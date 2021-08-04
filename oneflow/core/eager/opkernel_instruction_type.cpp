@@ -463,7 +463,10 @@ struct LocalCallOpKernelUtil {
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> Prepare();
+  static inline Maybe<void> Prepare(vm::Instruction* instruction);
+  static inline Maybe<void> InitOutputBlobAttrs(vm::Instruction* instruction) {
+    return Maybe<void>::Ok();
+  }
 
  protected:
   static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
@@ -590,15 +593,39 @@ struct LocalCallOpKernelUtil {
 };
 
 struct EagerLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
-  static inline Maybe<void> Prepare() {
+  static inline Maybe<void> Prepare(vm::Instruction* instruction) {
     std::cout << "Normal tensor prepared." << std::endl;
     return Maybe<void>::Ok();
   }
 };
 
 struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
-  static inline Maybe<void> Prepare() {
+  static inline Maybe<void> Prepare(vm::Instruction* instruction) {
     std::cout << "DTR tensor prepared." << std::endl;
+    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    JUST(operand->ForEachInputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
+      CHECK_OR_RETURN(static_cast<bool>(blob_object));
+      // Change pointer of EagerBlobObject -> DTREagerBlobObject
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object);
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      // pin inputs (unpin after compute)
+      dtr_blob_object->pin();
+      // TODO: recursive recompute the inputs
+      return Maybe<void>::Ok();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> InitOutputBlobAttrs(vm::Instruction* instruction) {
+    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
+      CHECK_OR_RETURN(static_cast<bool>(blob_object));
+      // Change pointer of EagerBlobObject -> DTREagerBlobObject
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object);
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      JUST(dtr_blob_object->InitBlobAttrs(instruction));
+      return Maybe<void>::Ok();
+    }));
     return Maybe<void>::Ok();
   }
 };
@@ -610,12 +637,13 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   bool enable_dtr = true;
   if (enable_dtr) {
-    CHECK_OK(DTRLocalCallOpKernelUtil::Prepare());
     CHECK_OK(DTRLocalCallOpKernelUtil::Infer(instruction));
+    CHECK_OK(DTRLocalCallOpKernelUtil::InitOutputBlobAttrs(instruction));
+    CHECK_OK(DTRLocalCallOpKernelUtil::Prepare(instruction));
     CHECK_OK(DTRLocalCallOpKernelUtil::Compute(instruction));
   } else {
-    CHECK_OK(EagerLocalCallOpKernelUtil::Prepare());
     CHECK_OK(EagerLocalCallOpKernelUtil::Infer(instruction));
+    CHECK_OK(EagerLocalCallOpKernelUtil::Prepare(instruction));
     CHECK_OK(EagerLocalCallOpKernelUtil::Compute(instruction));
   }
   

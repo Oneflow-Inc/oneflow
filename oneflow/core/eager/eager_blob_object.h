@@ -59,7 +59,7 @@ class EagerBlobObject : public BlobObject {
   const Blob& blob() const override { return *blob_; }
   Blob* mut_blob() override { return blob_.get(); }
   Maybe<void> TryInitBlob() override;
-  virtual Maybe<void> InitBlob();
+  Maybe<void> InitBlob();
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
@@ -95,6 +95,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
         memory_ = 0;
         compute_time_ = 0;
         last_access_time_ = 0;
+        pinned_ = 0;
+        compute_path_ = nullptr;
       }
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
@@ -102,6 +104,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
                     memory_ = 0;
                     compute_time_ = 0;
                     last_access_time_ = 0;
+                    pinned_ = 0;
+                    compute_path_ = nullptr;
                   }
   ~DTREagerBlobObject() override {
     non_pod_initer_.reset();
@@ -109,21 +113,33 @@ class DTREagerBlobObject final : public EagerBlobObject {
     blob_.reset();
   }
 
-  Maybe<void> InitBlob();
+  Maybe<void> InitBlobAttrs(vm::Instruction* instruction);
+  // Maybe<void> delete();
 
   // Getters and Setters
-  const int64_t memory() const { return memory_; }
-  const int64_t compute_time() const { return compute_time_; }
+  const double memory() const { return memory_; }
+  const double compute_time() const { return compute_time_; }
   const double last_access_time() const { return last_access_time_; }
+  const vm::Instruction* compute_path() const { return compute_path_; }
   void set_memory(int64_t val) { memory_ = val; }
   void set_compute_time(int64_t val) { compute_time_ = val; }
   void set_last_access_time(double val) { last_access_time_ = val; }
 
+  // bool is_in_memory();
+  bool is_pinned() { return (pinned_ > 0); }
+  void pin() { pinned_++; }
+  void unpin() { pinned_--; }
+
+  // TODO: variable cost functions in terms of different heuristics
+  double cost() { return compute_time_ / memory_ / last_access_time_; }
+
 
  private:
-  int64_t memory_;
-  int64_t compute_time_;
+  double memory_;
+  double compute_time_;
   double last_access_time_;
+  size_t pinned_;
+  vm::Instruction* compute_path_;
 };
 
 }  // namespace vm

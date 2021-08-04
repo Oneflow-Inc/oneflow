@@ -88,13 +88,12 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DTREagerBlobObject::InitBlob() {
-  CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
-
+Maybe<void> DTREagerBlobObject::InitBlobAttrs(vm::Instruction* instruction) {
   // reset DTREageBlobObject properties
   memory_ = 0;
   compute_time_ = 0;
   last_access_time_ = 0;
+  pinned_ = 0;
 
   int num_elements;
   num_elements = (blob_desc_.shape().NumAxes() > 0) ? 1 : 0;
@@ -107,9 +106,9 @@ Maybe<void> DTREagerBlobObject::InitBlob() {
   // current time
   last_access_time_ = memory_;
 
-  char* header_buffer =
-      reinterpret_cast<char*>(const_cast<int64_t*>(blob_desc_.shape().dim_vec().data()));
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer, nullptr));
+  CHECK_OR_RETURN(static_cast<bool>(instruction));
+  compute_path_ = instruction;
+
   return Maybe<void>::Ok();
 }
 

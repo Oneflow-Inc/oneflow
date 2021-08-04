@@ -39,6 +39,7 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
+#include "oneflow/core/framework/tensor_pool.h"
 
 namespace oneflow {
 
@@ -112,6 +113,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #endif
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
+  // Global<DTRTensorPool>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
