@@ -26,10 +26,12 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
 NNGraph::~NNGraph() {
+  VLOG(2) << "Try to delete c nn graph name " << name_ << "." << std::endl;
   CloseRuntimeBuffers();
   runtime_.reset();
 }
@@ -101,14 +103,17 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
-    Global<CtrlClient>::Get()->ClearKV("plan");
+    std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       // TODO(chengcheng): split plan for each rank.
-      Global<CtrlClient>::Get()->PushKV("plan", plan_);
+      Global<CtrlClient>::Get()->PushKV(plan_name, plan_);
     } else {
-      Global<CtrlClient>::Get()->PullKV("plan", &plan_);
+      Global<CtrlClient>::Get()->PullKV(plan_name, &plan_);
     }
     OF_SESSION_BARRIER();
+    // NOTE(zwx): After barrier plan is synchronized between all ranks,
+    //     then it can be cleared for saving mem.
+    if (GlobalProcessCtx::IsThisProcessMaster()) { Global<CtrlClient>::Get()->ClearKV(plan_name); }
   }
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttibute(&plan_, plan_.job_id2op_attribute_ref_table());
