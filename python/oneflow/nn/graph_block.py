@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from collections import OrderedDict
+from functools import partial
 from typing import Iterator, Optional, Set, Union
 
 import oneflow._oneflow_internal
@@ -207,57 +208,59 @@ class Block(object):
         if name in self.__dict__:
             return self.__dict__[name]
         if self._type == BlockType.MODULE:
+            # support get module
             if "_modules" in self.__dict__:
                 modules = self.__dict__["_modules"]
                 if name in modules:
                     return modules[name]
-            if "_parameters" in self.__dict__:
-                _parameters = self.__dict__["_parameters"]
-                if name in _parameters:
-                    p_block = _parameters[name]
-                    if self._is_executing_forward:
-                        if graph_build_util.lazy_mode.is_enabled():
-                            if p_block._lazy_origin is None:
-                                assert p_block._lazy_origin_builder is not None, (
-                                    repr(p_block)
-                                    + " has no lazy Tensor creation function."
-                                )
-                                with p_block.scope_context():
-                                    p_block._lazy_origin = (
-                                        p_block._lazy_origin_builder()
-                                    )
-                            return p_block._lazy_origin
-                        else:
-                            return p_block.origin
-                    else:
-                        return p_block
-            if "_buffers" in self.__dict__:
-                _buffers = self.__dict__["_buffers"]
-                if name in _buffers:
-                    b_block = _buffers[name]
-                    if self._is_executing_forward:
-                        if graph_build_util.lazy_mode.is_enabled():
-                            if b_block._lazy_origin is None:
-                                assert b_block._lazy_origin_builder is not None, (
-                                    repr(b_block)
-                                    + " has no lazy Tensor creation function."
-                                )
-                                with b_block.scope_context():
-                                    b_block._lazy_origin = (
-                                        b_block._lazy_origin_builder()
-                                    )
-                            return b_block._lazy_origin
-                        else:
-                            return b_block.origin
-                    else:
-                        return b_block
+            # support get parameter
+            p_state = self._get_in_states(name, "_parameters")
+            if p_state is not None:
+                return p_state
+            # support get buffer 
+            b_state = self._get_in_states(name, "_buffers")
+            if b_state is not None:
+                return b_state
+            # support get normal attr
             if name in self._origin.__dict__:
                 return self._origin.__dict__[name]
+            # support get function
             if hasattr(self._origin, name):
-                return getattr(self._origin, name)
+                return partial(getattr(self._origin.__class__, name), self)
         raise AttributeError(
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
+
+    def _get_in_states(self, name, states_name):
+        if states_name not in self.__dict__:
+            return None
+
+        _states = self.__dict__[states_name]
+        if name not in _states:
+            return None
+
+        _s_block = _states[name]
+        if graph_build_util.lazy_mode.is_enabled():
+            #  lazy
+            if _s_block._lazy_origin is None:
+                assert _s_block._lazy_origin_builder is not None, (
+                    repr(_s_block) + " has no lazy Tensor creation function."
+                )
+                assert self._is_executing_forward, (
+                    repr(_s_block)
+                    + "'s first get must happened in it's nn.Module.forward() to generate the right scope."
+                )
+                with _s_block.scope_context():
+                    _s_block._lazy_origin = _s_block._lazy_origin_builder()
+            return _s_block._lazy_origin
+        elif (
+            not graph_build_util.lazy_mode.is_enabled()
+        ) and self._is_executing_forward:
+            # eager and inside nn.Graph.build()
+            return _s_block.origin
+        else:
+            # outside nn.Graph.build()
+            return _s_block
 
     def __repr__(self):
         lines = None
