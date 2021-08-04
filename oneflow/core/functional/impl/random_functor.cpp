@@ -66,8 +66,9 @@ class BernoulliFunctor {
 class RandintFunctor {
  public:
   RandintFunctor() { randint_op_ = CHECK_JUST(one::OpBuilder("randint").Output("out").Build()); }
-  
-  Maybe<Tensor> operator()(const int64_t low,const int64_t high,const Shape& shape,const Optional<one::Generator>& generator) const{
+
+  Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Optional<one::Generator>& generator) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<int64_t>("low", low));
@@ -86,20 +87,17 @@ class RandintFunctor {
     return OpInterpUtil::Dispatch<Tensor>(*randint_op_, {},
                                           OpExprInterpContext{attrs, randint_kernel_state});
   }
-   
 
  private:
   std::shared_ptr<OpExpr> randint_op_;
 };
 
-
-
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-   m.add_functor<impl::BernoulliFunctor>("Bernoulli"); 
-   m.add_functor<impl::RandintFunctor>("Randint"); 
-  };
+  m.add_functor<impl::BernoulliFunctor>("Bernoulli");
+  m.add_functor<impl::RandintFunctor>("Randint");
+};
 
 }  // namespace functional
 }  // namespace one

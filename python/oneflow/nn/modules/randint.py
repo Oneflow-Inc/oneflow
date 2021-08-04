@@ -16,12 +16,14 @@ limitations under the License.
 
 from typing import Union
 import oneflow as flow
+
+
 class Randint(flow.nn.Module):
     def __init__(
         self,
         low: flow.int32,
-        high:flow.int32,
-        size:tuple,
+        high: flow.int32,
+        size: tuple,
         generator: flow.Generator = None,
         dtype: flow.dtype = flow.int32,
         layout=None,
@@ -46,38 +48,40 @@ class Randint(flow.nn.Module):
         self.device = device
         self.dtype = dtype
         self.requires_grad = requires_grad
-        assert low<high
+        assert low < high
         self.generator = generator
         self.low = low
         self.high = high
         self.size = size
+
     def forward(self):
-        res=flow.F.randint(self.low,self.high,self.size,generator=self.generator)
-        print(self.device,self.dtype)
-        res = res.to(device=self.device,dtype=self.dtype)
-        res.requires_grad=  self.requires_grad
+        res = flow.F.randint(self.low, self.high, self.size, generator=self.generator)
+        res = res.to(self.device, dtype=self.dtype)
+        res.requires_grad = self.requires_grad
         return res
-        
+
+
 def randint(
-    low: flow.int64=0,
-    high:Union[int,tuple]=None,
-    size:tuple=None,
-    generator: flow.Generator =None,
-    dtype: flow.dtype=flow.int64,
+    low: flow.int64 = 0,
+    high: Union[int, tuple] = None,
+    size: tuple = None,
+    generator: flow.Generator = None,
+    dtype: flow.dtype = flow.int64,
     layout=None,
     device: flow.device = flow.device("cpu"),
     requires_grad: bool = False,
-    ) -> flow.Tensor:
-    """Returns a tensor filled with random integers generated uniformly from $[low,high)$
+) -> flow.Tensor:
+    r"""Returns a tensor filled with random integers generated uniformly from  :math:`[ \text{low},\text{high} )`.
+    
 
     The shape of the tensor is defined by the variable argument size.
 
     Args:
-        low (int, optional) – Lowest integer to be drawn from the distribution. Default: 0.
+        low (int, optional):Lowest integer to be drawn from the distribution. Default: 0.
 
-        high (int) – One above the highest integer to be drawn from the distribution.
+        high (int):One above the highest integer to be drawn from the distribution.
 
-        size (tuple) – a tuple defining the shape of the output tensor.
+        size (tuple):a tuple defining the shape of the output tensor.
    
     Keyword args:
         generator(:class:`oneflow.Generator`, optional):  a pseudorandom number generator for sampling
@@ -88,7 +92,7 @@ def randint(
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     Returns:
-        oneflow.Tensor: The result Tensor.
+        oneflow.Tensor: The result Tensor of given size.
 
     For example:
 
@@ -103,8 +107,9 @@ def randint(
     """
     if type(high) is tuple:
         size = high
-        low,high = 0,low
-    return Randint(low,high,size,generator,dtype,layout,device,requires_grad)()
+        low, high = 0, low
+    return Randint(low, high, size, generator, dtype, layout, device, requires_grad)()
+
 
 if __name__ == "__main__":
     import doctest

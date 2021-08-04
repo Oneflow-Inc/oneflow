@@ -27,6 +27,7 @@ oneflow
             ones_like, 
             repeat, 
             reshape, 
+            randint,
             save, 
             saved_model, 
             scatter,
