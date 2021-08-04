@@ -266,24 +266,17 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   bool is_lazy() const override { return false; }
 
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override { return cur_rank_phy_tensor_; }
-
-  static Maybe<EagerConsistentTensorImpl> New(
-      const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor,
-      Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc);
+  void reset_cur_rank_phy_tensor(const std::shared_ptr<MirroredTensor>& val) {
+    cur_rank_phy_tensor_ = val;
+  }
 
   static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
                                               bool requires_grad, bool is_leaf);
 
-  static Maybe<EagerConsistentTensorImpl> NewWithPhyTensor(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
-      int64_t parallel_id, bool requires_grad, bool is_leaf);
-
-  static Maybe<EagerConsistentTensorImpl> NewWithoutPhyTensor(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
-      int64_t parallel_id, bool requires_grad, bool is_leaf);
-
-  typedef Maybe<EagerConsistentTensorImpl> (*NewMethod)(Symbol<ConsistentTensorMeta>,
-                                                        Symbol<Device>, int64_t, bool, bool);
+  static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+                                              Symbol<Device> device,
+                                              const Optional<int64_t>& parallel_id,
+                                              bool requires_grad, bool is_leaf);
 
  private:
   EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,

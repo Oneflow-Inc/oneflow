@@ -27,6 +27,12 @@ limitations under the License.
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
+#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/register/register_manager.h"
+#include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/version.h"
@@ -120,6 +126,17 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<RuntimeBufferManagersScope>::New();
   }
   for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
+  {
+    // NOTE(chengcheng): Init Global Runtime objects.
+    Global<RuntimeCtx>::New();
+    Global<MemoryAllocator>::New();
+    Global<RegstMgr>::New();
+    Global<ActorMsgBus>::New();
+    Global<ThreadMgr>::New();
+    Global<RuntimeJobDescs>::New();
+    Global<summary::EventsWriter>::New();
+  }
+
   return Maybe<void>::Ok();
 }
 
@@ -138,6 +155,17 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 }
 
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
+  {
+    // NOTE(chengcheng): Delete Global Runtime objects.
+    Global<summary::EventsWriter>::Delete();
+    Global<RuntimeJobDescs>::Delete();
+    Global<ThreadMgr>::Delete();
+    Global<ActorMsgBus>::Delete();
+    Global<RegstMgr>::Delete();
+    Global<MemoryAllocator>::Delete();
+    Global<RuntimeCtx>::Delete();
+  }
+
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<RuntimeBufferManagersScope>::Delete();
     Global<JobSetCompileCtx>::Delete();
