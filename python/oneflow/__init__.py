@@ -39,8 +39,8 @@ locals()["long"] = oneflow._oneflow_internal.int64
 locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
-from oneflow.core.job.job_conf_pb2 import JobConfigProto
-from oneflow.core.job.job_set_pb2 import ConfigProto
+# from oneflow.core.job.job_conf_pb2 import JobConfigProto
+# from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.version import __version__
 
 _DEPRECATED = set()
@@ -63,7 +63,7 @@ def is_deprecated(func_or_class):
 from . import sbp
 import atexit
 
-import oneflow.framework.c_api_util
+# import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
 import oneflow.framework.register_python_callback
 
@@ -74,7 +74,7 @@ import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
-from oneflow.framework.session_util import Session
+# from oneflow.framework.session_util import Session
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
@@ -150,63 +150,63 @@ import oneflow.nn.modules.sinh
 import oneflow.nn.modules.tan
 import oneflow.nn.modules.tensor_ops
 import oneflow.tmp
-from oneflow.advanced.distribute_ops import cast_to_current_logical_view
-from oneflow.deprecated.initializer_util import (
-    truncated_normal_initializer as truncated_normal,
-)
-from oneflow.experimental.namescope import deprecated_name_scope as name_scope
-from oneflow.framework.check_point_v2 import GetAllVariables as get_all_variables
+# from oneflow.advanced.distribute_ops import cast_to_current_logical_view
+# from oneflow.deprecated.initializer_util import (
+#     truncated_normal_initializer as truncated_normal,
+# )
+# from oneflow.experimental.namescope import deprecated_name_scope as name_scope
+# from oneflow.framework.check_point_v2 import GetAllVariables as get_all_variables
 from oneflow.framework.check_point_v2 import Load as load
-from oneflow.framework.check_point_v2 import LoadVariables as load_variables
+# from oneflow.framework.check_point_v2 import LoadVariables as load_variables
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
 from oneflow.framework.env_util import (
     api_enable_eager_execution as enable_eager_execution,
 )
-from oneflow.framework.env_util import api_get_current_machine_id as current_machine_id
-from oneflow.framework.env_util import api_get_current_resource as current_resource
-from oneflow.framework.function_desc import (
-    api_current_global_function_desc as current_global_function_desc,
-)
-from oneflow.framework.function_util import FunctionConfig
-from oneflow.framework.function_util import FunctionConfig as ExecutionConfig
+# from oneflow.framework.env_util import api_get_current_machine_id as current_machine_id
+# from oneflow.framework.env_util import api_get_current_resource as current_resource
+# from oneflow.framework.function_desc import (
+#     api_current_global_function_desc as current_global_function_desc,
+# )
+# from oneflow.framework.function_util import FunctionConfig
+# from oneflow.framework.function_util import FunctionConfig as ExecutionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
-from oneflow.framework.function_util import api_oneflow_function as global_function
+# from oneflow.framework.function_util import api_oneflow_function as global_function
 from oneflow.framework.generator import create_generator as Generator
 from oneflow.framework.generator import default_generator, manual_seed
-from oneflow.framework.input_blob_def import DeprecatedFixedTensorDef as FixedTensorDef
-from oneflow.framework.input_blob_def import (
-    DeprecatedMirroredTensorDef as MirroredTensorDef,
-)
-from oneflow.framework.job_set_util import inter_job_reuse_mem_strategy
-from oneflow.framework.model import Model
-from oneflow.framework.ops import api_acc as acc
-from oneflow.framework.ops import (
-    api_hierarchical_parallel_cast as hierarchical_parallel_cast,
-)
-from oneflow.framework.ops import api_pack as pack
-from oneflow.framework.ops import api_parallel_cast as parallel_cast
-from oneflow.framework.ops import api_unpack as unpack
-from oneflow.framework.placement_util import (
-    deprecated_placement as device_prior_placement,
-)
-from oneflow.framework.placement_util import deprecated_placement as fixed_placement
+# from oneflow.framework.input_blob_def import DeprecatedFixedTensorDef as FixedTensorDef
+# from oneflow.framework.input_blob_def import (
+#     DeprecatedMirroredTensorDef as MirroredTensorDef,
+# )
+# from oneflow.framework.job_set_util import inter_job_reuse_mem_strategy
+# from oneflow.framework.model import Model
+# from oneflow.framework.ops import api_acc as acc
+# from oneflow.framework.ops import (
+#     api_hierarchical_parallel_cast as hierarchical_parallel_cast,
+# )
+# from oneflow.framework.ops import api_pack as pack
+# from oneflow.framework.ops import api_parallel_cast as parallel_cast
+# from oneflow.framework.ops import api_unpack as unpack
+# from oneflow.framework.placement_util import (
+#     deprecated_placement as device_prior_placement,
+# )
+# from oneflow.framework.placement_util import deprecated_placement as fixed_placement
 from oneflow.framework.scope_util import api_current_scope as current_scope
-from oneflow.framework.session_util import (
-    TmpInitEagerGlobalSession as InitEagerGlobalSession,
-)
+# from oneflow.framework.session_util import (
+#     TmpInitEagerGlobalSession as InitEagerGlobalSession,
+# )
 from oneflow.framework.session_util import (
     api_clear_default_session as clear_default_session,
 )
-from oneflow.framework.session_util import (
-    api_eager_execution_enabled as eager_execution_enabled,
-)
-from oneflow.framework.session_util import (
-    api_find_or_create_module as find_or_create_module,
-)
-from oneflow.framework.session_util import (
-    api_sync_default_session as sync_default_session,
-)
+# from oneflow.framework.session_util import (
+#     api_eager_execution_enabled as eager_execution_enabled,
+# )
+# from oneflow.framework.session_util import (
+#     api_find_or_create_module as find_or_create_module,
+# )
+# from oneflow.framework.session_util import (
+#     api_sync_default_session as sync_default_session,
+# )
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import tensor as tensor
 from oneflow.nn.modules.abs import abs_op as abs
@@ -335,17 +335,17 @@ from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
-from oneflow.ops.assign_op import assign
+# from oneflow.ops.assign_op import assign
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
-from oneflow.ops.categorical_ordinal_encode_op import categorical_ordinal_encode
-from oneflow.ops.constant_op import constant, constant_like, constant_scalar
-from oneflow.ops.get_variable import api_get_variable as get_variable
+# from oneflow.ops.categorical_ordinal_encode_op import categorical_ordinal_encode
+# from oneflow.ops.constant_op import constant, constant_like, constant_scalar
+# from oneflow.ops.get_variable import api_get_variable as get_variable
 from oneflow.ops.initializer_util import constant_initializer, empty_initializer
-from oneflow.ops.initializer_util import glorot_normal_initializer
+# from oneflow.ops.initializer_util import glorot_normal_initializer
 from oneflow.ops.initializer_util import (
     glorot_normal_initializer as xavier_normal_initializer,
 )
-from oneflow.ops.initializer_util import glorot_uniform_initializer
+# from oneflow.ops.initializer_util import glorot_uniform_initializer
 from oneflow.ops.initializer_util import (
     glorot_uniform_initializer as xavier_uniform_initializer,
 )
