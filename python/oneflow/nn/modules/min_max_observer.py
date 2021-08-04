@@ -90,6 +90,7 @@ class MinMaxObserver(Module):
         ...    input_tensor, )
 
     """
+
     def __init__(
         self,
         quantization_formula: str = "google",
@@ -111,7 +112,6 @@ class MinMaxObserver(Module):
             self.quantization_scheme,
             self.per_layer_quantization,
         )
-
 
 
 if __name__ == "__main__":

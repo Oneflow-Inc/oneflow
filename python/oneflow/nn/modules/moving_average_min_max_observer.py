@@ -113,6 +113,7 @@ class MovingAverageMinMaxObserver(Module):
         ... )
 
     """
+
     def __init__(
         self,
         training: bool = False,
@@ -155,7 +156,6 @@ class MovingAverageMinMaxObserver(Module):
             self.quantization_scheme,
             self.momentum,
         )
-
 
 
 if __name__ == "__main__":
