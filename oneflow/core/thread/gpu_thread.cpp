@@ -48,6 +48,12 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     OF_CUDA_CHECK(cudaSetDevice(dev_id));
     ThreadCtx ctx;
     ctx.g_cuda_stream.reset(new CudaStreamHandle(&cb_event_chan_));
+    // TODO(liujuncheng): force creation
+    ctx.g_cuda_stream->cuda_stream();
+    ctx.g_cuda_stream->cublas_pmh_handle();
+    ctx.g_cuda_stream->cublas_pmd_handle();
+    ctx.g_cuda_stream->cublas_tensor_op_math_handle();
+    ctx.g_cuda_stream->cudnn_handle();
     ctx.cb_event_chan = &cb_event_chan_;
     PollMsgChannel(ctx);
   });

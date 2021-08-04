@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/gather_kernel_util.h"
 #include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -60,7 +61,7 @@ void CheckParallelDistribution(const Shape& hierarchy, int64_t gather_axis,
 }  // namespace
 
 template<DeviceType device_type, typename T, typename K>
-class GatherKernel final : public user_op::OpKernel {
+class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GatherKernel() = default;
   ~GatherKernel() override = default;

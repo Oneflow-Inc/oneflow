@@ -32,7 +32,7 @@ class UserKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UserKernel);
   UserKernel() = default;
-  ~UserKernel() override = default;
+  ~UserKernel() override;
 
   void InitUserKernel(DeviceCtx* device_ctx);
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx);
@@ -55,6 +55,8 @@ class UserKernel final : public Kernel {
   std::unique_ptr<UserKernelComputeContext> ctx_;
   std::unique_ptr<UserKernelInferContext> infer_ctx_;
   std::unique_ptr<user_op::OpKernelInferCache> infer_cache_;
+  struct CudaGraphContext;
+  std::unique_ptr<CudaGraphContext> cuda_graph_ctx_;
 };
 
 }  // namespace oneflow
