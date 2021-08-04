@@ -45,6 +45,7 @@ enum RankGroupRpcCmd {
   kRankGroupRpcCmdSyncSymbolConsistentTensorMeta,
   kRankGroupRpcCmdCheckRankGroupConsistency,
   kRankGroupRpcCmdCheckTensorConsistency,
+  kRankGroupRpcCmdAll2AllSyncShape,
   // End
   kSizeOfRankGroupRpcCmd
 };
@@ -87,7 +88,7 @@ class RpcToken final {
   RpcToken& operator++();
 
  private:
-  explicit RpcToken(RpcTokenType type) : type_(type) {}
+  explicit RpcToken(RpcTokenType type);
 
   static Maybe<RpcToken> NewMetaRpcToken(int32_t thread_consistent_unique_id,
                                          int32_t rank_group_level);

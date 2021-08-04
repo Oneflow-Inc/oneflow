@@ -41,6 +41,7 @@ from oneflow.nn.modules.adaptive_pool import (
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
 )
+from oneflow.nn.modules.all_reduce import AllReduce
 from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
 from oneflow.nn.modules.container import (
     ModuleDict,
@@ -58,6 +59,7 @@ from oneflow.nn.modules.dataset import (
     OFRecordImageDecoderRandomCrop,
     OfrecordRawDecoder,
     OfrecordReader,
+    OFRecordBytesDecoder,
 )
 from oneflow.nn.modules.deconv import ConvTranspose2d
 from oneflow.nn.modules.dropout import Dropout
@@ -105,10 +107,8 @@ from oneflow.nn.modules.upsampling import (
 )
 from oneflow.nn.modules.zeropad2d import ZeroPad2d
 from oneflow.nn.parameter import Parameter
-from oneflow.ops.domain_ops import (
-    api_fused_self_attention_query_mul_key_and_value as fused_self_attention_query_mul_key_and_value,
-)
-from oneflow.ops.loss_ops import ctc_greedy_decoder
 from oneflow.nn import utils
 
 from . import functional
+
+from . import parallel

@@ -109,7 +109,10 @@ def has_node_list():
 
 
 def node_size():
-    if has_node_list():
+    node_num_from_env = os.getenv("ONEFLOW_TEST_NODE_NUM", None)
+    if node_num_from_env:
+        return node_num_from_env
+    elif has_node_list():
         node_list_from_env = node_list()
         return len(node_list_from_env)
     else:

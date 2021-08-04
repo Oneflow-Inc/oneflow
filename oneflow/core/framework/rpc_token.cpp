@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <array>
 #include "oneflow/core/framework/rpc_token.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.h"
@@ -135,6 +136,12 @@ class CtrlRpcTokenView final {
 static_assert(sizeof(CtrlRpcTokenView) == sizeof(uint64_t), "");
 
 }  // namespace
+
+RpcToken::RpcToken(RpcTokenType type) {
+  static_assert(sizeof(RpcToken) == sizeof(int64_t), "");
+  *reinterpret_cast<int64_t*>(this) = 0;
+  type_ = type;
+}
 
 /*static*/ RpcToken RpcToken::NewDataRpcToken() {
   static auto* seq_id = new std::atomic<int64_t>();
