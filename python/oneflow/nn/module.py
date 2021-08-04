@@ -86,7 +86,14 @@ class Module(object):
                 if not isinstance(result, tuple):
                     result = (result,)
                 args = result
+
         res = self.forward(*args)
+
+        for hook in itertools.chain(self._forward_hooks.values()):
+            result = hook(self, args, res)
+            if result is not None:
+                res = result
+
         return res
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:
@@ -460,6 +467,9 @@ class Module(object):
 
     def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
+
+    def register_forward_hook(self, hook: Callable[..., None]) -> None:
+        self._forward_hooks[len(self._forward_hooks)] = hook
 
     def _apply(self, fn):
         for module in self.children():
