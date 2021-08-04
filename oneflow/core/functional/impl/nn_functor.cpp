@@ -115,44 +115,69 @@ class Conv3dFunctor : public ConvBaseFunctor {
   }
 };
 
-class MatMulBaseFunctor {
+class MatMulFunctor {
  public:
-  MatMulBaseFunctor() = default;
-  virtual ~MatMulBaseFunctor() = default;
+  MatMulFunctor() {
+    matmul_op_ = CHECK_JUST(one::OpBuilder("matmul").Input("a").Input("b").Output("out").Build());
+    batch_matmul_op_ =
+        CHECK_JUST(one::OpBuilder("batch_matmul").Input("a").Input("b").Output("out").Build());
+    bcast_matmul_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_matmul").Input("a").Input("b").Output("out").Build());
+  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const bool& transpose_a,
                            const bool& transpose_b, const double& alpha) const {
+    const auto& a_shape = a->shape();
+    const auto& b_shape = b->shape();
+
+    // TODO(): Support 1-d tensor by dot.
+    CHECK_GE_OR_RETURN(a_shape->NumAxes(), 2) << "Tensor a's dim should >= 2";
+    CHECK_GE_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b's dim should >= 2";
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attrs);
+    if (a_shape->NumAxes() != b_shape->NumAxes()) {
+      CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2)
+          << "Not support number of dimensions of a being less than number of dimensions of b!";
+      return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
+    }
+    if (a_shape->NumAxes() > 2) {
+      return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
   }
 
- protected:
-  std::shared_ptr<OpExpr> op_;
+ private:
+  std::shared_ptr<OpExpr> matmul_op_;
+  std::shared_ptr<OpExpr> batch_matmul_op_;
+  std::shared_ptr<OpExpr> bcast_matmul_op_;
 };
 
-class MatMulFunctor : public MatMulBaseFunctor {
- public:
-  MatMulFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("matmul").Input("a").Input("b").Output("out").Build());
-  }
-};
-
-class BatchMatMulFunctor : public MatMulBaseFunctor {
+class BatchMatMulFunctor {
  public:
   BatchMatMulFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("batch_matmul").Input("a").Input("b").Output("out").Build());
+    batch_matmul_op_ =
+        CHECK_JUST(one::OpBuilder("batch_matmul").Input("a").Input("b").Output("out").Build());
   }
-};
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, const bool& transpose_a,
+                           const bool& transpose_b, const double& alpha) const {
+    const auto& a_shape = a->shape();
+    const auto& b_shape = b->shape();
+    CHECK_GE_OR_RETURN(a_shape->NumAxes(), 3) << "Tensor a's dim should >= 3";
+    CHECK_GE_OR_RETURN(b_shape->NumAxes(), 3) << "Tensor b's dim should >= 3";
 
-class BroadcastMatMulFunctor : public MatMulBaseFunctor {
- public:
-  BroadcastMatMulFunctor() {
-    op_ =
-        CHECK_JUST(one::OpBuilder("broadcast_matmul").Input("a").Input("b").Output("out").Build());
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
+    JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
   }
+
+ private:
+  std::shared_ptr<OpExpr> batch_matmul_op_;
 };
 
 class LayerNormFunctor {
@@ -519,7 +544,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Conv3dFunctor>("Conv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
-  m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
