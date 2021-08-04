@@ -35,7 +35,7 @@ def compare_with_numpy_adam(
 
     simp_module = CustomModule()
     simp_module.to("cuda")
-
+    simp_module.train()
 
     adam0 = flow.optim.Adam(
             [
