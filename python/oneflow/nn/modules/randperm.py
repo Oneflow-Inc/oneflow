@@ -22,7 +22,7 @@ from typing import Union
 class Randperm(Module):
     def __init__(
         self,
-        N: flow.int32,
+        n: flow.int32,
         generator: flow.Generator = None,
         dtype: flow.dtype = flow.int32,
         layout=None,
@@ -63,7 +63,7 @@ class Randperm(Module):
 
 
 def randperm(
-    N: flow.int32,
+    n: flow.int32,
     generator=None,
     out: flow.Tensor = None,
     dtype=flow.int64,
