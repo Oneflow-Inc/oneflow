@@ -142,7 +142,7 @@ class RandomSampler(Sampler[int]):
         if self.generator is None:
             generator = flow.Generator()
             generator.manual_seed(
-                int(flow.Tensor(1, dtype=flow.int64).xavier_uniform_().numpy()[0])
+                int(flow.Tensor(1, dtype=flow.int64).xavier_uniform_().numpy())
             )
         else:
             generator = self.generator

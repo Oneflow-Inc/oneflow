@@ -67,6 +67,12 @@ class OpInterpUtil {
       const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
       const bool is_lazy, const bool is_local);
+
+  static Maybe<void> CheckTensorMatchAttr(
+      const std::shared_ptr<Tensor>& tensor,
+      const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
+      const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
+      const bool is_lazy, const bool is_local, const bool requires_grad, const bool is_leaf);
 };
 
 }  // namespace one
