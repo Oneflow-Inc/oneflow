@@ -77,12 +77,6 @@ std::string ErrorMsgFormat(std::string error_msg, bool has_error_hint) {
   return "\n    " + error_msg;
 }
 
-std::string ErrorTypeFormat(std::string error_type) {
-  if (error_type.size() == 0) { return ""; }
-  error_type.erase(error_type.find_first_of(" "));
-  return error_type;
-}
-
 std::string ErrorSummaryAndMsgFormat(const std::shared_ptr<cfg::ErrorProto>& error) {
   std::string error_summary_and_msg = "";
   if (error->has_error_summary()) { error_summary_and_msg += error->error_summary(); }
