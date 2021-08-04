@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/user/kernels/bernoulli_kernel.h"
+#include "oneflow/user/kernels/uniform_kernel.h"
 
 namespace oneflow {
 namespace one {
@@ -62,9 +63,73 @@ class BernoulliFunctor {
   std::shared_ptr<OpExpr> bernoulli_op_;
 };
 
+// - name: "rand"
+//   signature: "Tensor Rand(*, Shape shape, DataType dtype, Device device=None, Generator
+//   generator=None)" bind_python: True
+
+class RandFunctor {
+ public:
+  RandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    // TODO: deal with datatype
+    /*
+    tensor([[[0.5450, 0.0850, 0.8039],
+             [0.6258, 0.9747, 0.7761]]])
+    >>> torch.rand(1,2,3,dtype=torch.doule)
+
+    >>> torch.rand(1,2,3,dtype=torch.double)
+    tensor([[[0.2221, 0.6954, 0.5011],
+             [0.0680, 0.4570, 0.0813]]], dtype=torch.float64)
+    */
+    // if (IsIntegralDataType(dtype)) {
+    //   JUST(attrs.SetAttr<bool>("is_floating_value", false));
+    //   JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+    // } else {
+    //   JUST(attrs.SetAttr<bool>("is_floating_value", true));
+    //   JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+    // }
+    // {
+    //   ParallelDistribution parallel_distribution;
+    //   parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+    //   JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
+    // }
+
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& bernoulli_kernel_state = std::make_shared<UniformKernelState>(gen);
+
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_, {}, OpExprInterpContext(attrs, device_symbol, bernoulli_kernel_state));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {},
+                                            OpExprInterpContext(attrs, bernoulli_kernel_state));
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::BernoulliFunctor>("Bernoulli"); };
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::BernoulliFunctor>("Bernoulli");
+  m.add_functor<impl::RandFunctor>("Rand");
+};
 
 }  // namespace functional
 }  // namespace one

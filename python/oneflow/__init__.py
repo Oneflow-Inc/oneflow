@@ -302,6 +302,7 @@ from oneflow.nn.modules.ne import ne_op as not_equal
 from oneflow.nn.modules.negative import negative_op as neg
 from oneflow.nn.modules.negative import negative_op as negative
 from oneflow.nn.modules.random_ops import bernoulli
+from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min

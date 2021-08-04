@@ -16,8 +16,10 @@ limitations under the License.
 import random
 import sys
 
+from typing import Optional, Union
 import oneflow as flow
 from oneflow.nn.module import Module
+from oneflow.nn.modules.utils import _single
 
 
 def bernoulli(input, *, generator=None, out=None):
@@ -56,6 +58,107 @@ def bernoulli(input, *, generator=None, out=None):
 
     """
     return flow.F.bernoulli(input, flow.float32, generator)
+
+
+class Rand(Module):
+    def __init__(
+        self,
+        size,
+        generator=None,
+        dtype=None,
+        layout=None,
+        device=None,
+        placement=None,
+        sbp=None,
+        requires_grad=False,
+    ) -> None:
+        super().__init__()
+        # TODO: make shape process as a util
+        assert size is not None, "shape must not be None!"
+        assert isinstance(
+            size, (int, tuple, list, flow.Size)
+        ), "shape should be int or tuple int!"
+        self.device = device
+        if isinstance(self.device, str):
+            self.device = flow.device(self.device)
+        self.requires_grad = requires_grad
+        size = _single(size)
+        if dtype is None:
+            dtype = flow.float32
+        if generator is None:
+            self.generator = flow.Generator()
+        if placement is None:
+            if device is None:
+                self.device = flow.device("cpu")
+        else:
+            assert device is None
+        self.placement = placement
+        self.sbp = sbp
+        if placement is not None:
+            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+            if isinstance(self.sbp, flow.sbp.sbp):
+                self.sbp = (self.sbp,)
+            else:
+                for elem in sbp:
+                    assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+            assert len(self.sbp) == len(placement.hierarchy)
+        else:
+            assert sbp is None, "sbp: %s" % sbp
+        self.size = size
+        self.dtype = dtype
+
+    def forward(self):
+        if self.placement is not None:
+            pass  # consistent_rand?
+        else:
+            res = flow.F.rand(self.size, self.dtype, self.device, self.generator)
+            res.requires_grad = self.requires_grad
+            return res
+
+
+def rand_op(
+    *size,
+    out=None,
+    generator=None,
+    dtype: Optional[flow.dtype] = None,
+    layout=None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False
+):
+    """
+    Returns a tensor filled with random numbers from a uniform distribution on the interval [0, 1)
+
+    The shape of the tensor is defined by the variable argument ``size``.
+    Args:
+        size (int... or flow.Size): Defining the shape of the output tensor.
+          Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
+        out (optional): The output tensor.
+        dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
+        layout (optional): The desired layout of returned Tensor.
+        generator (flow.Generator, optional) – a pseudorandom number generator for sampling
+        device (torch.device, optional): The desired device of returned local tensor. If None, uses the
+          current device.
+        placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
+          construct local tensor.
+        sbp (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
+          numbers of placement.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+    For example:
+    .. code-block:: python
+        >>> import oneflow as flow
+        >>> x = flow.rand(3,3)
+        >>> print(x)
+        tensor([[0.5187, 0.4725, 0.974 ],
+                [0.2193, 0.6767, 0.2337],
+                [0.1863, 0.5853, 0.4277]], dtype=oneflow.float32)
+        >>> x.is_consistent
+        False
+    """
+    assert out is None, "out not supported yet"
+    assert layout is None, "layout not supported yet"
+    return Rand(size, generator, dtype, layout, device, placement, sbp, requires_grad)()
 
 
 if __name__ == "__main__":
