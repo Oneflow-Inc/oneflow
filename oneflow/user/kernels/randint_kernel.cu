@@ -59,9 +59,9 @@ class GpuRandintKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-#define REGISTER_GPU_RANDINT_KERNEL                                                \
-  REGISTER_USER_KERNEL("randint").SetCreateFn<GpuRandintKernel>().SetIsMatchedHob( \
+
+REGISTER_USER_KERNEL("randint").SetCreateFn<GpuRandintKernel>().SetIsMatchedHob( 
       (user_op::HobDeviceTag() == "gpu"));
 
-REGISTER_GPU_RANDINT_KERNEL
+
 }  // namespace oneflow
