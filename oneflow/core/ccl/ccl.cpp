@@ -36,13 +36,7 @@ Maybe<void> InitBroadcastRankHeap(std::vector<int64_t>* ranks, const ParallelDes
     (*ranks)[parallel_id] = machine_id;
   }
   CHECK_OR_RETURN(root_index.has_value());
-  {
-    // swap 0 and root in ranks vector;
-    int64_t root_idx = JUST(root_index.value());
-    int64_t tmp = (*ranks)[0];
-    (*ranks)[0] = (*ranks)[root_idx];
-    (*ranks)[root_idx] = tmp;
-  }
+  std::swap((*ranks)[0], (*ranks)[JUST(root_index.value())]);
   return Maybe<void>::Ok();
 }
 
@@ -54,7 +48,7 @@ Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
                                         DeviceCtx* ctx) {
   CHECK_EQ_OR_RETURN(parallel_desc->device_type(), DeviceType::kCPU);
   static thread_local std::vector<int64_t> rank_heap{};
-  InitBroadcastRankHeap(&rank_heap, *parallel_desc, root);
+  JUST(InitBroadcastRankHeap(&rank_heap, *parallel_desc, root));
   RpcToken rpc_token = RpcToken::NewDataRpcToken();
   CHECK_OR_RETURN(IsPODDataType(dtype));
   size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
@@ -75,7 +69,7 @@ Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
   JUST(RpcUtil::ReceiveDataFromParentInHeap(rank_heap, rpc_token, &rpc_ctx));
   JUST(RpcUtil::WaitUntilDoneOrTimeout(rpc_ctx, RpcUtil::TimeoutSeconds()));
   JUST(RpcUtil::SendDataToChildrenInHeap(rank_heap, rpc_token, &rpc_ctx));
-  if (GlobalProcessCtx::Rank() == root) { std::memcpy(out, in, buffer_size); }
+  if (GlobalProcessCtx::Rank() == root && out != in) { std::memcpy(out, in, buffer_size); }
   JUST(RpcUtil::WaitUntilDoneOrTimeout(rpc_ctx, RpcUtil::TimeoutSeconds()));
   return Maybe<void>::Ok();
 }

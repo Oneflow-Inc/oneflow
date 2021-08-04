@@ -21,10 +21,10 @@ namespace oneflow {
 
 namespace {
 
-class EagerCclOpKernelState final : public user_op::OpKernelState {
+class EagerNcclOpKernelState final : public user_op::OpKernelState {
  public:
-  EagerCclOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
-  ~EagerCclOpKernelState() override = default;
+  EagerNcclOpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
+  ~EagerNcclOpKernelState() override = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
@@ -42,19 +42,19 @@ class EagerCclOpKernelState final : public user_op::OpKernelState {
 
 }  // namespace
 
-class EagerCclBroadcastKernel final : public user_op::OpKernel {
+class EagerNcclBroadcastKernel final : public user_op::OpKernel {
  public:
-  EagerCclBroadcastKernel() = default;
-  ~EagerCclBroadcastKernel() override = default;
+  EagerNcclBroadcastKernel() = default;
+  ~EagerNcclBroadcastKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EagerCclOpKernelState>(ctx);
+    return std::make_shared<EagerNcclOpKernelState>(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<EagerCclOpKernelState*>(state);
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -69,7 +69,7 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("eager_nccl_broadcast")
-    .SetCreateFn<EagerCclBroadcastKernel>()
+    .SetCreateFn<EagerNcclBroadcastKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu");
 
 }  // namespace oneflow
