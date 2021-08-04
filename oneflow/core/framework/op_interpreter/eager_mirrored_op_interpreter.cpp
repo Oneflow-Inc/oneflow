@@ -96,9 +96,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
-      const auto& tensor_impl =
-          std::make_shared<MirroredTensor>(std::make_shared<EagerMirroredTensorImpl>());
-      outputs->at(i) = tensor_impl;
+      const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
+      outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);
       output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
     } else {
       bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
