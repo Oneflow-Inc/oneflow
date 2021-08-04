@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace py = pybind11;
 
@@ -91,7 +92,9 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
       .def("__str__", &SbpParallelSymbolToString)
       .def("__repr__", &SbpParallelSymbolToString)
       .def(py::self == py::self)
-      .def(py::hash(py::self));
+      .def(py::hash(py::self))
+      .def("_ToAttrStr",
+           [](const Symbol<cfg::SbpParallel>& sbp_sym) { return SbpParallelToString(*sbp_sym); });
   m.def(
       "split", [](int axis) { return GetSplitSbpParallel(axis).GetOrThrow(); }, py::arg("axis"));
   m.def("broadcast", []() { return GetBroadcastSbpParallel().GetOrThrow(); });
