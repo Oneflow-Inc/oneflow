@@ -161,6 +161,7 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
     PyObject* index = PyTuple_GetItem(args, 2);
     PyObject* src = PyTuple_GetItem(args, 3);
 
+    CHECK_OR_RETURN(PyTensorCheck(input)) << "input type should be Tensor";
     const auto& in = JUST(PyUnpackTensor(input));
 
     Optional<Scalar> dim_scalar;
@@ -168,18 +169,26 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
     Scalar& dim_value = *JUST(dim_scalar.value());
     int32_t d = JUST(dim_value.As<int32_t>());
 
+    CHECK_OR_RETURN(PyTensorCheck(index)) << "index type should be Tensor";
     const auto& idx = JUST(PyUnpackTensor(index));
 
+    bool is_src_scalar = PyScalarCheck(src);
     bool is_src_tensor = PyTensorCheck(src);
+
+    CHECK_OR_RETURN(is_src_scalar || is_src_tensor) << "src type should be Tensor or Scalar";
 
     if (is_src_tensor) {
       const auto& src_tensor = JUST(PyUnpackTensor(src));
       return functional::DimScatter(in, idx, src_tensor, d);
-    } else {
+    } else if (is_src_scalar) {
       Optional<Scalar> src_scalar;
       src_scalar = *JUST(PyUnpackScalar(src));
       Scalar& src_value = *JUST(src_scalar.value());
       return functional::DimScatterUpdateScalar(in, idx, JUST(src_value.As<float>()), d);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "none of:\n"
+                                     "(Tensor input, Int32 dim, Tensor index, Tensor src)\n"
+                                     "(Tensor input, Int32 dim, Tensor index, float src)";
     }
   }();
   return py::cast(result.GetPtrOrThrow());
