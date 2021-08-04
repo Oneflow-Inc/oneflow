@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include <cstddef>
+#include <memory>
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/framework/device.h"
@@ -144,7 +147,7 @@ template<>
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
     const auto& tensor = JUST(MirroredTensor::MakeTensor(
-        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false));
+        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
     const auto& parallel_distribution = std::make_shared<cfg::ParallelDistribution>();
@@ -152,9 +155,35 @@ template<>
     const auto& tensor = JUST(
         ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, SymbolOf(*parallel_distribution),
                                      SymbolOf(*parallel_attr->parallel_desc_symbol()), is_lazy,
-                                     /*requires_grad=*/false, /*is_leaf=*/false));
+                                     /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
+}
+
+/* static */ Maybe<void> OpInterpUtil::CheckTensorMatchAttr(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
+    const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr, const bool is_lazy,
+    const bool is_local, const bool requires_grad, const bool is_leaf) {
+  CHECK_EQ_OR_RETURN(*tensor->shape(), *blob_attr->shape());
+  CHECK_EQ_OR_RETURN(tensor->is_lazy(), is_lazy);
+  CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
+  const auto& dtype = DataType(blob_attr->get_dtype());
+  CHECK_EQ_OR_RETURN(tensor->dtype(), dtype);
+  CHECK_EQ_OR_RETURN(tensor->requires_grad(), requires_grad);
+  CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
+  if (is_local) {
+    const auto& device =
+        JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
+    CHECK_EQ_OR_RETURN(JUST(tensor->device()), device);
+  } else {
+    const auto& parallel_distribution = std::make_shared<cfg::ParallelDistribution>();
+    *parallel_distribution->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
+    CHECK_EQ_OR_RETURN(JUST(tensor->parallel_distribution()), SymbolOf(*parallel_distribution));
+    CHECK_EQ_OR_RETURN(JUST(tensor->parallel_desc()),
+                       SymbolOf(*parallel_attr->parallel_desc_symbol()));
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace one

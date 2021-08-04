@@ -189,5 +189,11 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeAddOpExpr& op_
   OF_UNIMPLEMENTED();
 }
 
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const SelectFirstOpExpr& op_expr,
+                                                  const TensorTuple& inputs, TensorTuple* outputs,
+                                                  const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
+}
+
 }  // namespace one
 }  // namespace oneflow
