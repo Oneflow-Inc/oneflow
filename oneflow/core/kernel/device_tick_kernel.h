@@ -30,9 +30,6 @@ class DeviceTickKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
-  const PbMessage& GetCustomizedOpConf() const override {
-    return this->op_conf().device_tick_conf();
-  }
 };
 
 }  // namespace oneflow
