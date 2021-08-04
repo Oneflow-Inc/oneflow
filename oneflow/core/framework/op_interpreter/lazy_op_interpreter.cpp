@@ -331,10 +331,13 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     }
   }
 
-  // temp debug log
-  std::cout << "cclog: Lazy nn.Graph add UserOp: " << op_conf->DebugString() << std::endl;
-
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
+
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+          << op_conf->DebugString() << std::endl;
+  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " infer and and op attr : \n"
+          << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
   const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
