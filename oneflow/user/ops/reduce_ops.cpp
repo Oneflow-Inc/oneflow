@@ -72,6 +72,9 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
           .Build();
     }
   }
+  if (num_axes == 0) {
+    ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  }
   return Maybe<void>::Ok();
 }
 
