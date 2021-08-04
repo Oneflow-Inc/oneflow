@@ -34,6 +34,7 @@ def _test_local_empty(test_case, shape, dtype, device, requires_grad):
 
 
 def _test_consistent_empty(test_case, shape, dtype, placement, sbp, requires_grad):
+    placement = flow.placement(placement, {0: [0]})
     x = flow.empty(
         shape, dtype=dtype, placement=placement, sbp=sbp, requires_grad=requires_grad
     )
@@ -60,10 +61,7 @@ class TestEmptyOp(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["dtype"] = [flow.float32, flow.int32]
-        arg_dict["placement"] = [
-            flow.placement("cuda", {0: [0]}),
-            flow.placement("cpu", {0: [0]}),
-        ]
+        arg_dict["placement"] = ["cpu", "cuda"]
         arg_dict["sbp"] = [flow.sbp.broadcast]
         arg_dict["requires_grad"] = [True, False]
         for arg in GenArgDict(arg_dict):
