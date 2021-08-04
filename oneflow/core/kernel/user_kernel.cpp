@@ -57,6 +57,7 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_d
 
 }  // namespace
 
+#ifdef WITH_USER_KERNEL_CUDA_GRAPH
 class UserKernel::CudaGraphContext {
  public:
   CudaGraphContext(cudaStream_t stream) : stream_(stream), graph_exec_(nullptr) {}
@@ -90,6 +91,9 @@ class UserKernel::CudaGraphContext {
   cudaStream_t stream_;
   cudaGraphExec_t graph_exec_;
 };
+#else
+class UserKernel::CudaGraphContext {};
+#endif  // WITH_USER_KERNEL_CUDA_GRAPH
 
 class UserKernelBaseContext {
  public:

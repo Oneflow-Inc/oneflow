@@ -55,7 +55,7 @@ class UserKernel final : public Kernel {
   std::unique_ptr<UserKernelComputeContext> ctx_;
   std::unique_ptr<UserKernelInferContext> infer_ctx_;
   std::unique_ptr<user_op::OpKernelInferCache> infer_cache_;
-  struct CudaGraphContext;
+  class CudaGraphContext;
   std::unique_ptr<CudaGraphContext> cuda_graph_ctx_;
 };
 
