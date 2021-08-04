@@ -20,7 +20,10 @@ limitations under the License.
 #include "oneflow/core/common/error.cfg.h"
 
 namespace oneflow {
-std::string& ErrorStrGet();
+namespace cfg {
+class ErrorProto;
+}
+std::string& GetErrorStr();
 void ErrorStrFormat(const std::shared_ptr<cfg::ErrorProto>& error);
 }  // namespace oneflow
 

@@ -14,12 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <stack>
 #include "oneflow/core/common/error_util.h"
 
 namespace oneflow {
 
-std::string& ErrorStrGet() {
+std::string& GetErrorStr() {
   thread_local static std::string error_str = "";
   return error_str;
 }
@@ -64,9 +63,10 @@ void ErrorMsgShorten(std::string& str) {
 }
 
 std::string LocationFormat(std::string location) {
-  // " line "
-  std::size_t index = location.find("line") - 1;
-  return "\n  File \"" + location.substr(0, index) + "\"," + location.substr(index, 4) + ",";
+  int index = location.find(":");
+  location.erase(index, 1);
+  location.insert(index, "\", line ");
+  return "\n  File \"" + location + ",";
 }
 
 std::string FunctionFormat(std::string function) { return " in " + function; }
@@ -83,7 +83,7 @@ std::string ErrorTypeFormat(std::string error_type) {
   return error_type;
 }
 
-std::string ErrorSummaryAndMsg(const std::shared_ptr<cfg::ErrorProto>& error) {
+std::string ErrorSummaryAndMsgFormat(const std::shared_ptr<cfg::ErrorProto>& error) {
   std::string error_summary_and_msg = "";
   if (error->has_error_summary()) { error_summary_and_msg += error->error_summary(); }
   if (error->has_msg()) {
@@ -105,11 +105,9 @@ void ErrorStrFormat(const std::shared_ptr<cfg::ErrorProto>& error) {
                                            stack_frame == error->mutable_stack_frame()->rend() - 1);
     error_global += (error_file + error_function + error_msg);
   }
-  std::string error_type_name = ErrorTypeFormat(*error->mutable_error_type_name());
-  std::string error_summary_and_msg = ErrorSummaryAndMsg(error);
-  if (error_summary_and_msg.size() != 0) { error_type_name += (": " + error_summary_and_msg); }
+  std::string error_summary_and_msg = ErrorSummaryAndMsgFormat(error);
 
-  ErrorStrGet() += (error_global + "\n" + error_type_name);
+  GetErrorStr() += (error_global + "\n" + error_summary_and_msg);
 }
 
 }  // namespace oneflow

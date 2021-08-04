@@ -132,8 +132,7 @@ message TimeoutError {}
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
   optional string msg = 2 [default = ""];
-  optional string error_type_name = 3 [default = ""];
-  repeated ErrorStackFrame stack_frame = 4;
+  repeated ErrorStackFrame stack_frame = 3;
   oneof error_type {
     ConfigAssertFailedError config_assert_failed_error = 12;
     ConfigResourceUnavailableError config_resource_unavailable_error = 13;
