@@ -26,10 +26,12 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
 NNGraph::~NNGraph() {
+  VLOG(2) << "Try to delete c nn graph name " << name_ << "." << std::endl;
   CloseRuntimeBuffers();
   runtime_.reset();
 }
