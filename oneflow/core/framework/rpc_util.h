@@ -119,6 +119,10 @@ struct RpcUtil final {
 
   static Maybe<void> CollectFromAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& token,
                                               AsyncRpcCtx* ctx);
+  static Maybe<void> SendDataToChildrenInHeap(
+      const std::vector<int64_t>& rank_heap, const RpcToken& token, AsyncRpcCtx* ctx);
+  static Maybe<void> ReceiveDataFromParentInHeap(
+      const std::vector<int64_t>& rank_heap, const RpcToken& token, AsyncRpcCtx* ctx);
 };
 
 }  // namespace oneflow

@@ -43,12 +43,12 @@ namespace {
 
 template<Maybe<void> (*SendOrRecv)(const RpcToken&, int64_t, void*, std::size_t,
                                    const std::function<void()>&),
-         Maybe<void> (AsyncRpcCtx::*Prepare)(int64_t, void**, std::size_t*, std::function<void()>*)>
-Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& token,
-                                  AsyncRpcCtx* ctx) {
-  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
+         Maybe<void> (AsyncRpcCtx::*Prepare)(int64_t, void**, std::size_t*, std::function<void()>*),
+         typename ForEachRankT>
+Maybe<void> AccessToOtherRanks(const ForEachRankT& ForEachRank, const RpcToken& token,
+                               AsyncRpcCtx* ctx) {
   const auto& flying_cnt = ctx->flying_cnt();
-  JUST(rank_group->ForEachRank([&](int64_t rank) -> Maybe<void> {
+  JUST(ForEachRank([&](int64_t rank) -> Maybe<void> {
     if (rank == GlobalProcessCtx::Rank()) { return Maybe<void>::Ok(); }
     ++*flying_cnt;
     void* buffer = nullptr;
@@ -64,27 +64,29 @@ Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& 
   return Maybe<void>::Ok();
 }
 
+template<Maybe<void> (*SendOrRecv)(const RpcToken&, int64_t, void*, std::size_t,
+                                   const std::function<void()>&),
+         Maybe<void> (AsyncRpcCtx::*Prepare)(int64_t, void**, std::size_t*, std::function<void()>*)>
+Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& token,
+                                  AsyncRpcCtx* ctx) {
+  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    return rank_group->ForEachRank(DoEach);
+  };
+  return AccessToOtherRanks(ForEachRank, token, ctx);
+}
+
 template<Maybe<int64_t> (RankGroup::*GetPrevOrNext)() const,
          Maybe<void> (*SendOrRecv)(const RpcToken&, int64_t, void*, std::size_t,
                                    const std::function<void()>&),
          Maybe<void> (AsyncRpcCtx::*Prepare)(int64_t, void**, std::size_t*, std::function<void()>*)>
 Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const RpcToken& token,
                                AsyncRpcCtx* ctx) {
-  if (rank_group->size() == 1) { return Maybe<void>::Ok(); }
-  const auto* rank_ranges_ptr = &*rank_group;
-  int64_t rank = JUST((rank_ranges_ptr->*GetPrevOrNext)());
-  CHECK_NE_OR_RETURN(rank, GlobalProcessCtx::Rank());
-  const auto& flying_cnt = ctx->flying_cnt();
-  ++*flying_cnt;
-  void* buffer = nullptr;
-  std::size_t size = 0;
-  std::function<void()> Callback;
-  JUST((ctx->*Prepare)(rank, &buffer, &size, &Callback));
-  JUST(SendOrRecv(token, rank, buffer, size, [flying_cnt, Callback]() {
-    Callback();
-    --*flying_cnt;
-  }));
-  return Maybe<void>::Ok();
+  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    return DoEach(JUST((rank_ranges_ptr->*GetPrevOrNext)()));
+  };
+  return AccessToOtherRanks(ForEachRank, token, ctx);
 }
 
 Maybe<void> Send(const RpcToken& token, int64_t rank, void* buffer, std::size_t size,
@@ -135,6 +137,47 @@ Maybe<void> Recv(const RpcToken& token, int64_t rank, void* buffer, std::size_t 
   JUST(AccessToNearbyRank<&RankGroup::GetPrevRankInRing, &Recv,
                           &AsyncRpcCtx::PrepareRecvBufferAndCallback>(rank_group, token, ctx));
   return Maybe<void>::Ok();
+}
+
+namespace {
+
+Maybe<int64_t> GetCurrentRankIndex(const std::vector<int64_t>& rank_heap) {
+  Optional<int64_t> current_rank_index{};
+  for (int i = 0; i < rank_heap.size(); ++i) {
+    if (rank_heap.at(i) == GlobalProcessCtx::Rank()) {
+      current_rank_index = i;
+      break;
+    }
+  }
+  CHECK_OR_RETURN(current_rank_index.has_value());
+  return current_rank_index.value();
+}
+
+}
+
+/*static*/ Maybe<void> RpcUtil::SendDataToChildrenInHeap(
+    const std::vector<int64_t>& rank_heap, const RpcToken& token, AsyncRpcCtx* ctx) {
+  int64_t current_rank_index = JUST(GetCurrentRankIndex(rank_heap));
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    int64_t left_index = current_rank_index * 2 + 1;
+    if (left_index < rank_heap.size()) { JUST(DoEach(rank_heap.at(left_index))); }
+    int64_t right_index = current_rank_index * 2 + 2;
+    if (right_index < rank_heap.size()) { JUST(DoEach(rank_heap.at(right_index))); }
+    return Maybe<void>::Ok();
+  };
+  return AccessToOtherRanks<&Send, &AsyncRpcCtx::PrepareSendBufferAndCallback>(
+        ForEachRank, token, ctx);
+}
+
+/*static*/ Maybe<void> RpcUtil::ReceiveDataFromParentInHeap(
+      const std::vector<int64_t>& rank_heap, const RpcToken& token, AsyncRpcCtx* ctx) {
+  int64_t current_rank_index = JUST(GetCurrentRankIndex(rank_heap));
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    if (current_rank_index == 0) { return Maybe<void>::Ok(); }
+    return DoEach(rank_heap.at((current_rank_index - 1) / 2));
+  };
+  return AccessToOtherRanks<&Recv, &AsyncRpcCtx::PrepareRecvBufferAndCallback>(
+      ForEachRank, token, ctx);
 }
 
 }  // namespace oneflow
