@@ -30,9 +30,7 @@ class _ConstantBase(Module):
         dtype: Optional[flow.dtype],
         device: Union[flow.device, str] = None,
         placement: flow.placement = None,
-        sbp: Union[
-            flow._oneflow_internal.sbp.sbp, List[flow._oneflow_internal.sbp.sbp]
-        ] = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
         requires_grad: bool = False,
     ) -> None:
         super().__init__()
@@ -125,7 +123,7 @@ def ones_op(
         placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
-    
+
     For example:
 
     .. code-block:: python
