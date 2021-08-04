@@ -89,10 +89,6 @@ def compare_with_numpy_adam(
 
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
-    
-    print("Oneflow result: ", oneflow_res)
-    print("Numpy result: ", numpy_res)
-
     test_case.assertTrue(
         np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=0.001, atol=0.001)
     )
@@ -101,27 +97,18 @@ def compare_with_numpy_adam(
 @flow.unittest.skip_unless_1n1d()
 class TestAdam(flow.unittest.TestCase):
     def test_adam(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["scale"] = [1.0, 0.8]
-    #     arg_dict["learning_rate"] = [1]
-    #     arg_dict["train_iters"] = [10]
-    #     arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
-    #     arg_dict["weight_decay"] = [0.0, 0.1]
-    #     arg_dict["eps"] = [1e-08, 1e-07]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_numpy_adam(test_case, *arg)
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["scale"] = [1.0, 0.8]
+        arg_dict["learning_rate"] = [1]
+        arg_dict["train_iters"] = [10]
+        arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
+        arg_dict["weight_decay"] = [0.0, 0.1]
+        arg_dict["eps"] = [1e-08, 1e-07]
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_adam(test_case, *arg)
 
-        compare_with_numpy_adam(test_case, 
-                                device="cuda", 
-                                x_shape=(10, ), 
-                                scale=1.0, 
-                                learning_rate=1, 
-                                train_iters=10, 
-                                betas=(0.99, 0.9), 
-                                weight_decay=0.0, 
-                                eps=1e-8)
 
 if __name__ == "__main__":
     unittest.main()
