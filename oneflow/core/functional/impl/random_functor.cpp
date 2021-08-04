@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/user/kernels/bernoulli_kernel.h"
+#include "oneflow/user/kernels/randint_kernel.h"
 
 namespace oneflow {
 namespace one {
@@ -62,9 +63,43 @@ class BernoulliFunctor {
   std::shared_ptr<OpExpr> bernoulli_op_;
 };
 
+class RandintFunctor {
+ public:
+  RandintFunctor() { randint_op_ = CHECK_JUST(one::OpBuilder("randint").Output("out").Build()); }
+  
+  Maybe<Tensor> operator()(const int64_t low,const int64_t high,const Shape& shape,const Optional<one::Generator>& generator) const{
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<int64_t>("low", low));
+    JUST(attrs.SetAttr<int64_t>("high", high));
+
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& randint_kernel_state = std::make_shared<RandintKernelState>(gen);
+    return OpInterpUtil::Dispatch<Tensor>(*randint_op_, {},
+                                          OpExprInterpContext{attrs, randint_kernel_state});
+  }
+   
+
+ private:
+  std::shared_ptr<OpExpr> randint_op_;
+};
+
+
+
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::BernoulliFunctor>("Bernoulli"); };
+ONEFLOW_FUNCTION_LIBRARY(m) {
+   m.add_functor<impl::BernoulliFunctor>("Bernoulli"); 
+   m.add_functor<impl::RandintFunctor>("Randint"); 
+  };
 
 }  // namespace functional
 }  // namespace one
