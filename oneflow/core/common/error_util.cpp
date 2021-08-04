@@ -105,7 +105,7 @@ void ErrorStrFormat(const std::shared_ptr<cfg::ErrorProto>& error) {
                                            stack_frame == error->mutable_stack_frame()->rend() - 1);
     error_global += (error_file + error_function + error_msg);
   }
-  ErrorStrGet() += (error_global + "\n" + ErrorTypeFormat(*error->mutable_msg()));
+  ErrorStrGet() += (error_global + "\n" + ErrorTypeFormat(*error->mutable_error_type_name()));
 }
 
 }  // namespace oneflow
