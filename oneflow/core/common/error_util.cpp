@@ -67,7 +67,7 @@ void ShortenErrorMsg(std::string& str) {
 
 std::string FormatFile(std::string file) {
   std::stringstream ss;
-  ss << "\n File \"" << file << "\", ";
+  ss << "\n  File \"" << file << "\", ";
   return ss.str();
 }
 
