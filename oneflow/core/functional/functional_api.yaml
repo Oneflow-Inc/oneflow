@@ -801,19 +801,19 @@
 
 - name: "broadcast_min"
   signature: "Tensor BroadcastMin(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_max"
   signature: "Tensor BroadcastMax(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "elementwise_min"
   signature: "Tensor ElementwiseMin(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "elementwise_max"
   signature: "Tensor ElementwiseMax(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "elementwise_min_grad"
   signature: "TensorTuple ElementwiseMinGrad(Tensor dz, Tensor x, Tensor y)"
