@@ -240,7 +240,7 @@ def _init_eager_local_tensor_by_initializer_conf(
     eager_local_tensor, initializer_conf, random_seed=None
 ):
     if random_seed is None:
-         random_seed = flow.default_generator().seed()
+        random_seed = flow.default_generator().seed()
     shape = tuple(eager_local_tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
     # initializer is None if and only if the initializer_conf is empty_initializer
