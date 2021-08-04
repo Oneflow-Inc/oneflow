@@ -47,6 +47,24 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,
   return JUST(Interpret(op, input_list, attrs));
 }
 
+Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<ParallelDesc>& placement,
+                                  const AttrMap& attrs) {
+  CHECK_EQ_OR_RETURN(op.input_size(), 0)
+      << " the op :  " << op.op_type_name()
+      << " is NOT source op with input_size = " << op.input_size();
+  return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(
+      op, {}, one::OpExprInterpContext(attrs, placement)));
+}
+
+Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<Device>& device,
+                                  const AttrMap& attrs) {
+  CHECK_EQ_OR_RETURN(op.input_size(), 0)
+      << " the op :  " << op.op_type_name()
+      << " is NOT source op with input_size = " << op.input_size();
+  return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(
+      op, {}, one::OpExprInterpContext(attrs, device)));
+}
+
 template<typename OpT, typename ConfT,
          typename std::enable_if<std::is_base_of<one::BuiltinOpExpr, OpT>::value>::type* = nullptr>
 py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>> PybindExportOpExpr(
@@ -77,9 +95,19 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
               const MutableCfgAttrMap& attrs) {
              return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
            })
-      .def("apply", [](const one::OpExpr& op_expr, const one::TensorTuple& inputs,
+      .def("apply",
+           [](const one::OpExpr& op_expr, const one::TensorTuple& inputs,
+              const MutableCfgAttrMap& attrs) {
+             return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
+           })
+      .def("apply",
+           [](const one::OpExpr& op_expr, const Symbol<ParallelDesc>& placement,
+              const MutableCfgAttrMap& attrs) {
+             return Interpret(op_expr, placement, attrs).GetPtrOrThrow();
+           })
+      .def("apply", [](const one::OpExpr& op_expr, const Symbol<Device>& device,
                        const MutableCfgAttrMap& attrs) {
-        return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
+        return Interpret(op_expr, device, attrs).GetPtrOrThrow();
       });
 
   py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,
