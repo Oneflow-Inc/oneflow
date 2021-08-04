@@ -165,6 +165,7 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
     const auto& in = JUST(PyUnpackTensor(input));
 
     Optional<Scalar> dim_scalar;
+    CHECK_OR_RETURN(PyScalarCheck(dim)) << "dim type should be Scalar";
     dim_scalar = *JUST(PyUnpackScalar(dim));
     Scalar& dim_value = *JUST(dim_scalar.value());
     int32_t d = JUST(dim_value.As<int32_t>());
@@ -174,8 +175,6 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
 
     bool is_src_scalar = PyScalarCheck(src);
     bool is_src_tensor = PyTensorCheck(src);
-
-    CHECK_OR_RETURN(is_src_scalar || is_src_tensor) << "src type should be Tensor or Scalar";
 
     if (is_src_tensor) {
       const auto& src_tensor = JUST(PyUnpackTensor(src));
