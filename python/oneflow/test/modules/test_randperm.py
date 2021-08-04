@@ -28,6 +28,8 @@ def _test_randperm_with_generator(test_case, N, device):
     generator.manual_seed(0)
     y_2 = flow.randperm(N, device=device, generator=generator)
     test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
+    test_case.assertTrue(y_1.device == device and y_2.device==device)
+    test_case.assertTrue(y_1.dtype == dtype and y_2.dtype ==dtype)
 
 
 def _test_randperm_backward(test_case, N, device):
