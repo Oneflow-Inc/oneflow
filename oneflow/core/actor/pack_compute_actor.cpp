@@ -34,7 +34,6 @@ void PackCompActor::VirtualCompActorInit(const TaskProto& proto) {
     total_pack_num_ = in_time_shape.At(in_time_shape.NumAxes() - 1);
   }
   act_num_cnt_ = 0;
-  cur_piece_id_ = 0;
   OF_SET_MSG_HANDLER(&PackCompActor::HandlerNormal);
 }
 
@@ -53,13 +52,7 @@ void PackCompActor::Act() {
 }
 
 void PackCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (act_num_cnt_ == total_pack_num_) {
-    HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
-      regst->set_piece_id(cur_piece_id_);
-      return true;
-    });
-    cur_piece_id_ += 1;
-  }
+  if (act_num_cnt_ == total_pack_num_) { HandleProducedNaiveDataRegstToConsumer(); }
 }
 
 void PackCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {

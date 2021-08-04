@@ -52,7 +52,6 @@ class ActorMsg final {
   ActorCmd actor_cmd() const;
   Regst* regst() const;
   int64_t regst_desc_id() const;
-  int64_t piece_id() const;
   int64_t act_id() const;
   void* comm_net_token() const;
   void set_comm_net_token(void* token);

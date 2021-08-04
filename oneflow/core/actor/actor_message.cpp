@@ -107,11 +107,6 @@ int64_t ActorMsg::regst_desc_id() const {
   }
 }
 
-int64_t ActorMsg::piece_id() const {
-  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-  return regst_wrapper_.regst_status.piece_id;
-}
-
 int64_t ActorMsg::comm_net_sequence_number() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.comm_net_sequence_number;

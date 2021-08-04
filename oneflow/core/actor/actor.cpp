@@ -234,35 +234,6 @@ void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
   produced_regst2reading_cnt_.at(regst) += val;
 }
 
-int64_t Actor::GetPieceId4NaiveCurReadableDataRegst() const {
-  int64_t init_val = -2;
-  int64_t pid = init_val;
-  auto FirstFoundOnly = [&pid, init_val](int64_t) { return pid == init_val; };
-  naive_consumed_rs_.ForChosenFrontRegst(
-      FirstFoundOnly, [&pid](int64_t regst_desc_id, Regst* regst) {
-        if (Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(regst_desc_id)) { return; }
-        if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
-          pid = regst->piece_id();
-        }
-      });
-  CHECK_GE(pid, 0);
-  return pid;
-}
-
-int64_t Actor::GetPieceId4NaiveOrInplaceCurReadableDataRegst() const {
-  int64_t init_val = -2;
-  int64_t pid = init_val;
-  auto FirstFoundOnly = [&pid, init_val](int64_t) { return pid == init_val; };
-  auto Select = [&pid](int64_t regst_desc_id, Regst* regst) {
-    if (Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(regst_desc_id)) { return; }
-    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { pid = regst->piece_id(); }
-  };
-  naive_consumed_rs_.ForChosenFrontRegst(FirstFoundOnly, Select);
-  if (pid == init_val) { inplace_consumed_rs_.ForChosenFrontRegst(FirstFoundOnly, Select); }
-  CHECK_GE(pid, 0);
-  return pid;
-}
-
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   DeviceCtx* dev_ctx = NewObj<int, DeviceCtx, const ThreadCtx&>(GetDeviceType(), thread_ctx);
   device_ctx_.reset(dev_ctx);

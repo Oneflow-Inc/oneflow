@@ -95,10 +95,7 @@ void CopyCommNetActor::Act() {
 }
 
 void CopyCommNetActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
-    regst->set_piece_id(next_sequence_number_);
-    return true;
-  });
+  HandleProducedNaiveDataRegstToConsumer();
 }
 
 void CopyCommNetActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {

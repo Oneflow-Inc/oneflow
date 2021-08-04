@@ -27,10 +27,7 @@ void CopyHdActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
 
 void CopyHdActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   Regst* in_regst = GetNaiveCurReadable("copy_in");
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
-    out_regst->set_piece_id(in_regst->piece_id());
-    return true;
-  });
+  HandleProducedNaiveDataRegstToConsumer();
 }
 
 REGISTER_ACTOR(TaskType::kCopyHd, CopyHdActor);

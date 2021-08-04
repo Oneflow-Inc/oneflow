@@ -82,8 +82,6 @@ class Actor {
   int64_t ReadingCnt4ProducedRegst(Regst* regst) const;
   void IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val);
   void IncreaseTotalReadingCnt(int64_t val) { total_reading_cnt_ += val; }
-  int64_t GetPieceId4NaiveCurReadableDataRegst() const;
-  int64_t GetPieceId4NaiveOrInplaceCurReadableDataRegst() const;
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
