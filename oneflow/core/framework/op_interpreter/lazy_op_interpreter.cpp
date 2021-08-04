@@ -96,7 +96,8 @@ Maybe<const ParallelDesc> GetParallelDescOfTensor(const std::shared_ptr<Tensor>&
   }
 }
 
-Maybe<Scope> NewScopeWithParallelConfAndCurScope(std::shared_ptr<cfg::ParallelConf> parallel_conf) {
+Maybe<Scope> NewScopeWithParallelConfAndCurScope(
+    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   std::shared_ptr<Scope> new_scope;
   const auto& old_scope = JUST(GetCurrentScope());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
