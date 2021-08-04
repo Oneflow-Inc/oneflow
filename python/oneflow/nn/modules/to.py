@@ -41,16 +41,16 @@ def ConsistentTo(input, device):
         "cuda",
         "cpu",
     ), 'consistent tensor only support to("cuda") or to("cpu")'
-    if (device == "cuda" and input.is_cuda) or (device == "cpu" and not input.is_cuda):
+    if device == input.placement.device_type:
         return input
     out_placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
         input.placement, device
     )
     sbp = input.sbp
-    input_local_tesnor = input.to_local()
+    input_local_tensor = input.to_local()
     device = flow.device(device)
-    output_local_tesnor = To(False)(input_local_tesnor, device, None)
-    return output_local_tesnor.to_consistent(out_placement, sbp)
+    output_local_tensor = To(False)(input_local_tensor, device, None)
+    return output_local_tensor.to_consistent(out_placement, sbp)
 
 
 @register_tensor_op("to")
