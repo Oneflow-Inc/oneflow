@@ -1490,8 +1490,10 @@ def minimum(x, y):
     For example:
 
     .. code-block:: python
+
         >>> import numpy as np
         >>> import oneflow as flow
+
         >>> x = flow.tensor((1, 2, -1), dtype=flow.float)
         >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
         >>> flow.minimum(x, y)
@@ -1512,8 +1514,10 @@ def maximum(x, y):
     For example:
 
     .. code-block:: python
+
         >>> import numpy as np
         >>> import oneflow as flow
+
         >>> x = flow.tensor((1, 2, -1), dtype=flow.float)
         >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
         >>> flow.maximum(x, y)
