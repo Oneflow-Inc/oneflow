@@ -42,8 +42,13 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
 
+  static const bool is_scalar = false;
+  static const bool is_class = true;
+  static const bool is_ref = false;
+  using data_value_type = std::shared_ptr<T>;
+
   bool IsOk() const { return data_or_error_.template Has<T>(); }
-  std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
+  data_value_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return data_or_error_.template Get<T>();
   }
   std::shared_ptr<cfg::ErrorProto> error() const {
@@ -108,6 +113,10 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
 
+  static const bool is_scalar = false;
+  static const bool is_class = false;
+  static const bool is_ref = false;
+
   static Maybe Ok() { return Maybe(); }
 
   bool IsOk() const { return error_or_scalar_.IsScalar(); }
@@ -165,10 +174,15 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
 
+  static const bool is_scalar = true;
+  static const bool is_class = false;
+  static const bool is_ref = false;
+  using data_value_type = T;
+
   void operator=(const Maybe& rhs) { error_or_scalar_ = rhs.error_or_scalar_; }
 
   bool IsOk() const { return error_or_scalar_.IsScalar(); }
-  T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
+  data_value_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return error_or_scalar_.scalar_value();
   }
   std::shared_ptr<cfg::ErrorProto> error() const { return error_or_scalar_.shared_ptr(); }
@@ -217,6 +231,10 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
     final {
   using ValueT = typename std::remove_reference<T>::type;
   using PtrT = ValueT*;
+
+  static const bool is_scalar = false;
+  static const bool is_class = false;
+  static const bool is_ref = true;
 
  public:
   Maybe(T data) : maybe_ptr_(&data) {}

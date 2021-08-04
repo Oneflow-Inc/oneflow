@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/function_traits.h"
 #include "oneflow/core/common/hash_eq_trait_ptr.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
@@ -75,6 +76,22 @@ std::function<Ret(const Arg&)> WithResultCached(F f) {
     if (iter != cache->end()) { return iter->second; }
     return cache->emplace(arg, f(arg)).first->second;
   };
+}
+
+template<
+    typename F, typename Ret = typename function_traits<F>::return_type,
+    typename RawArg = typename std::tuple_element<0, typename function_traits<F>::args_type>::type,
+    typename Arg = typename std::remove_const<typename std::remove_reference<RawArg>::type>::type>
+Ret ThreadLocal(RawArg arg) {
+  static_assert(is_maybe<Ret>::value, "the function must return maybe value");
+  static_assert(Ret::is_scalar || Ret::is_class, "the function must return maybe value");
+  static thread_local std::unordered_map<Arg, typename Ret::data_value_type> map;
+  auto iter = map.find(arg);
+  if (iter == map.end()) {
+    const auto& ret = JUST(F(arg));
+    iter = map.emplace(arg, ret).first;
+  }
+  return iter->second;
 }
 
 }  // namespace oneflow
