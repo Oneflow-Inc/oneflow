@@ -72,4 +72,8 @@ std::string GlobalProcessCtx::LogDirEntry() {
   return addr.host() + "-" + std::to_string(addr.port()) + "-" + std::to_string(process_ctx.rank());
 }
 
+/* static */ int64_t GlobalProcessCtx::LocalRank(int64_t rank) {
+  return rank % NumOfProcessPerNode();
+}
+
 }  // namespace oneflow
