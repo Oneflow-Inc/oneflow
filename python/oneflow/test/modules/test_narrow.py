@@ -21,10 +21,6 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestNarrow(flow.unittest.TestCase):
     @autotest()
     def test_flow_narrow_start_with_random_data(test_case):

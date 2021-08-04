@@ -43,5 +43,6 @@ class TestSplit(flow.unittest.TestCase):
         res = torch.split(x, split_size_or_sections=[1, 2, 3, 1], dim=1)
         return torch.cat(res, dim=1)
 
+
 if __name__ == "__main__":
     unittest.main()
