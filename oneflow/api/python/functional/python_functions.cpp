@@ -148,38 +148,38 @@ py::object PySub(py::args py_args, py::kwargs py_kwargs) {
 }
 
 py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
-  // "Tensor DimScatter(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
-  // "Tensor DimScatter(Tensor input, Tensor index, *, Float src, Int32 dim)"
+  // Scatter(Tensor input, Int32 dim, Tensor index, Tensor src)
+  // Scatter(Tensor input, Int32 dim, Tensor index, float src)
+
   PyObject* args = py_args.ptr();
-  PyObject* kwargs = py_kwargs.ptr();
   size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 4) << "4 positional inputs are required.";
 
   const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
-    Optional<Scalar> dim;
-    if (auto* dim_obj = PyDict_GetItemString(kwargs, "dim")) {
-      dim = *JUST(PyUnpackScalar(dim_obj));
-    }
     PyObject* input = PyTuple_GetItem(args, 0);
-    PyObject* index = PyTuple_GetItem(args, 1);
+    PyObject* dim = PyTuple_GetItem(args, 1);
+    PyObject* index = PyTuple_GetItem(args, 2);
+    PyObject* src = PyTuple_GetItem(args, 3);
+
     const auto& in = JUST(PyUnpackTensor(input));
+
+    Optional<Scalar> dim_scalar;
+    dim_scalar = *JUST(PyUnpackScalar(dim));
+    Scalar& dim_value = *JUST(dim_scalar.value());
+    int32_t d = JUST(dim_value.As<int32_t>());
+
     const auto& idx = JUST(PyUnpackTensor(index));
 
-    if (nargs == 3) {
-      PyObject* src = PyTuple_GetItem(args, 2);
-      const auto& src_tensor = JUST(PyUnpackTensor(src));
+    bool is_src_tensor = PyTensorCheck(src);
 
-      return functional::DimScatter(in, idx, src_tensor, dim);
-    } else if (nargs == 2) {
-      Optional<Scalar> src;
-      if (auto* src_obj = PyDict_GetItemString(kwargs, "src")) {
-        src = *JUST(PyUnpackScalar(src_obj));
-      }
-      Scalar& src_scalar = *JUST(src.value());
-      return functional::DimScatterUpdateScalar(in, idx, JUST(src_scalar.As<float>()), dim);
+    if (is_src_tensor) {
+      const auto& src_tensor = JUST(PyUnpackTensor(src));
+      return functional::DimScatter(in, idx, src_tensor, d);
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "none of:\n"
-                                     "(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
-                                     "(Tensor input, Tensor index, *, Float src, Int32 dim)";
+      Optional<Scalar> src_scalar;
+      src_scalar = *JUST(PyUnpackScalar(src));
+      Scalar& src_value = *JUST(src_scalar.value());
+      return functional::DimScatterUpdateScalar(in, idx, JUST(src_value.As<float>()), d);
     }
   }();
   return py::cast(result.GetPtrOrThrow());
