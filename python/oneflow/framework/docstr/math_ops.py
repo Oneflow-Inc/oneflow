@@ -24,11 +24,3 @@ add_docstr(
     oneflow.F.cos,
     "\n    cos(x: Tensor) -> Tensor\n\n    Returns a new tensor with the cosine  of the elements of :attr:`input`.\n    \n    .. math::\n        \\text{y}_{i} = \\cos(\\text{x}_{i})\n\n    Args:\n        x (Tensor): the input tensor.\n\n    For example:\n\n    .. code-block:: python\n\n        >>> import oneflow as flow\n        >>> import numpy as np\n        >>> x = np.array([1.4309,  1.2706, -0.8562,  0.9796])\n        >>> x = flow.Tensor(x, dtype=flow.float32)\n        >>> y = flow.F.cos(x)\n        >>> y\n        tensor([0.1394, 0.2957, 0.6553, 0.5574], dtype=oneflow.float32)\n\n",
 )
-add_docstr(
-    oneflow.F.maximum,
-    "\n    maximum(x: Tensor, y: Tensor) -> Tensor\n\n    Returns a new tensor with the element-wise maximum of x and y.\n    \n    .. math::\n        \\text{z}_{i} = \\maximum(\\text{x}_{i}, \\text{y}_{i})\n\n    Args:\n        x (Tensor): the input tensor.\n        y (Tensor): the input tensor\n\n    For example:\n\n    .. code-block:: python\n\n        >>> import oneflow as flow\n        >>> import numpy as np\n        >>> x = flow.tensor((1, 2, -1), dtype=flow.float)\n        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)\n        >>> flow.maximum(x, y)\n        tensor([3., 2., 4.], dtype=oneflow.float32)\n        >>> x = flow.tensor((1,), dtype=flow.float)\n        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)\n        >>> flow.maximum(x, y)\n        tensor([3., 1., 4.], dtype=oneflow.float32)\n\n",
-)
-add_docstr(
-    oneflow.F.minimum,
-    "\n    minimum(x: Tensor, y: Tensor) -> Tensor\n\n    Returns a new tensor with the element-wise minimum of x and y.\n    \n    .. math::\n        \\text{z}_{i} = \\minimum(\\text{x}_{i}, \\text{y}_{i})\n\n    Args:\n        x (Tensor): the input tensor.\n        y (Tensor): the input tensor\n\n    For example:\n\n    .. code-block:: python\n\n        >>> import oneflow as flow\n        >>> import numpy as np\n        >>> x = flow.tensor((1, 2, -1), dtype=flow.float)\n        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)\n        >>> flow.minimum(x, y)\n        tensor([ 1.,  0., -1.], dtype=oneflow.float32))\n        >>> x = flow.tensor((1,), dtype=flow.float)\n        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)\n        >>> flow.minimum(x, y)\n        tensor([1., 0., 1.], dtype=oneflow.float32)\n\n",
-)

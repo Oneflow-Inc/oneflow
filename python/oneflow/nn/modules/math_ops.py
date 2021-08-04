@@ -19,46 +19,11 @@ from typing import Optional, Sequence, Union
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _check_axis, _check_inplace_valid
+from oneflow.nn.modules.utils import _check_axis
 from oneflow.ops.transpose_util import (
     get_inversed_perm,
     get_perm_when_transpose_axis_to_last_dim,
 )
-
-
-class ScalarMul(Module):
-    def __init__(self, alpha) -> None:
-        super().__init__()
-        if not isinstance(alpha, (int, float)):
-            raise ValueError("alpha type can only be int or float")
-        self.alpha = alpha
-
-    def forward(self, x):
-        return flow.F.mul_scalar(x, self.alpha)
-
-
-class ScalarMulByTensor(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.mul_scalar_by_tensor(x, y)
-
-
-class ElementwiseMul(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.mul(x, y)
-
-
-class BroadcastMul(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_mul(x, y)
 
 
 @register_tensor_op("mul")
@@ -99,18 +64,7 @@ def _mul(input, other):
         (2, 3)
 
     """
-    if isinstance(input, (int, float)):
-        return ScalarMul(input)(other)
-    elif isinstance(other, (int, float)):
-        return ScalarMul(other)(input)
-    elif input.shape == other.shape:
-        return ElementwiseMul()(input, other)
-    elif input.shape == (1,):
-        return ScalarMulByTensor()(other, input)
-    elif other.shape == (1,):
-        return ScalarMulByTensor()(input, other)
-    else:
-        return BroadcastMul()(input, other)
+    return flow.F.mul(input, other)
 
 
 class Variance(Module):
@@ -122,7 +76,7 @@ class Variance(Module):
     def forward(self, input):
         axis = _check_axis(self.dim, input.shape)
         if isinstance(axis, list) and len(axis) == 0:
-            return flow.zeros(size=input.shape)
+            return flow.zeros(input.shape)
         else:
             return flow.sub(
                 flow.mean(flow.square(input), axis, self.keepdim),
@@ -201,22 +155,6 @@ def _sub(input, other):
     return flow.F.sub(input, other)
 
 
-class BroadcastDiv(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_div(x, y)
-
-
-class ScalarDivByTensor(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, scalar):
-        return flow.F.div_scalar_by_tensor(x, scalar)
-
-
 @register_tensor_op("div")
 def _div(input, other):
     """Computes the division of input by other for each element, scalar and broadcast promotation are supported.
@@ -258,20 +196,7 @@ def _div(input, other):
         (2, 3)
 
     """
-    if isinstance(input, (int, float)):
-        return ScalarMul(input)(flow.reciprocal(other))
-    elif isinstance(other, (int, float)):
-        if other == 0 or other == 0.0:
-            other = 0.0
-        else:
-            other = 1.0 / float(other)
-        return ScalarMul(other)(input)
-    elif input.shape == other.shape:
-        return BroadcastDiv()(input, other)
-    elif other.shape == (1,):
-        return ScalarDivByTensor()(input, other)
-    else:
-        return BroadcastDiv()(input, other)
+    return flow.F.div(input, other)
 
 
 class Reciprocal(Module):
@@ -493,8 +418,6 @@ class Sin(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            _check_inplace_valid(x)
         return flow.F.sin(x, self.inplace)
 
 
@@ -864,7 +787,7 @@ class Std(Module):
     def forward(self, x):
         self.axis = _check_axis(self.dim, x.shape)
         if isinstance(self.axis, list) and len(self.axis) == 0:
-            return flow.zeros(size=x.shape)
+            return flow.zeros(x.shape)
         else:
             if len(self.axis) == 0:
                 self.reduce_count = x.nelement()
@@ -1562,11 +1485,43 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 
 @register_tensor_op("minimum")
 def minimum(x, y):
+    r"""Computes the element-wise minimum of x and y.
+    For example:
+    .. code-block:: python
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = flow.tensor((1, 2, -1), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.minimum(x, y)
+        tensor([ 1.,  0., -1.], dtype=oneflow.float32)
+        >>> x = flow.tensor((1,), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.minimum(x, y)
+        tensor([1., 0., 1.], dtype=oneflow.float32)
+    """
     return flow.F.minimum(x, y)
 
 
 @register_tensor_op("maximum")
 def maximum(x, y):
+    r"""Computes the element-wise maximum of x and y.
+    For example:
+    .. code-block:: python
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = flow.tensor((1, 2, -1), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.maximum(x, y)
+        tensor([3., 2., 4.], dtype=oneflow.float32)
+        >>> x = flow.tensor((1,), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.maximum(x, y)
+        tensor([3., 1., 4.], dtype=oneflow.float32)
+    """
+    if x.shape == y.shape:
+        return ElementwiseMaximum()(x, y)
+    else:
+        return BroadcastMaximum()(x, y)
     return flow.F.maximum(x, y)
 
 
