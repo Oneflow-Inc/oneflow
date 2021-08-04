@@ -217,7 +217,7 @@ class Block(object):
             p_state = self._get_in_states(name, "_parameters")
             if p_state is not None:
                 return p_state
-            # support get buffer 
+            # support get buffer
             b_state = self._get_in_states(name, "_buffers")
             if b_state is not None:
                 return b_state

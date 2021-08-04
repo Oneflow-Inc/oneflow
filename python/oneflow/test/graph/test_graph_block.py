@@ -98,7 +98,7 @@ class TestGraphBlock(flow.unittest.TestCase):
                 out = out.sum()
                 out.backward()
                 test_case.assertTrue(self.m.linear.weight.is_lazy)
-                return out 
+                return out
 
         linear_t_g = LinearTrainGraph()
 
