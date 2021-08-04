@@ -156,7 +156,9 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
 
   const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
     Optional<Scalar> dim;
-    if (auto* obj = PyDict_GetItemString(kwargs, "dim")) { dim = *JUST(PyUnpackScalar(obj)); }
+    if (auto* dim_obj = PyDict_GetItemString(kwargs, "dim")) {
+      dim = *JUST(PyUnpackScalar(dim_obj));
+    }
     PyObject* input = PyTuple_GetItem(args, 0);
     PyObject* index = PyTuple_GetItem(args, 1);
     const auto& in = JUST(PyUnpackTensor(input));
@@ -168,16 +170,16 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
 
       return functional::DimScatter(in, idx, src_tensor, dim);
     } else if (nargs == 2) {
-      Optional<Scalar> src_value;
-      if (auto* obj = PyDict_GetItemString(kwargs, "src")) {
-        src_value = *JUST(PyUnpackScalar(obj));
+      Optional<Scalar> src;
+      if (auto* src_obj = PyDict_GetItemString(kwargs, "src")) {
+        src = *JUST(PyUnpackScalar(src_obj));
       }
-      return functional::DimScatterUpdateScalar(in, idx, src_value, dim);
+      Scalar& src_scalar = *JUST(src.value());
+      return functional::DimScatterUpdateScalar(in, idx, JUST(src_scalar.As<float>()), dim);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "none of:\n"
                                      "(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
                                      "(Tensor input, Tensor index, *, Float src, Int32 dim)";
-      return functional::OnesLike(in);  // TODO(yaochi): remove OnesLike
     }
   }();
   return py::cast(result.GetPtrOrThrow());
