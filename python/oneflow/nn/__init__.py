@@ -41,6 +41,7 @@ from oneflow.nn.modules.adaptive_pool import (
     AdaptiveAvgPool2d,
     AdaptiveAvgPool3d,
 )
+from oneflow.nn.modules.all_reduce import AllReduce
 from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
 from oneflow.nn.modules.container import (
     ModuleDict,
@@ -109,3 +110,5 @@ from oneflow.nn.parameter import Parameter
 from oneflow.nn import utils
 
 from . import functional
+
+from . import parallel
