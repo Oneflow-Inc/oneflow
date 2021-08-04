@@ -35,55 +35,45 @@ bool IsLetterNumberOrUnderline(char c) {
   return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
 }
 
-void ErrorMsgEraseMaybe(std::string& str) {
+void ErrorMsgErase(std::string& str) {
   if (str.size() == 0) { return; }
   SpaceStrip(str);
-  // maybe strip bracket
+  // strip bracket
   if (str.at(0) != '(') { return; }
-  std::stack<char> left_bracket;
-  left_bracket.push(str.at(0));
-  for (auto c = str.begin() + 1; c < str.end(); c++) {
-    if (*c == '(') { left_bracket.push(*c); }
-    if (*c == ')') {
-      left_bracket.pop();
-      if (left_bracket.empty()) {
-        str.erase(c);
-        str = str.substr(1);
-        break;
-      }
-    }
-  }
+  str = str.substr(1, str.size() - 2);
 }
 
-void ErrorMsgShortenMaybe(std::string& str) {
+void ErrorMsgShorten(std::string& str) {
+  const int num_displayed_char = 150;
   std::unordered_map<int, int> delim_index2length;
-  SpaceStrip(str);
   if (str.size() == 0) { return; }
-  delim_index2length.insert(std::make_pair(0, 0));
-  int word_num = 0;
+  SpaceStrip(str);
+  if (str.size() < num_displayed_char) { return; }
+
+  int first_index = -1;
+  int last_index = -1;
+  int pre_index = 0;
   for (int i = 1; i < str.size(); i++) {
     if (IsLetterNumberOrUnderline(str.at(i)) && !IsLetterNumberOrUnderline(str.at(i - 1))) {
-      word_num++;
-      delim_index2length.insert(std::make_pair(word_num, i));
+      if (first_index == -1 && i >= num_displayed_char / 3) { first_index = pre_index; }
+      if (last_index == -1 && str.size() - i <= num_displayed_char / 3) { last_index = i; }
+      pre_index = i;
     }
   }
-  if (word_num > 10) {
-    str = str.substr(0, delim_index2length.at(3)) + " ... "
-          + str.substr(delim_index2length.at(word_num - 3));
-  }
+  str = str.substr(0, first_index) + " ... " + str.substr(last_index);
 }
 
 std::string LocationFormat(std::string location) {
-  std::size_t index = location.find("line");
-  return "\n  File \"" + location.substr(0, index) + "\", " + location.substr(index, 4) + " "
-         + location.substr(index + 4) + ",";
+  // " line "
+  std::size_t index = location.find("line") - 1;
+  return "\n  File \"" + location.substr(0, index) + "\"," + location.substr(index, 4) + ",";
 }
 
 std::string FunctionFormat(std::string function) { return " in " + function; }
 
 std::string ErrorMsgFormat(std::string error_msg, bool has_error_hint) {
-  ErrorMsgEraseMaybe(error_msg);
-  if (!has_error_hint) { ErrorMsgShortenMaybe(error_msg); }
+  ErrorMsgErase(error_msg);
+  if (!has_error_hint) { ErrorMsgShorten(error_msg); }
   return "\n    " + error_msg;
 }
 
@@ -91,6 +81,16 @@ std::string ErrorTypeFormat(std::string error_type) {
   if (error_type.size() == 0) { return ""; }
   error_type.erase(error_type.find_first_of(" "));
   return error_type;
+}
+
+std::string ErrorSummaryAndMsg(const std::shared_ptr<cfg::ErrorProto>& error) {
+  std::string error_summary_and_msg = "";
+  if (error->has_error_summary()) { error_summary_and_msg += error->error_summary(); }
+  if (error->has_msg()) {
+    error_summary_and_msg +=
+        (error_summary_and_msg.size() != 0 ? ", " + error->msg() : error->msg());
+  }
+  return error_summary_and_msg;
 }
 
 }  // namespace
@@ -105,7 +105,11 @@ void ErrorStrFormat(const std::shared_ptr<cfg::ErrorProto>& error) {
                                            stack_frame == error->mutable_stack_frame()->rend() - 1);
     error_global += (error_file + error_function + error_msg);
   }
-  ErrorStrGet() += (error_global + "\n" + ErrorTypeFormat(*error->mutable_error_type_name()));
+  std::string error_type_name = ErrorTypeFormat(*error->mutable_error_type_name());
+  std::string error_summary_and_msg = ErrorSummaryAndMsg(error);
+  if (error_summary_and_msg.size() != 0) { error_type_name += (": " + error_summary_and_msg); }
+
+  ErrorStrGet() += (error_global + "\n" + error_type_name);
 }
 
 }  // namespace oneflow
