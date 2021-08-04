@@ -673,7 +673,8 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx);
+      opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx,
+      *one::CurrentDevVmDepObjectConsumeMode());
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
