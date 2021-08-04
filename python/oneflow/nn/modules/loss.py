@@ -199,10 +199,10 @@ class CrossEntropyLoss(Module):
             input, target, depth=input.shape[len(input.shape) - 1]
         )
         if self.ignore_index is not None:
-            zeros = flow.zeros(size=out.shape, dtype=out.dtype, device=out.device)
+            zeros = flow.zeros(out.shape, dtype=out.dtype, device=out.device)
             condition = flow.eq(target, self.ignore_index)
             ones = flow.ones(
-                size=condition.shape, dtype=condition.dtype, device=condition.device
+                condition.shape, dtype=condition.dtype, device=condition.device
             )
             condition = ones.sub(condition).reshape(tuple(out.shape))
             out = flow.where(condition, out, zeros)
@@ -442,10 +442,10 @@ class NLLLoss(Module):
         else:
             raise NotImplemented
         if self.ignore_index is not None:
-            zeros = flow.zeros(size=res.shape, dtype=res.dtype, device=res.device)
+            zeros = flow.zeros(res.shape, dtype=res.dtype, device=res.device)
             condition = flow.eq(target, self.ignore_index)
             ones = flow.ones(
-                size=condition.shape, dtype=condition.dtype, device=condition.device
+                condition.shape, dtype=condition.dtype, device=condition.device
             )
             condition = ones.sub(condition).reshape(tuple(res.shape))
             res = flow.where(condition, res, zeros)
@@ -565,7 +565,7 @@ class KLDivLoss(Module):
         else:
             _kl_div_out_loss = target * (flow.log(target) - input)
             _zeros = flow.zeros(
-                size=_kl_div_out_loss.shape,
+                _kl_div_out_loss.shape,
                 dtype=_kl_div_out_loss.dtype,
                 device=_kl_div_out_loss.device,
             )
@@ -889,7 +889,7 @@ class CTCLoss(Module):
             )
             loss = flow.where(
                 cond,
-                flow.zeros(size=loss.shape, dtype=loss.dtype, device=loss.device),
+                flow.zeros(loss.shape, dtype=loss.dtype, device=loss.device),
                 loss,
             )
         if self.reduction == "mean":
