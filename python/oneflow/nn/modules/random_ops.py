@@ -13,10 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import random
-import sys
-
 from typing import Optional, Union
+
 import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _single
@@ -145,7 +143,9 @@ def rand_op(
         sbp (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
           numbers of placement.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
     For example:
+
     .. code-block:: python
         >>> import oneflow as flow
         >>> x = flow.rand(3,3)
@@ -155,6 +155,7 @@ def rand_op(
                 [0.1863, 0.5853, 0.4277]], dtype=oneflow.float32)
         >>> x.is_consistent
         False
+
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
