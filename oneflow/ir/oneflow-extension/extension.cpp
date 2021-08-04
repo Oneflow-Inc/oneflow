@@ -130,8 +130,6 @@ class MlirJitKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    LOG(ERROR) << "MlirJitKernel::Compute";
-    LOG(ERROR) << ctx->Attr<std::string>("mlir_assembly");
     // TODO: extract a function
     mlir::DialectRegistry registry;
     registry.insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect,
@@ -141,7 +139,8 @@ class MlirJitKernel final : public user_op::OpKernel {
     mlir::MLIRContext mlir_ctx(registry);
     mlir::OwningModuleRef module =
         mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
-    CHECK(!!module);
+    CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
+    if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToLLVM(&mlir_ctx, *module)))
