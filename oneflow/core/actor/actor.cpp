@@ -41,6 +41,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
                  const ThreadCtx& thread_ctx) {
   job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
+  global_work_stream_id_ = Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id_);
   act_id_ = -1;
   job_id_ = task_proto.job_id();
   InitDeviceCtx(thread_ctx);
@@ -387,7 +388,7 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
   if (false) {
     auto act_event = std::make_shared<ActEvent>();
     act_event->set_actor_id(actor_id());
-    act_event->set_work_stream_id(GetGlobalWorkStreamId());
+    act_event->set_work_stream_id(global_work_stream_id_);
     act_event->set_act_id(act_id_);
     act_event->set_ready_time(GetCurTime());
     naive_consumed_rs_.ForEachFrontRegst([&](int64_t regst_desc_id, const Regst* readable_regst) {
@@ -700,16 +701,12 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 
 void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
   if (is_kernel_launch_synchronized_
-      && GetGlobalWorkStreamId()
+      && global_work_stream_id_
              == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
     Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
     async_msg_queue_.push_back(msg);
   }
-}
-
-int64_t Actor::GetGlobalWorkStreamId() const {
-  return Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id_);
 }
 
 Regst* Actor::GetNaiveOrInplaceCurReadable(int64_t regst_desc_id) const {

@@ -21,6 +21,11 @@ limitations under the License.
 
 namespace oneflow {
 
+Thread::Thread() {
+  local_msg_queue_enabled_ =
+      ParseBooleanFromEnv("ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE", false);
+}
+
 Thread::~Thread() {
   actor_thread_.join();
   CHECK(id2task_.empty());
@@ -33,8 +38,7 @@ void Thread::AddTask(const TaskProto& task) {
 }
 
 void Thread::EnqueueActorMsg(const ActorMsg& msg) {
-  if (Global<ResourceDesc, ForSession>::Get()->thread_enable_local_message_queue()
-      && std::this_thread::get_id() == actor_thread_.get_id()) {
+  if (local_msg_queue_enabled_ && std::this_thread::get_id() == actor_thread_.get_id()) {
     local_msg_queue_.push(msg);
   } else {
     msg_channel_.Send(msg);
