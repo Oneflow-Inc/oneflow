@@ -23,7 +23,7 @@ namespace oneflow {
 
 Thread::Thread() {
   local_msg_queue_enabled_ =
-      ParseBooleanFromEnv("ONEFLOW_THREAD_LOCAL_MESSAGE_QUEUE_ENABLE", false);
+      ParseBooleanFromEnv("ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE", false);
 }
 
 Thread::~Thread() {
