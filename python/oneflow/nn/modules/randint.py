@@ -38,7 +38,11 @@ class Randint(flow.nn.Module):
                 "oneflow.randperm.layout",
                 "will not be used. Layout is not supported yet.",
             )
-        
+        if isinstance(device, str):
+            self.device = flow.device(device)
+        else:
+            self.device = device
+
         self.device = device
         self.dtype = dtype
         self.requires_grad = requires_grad
@@ -48,10 +52,14 @@ class Randint(flow.nn.Module):
         self.high = high
         self.size = size
     def forward(self):
-        return flow.F.randint(self.low,self.high,self.size)
+        res=flow.F.randint(self.low,self.high,self.size,generator=self.generator)
+        print(self.device,self.dtype)
+        res = res.to(device=self.device,dtype=self.dtype)
+        res.requires_grad=  self.requires_grad
+        return res
         
 def randint(
-    low: flow.int64,
+    low: flow.int64=0,
     high:Union[int,tuple]=None,
     size:tuple=None,
     generator: flow.Generator =None,
@@ -89,11 +97,16 @@ def randint(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> generator = flow.Generator()
+        >>> generator.manual_seed(0)
+        >>> flow.randint(10,(1,10),generator=generator)
+        tensor([[5, 5, 7, 8, 6, 8, 5, 8, 4, 6]], dtype=oneflow.int64)
     """
     if type(high) is tuple:
         size = high
         low,high = 0,low
     return Randint(low,high,size,generator,dtype,layout,device,requires_grad)()
-generator = flow.Generator()
-generator.manual_seed(0)
-print(randint(10,(1,10),generator=generator))
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
