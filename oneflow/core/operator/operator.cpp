@@ -460,6 +460,8 @@ Maybe<void> Operator::GetSbpSignaturesIf(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const {
   JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, parallel_desc, sbp_sig_list));
+  // sbp_sig_list->clear_sbp_signature();
+  printf("\nsbp_sig_list->DebugString() >>>>>> %s", sbp_sig_list->DebugString().c_str());
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())

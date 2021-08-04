@@ -47,8 +47,12 @@ void GeneratePartialSbp(user_op::SbpContext* ctx, int64_t axis) {
 
 template<>
 void GeneratePartialSbp<BinaryFuncSum>(user_op::SbpContext* ctx, int64_t axis) {
-  ctx->NewBuilder().Split(ctx->inputs(), axis).PartialSum(ctx->outputs()).Build();
-  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  if(axis==0){
+    ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  }else{
+    ctx->NewBuilder().Split(ctx->inputs(), axis).PartialSum(ctx->outputs()).Build();
+    ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  }
 }
 
 template<template<typename> class binary_func>
@@ -61,15 +65,24 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   ReduceSbpUtil::GetRegularAxes(num_axes, reduce_axes, &conf_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   int32_t num_reduced_axes = 0;
-  FOR_RANGE(int64_t, i, 0, num_axes) {
-    if (IsReducedAxis(i)) {
-      GeneratePartialSbp<binary_func>(ctx, i);
-      num_reduced_axes += 1;
-    } else {
-      ctx->NewBuilder()
-          .Split(ctx->inputs(), i)
-          .Split(ctx->outputs(), keep_dims ? i : i - num_reduced_axes)
-          .Build();
+
+  // for (auto out : ctx->outputs()){
+  //   printf("\n out.first >>>>>>>> %s", out.first.c_str());
+  // }
+
+  if(num_axes==0){
+    ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  }else{
+    FOR_RANGE(int64_t, i, 0, num_axes) {
+      if (IsReducedAxis(i)) {
+        GeneratePartialSbp<binary_func>(ctx, i);
+        num_reduced_axes += 1;
+      } else {
+        ctx->NewBuilder()
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), keep_dims ? i : i - num_reduced_axes)
+            .Build();
+      }
     }
   }
   return Maybe<void>::Ok();

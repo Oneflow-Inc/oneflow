@@ -322,12 +322,16 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
       int64_t num_axes = logical_blob_desc.shape().NumAxes();
       if (axis < 0) { axis += num_axes; }
       CHECK_GE_OR_RETURN(axis, 0);
-      CHECK_LE_OR_RETURN(axis, num_axes)
+      if(num_axes>1){
+        CHECK_LT_OR_RETURN(axis, num_axes)
           << "op: " << op->op_name() << ", blob: " << pair.first << ", axis: " << axis
           << ", shape: " << logical_blob_desc.shape();
-      if (logical_blob_desc.shape().NumAxes() > 0) {
         CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
             << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
+            << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
+      }else{
+        LOG(WARNING) << "JobBuildAndInferCtx::CheckOpBlobSplitability() fail >> 0 dim tensor do not support split!"
+            << "\n >> op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
             << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
       }
     }
