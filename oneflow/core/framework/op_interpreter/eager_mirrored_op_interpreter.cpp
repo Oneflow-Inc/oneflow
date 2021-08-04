@@ -224,10 +224,9 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(FindOrCreatEagerNcclBroadcastOpExpr(broadcast_parallel_desc));
   if (JUST(broadcast_parallel_desc->MachineId4ParallelId(0)) == GlobalProcessCtx::Rank()) {
-    const auto& outputs = std::make_shared<TensorTuple>({tensor});
-    JUST(OpInterpUtil::Dispatch(
-        *op_expr, {tensor}, outputs.get(),
-        one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
+    TensorTuple outputs{tensor};
+    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
+                                one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
     return tensor;
   } else {
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(
