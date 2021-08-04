@@ -14,24 +14,47 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/memory/chunk_manager.h"
+#include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/memory/memory_case_util.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
-namespace {
-
-void ChunkMgr::GetChunkProtosByMemZoneUniqueId(
-    int64_t mem_zone_uid, std::vector<const ChunkProto*>* chunks) const {
-
+void ChunkMgr::GetChunkProtosByMemZoneUniqueId(int64_t mem_zone_uid,
+                                               std::vector<const ChunkProto*>* chunks) const {
+  chunks->clear();
+  auto chunk_ids_it = mzuid2chunk_ids_.find(mem_zone_uid);
+  if (chunk_ids_it != mzuid2chunk_ids_.end()) {
+    const auto& chunk_ids = chunk_ids_it->second;
+    chunks->reserve(chunk_ids.size());
+    for (int64_t chunk_id : chunk_ids) {
+      auto chunk_it = chunk_id2chunk_proto_.find(chunk_id);
+      CHECK(chunk_it != chunk_id2chunk_proto_.end());
+      chunks->push_back(chunk_it->second.get());
+    }
+  }
 }
 
 void ChunkMgr::AddChunkProto(const ChunkProto& chunk) {
-
+  const int64_t mem_zone_uid =
+      MemoryCaseUtil::GenMemZoneUniqueId(chunk.machine_id(), chunk.mem_case());
+  CHECK(
+      chunk_id2chunk_proto_.emplace(chunk.chunk_id(), std::make_unique<ChunkProto>(chunk)).second);
+  auto chunk_ids_it = mzuid2chunk_ids_.find(mem_zone_uid);
+  if (chunk_ids_it == mzuid2chunk_ids_.end()) {
+    chunk_ids_it = mzuid2chunk_ids_.emplace(mem_zone_uid, HashSet<int64_t>()).first;
+  }
+  CHECK(chunk_ids_it->second.insert(chunk.chunk_id()).second);
 }
 
 char* ChunkMgr::FindOrCreateChunk(const ChunkProto& chunk) {
-
+  CHECK_EQ(GlobalProcessCtx::Rank(), chunk.machine_id());
+  auto it = chunk_id2chunk_.find(chunk.chunk_id());
+  if (it == chunk_id2chunk_.end()) {
+    char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
+    it = chunk_id2chunk_.emplace(chunk.chunk_id(), ChunkWithPtr(chunk_ptr, chunk)).first;
+  }
+  return it->second.ptr;
 }
-
-}  // namespace
 
 }  // namespace oneflow

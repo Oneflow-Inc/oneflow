@@ -31,7 +31,8 @@ class ChunkMgr final {
   ~ChunkMgr() = default;
 
   // Compiler
-  void GetChunkProtosByMemZoneUniqueId(int64_t mem_zone_uid, std::vector<const ChunkProto*>* chunks) const;
+  void GetChunkProtosByMemZoneUniqueId(int64_t mem_zone_uid,
+                                       std::vector<const ChunkProto*>* chunks) const;
   void AddChunkProto(const ChunkProto& chunk);
 
   // Runtime
@@ -39,12 +40,13 @@ class ChunkMgr final {
 
  private:
   // for master compiler in PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan
-  HashMap<int64_t, std::vector<int64_t>> mzuid2chunk_id_; 
+  HashMap<int64_t, HashSet<int64_t>> mzuid2chunk_ids_;
   HashMap<int64_t, std::unique_ptr<ChunkProto>> chunk_id2chunk_proto_;
-  
+
   struct ChunkWithPtr {
     char* ptr;
     ChunkProto chunk_proto;
+    ChunkWithPtr(char* p, const ChunkProto& c_p) : ptr(p), chunk_proto(c_p) {}
   };
 
   // for runtime
