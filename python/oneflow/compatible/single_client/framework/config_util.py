@@ -241,7 +241,7 @@ def api_thread_enable_local_message_queue(val: bool) -> None:
         val (bool):  True or False
     """
     print(
-        "'thread_enable_local_message_queue' has been deprecated, has no effect and will be removed in the future. Use environment variable 'ONEFLOW_THREAD_LOCAL_MESSAGE_QUEUE_ENABLE' instead."
+        "'thread_enable_local_message_queue' has been deprecated, has no effect and will be removed in the future. Use environment variable 'ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE' instead."
     )
 
 
