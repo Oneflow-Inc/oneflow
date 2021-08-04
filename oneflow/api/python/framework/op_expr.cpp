@@ -52,10 +52,8 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<ParallelDe
   CHECK_EQ_OR_RETURN(op.input_size(), 0)
       << " the op :  " << op.op_type_name()
       << " is NOT source op with input_size = " << op.input_size();
-  auto outputs = std::make_shared<one::TensorTuple>(op.output_size());
-  JUST(one::OpInterpUtil::Dispatch(op, {}, outputs.get(),
-                                   one::OpExprInterpContext(attrs, placement)));
-  return outputs;
+  return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(
+      op, {}, one::OpExprInterpContext(attrs, placement)));
 }
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<Device>& device,
@@ -63,9 +61,8 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<Device>& d
   CHECK_EQ_OR_RETURN(op.input_size(), 0)
       << " the op :  " << op.op_type_name()
       << " is NOT source op with input_size = " << op.input_size();
-  auto outputs = std::make_shared<one::TensorTuple>(op.output_size());
-  JUST(one::OpInterpUtil::Dispatch(op, {}, outputs.get(), one::OpExprInterpContext(attrs, device)));
-  return outputs;
+  return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(
+      op, {}, one::OpExprInterpContext(attrs, device)));
 }
 
 template<typename OpT, typename ConfT,

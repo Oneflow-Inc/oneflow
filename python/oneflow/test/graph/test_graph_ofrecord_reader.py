@@ -24,13 +24,16 @@ import oneflow.unittest
 class OFRecordDataLoader(flow.nn.Module):
     def __init__(self):
         super().__init__()
+        batch_size = 4
         self.train_record_reader = flow.nn.OfrecordReader(
             "/dataset/imagenette/ofrecord",
-            batch_size=4,
+            batch_size=batch_size,
             data_part_num=1,
             part_name_suffix_length=5,
             random_shuffle=True,
             shuffle_after_epoch=True,
+            # placement=flow.placement("cpu", {0: [0]}),
+            # sbp=[flow.sbp.broadcast]
         )
 
         self.record_label_decoder = flow.nn.OfrecordRawDecoder(
@@ -45,8 +48,11 @@ class OFRecordDataLoader(flow.nn.Module):
 
         self.resize = flow.nn.image.Resize(target_size=[224, 224])
 
-        self.flip = None
-        # self.flip = flow.nn.CoinFlip(batch_size=batch_size)
+        self.flip = flow.nn.CoinFlip(
+            batch_size=batch_size,
+            # placement=flow.placement("cpu", {0: [0]}),
+            # sbp=[flow.sbp.broadcast]
+        )
 
         rgb_mean = [123.68, 116.779, 103.939]
         rgb_std = [58.393, 57.12, 57.375]
@@ -63,13 +69,9 @@ class OFRecordDataLoader(flow.nn.Module):
         label = self.record_label_decoder(train_record)
         image_raw_buffer = self.record_image_decoder(train_record)
         image = self.resize(image_raw_buffer)[0]
-        rng = self.flip() if self.flip != None else None
+        rng = self.flip()
         image = self.crop_mirror_norm(image, rng)
         return image, label
-
-
-# class AlexNet(nn.Module):
-#    def __init__(self, num_classes: int = 1000) -> None:
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -88,6 +90,7 @@ class TestOFRecordReaderGraph(oneflow.unittest.TestCase):
 
         reader_g = GraphReader()
         image, label = reader_g()
+
         print(image)
         print(label)
 

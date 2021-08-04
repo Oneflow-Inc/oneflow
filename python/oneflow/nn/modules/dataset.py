@@ -22,7 +22,6 @@ import oneflow as flow
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
-import oneflow._oneflow_internal
 
 
 def mirrored_gen_random_seed(seed=None):
@@ -48,12 +47,13 @@ class OfrecordReader(Module):
         random_seed: int = -1,
         device: Union[flow.device, str] = None,
         placement: flow.placement = None,
-        sbp: Union[
-            flow._oneflow_internal.sbp.sbp, List[flow._oneflow_internal.sbp.sbp]
-        ] = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
         name: Optional[str] = None,
     ):
         super().__init__()
+
+        if name is not None:
+            print("WARNING: name has been deprecated and has NO effect.\n")
 
         parallel_distribution = []
 
@@ -66,19 +66,20 @@ class OfrecordReader(Module):
 
         if placement is not None:
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
-            if isinstance(self.sbp, flow.sbp.sbp):
-                parallel_distribution.append(sbp.__str__())
+            if isinstance(sbp, flow.sbp.sbp):
+                parallel_distribution.append(sbp._ToAttrStr())
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-                    parallel_distribution.append(elem.__str__())
-            assert len(self.sbp) == len(placement.hierarchy)
+                    parallel_distribution.append(elem._ToAttrStr())
+            assert len(parallel_distribution) == len(placement.hierarchy)
+            print("cclog: ", parallel_distribution)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
         (seed, has_seed) = mirrored_gen_random_seed(random_seed)
         self._op = (
-            flow.builtin_op("OFRecordReader", name)
+            flow.builtin_op("OFRecordReader")
             .Output("out")
             .Attr("data_dir", ofrecord_dir)
             .Attr("data_part_num", data_part_num)
@@ -92,7 +93,7 @@ class OfrecordReader(Module):
             .Attr("parallel_distribution", parallel_distribution)
             .Build()
         )
-        self.attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
+        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
 
     def forward(self):
         if self.placement is not None:
@@ -116,10 +117,12 @@ class OfrecordRawDecoder(Module):
         super().__init__()
         if auto_zero_padding:
             print(
-                "WARNING: auto_zero_padding has been deprecated, Please use truncate instead.\n                "
+                "WARNING: auto_zero_padding has been deprecated, Please use truncate instead.\n"
             )
+        if name is not None:
+            print("WARNING: name has been deprecated and has NO effect.\n")
         self._op = (
-            flow.builtin_op("ofrecord_raw_decoder", name)
+            flow.builtin_op("ofrecord_raw_decoder")
             .Input("in")
             .Output("out")
             .Attr("name", blob_name)
@@ -141,9 +144,34 @@ class CoinFlip(Module):
         batch_size: int = 1,
         random_seed: Optional[int] = None,
         probability: float = 0.5,
+        device: Union[flow.device, str] = None,
+        placement: flow.placement = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     ):
         super().__init__()
+        parallel_distribution = []
+
+        self.placement = placement
+        if placement is None:
+            if device is None:
+                self.device = flow.device("cpu")
+        else:
+            assert device is None
+
+        if placement is not None:
+            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+            if isinstance(sbp, flow.sbp.sbp):
+                parallel_distribution.append(sbp._ToAttrStr())
+            else:
+                for elem in sbp:
+                    assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+                    parallel_distribution.append(elem._ToAttrStr())
+            assert len(parallel_distribution) == len(placement.hierarchy)
+        else:
+            assert sbp is None, "sbp: %s" % sbp
+
         (seed, has_seed) = mirrored_gen_random_seed(random_seed)
+
         self._op = (
             flow.builtin_op("coin_flip")
             .Output("out")
@@ -151,11 +179,16 @@ class CoinFlip(Module):
             .Attr("probability", probability)
             .Attr("has_seed", has_seed)
             .Attr("seed", seed)
+            .Attr("parallel_distribution", parallel_distribution)
             .Build()
         )
+        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
 
     def forward(self):
-        res = self._op()[0]
+        if self.placement is not None:
+            res = self._op.apply(self.placement, self.attrs)[0]
+        else:
+            res = self._op.apply(self.device, self.attrs)[0]
         return res
 
 
@@ -355,6 +388,8 @@ class ImageResize(Module):
         resize_y: int = 0,
     ):
         super().__init__()
+        if name is not None:
+            print("WARNING: name has been deprecated and has NO effect.\n")
         deprecated_param_used = False
         if color_space is not None:
             print(
@@ -719,8 +754,10 @@ class OFRecordBytesDecoder(Module):
 
     def __init__(self, blob_name: str, name: Optional[str] = None):
         super().__init__()
+        if name is not None:
+            print("WARNING: name has been deprecated and has NO effect.\n")
         self._op = (
-            flow.builtin_op("ofrecord_bytes_decoder", name)
+            flow.builtin_op("ofrecord_bytes_decoder")
             .Input("in")
             .Output("out")
             .Attr("name", blob_name)
