@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -53,10 +54,7 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
     if (out_grads.empty()) {
       CHECK_OR_RETURN(IsScalarTensor(*outputs.at(i)))
           << "Grad can be implicitly created only for scalar outputs";
-      const auto& ones_like = JUST(op_expr_helper::OnesLikeOp());
-      one::TensorTuple grad_output(1);
-      JUST(one::OpInterpUtil::Dispatch(*ones_like, one::TensorTuple{outputs.at(i)}, &grad_output));
-      gradients->at(i) = grad_output.at(0);
+      gradients->at(i) = JUST(one::functional::OnesLike(outputs.at(i)));
     } else {
       CHECK_OR_RETURN(*(outputs.at(i)->shape()) == *(out_grads.at(i)->shape()))
           << "out_grad's shape must be same as output's (" << outputs.at(i)->shape()->ToString()
