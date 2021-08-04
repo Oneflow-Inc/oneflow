@@ -294,10 +294,10 @@ namespace functional = one::functional;
 ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("add", &functional::PyAdd);
   m.def("sub", &functional::PySub);
-  m.def("maximum", &functional::PyMaximum);
-  m.def("minimum", &functional::PyMinimum);
   m.def("mul", &functional::PyMul);
   m.def("div", &functional::PyDiv);
+  m.def("maximum", &functional::PyMaximum);
+  m.def("minimum", &functional::PyMinimum);
 }
 
 }  // namespace oneflow

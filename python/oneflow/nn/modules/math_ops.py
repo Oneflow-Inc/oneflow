@@ -1486,7 +1486,9 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 @register_tensor_op("minimum")
 def minimum(x, y):
     r"""Computes the element-wise minimum of x and y.
+
     For example:
+
     .. code-block:: python
         >>> import numpy as np
         >>> import oneflow as flow
@@ -1494,6 +1496,7 @@ def minimum(x, y):
         >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
         >>> flow.minimum(x, y)
         tensor([ 1.,  0., -1.], dtype=oneflow.float32)
+
         >>> x = flow.tensor((1,), dtype=flow.float)
         >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
         >>> flow.minimum(x, y)
@@ -1505,7 +1508,9 @@ def minimum(x, y):
 @register_tensor_op("maximum")
 def maximum(x, y):
     r"""Computes the element-wise maximum of x and y.
+
     For example:
+
     .. code-block:: python
         >>> import numpy as np
         >>> import oneflow as flow
@@ -1513,15 +1518,12 @@ def maximum(x, y):
         >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
         >>> flow.maximum(x, y)
         tensor([3., 2., 4.], dtype=oneflow.float32)
+
         >>> x = flow.tensor((1,), dtype=flow.float)
         >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
         >>> flow.maximum(x, y)
         tensor([3., 1., 4.], dtype=oneflow.float32)
     """
-    if x.shape == y.shape:
-        return ElementwiseMaximum()(x, y)
-    else:
-        return BroadcastMaximum()(x, y)
     return flow.F.maximum(x, y)
 
 
