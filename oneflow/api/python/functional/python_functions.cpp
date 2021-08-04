@@ -209,19 +209,19 @@ py::object PyClamp(py::args py_args, py::kwargs py_kwargs) {
 
     if (has_min_bound && has_max_bound) {
       min_scalar = *JUST(PyUnpackScalar(min));
-      Scalar& min_value = *JUST(min_scalar.value());
+      Scalar min_value = *JUST(min_scalar.value());
       max_scalar = *JUST(PyUnpackScalar(max));
-      Scalar& max_value = *JUST(max_scalar.value());
+      Scalar max_value = *JUST(max_scalar.value());
 
       return functional::ClipByScalar(in, min_value, max_value);
     } else if (has_min_bound && !has_max_bound) {
       min_scalar = *JUST(PyUnpackScalar(min));
-      Scalar& min_value = *JUST(min_scalar.value());
+      Scalar min_value = *JUST(min_scalar.value());
 
       return functional::ClipByScalarMin(in, min_value);
     } else if (!has_min_bound && has_max_bound) {
       max_scalar = *JUST(PyUnpackScalar(max));
-      Scalar& max_value = *JUST(max_scalar.value());
+      Scalar max_value = *JUST(max_scalar.value());
 
       return functional::ClipByScalarMax(in, max_value);
     } else {
