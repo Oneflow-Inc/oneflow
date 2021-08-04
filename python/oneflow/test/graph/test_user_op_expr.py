@@ -149,6 +149,7 @@ class TestUserOpGraph(unittest.TestCase):
     def test_user_op_graph_cpu(test_case):
         _test_user_op_graph(test_case, False)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_user_op_graph_gpu(test_case):
         _test_user_op_graph(test_case, True)
 

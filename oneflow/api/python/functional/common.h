@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/functional/scalar.h"
 
 namespace py = pybind11;
 
@@ -143,6 +144,11 @@ template<typename T>
 }  // namespace detail
 
 bool PyTensorCheck(PyObject* object);
+Maybe<Tensor> PyUnpackTensor(PyObject* object);
+
+bool PyScalarCheck(PyObject* object);
+Maybe<Scalar> PyUnpackScalar(PyObject* object);
+
 const char* PyStringAsString(PyObject* object);
 
 }  // namespace functional

@@ -20,6 +20,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestReluGraph(oneflow.unittest.TestCase):
     def test_relu_graph(test_case):
         data = np.array([2.0, 1.0, 0.0, -1.0, -2.0])

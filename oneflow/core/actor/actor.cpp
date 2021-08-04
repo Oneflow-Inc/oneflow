@@ -42,6 +42,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
+  job_id_ = task_proto.job_id();
   InitDeviceCtx(thread_ctx);
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
@@ -383,9 +384,8 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
-  if (Global<RuntimeCtx>::Get()->is_experiment_phase() || NeedCollectActEvent()) {
+  if (false) {
     auto act_event = std::make_shared<ActEvent>();
-    act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
     act_event->set_actor_id(actor_id());
     act_event->set_work_stream_id(GetGlobalWorkStreamId());
     act_event->set_act_id(act_id_);
@@ -418,7 +418,8 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     act_id_ += 1;
-    TryLogActEvent([&] { Act(); });
+    // TryLogActEvent([&] { Act(); }); NOTE(chengcheng): LogActEvent NOT ready now.
+    Act();
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
     AsyncSendNaiveProducedRegstMsgToConsumer();

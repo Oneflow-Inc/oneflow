@@ -205,9 +205,7 @@ def is_multi_client():
     return oneflow._oneflow_internal.IsMultiClient()
 
 
-def split_sbp(
-    axis: int,
-) -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
+def split_sbp(axis: int) -> oneflow._oneflow_internal.sbp.sbp:
     """Generate a split scheme in which op will be splitted at `axis`.
 
     Args:

@@ -30,6 +30,7 @@ import google.protobuf.text_format as pbtxt
 import oneflow
 import oneflow.env
 import oneflow.framework.env_util as env_util
+import oneflow.sysconfig
 from oneflow.core.job.env_pb2 import EnvProto
 
 
@@ -108,7 +109,10 @@ def has_node_list():
 
 
 def node_size():
-    if has_node_list():
+    node_num_from_env = os.getenv("ONEFLOW_TEST_NODE_NUM", None)
+    if node_num_from_env:
+        return node_num_from_env
+    elif has_node_list():
         node_list_from_env = node_list()
         return len(node_list_from_env)
     else:
@@ -340,6 +344,10 @@ class TestCase(unittest.TestCase):
 
 
 def skip_unless(n, d):
+    if (n > 1 or d > 1) and oneflow.sysconfig.has_rpc_backend_grpc() == False:
+        return unittest.skip(
+            "requires multi node rpc backend when node_size > 1 and device_num > 1"
+        )
     if node_size() == n and device_num() == d:
         return lambda func: func
     else:

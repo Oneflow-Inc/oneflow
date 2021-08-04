@@ -65,8 +65,9 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
       LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;
+      int64_t job_id = actor_it->second->job_id();
       id2actor_ptr_.erase(actor_it);
-      Global<RuntimeCtx>::Get()->DecreaseCounter("running_actor_cnt");
+      Global<RuntimeCtx>::Get()->DecreaseCounter(GetRunningActorCountKeyByJobId(job_id));
     } else {
       CHECK_EQ(process_msg_ret, 0);
     }

@@ -23,6 +23,7 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestForwardGraph(flow.unittest.TestCase):
     def test_forward_graph(test_case):
         class SubModule(flow.nn.Module):

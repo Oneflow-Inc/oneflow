@@ -48,10 +48,10 @@ class AddNFunctor {
       TensorTuple partial_inputs(size);
       std::copy(inputs.begin() + i, inputs.begin() + i + size, partial_inputs.begin());
       if (i == 0 && inplace) {
+        JUST(CheckInplaceValid(partial_inputs.at(0)));
         std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
         outs->at(0) = partial_inputs.at(0);
-        JUST(JUST(OpInterpUtil::GetInterpreter())
-                 ->Apply(*op_.at(size - 1), partial_inputs, outs.get()));
+        JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
         outputs.push_back(outs->at(0));
       } else {
         outputs.push_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
@@ -85,9 +85,10 @@ class ScalarAddFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
     }
     if (inplace) {
+      JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -104,16 +105,17 @@ class ScalarMulFunctor {
     op_ = CHECK_JUST(one::OpBuilder("scalar_mul").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    if (std::dynamic_pointer_cast<StaticZerosTensor>(x)) { return x; }
     MutableAttrMap attrs;
     if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarMul shoule be float or int.";
@@ -386,6 +388,19 @@ class ClipByScalarMaxGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SelectFirstFunctor {
+ public:
+  SelectFirstFunctor() { op_ = CHECK_JUST(one::SelectFirstOpExpr::New()); }
+
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, inputs));
+    return output;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -405,6 +420,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ClipByScalarMinGradFunctor>("ClipByScalarMinGrad");
   m.add_functor<impl::ClipByScalarMaxFunctor>("ClipByScalarMax");
   m.add_functor<impl::ClipByScalarMaxGradFunctor>("ClipByScalarMaxGrad");
+  m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
 };
 
 }  // namespace functional

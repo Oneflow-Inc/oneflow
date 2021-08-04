@@ -91,6 +91,13 @@ class TestFmodModule(flow.unittest.TestCase):
         other = random_pytorch_tensor().to(device)
         return torch.fmod(input, other)
 
+    @autotest(auto_backward=False)
+    def test_fmod_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = torch.fmod(x, 2)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

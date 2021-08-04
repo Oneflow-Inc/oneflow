@@ -23,6 +23,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_reshape(test_case, device):
@@ -81,6 +82,15 @@ class TestModule(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
         y = torch.reshape(x, shape=(-1,))
+        return y
+
+    @autotest(auto_backward=False)
+    def test_reshape_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 0, 3).to(device)
+        y = torch.reshape(
+            x, shape=(random(0, 5).to(int).value(), 0, random(0, 5).to(int).value())
+        )
         return y
 
 

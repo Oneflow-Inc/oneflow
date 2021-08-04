@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_arange(test_case, device):
@@ -53,7 +54,7 @@ def _test_arange_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestArange(flow.unittest.TestCase):
-    def test_transpose(test_case):
+    def test_arange(test_case):
         arg_dict = OrderedDict()
         arg_dict["function_test"] = [
             _test_arange,
@@ -64,6 +65,16 @@ class TestArange(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5)
+    def test_arange_with_random_data(test_case):
+        start = random().to(int)
+        end = start + random().to(int)
+        step = random(0, end - start).to(int)
+        x = torch.arange(start=start, end=end, step=step)
+        device = random_device()
+        x.to(device)
+        return x
 
 
 if __name__ == "__main__":

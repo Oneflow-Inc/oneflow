@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 input_arr = np.array(
     [
@@ -135,6 +136,25 @@ class TestLayerNorm(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=5, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_layernorm_with_random_data(test_case):
+        channel = random(1, 6).to(int)
+        height = random(1, 6).to(int)
+        width = random(1, 6).to(int)
+        m = torch.nn.LayerNorm(
+            normalized_shape=random(1, 6).to(int),
+            eps=random().to(float) | nothing(),
+            elementwise_affine=random().to(bool),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
+            device
+        )
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":
