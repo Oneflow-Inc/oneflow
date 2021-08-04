@@ -401,6 +401,50 @@ class SelectFirstFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MinimumFunctor {
+ public:
+  MinimumFunctor() {
+    elementwise_minimum_op_ =
+        CHECK_JUST(one::OpBuilder("elementwise_minimum").Input("x").Input("y").Output("z").Build());
+    broadcast_minimum_op_ = CHECK_JUST(one::OpBuilder("broadcast_minimum").Input("x").Input("y").Output("z").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    if (*x->shape() == *y->shape()) {
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x, y});
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x, y});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> elementwise_minimum_op_;
+  std::shared_ptr<OpExpr> broadcast_minimum_op_;
+};
+
+class MaximumFunctor {
+ public:
+  MaximumFunctor() {
+    elementwise_maximum_op_ =
+        CHECK_JUST(one::OpBuilder("elementwise_maximum").Input("x").Input("y").Output("z").Build());
+    broadcast_maximum_op_ = CHECK_JUST(one::OpBuilder("broadcast_maximum").Input("x").Input("y").Output("z").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    if (*x->shape() == *y->shape()) {
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x, y});
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x, y});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> elementwise_maximum_op_;
+  std::shared_ptr<OpExpr> broadcast_maximum_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -421,6 +465,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ClipByScalarMaxFunctor>("ClipByScalarMax");
   m.add_functor<impl::ClipByScalarMaxGradFunctor>("ClipByScalarMaxGrad");
   m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
+  m.add_functor<impl::MinimumFunctor>("Minimum");
+  m.add_functor<impl::MaximumFunctor>("Maximum");
 };
 
 }  // namespace functional

@@ -236,56 +236,6 @@ py::object PyDiv(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
-py::object PyMaximum(py::args py_args, py::kwargs py_kwargs) {
-  // "Maximum(Tensor x, Tensor y)"
-  PyObject* args = py_args.ptr();
-  PyObject* kwargs = py_kwargs.ptr();
-  size_t nargs = PyTuple_Size(args);
-  size_t nkwargs = PyDict_Size(kwargs);
-  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
-  CHECK_EQ_OR_THROW(nkwargs, 0) << "no keyword argument required.";
-  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
-    PyObject* x = PyTuple_GetItem(args, 0);
-    PyObject* y = PyTuple_GetItem(args, 1);
-    bool x_is_tensor = PyTensorCheck(x);
-    bool y_is_tensor = PyTensorCheck(y);
-    CHECK_OR_RETURN(x_is_tensor && y_is_tensor) << "All inputs must be tensor.";
-    const auto& a = JUST(PyUnpackTensor(x));
-    const auto& b = JUST(PyUnpackTensor(y));
-    if (*a->shape() == *b->shape()) {
-      return functional::ElementwiseMax(a, b);
-    } else {
-      return functional::BroadcastMax(a, b);
-    }
-  }();
-  return py::cast(result.GetPtrOrThrow());
-}
-
-py::object PyMinimum(py::args py_args, py::kwargs py_kwargs) {
-  // "Minimum(Tensor x, Tensor y)"
-  PyObject* args = py_args.ptr();
-  PyObject* kwargs = py_kwargs.ptr();
-  size_t nargs = PyTuple_Size(args);
-  size_t nkwargs = PyDict_Size(kwargs);
-  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
-  CHECK_EQ_OR_THROW(nkwargs, 0) << "no keyword argument required.";
-  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
-    PyObject* x = PyTuple_GetItem(args, 0);
-    PyObject* y = PyTuple_GetItem(args, 1);
-    bool x_is_tensor = PyTensorCheck(x);
-    bool y_is_tensor = PyTensorCheck(y);
-    CHECK_OR_RETURN(x_is_tensor && y_is_tensor) << "All inputs must be tensor.";
-    const auto& a = JUST(PyUnpackTensor(x));
-    const auto& b = JUST(PyUnpackTensor(y));
-    if (*a->shape() == *b->shape()) {
-      return functional::ElementwiseMin(a, b);
-    } else {
-      return functional::BroadcastMin(a, b);
-    }
-  }();
-  return py::cast(result.GetPtrOrThrow());
-}
-
 }  // namespace functional
 }  // namespace one
 
@@ -296,8 +246,6 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("sub", &functional::PySub);
   m.def("mul", &functional::PyMul);
   m.def("div", &functional::PyDiv);
-  m.def("maximum", &functional::PyMaximum);
-  m.def("minimum", &functional::PyMinimum);
 }
 
 }  // namespace oneflow
