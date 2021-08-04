@@ -1,6 +1,6 @@
-# Test all ops, usage :
-# test 1n2g: bash test_all.sh > test_1_gpu.log 2>&1
-# test 1n2g: export ONEFLOW_TEST_DEVICE_NUM=2 && bash test_all.sh > test_2_gpu.log 2>&1
+# Test all ops
+# bash test_all.sh > test_1_gpu.log 2>&1
+# export ONEFLOW_TEST_DEVICE_NUM=2 && bash test_all.sh > test_2_gpu.log 2>&1
 ls |grep 'test.*.py' > test_cases_names.txt
 while read line
 do
