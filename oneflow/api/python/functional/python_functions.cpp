@@ -237,7 +237,7 @@ py::object PyDiv(py::args py_args, py::kwargs py_kwargs) {
 }
 
 py::object PyMaximum(py::args py_args, py::kwargs py_kwargs) {
-  // "Add(Tensor x, Tensor y)"
+  // "Maximum(Tensor x, Tensor y)"
   PyObject* args = py_args.ptr();
   PyObject* kwargs = py_kwargs.ptr();
   size_t nargs = PyTuple_Size(args);
@@ -262,7 +262,7 @@ py::object PyMaximum(py::args py_args, py::kwargs py_kwargs) {
 }
 
 py::object PyMinimum(py::args py_args, py::kwargs py_kwargs) {
-  // "Add(Tensor x, Tensor y)"
+  // "Minimum(Tensor x, Tensor y)"
   PyObject* args = py_args.ptr();
   PyObject* kwargs = py_kwargs.ptr();
   size_t nargs = PyTuple_Size(args);
