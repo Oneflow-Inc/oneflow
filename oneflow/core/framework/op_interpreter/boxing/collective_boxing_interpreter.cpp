@@ -50,7 +50,7 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
       .Build();
 }
 
-Maybe<one::UserOpExpr> FindOrCreatEagerNcclNcclAllGatherOpExpr(Symbol<ParallelDesc> parallel_desc) {
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclAllGatherOpExpr(Symbol<ParallelDesc> parallel_desc) {
   thread_local HashMap<Symbol<ParallelDesc>, std::shared_ptr<one::UserOpExpr>>
       parallel_desc2eager_nccl_all_gather;
   auto iter = parallel_desc2eager_nccl_all_gather.find(parallel_desc);
@@ -61,7 +61,7 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclNcclAllGatherOpExpr(Symbol<ParallelDe
   return iter->second;
 }
 
-Maybe<one::UserOpExpr> FindOrCreatEagerNcclNcclAllReduceOpExpr(Symbol<ParallelDesc> parallel_desc) {
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclAllReduceOpExpr(Symbol<ParallelDesc> parallel_desc) {
   thread_local HashMap<Symbol<ParallelDesc>, std::shared_ptr<one::UserOpExpr>>
       parallel_desc2eager_nccl_all_reduce;
   auto iter = parallel_desc2eager_nccl_all_reduce.find(parallel_desc);
@@ -72,8 +72,8 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclNcclAllReduceOpExpr(Symbol<ParallelDe
   return iter->second;
 }
 
-Maybe<one::UserOpExpr> FindOrCreatEagerNcclNcclReduceScatterOpExpr(
-    Symbol<ParallelDesc> parallel_desc, const std::string& op_type) {
+Maybe<one::UserOpExpr> FindOrCreatEagerNcclReduceScatterOpExpr(Symbol<ParallelDesc> parallel_desc,
+                                                               const std::string& op_type) {
   thread_local HashMap<std::pair<Symbol<ParallelDesc>, std::string>,
                        std::shared_ptr<one::UserOpExpr>>
       parallel_desc_and_reduce_type2eager_nccl_all_gather;
@@ -96,7 +96,7 @@ Maybe<one::Tensor> NcclCollectiveAllGatherBoxingInterpreter::InterpretImpl(
       in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
-      JUST(FindOrCreatEagerNcclNcclAllGatherOpExpr(in_parallel_desc));
+      JUST(FindOrCreatEagerNcclAllGatherOpExpr(in_parallel_desc));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
@@ -109,7 +109,7 @@ Maybe<one::Tensor> NcclCollectiveAllReduceBoxingInterpreter::InterpretImpl(
       in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
-      JUST(FindOrCreatEagerNcclNcclAllReduceOpExpr(in_parallel_desc));
+      JUST(FindOrCreatEagerNcclAllReduceOpExpr(in_parallel_desc));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
@@ -125,7 +125,7 @@ Maybe<one::Tensor> NcclCollectiveReduceScatterBoxingInterpreter::InterpretImpl(
                                                   out_parallel_distribution->sbp_parallel(0))));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   std::shared_ptr<one::UserOpExpr> op_expr =
-      JUST(FindOrCreatEagerNcclNcclReduceScatterOpExpr(in_parallel_desc, op_type_));
+      JUST(FindOrCreatEagerNcclReduceScatterOpExpr(in_parallel_desc, op_type_));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 

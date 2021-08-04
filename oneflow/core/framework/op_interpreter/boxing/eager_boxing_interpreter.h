@@ -30,7 +30,7 @@ inline Maybe<void> CheckEagerBoxingDataType(DataType val) {
       << "EagerBoxing only support POD data type.";
   return Maybe<void>::Ok();
 }
-}
+}  // namespace
 
 class EagerBoxingInterpreter {
  public:
@@ -39,20 +39,21 @@ class EagerBoxingInterpreter {
   virtual ~EagerBoxingInterpreter() = default;
 
   Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input,
-                                       Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-                                       Symbol<cfg::ParallelDistribution> out_parallel_distribution,
-                                       Symbol<ParallelDesc> in_parallel_desc,
-                                       Symbol<ParallelDesc> out_parallel_desc) {
+                               Symbol<cfg::ParallelDistribution> in_parallel_distribution,
+                               Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+                               Symbol<ParallelDesc> in_parallel_desc,
+                               Symbol<ParallelDesc> out_parallel_desc) {
     JUST(CheckEagerBoxingDataType(input->dtype()));
-    return InterpretImpl(input, in_parallel_distribution, out_parallel_distribution, in_parallel_desc, out_parallel_desc);
+    return InterpretImpl(input, in_parallel_distribution, out_parallel_distribution,
+                         in_parallel_desc, out_parallel_desc);
   }
 
-  protected:
-    virtual Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                       Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-                                       Symbol<cfg::ParallelDistribution> out_parallel_distribution,
-                                       Symbol<ParallelDesc> in_parallel_desc,
-                                       Symbol<ParallelDesc> out_parallel_desc) const = 0;
+ protected:
+  virtual Maybe<one::Tensor> InterpretImpl(
+      const std::shared_ptr<one::Tensor>& input,
+      Symbol<cfg::ParallelDistribution> in_parallel_distribution,
+      Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+      Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const = 0;
 };
 
 }  // namespace oneflow

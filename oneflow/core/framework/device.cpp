@@ -127,7 +127,7 @@ std::string Device::ToString() const {
 }
 
 Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
-  std::string type = DeviceType4ParallelDesc(SymbolOf(parallel_desc));
+  std::string type = DeviceType4ParallelDesc(parallel_desc.device_tag());
   std::vector<std::string> machine_device_ids;
   for (const auto& item : parallel_desc.parallel_conf().device_name()) {
     machine_device_ids.emplace_back(item);
@@ -142,8 +142,8 @@ Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& paral
   return Device::New(type, std::stoi(device_id));
 }
 
-std::string Device::DeviceType4ParallelDesc(Symbol<ParallelDesc> parallel_desc) {
-  return parallel_desc->device_tag() == "gpu" ? "cuda" : parallel_desc->device_tag();
+std::string Device::DeviceType4ParallelDesc(const std::string& device_tag) {
+  return device_tag == "gpu" ? "cuda" : device_tag;
 }
 
 }  // namespace oneflow

@@ -30,10 +30,10 @@ class NcclCollectiveAllGatherBoxingInterpreter final : public EagerBoxingInterpr
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                               Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-                               Symbol<cfg::ParallelDistribution> out_parallel_distribution,
-                               Symbol<ParallelDesc> in_parallel_desc,
-                               Symbol<ParallelDesc> out_parallel_desc) const override;
+                                   Symbol<cfg::ParallelDistribution> in_parallel_distribution,
+                                   Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+                                   Symbol<ParallelDesc> in_parallel_desc,
+                                   Symbol<ParallelDesc> out_parallel_desc) const override;
 };
 
 class NcclCollectiveAllReduceBoxingInterpreter final : public EagerBoxingInterpreter {
@@ -44,10 +44,10 @@ class NcclCollectiveAllReduceBoxingInterpreter final : public EagerBoxingInterpr
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                               Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-                               Symbol<cfg::ParallelDistribution> out_parallel_distribution,
-                               Symbol<ParallelDesc> in_parallel_desc,
-                               Symbol<ParallelDesc> out_parallel_desc) const override;
+                                   Symbol<cfg::ParallelDistribution> in_parallel_distribution,
+                                   Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+                                   Symbol<ParallelDesc> in_parallel_desc,
+                                   Symbol<ParallelDesc> out_parallel_desc) const override;
 };
 
 class NcclCollectiveReduceScatterBoxingInterpreter final : public EagerBoxingInterpreter {
@@ -58,10 +58,10 @@ class NcclCollectiveReduceScatterBoxingInterpreter final : public EagerBoxingInt
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                               Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-                               Symbol<cfg::ParallelDistribution> out_parallel_distribution,
-                               Symbol<ParallelDesc> in_parallel_desc,
-                               Symbol<ParallelDesc> out_parallel_desc) const override;
+                                   Symbol<cfg::ParallelDistribution> in_parallel_distribution,
+                                   Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+                                   Symbol<ParallelDesc> in_parallel_desc,
+                                   Symbol<ParallelDesc> out_parallel_desc) const override;
 
   const std::string op_type_;
 };
