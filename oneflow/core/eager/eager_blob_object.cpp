@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
+#include "oneflow/core/framework/tensor_pool.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 
 namespace oneflow {
 namespace vm {
@@ -90,26 +92,20 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
 
 Maybe<void> DTREagerBlobObject::InitBlobAttrs(vm::Instruction* instruction) {
   // reset DTREageBlobObject properties
-  memory_ = 0;
   compute_time_ = 0;
-  last_access_time_ = 0;
   pinned_ = 0;
 
-  int num_elements;
-  num_elements = (blob_desc_.shape().NumAxes() > 0) ? 1 : 0;
-  for (int64_t i = 0; i < blob_desc_.shape().NumAxes(); i++) {
-    num_elements *= blob_desc_.shape().At(i);
-  }
-  CHECK_NE_OR_RETURN(num_elements, 0);
-  memory_ = num_elements * GetSizeOfDataType(blob_desc_.data_type());
-  compute_time_ = memory_;
-  // current time
-  last_access_time_ = memory_;
+  // current time 
+  last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
 
   CHECK_OR_RETURN(static_cast<bool>(instruction));
   compute_path_ = instruction;
 
   return Maybe<void>::Ok();
+}
+
+bool DTREagerBlobObject::is_in_memory() {
+  return (tensor_buffer_.get()->blob_dptr() != nullptr);
 }
 
 }  // namespace vm

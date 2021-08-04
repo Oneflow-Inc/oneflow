@@ -37,6 +37,8 @@ limitations under the License.
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/framework/tensor_pool.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 
 namespace oneflow {
 namespace vm {
@@ -467,6 +469,9 @@ struct LocalCallOpKernelUtil {
   static inline Maybe<void> InitOutputBlobAttrs(vm::Instruction* instruction) {
     return Maybe<void>::Ok();
   }
+  static inline Maybe<void> UpdateTensorInfo(vm::Instruction* instruction, double compute_time) {
+    return Maybe<void>::Ok();
+  }
 
  protected:
   static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
@@ -610,7 +615,9 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
       // pin inputs (unpin after compute)
       dtr_blob_object->pin();
-      // TODO: recursive recompute the inputs
+      if (!dtr_blob_object->is_in_memory()) {
+        // TODO: recursive recompute the inputs
+      }
       return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();
@@ -624,6 +631,20 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object);
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
       JUST(dtr_blob_object->InitBlobAttrs(instruction));
+      // TODO: condition - insert current blob into candidates only when blob memory > threshold
+      JUST(Global<one::DTRTensorPool>::Get()->insert(dtr_blob_object));
+      return Maybe<void>::Ok();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> UpdateTensorInfo(vm::Instruction* instruction, double compute_time) {
+    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
+      CHECK_OR_RETURN(static_cast<bool>(blob_object));
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object);
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      dtr_blob_object->set_compute_time(compute_time);
       return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();
@@ -637,10 +658,17 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   bool enable_dtr = true;
   if (enable_dtr) {
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
     CHECK_OK(DTRLocalCallOpKernelUtil::Infer(instruction));
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
     CHECK_OK(DTRLocalCallOpKernelUtil::InitOutputBlobAttrs(instruction));
     CHECK_OK(DTRLocalCallOpKernelUtil::Prepare(instruction));
+    std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
     CHECK_OK(DTRLocalCallOpKernelUtil::Compute(instruction));
+    std::chrono::steady_clock::time_point t4 = std::chrono::steady_clock::now();
+    // update outputs' computation time
+    std::chrono::duration<double> compute_time = (t2 - t1) + (t4 - t3);
+    CHECK_OK(DTRLocalCallOpKernelUtil::UpdateTensorInfo(instruction, compute_time.count()));
   } else {
     CHECK_OK(EagerLocalCallOpKernelUtil::Infer(instruction));
     CHECK_OK(EagerLocalCallOpKernelUtil::Prepare(instruction));

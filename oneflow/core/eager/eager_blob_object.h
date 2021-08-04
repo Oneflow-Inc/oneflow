@@ -92,7 +92,6 @@ class DTREagerBlobObject final : public EagerBlobObject {
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
       : DTREagerBlobObject(mem_case, shape, data_type, tensor_buffer, nullptr) {
-        memory_ = 0;
         compute_time_ = 0;
         last_access_time_ = 0;
         pinned_ = 0;
@@ -101,7 +100,6 @@ class DTREagerBlobObject final : public EagerBlobObject {
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
                   const std::shared_ptr<const ParallelDesc>& parallel_desc) : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, parallel_desc) {
-                    memory_ = 0;
                     compute_time_ = 0;
                     last_access_time_ = 0;
                     pinned_ = 0;
@@ -117,25 +115,26 @@ class DTREagerBlobObject final : public EagerBlobObject {
   // Maybe<void> delete();
 
   // Getters and Setters
-  const double memory() const { return memory_; }
+  const std::size_t memory() const { return blob_body_bytes_; }
   const double compute_time() const { return compute_time_; }
   const double last_access_time() const { return last_access_time_; }
   const vm::Instruction* compute_path() const { return compute_path_; }
-  void set_memory(int64_t val) { memory_ = val; }
-  void set_compute_time(int64_t val) { compute_time_ = val; }
+  void set_compute_time(double val) {
+    compute_time_ = val;
+    std::cout << "Compute time: " << val << std::endl;
+  }
   void set_last_access_time(double val) { last_access_time_ = val; }
 
-  // bool is_in_memory();
+  bool is_in_memory();
   bool is_pinned() { return (pinned_ > 0); }
   void pin() { pinned_++; }
   void unpin() { pinned_--; }
 
   // TODO: variable cost functions in terms of different heuristics
-  double cost() { return compute_time_ / memory_ / last_access_time_; }
+  double cost() { return compute_time_ / blob_body_bytes_ / last_access_time_; }
 
 
  private:
-  double memory_;
   double compute_time_;
   double last_access_time_;
   size_t pinned_;

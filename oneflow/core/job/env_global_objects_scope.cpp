@@ -113,7 +113,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #endif
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
-  // Global<DTRTensorPool>::New();
+  Global<one::DTRTensorPool>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -193,6 +193,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<RpcManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
+  Global<one::DTRTensorPool>::Delete();
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif
