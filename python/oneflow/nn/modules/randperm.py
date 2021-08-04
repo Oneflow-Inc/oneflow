@@ -79,7 +79,7 @@ def randperm(
         n (int): the upper bound (exclusive)
     
     Keyword args:
-        {generator(:class:`oneflow.Generator`, optional)}:  a pseudorandom number generator for sampling
+        generator(:class:`oneflow.Generator`, optional):  a pseudorandom number generator for sampling
         out (Tensor): output Tensor,not supported yet.
         dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
             Default: ``oneflow.int64``.
@@ -88,7 +88,8 @@ def randperm(
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
         pin_memory(bool, optional):pin_memory is not supported yet.
 
-    Example::
+    Example:
+
     .. code-block:: python
 
         >>> import oneflow as flow
