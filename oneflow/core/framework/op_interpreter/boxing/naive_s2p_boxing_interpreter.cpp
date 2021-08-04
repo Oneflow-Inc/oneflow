@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<one::Tensor> NcclS2PBoxingInterpreter::Interpret(
+Maybe<one::Tensor> NcclS2PBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input,
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
     Symbol<cfg::ParallelDistribution> out_parallel_distribution,

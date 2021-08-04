@@ -24,13 +24,31 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+inline Maybe<void> CheckEagerBoxingDataType(DataType val) {
+  CHECK_OR_RETURN(val != DataType::kTensorBuffer && val != DataType::kOFRecord)
+      << "EagerBoxing only support POD data type.";
+  return Maybe<void>::Ok();
+}
+}
+
 class EagerBoxingInterpreter {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerBoxingInterpreter);
   EagerBoxingInterpreter() = default;
   virtual ~EagerBoxingInterpreter() = default;
 
-  virtual Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input,
+  Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input,
+                                       Symbol<cfg::ParallelDistribution> in_parallel_distribution,
+                                       Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+                                       Symbol<ParallelDesc> in_parallel_desc,
+                                       Symbol<ParallelDesc> out_parallel_desc) {
+    JUST(CheckEagerBoxingDataType(input->dtype()));
+    return InterpretImpl(input, in_parallel_distribution, out_parallel_distribution, in_parallel_desc, out_parallel_desc);
+  }
+
+  protected:
+    virtual Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
                                        Symbol<cfg::ParallelDistribution> in_parallel_distribution,
                                        Symbol<cfg::ParallelDistribution> out_parallel_distribution,
                                        Symbol<ParallelDesc> in_parallel_desc,
