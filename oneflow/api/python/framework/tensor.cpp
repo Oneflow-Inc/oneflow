@@ -281,7 +281,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
                     || py::isinstance<py::str>(device_kwarg));
 
     if (py::isinstance<py::str>(device_kwarg)) {
-      device = DeviceExportUtil::MakeDevice(py::cast<std::string>(device_kwarg));
+      device = DeviceExportUtil::New(py::cast<std::string>(device_kwarg));
     } else {
       device = py::cast<Symbol<Device>>(device_kwarg);
     }
@@ -353,6 +353,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init(&ApiNewTensor))
       // Properties of pytorch
+      .def_property_readonly("ndim", &Tensor::ndim)
       .def_property_readonly("shape", &Tensor::shape)
       .def_property_readonly("dtype", &GetTensorDType)
       .def_property_readonly("is_cuda", &Tensor::is_cuda)

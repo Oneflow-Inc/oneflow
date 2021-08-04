@@ -39,12 +39,7 @@ parser.register("type", "bool", lambda v: v.lower() == "true")
 parser.add_argument("--package_name", type=str, default="oneflow")
 args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args
-REQUIRED_PACKAGES = [
-    "numpy",
-    "protobuf>=3.9.2",
-    "tqdm",
-    "requests",
-]
+REQUIRED_PACKAGES = ["numpy", "protobuf>=3.9.2", "tqdm", "requests", "pillow"]
 
 
 class BinaryDistribution(Distribution):

@@ -37,8 +37,11 @@ class CheckConsistencyAsyncRpcCtx : public AsyncRpcCtx {
 
   ~CheckConsistencyAsyncRpcCtx() override;
 
-  Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                        std::function<void()>* Callback) override;
+  Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                           std::function<void()>* Callback) override;
+
+  Maybe<void> PrepareRecvBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                           std::function<void()>* Callback) override;
 
   Maybe<void> Check() const;
 
