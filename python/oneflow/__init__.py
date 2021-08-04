@@ -318,6 +318,7 @@ from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.softplus import softplus_op as softplus
 from oneflow.nn.modules.sort import sort_op as sort
+from oneflow.nn.modules.split import split_op as split
 from oneflow.nn.modules.squeeze import squeeze_op as squeeze
 from oneflow.nn.modules.stack import stack
 from oneflow.nn.modules.tan import tan_op as tan

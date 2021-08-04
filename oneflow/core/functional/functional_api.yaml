@@ -850,3 +850,11 @@
 - name: "reduce_sum_like"
   signature: "Tensor ReduceSumLike(Tensor in, Tensor like, *,Int32List axis)"
   bind_python: True
+
+- name: "split"
+  signature: "TensorTuple Split(Tensor x, *, Int64 split_size, Int64 dim=0)"
+  bind_python: True
+
+- name: "split_with_size"
+  signature: "TensorTuple SplitWithSize(Tensor x, *, Int64List split_sizes, Int64 dim=0)"
+  bind_python: True
