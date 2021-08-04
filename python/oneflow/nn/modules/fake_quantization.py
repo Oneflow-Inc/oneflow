@@ -110,23 +110,6 @@ class FakeQuantization(Module):
             self.quantization_scheme,
         )
 
-
-def fake_quantization_op(
-    input,
-    scale,
-    zero_point,
-    quantization_formula: str = "google",
-    quantization_bit: int = 8,
-    quantization_scheme: str = "symmetric",
-):
-    
-    return FakeQuantization(
-        quantization_formula=quantization_formula,
-        quantization_bit=quantization_bit,
-        quantization_scheme=quantization_scheme,
-    )(input, scale, zero_point)
-
-
 if __name__ == "__main__":
     import doctest
 
