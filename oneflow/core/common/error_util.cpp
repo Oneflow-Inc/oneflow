@@ -101,20 +101,15 @@ std::string FormatErrorSummaryAndMsg(const std::shared_ptr<cfg::ErrorProto>& err
 }  // namespace
 
 void FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error) {
-  std::string error_global = "";
   std::stringstream ss;
   for (auto stack_frame = error->mutable_stack_frame()->rbegin();
        stack_frame < error->mutable_stack_frame()->rend(); stack_frame++) {
-    std::string error_file = FormatFile(*stack_frame->mutable_file());
-    std::string error_line = FormatLine(*stack_frame->mutable_line());
-    std::string error_function = FormatFunction(*stack_frame->mutable_function());
-    std::string error_msg = FormatErrorMsg(*stack_frame->mutable_error_msg(),
-                                           stack_frame == error->mutable_stack_frame()->rend() - 1);
-    ss << error_file << error_line << error_function << error_msg;
+    ss << FormatFile(*stack_frame->mutable_file()) << FormatLine(*stack_frame->mutable_line())
+       << FormatFunction(*stack_frame->mutable_function())
+       << FormatErrorMsg(*stack_frame->mutable_error_msg(),
+                         stack_frame == error->mutable_stack_frame()->rend() - 1);
   }
-  std::string error_summary_and_msg = FormatErrorSummaryAndMsg(error);
-
-  ss << error_global << "\n" << error_summary_and_msg;
+  ss << "\n" << FormatErrorSummaryAndMsg(error);
   *MutErrorStr() = ss.str();
 }
 
