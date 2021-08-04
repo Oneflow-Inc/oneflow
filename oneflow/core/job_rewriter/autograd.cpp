@@ -290,7 +290,7 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     instance_num_op_conf->set_x(GenLogicalBlobName(loss_lbi));
     instance_num_op_conf->set_y("y");
     instance_num_op_conf->set_data_type(op_node->LogicalBlobDesc4Lbi(loss_lbi).data_type());
-    instance_num_op_conf->mutable_include_axis_conf()->add_axis(0);
+    instance_num_op_conf->mutable_include_axis_conf();
     instance_num_op.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
     lbi->set_op_name(instance_num_op.name());
