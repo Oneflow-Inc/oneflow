@@ -116,9 +116,10 @@ message InputDeviceNotMatchError {
 }
 
 message ErrorStackFrame {
-  required string location = 1;
-  required string function = 2;
-  required string error_msg = 3;
+  required string file = 1;
+  required int64 line = 2;
+  required string function = 3;
+  required string error_msg = 4;
 }
 
 message SymbolIdUninitializedError {}
