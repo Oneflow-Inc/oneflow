@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +12,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/common.h"
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/device.h"
+"""
+from .ddp import DistributedDataParallel
 
-namespace oneflow {
-struct DeviceExportUtil final {
-  static void CheckDeviceType(const std::string& type);
-
-  static Symbol<Device> ParseAndNew(const std::string& type_and_id);
-
-  static Symbol<Device> New(const std::string& type_and_id);
-
-  static Symbol<Device> New(const std::string& type, int64_t device_id);
-};
-
-}  // namespace oneflow
+__all__ = ["DistributedDataParallel"]
