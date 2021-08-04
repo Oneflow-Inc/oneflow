@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -27,6 +29,8 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/user/kernels/bernoulli_kernel.h"
 #include "oneflow/user/kernels/uniform_kernel.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 namespace one {
@@ -63,10 +67,6 @@ class BernoulliFunctor {
   std::shared_ptr<OpExpr> bernoulli_op_;
 };
 
-// - name: "rand"
-//   signature: "Tensor Rand(*, Shape shape, DataType dtype, Device device=None, Generator
-//   generator=None)" bind_python: True
-
 class RandFunctor {
  public:
   RandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
@@ -76,28 +76,6 @@ class RandFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    // TODO: deal with datatype
-    /*
-    tensor([[[0.5450, 0.0850, 0.8039],
-             [0.6258, 0.9747, 0.7761]]])
-    >>> torch.rand(1,2,3,dtype=torch.doule)
-
-    >>> torch.rand(1,2,3,dtype=torch.double)
-    tensor([[[0.2221, 0.6954, 0.5011],
-             [0.0680, 0.4570, 0.0813]]], dtype=torch.float64)
-    */
-    // if (IsIntegralDataType(dtype)) {
-    //   JUST(attrs.SetAttr<bool>("is_floating_value", false));
-    //   JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
-    // } else {
-    //   JUST(attrs.SetAttr<bool>("is_floating_value", true));
-    //   JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
-    // }
-    // {
-    //   ParallelDistribution parallel_distribution;
-    //   parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-    //   JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
-    // }
 
     std::shared_ptr<one::Generator> gen;
     if (!generator) {
@@ -108,16 +86,67 @@ class RandFunctor {
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
-    const auto& bernoulli_kernel_state = std::make_shared<UniformKernelState>(gen);
+    const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
 
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
       return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {}, OpExprInterpContext(attrs, device_symbol, bernoulli_kernel_state));
+          *op_, {}, OpExprInterpContext(attrs, device_symbol, uniform_kernel_state));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {},
-                                            OpExprInterpContext(attrs, bernoulli_kernel_state));
+                                            OpExprInterpContext(attrs, uniform_kernel_state));
     }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentRandFunctor {
+ public:
+  ConsistentRandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const Optional<one::Generator>& generator) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
+
+    const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
+    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {},
+        OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
+  }
+
+  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
+      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
+                                 Symbol<cfg::ParallelDistribution>>
+        map;
+    auto iter = map.find(sbp_tuple);
+    if (iter == map.end()) {
+      cfg::ParallelDistribution parallel_distribution;
+      for (const auto& sbp_parallel : sbp_tuple) {
+        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
+      }
+      iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
+    }
+    return iter->second;
   }
 
  private:
@@ -129,6 +158,7 @@ class RandFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BernoulliFunctor>("Bernoulli");
   m.add_functor<impl::RandFunctor>("Rand");
+  m.add_functor<impl::ConsistentRandFunctor>("ConsistentRandFunctor");
 };
 
 }  // namespace functional

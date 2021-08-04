@@ -83,8 +83,12 @@ class Rand(Module):
         size = _single(size)
         if dtype is None:
             dtype = flow.float32
+        if dtype not in [flow.float, flow.double]:
+            raise NotImplementedError("Do not support such data type: {}".format(dtype))
+
         if generator is None:
-            self.generator = flow.Generator()
+            generator = flow.default_generator()
+        self.generator = generator
         if placement is None:
             if device is None:
                 self.device = flow.device("cpu")
@@ -107,11 +111,13 @@ class Rand(Module):
 
     def forward(self):
         if self.placement is not None:
-            pass  # consistent_rand?
+            res = flow.F.consistent_rand(
+                self.size, self.dtype, self.placement, self.sbp, self.generator
+            )
         else:
             res = flow.F.rand(self.size, self.dtype, self.device, self.generator)
-            res.requires_grad = self.requires_grad
-            return res
+        res.requires_grad = self.requires_grad
+        return res
 
 
 def rand_op(
