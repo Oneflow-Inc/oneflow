@@ -60,6 +60,7 @@ def is_deprecated(func_or_class):
     )
 
 
+from . import sbp
 import atexit
 
 import oneflow.framework.c_api_util
@@ -363,4 +364,6 @@ from oneflow.ops.initializer_util import (
 )
 from oneflow.nn.modules.scatter import *
 
-from . import autograd, distributed, linalg, optim, saved_model, sbp
+from . import autograd, distributed, linalg, optim, saved_model
+import oneflow.utils.data
+import oneflow.utils.vision
