@@ -27,7 +27,9 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
@@ -56,10 +58,16 @@ class ConsistentConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> parallel_distribution(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          parallel_distribution.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("parallel_distribution", parallel_distribution));
     }
+    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
   }
@@ -124,10 +132,16 @@ class ConsistentEmptyFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> parallel_distribution(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          parallel_distribution.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("parallel_distribution", parallel_distribution));
     }
+    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
   }

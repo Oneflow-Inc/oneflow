@@ -44,8 +44,7 @@ def empty_op(
           current device.
         placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
           construct local tensor.
-        sbp (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
-          numbers of placement.
+        sbp (flow.sbp or List[flow.sbp], optional): The desired sbp of returned consistent tensor.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
