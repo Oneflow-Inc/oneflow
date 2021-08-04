@@ -207,6 +207,7 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   const auto& tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   std::vector<Shape> shapes;
+  // std::vector<const DType*> dtypes;
   std::vector<Symbol<DType>> dtypes;
   std::atomic<bool> synced(false);
 
@@ -226,7 +227,7 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
     const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
     shapes.push_back(tensor_buffer->shape());
-    dtypes.push_back(DType::DType4DataType(DataType::kTensorBuffer));
+    dtypes.push_back(DType::Get(tensor_buffer->data_type()).GetOrThrow());
   }
   return std::make_tuple(shapes, dtypes);
 }
