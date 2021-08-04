@@ -64,13 +64,13 @@ class MaxPool1d(Module):
 
     .. code-block:: python 
 
-        >>> import oneflow as flow 
-        >>> import numpy as np 
+        import oneflow as flow 
+        import numpy as np
 
-        >>> of_maxpool1d = flow.nn.MaxPool1d(kernel_size=3, padding=1, stride=1)
-        >>> x = flow.Tensor(np.random.randn(1, 4, 4))
-        >>> y = of_maxpool1d(x)
-        >>> y.shape 
+        of_maxpool1d = flow.nn.MaxPool1d(kernel_size=3, padding=1, stride=1)
+        x = flow.Tensor(np.random.randn(1, 4, 4))
+        y = of_maxpool1d(x)
+        y.shape 
         flow.Size([1, 4, 4])
 
     """
@@ -169,13 +169,13 @@ class MaxPool2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow as flow 
-        >>> import numpy as np 
+        import oneflow as flow 
+        import numpy as np
 
-        >>> of_maxpool2d = flow.nn.MaxPool2d(kernel_size=3, padding=1, stride=1)
-        >>> x = flow.Tensor(np.random.randn(1, 4, 4, 4))
-        >>> y = of_maxpool2d(x)
-        >>> y.shape 
+        of_maxpool2d = flow.nn.MaxPool2d(kernel_size=3, padding=1, stride=1)
+        x = flow.Tensor(np.random.randn(1, 4, 4, 4))
+        y = of_maxpool2d(x)
+        y.shape 
         flow.Size([1, 4, 4, 4])
 
     """
@@ -283,13 +283,13 @@ class MaxPool3d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow as flow 
-        >>> import numpy as np 
+        import oneflow as flow 
+        import numpy as np 
 
-        >>> of_maxpool3d = flow.nn.MaxPool3d(kernel_size=3, padding=1, stride=1)
-        >>> x = flow.Tensor(np.random.randn(1, 4, 4, 4, 4))
-        >>> y = of_maxpool3d(x)
-        >>> y.shape 
+        of_maxpool3d = flow.nn.MaxPool3d(kernel_size=3, padding=1, stride=1)
+        x = flow.Tensor(np.random.randn(1, 4, 4, 4, 4))
+        y = of_maxpool3d(x)
+        y.shape 
         flow.Size([1, 4, 4, 4, 4])
 
     """
@@ -366,13 +366,13 @@ class AvgPool1d(Module):
 
     .. code-block:: python 
         
-        >>> import oneflow as flow 
-        >>> import numpy as np 
+        import oneflow as flow 
+        import numpy as np
 
-        >>> of_avgpool1d = flow.nn.AvgPool1d(kernel_size=3, padding=1, stride=1)
-        >>> x = flow.Tensor(np.random.randn(1, 4, 4))
-        >>> y = of_avgpool1d(x)
-        >>> y.shape 
+        of_avgpool1d = flow.nn.AvgPool1d(kernel_size=3, padding=1, stride=1)
+        x = flow.Tensor(np.random.randn(1, 4, 4))
+        y = of_avgpool1d(x)
+        y.shape 
         flow.Size([1, 4, 4])
 
     """
@@ -439,13 +439,13 @@ class AvgPool2d(Module):
 
     .. code-block:: python
 
-        >>> import oneflow as flow 
-        >>> import numpy as np 
+        import oneflow as flow 
+        import numpy as np 
 
-        >>> of_avgpool2d = flow.nn.AvgPool2d(kernel_size=3, padding=1, stride=1)
-        >>> x = flow.Tensor(np.random.randn(1, 4, 4, 4))
-        >>> y = of_avgpool2d(x)   
-        >>> y.shape
+        of_avgpool2d = flow.nn.AvgPool2d(kernel_size=3, padding=1, stride=1)
+        x = flow.Tensor(np.random.randn(1, 4, 4, 4))
+        y = of_avgpool2d(x)   
+        y.shape
         flow.Size([1, 4, 4, 4])
 
     """
@@ -532,13 +532,13 @@ class AvgPool3d(Module):
     
     .. code-block:: python
     
-        >>> import oneflow as flow
-        >>> import numpy as np
+        import oneflow as flow
+        import numpy as np
         
-        >>> m = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1))
-        >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
-        >>> y = m(x)
-        >>> y.shape
+        m = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1))
+        x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
+        y = m(x)
+        y.shape
         flow.Size([9, 7, 10, 31, 19])
 
     """
