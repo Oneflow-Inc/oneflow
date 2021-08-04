@@ -87,7 +87,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-#define REGISTER_GPU_RANDPERM_KERNEL                                                         \
+#define REGISTER_USER_KERNEL                                                         \
   REGISTER_USER_KERNEL("randperm")                                                           \
       .SetCreateFn<GpuRandPermKernel>()                                                      \
       .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")                                     \
@@ -108,6 +108,6 @@ class GpuRandPermKernel final : public user_op::OpKernel {
                                                                                                                                                                                                                                                                                                              \
       });
 
-REGISTER_GPU_RANDPERM_KERNEL
+REGISTER_USER_KERNEL
 
 }  // namespace oneflow
