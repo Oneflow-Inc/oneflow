@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +12,25 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/common.h"
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/device.h"
+"""
+import oneflow as flow
+from oneflow.nn.module import Module
 
-namespace oneflow {
-struct DeviceExportUtil final {
-  static void CheckDeviceType(const std::string& type);
+from typing import Sequence
 
-  static Symbol<Device> ParseAndNew(const std::string& type_and_id);
 
-  static Symbol<Device> New(const std::string& type_and_id);
+class AllReduce(Module):
+    def __init__(self, parallel_conf_str: str):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("eager_nccl_all_reduce")
+            .Input("in")
+            .Output("out")
+            .Attr("parallel_conf", parallel_conf_str)
+            .Build()
+        )
 
-  static Symbol<Device> New(const std::string& type, int64_t device_id);
-};
-
-}  // namespace oneflow
+    def forward(self, x):
+        assert x.device.type == "cuda"
+        assert x.device.index == flow.framework.distribute.get_local_rank()
+        return self._op(x)[0]

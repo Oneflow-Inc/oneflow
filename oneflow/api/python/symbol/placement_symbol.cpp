@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -192,6 +193,26 @@ struct PlacementSymbolExportUtil {
                                 + ", hierarchy=" + hierarchy + ")";
     return placement_str;
   }
+
+  static Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
+                                                               const std::string& device_type) {
+    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
+    std::shared_ptr<cfg::ParallelConf> parallel_conf =
+        std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
+    parallel_conf->set_device_tag(JUST(MapAt(type2device_tag, device_type)));
+    std::shared_ptr<ParallelDesc> out_parallel_desc;
+    JUST(LogicalRun(
+        [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+          out_parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+          return Maybe<void>::Ok();
+        }));
+    return SymbolOf(*out_parallel_desc);
+  }
+
+  static Symbol<ParallelDesc> ApiReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
+                                                           const std::string& device_type) {
+    return ReplacePlacementDeviceTag(parallel_desc, device_type).GetOrThrow();
+  }
 };
 
 }  // namespace
@@ -244,6 +265,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::self == py::self)
       .def(py::hash(py::self));
   m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);
+  m.def("_ReplacePlacementDeviceTag", &PlacementSymbolExportUtil::ApiReplacePlacementDeviceTag);
 }
 
 }  // namespace oneflow
