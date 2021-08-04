@@ -129,6 +129,7 @@ def rand_op(
     Returns a tensor filled with random numbers from a uniform distribution on the interval [0, 1)
 
     The shape of the tensor is defined by the variable argument ``size``.
+
     Args:
         size (int... or flow.Size): Defining the shape of the output tensor.
           Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
@@ -147,6 +148,7 @@ def rand_op(
     For example:
 
     .. code-block:: python
+
         >>> import oneflow as flow
         >>> x = flow.rand(3,3)
         >>> print(x)
