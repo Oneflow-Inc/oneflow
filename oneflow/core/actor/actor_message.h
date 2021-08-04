@@ -62,6 +62,8 @@ class ActorMsg final {
   uint8_t user_data_size() const;
   const void* user_data() const;
   bool IsDataRegstMsgToConsumer() const;
+  int64_t comm_net_sequence_number() const;
+  void set_comm_net_sequence_number(int64_t sequence_number);
 
   // Serialize
   template<typename StreamT>
@@ -77,6 +79,7 @@ class ActorMsg final {
   struct RegstWrapper {
     Regst* regst;
     void* comm_net_token;
+    int64_t comm_net_sequence_number;
     RegstStatus regst_status;
     bool has_sole_empty_blob;
     bool is_data_regst_to_consumer;

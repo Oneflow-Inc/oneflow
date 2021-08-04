@@ -112,6 +112,16 @@ int64_t ActorMsg::piece_id() const {
   return regst_wrapper_.regst_status.piece_id;
 }
 
+int64_t ActorMsg::comm_net_sequence_number() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  return regst_wrapper_.comm_net_sequence_number;
+}
+
+void ActorMsg::set_comm_net_sequence_number(int64_t sequence_number) {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  regst_wrapper_.comm_net_sequence_number = sequence_number;
+}
+
 int64_t ActorMsg::act_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.regst_status.act_id;
