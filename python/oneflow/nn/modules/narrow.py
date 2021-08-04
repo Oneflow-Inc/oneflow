@@ -34,4 +34,33 @@ class Narrow(Module):
 
 @register_tensor_op("narrow")
 def narrow_op(x, dim: int, start: int, length: int):
+    """Returns a new tensor that is a narrowed version of `x` tensor.
+    The dimension `dim` is input from `start` to `start + length`.
+
+    Args:
+        x: the tensor to narrow.
+        dim: the dimension along which to narrow.
+        start: the starting dimension.
+        length: the distance to the ending dimension.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> flow.narrow(x, 0, 0, 2)
+        tensor([[1, 2, 3],
+                [4, 5, 6]], dtype=oneflow.int64)
+        >>> flow.narrow(x, 1, 1, 2)
+        tensor([[2, 3],
+                [5, 6],
+                [8, 9]], dtype=oneflow.int64)
+    """
     return Narrow(dim, start, length)(x)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
