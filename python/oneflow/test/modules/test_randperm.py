@@ -21,20 +21,22 @@ import numpy as np
 import unittest
 
 
-def _test_randperm_with_generator(test_case, N, device,dtype):
+def _test_randperm_with_generator(test_case, N, device, dtype):
     generator = flow.Generator()
     generator.manual_seed(0)
-    y_1 = flow.randperm(N, device=device,dtype=dtype, generator=generator)
+    y_1 = flow.randperm(N, device=device, dtype=dtype, generator=generator)
     generator = flow.Generator()
     generator.manual_seed(0)
-    y_2 = flow.randperm(N, device=device,dtype=dtype, generator=generator)
+    y_2 = flow.randperm(N, device=device, dtype=dtype, generator=generator)
     test_case.assertTrue(np.allclose(y_1.numpy(), y_2.numpy()))
-    test_case.assertTrue(y_1.device == flow.device(device) and y_2.device==flow.device(device))
-    test_case.assertTrue(y_1.dtype == dtype and y_2.dtype ==dtype)
+    test_case.assertTrue(
+        y_1.device == flow.device(device) and y_2.device == flow.device(device)
+    )
+    test_case.assertTrue(y_1.dtype == dtype and y_2.dtype == dtype)
 
 
-def _test_randperm_backward(test_case, N, device,dtype):
-    x = flow.randperm(N, device=device,dtype=dtype)
+def _test_randperm_backward(test_case, N, device, dtype):
+    x = flow.randperm(N, device=device, dtype=dtype)
     x.requires_grad = True
     y = x.sum()
     y.backward()
@@ -51,7 +53,7 @@ class Testrandperm(flow.unittest.TestCase):
         ]
         arg_dict["N"] = [i for i in range(2, 100, 7)]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["dtype"] = [flow.int32,flow.int64]
+        arg_dict["dtype"] = [flow.int32, flow.int64]
         # @TODO:GPU version test needs context support from backend
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

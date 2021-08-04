@@ -57,7 +57,7 @@ class Randperm(Module):
 
     def forward(self, out=None):
         res = flow.F.randperm(self.N, self.generator)
-        res = res.to(self.device, dtype =self.dtype)
+        res = res.to(self.device, dtype=self.dtype)
         res.requires_grad = self.requires_grad
         return res
 
