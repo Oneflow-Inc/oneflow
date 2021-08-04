@@ -47,10 +47,9 @@ class CpuRandintKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-#define REGISTER_CPU_RANDINT_KERNEL                                                \
-  REGISTER_USER_KERNEL("randint").SetCreateFn<CpuRandintKernel>().SetIsMatchedHob( \
+
+REGISTER_USER_KERNEL("randint").SetCreateFn<CpuRandintKernel>().SetIsMatchedHob( 
       (user_op::HobDeviceTag() == "cpu"));
 
-REGISTER_CPU_RANDINT_KERNEL
 
 }  // namespace oneflow
