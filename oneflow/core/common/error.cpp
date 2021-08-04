@@ -35,9 +35,11 @@ std::shared_ptr<cfg::ErrorProto>* MutThreadLocalError() {
 
 }  // namespace
 
-Error&& Error::AddStackFrame(const std::string& location, const std::string& function) {
+Error&& Error::AddStackFrame(const std::string& file, const int64_t& line,
+                             const std::string& function) {
   auto* stack_frame = error_proto_->add_stack_frame();
-  stack_frame->set_location(location);
+  stack_frame->set_file(file);
+  stack_frame->set_line(line);
   stack_frame->set_function(function);
   return std::move(*this);
 }
@@ -278,7 +280,7 @@ Error Error::InputDeviceNotMatchError() {
 }
 
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
-  ErrorStrFormat(error);
+  FormatErrorStr(error);
   *MutThreadLocalError() = error;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
   switch (error->error_type_case()) {

@@ -13,19 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#include <sstream>
 #include "oneflow/core/common/error_util.h"
 
 namespace oneflow {
 
-std::string& GetErrorStr() {
+std::string* MutErrorStr() {
   thread_local static std::string error_str = "";
-  return error_str;
+  return &error_str;
 }
+
+const std::string& GetErrorStr() { return *MutErrorStr(); }
 
 namespace {
 
-void SpaceStrip(std::string& str) {
+void StripSpace(std::string& str) {
   str.erase(0, str.find_first_not_of(" "));
   str.erase(str.find_last_not_of(" ") + 1);
 }
@@ -34,18 +36,18 @@ bool IsLetterNumberOrUnderline(char c) {
   return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
 }
 
-void ErrorMsgErase(std::string& str) {
+void EraseErrorMsg(std::string& str) {
   if (str.size() == 0) { return; }
-  SpaceStrip(str);
+  StripSpace(str);
   // strip bracket
   if (str.at(0) != '(') { return; }
   str = str.substr(1, str.size() - 2);
 }
 
-void ErrorMsgShorten(std::string& str) {
+void ShortenErrorMsg(std::string& str) {
   const int num_displayed_char = 150;
   if (str.size() == 0) { return; }
-  SpaceStrip(str);
+  StripSpace(str);
   if (str.size() < num_displayed_char) { return; }
 
   int first_index = -1;
@@ -58,49 +60,62 @@ void ErrorMsgShorten(std::string& str) {
       pre_index = i;
     }
   }
-  str = str.substr(0, first_index) + " ... " + str.substr(last_index);
+  std::stringstream ss;
+  ss << str.substr(0, first_index) << " ... " << str.substr(last_index);
+  str = ss.str();
 }
 
-std::string LocationFormat(std::string location) {
-  int index = location.find(":");
-  location.erase(index, 1);
-  location.insert(index, "\", line ");
-  return "\n  File \"" + location + ",";
+std::string FormatFile(std::string file) {
+  std::stringstream ss;
+  ss << "\n File \"" << file << "\", ";
+  return ss.str();
 }
 
-std::string FunctionFormat(std::string function) { return " in " + function; }
-
-std::string ErrorMsgFormat(std::string error_msg, bool has_error_hint) {
-  ErrorMsgErase(error_msg);
-  if (!has_error_hint) { ErrorMsgShorten(error_msg); }
-  return "\n    " + error_msg;
+std::string FormatLine(const int64_t& line) {
+  std::stringstream ss;
+  ss << "line " << line << ",";
+  return ss.str();
 }
 
-std::string ErrorSummaryAndMsgFormat(const std::shared_ptr<cfg::ErrorProto>& error) {
-  std::string error_summary_and_msg = "";
-  if (error->has_error_summary()) { error_summary_and_msg += error->error_summary(); }
-  if (error->has_msg()) {
-    error_summary_and_msg +=
-        (error_summary_and_msg.size() != 0 ? ", " + error->msg() : error->msg());
-  }
-  return error_summary_and_msg;
+std::string FormatFunction(std::string function) {
+  std::stringstream ss;
+  ss << " in " << function;
+  return ss.str();
+}
+
+std::string FormatErrorMsg(std::string error_msg, bool has_error_hint) {
+  EraseErrorMsg(error_msg);
+  if (!has_error_hint) { ShortenErrorMsg(error_msg); }
+  std::stringstream ss;
+  ss << "\n    " << error_msg;
+  return ss.str();
+}
+
+std::string FormatErrorSummaryAndMsg(const std::shared_ptr<cfg::ErrorProto>& error) {
+  std::stringstream ss;
+  if (error->has_error_summary()) { ss << error->error_summary(); }
+  if (error->has_msg()) { ss << (ss.str().size() != 0 ? ", " + error->msg() : error->msg()); }
+  return ss.str();
 }
 
 }  // namespace
 
-void ErrorStrFormat(const std::shared_ptr<cfg::ErrorProto>& error) {
+void FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error) {
   std::string error_global = "";
+  std::stringstream ss;
   for (auto stack_frame = error->mutable_stack_frame()->rbegin();
        stack_frame < error->mutable_stack_frame()->rend(); stack_frame++) {
-    std::string error_file = LocationFormat(*stack_frame->mutable_location());
-    std::string error_function = FunctionFormat(*stack_frame->mutable_function());
-    std::string error_msg = ErrorMsgFormat(*stack_frame->mutable_error_msg(),
+    std::string error_file = FormatFile(*stack_frame->mutable_file());
+    std::string error_line = FormatLine(*stack_frame->mutable_line());
+    std::string error_function = FormatFunction(*stack_frame->mutable_function());
+    std::string error_msg = FormatErrorMsg(*stack_frame->mutable_error_msg(),
                                            stack_frame == error->mutable_stack_frame()->rend() - 1);
-    error_global += (error_file + error_function + error_msg);
+    ss << error_file << error_line << error_function << error_msg;
   }
-  std::string error_summary_and_msg = ErrorSummaryAndMsgFormat(error);
+  std::string error_summary_and_msg = FormatErrorSummaryAndMsg(error);
 
-  GetErrorStr() += (error_global + "\n" + error_summary_and_msg);
+  ss << error_global << "\n" << error_summary_and_msg;
+  *MutErrorStr() = ss.str();
 }
 
 }  // namespace oneflow

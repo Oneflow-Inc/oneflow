@@ -23,8 +23,9 @@ namespace oneflow {
 namespace cfg {
 class ErrorProto;
 }
-std::string& GetErrorStr();
-void ErrorStrFormat(const std::shared_ptr<cfg::ErrorProto>& error);
+std::string* MutErrorStr();
+const std::string& GetErrorStr();
+void FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ERROR_UTIL_H
