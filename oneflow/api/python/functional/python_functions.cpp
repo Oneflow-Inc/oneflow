@@ -164,11 +164,9 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
     CHECK_OR_RETURN(PyTensorCheck(input)) << "input type should be Tensor";
     const auto& in = JUST(PyUnpackTensor(input));
 
-    Optional<Scalar> dim_scalar;
     CHECK_OR_RETURN(PyScalarCheck(dim)) << "dim type should be Scalar";
-    dim_scalar = *JUST(PyUnpackScalar(dim));
-    Scalar& dim_value = *JUST(dim_scalar.value());
-    int32_t d = JUST(dim_value.As<int32_t>());
+    Scalar dim_scalar = *JUST(PyUnpackScalar(dim));
+    int32_t d = JUST(dim_scalar.As<int32_t>());
 
     CHECK_OR_RETURN(PyTensorCheck(index)) << "index type should be Tensor";
     const auto& idx = JUST(PyUnpackTensor(index));
@@ -180,10 +178,8 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
       const auto& src_tensor = JUST(PyUnpackTensor(src));
       return functional::DimScatter(in, idx, src_tensor, d);
     } else if (is_src_scalar) {
-      Optional<Scalar> src_scalar;
-      src_scalar = *JUST(PyUnpackScalar(src));
-      Scalar& src_value = *JUST(src_scalar.value());
-      return functional::DimScatterUpdateScalar(in, idx, JUST(src_value.As<float>()), d);
+      Scalar src_scalar = *JUST(PyUnpackScalar(src));
+      return functional::DimScatterUpdateScalar(in, idx, JUST(src_scalar.As<float>()), d);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "none of:\n"
                                      "(Tensor input, Int32 dim, Tensor index, Tensor src)\n"
@@ -208,9 +204,6 @@ py::object PyClamp(py::args py_args, py::kwargs py_kwargs) {
 
     bool has_min_bound = PyScalarCheck(min);
     bool has_max_bound = PyScalarCheck(max);
-    LOG(INFO) << "yaochi: min bound:" << has_min_bound;
-    LOG(INFO) << "yaochi: max bound:" << has_max_bound;
-
     Optional<Scalar> min_scalar;
     Optional<Scalar> max_scalar;
 
