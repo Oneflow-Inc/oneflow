@@ -27,9 +27,6 @@ class SrcSubsetTickKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
-  const PbMessage& GetCustomizedOpConf() const override {
-    return this->op_conf().src_subset_tick_conf();
-  }
 };
 
 REGISTER_KERNEL(OperatorConf::kSrcSubsetTickConf, SrcSubsetTickKernel);
