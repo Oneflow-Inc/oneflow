@@ -32,14 +32,14 @@ class CpuRandPermKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t* output = out->mut_dptr<int32_t>();
-    const int32_t N = ctx->Attr<int32_t>("N");
+    const int32_t n = ctx->Attr<int32_t>("n");
     auto* randperm_kernel_state = dynamic_cast<RandpermKernelState*>(state);
     CHECK_NOTNULL(randperm_kernel_state);
     const auto& generator = randperm_kernel_state->generator();
     const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
     CHECK_NOTNULL(generator);
-    user_op::RangeFunctor<DeviceType::kCPU, int32_t>()(ctx->device_ctx(), 0, 1, N, output);
-    std::shuffle(output, output + N, cpu_generator->engine());
+    user_op::RangeFunctor<DeviceType::kCPU, int32_t>()(ctx->device_ctx(), 0, 1, n, output);
+    std::shuffle(output, output + n, cpu_generator->engine());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

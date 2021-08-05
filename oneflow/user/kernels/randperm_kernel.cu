@@ -18,9 +18,9 @@ limitations under the License.
 #include <curand.h>
 #include <curand_kernel.h>
 namespace oneflow {
-__global__ void GeneKeysAndValues(const int32_t N, int32_t* values, int32_t* keys,
+__global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
                                   curandState* state) {
-  XPU_1D_KERNEL_LOOP(i, N) {
+  XPU_1D_KERNEL_LOOP(i, n) {
     curandState localState = state[i];
     keys[i] = curand(&localState);
     values[i] = i;
@@ -42,7 +42,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t* output = out->mut_dptr<int32_t>();
-    const int32_t N = ctx->Attr<int32_t>("N");
+    const int32_t n = ctx->Attr<int32_t>("n");
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     auto* randperm_kernel_state = dynamic_cast<RandpermKernelState*>(state);
@@ -60,26 +60,26 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     void* tmp = tmp_buffer->mut_dptr<void>();
     int32_t* key_base = reinterpret_cast<int32_t*>(tmp);
 
-    const int32_t key_aligned_bytes = GetCudaAlignedSize(N * sizeof(int32_t));
+    const int32_t key_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));
     int32_t* value_base =
         reinterpret_cast<int32_t*>(reinterpret_cast<char*>(key_base) + 2 * key_aligned_bytes);
 
-    const int32_t indices_aligned_bytes = GetCudaAlignedSize(N * sizeof(int32_t));
+    const int32_t indices_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));
     void* tmp_base =
         reinterpret_cast<void*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
-    size_t temp_storage_bytes = InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, N);
+    size_t temp_storage_bytes = InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
 
-    GeneKeysAndValues<<<BlocksNum4ThreadsNum(N), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(N, value_base, key_base, curand_states);
+    GeneKeysAndValues<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                        ctx->device_ctx()->cuda_stream()>>>(n, value_base, key_base, curand_states);
 
     auto err = cub::DeviceRadixSort::SortPairs(
         /* d_temp_storage */ tmp_base,
         /* temp_storage_bytes */ temp_storage_bytes,
         /* d_keys_in */ key_base,
-        /* d_keys_out */ key_base + N,
+        /* d_keys_out */ key_base + n,
         /* d_values_in */ value_base,
         /* d_values_out */ output,
-        /* num_items */ N,
+        /* num_items */ n,
         /* begin_bit */ 0,
         /* end_bit */ sizeof(int32_t) * 8,
         /* stream */ ctx->device_ctx()->cuda_stream());
@@ -91,15 +91,15 @@ REGISTER_USER_KERNEL("randperm")
       .SetCreateFn<GpuRandPermKernel>()                                                      
       .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")                                     
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    
-        const int32_t N = ctx->Attr<int32_t>("N");                                           
+        const int32_t n = ctx->Attr<int32_t>("n");                                           
         /* Sorted In */                                                                      
-        const int32_t sorted_in_aligned_bytes = 2 * GetCudaAlignedSize(N * sizeof(int32_t)); 
+        const int32_t sorted_in_aligned_bytes = 2 * GetCudaAlignedSize(n * sizeof(int32_t)); 
         /* Indices */                                                                        
-        const int32_t indices_aligned_bytes = GetCudaAlignedSize(N * sizeof(int32_t));       
+        const int32_t indices_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));       
         
         /* CUB Temp Storage */                                                               
-            const int32_t temp_storage_bytes =                                               
-                InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, N);              
+        const int32_t temp_storage_bytes =                                               
+                InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);              
                                                                          
         return sorted_in_aligned_bytes                                                       
             + indices_aligned_bytes + temp_storage_bytes;                                    

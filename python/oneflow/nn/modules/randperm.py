@@ -22,11 +22,13 @@ from typing import Union
 class Randperm(Module):
     def __init__(
         self,
-        n: flow.int32,
-        generator: flow.Generator = None,
+        n,
+        generator:flow.Generator=None,
         dtype: flow.dtype = flow.int32,
         layout=None,
-        device: Union[str, flow.device] = "cpu",
+        device: Union[flow.device, str, None] = None,
+        placement: flow.placement = None,
+        sbp: flow._oneflow_internal.sbp.sbp = None,
         requires_grad: bool = False,
         pin_memory: bool = False,
     ) -> None:
@@ -46,29 +48,54 @@ class Randperm(Module):
                 "pin_memory",
                 "will not be used. pin_memory is not supported yet.",
             ),
-        assert N > 0
+        assert n > 0
+        if isinstance(device, str):
+            device = flow.device(device)
+        if placement is None:
+            if device is None:
+                device = flow.device("cpu")
+        else:
+            assert device is None
+
+        self.placement = placement
+        self.sbp = sbp
+        if placement is not None:
+            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+            if isinstance(self.sbp, flow.sbp.sbp):
+                self.sbp = (self.sbp,)
+            else:
+                for elem in sbp:
+                    assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+            assert len(self.sbp) == len(placement.hierarchy)
+        else:
+            assert sbp is None, "sbp: %s" % sbp
 
         self.device = device
         self.dtype = dtype
         self.requires_grad = requires_grad
         self.pin_memory = pin_memory
         self.generator = generator
-        self.N = N
+        self.n = n
 
     def forward(self, out=None):
-        res = flow.F.randperm(self.N, self.generator)
-        res = res.to(self.device, dtype=self.dtype)
+        if self.placement is not None:
+            res = flow.F.consistent_randperm(
+                self.n, self.placement, self.sbp, self.generator
+            )
+        else:
+            res = flow.F.randperm(self.n, self.device, self.generator)
         res.requires_grad = self.requires_grad
-        return res
-
+        return res.to(self.device,dtype=self.dtype)
 
 def randperm(
     n: flow.int32,
+    out=None,
     generator=None,
-    out: flow.Tensor = None,
-    dtype=flow.int64,
+    dtype: flow.dtype = flow.int32,
     layout=None,
-    device: flow.device = flow.device("cpu"),
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
     requires_grad: bool = False,
     pin_memory: bool = False,
 ) -> Tensor:
@@ -82,7 +109,7 @@ def randperm(
         generator(:class:`oneflow.Generator`, optional):  a pseudorandom number generator for sampling
         out (Tensor): output Tensor,not supported yet.
         dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
-            Default: ``oneflow.int64``.
+            Default: ``oneflow.int32``.
         layout: layout is not supported yet.
         device: the desired device of returned tensor. Default: cpu.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
@@ -96,9 +123,9 @@ def randperm(
         >>> generator = flow.Generator()
         >>> generator.manual_seed(0)
         >>> flow.randperm(5, generator=generator)
-        tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)
+        tensor([2, 4, 3, 0, 1], dtype=oneflow.int32)
     """
-    return Randperm(N, generator, dtype, layout, device, requires_grad, pin_memory)(out)
+    return Randperm(n, generator, dtype, layout, device, placement,sbp,requires_grad, pin_memory)(out)
 
 
 if __name__ == "__main__":

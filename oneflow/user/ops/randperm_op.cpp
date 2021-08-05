@@ -15,16 +15,22 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/framework.h"
-
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/job/global_for.h"
 namespace oneflow {
+
+Maybe<void> InferUniformParallelDistribution(user_op::InferParallelDistributionFnContext* ctx);
+
 REGISTER_NO_GRAD_USER_OP("randperm")
     .Output("out")
-    .Attr<int32_t>("N")
+    .Attr<int32_t>("n")
     .Attr<int64_t>("seed", -1)
+    .Attr<std::string>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);
-      int32_t N = ctx->Attr<int32_t>("N");
-      *out_shape = Shape({N});
+      int32_t n = ctx->Attr<int32_t>("n");
+      *out_shape = Shape({n});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -34,6 +40,20 @@ REGISTER_NO_GRAD_USER_OP("randperm")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
-    });
+    })
+    .SetParallelDistributionInferFn(&InferUniformParallelDistribution);
+
+Maybe<void> InferUniformParallelDistribution(user_op::InferParallelDistributionFnContext* ctx) {
+  cfg::ParallelDistribution* out = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    const auto& pb_str = ctx->user_op_conf().attr<std::string>("nd_sbp");
+    ParallelDistribution pb;
+    CHECK_OR_RETURN(TxtString2PbMessage(pb_str, &pb));
+    out->InitFromProto(pb);
+  } else {
+    out->mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  }
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
