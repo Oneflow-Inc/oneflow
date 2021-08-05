@@ -52,9 +52,9 @@ REGISTER_USER_OP_GRAD("scalar_mul")
                 .Input("in", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("out")
                 .Attr("has_int_operand", op.attr<bool>("has_int_operand"))
-                .Attr("int_operand", op.attr<int64_t>("int_operand"))
+                .Attr("int_operand", op.attr_or_default<int64_t>("int_operand", 0))
                 .Attr("has_float_operand", op.attr<bool>("has_float_operand"))
-                .Attr("float_operand", op.attr<double>("float_operand"))
+                .Attr("float_operand", op.attr_or_default<double>("float_operand", 0.0))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
         AddOp(grad_op);

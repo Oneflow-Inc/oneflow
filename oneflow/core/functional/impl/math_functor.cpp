@@ -105,16 +105,17 @@ class ScalarMulFunctor {
     op_ = CHECK_JUST(one::OpBuilder("scalar_mul").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    if (std::dynamic_pointer_cast<StaticZerosTensor>(x)) { return x; }
     MutableAttrMap attrs;
     if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarMul shoule be float or int.";
@@ -387,6 +388,65 @@ class ClipByScalarMaxGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SelectFirstFunctor {
+ public:
+  SelectFirstFunctor() { op_ = CHECK_JUST(one::SelectFirstOpExpr::New()); }
+
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, inputs));
+    return output;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class MinimumFunctor {
+ public:
+  MinimumFunctor() {
+    elementwise_minimum_op_ =
+        CHECK_JUST(one::OpBuilder("elementwise_minimum").Input("x").Input("y").Output("z").Build());
+    broadcast_minimum_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_minimum").Input("x").Input("y").Output("z").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    if (*x->shape() == *y->shape()) {
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x, y});
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x, y});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> elementwise_minimum_op_;
+  std::shared_ptr<OpExpr> broadcast_minimum_op_;
+};
+
+class MaximumFunctor {
+ public:
+  MaximumFunctor() {
+    elementwise_maximum_op_ =
+        CHECK_JUST(one::OpBuilder("elementwise_maximum").Input("x").Input("y").Output("z").Build());
+    broadcast_maximum_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_maximum").Input("x").Input("y").Output("z").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    if (*x->shape() == *y->shape()) {
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x, y});
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x, y});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> elementwise_maximum_op_;
+  std::shared_ptr<OpExpr> broadcast_maximum_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -406,6 +466,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ClipByScalarMinGradFunctor>("ClipByScalarMinGrad");
   m.add_functor<impl::ClipByScalarMaxFunctor>("ClipByScalarMax");
   m.add_functor<impl::ClipByScalarMaxGradFunctor>("ClipByScalarMaxGrad");
+  m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
+  m.add_functor<impl::MinimumFunctor>("Minimum");
+  m.add_functor<impl::MaximumFunctor>("Maximum");
 };
 
 }  // namespace functional

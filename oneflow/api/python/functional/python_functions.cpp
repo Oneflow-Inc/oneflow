@@ -77,11 +77,12 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
           b = JUST(functional::ScalarMul(b, *JUST(alpha.value())));
         }
       }
-      if (a->shape()->NumAxes() == 0) {
+      /* if (a->shape()->NumAxes() == 0) {
         return functional::ScalarAddByTensor(b, a, inplace);
       } else if (b->shape()->NumAxes() == 0) {
         return functional::ScalarAddByTensor(a, b, inplace);
-      } else if (*a->shape() == *b->shape()) {
+      } else */
+      if (*a->shape() == *b->shape()) {
         return functional::Add(a, b, inplace);
       } else {
         if (inplace) {
@@ -189,6 +190,50 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
+py::object PyMul(py::args py_args, py::kwargs py_kwargs) {
+  // "Mul(Tensor input, Tensor other, *, bool inplace=False)"
+  // "Mul(Tensor input, Scalar other, *, bool inplace=False)"
+  // "Mul(Scalar input, Tensor other)"
+  PyObject* args = py_args.ptr();
+  PyObject* kwargs = py_kwargs.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  bool inplace = false;
+  if (auto* obj = PyDict_GetItemString(kwargs, "inplace")) {
+    CHECK_OR_THROW(PyBool_Check(obj)) << "The keyword inplace's value should be boolean.";
+    inplace = (obj == Py_True);
+  }
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    CHECK_OR_RETURN(!inplace) << "Can not apply inplace for mul.";
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor) << "Inputs must have one tensor at least.";
+    if (input_is_tensor && other_is_tensor) {
+      // "Mul(Tensor input, Tensor other, *, bool inplace=False)"
+      const auto& a = JUST(PyUnpackTensor(input));
+      auto b = JUST(PyUnpackTensor(other));
+      if (*a->shape() == *b->shape()) { return functional::Multiply(a, b); }
+      return functional::BroadcastMul(a, b);
+    } else if (input_is_tensor && !other_is_tensor) {
+      // "Mul(Tensor input, Scalar other, *, bool inplace=False)"
+      const auto& a = JUST(PyUnpackTensor(input));
+      CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar or tensor.";
+      auto b = *JUST(PyUnpackScalar(other));
+      return functional::ScalarMul(a, b);
+    } else {
+      // "Mul(Scalar input, Tensor other)"
+      CHECK_OR_RETURN(!inplace) << "Can not apply inplace on scalar input.";
+      CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar or tensor.";
+      Scalar a = *JUST(PyUnpackScalar(input));
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::ScalarMul(b, a);
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
 py::object PyClamp(py::args py_args, py::kwargs py_kwargs) {
   PyObject* args = py_args.ptr();
   size_t nargs = PyTuple_Size(args);
@@ -228,6 +273,51 @@ py::object PyClamp(py::args py_args, py::kwargs py_kwargs) {
       UNIMPLEMENTED_THEN_RETURN() << "min and max cannot be none at the same time";
     }
   }();
+
+  return py::cast(result.GetPtrOrThrow());
+}
+
+py::object PyDiv(py::args py_args, py::kwargs py_kwargs) {
+  // "Div(Tensor input, Tensor other, *, bool inplace=False)"
+  // "Div(Tensor input, Scalar other, *, bool inplace=False)"
+  // "Div(Scalar input, Tensor other)"
+  PyObject* args = py_args.ptr();
+  PyObject* kwargs = py_kwargs.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  bool inplace = false;
+  if (auto* obj = PyDict_GetItemString(kwargs, "inplace")) {
+    CHECK_OR_THROW(PyBool_Check(obj)) << "The keyword inplace's value should be boolean.";
+    inplace = (obj == Py_True);
+  }
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    CHECK_OR_RETURN(!inplace) << "Can not apply inplace for div.";
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor) << "Inputs must have one tensor at least.";
+    if (input_is_tensor && other_is_tensor) {
+      // "Div(Tensor input, Tensor other, *, bool inplace=False)"
+      const auto& a = JUST(PyUnpackTensor(input));
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::BroadcastDiv(a, b);
+    } else if (input_is_tensor && !other_is_tensor) {
+      // "Div(Tensor input, Scalar other, *, bool inplace=False)"
+      const auto& a = JUST(PyUnpackTensor(input));
+      CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar or tensor.";
+      Scalar b = 1.0;
+      b /= *JUST(PyUnpackScalar(other));
+      return functional::ScalarMul(a, b);
+    } else {
+      // "Div(Scalar input, Tensor other)"
+      CHECK_OR_RETURN(!inplace) << "Can not apply inplace on scalar input.";
+      CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar or tensor.";
+      Scalar a = *JUST(PyUnpackScalar(input));
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::ScalarMul(JUST(functional::ReciprocalNoNan(b)), a);
+    }
+  }();
   return py::cast(result.GetPtrOrThrow());
 }
 
@@ -241,6 +331,8 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("sub", &functional::PySub);
   m.def("scatter", &functional::PyScatter);
   m.def("clamp", &functional::PyClamp);
+  m.def("mul", &functional::PyMul);
+  m.def("div", &functional::PyDiv);
 }
 
 }  // namespace oneflow
