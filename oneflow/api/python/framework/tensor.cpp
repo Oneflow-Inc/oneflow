@@ -250,7 +250,7 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
 
 Maybe<void> CheckConsistentTensorMeta(const one::Tensor& tensor, int64_t seconds) {
   const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(tensor));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
   JUST(ctx->Check());
   return Maybe<void>::Ok();
 }
@@ -412,9 +412,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
       .def_property_readonly("data", &Tensor::data)
-      .def("rpc_token",
+      .def("consistent_id",
            [](const one::Tensor& tensor) -> int64_t {
-             return static_cast<uint64_t>(tensor.rpc_token().GetOrThrow());
+             return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());
            })
       .def("check_meta_consistency",
            [](const one::Tensor& tensor) {
