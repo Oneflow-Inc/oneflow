@@ -173,6 +173,7 @@ struct BinaryFuncAND final {
   static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x && y; }
 };
 
+template<typename T>
 struct BinaryFuncOR final {
   static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x || y; }
 };
