@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
