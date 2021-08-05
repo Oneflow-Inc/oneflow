@@ -64,22 +64,21 @@ class MessagePool final {
           message_buf_.pop();
           return msg_mr;
       } else {
-                  //register a big memory 
+        //register a big memory 
         addr_ = malloc( size_ * num_of_message_);//申请内存空间
-        mem_desc_ = new IBVerbsMemDesc(pd_,addr_, size_ * num_of_message_);//给这一块内存空间注册内存
-     //   message_buf_.assign(num_of_message_, nullptr);
+        mem_desc_ = new IBVerbsMemDesc(pd_,addr_, size_ * num_of_message_);//给这一块内存空间注册内
         //切割内存
         const ibv_mr* mr = mem_desc_->mr();
          for(int i = 0; i < num_of_message_; i++){
            ibv_mr * mr1 =(ibv_mr*) (mr + size_ * i);
            void* addr =(void*) ((char*)addr_ + size_* i);
            IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(mr1,addr,size_);
-      //     message_buf_[i] = new ActorMsgMR(mem_desc);
             ActorMsgMR * actorMr = new ActorMsgMR(mem_desc);
             message_buf_.push(actorMr);
          }
-        ActorMsgMR * msg_mr  =message_buf_.front();
-        msg_mr->set_msg(msg);
+          ActorMsgMR * msg_mr  =message_buf_.front();
+          message_buf_.pop();
+          return msg_mr;
       }
       
     }
