@@ -22,17 +22,17 @@ import oneflow.framework.session_context as session_context
 from oneflow import oneflow_deprecate
 
 
-@oneflow_deprecate()
-def deprecated_name_scope(*args, **kwargs):
-    print(
-        "WARNING:",
-        "oneflow.name_scope/oneflow.experimental.name_scope/deprecated.variable_scope",
-        "will be removed in the future, use {} instead.".format(
-            "oneflow.scope.namespace"
-        ),
-    )
-    print(traceback.format_stack()[-2])
-    return name_scope(*args, **kwargs)
+# @oneflow_deprecate()
+# def deprecated_name_scope(*args, **kwargs):
+#     print(
+#         "WARNING:",
+#         "oneflow.name_scope/oneflow.experimental.name_scope/deprecated.variable_scope",
+#         "will be removed in the future, use {} instead.".format(
+#             "oneflow.scope.namespace"
+#         ),
+#     )
+#     print(traceback.format_stack()[-2])
+#     return name_scope(*args, **kwargs)
 
 
 @contextmanager

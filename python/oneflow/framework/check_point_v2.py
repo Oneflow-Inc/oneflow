@@ -127,21 +127,21 @@ def _ElemCnt(shape):
     return np.prod(shape).astype(int).item()
 
 
-@session_ctx.try_init_default_session
-def GetAllVariables() -> Dict[str, oneflow._oneflow_internal.EagerConsistentBlob]:
-    """
-    Get all variables of all jobs as a dict.
-    """
-    sync_default_session_if_normal()
-    sess = session_ctx.GetDefaultSession()
-    interface_ops = sess.interface_ops
-    variables = {}
-    for op in interface_ops:
-        op_attr = sess.OpAttribute4InterfaceOpName(op)
-        if op_attr.op_conf.WhichOneof("op_type") != "variable_conf":
-            continue
-        variables[op] = interface_op_read_and_write.GetEagerInterfaceBlob(op)
-    return variables
+# @session_ctx.try_init_default_session
+# def GetAllVariables() -> Dict[str, oneflow._oneflow_internal.EagerConsistentBlob]:
+#     """
+#     Get all variables of all jobs as a dict.
+#     """
+#     sync_default_session_if_normal()
+#     sess = session_ctx.GetDefaultSession()
+#     interface_ops = sess.interface_ops
+#     variables = {}
+#     for op in interface_ops:
+#         op_attr = sess.OpAttribute4InterfaceOpName(op)
+#         if op_attr.op_conf.WhichOneof("op_type") != "variable_conf":
+#             continue
+#         variables[op] = interface_op_read_and_write.GetEagerInterfaceBlob(op)
+#     return variables
 
 
 def _LoadSingleVariable(path: str) -> Optional[FileBackendVariableBlob]:

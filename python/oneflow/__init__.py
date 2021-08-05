@@ -39,8 +39,8 @@ locals()["long"] = oneflow._oneflow_internal.int64
 locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
-from oneflow.core.job.job_conf_pb2 import JobConfigProto
-from oneflow.core.job.job_set_pb2 import ConfigProto
+# from oneflow.core.job.job_conf_pb2 import JobConfigProto
+# from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.version import __version__
 
 _DEPRECATED = set()
@@ -74,7 +74,7 @@ import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
-from oneflow.framework.session_util import Session
+# from oneflow.framework.session_util import Session
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
@@ -152,12 +152,12 @@ import oneflow.nn.modules.sinh
 import oneflow.nn.modules.tan
 import oneflow.nn.modules.tensor_ops
 import oneflow.tmp
-from oneflow.advanced.distribute_ops import cast_to_current_logical_view
-from oneflow.deprecated.initializer_util import (
-    truncated_normal_initializer as truncated_normal,
-)
-from oneflow.experimental.namescope import deprecated_name_scope as name_scope
-from oneflow.framework.check_point_v2 import GetAllVariables as get_all_variables
+# from oneflow.advanced.distribute_ops import cast_to_current_logical_view
+# from oneflow.deprecated.initializer_util import (
+#     truncated_normal_initializer as truncated_normal,
+# )
+# from oneflow.experimental.namescope import deprecated_name_scope as name_scope
+# from oneflow.framework.check_point_v2 import GetAllVariables as get_all_variables
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import LoadVariables as load_variables
 from oneflow.framework.check_point_v2 import save
