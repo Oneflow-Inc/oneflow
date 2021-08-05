@@ -65,45 +65,44 @@ class DataLoaderGraph(flow.nn.Graph):
         return self.loader_()
 
 
-# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-# @flow.unittest.skip_unless_1n2d()
-# class DistributedOFRecordReaderTestCase(oneflow.unittest.TestCase):
-def test(test_case=None):
-    rank = flow.distributed.get_rank()
-    print(f"DistributedOFRecordReaderTestCase.test on rank {rank} {os.getpid()}")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class DistributedOFRecordReaderTestCase(oneflow.unittest.TestCase):
+    def test(test_case=None):
+        rank = flow.distributed.get_rank()
+        print(f"DistributedOFRecordReaderTestCase.test on rank {rank} {os.getpid()}")
 
-    # eager_ofrecord_loader = OFRecordDataLoader(device=flow.device("cpu", rank))
+        eager_ofrecord_loader = OFRecordDataLoader(device=flow.device("cpu", rank))
 
-    lazy_consistent_loader = OFRecordDataLoader(
-        placement=flow.placement("cpu", {0: [0]}), sbp=[flow.sbp.split(0)]
-    )
-    graph = DataLoaderGraph(lazy_consistent_loader)
-
-    iteration = 1
-    for i in range(iteration):
-        g_image, g_label = graph()
-        print(
-            f"rank {rank} graph output image: {g_image.shape}, {g_image.dtype}, placement: {g_image.placement}"
-            # f"\n{g_image.to_local().numpy().mean()}"
-        )
-        print(
-            f"rank {rank} graph output label: {g_label.shape}, {g_label.dtype}, placement: {g_image.placement}"
-            # f"\n{g_label.to_local().numpy()}"
-        )
-
-        # image, label = eager_ofrecord_loader()
-        # print(
-        #     f"rank {rank} image: {image.shape}, {image.dtype}"
-        #     f"\n{image.to_local().numpy().mean()}"
+        # lazy_consistent_loader = OFRecordDataLoader(
+        #     placement=flow.placement("cpu", {0: [0]}), sbp=[flow.sbp.split(0)]
         # )
-        # print(
-        #     f"rank {rank} label: {label.shape}, {label.dtype}"
-        #     f"\n{label.to_local().numpy()}"
-        # )
+        # graph = DataLoaderGraph(lazy_consistent_loader)
 
-        print(f"{'-' * 20} rank {rank} iter {i} complete {'-' * 20}")
+        iteration = 2
+        for i in range(iteration):
+            image, label = eager_ofrecord_loader()
+            print(
+                f"rank {rank} image: {image.shape}, {image.dtype}, device: {image.device}"
+                f"\n{image.numpy().mean()}"
+            )
+            print(
+                f"rank {rank} label: {label.shape}, {label.dtype}, device: {label.device}"
+                f"\n{label.numpy()}"
+            )
+
+            # g_image, g_label = graph()
+            # print(
+            #     f"rank {rank} graph output image: {g_image.shape}, {g_image.dtype}, placement: {g_image.placement}"
+            #     # f"\n{g_image.to_local().numpy().mean()}"
+            # )
+            # print(
+            #     f"rank {rank} graph output label: {g_label.shape}, {g_label.dtype}, placement: {g_image.placement}"
+            #     # f"\n{g_label.to_local().numpy()}"
+            # )
+
+            print(f"{'-' * 20} rank {rank} iter {i} complete {'-' * 20}")
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    test()
+    unittest.main()
