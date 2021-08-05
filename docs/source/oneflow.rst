@@ -41,7 +41,7 @@ oneflow
             eq, 
             equal, 
             expand, 
-            eye， 
+            eye,
             exp, 
             expm1, 
             erf, 
@@ -71,7 +71,6 @@ oneflow
             min, 
             meshgrid, 
             mul, 
-            new_ones, 
             neg, 
             negative, 
             ones, 
