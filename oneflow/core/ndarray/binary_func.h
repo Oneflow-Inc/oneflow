@@ -175,7 +175,7 @@ struct BinaryFuncAND final {
 
 template<typename T>
 struct BinaryFuncXOR final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x != y; }
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return (!x) != (!y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
 

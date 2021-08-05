@@ -10,9 +10,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
+from oneflow.compatible import single_client as flow
+from oneflow.compatible.single_client.framework.tensor import register_tensor_op
+from oneflow.compatible.single_client.nn.module import Module
 
 
 class LogicalXor(Module):
@@ -27,12 +27,12 @@ class LogicalXor(Module):
 
 def logical_xor_op(input, other):
     """
-    Computes the element-wise logical XOR of the given input tensors. 
+    Computes the element-wise logical AND of the given input tensors. 
     Zeros are treated as False and nonzeros are treated as True.
 
     Args:
         input (oneflow.Tensor): The input Tensor
-        other (oneflow.Tensor): The Tensor to compute XOR with
+        other (oneflow.Tensor): The Tensor to compute AND with
 
     Returns:
         oneflow.Tensor: The output Tensor
@@ -40,27 +40,28 @@ def logical_xor_op(input, other):
     For example:
 
     .. code-block:: python
-    
+
+        >>> import oneflow.compatible.single_client.experimental as flow
         >>> import numpy as np
-        >>> import oneflow as flow
+        >>> flow.enable_eager_execution()
         
         >>> input1 = flow.Tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
-        >>> out = flow.logical_xor(input1, input2)
+        >>> input2 = flow.Tensor(np.array([1, 1, 0]).astype(np.float32), dtype=flow.float32)
+        >>> out = flow.logical_and(input1, input2)
         >>> out
-        tensor([0, 0, 1], dtype=oneflow.int8)
+        tensor([1, 0, 0], dtype=oneflow.int8)
 
     """
     return LogicalXor()(input, other)
 
 
 @register_tensor_op("logical_xor")
-def logical_or_op_tensor(input, other):
+def logical_xor_op_tensor(input, other):
     """
-    logical_or() -> Tensor
+    logical_and() -> Tensor
 
-    See :func:`oneflow.logical_xor`
-
+    See :func:`oneflow.logical_and`
+    
     """
     return LogicalXor()(input, other)
 
@@ -69,3 +70,4 @@ if __name__ == "__main__":
     import doctest
 
     doctest.testmod(raise_on_error=True)
+    

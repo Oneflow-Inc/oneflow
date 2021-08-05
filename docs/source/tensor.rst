@@ -70,6 +70,7 @@ OneFlow Tensor Class
             le, 
             log, 
             log1p, 
+            logical_xor,
             long, 
             lt, 
             masked_fill, 
