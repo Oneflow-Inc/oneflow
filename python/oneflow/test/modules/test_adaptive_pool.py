@@ -37,7 +37,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=3, dim0=random(1, 2), dim1=random(), dim2=random()).to(device)
+        x = random_pytorch_tensor(ndim=3).to(device)
         y = m(x)
         return y
 
@@ -47,7 +47,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim0=random(), dim1=random(), dim2=random(), dim3=random()).to(device)
+        x = random_pytorch_tensor(ndim=4).to(device)
         y = m(x)
         return y
 
@@ -61,8 +61,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim0=random(), dim1=random(), dim2=random(), dim3=random(), dim4=random()) \
-            .to(device)
+        x = random_pytorch_tensor(ndim=5).to(device)
         y = m(x)
         return y
 
