@@ -160,7 +160,6 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-// TODO: figure out if device and dtype are necessary for this op?
 #define REGISTER_MLIR_JIT_CPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitCpuKernel<dtype>>()                                                   \
@@ -177,6 +176,38 @@ REGISTER_MLIR_JIT_CPU_KERNEL(int32_t)
 REGISTER_MLIR_JIT_CPU_KERNEL(int64_t)
 
 #undef REGISTER_MLIR_JIT_CPU_KERNEL
+
+#ifdef WITH_CUDA
+
+template<typename T>
+class MlirJitGpuKernel final : public user_op::OpKernel {
+ public:
+  MlirJitGpuKernel() = default;
+  ~MlirJitGpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {}
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                     \
+  REGISTER_USER_KERNEL("mlir_jit")                                                              \
+      .SetCreateFn<MlirJitGpuKernel<dtype>>()                                                   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                            \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        return Maybe<void>::Ok();                                                               \
+      });
+
+REGISTER_MLIR_JIT_GPU_KERNEL(float)
+REGISTER_MLIR_JIT_GPU_KERNEL(double)
+REGISTER_MLIR_JIT_GPU_KERNEL(int32_t)
+REGISTER_MLIR_JIT_GPU_KERNEL(int64_t)
+
+#undef REGISTER_MLIR_JIT_GPU_KERNEL
+
+#endif  // WITH_CUDA
 
 }  // namespace
 
