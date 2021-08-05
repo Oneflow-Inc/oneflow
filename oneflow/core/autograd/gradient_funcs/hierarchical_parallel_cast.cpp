@@ -29,8 +29,8 @@ namespace one {
 namespace {
 
 Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
-    Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  thread_local HashMap<Symbol<cfg::ParallelDistribution>, std::shared_ptr<one::UserOpExpr>>
+    const std::vector<std::string>& parallel_distribution) {
+  thread_local HashMap<std::vector<std::string>, std::shared_ptr<one::UserOpExpr>>
       parallel_distribution2hierarchical_parallel_cast_op_expr;
   auto iter = parallel_distribution2hierarchical_parallel_cast_op_expr.find(parallel_distribution);
   if (iter == parallel_distribution2hierarchical_parallel_cast_op_expr.end()) {
@@ -40,7 +40,7 @@ Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
                  .Input("in")
                  .Output("out")
                  .Attr<std::vector<std::string>>("parallel_distribution",
-                                                 *JUST(GetDualNdSbpStrList(parallel_distribution)))
+                                                 parallel_distribution)
                  .Attr<std::string>("grad_mode", "restore")
                  .Attr<std::vector<std::string>>("grad_parallel_distribution",
                                                  std::vector<std::string>())
@@ -64,6 +64,9 @@ class HerarchicalParallelCast
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    const auto& attr_map = fw_op_expr->base_attrs();
+    grad_parallel_distribution_ =
+        JUST(attr_map.GetAttr<std::vector<std::string>>("grad_parallel_distribution"));
     return Maybe<void>::Ok();
   }
 
@@ -75,12 +78,21 @@ class HerarchicalParallelCast
 
   Maybe<void> Apply(const HerarchicalParallelCastOpExprInterpState* ctx,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override {
-    const auto& grad_op =
-        JUST(FindOrCreatHierarchicalParallelCastOpExpr(ctx->parallel_distribution));
+    std::shared_ptr<one::UserOpExpr> grad_op;
+    if (grad_parallel_distribution_.size() > 0) {
+      grad_op = JUST(FindOrCreatHierarchicalParallelCastOpExpr(grad_parallel_distribution_));
+    } else {
+      grad_op = JUST(FindOrCreatHierarchicalParallelCastOpExpr(
+          *JUST(GetDualNdSbpStrList(ctx->parallel_distribution))));
+    }
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {out_grads.at(0)}));
     return Maybe<void>::Ok();
   }
+
+ private:
+  std::vector<std::string> grad_parallel_distribution_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("hierarchical_parallel_cast", HerarchicalParallelCast);

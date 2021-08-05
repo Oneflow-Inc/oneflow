@@ -35,7 +35,7 @@ class ToConsistent(Module):
 
 
 @register_tensor_op("to_consistent")
-def to_consistent_op(input, placement=None, sbp=None, shape=None):
+def to_consistent_op(input, placement=None, sbp=None, shape=None, grad_sbp=None):
     """Cast a local tensor to consistent tensor or cast a
     consistent tensor to another consistent tensor with 
     different sbp or placement
@@ -69,9 +69,10 @@ def to_consistent_op(input, placement=None, sbp=None, shape=None):
         assert (
             placement is not None or sbp is not None
         ), "Converting a consistent tensor to consistent tensor must have at least one of placement and sbp parameters!"
+        assert (shape is None), "Converting a consistent tensor to consistent tensor can't have shape parameters!"
         placement = input.placement if placement is None else placement
         sbp = input.sbp if sbp is None else sbp
-    return flow.F.to_consistent(input, placement, sbp, shape)
+    return flow.F.to_consistent(input, placement, sbp, shape, grad_sbp)
 
 
 class ToLocal(Module):
