@@ -13,25 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_TICK_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_TICK_KERNEL_H_
+#ifndef ONEFLOW_CORE_COMMON_ERROR_UTIL_H
+#define ONEFLOW_CORE_COMMON_ERROR_UTIL_H
 
-#include "oneflow/core/kernel/kernel.h"
+#include <string>
+#include "oneflow/core/common/error.cfg.h"
 
 namespace oneflow {
-
-template<DeviceType device_type>
-class TickKernel final : public KernelIf<device_type> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(TickKernel);
-  TickKernel() = default;
-  ~TickKernel() = default;
-
- private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
-};
-
+namespace cfg {
+class ErrorProto;
+}
+std::string* MutErrorStr();
+const std::string& GetErrorStr();
+void FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error);
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_TICK_KERNEL_H_
+#endif  // ONEFLOW_CORE_COMMON_ERROR_UTIL_H
