@@ -27,17 +27,17 @@ import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.support.enable_if as enable_if
 
 
-def assign(ref, value, dtype=None, name=None):
-    if name is None:
-        name = id_util.UniqueStr("Assign_")
-    op = (
-        oneflow.consistent_user_op_builder(name)
-        .Op("assign")
-        .Input("ref", [ref])
-        .Input("value", [value])
-        .Build()
-    )
-    op.InferAndTryRun()
+# def assign(ref, value, dtype=None, name=None):
+#     if name is None:
+#         name = id_util.UniqueStr("Assign_")
+#     op = (
+#         oneflow.consistent_user_op_builder(name)
+#         .Op("assign")
+#         .Input("ref", [ref])
+#         .Input("value", [value])
+#         .Build()
+#     )
+#     op.InferAndTryRun()
 
 
 def api_system_assign(ref, value, validate_shape=None, use_locking=None, name=None):

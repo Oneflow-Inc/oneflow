@@ -203,9 +203,9 @@ from oneflow.framework.session_util import (
 from oneflow.framework.session_util import (
     api_eager_execution_enabled as eager_execution_enabled,
 )
-from oneflow.framework.session_util import (
-    api_find_or_create_module as find_or_create_module,
-)
+# from oneflow.framework.session_util import (
+#     api_find_or_create_module as find_or_create_module,
+# )
 from oneflow.framework.session_util import (
     api_sync_default_session as sync_default_session,
 )
@@ -339,20 +339,20 @@ from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
-from oneflow.ops.assign_op import assign
+# from oneflow.ops.assign_op import assign
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.ops.categorical_ordinal_encode_op import categorical_ordinal_encode
-from oneflow.ops.constant_op import constant, constant_like, constant_scalar
-from oneflow.ops.get_variable import api_get_variable as get_variable
+# from oneflow.ops.constant_op import constant, constant_like, constant_scalar
+# from oneflow.ops.get_variable import api_get_variable as get_variable
 from oneflow.ops.initializer_util import constant_initializer, empty_initializer
-from oneflow.ops.initializer_util import glorot_normal_initializer
-from oneflow.ops.initializer_util import (
-    glorot_normal_initializer as xavier_normal_initializer,
-)
-from oneflow.ops.initializer_util import glorot_uniform_initializer
-from oneflow.ops.initializer_util import (
-    glorot_uniform_initializer as xavier_uniform_initializer,
-)
+# from oneflow.ops.initializer_util import glorot_normal_initializer
+# from oneflow.ops.initializer_util import (
+#     glorot_normal_initializer as xavier_normal_initializer,
+# )
+# from oneflow.ops.initializer_util import glorot_uniform_initializer
+# from oneflow.ops.initializer_util import (
+#     glorot_uniform_initializer as xavier_uniform_initializer,
+# )
 from oneflow.ops.initializer_util import (
     kaiming_initializer,
     ones_initializer,

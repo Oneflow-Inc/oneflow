@@ -541,186 +541,186 @@ def truncated_normal_initializer(
     return initializer
 
 
-def glorot_uniform_initializer(
-    data_format: str = "",
-) -> initializer_conf_util.InitializerConf:
-    """Initializer that generates a Xavier uniform distribution. 
+# def glorot_uniform_initializer(
+#     data_format: str = "",
+# ) -> initializer_conf_util.InitializerConf:
+#     """Initializer that generates a Xavier uniform distribution. 
     
-    It also can be called as `oneflow.glorot_uniform_initializer`.  
+#     It also can be called as `oneflow.glorot_uniform_initializer`.  
 
-    The equation is: 
+#     The equation is: 
 
-    .. math:: 
+#     .. math:: 
 
-        W\\sim U(-\\sqrt{\\frac{{6}}{{n_j+n_{j+1}}}},\\sqrt{\\frac{{6}}{{n_j+n_{j+1}}}})
+#         W\\sim U(-\\sqrt{\\frac{{6}}{{n_j+n_{j+1}}}},\\sqrt{\\frac{{6}}{{n_j+n_{j+1}}}})
 
-    :math:`U` means uniform distribution 
+#     :math:`U` means uniform distribution 
 
-    :math:`n_j` means the amount of Nth layer parameters 
+#     :math:`n_j` means the amount of Nth layer parameters 
 
-    Args:
-        data_format (str, optional): The data format. Defaults to "".
+#     Args:
+#         data_format (str, optional): The data format. Defaults to "".
 
-    Returns:
-        initializer_conf_util.InitializerConf: Initial configuration
+#     Returns:
+#         initializer_conf_util.InitializerConf: Initial configuration
 
-    For example: 
+#     For example: 
 
-    Example 1:
+#     Example 1:
 
-    .. code-block:: python 
+#     .. code-block:: python 
 
-        import oneflow as flow
-        import oneflow.typing as tp
-
-
-        def watch_handler(y: tp.Numpy):
-            print("out", y)
+#         import oneflow as flow
+#         import oneflow.typing as tp
 
 
-        @flow.global_function()
-        def xavier_uniform_Job() -> None:
-            init = flow.xavier_uniform_initializer()
-            blob = flow.get_variable(
-                "blob-weight",
-                shape=(3, 3),
-                initializer=init,
-                trainable=True
-            )
-            flow.watch(blob, watch_handler)
+#         def watch_handler(y: tp.Numpy):
+#             print("out", y)
 
 
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.init()
-        xavier_uniform_Job()
-
-        # out [[-0.14424723 -0.9532095  -0.08723891]
-        #      [-0.8011227  -0.29729813 -0.26769108]
-        #      [ 0.9208976  -0.5971756  -0.15077025]]
-
-    Example 2: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
+#         @flow.global_function()
+#         def xavier_uniform_Job() -> None:
+#             init = flow.xavier_uniform_initializer()
+#             blob = flow.get_variable(
+#                 "blob-weight",
+#                 shape=(3, 3),
+#                 initializer=init,
+#                 trainable=True
+#             )
+#             flow.watch(blob, watch_handler)
 
 
-        @flow.global_function()
-        def conv2d_xavier_uniform_Job(x: tp.Numpy.Placeholder((1, 256, 32, 32))
-        ) -> tp.Numpy:
-            initializer = flow.xavier_uniform_initializer()
-            conv2d = flow.layers.conv2d(
-                x,
-                filters=128,
-                kernel_size=3,
-                strides=1,
-                padding='SAME',
-                kernel_initializer=initializer, 
-                name="Conv2d"
-            )
-            return conv2d
+#         checkpoint = flow.train.CheckPoint()
+#         checkpoint.init()
+#         xavier_uniform_Job()
+
+#         # out [[-0.14424723 -0.9532095  -0.08723891]
+#         #      [-0.8011227  -0.29729813 -0.26769108]
+#         #      [ 0.9208976  -0.5971756  -0.15077025]]
+
+#     Example 2: 
+
+#     .. code-block:: python 
+
+#         import oneflow as flow
+#         import numpy as np
+#         import oneflow.typing as tp
 
 
-        x = np.random.randn(1, 256, 32, 32).astype(np.float32)
-        out = conv2d_xavier_uniform_Job(x)
+#         @flow.global_function()
+#         def conv2d_xavier_uniform_Job(x: tp.Numpy.Placeholder((1, 256, 32, 32))
+#         ) -> tp.Numpy:
+#             initializer = flow.xavier_uniform_initializer()
+#             conv2d = flow.layers.conv2d(
+#                 x,
+#                 filters=128,
+#                 kernel_size=3,
+#                 strides=1,
+#                 padding='SAME',
+#                 kernel_initializer=initializer, 
+#                 name="Conv2d"
+#             )
+#             return conv2d
 
-        # out.shape (1, 128, 32, 32)
 
-    """
-    return variance_scaling_initializer(1.0, "fan_avg", "random_uniform", data_format)
+#         x = np.random.randn(1, 256, 32, 32).astype(np.float32)
+#         out = conv2d_xavier_uniform_Job(x)
+
+#         # out.shape (1, 128, 32, 32)
+
+#     """
+#     return variance_scaling_initializer(1.0, "fan_avg", "random_uniform", data_format)
 
 
-def glorot_normal_initializer(
-    data_format: str = "",
-) -> initializer_conf_util.InitializerConf:
-    """Initializer that generates a Xavier normal distribution. 
+# def glorot_normal_initializer(
+#     data_format: str = "",
+# ) -> initializer_conf_util.InitializerConf:
+#     """Initializer that generates a Xavier normal distribution. 
     
-    It also can be called as `oneflow.glorot_normal_initializer`.  
+#     It also can be called as `oneflow.glorot_normal_initializer`.  
 
-    The equation is: 
+#     The equation is: 
 
-    .. math:: 
+#     .. math:: 
 
-        W\\sim N(0, \\sqrt{\\frac{{2}}{{n_j+n_{j+1}}}})
+#         W\\sim N(0, \\sqrt{\\frac{{2}}{{n_j+n_{j+1}}}})
 
-    :math:`N` means normal distribution 
+#     :math:`N` means normal distribution 
 
-    :math:`n_j` means the amount of Nth layer parameters 
+#     :math:`n_j` means the amount of Nth layer parameters 
 
-    Args:
-        data_format (str, optional): The data format. Defaults to "".
+#     Args:
+#         data_format (str, optional): The data format. Defaults to "".
 
-    Returns:
-        initializer_conf_util.InitializerConf: Initial configuration
+#     Returns:
+#         initializer_conf_util.InitializerConf: Initial configuration
 
-    For example: 
+#     For example: 
 
-    Example 1: 
+#     Example 1: 
 
-    .. code-block:: python 
+#     .. code-block:: python 
 
-        import oneflow as flow
-        import oneflow.typing as tp
-
-
-        def watch_handler(y: tp.Numpy):
-            print("out", y)
+#         import oneflow as flow
+#         import oneflow.typing as tp
 
 
-        @flow.global_function()
-        def xavier_normal_Job() -> None:
-            init = flow.xavier_normal_initializer()
-            blob = flow.get_variable(
-                "blob-weight",
-                shape=(3, 3),
-                initializer=init,
-                trainable=True
-            )
-            flow.watch(blob, watch_handler)
+#         def watch_handler(y: tp.Numpy):
+#             print("out", y)
 
 
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.init()
-        xavier_normal_Job()
-
-        # out [[ 0.5908121  -0.10804518 -0.6148571 ]
-        #      [ 1.4007381  -0.08172473  0.36579943]
-        #      [-0.6461796  -0.15923311  0.33653972]]
-
-    Example 2: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
+#         @flow.global_function()
+#         def xavier_normal_Job() -> None:
+#             init = flow.xavier_normal_initializer()
+#             blob = flow.get_variable(
+#                 "blob-weight",
+#                 shape=(3, 3),
+#                 initializer=init,
+#                 trainable=True
+#             )
+#             flow.watch(blob, watch_handler)
 
 
-        @flow.global_function()
-        def conv2d_xavier_normal_Job(x: tp.Numpy.Placeholder((1, 256, 32, 32))
-        ) -> tp.Numpy:
-            initializer = flow.xavier_normal_initializer()
-            conv2d = flow.layers.conv2d(
-                x,
-                filters=128,
-                kernel_size=3,
-                strides=1,
-                padding='SAME',
-                kernel_initializer=initializer, 
-                name="Conv2d"
-            )
-            return conv2d
+#         checkpoint = flow.train.CheckPoint()
+#         checkpoint.init()
+#         xavier_normal_Job()
+
+#         # out [[ 0.5908121  -0.10804518 -0.6148571 ]
+#         #      [ 1.4007381  -0.08172473  0.36579943]
+#         #      [-0.6461796  -0.15923311  0.33653972]]
+
+#     Example 2: 
+
+#     .. code-block:: python 
+
+#         import oneflow as flow
+#         import numpy as np
+#         import oneflow.typing as tp
 
 
-        x = np.random.randn(1, 256, 32, 32).astype(np.float32)
-        out = conv2d_xavier_normal_Job(x)
+#         @flow.global_function()
+#         def conv2d_xavier_normal_Job(x: tp.Numpy.Placeholder((1, 256, 32, 32))
+#         ) -> tp.Numpy:
+#             initializer = flow.xavier_normal_initializer()
+#             conv2d = flow.layers.conv2d(
+#                 x,
+#                 filters=128,
+#                 kernel_size=3,
+#                 strides=1,
+#                 padding='SAME',
+#                 kernel_initializer=initializer, 
+#                 name="Conv2d"
+#             )
+#             return conv2d
 
-        # out.shape (1, 128, 32, 32)
 
-    """
-    return variance_scaling_initializer(1.0, "fan_avg", "random_normal", data_format)
+#         x = np.random.randn(1, 256, 32, 32).astype(np.float32)
+#         out = conv2d_xavier_normal_Job(x)
+
+#         # out.shape (1, 128, 32, 32)
+
+#     """
+#     return variance_scaling_initializer(1.0, "fan_avg", "random_normal", data_format)
 
 
 def variance_scaling_initializer(

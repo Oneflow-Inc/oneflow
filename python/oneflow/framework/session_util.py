@@ -416,11 +416,11 @@ class Session(object):
         self.TryClose()
 
 
-def api_find_or_create_module(
-    module_name: str, create: Callable[[], None], reuse: bool = False
-):
-    func = enable_if.unique([find_or_create_module])
-    return func(module_name, create, reuse)
+# def api_find_or_create_module(
+#     module_name: str, create: Callable[[], None], reuse: bool = False
+# ):
+#     func = enable_if.unique([find_or_create_module])
+#     return func(module_name, create, reuse)
 
 
 @enable_if.condition(hob.in_global_mode)
