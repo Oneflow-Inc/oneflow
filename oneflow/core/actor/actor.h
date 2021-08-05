@@ -146,7 +146,6 @@ class Actor {
   int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
  protected:
-  int64_t GetGlobalWorkStreamId() const;
   bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {
     return consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
   }
@@ -215,6 +214,7 @@ class Actor {
 
   const JobDesc* job_desc_;
   int64_t actor_id_;
+  int64_t global_work_stream_id_;
   int64_t act_id_;
   int64_t job_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
