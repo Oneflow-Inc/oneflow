@@ -49,6 +49,9 @@ jobs:
           # clang-tidy has builtin includes, but doesn't work here
           # https://clang.llvm.org/docs/LibTooling.html#builtin-includes
           cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_C_COMPILER=clang-12 \
+            -DCMAKE_CXX_COMPILER=clang++-12 \
+            -DCMAKE_CXX_FLAGS="-isystem /usr/lib/llvm-12/lib/clang/12.0.1/include/" \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON
           cmake --build . -j$(nproc) --target of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
