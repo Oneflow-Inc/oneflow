@@ -29,9 +29,9 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InitConsistentRpcTokenScope(const std::string& thread_tag,
-                                        int64_t thread_consistent_uid,
-                                        Symbol<RankGroup> rank_group) {
+Maybe<void> InitConsistentTransportTokenScope(const std::string& thread_tag,
+                                              int64_t thread_consistent_uid,
+                                              Symbol<RankGroup> rank_group) {
   JUST(SetThisThreadConsistentUniqueId(thread_consistent_uid, thread_tag));
   static thread_local const auto& init_rank_group_scope =
       JUST(RankGroupScope::MakeInitialRankGroupScope(rank_group));
@@ -40,21 +40,21 @@ Maybe<void> InitConsistentRpcTokenScope(const std::string& thread_tag,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InitConsistentRpcTokenScope(const std::string& thread_tag,
-                                        int64_t thread_consistent_uid) {
+Maybe<void> InitConsistentTransportTokenScope(const std::string& thread_tag,
+                                              int64_t thread_consistent_uid) {
   const auto& rank_group = JUST(RankGroup::DefaultRankGroup());
-  JUST(InitConsistentRpcTokenScope(thread_tag, thread_consistent_uid, rank_group));
+  JUST(InitConsistentTransportTokenScope(thread_tag, thread_consistent_uid, rank_group));
   return Maybe<void>::Ok();
 }
 
-void ApiInitDefaultConsistentRpcTokenScope() {
-  return InitConsistentRpcTokenScope("main", 0).GetOrThrow();
+void ApiInitDefaultConsistentTransportTokenScope() {
+  return InitConsistentTransportTokenScope("main", 0).GetOrThrow();
 }
 
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("InitDefaultConsistentRpcTokenScope", &ApiInitDefaultConsistentRpcTokenScope);
+  m.def("InitDefaultConsistentTransportTokenScope", &ApiInitDefaultConsistentTransportTokenScope);
 }
 
 }  // namespace oneflow

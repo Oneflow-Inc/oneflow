@@ -55,10 +55,10 @@ class CopyCommNetActor final : public Actor {
   void AsyncReturnAllCustomizedReadableRegst() override;
 
   bool is_in_eord_;
-  HashMap<int64_t, RegstCtx> piece_id2regst_ctx_;
+  HashMap<int64_t, RegstCtx> sequence_number2regst_ctx_;
   void* actor_read_id_;
   CommNetDeviceCtx* comm_net_device_ctx_;
-  int64_t next_piece_id_;
+  int64_t next_sequence_number_;
   int64_t in_regst_desc_id_;
 };
 
