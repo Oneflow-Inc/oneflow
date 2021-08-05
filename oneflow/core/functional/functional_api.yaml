@@ -856,20 +856,12 @@
                        Int32List stride, Bool ceil_mode, Bool count_include_pad, Int64 divisor_override=0)"
   bind_python: False
   
-- name: "broadcast_min"
-  signature: "Tensor BroadcastMin(Tensor x, Tensor y)"
+- name: "minimum"
+  signature: "Tensor Minimum(Tensor x, Tensor y)"
   bind_python: True
 
-- name: "broadcast_max"
-  signature: "Tensor BroadcastMax(Tensor x, Tensor y)"
-  bind_python: True
-
-- name: "elementwise_min"
-  signature: "Tensor ElementwiseMin(Tensor x, Tensor y)"
-  bind_python: True
-
-- name: "elementwise_max"
-  signature: "Tensor ElementwiseMax(Tensor x, Tensor y)"
+- name: "maximum"
+  signature: "Tensor Maximum(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "elementwise_min_grad"
