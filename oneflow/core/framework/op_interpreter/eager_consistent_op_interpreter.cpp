@@ -81,8 +81,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   for (int i = 0; i < outputs->size(); ++i) {
     const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(output_tensor_metas.at(i), device,
                                                                   parallel_id, false, false));
-    const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
-    JUST(tensor_impl->set_rpc_token(rpc_token));
+    const auto& transport_token = JUST(TransportToken::NewMetaTransportToken());
+    JUST(tensor_impl->set_transport_token(transport_token));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
