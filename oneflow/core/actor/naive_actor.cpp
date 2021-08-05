@@ -20,11 +20,7 @@ namespace oneflow {
 void NaiveActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
 
 void NaiveActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  int64_t piece_id = GetPieceId4NaiveCurReadableDataRegst();
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
-    regst->set_piece_id(piece_id);
-    return true;
-  });
+  HandleProducedNaiveDataRegstToConsumer();
 }
 
 REGISTER_ACTOR(TaskType::kSliceBoxing, NaiveActor);

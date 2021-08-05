@@ -15,8 +15,8 @@ limitations under the License.
 */
 #include <memory>
 #include <chrono>
-#include "oneflow/core/framework/rpc_token.h"
-#include "oneflow/core/framework/rpc_util.h"
+#include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/transport/transport.h"
 #include "oneflow/core/thread/consistent_unique_id.h"
@@ -26,7 +26,8 @@ limitations under the License.
 
 namespace oneflow {
 
-/*static*/ Maybe<void> RpcUtil::WaitUntilDoneOrTimeout(const AsyncRpcCtx& ctx, int64_t seconds) {
+/*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
+                                                             int64_t seconds) {
   const auto& start = std::chrono::steady_clock::now();
   const auto& cond_cnt = ctx.flying_cnt();
   while (*cond_cnt > 0) {
@@ -35,17 +36,20 @@ namespace oneflow {
     CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
         << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
   }
-  if (ctx.rpc_token().type() == kCtrlRpcTokenType) { JUST(ctx.rpc_token().ReleaseCtrlRpcToken()); }
+  if (ctx.transport_token().type() == kCtrlTransportTokenType) {
+    JUST(ctx.transport_token().ReleaseCtrlTransportToken());
+  }
   return Maybe<void>::Ok();
 }
 
 namespace {
 
-template<Maybe<void> (*SendOrRecv)(const RpcToken&, int64_t, void*, std::size_t,
+template<Maybe<void> (*SendOrRecv)(const TransportToken&, int64_t, void*, std::size_t,
                                    const std::function<void()>&),
-         Maybe<void> (AsyncRpcCtx::*Prepare)(int64_t, void**, std::size_t*, std::function<void()>*)>
-Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& token,
-                                  AsyncRpcCtx* ctx) {
+         Maybe<void> (AsyncTransportCtx::*Prepare)(int64_t, void**, std::size_t*,
+                                                   std::function<void()>*)>
+Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const TransportToken& token,
+                                  AsyncTransportCtx* ctx) {
   CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
   const auto& flying_cnt = ctx->flying_cnt();
   JUST(rank_group->ForEachRank([&](int64_t rank) -> Maybe<void> {
@@ -65,11 +69,12 @@ Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& 
 }
 
 template<Maybe<int64_t> (RankGroup::*GetPrevOrNext)() const,
-         Maybe<void> (*SendOrRecv)(const RpcToken&, int64_t, void*, std::size_t,
+         Maybe<void> (*SendOrRecv)(const TransportToken&, int64_t, void*, std::size_t,
                                    const std::function<void()>&),
-         Maybe<void> (AsyncRpcCtx::*Prepare)(int64_t, void**, std::size_t*, std::function<void()>*)>
-Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const RpcToken& token,
-                               AsyncRpcCtx* ctx) {
+         Maybe<void> (AsyncTransportCtx::*Prepare)(int64_t, void**, std::size_t*,
+                                                   std::function<void()>*)>
+Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const TransportToken& token,
+                               AsyncTransportCtx* ctx) {
   if (rank_group->size() == 1) { return Maybe<void>::Ok(); }
   const auto* rank_ranges_ptr = &*rank_group;
   int64_t rank = JUST((rank_ranges_ptr->*GetPrevOrNext)());
@@ -87,53 +92,69 @@ Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const RpcToken& tok
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Send(const RpcToken& token, int64_t rank, void* buffer, std::size_t size,
+Maybe<void> Send(const TransportToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
+#ifdef __linux__
   auto* transport = JUST(GlobalMaybe<Transport>());
-  RpcToken transport_token(token);
+  TransportToken transport_token(token);
   JUST(transport_token.set_src_rank(GlobalProcessCtx::Rank()));
   JUST(transport_token.set_dst_rank(rank));
   transport->Send(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
+#else
+  UNIMPLEMENTED();
+  return Maybe<void>::Ok();
+#endif  // __linux__
 }
 
-Maybe<void> Recv(const RpcToken& token, int64_t rank, void* buffer, std::size_t size,
+Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
+#ifdef __linux__
   auto* transport = JUST(GlobalMaybe<Transport>());
-  RpcToken transport_token(token);
+  TransportToken transport_token(token);
   JUST(transport_token.set_src_rank(rank));
   JUST(transport_token.set_dst_rank(GlobalProcessCtx::Rank()));
   transport->Receive(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
+#else
+  UNIMPLEMENTED();
+  return Maybe<void>::Ok();
+#endif  // __linux__
 }
 
 }  // namespace
 
-/*static*/ Maybe<void> RpcUtil::BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group,
-                                                         const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToAllOtherRanks<&Send, &AsyncRpcCtx::PrepareSendBufferAndCallback>(rank_group, token,
-                                                                                ctx));
+/*static*/ Maybe<void> TransportUtil::BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group,
+                                                               const TransportToken& token,
+                                                               AsyncTransportCtx* ctx) {
+  JUST(AccessToAllOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(rank_group,
+                                                                                      token, ctx));
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> RpcUtil::CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
-                                                         const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToAllOtherRanks<&Recv, &AsyncRpcCtx::PrepareRecvBufferAndCallback>(rank_group, token,
-                                                                                ctx));
+/*static*/ Maybe<void> TransportUtil::CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
+                                                               const TransportToken& token,
+                                                               AsyncTransportCtx* ctx) {
+  JUST(AccessToAllOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(rank_group,
+                                                                                      token, ctx));
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> RpcUtil::SendToNextRankInRing(Symbol<RankGroup> rank_group,
-                                                     const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToNearbyRank<&RankGroup::GetNextRankInRing, &Send,
-                          &AsyncRpcCtx::PrepareSendBufferAndCallback>(rank_group, token, ctx));
+/*static*/ Maybe<void> TransportUtil::SendToNextRankInRing(Symbol<RankGroup> rank_group,
+                                                           const TransportToken& token,
+                                                           AsyncTransportCtx* ctx) {
+  JUST(
+      AccessToNearbyRank<&RankGroup::GetNextRankInRing, &Send,
+                         &AsyncTransportCtx::PrepareSendBufferAndCallback>(rank_group, token, ctx));
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> RpcUtil::ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group,
-                                                          const RpcToken& token, AsyncRpcCtx* ctx) {
-  JUST(AccessToNearbyRank<&RankGroup::GetPrevRankInRing, &Recv,
-                          &AsyncRpcCtx::PrepareRecvBufferAndCallback>(rank_group, token, ctx));
+/*static*/ Maybe<void> TransportUtil::ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group,
+                                                                const TransportToken& token,
+                                                                AsyncTransportCtx* ctx) {
+  JUST(
+      AccessToNearbyRank<&RankGroup::GetPrevRankInRing, &Recv,
+                         &AsyncTransportCtx::PrepareRecvBufferAndCallback>(rank_group, token, ctx));
   return Maybe<void>::Ok();
 }
 

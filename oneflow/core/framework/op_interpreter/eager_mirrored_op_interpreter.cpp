@@ -259,8 +259,8 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
         SymbolOf(tensor_meta), device, parallel_id, input_mirrored_tensor->requires_grad(),
         !input_mirrored_tensor->requires_grad()));
-    const auto& rpc_token = JUST(RpcToken::NewMetaRpcToken());
-    JUST(consistent_tensor_impl->set_rpc_token(rpc_token));
+    const auto& transport_token = JUST(TransportToken::NewMetaTransportToken());
+    JUST(consistent_tensor_impl->set_transport_token(transport_token));
     consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
     const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*consistent_tensor));
     if (parallel_id.has_value()) {
@@ -269,7 +269,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
       consistent_tensor_impl->reset_cur_rank_phy_tensor(
           std::dynamic_pointer_cast<MirroredTensor>(synced_tensor));
     }
-    JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, RpcUtil::TimeoutSeconds()));
+    JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
     JUST(ctx->Check());
   }
   outputs->at(0) = consistent_tensor;
@@ -330,6 +330,14 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeAddOpExpr& op_ex
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
+}
+
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const SelectFirstOpExpr& op_expr,
+                                                const TensorTuple& inputs, TensorTuple* outputs,
+                                                const OpExprInterpContext& ctx) const {
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  outputs->at(0) = inputs.at(0);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace one
