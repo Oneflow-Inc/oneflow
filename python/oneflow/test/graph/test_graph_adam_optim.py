@@ -62,8 +62,9 @@ def compare_with_numpy_adam(
             return loss
 
     of_res_list = []
+    adam_graph = CustomAdamGraph()
+
     for i in range(train_iters):
-        adam_graph = CustomAdamGraph()
         mask_tensor = flow.Tensor(
                 random_grad_seq[i], requires_grad=False, device=flow.device(device)
             )
@@ -92,15 +93,11 @@ def compare_with_numpy_adam(
             np_res_list.append(x)
         return x
 
-    oneflow_res = adam_x.numpy()
     numpy_res = train_by_numpy()
 
-    print("of list: ", of_res_list)
-    print("Np list :", np_res_list)
-
-    # test_case.assertTrue(
-    #     np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=0.001, atol=0.001)
-    # )
+    test_case.assertTrue(
+        np.allclose(of_res_list, np_res_list, rtol=0.001, atol=0.001)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -116,6 +113,16 @@ class TestAdam(flow.unittest.TestCase):
                                 weight_decay=0.0, 
                                 eps=1e-8)
 
+    def test_adam2(test_case):
+        compare_with_numpy_adam(test_case, 
+                                device="cuda", 
+                                x_shape=(1, ), 
+                                scale=0.8, 
+                                learning_rate=1, 
+                                train_iters=10, 
+                                betas=(0.99, 0.9), 
+                                weight_decay=0.0005, 
+                                eps=1e-8)
 
 if __name__ == "__main__":
     unittest.main()
