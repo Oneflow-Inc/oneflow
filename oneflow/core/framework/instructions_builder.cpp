@@ -1165,7 +1165,7 @@ Maybe<void> InstructionsBuilder::StatefulCall(
   };
 
   const auto GetDelegateBlobObject =
-      [this, &FetchDelegateBlobObject](
+      [&FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
@@ -1198,7 +1198,7 @@ Maybe<void> InstructionsBuilder::StatelessCall(
   };
 
   const auto GetDelegateBlobObject =
-      [this, &FetchDelegateBlobObject](
+      [&FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
@@ -1241,7 +1241,7 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
   };
 
   const auto GetDirectOr121BlobObject =
-      [this, &FetchDelegateBlobObject](
+      [&FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {

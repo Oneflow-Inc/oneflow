@@ -133,7 +133,7 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
       && Global<const ProfilerConf>::Get()->collect_act_event()) {
     Global<Profiler>::New();
   }
-  for (const std::string lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
+  for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   return Maybe<void>::Ok();
 }
 

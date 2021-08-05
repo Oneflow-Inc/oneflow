@@ -119,7 +119,7 @@ class ConsistentTensorInferCache;
 
 class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
  public:
-  UserOpExpr() = default;
+  UserOpExpr() = delete;
   virtual ~UserOpExpr() = default;
 
   static Maybe<UserOpExpr> New(const std::string& op_name, UserOpConf&& op_proto,

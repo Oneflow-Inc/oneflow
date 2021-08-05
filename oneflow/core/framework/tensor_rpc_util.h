@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class FlatTensorConsistency;
+struct FlatTensorConsistency;
 
 class CheckConsistencyAsyncRpcCtx : public AsyncRpcCtx {
  public:
