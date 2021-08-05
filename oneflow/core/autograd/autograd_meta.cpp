@@ -23,9 +23,41 @@ namespace oneflow {
 
 namespace one {
 
-TensorInfo::TensorInfo(const Tensor& tensor) : shape_(tensor.shape()), dtype_(tensor.dtype()) {}
+TensorInfo::TensorInfo(const Tensor& tensor) : shape_(tensor.shape()), dtype_(tensor.dtype()) {
+  if (TRY(tensor.device()).IsOk()) { device_ = CHECK_JUST(tensor.device()); }
+  if (TRY(tensor.parallel_desc()).IsOk()) { parallel_desc_ = CHECK_JUST(tensor.parallel_desc()); }
+  if (TRY(tensor.parallel_distribution()).IsOk()) {
+    parallel_distribution_ = CHECK_JUST(tensor.parallel_distribution());
+  }
+}
 
-Maybe<Tensor> TensorInfo::zeros() const { return functional::Constant(*shape_.get(), 0, dtype_); }
+Maybe<const std::vector<Symbol<cfg::SbpParallel>>&> GetSbpTuple(
+    Symbol<cfg::ParallelDistribution> parallel_distribution) {
+  static thread_local HashMap<Symbol<cfg::ParallelDistribution>,
+                              std::vector<Symbol<cfg::SbpParallel>>>
+      map;
+  auto iter = map.find(parallel_distribution);
+  if (iter == map.end()) {
+    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;
+    for (const auto& sbp_parallel : parallel_distribution->sbp_parallel()) {
+      sbp_tuple.push_back(SymbolOf(sbp_parallel));
+    }
+    iter = map.emplace(parallel_distribution, sbp_tuple).first;
+  }
+  return iter->second;
+}
+
+Maybe<Tensor> TensorInfo::zeros() const {
+  if (device_.has_value()) {
+    const auto& device = JUST(device_.value());
+    return functional::Constant(*shape_.get(), 0, dtype_, device);
+  } else {
+    const auto& parallel_desc = JUST(parallel_desc_.value());
+    const auto& parallel_distribution = JUST(parallel_distribution_.value());
+    const auto& sbp_tuple = JUST(GetSbpTuple(parallel_distribution));
+    return functional::ConsistentConstant(*shape_.get(), 0, dtype_, parallel_desc, sbp_tuple);
+  }
+}
 
 }  // namespace one
 

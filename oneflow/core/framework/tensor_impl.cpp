@@ -60,23 +60,13 @@ Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
   return Maybe<void>::Ok();
 }
 
-namespace {
-
-std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
-  const auto& shape = std::make_shared<Shape>();
-  const auto& dtype = DataType::kInvalidDataType;
-  return std::make_shared<MirroredTensorMeta>(shape, dtype, Symbol<Device>());
-}
-
-}  // namespace
-
 Maybe<MirroredTensorImpl> LazyMirroredTensorImpl::detach() const {
   auto detached_impl = std::make_shared<LazyMirroredTensorImpl>(tensor_meta_, false, true);
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl()
-    : MirroredTensorImpl(NewDefaultMirroredTensorMeta(), false, false) {}
+    : MirroredTensorImpl(std::make_shared<const MirroredTensorMeta>(), false, false) {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<const MirroredTensorMeta>& tensor_meta, bool requires_grad, bool is_leaf)
@@ -166,6 +156,12 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
 
+MirroredTensorMeta::MirroredTensorMeta()
+    : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
+      device_(Symbol<Device>()),
+      stride_(std::make_shared<const Stride>()),
+      storage_offset_(0) {}
+
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device)
     : TensorMeta(shape, dtype),
@@ -206,42 +202,33 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
       cur_rank_phy_tensor_(cur_rank_phy_tensor) {}
 
 /* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
-    const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor,
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
-  CHECK_OR_RETURN(!cur_rank_phy_tensor->is_lazy());
-  {
-    int64_t machine_id = 0;
-    int64_t device_id = 0;
-    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-    const auto& device = JUST(Device::ThreadLocalGetOrNew(parallel_desc->device_tag(), device_id));
-    const auto& cur_rank_phy_device = JUST(cur_rank_phy_tensor->device());
-    CHECK_OR_RETURN(*device == *cur_rank_phy_device)
-        << "only LocalTensors on current rank Device can be casted to ConsistentTensor";
-  }
-  const auto& shape =
-      JUST(GetLogicalShape(*cur_rank_phy_tensor->shape(), *parallel_distribution, *parallel_desc));
-  const auto& dtype = cur_rank_phy_tensor->dtype();
-  Symbol<ConsistentTensorMeta> consistent_tensor_meta(
-      ConsistentTensorMeta(shape, dtype, parallel_distribution, parallel_desc));
-  return std::shared_ptr<EagerConsistentTensorImpl>(
-      new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
-                                    cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor));
-}
-
-/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf) {
   const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
-  int64_t parallel_id = -1;
+  Optional<int64_t> parallel_id;
   const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&parallel_id));
-  using TensorImpl = EagerConsistentTensorImpl;
-  TensorImpl::NewMethod NewImpl =
-      (device ? &TensorImpl::NewWithPhyTensor : &TensorImpl::NewWithoutPhyTensor);
-  return NewImpl(consistent_tensor_meta, device, parallel_id, requires_grad, is_leaf);
+  return EagerConsistentTensorImpl::New(consistent_tensor_meta, device, parallel_id, requires_grad,
+                                        is_leaf);
 }
 
-/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::NewWithPhyTensor(
-    Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device, int64_t parallel_id,
-    bool requires_grad, bool is_leaf) {
+namespace {
+
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
+                              const cfg::ParallelDistribution& parallel_distribution,
+                              const ParallelDesc& parallel_desc,
+                              const Optional<int64_t>& parallel_id) {
+  if (parallel_id.has_value()) {
+    return GetPhysicalShape(logical_shape, parallel_distribution, parallel_desc,
+                            JUST(parallel_id.value()));
+  } else {
+    return std::make_shared<Shape>(DimVector(logical_shape.NumAxes(), 0));
+  }
+}
+
+}  // namespace
+
+/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
+    Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
+    const Optional<int64_t>& parallel_id, bool requires_grad, bool is_leaf) {
   const auto& shape = consistent_tensor_meta->shape_ptr();
   const auto& dtype = consistent_tensor_meta->dtype();
   const auto& parallel_distribution = consistent_tensor_meta->parallel_distribution();
@@ -257,14 +244,6 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
   auto* tensor_impl =
       new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
                                     cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);
-  return std::shared_ptr<EagerConsistentTensorImpl>(tensor_impl);
-}
-
-/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::NewWithoutPhyTensor(
-    Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device, int64_t parallel_id,
-    bool requires_grad, bool is_leaf) {
-  auto* tensor_impl = new EagerConsistentTensorImpl(consistent_tensor_meta, requires_grad, is_leaf,
-                                                    std::shared_ptr<MirroredTensor>());
   return std::shared_ptr<EagerConsistentTensorImpl>(tensor_impl);
 }
 

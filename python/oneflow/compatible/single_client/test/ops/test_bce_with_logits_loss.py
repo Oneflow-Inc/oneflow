@@ -143,11 +143,11 @@ def _compare_bce_with_logits_loss_np(
         np_out_bceloss_dict["np_bce_with_logits_loss"],
     )
     assert np.allclose(
-        of_out_bceloss_dict["of_bce_with_logits_loss_mean"][0],
+        of_out_bceloss_dict["of_bce_with_logits_loss_mean"],
         np_out_bceloss_dict["np_bce_with_logits_loss_mean"],
     )
     assert np.allclose(
-        of_out_bceloss_dict["of_bce_with_logits_loss_sum"][0],
+        of_out_bceloss_dict["of_bce_with_logits_loss_sum"],
         np_out_bceloss_dict["np_bce_with_logits_loss_sum"],
     )
 

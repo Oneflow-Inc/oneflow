@@ -39,9 +39,11 @@ struct PackedChunkInfo {
 
 }  // namespace
 
-RegstMgr::RegstMgr(const Plan& plan) {
+void RegstMgr::AddPlan(const Plan& plan,
+                       const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
 
+  // TODO(chengcheng): create chunk mgr for reuse memory between plans.
   HashMap<int64_t, char*> chunk_id2ptr;
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
@@ -57,11 +59,36 @@ RegstMgr::RegstMgr(const Plan& plan) {
     if (mem_block.mem_size() == 0) { continue; }
     const int64_t mem_block_id = mem_block.mem_block_id();
     CHECK(all_block_ids.insert(mem_block_id).second);
+
     if (mem_block.has_chunk_id()) {
       CHECK(mem_block.has_chunk_offset());
       CHECK(chunk_id2ptr.find(mem_block.chunk_id()) != chunk_id2ptr.end());
       char* mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
       CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second);
+      CHECK(!mem_block.has_variable_op_name());
+    } else if (mem_block.has_variable_op_name()) {
+      // NOTE(chengcheng): bind mem_block_ptr to variable blob header_ptr and body_ptr
+      CHECK(!mem_block.enable_reuse_mem());
+      const std::string& var_name = mem_block.variable_op_name();
+      CHECK(!var_name.empty());
+      auto it = variable_op_name2eager_blob.find(var_name);
+      CHECK(it != variable_op_name2eager_blob.end())
+          << " CANNOT find variable op name: " << var_name;
+      CHECK(mem_block.has_is_separated_header());
+      Blob* var_blob = it->second;
+      CHECK(var_blob) << " variable op name: " << var_name << " in rank: " << this_machine_id
+                      << " CANNNOT NULL.";
+      if (mem_block.is_separated_header()) {
+        CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobHeader(), mem_block.mem_size());
+        CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobHeader());
+        CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->mut_header_ptr()).second);
+        CHECK(mem_block.mem_case().has_host_mem());
+      } else {
+        CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobBody(), mem_block.mem_size());
+        CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobBody());
+        CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->ForceMutDptr<char>()).second);
+        CHECK(mem_block.mem_case() == var_blob->mem_case());
+      }
     } else {
       int64_t zone_id = MemoryCaseUtil::GenMemZoneId(mem_block.mem_case());
       if (zone_id2packed_chunk.find(zone_id) == zone_id2packed_chunk.end()) {
@@ -113,6 +140,11 @@ RegstMgr::RegstMgr(const Plan& plan) {
   for (const auto& pair : plan.ctrl_regst_desc_info().ctrl_regst_desc_id2producer_task_id()) {
     CHECK(ctrl_regst_desc_id2producer_task_id_.emplace(pair.first, pair.second).second);
   }
+}
+
+void RegstMgr::AddPlan(const Plan& plan) {
+  HashMap<std::string, Blob*> variable_op_name2eager_blob;
+  AddPlan(plan, variable_op_name2eager_blob);
 }
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,

@@ -63,9 +63,28 @@ void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
 }
 
 void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
+  HashSet<std::string> variable_op_names;
+  PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names);
+}
+
+void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
+    Plan* plan, const HashSet<std::string>& variable_op_names) {
   HashMap<int64_t, MemBlockProto> mem_block_id2mem_block;
   // mzuid = memory zone unique id
   HashMap<int64_t, ChunkProto> mzuid2chunk;
+
+  auto IsVariableRegst = [&](const TaskProto* task, std::string* name) -> bool {
+    if (variable_op_names.empty()) { return false; }
+    if (task->exec_sequence().exec_node_size() != 1) { return false; }
+    const auto& op_conf =
+        GetOpAttribute(plan, task->job_id(), task->exec_sequence().exec_node(0).kernel_conf())
+            .op_conf();
+    if (!op_conf.has_variable_conf()) { return false; }
+    const std::string& var_name = op_conf.name();
+    if (variable_op_names.find(var_name) == variable_op_names.end()) { return false; }
+    *name = var_name;
+    return true;
+  };
 
   auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, const TaskProto* task) {
     const int64_t job_id = task->job_id();
@@ -77,9 +96,24 @@ void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
     CHECK_NE(mem_block_offset, -1);
     CHECK_EQ(regst_desc->separated_header_mem_block_id(), -1);
 
+    std::string var_name;
+    bool is_variable_regst = IsVariableRegst(task, &var_name);
+    if (is_variable_regst) {
+      CHECK(!var_name.empty());
+      CHECK_EQ(regst_desc->register_num(), 1);
+      CHECK_EQ(regst_desc->min_register_num(), 1);
+      CHECK_EQ(regst_desc->max_register_num(), 1);
+      regst_desc->set_variable_op_name(var_name);
+    }
+
     RtRegstDesc rt_regst_desc(*regst_desc);
     int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
     int64_t regst_separated_size = rt_regst_desc.TotalSeparatedHeaderByteSize4AllRegst();
+
+    if (is_variable_regst) {
+      CHECK_GT(regst_separated_size,
+               0);  // NOTE(chengcheng): variable regst header ALWAYS separated
+    }
 
     if (mem_block_id2mem_block.find(mem_block_id) == mem_block_id2mem_block.end()) {
       MemBlockProto mem_block;
@@ -90,9 +124,14 @@ void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
       mem_block.set_enable_reuse_mem(regst_desc->enable_reuse_mem());
       mem_block.set_mem_size(regst_main_size + mem_block_offset);
       mem_block.set_thrd_id_hint(thrd_id);
+      if (is_variable_regst) {
+        mem_block.set_variable_op_name(var_name);
+        mem_block.set_is_separated_header(false);
+      }
       CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
     } else {
       MemBlockProto* mem_block = &(mem_block_id2mem_block.at(mem_block_id));
+      CHECK(!mem_block->has_variable_op_name());  // variable regst mem block is unique.
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
       CHECK(mem_block->mem_case() == regst_desc->mem_case());
@@ -108,10 +147,14 @@ void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
       mem_block.add_job_id(job_id);
       mem_block.set_machine_id(machine_id);
       *(mem_block.mutable_mem_case()) =
-          MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
+          MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
       mem_block.set_thrd_id_hint(thrd_id);
+      if (is_variable_regst) {
+        mem_block.set_variable_op_name(var_name);
+        mem_block.set_is_separated_header(true);
+      }
       CHECK(mem_block_id2mem_block.emplace(mem_block.mem_block_id(), mem_block).second);
     }
   };
@@ -211,7 +254,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
         CHECK_EQ(header_mem_block.mem_size(), separated_header_mem_size);
         CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
         CHECK(header_mem_block.mem_case()
-              == MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
+              == MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
         CHECK(header_mem_block.enable_reuse_mem() == false);
         const auto& header_block_job_ids = mem_block_id2job_ids[header_block_id];
         CHECK(header_block_job_ids.find(task.job_id()) != header_block_job_ids.end());

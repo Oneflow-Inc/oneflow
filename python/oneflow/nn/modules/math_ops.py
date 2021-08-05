@@ -177,18 +177,10 @@ class BroadcastSub(Module):
         return flow.F.broadcast_sub(x, y)
 
 
-class ScalarAdd(Module):
-    def __init__(self, alpha, inplace: bool = False) -> None:
-        super().__init__()
-        if not isinstance(alpha, int) and (not isinstance(alpha, float)):
-            raise ValueError("scalar type can only be int or float")
-        self.alpha = alpha
-        self.inplace = inplace
-
-    def forward(self, x):
-        if self.inplace:
-            _check_inplace_valid(x)
-        return flow.F.add_scalar(x, self.alpha, self.inplace)
+def scalar_add_inplaceable(x, alpha, inplace: bool = False):
+    if inplace:
+        _check_inplace_valid(x)
+    return flow.F.add_scalar(x, alpha, inplace)
 
 
 @register_tensor_op("sub")
@@ -229,9 +221,9 @@ def _sub(input, other):
 
     """
     if isinstance(input, (int, float)):
-        return ScalarAdd(input)(ScalarMul(-1)(other))
+        return flow.F.add_scalar(ScalarMul(-1)(other), input)
     elif isinstance(other, (int, float)):
-        return ScalarAdd(-1 * other)(input)
+        return flow.F.add_scalar(input, -1 * other)
     elif input.shape == other.shape:
         return BroadcastSub()(input, other)
     elif other.shape == (1,):
@@ -342,34 +334,16 @@ def _reciprocal(x):
     return Reciprocal()(x)
 
 
-class ScalarAddByTensor(Module):
-    def __init__(self, inplace: bool = False) -> None:
-        super().__init__()
-        self.inplace = inplace
-
-    def forward(self, x, y):
-        if self.inplace:
-            _check_inplace_valid(x)
-        return flow.F.add_scalar_by_tensor(x, y, self.inplace)
+def scalar_add_by_tensor_inplaceable(x, y, inplace: bool = False):
+    if inplace:
+        _check_inplace_valid(x)
+    return flow.F.add_scalar_by_tensor(x, y, inplace)
 
 
-class ElementwiseAdd(Module):
-    def __init__(self, inplace: bool = False) -> None:
-        super().__init__()
-        self.inplace = inplace
-
-    def forward(self, x, y):
-        if self.inplace:
-            _check_inplace_valid(x)
-        return flow.F.add(x, y, self.inplace)
-
-
-class BroadcastAdd(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_add(x, y)
+def elementwise_add_inplaceable(x, y, inplace: bool = False):
+    if inplace:
+        _check_inplace_valid(x)
+    return flow.F.add(x, y, inplace)
 
 
 @register_tensor_op("add")
@@ -410,17 +384,17 @@ def _add(x, y):
 
     """
     if isinstance(x, (int, float)):
-        return ScalarAdd(x)(y)
+        return flow.F.add_scalar(y, x, False)
     elif isinstance(y, (int, float)):
-        return ScalarAdd(y)(x)
+        return flow.F.add_scalar(x, y, False)
     elif x.shape == y.shape:
-        return ElementwiseAdd()(x, y)
+        return flow.F.add(x, y, False)
     elif x.shape == (1,):
-        return ScalarAddByTensor()(y, x)
+        return flow.F.add_scalar_by_tensor(y, x, False)
     elif y.shape == (1,):
-        return ScalarAddByTensor()(x, y)
+        return flow.F.add_scalar_by_tensor(x, y, False)
     else:
-        return BroadcastAdd()(x, y)
+        return flow.F.broadcast_add(x, y)
 
 
 @register_tensor_op("add_")
@@ -429,18 +403,18 @@ def _add_inplace(x, y):
     In-place version of :func:`oneflow.Tensor.add`.
     """
     if isinstance(y, (int, float)):
-        return ScalarAdd(y, inplace=True)(x)
+        return scalar_add_inplaceable(x, y, inplace=True)
     elif x.shape == y.shape:
-        return ElementwiseAdd(inplace=True)(x, y)
+        return elementwise_add_inplaceable(x, y, inplace=True)
     elif x.shape == (1,):
         raise RuntimeError(
             f"output with shape {x.shape} doesn't match the broadcast shape {y.shape}"
         )
     elif y.shape == (1,):
-        return ScalarAddByTensor(inplace=True)(x, y)
+        return scalar_add_by_tensor_inplaceable(x, y, inplace=True)
     else:
         y = flow.broadcast_like(y, x)
-        return ElementwiseAdd(inplace=True)(x, y)
+        return elementwise_add_inplaceable(x, y, inplace=True)
 
 
 class Asin(Module):
@@ -837,9 +811,9 @@ class Subtract(Module):
 
     def forward(self, x, y):
         if isinstance(x, (int, float)):
-            return ScalarAdd(x)(-1 * y)
+            return flow.F.add_scalar(-1 * y, x)
         elif isinstance(y, (int, float)):
-            return ScalarAdd(-1 * y)(x)
+            return flow.F.add_scalar(x, -1 * y)
         elif x.shape == y.shape:
             return BroadcastSub()(x, y)
         elif x.shape == (1,):
@@ -953,9 +927,9 @@ def square_op(input):
 
 
 class Std(Module):
-    def __init__(self, dim=None, unbiased=True, keepdim=False) -> None:
+    def __init__(self, dim=None, unbiased=False, keepdim=False) -> None:
         super().__init__()
-        assert unbiased == True, "Only support 'unbiased=True' for now!"
+        assert unbiased == False, "Only support 'unbiased=False' for now!"
         self.unbiased = unbiased
         self.keepdim = keepdim
         self.dim = dim
@@ -986,7 +960,7 @@ class Std(Module):
 
 
 @register_tensor_op("std")
-def std_op(tensor, dim, unbiased=True, keepdim=False):
+def std_op(tensor, dim, unbiased=False, keepdim=False):
     """
     Returns the standard-deviation of each row of the :attr:`input` tensor in the
     dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
@@ -1016,7 +990,7 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
         >>> input = flow.Tensor(arr)
         >>> output = flow.std(input, dim=0).numpy()
         >>> output
-        array([0.8164968], dtype=float32)
+        array(0.8164968, dtype=float32)
 
     """
     return Std(dim, unbiased, keepdim)(tensor)
@@ -1075,15 +1049,11 @@ def pow_op(tensor, exponent):
     return Pow()(tensor, exponent)
 
 
-class Addmm(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, mat1, mat2, alpha=1, beta=1):
-        if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
-            raise ValueError("input matrixes shape can not be greater than 2")
-        else:
-            return _mul(x, beta) + _mul(flow.F.matmul(mat1, mat2), alpha)
+def addmm(x, mat1, mat2, alpha=1, beta=1):
+    if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
+        raise ValueError("input matrixes shape can not be greater than 2")
+    else:
+        return _mul(x, beta) + _mul(flow.F.matmul(mat1, mat2), alpha)
 
 
 def addmm_op(input, mat1, mat2, alpha=1, beta=1):
@@ -1139,7 +1109,7 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         >>> output2.shape
         flow.Size([3, 3])
     """
-    return Addmm()(input, mat1, mat2, alpha, beta)
+    return addmm(input, mat1, mat2, alpha, beta)
 
 
 @register_tensor_op("addmm")
@@ -1147,7 +1117,7 @@ def addmm_op_tensor(input, mat1, mat2, alpha=1, beta=1):
     """
     See :func:`oneflow.addmm`
     """
-    return Addmm()(input, mat1, mat2, alpha, beta)
+    return addmm(input, mat1, mat2, alpha, beta)
 
 
 class Clamp(Module):
@@ -1665,6 +1635,92 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 
     """
     return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
+
+
+class ElementwiseMinimum(Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x, y):
+        return flow.F.elementwise_min(x, y)
+
+
+class BroadcastMinimum(Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x, y):
+        return flow.F.broadcast_min(x, y)
+
+
+@register_tensor_op("minimum")
+def minimum(x, y):
+    r"""Computes the element-wise minimum of x and y.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x = flow.tensor((1, 2, -1), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.minimum(x, y)
+        tensor([ 1.,  0., -1.], dtype=oneflow.float32)
+
+        >>> x = flow.tensor((1,), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.minimum(x, y)
+        tensor([1., 0., 1.], dtype=oneflow.float32)
+    """
+    if x.shape == y.shape:
+        return ElementwiseMinimum()(x, y)
+    else:
+        return BroadcastMinimum()(x, y)
+
+
+class ElementwiseMaximum(Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x, y):
+        return flow.F.elementwise_max(x, y)
+
+
+class BroadcastMaximum(Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x, y):
+        return flow.F.broadcast_max(x, y)
+
+
+@register_tensor_op("maximum")
+def maximum(x, y):
+    r"""Computes the element-wise maximum of x and y.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x = flow.tensor((1, 2, -1), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.maximum(x, y)
+        tensor([3., 2., 4.], dtype=oneflow.float32)
+
+        >>> x = flow.tensor((1,), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.maximum(x, y)
+        tensor([3., 1., 4.], dtype=oneflow.float32)
+    """
+    if x.shape == y.shape:
+        return ElementwiseMaximum()(x, y)
+    else:
+        return BroadcastMaximum()(x, y)
 
 
 if __name__ == "__main__":

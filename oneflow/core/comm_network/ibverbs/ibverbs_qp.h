@@ -70,6 +70,8 @@ class IBVerbsQP final {
   void RecvDone(WorkRequestId*);
 
  private:
+  void EnqueuePostSendReadWR(ibv_send_wr wr, ibv_sge sge);
+  void PostPendingSendWR();
   WorkRequestId* NewWorkRequestId();
   void DeleteWorkRequestId(WorkRequestId* wr_id);
   ActorMsgMR* GetOneSendMsgMRFromBuf();
@@ -83,6 +85,10 @@ class IBVerbsQP final {
 
   std::mutex send_msg_buf_mtx_;
   std::queue<ActorMsgMR*> send_msg_buf_;
+  std::mutex pending_send_wr_mutex_;
+  uint32_t num_outstanding_send_wr_;
+  uint32_t max_outstanding_send_wr_;
+  std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
 };
 
 }  // namespace oneflow

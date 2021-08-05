@@ -46,6 +46,7 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
     T* y = tensor_y->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y);
@@ -70,6 +71,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
     T* dx = tensor_dx->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, dy, dx);
@@ -110,6 +112,7 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
     half* y = reinterpret_cast<half*>(tensor_y->mut_dptr<float16>());
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathUnaryElementwiseForwardGpu<UnaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, y);
@@ -134,6 +137,7 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel {
     half* dx = reinterpret_cast<half*>(tensor_dx->mut_dptr<float16>());
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
+    if (n == 0) { return; }
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, half>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, x, dy, dx);

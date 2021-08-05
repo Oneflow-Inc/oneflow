@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"

@@ -37,17 +37,38 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
+  // slice a 1-dim tensor will return a 0-dim or 1-dim tensor
+  if (x_shape.NumAxes() == 1) {
+    const int64_t start = start_vec.at(0);
+    const int64_t stop = stop_vec.at(0);
+    const int64_t step = step_vec.at(0);
+    const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
+    const int64_t len = diff / step + 1;
+    CHECK_GE_OR_RETURN(len, 1);
+    if (len == 1) {
+      // return a 0-dim tensor
+      DimVector zero_dim_vec(0);
+      *ctx->OutputShape("y", 0) = Shape(zero_dim_vec);
+    } else {
+      DimVector one_dim_vec(1);
+      one_dim_vec[0] = len;
+      *ctx->OutputShape("y", 0) = Shape(one_dim_vec);
+    }
+    return Maybe<void>::Ok();
+  }
   DimVector dim_vec(ndim);
   FOR_RANGE(size_t, i, 0, dim_vec.size()) {
     const int64_t dim_size = x_shape.At(i);
-    if (dim_size == 0) {
+    const int64_t step = step_vec.at(i);
+    int64_t start = start_vec.at(i);
+    int64_t stop = stop_vec.at(i);
+    if (dim_size == 0 || start == stop) {
       dim_vec[i] = 0;
       continue;
     }
-    const int64_t step = step_vec.at(i);
     CHECK_NE_OR_RETURN(step, 0) << "slice step cannot be 0";
-    int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
-    int64_t stop = RegulateSliceStop(stop_vec.at(i), dim_size);
+    start = RegulateSliceStart(start, dim_size);
+    stop = RegulateSliceStop(stop, dim_size);
     if (step > 0) {
       CHECK_LT_OR_RETURN(start, stop) << "slice start must be less than stop when step > 0"
                                          ", otherwise empty result will be outputted.";
@@ -89,16 +110,32 @@ Maybe<void> GetSliceOpSbpSignature(user_op::SbpContext* ctx) {
 Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
   const Shape& like_shape = ctx->InputShape("like", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  const int64_t ndim = dy_shape.NumAxes();
-  CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
-
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
-  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
-  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
+  const int64_t ndim = dy_shape.NumAxes();
+  if (like_shape.NumAxes() == 1) {
+    const int64_t start = start_vec.at(0);
+    const int64_t stop = stop_vec.at(0);
+    const int64_t step = step_vec.at(0);
+    const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
+    const int64_t len = diff / step + 1;
+    CHECK_GE_OR_RETURN(len, 1);
+    if (len == 1) {
+      CHECK_EQ_OR_RETURN(ndim, 0);
+    } else {
+      CHECK_EQ_OR_RETURN(ndim, 1);
+    }
+    CHECK_EQ_OR_RETURN(start_vec.size(), 1);
+    CHECK_EQ_OR_RETURN(stop_vec.size(), 1);
+    CHECK_EQ_OR_RETURN(step_vec.size(), 1);
+  } else {
+    CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
+    CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+    CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+    CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+  }
   *ctx->OutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
 }

@@ -97,8 +97,8 @@ def _run_test(test_case, device_type, op_param):
     count_not_finite = np.array([op_param["count_not_finite"]]).astype(np.int64)
     schedule_job(count_not_finite).get()
     (good_step_counter, loss_scale) = fetch_job().get()
-    assert good_step_counter.numpy()[0] == op_param["result_step"]
-    assert loss_scale.numpy()[0] == op_param["result_loss_scale"]
+    assert good_step_counter.numpy() == op_param["result_step"]
+    assert loss_scale.numpy() == op_param["result_loss_scale"]
 
 
 @flow.unittest.skip_unless_1n1d()
