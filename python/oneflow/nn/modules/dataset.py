@@ -655,10 +655,39 @@ class COCOReader(Module):
         group_by_aspect_ratio: bool = True,
         remove_images_without_annotations: bool = True,
         stride_partition: bool = True,
+        device: Union[flow.device, str] = None,
+        placement: flow.placement = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     ):
         super().__init__()
         if random_seed is None:
             random_seed = random.randrange(sys.maxsize)
+
+        parallel_distribution = []
+
+        if placement is None:
+            self.device = device or flow.device("cpu")
+        else:
+            if device is not None:
+                raise ValueError(
+                    "when param sbp is specified, param device should not be specified"
+                )
+
+            if isinstance(sbp, (tuple, list)):
+                for sbp_item in sbp:
+                    if not isinstance(sbp_item, flow.sbp.sbp):
+                        raise ValueError(f"invalid sbp item: {sbp_item}")
+                    parallel_distribution.append(sbp_item._ToAttrStr())
+            elif isinstance(sbp, flow.sbp.sbp):
+                parallel_distribution.append(sbp._ToAttrStr())
+            else:
+                raise ValueError(f"invalid param sbp: {sbp}")
+
+            if len(parallel_distribution) != len(placement.hierarchy):
+                raise ValueError(
+                    "dimensions of sbp and dimensions of hierarchy of placement don't equal"
+                )
+
         self._op = (
             flow.builtin_op("COCOReader")
             .Output("image")
@@ -679,12 +708,19 @@ class COCOReader(Module):
                 "remove_images_without_annotations", remove_images_without_annotations
             )
             .Attr("stride_partition", stride_partition)
+            .Attr("parallel_distribution", parallel_distribution)
             .Build()
         )
+        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
 
     def forward(self):
-        res = self._op()
-        return res
+        if self.placement is None:
+            # local apply
+            output = self._op.apply(self.device, self.attrs)[0]
+        else:
+            # consistent apply
+            output = self._op.apply(self.placement, self.attrs)[0]
+        return output
 
 
 class ImageBatchAlign(Module):
