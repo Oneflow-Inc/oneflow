@@ -16,6 +16,7 @@ limitations under the License.
 from contextlib import contextmanager
 
 from google.protobuf import text_format
+import oneflow
 
 import oneflow._oneflow_internal
 from oneflow._oneflow_internal.oneflow.core.framework import (
@@ -174,5 +175,14 @@ def build_graph_output(op_name, out):
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
 
-    eager_out = output_op.apply([out], attrs)[0]
+    fake_eager_out = output_op.apply([out], attrs)[0]
+
+    shape = fake_eager_out.shape
+    dtype = fake_eager_out.dtype
+    with oneflow._oneflow_internal.lazy_mode.gard(False):
+        if fake_eager_out.is_consistent:
+            eager_out = oneflow.empty(shape, dtype=dtype, placement=fake_eager_out.placement, sbp=fake_eager_out.sbp)
+        else:
+            eager_out = oneflow.empty(shape, dtype=dtype, device=fake_eager_out.device)
+
     return eager_out
