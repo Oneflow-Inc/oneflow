@@ -536,3 +536,19 @@ class Module(object):
                 main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
+
+    def _shallow_repr(self):
+        extra_lines = []
+        extra_repr = self.extra_repr()
+        if extra_repr:
+            extra_lines = extra_repr.split("\n")
+        child_lines = []
+        lines = extra_lines
+        main_str = self._get_name() + "("
+        if lines:
+            if len(extra_lines) == 1 and (not child_lines):
+                main_str += extra_lines[0]
+            else:
+                main_str += "\n  " + "\n  ".join(lines) + "\n"
+        main_str += ")"
+        return main_str

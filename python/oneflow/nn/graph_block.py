@@ -30,6 +30,8 @@ class BlockType:
     MODULE = "MODULE"
     PARAMETER = "PARAMETER"
     BUFFER = "BUFFER"
+    INPUT = "INPUT"
+    OUTPUT = "OUTPUT"
 
 
 class Block(object):
@@ -37,7 +39,7 @@ class Block(object):
         self,
         prefix: str = "",
         name: str = "",
-        value: Union[Module, Parameter, Tensor] = None,
+        value: Union[Module, Parameter, Tensor, str] = None,
     ):
         assert not isinstance(value, Block)
         self._name = name
@@ -283,7 +285,11 @@ class Block(object):
             + self._name_prefix
             + self._name
             + ":"
-            + self._origin.__class__.__name__
+            + (
+                self._origin._shallow_repr()
+                if self._type == BlockType.MODULE
+                else (self.origin._shallow_repr())
+            )
             + ":"
             + self._type
             + "): ("

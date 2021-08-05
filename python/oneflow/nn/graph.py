@@ -45,6 +45,8 @@ class Graph(object):
         self._variables_conf = OrderedDict()
         self._is_compiled = False
         self._job_proto = None
+        self._args_repr = []
+        self._outs_repr = []
 
     @property
     def name(self):
@@ -126,6 +128,7 @@ class Graph(object):
                 op_name = "_" + self.name + "-input_" + str(idx)
                 lazy_args.append(graph_build_util.build_graph_input_arg(op_name, arg))
                 lazy_arg_op_names.append(op_name)
+                self._args_repr.append(op_name + ":" + arg._shallow_repr())
 
             # Deal with parameter and buffer
             state_op_names = []
@@ -165,6 +168,7 @@ class Graph(object):
                 op_name = "_" + self.name + "-output_" + str(idx)
                 eager_outputs.append(graph_build_util.build_graph_output(op_name, out))
                 eager_output_op_names.append(op_name)
+                self._outs_repr.append(op_name + ":" + out._shallow_repr())
             if len(eager_outputs) == 0:
                 eager_outputs = None
             elif len(eager_outputs) == 1:
@@ -188,7 +192,6 @@ class Graph(object):
         # Complie and init Runtime
         self._c_nn_graph.complie_and_init_runtime()
         self._is_compiled = True
-        return eager_outputs
 
     def _launch(self, *args):
         # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
@@ -251,18 +254,26 @@ class Graph(object):
         )
 
     def __repr__(self):
-        lines = None
+        child_lines = []
+        if len(self._args_repr) > 0:
+            for in_str in self._args_repr:
+                input_str = add_indent("(" + in_str + ":INPUT)", 2)
+                child_lines.append(input_str)
+
+        if len(self._outs_repr) > 0:
+            for out_str in self._outs_repr:
+                output_str = add_indent("(" + out_str + ":OUTPUT)", 2)
+                child_lines.append(output_str)
+
         if len(self._blocks) > 0:
-            child_lines = []
             for n, m in self._blocks.items():
                 mod_str = repr(m)
                 mod_str = add_indent(mod_str, 2)
                 child_lines.append(mod_str)
-            lines = child_lines
 
         main_str = "(" + self._name + ":" + self.__class__.__name__ + ":GRAPH): ("
-        if lines is not None:
-            main_str += "\n  " + "\n  ".join(lines) + "\n"
+        if len(child_lines) > 0:
+            main_str += "\n  " + "\n  ".join(child_lines) + "\n"
         main_str += ")"
         return main_str
 

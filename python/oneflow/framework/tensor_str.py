@@ -34,7 +34,7 @@ def _add_suffixes(tensor_str, suffixes, indent):
     return "".join(tensor_strs)
 
 
-def _gen_tensor_str(tensor):
+def _gen_tensor_str_template(tensor, data_str):
     prefix = "tensor("
     indent = len(prefix)
     suffixes = []
@@ -48,7 +48,17 @@ def _gen_tensor_str(tensor):
         suffixes.append("grad_fn=<{}>".format(name))
     elif tensor.requires_grad:
         suffixes.append("requires_grad=True")
-    tensor_str = np.array2string(
+    return _add_suffixes(prefix + data_str, suffixes, indent)
+
+
+def _gen_tensor_str(tensor):
+    prefix = "tensor("
+    data_str = np.array2string(
         tensor.numpy(), precision=4, separator=", ", prefix=prefix
     )
-    return _add_suffixes(prefix + tensor_str, suffixes, indent)
+    return _gen_tensor_str_template(tensor, data_str)
+
+
+def _gen_tensor_str_with_no_data(tensor):
+    data_str = repr(tensor.shape)
+    return _gen_tensor_str_template(tensor, data_str)

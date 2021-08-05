@@ -61,6 +61,48 @@ def _parse_args():
     return parser.parse_known_args()
 
 
+def _test_alexnet_graph_repr(test_case, args):
+    train_data_loader = OFRecordDataLoader(
+        ofrecord_root=args.ofrecord_path,
+        mode="train",
+        dataset_size=args.train_dataset_size,
+        batch_size=args.train_batch_size,
+    )
+
+    alexnet_module = alexnet()
+    alexnet_module.to(args.device)
+
+    of_cross_entropy = flow.nn.CrossEntropyLoss()
+    of_cross_entropy.to(args.device)
+
+    of_sgd = flow.optim.SGD(
+        alexnet_module.parameters(), lr=args.learning_rate, momentum=args.mom
+    )
+
+    class AlexNetGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.alexnet = alexnet_module
+            self.cross_entropy = of_cross_entropy
+            self.add_optimizer("sgd", of_sgd)
+
+        def build(self, image, label):
+            logits = self.alexnet(image)
+            loss = self.cross_entropy(logits, label)
+            loss.backward()
+            return loss
+
+    alexnet_graph = AlexNetGraph()
+
+    alexnet_module.train()
+    image, label = train_data_loader.get_batch()
+    image = image.to(args.device)
+    label = label.to(args.device)
+    loss = alexnet_graph(image, label)
+
+    print("repr(alexnet_graph) after run: \n", repr(alexnet_graph))
+
+
 def _test_alexnet_graph(test_case, args):
     train_data_loader = OFRecordDataLoader(
         ofrecord_root=args.ofrecord_path,
@@ -132,6 +174,11 @@ def _test_alexnet_graph(test_case, args):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestAlexnetGraph(oneflow.unittest.TestCase):
+    def test_alexnet_graph_repr(test_case):
+        args, unknown_args = _parse_args()
+        args.device = "cuda"
+        _test_alexnet_graph_repr(test_case, args)
+
     def test_alexnet_graph_gpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cuda"
