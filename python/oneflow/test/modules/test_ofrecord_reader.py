@@ -28,10 +28,9 @@ class OFRecordDataLoader(flow.nn.Module):
         shuffle = False
 
         self.ofrecord_reader = flow.nn.OfrecordReader(
-            "/dataset/imagenette/ofrecord",
+            "/dataset/imagenet_227/train/32",
             batch_size=batch_size,
-            data_part_num=1,
-            part_name_suffix_length=5,
+            data_part_num=2,
             random_shuffle=shuffle,
             shuffle_after_epoch=shuffle,
             device=device,
@@ -47,7 +46,7 @@ class OFRecordDataLoader(flow.nn.Module):
             "encoded", color_space="RGB"
         )
 
-        self.resize = flow.nn.image.Resize(target_size=[224, 224], dtype=flow.float32)
+        self.resize = flow.nn.image.Resize(target_size=[227, 227], dtype=flow.float32)
 
     def forward(self):
         record = self.ofrecord_reader()
@@ -57,31 +56,54 @@ class OFRecordDataLoader(flow.nn.Module):
         return image, label
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@flow.unittest.skip_unless_1n2d()
-class DistributedOFRecordReaderTestCase(oneflow.unittest.TestCase):
-    def test(test_case):
-        rank = flow.distributed.get_rank()
-        print(f"DistributedOFRecordReaderTestCase.test on rank {rank}")
-        eager_ofrecord_loader = OFRecordDataLoader(device=flow.device("cpu", rank))
-        image, label = eager_ofrecord_loader()
+class DataLoaderGraph(flow.nn.Graph):
+    def __init__(self, loader):
+        super().__init__()
+        self.loader_ = loader
 
-        print(f"image: {image.shape}, {image.dtype}")
-        # print(image.numpy())
-        print(f"label: {label.shape}, {label.dtype}")
-        print(label.numpy())
+    def build(self):
+        return self.loader_()
 
-        # class GraphReader(flow.nn.Graph):
-        #     def __init__(self):
-        #         super().__init__()
-        #         self.my_reader = cc_reader
 
-        #     def build(self):
-        #         return self.my_reader()
+# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+# @flow.unittest.skip_unless_1n2d()
+# class DistributedOFRecordReaderTestCase(oneflow.unittest.TestCase):
+def test(test_case=None):
+    rank = flow.distributed.get_rank()
+    print(f"DistributedOFRecordReaderTestCase.test on rank {rank} {os.getpid()}")
 
-        # reader_g = GraphReader()
-        # image, label = reader_g()
+    # eager_ofrecord_loader = OFRecordDataLoader(device=flow.device("cpu", rank))
+
+    lazy_consistent_loader = OFRecordDataLoader(
+        placement=flow.placement("cpu", {0: [0]}), sbp=[flow.sbp.split(0)]
+    )
+    graph = DataLoaderGraph(lazy_consistent_loader)
+
+    iteration = 1
+    for i in range(iteration):
+        g_image, g_label = graph()
+        print(
+            f"rank {rank} graph output image: {g_image.shape}, {g_image.dtype}, placement: {g_image.placement}"
+            # f"\n{g_image.to_local().numpy().mean()}"
+        )
+        print(
+            f"rank {rank} graph output label: {g_label.shape}, {g_label.dtype}, placement: {g_image.placement}"
+            # f"\n{g_label.to_local().numpy()}"
+        )
+
+        # image, label = eager_ofrecord_loader()
+        # print(
+        #     f"rank {rank} image: {image.shape}, {image.dtype}"
+        #     f"\n{image.to_local().numpy().mean()}"
+        # )
+        # print(
+        #     f"rank {rank} label: {label.shape}, {label.dtype}"
+        #     f"\n{label.to_local().numpy()}"
+        # )
+
+        print(f"{'-' * 20} rank {rank} iter {i} complete {'-' * 20}")
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+    test()
