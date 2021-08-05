@@ -15,15 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Abs(Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.abs(x)
 
 
 @register_tensor_op("abs")
@@ -45,7 +36,7 @@ def abs_op(x):
         tensor([1., 2., 3., 4.], dtype=oneflow.float32)
 
     """
-    return Abs()(x)
+    return flow.F.abs(x)
 
 
 if __name__ == "__main__":

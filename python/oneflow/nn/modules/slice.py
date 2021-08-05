@@ -15,27 +15,11 @@ limitations under the License.
 """
 from typing import Sequence, Tuple
 
-import numpy as np
-
 import oneflow as flow
-from oneflow.nn.module import Module
 from oneflow.ops.array_ops import GetSliceAttrs, check_slice_tup_list
 
 
-class Slice(Module):
-    def __init__(
-        self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
-    ) -> None:
-        super().__init__()
-        self.start = start
-        self.stop = stop
-        self.step = step
-
-    def forward(self, x):
-        return flow.F.slice(x, start=self.start, stop=self.stop, step=self.step)
-
-
-def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
+def slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
     """Extracts a slice from a tensor.
     The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step).
     The operator will slice the tensor according to the `slice_tup_list`.
@@ -56,26 +40,11 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
         >>> y.shape
         flow.Size([3, 3, 2])
     """
-    (start, stop, step) = check_slice_tup_list(slice_tup_list, x.shape)
-    return Slice(start, stop, step)(x)
+    (start, stop, step) = check_slice_tup_list(slice_tup_list, input.shape)
+    return flow.F.slice(input, start, stop, step)
 
 
-class SliceUpdate(Module):
-    def __init__(
-        self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
-    ) -> None:
-        super().__init__()
-        self.start = start
-        self.stop = stop
-        self.step = step
-
-    def forward(self, x, update):
-        return flow.F.slice_update(
-            x, update, start=self.start, stop=self.stop, step=self.step
-        )
-
-
-def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
+def slice_update_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     """Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
 
     Args:
@@ -95,28 +64,11 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
         >>> y.numpy()
         array([1., 2., 3., 4., 1.], dtype=float32)
     """
-    (start, stop, step) = GetSliceAttrs(slice_tup_list, x.shape)
-    return SliceUpdate(start, stop, step)(x, update)
+    (start, stop, step) = GetSliceAttrs(slice_tup_list, input.shape)
+    return flow.F.slice_update(input, update, start, stop, step)
 
 
-class LogicalSliceAssign(Module):
-    def __init__(
-        self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
-    ) -> None:
-        super().__init__()
-        self.start = start
-        self.stop = stop
-        self.step = step
-
-    def forward(self, x, update):
-        if update.dtype != x.dtype:
-            update = update.to(dtype=x.dtype)
-        return flow.F.logical_slice_assign(
-            x, update, start=self.start, stop=self.stop, step=self.step
-        )
-
-
-def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
+def logical_slice_assign_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     """Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`. 
 
     Args:
@@ -134,10 +86,15 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         >>> y = flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
+        >>> input
+        tensor([1., 2., 3., 4., 1.], dtype=oneflow.float32)
+
     """
-    "[summary]\n\n    Returns:\n        [type]: [description]\n    "
-    (start, stop, step) = GetSliceAttrs(slice_tup_list, x.shape)
-    return LogicalSliceAssign(start, stop, step)(x, update)
+
+    (start, stop, step) = GetSliceAttrs(slice_tup_list, input.shape)
+    if update.dtype != input.dtype:
+        update = update.to(dtype=xinput.dtype)
+    return flow.F.logical_slice_assign(input, update, start, stop, step)
 
 
 if __name__ == "__main__":
