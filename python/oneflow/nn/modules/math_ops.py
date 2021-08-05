@@ -199,14 +199,6 @@ def _div(input, other):
     return flow.F.div(input, other)
 
 
-class Reciprocal(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.reciprocal_no_nan(x)
-
-
 @register_tensor_op("reciprocal")
 def _reciprocal(x):
     """Computes the safe reciprocal of x. If x is zero, the reciprocal will
@@ -225,7 +217,7 @@ def _reciprocal(x):
         array([[1.        , 0.5       , 0.33333334],
                [0.25      , 0.2       , 0.16666667]], dtype=float32)
     """
-    return Reciprocal()(x)
+    return flow.F.reciprocal_no_nan(x)
 
 
 @register_tensor_op("add")
@@ -265,7 +257,7 @@ def _add(x, y):
         (2, 3)
 
     """
-    return flow.F.add(x, y)
+    return flow.F.reciprocal_no_nan(x)
 
 
 @register_tensor_op("add_")
