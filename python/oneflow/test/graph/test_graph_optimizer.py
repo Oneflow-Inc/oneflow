@@ -19,8 +19,6 @@ import unittest
 
 import numpy as np
 
-from ..modules.test_util import GenArgList
-
 import oneflow
 import oneflow as flow
 import oneflow.unittest
@@ -28,7 +26,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestGraphOptimizer(flow.unittest.TestCase):
-    def test_sgd_optimizer(test_case):
+    def test_optimizer(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
