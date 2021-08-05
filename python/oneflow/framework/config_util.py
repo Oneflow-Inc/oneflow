@@ -253,22 +253,6 @@ def enable_model_io_v2(val):
     sess.config_proto.resource.enable_model_io_v2 = val
 
 
-def api_collect_act_event(val: bool = True) -> None:
-    """Whether or not collect active event.
-
-    Args:
-        val (bool, optional): True or False. Defaults to True.
-    """
-    return enable_if.unique([collect_act_event, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def collect_act_event(val=True):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.profile_conf.collect_act_event = val
-
-
 def api_enable_fusion(val: bool = True) -> None:
     """Whether or not allow fusion the operators
 
