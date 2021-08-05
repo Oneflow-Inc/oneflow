@@ -66,8 +66,8 @@ class CocoCaptions(CocoDetection):
             and returns a transformed version.
     Example:
         .. code:: python
-            import torchvision.datasets as dset
-            import torchvision.transforms as transforms
+            import oneflow.utils.vision.datasets as dset
+            import oneflow.utils.vision.transforms as transforms
             cap = dset.CocoCaptions(root = 'dir where images are',
                                     annFile = 'json annotation file',
                                     transform=transforms.ToTensor())
