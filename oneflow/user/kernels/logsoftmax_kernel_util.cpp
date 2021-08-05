@@ -16,7 +16,7 @@ limitations under the License.
 #include <cstdint>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/user/kernels/softmax_kernel_log_util.h"
+#include "oneflow/user/kernels/logsoftmax_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {

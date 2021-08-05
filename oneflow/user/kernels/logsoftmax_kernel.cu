@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/softmax.cuh"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/user/kernels/softmax_kernel_log_util.h"
+#include "oneflow/user/kernels/logsoftmax_kernel_util.h"
 
 namespace oneflow {
 
