@@ -346,6 +346,36 @@ class AvgPoolingNdGradFunctor {
   std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
 };
 
+class NormalizationGradFunctor {
+ public:
+  NormalizationGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("normalization_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("mean")
+                         .Input("inv_variance")
+                         .Input("gamma")
+                         .Output("dx")
+                         .Output("gamma_diff")
+                         .Output("beta_diff")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& grad,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& mean,
+                                const std::shared_ptr<one::Tensor>& inv_variance,
+                                const std::shared_ptr<one::Tensor>& gamma, const float& epsilon,
+                                const int32_t& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {grad, x, mean, inv_variance, gamma}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -358,6 +388,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
+  m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
 };
 
 }  // namespace functional
