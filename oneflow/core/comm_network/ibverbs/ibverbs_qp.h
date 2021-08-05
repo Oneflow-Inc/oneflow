@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_QP_H_
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_QP_H_
 
+#include <cstdint>
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/actor/actor_message.h"
 
@@ -28,6 +29,9 @@ class ActorMsgMR final {
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
   ActorMsgMR(ibv_pd* pd) { mem_desc_.reset(new IBVerbsMemDesc(pd, &msg_, sizeof(msg_))); }
+  ActorMsgMR(IBVerbsMemDesc * mem_desc){
+    mem_desc_.reset(mem_desc);
+  }
   ~ActorMsgMR() { mem_desc_.reset(); }
 
   const ActorMsg& msg() const { return msg_; }
@@ -48,6 +52,42 @@ struct WorkRequestId {
   ActorMsgMR* msg_mr;
 };
 
+class MessagePool final {
+  public:
+    OF_DISALLOW_COPY_AND_MOVE(MessagePool);
+    MessagePool() = delete;
+    MessagePool(ibv_pd* pd,uint32_t size, uint32_t number_of_message): pd_(pd),size_(size),num_of_message_(number_of_message), {
+    }
+    ActorMsg GetMessage();
+    void PutMessage(const ActorMsg & msg){
+     // message_buf_.push()
+      if(message_buf_.empty() == false) {
+        ActorMsgMR * msg_mr  =message_buf_.front();
+        msg_mr->set_msg(msg);
+      } else {
+        //register a big memory 
+        addr_ = (char*)malloc(sizeof(char) * size_ * num_of_message_);//申请内存空间
+        mem_desc_ = new IBVerbsMemDesc(pd_,addr_, size_ * num_of_message_);//给这一块内存空间注册内存
+        message_buf_.assign(num_of_message_, nullptr);
+        //切割内存
+        const ibv_mr* mr = mem_desc_->mr();
+         for(int i = 0; i < num_of_message_; i++){
+           ibv_mr * mr1 =(ibv_mr*) (mr + size_ * i);
+           char* addr = addr_ + size_* i;
+           IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(mr1,addr,size_);
+           message_buf_[i] = new ActorMsgMR(mem_desc);
+         }
+      }
+    }
+
+  private:
+    ibv_pd* pd_;
+    char *addr_;
+    IBVerbsMemDesc * mem_desc_;
+    uint32_t size_;
+    uint32_t num_of_message_;
+    std::vector<ActorMsgMR*> message_buf_;
+};
 struct IBVerbsCommNetRMADesc;
 
 class IBVerbsQP final {
@@ -89,6 +129,7 @@ class IBVerbsQP final {
   uint32_t num_outstanding_send_wr_;
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
+
 };
 
 }  // namespace oneflow

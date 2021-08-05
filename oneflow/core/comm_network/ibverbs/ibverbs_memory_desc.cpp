@@ -29,6 +29,11 @@ IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size)
   CHECK(mr_);
 }
 
+IBVerbsMemDesc::IBVerbsMemDesc(ibv_mr* mr, void * mem_ptr, size_t byte_size)
+:mr_(mr), mem_ptr_(mem_ptr),mem_size_(byte_size){
+    CHECK(mr_);
+}
+
 IBVerbsMemDesc::~IBVerbsMemDesc() { CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0); }
 
 }  // namespace oneflow
