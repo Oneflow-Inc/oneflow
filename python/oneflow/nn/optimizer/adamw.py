@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
+import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
 import oneflow as flow
@@ -142,49 +143,15 @@ class AdamW(Optimizer):
             self._state["step"] = self._state["step"] + 1
             return loss
 
-    """
-    def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-    optimizer_conf = train_conf.mutable_optimizer_conf().Add()
-    self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
-    if self.grad_clipping is not None:
-        optimizer_conf.mutable_clip_conf().CopyFrom(self.grad_clipping.clip_conf)
-    optimizer_conf.mutable_adam_conf().set_beta1(self.beta1)
-    optimizer_conf.mutable_adam_conf().set_beta2(self.beta2)
-    optimizer_conf.mutable_adam_conf().set_epsilon(self.epsilon)
-    optimizer_conf.mutable_adam_conf().set_do_bias_correction(
-        self.do_bias_correction
-    )
-    if self.weight_decay is not None:
-        optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
-            self.weight_decay
-        )
-        assert not (
-            self.weight_decay_excludes is not None
-            and self.weight_decay_includes is not None
-        )
-        if self.weight_decay_includes is not None:
-            for weight_decay_include in self.weight_decay_includes:
-                optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(
-                    weight_decay_include
-                )
-        elif self.weight_decay_excludes is not None:
-            for weight_decay_exclude in self.weight_decay_excludes:
-                optimizer_conf.mutable_weight_decay_conf().mutable_excludes().add_pattern(
-                    weight_decay_exclude
-                )
-    for variable in self.Variables():
-        optimizer_conf.add_variable_op_names(variable)
-    """
-
     def generate_conf_for_graph(self, train_conf, vars_conf):
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
-            learning_rate_val = param_group["lr"]
+            lr = param_group["lr"]
             scale = param_group["scale"]
-            weight_decay = param_group["weight_decay"],
-            beta1 = param_group["betas"][0],
-            beta2 = param_group["betas"][1],
-            epsilon = param_group["eps"],
+            weight_decay = param_group["weight_decay"]
+            beta1 = param_group["betas"][0]
+            beta2 = param_group["betas"][1]
+            epsilon = param_group["eps"]
 
             # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
             base_scale = train_conf.loss_scale_factor()
@@ -196,17 +163,19 @@ class AdamW(Optimizer):
 
             train_conf.set_loss_scale_factor(scale)
             optimizer_conf.set_base_learning_rate(lr)
-            
+
             optimizer_conf.mutable_adam_conf().set_beta1(beta1)
             optimizer_conf.mutable_adam_conf().set_beta2(beta2)
             optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
             optimizer_conf.mutable_adam_conf().set_do_bias_correction(
-               False
+                False
             )  # TODO(zzk): Check this option
 
-            # How to process ?
-            # for param in param_group.parameters:
-            #     vars_conf[param].l2 = l2
-            #     if not param.requires_grad:
-            #         continue
-            #     optimizer_conf.add_variable_op_names(vars_conf[param].name)
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                weight_decay
+            )
+            for param in param_group.parameters:
+                vars_conf[param].weight_decay = weight_decay
+                if not param.requires_grad:
+                    continue
+                optimizer_conf.add_variable_op_names(vars_conf[param].name)
