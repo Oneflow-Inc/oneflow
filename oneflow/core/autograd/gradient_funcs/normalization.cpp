@@ -110,11 +110,11 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     if (ctx->beta_requires_grad) {
       in_grads->at(4) = results->at(2);  // beta_diff
     }
-    if (ctx->x_requires_grad) {
+    if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
+    if (ctx->is_training) {
       in_grads->at(0) = results->at(0);
       return Maybe<void>::Ok();
     }
-
     DimVector dim_vec;
     for (int i = 0; i < x->shape()->NumAxes(); ++i) {
       if (i != ctx->axis) {
