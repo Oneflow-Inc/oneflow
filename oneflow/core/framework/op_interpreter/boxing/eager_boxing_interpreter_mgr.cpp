@@ -52,15 +52,15 @@ Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
     Symbol<cfg::ParallelDistribution> out_parallel_distribution) {
   static SbpPair2EagerBoxingInterpreter sbp_pair2eager_boxing_interpreter = {
-      {{*JUST(GetSplitSbpParallel(0)), *JUST(MakeBroadcastSbpParallel())},
+      {{*JUST(GetSplitSbpParallel(0)), *JUST(MakeBroadcastSbpParallel())},  // S(0) -> B
        std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>()},
-      {{*JUST(MakeBroadcastSbpParallel()), *JUST(GetSplitSbpParallel(0))},
+      {{*JUST(MakeBroadcastSbpParallel()), *JUST(GetSplitSbpParallel(0))},  // B -> S(0)
        std::make_shared<NcclCollectiveReduceScatterBoxingInterpreter>("max")},
-      {{*JUST(MakePartialSumSbpParallel()), *JUST(MakeBroadcastSbpParallel())},
+      {{*JUST(MakePartialSumSbpParallel()), *JUST(MakeBroadcastSbpParallel())},  // P -> B
        std::make_shared<NcclCollectiveAllReduceBoxingInterpreter>()},
-      {{*JUST(MakePartialSumSbpParallel()), *JUST(GetSplitSbpParallel(0))},
+      {{*JUST(MakePartialSumSbpParallel()), *JUST(GetSplitSbpParallel(0))},  // P -> S(0)
        std::make_shared<NcclCollectiveReduceScatterBoxingInterpreter>("sum")},
-      {{*JUST(GetSplitSbpParallel(0)), *JUST(MakePartialSumSbpParallel())},
+      {{*JUST(GetSplitSbpParallel(0)), *JUST(MakePartialSumSbpParallel())},  // S(0) -> P
        std::make_shared<NcclS2PBoxingInterpreter>()},
   };
   return JUST(MapAt(sbp_pair2eager_boxing_interpreter,
