@@ -45,7 +45,11 @@ Maybe<void> OutputOp::InferOutBlobDescs(
   } else {
     JUST(InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), out_blob_desc,
                                            parallel_ctx, *JUST(GetOpParallelDesc())));
-    CHECK_OR_RETURN(*out_blob_desc == *in_blob_desc);
+    CHECK_OR_RETURN(out_blob_desc->shape() == in_blob_desc->shape());
+    CHECK_OR_RETURN(out_blob_desc->data_type() == in_blob_desc->data_type());
+    // NOTE(chengcheng):
+    //   blob.is_dynamic is weak in nn.Graph output tensor.
+    // CHECK_OR_RETURN(*out_blob_desc == *in_blob_desc);
   }
   return Maybe<void>::Ok();
 }
