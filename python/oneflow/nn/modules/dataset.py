@@ -606,9 +606,10 @@ class ImageFlip(Module):
     def __init__(self, flip_code):
         super().__init__()
         self.flip_code = flip_code
+        self.filp_tensor_ = flow.zeros((2,), dtype=flow.int8)
 
     def forward(self, images):
-        flip_codes = flow.Tensor([self.flip_code] * images.shape[0], dtype=flow.int8)
+        flip_codes = self.filp_tensor_.fill_(int(self.flip_code))
         return flow.F.image_flip(images, flip_codes)
 
 
