@@ -569,13 +569,14 @@ def arctan_op_tensor(tensor):
 class FMod(Module):
     def __init__(self) -> None:
         super().__init__()
+        self.y_scalar_tensor_ = flow.zeros((1,), dtype=flow.float32)
 
     def forward(self, x, y):
         if not isinstance(x, (flow.Tensor, flow._oneflow_internal.Tensor)):
             raise ValueError("Expected type of input is Tensor")
         if isinstance(y, (int, float)):
             x = flow.F.cast(x, flow.float32)
-            y = flow.tensor([y], dtype=flow.float32, device=x.device)
+            y = self.y_scalar_tensor_.fill_(float(y)).to(flow.device(x.device.type))
         elif isinstance(y, (flow.Tensor, flow._oneflow_internal.Tensor)):
             if x.dtype != y.dtype:
                 x = flow.F.cast(x, flow.float32)
