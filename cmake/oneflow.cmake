@@ -256,7 +256,7 @@ endif()
 
 target_compile_options(of_ccobj PRIVATE -Werror=return-type)
 
-if (TREAT_WARNING_AS_ERROR)
+if (TREAT_WARNINGS_AS_ERRORS)
   target_compile_options(of_ccobj PRIVATE -Werror)
 
   # TODO: remove it while fixing all deprecated call
