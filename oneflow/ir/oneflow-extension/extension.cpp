@@ -123,10 +123,10 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 }
 
 template<DeviceType device_type, typename T>
-class MlirJitKernel final : public user_op::OpKernel {
+class MlirJitCpuKernel final : public user_op::OpKernel {
  public:
-  MlirJitKernel() = default;
-  ~MlirJitKernel() = default;
+  MlirJitCpuKernel() = default;
+  ~MlirJitCpuKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -161,9 +161,9 @@ class MlirJitKernel final : public user_op::OpKernel {
 };
 
 // TODO: figure out if device and dtype are necessary for this op?
-#define REGISTER_MLIR_JIT_KERNEL(device, dtype)                                                 \
+#define REGISTER_MLIR_JIT_CPU_KERNEL(device, dtype)                                             \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
-      .SetCreateFn<MlirJitKernel<device, dtype>>()                                              \
+      .SetCreateFn<MlirJitCpuKernel<device, dtype>>()                                           \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
@@ -171,12 +171,12 @@ class MlirJitKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, float)
-REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, double)
-REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, int64_t)
+REGISTER_MLIR_JIT_CPU_KERNEL(DeviceType::kCPU, float)
+REGISTER_MLIR_JIT_CPU_KERNEL(DeviceType::kCPU, double)
+REGISTER_MLIR_JIT_CPU_KERNEL(DeviceType::kCPU, int32_t)
+REGISTER_MLIR_JIT_CPU_KERNEL(DeviceType::kCPU, int64_t)
 
-#undef REGISTER_MLIR_JIT_KERNEL
+#undef REGISTER_MLIR_JIT_CPU_KERNEL
 
 }  // namespace
 
