@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ccl/ccl.h"
-#include "oneflow/core/framework/rpc_util.h"
+#include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/data_type.h"
@@ -49,10 +49,10 @@ Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
   CHECK_EQ_OR_RETURN(parallel_desc->device_type(), DeviceType::kCPU);
   static thread_local std::vector<int64_t> rank_heap{};
   JUST(InitBroadcastRankHeap(&rank_heap, *parallel_desc, root));
-  RpcToken rpc_token = RpcToken::NewDataRpcToken();
+  TransportToken rpc_token = TransportToken::NewDataTransportToken();
   CHECK_OR_RETURN(IsPODDataType(dtype));
   size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-  NaiveAsyncRpcCtx rpc_ctx(
+  NaiveAsyncTransportCtx rpc_ctx(
       rpc_token,
       [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = (root == GlobalProcessCtx::Rank() ? const_cast<void*>(in) : out);
@@ -66,11 +66,11 @@ Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
         *Cb = [] {};
         return Maybe<void>::Ok();
       });
-  JUST(RpcUtil::ReceiveDataFromParentInHeap(rank_heap, rpc_token, &rpc_ctx));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(rpc_ctx, RpcUtil::TimeoutSeconds()));
-  JUST(RpcUtil::SendDataToChildrenInHeap(rank_heap, rpc_token, &rpc_ctx));
+  JUST(TransportUtil::ReceiveDataFromParentInHeap(rank_heap, rpc_token, &rpc_ctx));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(rpc_ctx, TransportUtil::TimeoutSeconds()));
+  JUST(TransportUtil::SendDataToChildrenInHeap(rank_heap, rpc_token, &rpc_ctx));
   if (GlobalProcessCtx::Rank() == root && out != in) { std::memcpy(out, in, buffer_size); }
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(rpc_ctx, RpcUtil::TimeoutSeconds()));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(rpc_ctx, TransportUtil::TimeoutSeconds()));
   return Maybe<void>::Ok();
 }
 
