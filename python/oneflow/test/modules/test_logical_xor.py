@@ -23,7 +23,7 @@ import oneflow as flow
 from automated_test_util import *
 
 
-def _test_logical_xor(test_case, shape, device):
+def _test_logical_xor_int(test_case, shape, device):
     np_input = np.random.randint(-2, 4, size=shape)
     np_other = np.random.randint(-2, 4, size=shape)
     input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
@@ -32,22 +32,41 @@ def _test_logical_xor(test_case, shape, device):
     np_out = np.logical_xor(np_input, np_other)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
-def _test_tensor_logical_xor(test_case, shape, device):
-    np_input = np.random.randint(2, size=shape)
-    np_other = np.random.randint(2, size=shape)
+def _test_logical_xor_float(test_case, shape, device):
+    np_input = np.random.uniform(low=0.0, high=1.0, size=shape) * 10 - 5
+    np_other = np.random.uniform(low=0.0, high=1.0, size=shape) * 10 - 5
+    input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
+    other = flow.Tensor(np_other, dtype=flow.float32, device=flow.device(device))
+    of_out = flow.logical_xor(input, other)
+    np_out = np.logical_xor(np_input, np_other)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+def _test_tensor_logical_xor_int(test_case, shape, device):
+    np_input = np.random.randint(-2, 4, size=shape)
+    np_other = np.random.randint(-2, 4, size=shape)
     input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
     other = flow.Tensor(np_other, dtype=flow.float32, device=flow.device(device))
     of_out = input.logical_xor(other)
     np_out = np.logical_xor(np_input, np_other)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+def _test_tensor_logical_xor_float(test_case, shape, device):
+    np_input = np.random.uniform(low=0.0, high=1.0, size=shape) * 10 - 5
+    np_other = np.random.uniform(low=0.0, high=1.0, size=shape) * 10 - 5
+    input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
+    other = flow.Tensor(np_other, dtype=flow.float32, device=flow.device(device))
+    of_out = input.logical_xor(other)
+    np_out = np.logical_xor(np_input, np_other)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 @flow.unittest.skip_unless_1n1d()
 class TestLogicalXorModule(flow.unittest.TestCase):
     def test_logical_xor(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_logical_xor,
-            _test_tensor_logical_xor,
+            _test_logical_xor_int,
+            _test_tensor_logical_xor_int,
+            _test_logical_xor_float,
+            _test_tensor_logical_xor_float,
         ]
         arg_dict["shape"] = [(2, 3), (2, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
