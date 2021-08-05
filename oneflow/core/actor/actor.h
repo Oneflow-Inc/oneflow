@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
-#include "oneflow/core/actor/act_event.pb.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
@@ -75,10 +74,8 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
-  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const;
   void ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)>) const;
 
-  int64_t act_id() const { return act_id_; }
   int64_t ReadingCnt4ProducedRegst(Regst* regst) const;
   void IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val);
   void IncreaseTotalReadingCnt(int64_t val) { total_reading_cnt_ += val; }
@@ -151,12 +148,6 @@ class Actor {
   // Act
   void ActUntilFail();
   virtual void Act() { UNIMPLEMENTED(); }
-  virtual int64_t ActNumForEachOutput(int64_t regst_desc_id) const { return 1; }
-  virtual bool CheckOutputActId(int64_t regst_desc_id) const {
-    return true;  // TODO(jiyuan): figure out the ActNumForEachOutput of the model regsts to MdSave
-                  // area
-  }
-  void TryLogActEvent(const std::function<void()>& Callback) const;
 
   // Ready
   bool IsReadReady() const;
@@ -205,7 +196,6 @@ class Actor {
   const JobDesc* job_desc_;
   int64_t actor_id_;
   int64_t global_work_stream_id_;
-  int64_t act_id_;
   int64_t job_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
@@ -216,7 +206,6 @@ class Actor {
   int64_t remaining_eord_cnt_;
 
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
-  HashMap<int64_t, int64_t> produced_regst2expected_act_id_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
   int64_t total_reading_cnt_;
 

@@ -28,7 +28,6 @@ class AccTickCompActor : public CompActor {
 
  protected:
   void VirtualCompActorInit(const TaskProto& proto) override;
-  int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
 
  private:
   void Act() override;
