@@ -176,17 +176,17 @@ from oneflow.framework.function_util import FunctionConfig as function_config
 from oneflow.framework.function_util import api_oneflow_function as global_function
 from oneflow.framework.generator import create_generator as Generator
 from oneflow.framework.generator import default_generator, manual_seed
-from oneflow.framework.input_blob_def import DeprecatedFixedTensorDef as FixedTensorDef
-from oneflow.framework.input_blob_def import (
-    DeprecatedMirroredTensorDef as MirroredTensorDef,
-)
-from oneflow.framework.job_set_util import inter_job_reuse_mem_strategy
+# from oneflow.framework.input_blob_def import DeprecatedFixedTensorDef as FixedTensorDef
+# from oneflow.framework.input_blob_def import (
+#     DeprecatedMirroredTensorDef as MirroredTensorDef,
+# )
+# from oneflow.framework.job_set_util import inter_job_reuse_mem_strategy
 from oneflow.framework.model import Model
-from oneflow.framework.ops import api_acc as acc
-from oneflow.framework.ops import (
-    api_hierarchical_parallel_cast as hierarchical_parallel_cast,
-)
-from oneflow.framework.ops import api_pack as pack
+# from oneflow.framework.ops import api_acc as acc
+# from oneflow.framework.ops import (
+#     api_hierarchical_parallel_cast as hierarchical_parallel_cast,
+# )
+# from oneflow.framework.ops import api_pack as pack
 from oneflow.framework.ops import api_parallel_cast as parallel_cast
 from oneflow.framework.ops import api_unpack as unpack
 from oneflow.framework.placement_util import (
