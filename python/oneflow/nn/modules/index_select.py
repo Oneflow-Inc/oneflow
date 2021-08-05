@@ -18,6 +18,7 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor, register_tensor_op
 from oneflow.nn.module import Module
 
+import pdb
 
 def _input_args_is_int(args):
     return all((isinstance(x, int) for x in args))
@@ -30,20 +31,21 @@ class IndexSelect(Module):
     
     def forward(self, input, index):
         assert len(index.shape) == 1, "Dimensions of index should be an LongTensor"
-        assert self.dim < len(input.shape), "Value of dim is out of range"       
+        assert self.dim < len(input.shape) and self.dim > -1, "Value of dim is out of range"       
         assert _input_args_is_int(index.tolist()), "input index parameter is not illegal!"
         
-        index_rshp = list(input.shape)                           
+        index_rshp = list(input.shape)
 
         for index_i in index:
-            assert index_i < index_rshp[0], \
+            assert index_i < index_rshp[self.dim], \
             "value of index out of range(index shuold lower than the first dimension of input)"                    
         
         index_rshp[self.dim] = 1
-        index_gather = index[0].expand(index_rshp)                     
-        for index_i in index[1:]:        
-            x=index_i.expand(index_rshp)
-            index_gather = flow.cat((index_gather,x), self.dim)                   
+        index_gather = index[0].expand(index_rshp)
+        if index.size()[0] > 1:                     
+            for index_i in index[1:]:        
+                x=index_i.expand(index_rshp)
+                index_gather = flow.cat((index_gather,x), self.dim)                   
 
         return flow.gather(input, index_gather, self.dim)
 

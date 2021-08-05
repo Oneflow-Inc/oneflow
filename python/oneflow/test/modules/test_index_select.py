@@ -16,28 +16,33 @@ limitations under the License.
 
 
 import oneflow as flow
+import oneflow.unittest
+
 import unittest
 
 from automated_test_util import *
 
 
 
-@autotest()
-def test_index_select_by_gpu(test_case):
-    device = random_device()
+@flow.unittest.skip_unless_1n1d()
+class TestIndexSelect(flow.unittest.TestCase):
 
-    #test 4 dimensions tensor
-    axis = radom(0,4).to(int)
-    index= random_pytorch_tensor(ndim=1,low=0, high=dim[axis], dtype=int).to(device)
+    @autotest()
+    def test_index_select_by_random(test_case):
+        device = random_device()
 
-    dim = []
-    for i in range(0,4):
-        dim.append(random(2,6).to(int))
+        #test 4 dimensions tensor
+        axis = random(0, 4).to(int)
 
-    x = random_pytorch_tensor(ndim=4, dim0=dim[0], dim1=dim[1], dim2=dim[2], dim3=dim[3]).to(device)  
-    y = torch.index_select(input=x, dim=axis, index=index)  
+        dim = []
+        for i in range(0,4):
+            dim.append(random(2,6).to(int).value())
 
-    return y
+        index = random_pytorch_tensor(ndim=1,low=0, high=dim[axis.value()], dtype=int).to(device)
+        x     = random_pytorch_tensor(ndim=4, dim0=dim[0], dim1=dim[1], dim2=dim[2], dim3=dim[3]).to(device)  
+        y     = torch.index_select(x, axis, index)  
+
+        return y
 
 if __name__ == "__main__":
-   unittest.main() 
+    unittest.main() 
