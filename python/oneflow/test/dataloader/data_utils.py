@@ -35,6 +35,36 @@ def load_data_cifar10(
     return train_iter, test_iter
 
 
+def get_fashion_mnist_dataset(
+    resize=None,
+    root="./data-test/fashion-mnist",
+    download=True,
+    source_url=None,
+):
+    root = os.path.expanduser(root)
+    trans = []
+    if resize:
+        trans.append(flow.utils.vision.transforms.Resize(resize))
+    trans.append(flow.utils.vision.transforms.ToTensor())
+    transform = flow.utils.vision.transforms.Compose(trans)
+
+    mnist_train = flow.utils.vision.datasets.FashionMNIST(
+        root=root,
+        train=True,
+        transform=transform,
+        download=download,
+        source_url=source_url,
+    )
+    mnist_test = flow.utils.vision.datasets.FashionMNIST(
+        root=root,
+        train=False,
+        transform=transform,
+        download=download,
+        source_url=source_url,
+    )
+    return mnist_train, mnist_test
+
+
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.10_mlp-pytorch
 def load_data_fashion_mnist(
     batch_size,
