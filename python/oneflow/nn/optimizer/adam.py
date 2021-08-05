@@ -171,6 +171,5 @@ class Adam(Optimizer):
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
-                if not param.requires_grad:
-                    continue
-                optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
