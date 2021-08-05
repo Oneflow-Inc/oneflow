@@ -149,7 +149,7 @@ class BroadcastLogicalOrFunctor : public BinaryFunctor {
 
 class BroadcastLogicalXorFunctor : public BinaryFunctor {
  public:
-  BroadcastLogicalOrFunctor() {
+  BroadcastLogicalXorFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("broadcast_logical_xor").Input("x").Input("y").Output("z").Build());
   }

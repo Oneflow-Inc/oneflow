@@ -20,7 +20,7 @@ import numpy as np
 from test_util import GenArgList
 
 import oneflow as flow
-import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_logical_xor(test_case, shape, device):
@@ -77,6 +77,15 @@ class TestLogicalXorModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=10, auto_backward=False)
+    def test_logical_xor_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x1 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = torch.logical_xor(x1, x2)
+        return y
 
 
 if __name__ == "__main__":
