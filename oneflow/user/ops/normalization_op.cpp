@@ -76,14 +76,21 @@ Maybe<void> FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgMo
   } else {
     training = true;
   }
-  user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
-  CHECK_OR_RETURN(moving_mean_modifier != nullptr);
-  moving_mean_modifier->set_is_mutable(training);
-  moving_mean_modifier->set_requires_grad(false);
-  user_op::InputArgModifier* moving_variance_modifier = GetInputArgModifierFn("moving_variance", 0);
-  CHECK_OR_RETURN(moving_variance_modifier != nullptr);
-  moving_variance_modifier->set_is_mutable(training);
-  moving_variance_modifier->set_requires_grad(false);
+  if (conf.has_input("moving_mean", 0)) {
+    CHECK_OR_RETURN(conf.has_input("moving_variance", 0));
+    user_op::InputArgModifier* moving_mean_modifier = GetInputArgModifierFn("moving_mean", 0);
+    CHECK_OR_RETURN(moving_mean_modifier != nullptr);
+    moving_mean_modifier->set_is_mutable(training);
+    moving_mean_modifier->set_requires_grad(false);
+    user_op::InputArgModifier* moving_variance_modifier =
+        GetInputArgModifierFn("moving_variance", 0);
+    CHECK_OR_RETURN(moving_variance_modifier != nullptr);
+    moving_variance_modifier->set_is_mutable(training);
+    moving_variance_modifier->set_requires_grad(false);
+  } else {
+    CHECK_OR_RETURN(training)
+        << "Must have moving mean and moving variance for normalization in inference mode.";
+  }
   return Maybe<void>::Ok();
 }
 
@@ -139,8 +146,11 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
     const Shape param_shape({x_shape.At(axis)});
     const auto CheckParamTensorDesc = MakeCheckParamTensorDescFn(ctx, param_shape);
     const auto SetParamTensorDesc = MakeSetParamTensorDescFn(ctx, param_shape);
-    JUST(CheckParamTensorDesc("moving_mean"));
-    JUST(CheckParamTensorDesc("moving_variance"));
+    if (ctx->has_input("moving_mean", 0)) {
+      CHECK_OR_RETURN(ctx->has_input("moving_variance", 0));
+      JUST(CheckParamTensorDesc("moving_mean"));
+      JUST(CheckParamTensorDesc("moving_variance"));
+    }
     JUST(CheckParamTensorDesc("beta"));
     JUST(CheckParamTensorDesc("gamma"));
     JUST(SetParamTensorDesc("mean"));
@@ -171,8 +181,12 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
     const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
     const auto CheckParamDataType = MakeCheckParamDataTypeFn(ctx, param_data_type);
     const auto SetParamDataType = MakeSetParamDataTypeFn(ctx, param_data_type);
-    JUST(CheckParamDataType("moving_mean"));
-    JUST(CheckParamDataType("moving_variance"));
+    if (ctx->has_input("moving_mean", 0)) {
+      CHECK_OR_RETURN(ctx->has_input("moving_variance", 0));
+      JUST(CheckParamDataType("moving_mean"));
+      JUST(CheckParamDataType("moving_variance"));
+    }
+    CHECK_OR_RETURN(ctx->has_input("gamma", 0));
     JUST(CheckParamDataType("beta"));
     JUST(CheckParamDataType("gamma"));
     JUST(SetParamDataType("mean"));
@@ -199,8 +213,8 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
 
 REGISTER_USER_OP("normalization")
     .Input("x")
-    .Input("moving_mean")
-    .Input("moving_variance")
+    .OptionalInput("moving_mean")
+    .OptionalInput("moving_variance")
     .Input("gamma")
     .Input("beta")
     .OptionalInput("_add_to_output")
@@ -219,8 +233,8 @@ REGISTER_USER_OP("normalization")
 REGISTER_USER_OP("normalization_add_relu")
     .Input("x")
     .OptionalInput("addend")
-    .Input("moving_mean")
-    .Input("moving_variance")
+    .OptionalInput("moving_mean")
+    .OptionalInput("moving_variance")
     .Input("gamma")
     .Input("beta")
     .Output("y")
@@ -278,8 +292,8 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
 REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
     .Input("x")
     .OptionalInput("addend")
-    .Input("moving_mean")
-    .Input("moving_variance")
+    .OptionalInput("moving_mean")
+    .OptionalInput("moving_variance")
     .Input("gamma")
     .Input("beta")
     .Output("y")
@@ -489,32 +503,41 @@ REGISTER_USER_OP_GRAD("normalization")
       const bool is_training = ctx->FwOp().attr<bool>("training");
       const bool is_fp16 = ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16;
 
-      // calculate inv_variance from moving_variance
-      const auto var_add_eps_op_name =
-          "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceAddEpsilon";
-      ctx->DefineOp(var_add_eps_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("scalar_add")
-            .InputBind("in", ctx->FwOp().input("moving_variance", 0))
-            .Attr("has_float_operand", true)
-            .Attr("has_int_operand", false)
-            .Attr("int_operand", static_cast<int64_t>(0))
-            .Attr("float_operand", static_cast<double>(ctx->FwOp().attr<float>("epsilon")))
-            .Output("out")
-            .Build();
-      });
+      std::string mean;
+      std::string inv_variance;
+      if (ctx->FwOp().user_op_conf().has_input("moving_variance", 0)) {
+        // calculate inv_variance from moving_variance
+        const auto var_add_eps_op_name =
+            "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceAddEpsilon";
+        ctx->DefineOp(var_add_eps_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+          return builder.OpTypeName("scalar_add")
+              .InputBind("in", ctx->FwOp().input("moving_variance", 0))
+              .Attr("has_float_operand", true)
+              .Attr("has_int_operand", false)
+              .Attr("int_operand", static_cast<int64_t>(0))
+              .Attr("float_operand", static_cast<double>(ctx->FwOp().attr<float>("epsilon")))
+              .Output("out")
+              .Build();
+        });
 
-      const auto var_rsqrt_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceRsqrt";
-      ctx->DefineOp(var_rsqrt_op_name,
-                    [&ctx, &var_add_eps_op_name](user_op::BackwardOpBuilder& builder) {
-                      return builder.OpTypeName("rsqrt")
-                          .InputBind("x", ctx->GetOp(var_add_eps_op_name).output("out", 0))
-                          .Output("y")
-                          .Build();
-                    });
-
+        const auto var_rsqrt_op_name =
+            "System-AutoGrad-" + ctx->FwOp().op_name() + "-VarianceRsqrt";
+        ctx->DefineOp(var_rsqrt_op_name,
+                      [&ctx, &var_add_eps_op_name](user_op::BackwardOpBuilder& builder) {
+                        return builder.OpTypeName("rsqrt")
+                            .InputBind("x", ctx->GetOp(var_add_eps_op_name).output("out", 0))
+                            .Output("y")
+                            .Build();
+                      });
+        mean = ctx->FwOp().input("moving_mean", 0);
+        inv_variance = ctx->GetOp(var_rsqrt_op_name).output("y", 0);
+      } else {
+        mean = ctx->FwOp().output("mean", 0);
+        inv_variance = ctx->FwOp().output("inv_variance", 0);
+      }
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(grad_op_name, [&ctx, &is_training,
-                                   &var_rsqrt_op_name](user_op::BackwardOpBuilder& builder) {
+      ctx->DefineOp(grad_op_name, [&ctx, &is_training, &mean,
+                                   &inv_variance](user_op::BackwardOpBuilder& builder) {
         builder.OpTypeName("normalization_grad")
             .InputBind("x", ctx->FwOp().input("x", 0))
             .InputBind("dy", ctx->FwOp().output_grad("y", 0))
@@ -528,8 +551,7 @@ REGISTER_USER_OP_GRAD("normalization")
           builder.InputBind("mean", ctx->FwOp().output("mean", 0))
               .InputBind("inv_variance", ctx->FwOp().output("inv_variance", 0));
         } else {
-          builder.InputBind("mean", ctx->FwOp().input("moving_mean", 0))
-              .InputBind("inv_variance", ctx->GetOp(var_rsqrt_op_name).output("y", 0));
+          builder.InputBind("mean", mean).InputBind("inv_variance", inv_variance);
         }
         return builder.Build();
       });
@@ -597,12 +619,11 @@ REGISTER_USER_OP_GRAD("normalization")
 
       const std::string mul_inv_var_name = ctx->FwOp().op_name() + "_out_grad_mul_inv_var";
       const auto dy_mul_inv_var_op_name = "System-AutoGrad-" + mul_inv_var_name + "-BroadcastMul";
-      BroadcastMulAtAxisOpDefine(
-          [&ctx, &var_rsqrt_op_name]() { return ctx->GetOp(var_rsqrt_op_name).output("y", 0); },
-          [&ctx, &dy_mul_gamma_op_name]() {
-            return ctx->GetOp(dy_mul_gamma_op_name).output("z", 0);
-          },
-          mul_inv_var_name);
+      BroadcastMulAtAxisOpDefine([&ctx, &inv_variance]() { return inv_variance; },
+                                 [&ctx, &dy_mul_gamma_op_name]() {
+                                   return ctx->GetOp(dy_mul_gamma_op_name).output("z", 0);
+                                 },
+                                 mul_inv_var_name);
 
       const auto dx_f2h_cast_op_name = "System-AutoGrad-" + ctx->FwOp().op_name() + "-Cast-dx-f2h";
       ctx->DefineOp(dx_f2h_cast_op_name,
