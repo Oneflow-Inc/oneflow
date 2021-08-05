@@ -507,25 +507,6 @@ def arctan_op_tensor(input):
     return flow.F.atan(input)
 
 
-class FMod(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        if not isinstance(x, (flow.Tensor, flow._oneflow_internal.Tensor)):
-            raise ValueError("Expected type of input is Tensor")
-        if isinstance(y, (int, float)):
-            x = flow.F.cast(x, flow.float32)
-            y = flow.tensor([y], dtype=flow.float32, device=x.device)
-        elif isinstance(y, (flow.Tensor, flow._oneflow_internal.Tensor)):
-            if x.dtype != y.dtype:
-                x = flow.F.cast(x, flow.float32)
-                y = flow.F.cast(y, flow.float32)
-        else:
-            raise ValueError("Expected type of other is Tensor or Scalar")
-        return flow.F.fmod(x, y)
-
-
 def fmod_op(input, other):
     """
     fmod(input, other, *, out=None) -> Tensor
@@ -556,7 +537,19 @@ def fmod_op(input, other):
         tensor([ 1.,  0.,  0.,  1., -0.], dtype=oneflow.float32)
 
     """
-    return FMod()(input, other)
+
+    if not isinstance(input, (flow.Tensor, flow._oneflow_internal.Tensor)):
+        raise ValueError("Expected type of input is Tensor")
+    if isinstance(other, (int, float)):
+        input = flow.F.cast(input, flow.float32)
+        other = flow.tensor([other], dtype=flow.float32, device=input.device)
+    elif isinstance(other, (flow.Tensor, flow._oneflow_internal.Tensor)):
+        if input.dtype != other.dtype:
+            input = flow.F.cast(input, flow.float32)
+            other = flow.F.cast(other, flow.float32)
+    else:
+        raise ValueError("Expected type of other is Tensor or Scalar")
+    return flow.F.fmod(input, other)
 
 
 @register_tensor_op("fmod")
@@ -566,19 +559,11 @@ def fmod_op_tensor(input, other):
     See :func:`oneflow.fmod`
     
     """
-    return FMod()(input, other)
-
-
-class Log(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.log(x)
+    return fmod_op(input, other)
 
 
 @register_tensor_op("log")
-def log_op(tensor):
+def log_op(input):
     """
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
     
@@ -600,23 +585,7 @@ def log_op(tensor):
 
 
     """
-    return Log()(tensor)
-
-
-class Subtract(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.sub(x, y)
-
-
-class Sqrt(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input):
-        return flow.F.sqrt(input)
+    return flow.F.log(input)
 
 
 @register_tensor_op("rsqrt")
@@ -642,15 +611,7 @@ def rsqrt_op(input):
             >>> out
             array([1.        , 0.70710677, 0.57735026], dtype=float32)
     """
-    return Rsqrt()(input)
-
-
-class Rsqrt(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input):
-        return flow.F.rsqrt(input)
+    return flow.F.rsqrt(input)
 
 
 @register_tensor_op("sqrt")
@@ -676,15 +637,7 @@ def sqrt_op(input):
             >>> output
             array([1.       , 1.4142135, 1.7320508], dtype=float32)
         """
-    return Sqrt()(input)
-
-
-class Square(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input):
-        return flow.F.square(input)
+    return flow.F.sqrt(input)
 
 
 @register_tensor_op("square")
@@ -710,44 +663,11 @@ def square_op(input):
             >>> output
             array([1., 4., 9.], dtype=float32)
         """
-    return Square()(input)
-
-
-class Std(Module):
-    def __init__(self, dim=None, unbiased=False, keepdim=False) -> None:
-        super().__init__()
-        assert unbiased == False, "Only support 'unbiased=False' for now!"
-        self.unbiased = unbiased
-        self.keepdim = keepdim
-        self.dim = dim
-        self.reduce_count = 1
-        self.square_op = Square()
-        self.sqrt_op = Sqrt()
-        self.subtract_op = Subtract()
-
-    def forward(self, x):
-        self.axis = _check_axis(self.dim, x.shape)
-        if isinstance(self.axis, list) and len(self.axis) == 0:
-            return flow.zeros(x.shape)
-        else:
-            if len(self.axis) == 0:
-                self.reduce_count = x.nelement()
-            else:
-                for i in self.axis:
-                    self.reduce_count *= x.shape[i]
-            sum = (
-                flow.sum(self.square_op(x), self.axis, self.keepdim) / self.reduce_count
-            )
-            square = self.square_op(
-                flow.sum(x, self.axis, self.keepdim) / self.reduce_count
-            )
-            subtract = self.subtract_op(sum, square)
-            res = self.sqrt_op(subtract)
-            return res
+    return flow.F.square(input)
 
 
 @register_tensor_op("std")
-def std_op(tensor, dim, unbiased=False, keepdim=False):
+def std_op(input, dim, unbiased=False, keepdim=False):
     """
     Returns the standard-deviation of each row of the :attr:`input` tensor in the
     dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
@@ -780,7 +700,28 @@ def std_op(tensor, dim, unbiased=False, keepdim=False):
         array(0.8164968, dtype=float32)
 
     """
-    return Std(dim, unbiased, keepdim)(tensor)
+
+    assert unbiased == False, "Only support 'unbiased=False' for now!"
+    reduce_count = 1
+
+    axis = _check_axis(dim, input.shape)
+    if isinstance(axis, list) and len(axis) == 0:
+        return flow.zeros(input.shape)
+    else:
+        if len(axis) == 0:
+            reduce_count = input.nelement()
+        else:
+            for i in axis:
+                reduce_count *= input.shape[i]
+        sum = (
+            flow.sum(flow.F.square(input), axis, keepdim) / reduce_count
+        )
+        square = flow.F.square(
+            flow.sum(input, axis, keepdim) / reduce_count
+        )
+        subtract = flow.F.sub(sum, square)
+        res = flow.F.sqrt(subtract)
+        return res
 
 
 class Pow(Module):
