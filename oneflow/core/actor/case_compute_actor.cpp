@@ -124,8 +124,6 @@ void CaseCompActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
 
 bool CaseCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
 
-bool CaseCompActor::CheckOutputActId(int64_t regst_desc_id) const { return false; }
-
 REGISTER_ACTOR(kCase, CaseCompActor);
 
 }  // namespace oneflow
