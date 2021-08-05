@@ -128,7 +128,7 @@ class Graph(object):
                 op_name = "_" + self.name + "-input_" + str(idx)
                 lazy_args.append(graph_build_util.build_graph_input_arg(op_name, arg))
                 lazy_arg_op_names.append(op_name)
-                self._args_repr.append(op_name + ":" + arg._shallow_repr())
+                self._args_repr.append(op_name + ":" + arg._meta_repr())
 
             # Deal with parameter and buffer
             state_op_names = []
@@ -168,7 +168,7 @@ class Graph(object):
                 op_name = "_" + self.name + "-output_" + str(idx)
                 eager_outputs.append(graph_build_util.build_graph_output(op_name, out))
                 eager_output_op_names.append(op_name)
-                self._outs_repr.append(op_name + ":" + out._shallow_repr())
+                self._outs_repr.append(op_name + ":" + out._meta_repr())
             if len(eager_outputs) == 0:
                 eager_outputs = None
             elif len(eager_outputs) == 1:

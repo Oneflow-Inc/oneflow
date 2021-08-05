@@ -38,10 +38,17 @@ def _gen_tensor_str_template(tensor, data_str):
     prefix = "tensor("
     indent = len(prefix)
     suffixes = []
-    if tensor.device.type != "cpu" or (
-        tensor.device.type == "cuda" and tensor.device.index != 0
-    ):
-        suffixes.append("device='" + str(tensor.device) + "'")
+    if tensor.is_local:
+        if tensor.device.type != "cpu" or (
+            tensor.device.type == "cuda" and tensor.device.index != 0
+        ):
+            suffixes.append("device='" + str(tensor.device) + "'")
+    else:
+        suffixes.append("placement=" + repr(tensor.placement).strip())
+        suffixes.append("sbp=" + repr(tensor.sbp).strip())
+    if tensor.is_lazy:
+        suffixes.append("is_lazy ='True'")
+
     suffixes.append("dtype=" + str(tensor.dtype))
     if tensor.grad_fn is not None:
         name = tensor.grad_fn.name()
@@ -59,6 +66,6 @@ def _gen_tensor_str(tensor):
     return _gen_tensor_str_template(tensor, data_str)
 
 
-def _gen_tensor_str_with_no_data(tensor):
+def _gen_tensor_meta_str(tensor):
     data_str = repr(tensor.shape)
     return _gen_tensor_str_template(tensor, data_str)

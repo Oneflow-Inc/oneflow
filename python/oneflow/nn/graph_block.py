@@ -288,7 +288,7 @@ class Block(object):
             + (
                 self._origin._shallow_repr()
                 if self._type == BlockType.MODULE
-                else (self.origin._shallow_repr())
+                else (self.origin._meta_repr())
             )
             + ":"
             + self._type
