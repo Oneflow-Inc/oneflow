@@ -36,7 +36,7 @@ def _generate_output_size(input_size, output_size):
 
 
 class AdaptiveAvgPool1d(Module):
-    r"""Applies a 1D adaptive average pooling over an input signal composed of several input planes.
+    """Applies a 1D adaptive average pooling over an input signal composed of several input planes.
 
     The output size is H, for any input size.
     The number of output features is equal to the number of input planes.
@@ -51,7 +51,6 @@ class AdaptiveAvgPool1d(Module):
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
-        >>> flow.enable_eager_execution()
 
         >>> m = nn.AdaptiveAvgPool1d(5)
         >>> input = flow.Tensor(np.random.randn(1, 64, 8))
@@ -68,13 +67,13 @@ class AdaptiveAvgPool1d(Module):
 
     def forward(self, x):
         assert len(x.shape) == 3 and len(self.output_size) == 1, \
-            f"the length of 'output_size' does not match the input size, 1 expected"
+            "the length of 'output_size' does not match the input size, 1 expected"
         assert isinstance(self.output_size[0], int), "numbers in 'output_size' should be integer"
         return flow.F.adaptive_avg_pool1d(x, output_size=self.output_size)
 
 
 def adaptive_avg_pool1d(input, output_size):
-    r"""Applies a 1D adaptive average pooling over an input signal composed of several input planes.
+    """Applies a 1D adaptive average pooling over an input signal composed of several input planes.
 
     See :mod:`oneflow.nn.AdaptiveAvgPool1d`
 
@@ -86,7 +85,7 @@ def adaptive_avg_pool1d(input, output_size):
 
 
 class AdaptiveAvgPool2d(Module):
-    r"""Applies a 2D adaptive average pooling over an input signal composed of several input planes.
+    """Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
     The output is of size H x W, for any input size.
     The number of output features is equal to the number of input planes.
@@ -104,7 +103,6 @@ class AdaptiveAvgPool2d(Module):
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
-        >>> flow.enable_eager_execution()
 
         >>> m = nn.AdaptiveAvgPool2d((5,7))
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9))
@@ -132,13 +130,13 @@ class AdaptiveAvgPool2d(Module):
         self.output_size = _pair(output_size)
 
     def forward(self, x):
-        assert len(x.shape) == 4
+        assert len(x.shape) == 4, f"expected 4-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
         new_output_size = _generate_output_size(x.shape, self.output_size)
         return flow.F.adaptive_avg_pool2d(x, output_size=new_output_size)
 
 
 def adaptive_avg_pool2d(input, output_size):
-    r"""Applies a 2D adaptive average pooling over an input signal composed of several input planes.
+    """Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
     See :mod:`oneflow.nn.AdaptiveAvgPool2d`
 
@@ -150,7 +148,7 @@ def adaptive_avg_pool2d(input, output_size):
 
 
 class AdaptiveAvgPool3d(Module):
-    r"""Applies a 3D adaptive average pooling over an input signal composed of several input planes.
+    """Applies a 3D adaptive average pooling over an input signal composed of several input planes.
 
     The output is of size D x H x W, for any input size.
     The number of output features is equal to the number of input planes.
@@ -168,7 +166,6 @@ class AdaptiveAvgPool3d(Module):
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
-        >>> flow.enable_eager_execution()
 
         >>> m = nn.AdaptiveAvgPool3d((5,7,9))
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9, 10))
@@ -196,13 +193,13 @@ class AdaptiveAvgPool3d(Module):
         self.output_size = _triple(output_size)
 
     def forward(self, x):
-        assert len(x.shape) == 5
+        assert len(x.shape) == 5, f"expected 5-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
         new_output_size = _generate_output_size(x.shape, self.output_size)
         return flow.F.adaptive_avg_pool3d(x, output_size=new_output_size)
 
 
 def adaptive_avg_pool3d(input, output_size):
-    r"""Applies a 3D adaptive average pooling over an input signal composed of several input planes.
+    """Applies a 3D adaptive average pooling over an input signal composed of several input planes.
 
     See :mod:`oneflow.nn.AdaptiveAvgPool3d`
 
