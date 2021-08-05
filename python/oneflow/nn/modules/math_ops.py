@@ -67,23 +67,6 @@ def _mul(input, other):
     return flow.F.mul(input, other)
 
 
-class Variance(Module):
-    def __init__(self, dim: int = None, keepdim: bool = False) -> None:
-        super().__init__()
-        self.dim = dim
-        self.keepdim = keepdim
-
-    def forward(self, input):
-        axis = _check_axis(self.dim, input.shape)
-        if isinstance(axis, list) and len(axis) == 0:
-            return flow.zeros(input.shape)
-        else:
-            return flow.sub(
-                flow.mean(flow.square(input), axis, self.keepdim),
-                flow.square(flow.mean(input, axis, self.keepdim)),
-            )
-
-
 @register_tensor_op("var")
 def variance_op(input, dim=None, keepdim=False):
     """Returns the variance of each row of the `input` tensor in the given dimension `dim`.
@@ -112,7 +95,15 @@ def variance_op(input, dim=None, keepdim=False):
         >>> output = flow.var(input, 1, True)
 
     """
-    return Variance(dim, keepdim)(input)
+
+    axis = _check_axis(dim, input.shape)
+    if isinstance(axis, list) and len(axis) == 0:
+        return flow.zeros(input.shape)
+    else:
+        return flow.sub(
+            flow.mean(flow.square(input), axis, keepdim),
+            flow.square(flow.mean(input, axis, keepdim)),
+        )
 
 
 @register_tensor_op("sub")
@@ -268,14 +259,6 @@ def _add_inplace(x, y):
     return flow.F.add(x, y, inplace=True)
 
 
-class Asin(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.asin(x)
-
-
 def asin_op(input):
     """
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
@@ -306,7 +289,7 @@ def asin_op(input):
         tensor([[ 0.9273,  1.5708],
                 [-0.6435, -1.5708]], dtype=oneflow.float32)
     """
-    return Asin()(input)
+    return flow.F.asin(input)
 
 
 @register_tensor_op("asin")
@@ -315,7 +298,7 @@ def asin_op_tensor(input):
 
     See :func:`oneflow.asin`
     """
-    return Asin()(input)
+    return flow.F.asin(input)
 
 
 def arcsin_op(input):
@@ -323,7 +306,7 @@ def arcsin_op(input):
   
     Alias for :func:`oneflow.asin`
     """
-    return Asin()(input)
+    return flow.F.asin(input)
 
 
 @register_tensor_op("arcsin")
@@ -332,15 +315,7 @@ def arcsin_op_tensor(input):
 
     See :func:`oneflow.asin`
     """
-    return Asin()(input)
-
-
-class Asinh(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.asinh(x)
+    return flow.F.asin(input)
 
 
 def asinh_op(input):
@@ -375,7 +350,7 @@ def asinh_op(input):
                 [ 2.3124,  2.6441,  0.7327]], dtype=oneflow.float32)
 
     """
-    return Asinh()(input)
+    return flow.F.asinh(input)
 
 
 def arcsinh_op(input):
@@ -383,7 +358,7 @@ def arcsinh_op(input):
   
     Alias for :func:`oneflow.asinh`
     """
-    return Asinh()(input)
+    return flow.F.asinh(input)
 
 
 @register_tensor_op("asinh")
@@ -392,7 +367,7 @@ def asinh_op_tensor(input):
 
     See :func:`oneflow.asinh`
     """
-    return Asinh()(input)
+    return flow.F.asinh(input)
 
 
 @register_tensor_op("arcsinh")
@@ -401,19 +376,10 @@ def arcsinh_op_tensor(input):
 
     See :func:`oneflow.asinh`
     """
-    return Asinh()(input)
+    return flow.F.asinh(input)
 
 
-class Sin(Module):
-    def __init__(self, inplace: bool = False) -> None:
-        super().__init__()
-        self.inplace = inplace
-
-    def forward(self, x):
-        return flow.F.sin(x, self.inplace)
-
-
-def sin_op(tensor):
+def sin_op(input):
     """
     Returns a new tensor with the sine of the elements of :attr:`input`.
 
@@ -440,11 +406,11 @@ def sin_op(tensor):
         tensor([-0.9854,  0.5155, -0.5298], device='cuda:0', dtype=oneflow.float32)
 
     """
-    return Sin(inplace=False)(tensor)
+    return flow.F.sin(input, False)
 
 
 @register_tensor_op("sin")
-def sin_op_tensor(tensor):
+def sin_op_tensor(input):
     """
 
     sin() -> Tensor
@@ -452,28 +418,20 @@ def sin_op_tensor(tensor):
     See :func:`oneflow.sin`
     
     """
-    return Sin(inplace=False)(tensor)
+    return flow.F.sin(input, False)
 
 
 @register_tensor_op("sin_")
-def inplace_sin_op_tensor(x):
+def inplace_sin_op_tensor(input):
     """
     In-place version of :func:`oneflow.sin`
     
     """
-    return Sin(inplace=True)(x)
-
-
-class Cos(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.cos(x)
+    return flow.F.sin(input, True)
 
 
 @register_tensor_op("cos")
-def cos_op(tensor):
+def cos_op(input):
     """
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
     
@@ -494,18 +452,9 @@ def cos_op(tensor):
         >>> output = flow.cos(input).numpy()
 
     """
-    return Cos()(tensor)
+    return flow.F.cos(input)
 
-
-class Atan(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.atan(x)
-
-
-def atan_op(tensor):
+def atan_op(input):
     """
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
 
@@ -527,35 +476,35 @@ def atan_op(tensor):
         flow.Size([3])
         
     """
-    return Atan()(tensor)
+    return flow.F.atan(input)
 
 
 @register_tensor_op("atan")
-def atan_op_tensor(tensor):
+def atan_op_tensor(input):
     """
 
     See :func:`oneflow.atan`
     
     """
-    return Atan()(tensor)
+    return flow.F.atan(input)
 
 
-def arctan_op(tensor):
+def arctan_op(input):
     """
     Alias for :func:`oneflow.atan`
     
     """
-    return Atan()(tensor)
+    return flow.F.atan(input)
 
 
 @register_tensor_op("arctan")
-def arctan_op_tensor(tensor):
+def arctan_op_tensor(input):
     """
 
     See :func:`oneflow.arctan`
     
     """
-    return Atan()(tensor)
+    return flow.F.atan(input)
 
 
 class FMod(Module):
