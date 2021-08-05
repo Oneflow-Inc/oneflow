@@ -53,6 +53,7 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
 
 Maybe<void> EagerBlobObject::InitBlob() {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
+  if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
   {
     header_buffer_.reset();
     int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
