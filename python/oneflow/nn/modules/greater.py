@@ -21,7 +21,7 @@ from oneflow.nn.module import Module
 class Greater(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.y_scalar_tensor_ = flow.zeros((1, ), dtype=flow.float32)
+        self.y_scalar_tensor_ = flow.zeros((1,), dtype=flow.float32)
 
     def forward(self, x, y):
         if x.dtype != flow.float32:
