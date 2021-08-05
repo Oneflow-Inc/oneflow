@@ -270,6 +270,9 @@ if (TREAT_WARNINGS_AS_ERRORS)
   target_compile_options(of_ccobj PRIVATE -Wno-error=unused-lambda-capture)
   target_compile_options(of_ccobj PRIVATE -Wno-error=instantiation-after-specialization)
 
+  # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=mismatched-tags)
+
   # TODO: remove it while `oneflow/user/kernels/upsample_kernel.h:141:9: error: implicit conversion from 'double' to 'int' changes value from -0.75 to 0 [-Wliteral-conversion]` is fixed
   target_compile_options(of_ccobj PRIVATE -Wno-error=literal-conversion)
 endif()
