@@ -25,7 +25,6 @@ class BoxingZerosActor : public NaiveActor {
 
   void VirtualActorInit(const TaskProto& task_proto) override {
     NaiveActor::VirtualActorInit(task_proto);
-    piece_id_ = 0;
     out_inited_ = false;
   }
 
@@ -38,15 +37,9 @@ class BoxingZerosActor : public NaiveActor {
   }
 
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override {
-    int64_t piece_id = piece_id_;
-    HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
-      regst->set_piece_id(piece_id);
-      return true;
-    });
-    piece_id_ += 1;
+    HandleProducedNaiveDataRegstToConsumer();
   }
 
-  int64_t piece_id_;
   bool out_inited_;
 };
 
