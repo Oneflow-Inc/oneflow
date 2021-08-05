@@ -14,15 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import inspect
-import typing  # This unused import is needed
-from typing import Dict, Optional, Tuple, Any, Union
-from collections import namedtuple
-import random as random_util
 import os
+import random as random_util
+import typing
+from collections import namedtuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
-import oneflow.experimental as flow
 import torch
+
+import oneflow as flow
 
 py_tuple = tuple
 NoneType = type(None)
@@ -30,9 +31,7 @@ NoneType = type(None)
 TEST_MODULE = 0
 TEST_FLOW = 1
 TEST_TENSOR = 2
-
 rng = np.random.default_rng()
-
 annotation2default_generator = {}
 annotation2torch_to_flow_converter = {}
 
@@ -59,7 +58,7 @@ def tensor_converter(torch_tensor):
 
 
 def convert_torch_object_to_flow(x):
-    for annotation, converter in annotation2torch_to_flow_converter.items():
+    for (annotation, converter) in annotation2torch_to_flow_converter.items():
         if isinstance(x, annotation):
             return converter(x)
     return x
@@ -121,6 +120,12 @@ class generator:
     def __rsub__(self, other):
         return neg(self - other)
 
+    def __mul__(self, other):
+        return mul(self, other)
+
+    def __rmul__(self, other):
+        return self * other
+
     def to(self, annotation):
         self._to(annotation)
         for x in self.children:
@@ -139,6 +144,16 @@ class add(generator):
 
     def _calc_value(self):
         return self.a.value() + self.b.value()
+
+
+class mul(generator):
+    def __init__(self, a, b):
+        self.a = pack(a)
+        self.b = pack(b)
+        super(mul, self).__init__([self.a, self.b])
+
+    def _calc_value(self):
+        return self.a.value() * self.b.value()
 
 
 class neg(generator):
@@ -164,7 +179,7 @@ class oneof(generator):
     def _calc_value(self):
         rand = rng.random()
         sum = 0
-        for i, possibility in enumerate(self.possibility.value()):
+        for (i, possibility) in enumerate(self.possibility.value()):
             sum += possibility
             if sum > rand:
                 return self.args[i].value()
@@ -211,20 +226,6 @@ class random(generator):
         if self.annotation is not None:
             return
         if hasattr(annotation, "__origin__"):
-            # PyTorch _size_2_t and similar types are defined by type variables,
-            # leading to unexpected __args__ and __origin__
-            #
-            # >>> _size_2_t = Union[T, Tuple[T, T]][int]
-            # >>> _size_2_t.__origin__
-            # typing.Union[~T, typing.Tuple[~T, ~T]]
-            #
-            # So recreate a new annotation object by repr and eval
-            #
-            # >>> _size_2_t
-            # typing.Union[int, typing.Tuple[int, int]]
-            # >>> _size_2_t_new = eval(repr(annotation))
-            # >>> _size_2_t_new.__origin__
-            # typing.Union
             annotation = eval(repr(annotation))
         self.annotation = annotation
 
@@ -239,9 +240,7 @@ class random(generator):
                 raise NotImplementedError(
                     f"Not implemented annotation {annotation} in random, type(annotation.__origin__) is {type(annotation.__origin__)}"
                 )
-
-        low, high = self.low.value(), self.high.value()
-
+        (low, high) = (self.low.value(), self.high.value())
         if annotation == int:
             val = int(rng.integers(low, high))
         elif annotation == float:
@@ -266,7 +265,18 @@ def random_or_nothing(low, high):
 
 @data_generator(torch.Tensor)
 class random_tensor(generator):
-    def __init__(self, ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None):
+    def __init__(
+        self,
+        ndim=None,
+        dim0=1,
+        dim1=None,
+        dim2=None,
+        dim3=None,
+        dim4=None,
+        low=0,
+        high=1,
+        dtype=float,
+    ):
         if ndim is None:
             ndim = random(1, 6)
         if dim0 is None:
@@ -285,8 +295,21 @@ class random_tensor(generator):
         self.dim2 = pack(dim2).to(int)
         self.dim3 = pack(dim3).to(int)
         self.dim4 = pack(dim4).to(int)
+        self.low = pack(low).to(float)
+        self.high = pack(high).to(float)
+        self.dtype = pack(dtype)
         super().__init__(
-            [self.ndim, self.dim0, self.dim1, self.dim2, self.dim3, self.dim4]
+            [
+                self.ndim,
+                self.dim0,
+                self.dim1,
+                self.dim2,
+                self.dim3,
+                self.dim4,
+                self.low,
+                self.high,
+                self.dtype,
+            ]
         )
 
     def _calc_value(self):
@@ -296,6 +319,9 @@ class random_tensor(generator):
         dim2 = self.dim2.value()
         dim3 = self.dim3.value()
         dim4 = self.dim4.value()
+        low = self.low.value()
+        high = self.high.value()
+        dtype = self.dtype.value()
         shape = rng.integers(low=1, high=8, size=ndim)
         if dim0 is not None:
             shape[0] = dim0
@@ -342,8 +368,8 @@ def test_against_pytorch(
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
-    rtol=1e-4,
-    atol=1e-5,
+    rtol=0.0001,
+    atol=1e-05,
     n=20,
     pytorch_callable_name=None,
     api_flag: int = TEST_MODULE,
@@ -361,7 +387,6 @@ def test_against_pytorch(
         extra_defaults = {}
     if pytorch_callable_name is None:
         pytorch_callable_name = callable_name
-
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
     def has_full_args_spec(callable):
@@ -376,12 +401,10 @@ def test_against_pytorch(
         pytorch_call = eval(f"pytorch_tensor.{pytorch_callable_name}")
     else:
         pytorch_call = eval(f"torch.{pytorch_callable_name}")
-
     Spec = namedtuple(
         "spec",
         "args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations",
     )
-
     if has_full_args_spec(pytorch_call):
         tmp_spec = inspect.getfullargspec(pytorch_call)
         new_defaults = tmp_spec.defaults
@@ -402,28 +425,23 @@ def test_against_pytorch(
     else:
         args = list(extra_annotations.keys()) + list(extra_defaults.keys())
         spec = Spec(args, None, None, [], [], {}, {})
-
     annotations = spec.annotations
     annotations.update(extra_annotations)
-
     if "return" in annotations:
         del annotations["return"]
-
     args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
-
     assert args == set(
         annotations.keys()
     ), f"args = {args}, annotations = {annotations.keys()}"
-
     if "input" not in annotations:
         annotations.update({"input": torch.Tensor})
 
     def has_default(name):
         if name in spec.args:
-            return (len(spec.args) - spec.args.index(name)) <= len(spec.defaults)
+            return len(spec.args) - spec.args.index(name) <= len(spec.defaults)
         else:
             assert name in spec.kwonlyargs
-            return (len(spec.kwonlyargs) - spec.kwonlyargs.index(name)) <= len(
+            return len(spec.kwonlyargs) - spec.kwonlyargs.index(name) <= len(
                 spec.kwonlydefaults
             )
 
@@ -439,13 +457,11 @@ def test_against_pytorch(
     while n > 0:
         flow_attr_dict = {}
         torch_attr_dict = {}
-
         generator_tuple = tuple(
-            *([get_generator(name) for name in args] + [get_generator("input")])
+            *[get_generator(name) for name in args] + [get_generator("input")]
         )
         values = generator_tuple.eval()
-
-        for i, name in enumerate(args):
+        for (i, name) in enumerate(args):
             torch_data = values[i]
             if isinstance(torch_data, Nothing):
                 continue
@@ -456,15 +472,13 @@ def test_against_pytorch(
                 flow_data = flow_data.to(device)
             flow_attr_dict[name] = flow_data
             torch_attr_dict[name] = torch_data
-
         if verbose:
             print(f"attr = {torch_attr_dict}, device = {device}")
-
         torch_input_original = values[-1]
         flow_input_original = convert_torch_object_to_flow(torch_input_original)
         flow_input_original.requires_grad_(backward)
         torch_input_original.requires_grad_(backward)
-        flow_input, torch_input = (
+        (flow_input, torch_input) = (
             flow_input_original.to(device),
             torch_input_original.to(device),
         )
@@ -476,30 +490,25 @@ def test_against_pytorch(
                 torch_res = torch_call(torch_input)
                 state_dict = torch_call.state_dict()
                 state_dict = {
-                    k: v.detach().cpu().numpy() for k, v in state_dict.items()
+                    k: v.detach().cpu().numpy() for (k, v) in state_dict.items()
                 }
             elif api_flag == TEST_FLOW:
                 torch_xxx_func = eval(f"torch.{pytorch_callable_name}")
                 torch_res = torch_xxx_func(torch_input, **torch_attr_dict)
-
             else:
                 torch_tensor_xxx_func = eval(f"torch_input.{pytorch_callable_name}")
                 torch_res = torch_tensor_xxx_func(**torch_attr_dict)
-
             loss = torch_res.sum()
             loss.backward()
             if api_flag == TEST_MODULE:
                 state_dict = torch_call.state_dict()
                 state_dict = {
-                    k: v.detach().cpu().numpy() for k, v in state_dict.items()
+                    k: v.detach().cpu().numpy() for (k, v) in state_dict.items()
                 }
         except Exception as e:
             if verbose:
                 print(f"PyTorch error: {e}")
-            # The random generated test data is not always valid,
-            # so just skip when PyTorch raises an exception
             continue
-
         if api_flag == TEST_MODULE:
             flow_call_class = eval(f"flow.{callable_name}")
             flow_call = flow_call_class(**flow_attr_dict)
@@ -513,7 +522,6 @@ def test_against_pytorch(
         else:
             flow_tensor_xxx_func = eval(f"flow_input.{callable_name}")
             flow_res = flow_tensor_xxx_func(**flow_attr_dict)
-
         loss = flow_res.sum()
         loss.backward()
 
@@ -533,7 +541,7 @@ def test_against_pytorch(
         allclose_or_fail(flow_input_original.grad, torch_input_original.grad)
         if api_flag == TEST_MODULE:
             flow_parameters = dict(flow_call.named_parameters())
-            for name, torch_param in torch_call.named_parameters():
+            for (name, torch_param) in torch_call.named_parameters():
                 flow_param = flow_parameters[name]
                 allclose_or_fail(flow_param.grad, torch_param.grad)
         if verbose:
@@ -550,8 +558,8 @@ def test_module_against_pytorch(
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
-    rtol=1e-4,
-    atol=1e-5,
+    rtol=0.0001,
+    atol=1e-05,
     n=20,
     pytorch_callable_name=None,
 ):
@@ -581,8 +589,8 @@ def test_flow_against_pytorch(
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
-    rtol=1e-4,
-    atol=1e-5,
+    rtol=0.0001,
+    atol=1e-05,
     n=20,
     pytorch_callable_name=None,
 ):
@@ -612,8 +620,8 @@ def test_tensor_against_pytorch(
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
-    rtol=1e-4,
-    atol=1e-5,
+    rtol=0.0001,
+    atol=1e-05,
     n=20,
     pytorch_callable_name=None,
 ):
@@ -640,6 +648,7 @@ __all__ = [
     "random_device",
     "random",
     "random_or_nothing",
+    "oneof",
     "constant",
     "nothing",
     "test_module_against_pytorch",
