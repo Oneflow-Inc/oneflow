@@ -221,12 +221,12 @@ def _reciprocal(x):
 
 
 @register_tensor_op("add")
-def _add(x, y):
-    """Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
+def _add(input, other):
+    """Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
-        out = x + y
+        out = input + other
 
     For example:
 
@@ -257,7 +257,7 @@ def _add(x, y):
         (2, 3)
 
     """
-    return flow.F.reciprocal_no_nan(x)
+    return flow.F.add(input, other)
 
 
 @register_tensor_op("add_")

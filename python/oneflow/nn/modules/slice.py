@@ -25,7 +25,7 @@ def slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
     The operator will slice the tensor according to the `slice_tup_list`.
 
     Args:
-        x: A `Tensor`.
+        input: A `Tensor`.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
 
     For example: 
@@ -68,7 +68,9 @@ def slice_update_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]
     return flow.F.slice_update(input, update, start, stop, step)
 
 
-def logical_slice_assign_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
+def logical_slice_assign_op(
+    input, update, slice_tup_list: Sequence[Tuple[int, int, int]]
+):
     """Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`. 
 
     Args:

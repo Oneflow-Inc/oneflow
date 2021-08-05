@@ -68,7 +68,7 @@ def arccosh_op(input):
 
 
 @register_tensor_op("arccosh")
-def arccosh_op_tensor(x):
+def arccosh_op_tensor(input):
     """
 
     arccosh() -> Tensor

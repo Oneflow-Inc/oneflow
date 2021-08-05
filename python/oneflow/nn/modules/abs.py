@@ -18,7 +18,7 @@ from oneflow.framework.tensor import register_tensor_op
 
 
 @register_tensor_op("abs")
-def abs_op(x):
+def abs_op(input):
     """Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
 
     Args:
@@ -36,7 +36,7 @@ def abs_op(x):
         tensor([1., 2., 3., 4.], dtype=oneflow.float32)
 
     """
-    return flow.F.abs(x)
+    return flow.F.abs(input)
 
 
 if __name__ == "__main__":
