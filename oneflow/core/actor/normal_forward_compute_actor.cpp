@@ -18,28 +18,20 @@ limitations under the License.
 namespace oneflow {
 
 void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  cur_piece_id_ = -1;
   OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
 }
 
 void NormalForwardCompActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  cur_piece_id_ = GetPieceId4NaiveOrInplaceCurReadableDataRegst();
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* { return nullptr; });
 }
 
 void NormalForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
-    regst->set_piece_id(cur_piece_id_);
-    return true;
-  });
+  HandleProducedNaiveDataRegstToConsumer();
 }
 
 void NormalForwardCompActor::VirtualAsyncSendInplaceProducedRegstMsgToConsumer() {
-  HandleProducedInplaceDataRegstToConsumer([&](Regst* regst) {
-    regst->set_piece_id(cur_piece_id_);
-    return true;
-  });
+  HandleProducedInplaceDataRegstToConsumer();
 }
 
 REGISTER_ACTOR(TaskType::kNormalForward, NormalForwardCompActor);
