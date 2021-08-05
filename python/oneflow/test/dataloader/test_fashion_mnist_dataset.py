@@ -20,42 +20,7 @@ import time
 import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
-
-
-# reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.10_mlp-pytorch
-def load_data_fashion_mnist(
-    batch_size, resize=None, root="./data/fashion-mnist", download=True, source_url=None
-):
-    """Download the Fashion-MNIST dataset and then load into memory."""
-    root = os.path.expanduser(root)
-    transformer = []
-    if resize:
-        transformer += [flow.utils.vision.transforms.Resize(resize)]
-    transformer += [flow.utils.vision.transforms.ToTensor()]
-    transformer = flow.utils.vision.transforms.Compose(transformer)
-
-    mnist_train = flow.utils.vision.datasets.FashionMNIST(
-        root=root,
-        train=True,
-        transform=transformer,
-        download=download,
-        source_url=source_url,
-    )
-    mnist_test = flow.utils.vision.datasets.FashionMNIST(
-        root=root,
-        train=False,
-        transform=transformer,
-        download=download,
-        source_url=source_url,
-    )
-    num_workers = 0
-    train_iter = flow.utils.data.DataLoader(
-        mnist_train, batch_size, shuffle=True, num_workers=num_workers
-    )
-    test_iter = flow.utils.data.DataLoader(
-        mnist_test, batch_size, shuffle=False, num_workers=num_workers
-    )
-    return train_iter, test_iter
+from data_utils import load_data_fashion_mnist
 
 
 def get_fashion_mnist_labels(labels):
