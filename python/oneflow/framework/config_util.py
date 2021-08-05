@@ -200,22 +200,6 @@ def reserved_device_mem_mbyte(val):
     sess.config_proto.resource.reserved_device_mem_mbyte = val
 
 
-def api_thread_enable_local_message_queue(val: bool) -> None:
-    """Whether or not enable thread using local  message queue.
-
-    Args:
-        val (bool):  True or False
-    """
-    return enable_if.unique([thread_enable_local_message_queue, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def thread_enable_local_message_queue(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.thread_enable_local_message_queue = val
-
-
 def api_enable_debug_mode(val: bool) -> None:
     """Whether use debug mode or not.
 
