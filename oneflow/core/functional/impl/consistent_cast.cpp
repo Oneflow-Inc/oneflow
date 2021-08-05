@@ -30,8 +30,8 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/rank_group_scope.h"
-#include "oneflow/core/framework/rpc_token.h"
-#include "oneflow/core/framework/rpc_util.h"
+#include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -45,12 +45,13 @@ namespace impl {
 namespace {
 
 Maybe<HashMap<int64_t, std::shared_ptr<FlatShape>>> All2AllSyncShape(const Shape& shape) {
-  const auto& rpc_token = JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdAll2AllSyncShape));
+  const auto& transport_token =
+      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdAll2AllSyncShape));
   const auto& send_buffer = JUST(FlatShape::New(shape));
   const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShape>>>();
   map->emplace(GlobalProcessCtx::Rank(), send_buffer);
-  NaiveAsyncRpcCtx ctx(
-      rpc_token,
+  NaiveAsyncTransportCtx ctx(
+      transport_token,
       [send_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = send_buffer.get();
         *size = sizeof(FlatShape);
@@ -68,9 +69,9 @@ Maybe<HashMap<int64_t, std::shared_ptr<FlatShape>>> All2AllSyncShape(const Shape
         return Maybe<void>::Ok();
       });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  JUST(RpcUtil::BroadcastToAllOtherRanks(rank_group, rpc_token, &ctx));
-  JUST(RpcUtil::CollectFromAllOtherRanks(rank_group, rpc_token, &ctx));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(ctx, RpcUtil::TimeoutSeconds()));
+  JUST(TransportUtil::BroadcastToAllOtherRanks(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::CollectFromAllOtherRanks(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
   return map;
 }
 
