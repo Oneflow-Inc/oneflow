@@ -117,8 +117,8 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     MemBlockProto* mem_block = pair.second.get();
     CHECK(mem_block->has_chunk_id() == false);
     CHECK(mem_block->has_chunk_offset() == false);
-    // NOTE(chengcheng): ONLY variable regst has NO chunk id in Multi-Client.
     if (mem_block->has_variable_op_name()) { continue; }
+    if (!mem_block->enable_reuse_mem()) { continue; }
     int64_t mem_zone_uid =
         MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
     auto it = mzuid2mem_blocks.find(mem_zone_uid);
@@ -158,14 +158,14 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
           CHECK_EQ(mem_block->machine_id(), chunk->machine_id());
           CHECK(mem_block->mem_case() == chunk->mem_case());
           CHECK_LE(current_chunk_offset + mem_block->mem_size(), chunk->mem_size());
-          CHECK_GT(current_chunk_offset, 0);
-          CHECK_GT(mem_block->mem_size(), 0);
+          CHECK_GE(current_chunk_offset, 0);
+          // CHECK_GT(mem_block->mem_size(), 0); NOTE(chengcheng): has mem block mem size = 0
           CHECK_GT(chunk->mem_size(), 0);
           mem_block->set_chunk_id(chunk->chunk_id());
           mem_block->set_chunk_offset(current_chunk_offset);
           current_chunk_offset += mem_block->mem_size();
-          std::cout << "cclog: Yeah! reused MemBlock :[" << mem_block->DebugString()
-                    << "] to Chunk :[" << chunk->DebugString() << "]\n\n";
+          VLOG(3) << "Lazy nn.Graph Reused MemBlock :[" << mem_block->DebugString()
+                  << "] to old Chunk :[" << chunk->DebugString() << "]\n";
         } else {
           // NOTE(chengcheng): sad, no chunk can used, so this mem block need to insert in remain.
           CHECK(remain_blocks.insert(*mem_block_it).second);
@@ -189,8 +189,8 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
       first_block->set_chunk_id(new_chunk.chunk_id());
       first_block->set_chunk_offset(0);
       ++remain_block_it;
-      std::cout << "cclog: Add MemBlock :[" << first_block->DebugString() << "] to NewChunk :["
-                << new_chunk.DebugString() << "]\n\n";
+      VLOG(3) << "Lazy nn.Graph Add MemBlock :[" << first_block->DebugString() << "] to NewChunk :["
+              << new_chunk.DebugString() << "]\n";
 
       while (remain_block_it != remain_blocks.end()) {
         MemBlockProto* this_block = *remain_block_it;
@@ -199,8 +199,8 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
         this_block->set_chunk_id(new_chunk.chunk_id());
         this_block->set_chunk_offset(new_chunk.mem_size());
         new_chunk.set_mem_size(new_chunk.mem_size() + this_block->mem_size());
-        std::cout << "cclog: Add MemBlock :[" << this_block->DebugString() << "] to NewChunk :["
-                  << new_chunk.DebugString() << "]\n\n";
+        VLOG(3) << "Lazy nn.Graph Add MemBlock :[" << this_block->DebugString()
+                << "] to NewChunk :[" << new_chunk.DebugString() << "]\n";
         ++remain_block_it;
       }
 
