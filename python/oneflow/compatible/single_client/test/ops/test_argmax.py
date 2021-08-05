@@ -53,6 +53,8 @@ def compare_with_tensorflow(device_type, in_shape, axis, data_type):
     of_out = ArgMaxJob([input]).get().numpy_list()[0]
     tf_out = tf.math.argmax(input, axis).numpy()
     tf_out = np.array([tf_out]) if isinstance(tf_out, np.int64) else tf_out
+    if len(of_out.shape) < 1:
+        of_out = [of_out]
     assert np.array_equal(of_out, tf_out)
 
 

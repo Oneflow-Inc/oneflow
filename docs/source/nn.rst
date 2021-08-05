@@ -57,6 +57,7 @@ Operators for neural networks
         OFRecordImageDecoderRandomCrop,
         OfrecordRawDecoder,
         OfrecordReader,
+        OFRecordBytesDecoder,
         PReLU,
         Parameter,
         ParameterDict,
@@ -79,4 +80,3 @@ Operators for neural networks
         UpsamplingBilinear2d,
         UpsamplingNearest2d,
         ZeroPad2d,
-        ctc_greedy_decoder

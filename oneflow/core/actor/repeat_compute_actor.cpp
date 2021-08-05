@@ -33,7 +33,6 @@ class RepeatCompActor final : public CompActor {
 
   int64_t repeat_num_;
   int64_t repeat_count_;
-  int64_t cur_piece_id_;
 };
 
 void RepeatCompActor::VirtualCompActorInit(const TaskProto& proto) {
@@ -50,7 +49,6 @@ void RepeatCompActor::VirtualCompActorInit(const TaskProto& proto) {
   }
   repeat_num_ = out_time_shape.At(out_time_shape.NumAxes() - 1);
   repeat_count_ = 0;
-  cur_piece_id_ = 0;
   const RegstDescProto& out_regst_desc = proto.produced_regst_desc().at("out");
   CHECK(!out_regst_desc.enable_reuse_mem());
   CHECK_EQ(out_regst_desc.register_num(), 1);
@@ -84,17 +82,11 @@ void RepeatCompActor::Act() {
 }
 
 void RepeatCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
-  if (repeat_count_ == repeat_num_) {
-    HandleConsumedNaiveDataRegstToProducer([](Regst* regst) { return true; });
-  }
+  if (repeat_count_ == repeat_num_) { HandleConsumedNaiveDataRegstToProducer(); }
 }
 
 void RepeatCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
-    regst->set_piece_id(cur_piece_id_);
-    return true;
-  });
-  cur_piece_id_ += 1;
+  HandleProducedNaiveDataRegstToConsumer();
 }
 
 bool RepeatCompActor::ConsumedCtrlRegstValid(int64_t regst_desc_id) const {

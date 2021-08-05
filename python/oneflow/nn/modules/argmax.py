@@ -75,7 +75,7 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
 
         >>> out = flow.argmax(flow.Tensor(x))
         >>> out
-        tensor([6], dtype=oneflow.int32)
+        tensor(6, dtype=oneflow.int32)
         >>> out = flow.argmax(flow.Tensor(x), dim=1)
         >>> out
         tensor([2, 1], dtype=oneflow.int32)
