@@ -1332,22 +1332,6 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
     return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
 
 
-class ElementwiseMinimum(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.elementwise_min(x, y)
-
-
-class BroadcastMinimum(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_min(x, y)
-
-
 @register_tensor_op("minimum")
 def minimum(x, y):
     r"""Computes the element-wise minimum of x and y.
@@ -1369,26 +1353,7 @@ def minimum(x, y):
         >>> flow.minimum(x, y)
         tensor([1., 0., 1.], dtype=oneflow.float32)
     """
-    if x.shape == y.shape:
-        return ElementwiseMinimum()(x, y)
-    else:
-        return BroadcastMinimum()(x, y)
-
-
-class ElementwiseMaximum(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.elementwise_max(x, y)
-
-
-class BroadcastMaximum(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        return flow.F.broadcast_max(x, y)
+    return flow.F.minimum(x, y)
 
 
 @register_tensor_op("maximum")
@@ -1412,10 +1377,7 @@ def maximum(x, y):
         >>> flow.maximum(x, y)
         tensor([3., 1., 4.], dtype=oneflow.float32)
     """
-    if x.shape == y.shape:
-        return ElementwiseMaximum()(x, y)
-    else:
-        return BroadcastMaximum()(x, y)
+    return flow.F.maximum(x, y)
 
 
 if __name__ == "__main__":
