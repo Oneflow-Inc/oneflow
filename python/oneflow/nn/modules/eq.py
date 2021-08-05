@@ -21,6 +21,7 @@ from oneflow.nn.module import Module
 class Eq(Module):
     def __init__(self) -> None:
         super().__init__()
+        self.other_scalar_tensor_ = flow.zeros((1,), dtype=flow.float32)
 
     def forward(self, input, other):
         if isinstance(other, flow.Tensor) or isinstance(
@@ -33,7 +34,10 @@ class Eq(Module):
                 if input.dtype != other.dtype:
                     other = other.to(dtype=input.dtype)
         elif isinstance(other, int) or isinstance(other, float):
-            other = flow.Tensor([other], dtype=input.dtype, device=input.device)
+            other = self.other_scalar_tensor_.fill_(float(other)).to(
+                flow.device(input.device.type)
+            )
+            other = flow.cast(other, input.dtype)
         else:
             raise NotImplementedError(
                 "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
