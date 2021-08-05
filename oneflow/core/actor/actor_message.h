@@ -52,7 +52,6 @@ class ActorMsg final {
   ActorCmd actor_cmd() const;
   Regst* regst() const;
   int64_t regst_desc_id() const;
-  int64_t act_id() const;
   void* comm_net_token() const;
   void set_comm_net_token(void* token);
   bool has_sole_empty_blob() const;
@@ -79,7 +78,7 @@ class ActorMsg final {
     Regst* regst;
     void* comm_net_token;
     int64_t comm_net_sequence_number;
-    RegstStatus regst_status;
+    int64_t regst_desc_id;
     bool has_sole_empty_blob;
     bool is_data_regst_to_consumer;
   };
