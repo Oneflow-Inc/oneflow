@@ -17,15 +17,6 @@ limitations under the License.
 
 namespace oneflow {
 
-bool EagerBoxingInterpreterUtil::IsPlacementEqual(Symbol<ParallelDesc> src,
-                                                  Symbol<ParallelDesc> dst) {
-  return src == dst;
-}
-
-bool EagerBoxingInterpreterUtil::IsDeviceTypeGPU(Symbol<ParallelDesc> parallel_desc) {
-  return parallel_desc->device_type() == DeviceType::kGPU;
-}
-
 bool EagerBoxingInterpreterUtil::IsBoxingS2B(const cfg::SbpParallel& src,
                                              const cfg::SbpParallel& dst) {
   return src.has_split_parallel() && dst.has_broadcast_parallel();
