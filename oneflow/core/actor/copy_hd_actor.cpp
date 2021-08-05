@@ -26,7 +26,6 @@ void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
 void CopyHdActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
 
 void CopyHdActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  Regst* in_regst = GetNaiveCurReadable("copy_in");
   HandleProducedNaiveDataRegstToConsumer();
 }
 

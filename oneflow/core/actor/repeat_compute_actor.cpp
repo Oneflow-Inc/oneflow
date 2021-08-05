@@ -82,9 +82,7 @@ void RepeatCompActor::Act() {
 }
 
 void RepeatCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
-  if (repeat_count_ == repeat_num_) {
-    HandleConsumedNaiveDataRegstToProducer([](Regst* regst) { return true; });
-  }
+  if (repeat_count_ == repeat_num_) { HandleConsumedNaiveDataRegstToProducer(); }
 }
 
 void RepeatCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {

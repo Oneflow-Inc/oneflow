@@ -35,7 +35,6 @@ class PackCompActor final : public CompActor {
 
   size_t total_pack_num_;
   size_t act_num_cnt_;
-  bool handle_unpack_bw_;
 };
 
 }  // namespace oneflow

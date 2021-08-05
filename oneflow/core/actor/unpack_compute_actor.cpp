@@ -48,7 +48,7 @@ void UnpackCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 void UnpackCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
   if (act_num_cnt_ == total_unpack_num_) {
-    HandleConsumedNaiveDataRegstToProducer([](Regst*) { return true; });
+    HandleConsumedNaiveDataRegstToProducer();
     act_num_cnt_ = 0;
   }
 }

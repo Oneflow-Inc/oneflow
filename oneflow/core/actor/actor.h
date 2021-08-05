@@ -105,20 +105,10 @@ class Actor {
 
   // Util For Derived Actor to Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                              std::function<bool(int64_t)> IsAllowedActor);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer();
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                                std::function<bool(int64_t)> IsAllowedActor);
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedInplaceDataRegstToConsumer();
-  void AsyncSendRegstMsgToConsumer(Regst* regst);
-  void AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
-  void HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
+  void HandleConsumedNaiveDataRegstToProducer();
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -143,7 +133,7 @@ class Actor {
   }
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const;
   void ForEachProducedRegst(const std::function<void(Regst*)>&) const;
-  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
+  int64_t HandleRegstToConsumer(Regst* regst);
 
  protected:
   bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {

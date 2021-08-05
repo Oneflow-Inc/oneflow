@@ -88,9 +88,8 @@ class SspVariableProxyCompActor final : public CompActor {
       if (value_regst->consumers_actor_id().empty()) {
         ++ack_msg_returned_value_piece_id_;
       } else {
-        Regst* const var_regst = consumed_var_rs_.Front(consumed_var_regst_desc_id_);
         CHECK_EQ(value_regst, GetRingBufferValueRegst(received_var_piece_id_));
-        CHECK_GT(HandleRegstToConsumer(value_regst, [](int64_t) { return true; }), 0);
+        CHECK_GT(HandleRegstToConsumer(value_regst), 0);
         produced_value_rs_.PopFrontRegsts({produced_value_regst_desc_id_});
       }
     }
@@ -100,7 +99,7 @@ class SspVariableProxyCompActor final : public CompActor {
       if (ref_regst->consumers_actor_id().empty()) {
         ++ack_msg_returned_ref_piece_id_;
       } else {
-        CHECK_GT(HandleRegstToConsumer(ref_regst, [](int64_t) { return true; }), 0);
+        CHECK_GT(HandleRegstToConsumer(ref_regst), 0);
         produced_ref_rs_.PopFrontRegsts({produced_ref_regst_desc_id_});
       }
     }
