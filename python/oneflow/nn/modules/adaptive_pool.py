@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.python.nn.module import Module
-from oneflow.python.nn.common_types import _size_1_t
-from oneflow.python.nn.modules.utils import _single, _pair, _triple
+from oneflow.nn.module import Module
+from oneflow.nn.common_types import _size_1_t
+from oneflow.nn.modules.utils import _single, _pair, _triple
 
 
 def _generate_output_size(input_size, output_size):
