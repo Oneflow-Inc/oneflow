@@ -180,8 +180,8 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {
 
 #endif // ONEFLOW_OPS
 
-#ifndef ONEFLOWPATTERNS
-#define ONEFLOWPATTERNS
+#ifndef ONEFLOW_PATTERNS
+#define ONEFLOW_PATTERNS
 
 def OutlineFunction : NativeCodeCall<"OutlineFunction($_builder, $0, $1)">;
 // TODO: remove attr binding if possible
@@ -209,7 +209,7 @@ def OutlineFuseCastScale : Pat<
   (OutlineFunction $mul_op, $cast_op)
 >;
 
-#endif // ONEFLOWPATTERNS
+#endif // ONEFLOW_PATTERNS
 
 #ifndef ONEFLOW_PASSES
 #define ONEFLOW_PASSES
