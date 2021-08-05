@@ -145,7 +145,7 @@ class LocalToConsistentFunctor {
       input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                     GlobalProcessCtx::LocalRank()));
     }
-    // copy to device of the current rank
+    // copy to default device of the current rank
     if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
       LOG(INFO)
           << "The tensor isn't on default device of the current rank., now copy it to "
