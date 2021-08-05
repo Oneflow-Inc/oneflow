@@ -16,7 +16,7 @@ limitations under the License.
 #include <memory>
 #include <chrono>
 #include "oneflow/core/framework/rank_group_rpc_util.h"
-#include "oneflow/core/framework/rpc_util.h"
+#include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/rank_group.h"
@@ -27,9 +27,9 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<NaiveAsyncRpcCtx> CheckRpcToken(Symbol<RankGroup> rank_group) {
-  const auto& rpc_token =
-      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdCheckRankGroupConsistency));
+Maybe<NaiveAsyncTransportCtx> CheckTransportToken(Symbol<RankGroup> rank_group) {
+  const auto& transport_token =
+      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdCheckRankGroupConsistency));
   const auto& PrepareBuffer = [](void** buffer, std::size_t* size,
                                  std::function<void()>* Callback) -> Maybe<void> {
     const auto& placeholder = std::make_shared<uint32_t>();
@@ -38,9 +38,10 @@ Maybe<NaiveAsyncRpcCtx> CheckRpcToken(Symbol<RankGroup> rank_group) {
     *Callback = [placeholder]() {};
     return Maybe<void>::Ok();
   };
-  const auto& ctx = std::make_shared<NaiveAsyncRpcCtx>(rpc_token, PrepareBuffer, PrepareBuffer);
-  JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, ctx.get()));
-  JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, ctx.get()));
+  const auto& ctx =
+      std::make_shared<NaiveAsyncTransportCtx>(transport_token, PrepareBuffer, PrepareBuffer);
+  JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, ctx.get()));
+  JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, ctx.get()));
   return ctx;
 }
 

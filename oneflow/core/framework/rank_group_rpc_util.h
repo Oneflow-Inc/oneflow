@@ -16,14 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_PLACEMENT_RPC_UTIL_H_
 #define ONEFLOW_CORE_FRAMEWORK_PLACEMENT_RPC_UTIL_H_
 
-#include "oneflow/core/framework/rpc_token.h"
-#include "oneflow/core/framework/rpc_util.h"
+#include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/rank_group.h"
 
 namespace oneflow {
 
-Maybe<NaiveAsyncRpcCtx> CheckRpcToken(Symbol<RankGroup> rank_group);
+Maybe<NaiveAsyncTransportCtx> CheckTransportToken(Symbol<RankGroup> rank_group);
 
 Maybe<int64_t> GetCurrentRankGroupLevel();
 
