@@ -19,6 +19,7 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _single
 
+
 def bernoulli(input, *, generator=None, out=None):
     """This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
@@ -55,6 +56,7 @@ def bernoulli(input, *, generator=None, out=None):
 
     """
     return flow.F.bernoulli(input, flow.float32, generator)
+
 
 class RandN(Module):
     def __init__(
@@ -170,7 +172,9 @@ def randn_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    return RandN(size, generator, dtype, layout, device, placement, sbp, requires_grad)()
+    return RandN(
+        size, generator, dtype, layout, device, placement, sbp, requires_grad
+    )()
 
 
 if __name__ == "__main__":
