@@ -28,8 +28,6 @@ NoneType = type(None)
 _size_2_opt_t_not_none = Union[int, Tuple[Union[int, NoneType], Union[int, NoneType]]]
 _size_3_opt_t_not_none = Union[int, Tuple[Union[int, NoneType], Union[int, NoneType], Union[int, NoneType]]]
 
-# TODO: auto test
-
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdaptiveAvgPool(flow.unittest.TestCase):
@@ -63,7 +61,8 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim0=random(), dim1=random(), dim2=random(), dim3=random(), dim4=random()).to(device)
+        x = random_pytorch_tensor(ndim=5, dim0=random(), dim1=random(), dim2=random(), dim3=random(), dim4=random()) \
+            .to(device)
         y = m(x)
         return y
 

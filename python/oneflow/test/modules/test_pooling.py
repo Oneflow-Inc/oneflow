@@ -18,6 +18,7 @@ import unittest
 import oneflow as flow
 from automated_test_util import *
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPooling(flow.unittest.TestCase):
     @autotest()

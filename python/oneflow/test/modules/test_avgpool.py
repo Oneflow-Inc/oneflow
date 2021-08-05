@@ -31,7 +31,8 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim0=random(1, 2), dim1=random(1, 3), dim2=random(5, 7), dim4=random(5, 7)).to(device)
+        x = random_pytorch_tensor(ndim=4, dim0=random(1, 2), dim1=random(1, 3), dim2=random(5, 7), dim4=random(5, 7)) \
+            .to(device)
         y = m(x)
         return y
 

@@ -104,5 +104,6 @@ class TestNegativeModule(flow.unittest.TestCase):
         z = torch.neg(x)
         return z
 
+
 if __name__ == "__main__":
     unittest.main()

@@ -67,7 +67,8 @@ class AdaptiveAvgPool1d(Module):
         self.output_size = _single(output_size)
 
     def forward(self, x):
-        assert len(x.shape) == 3 and len(self.output_size) == 1,  f"the length of 'output_size' does not match the input size, 1 expected"
+        assert len(x.shape) == 3 and len(self.output_size) == 1, \
+            f"the length of 'output_size' does not match the input size, 1 expected"
         assert isinstance(self.output_size[0], int), "numbers in 'output_size' should be integer"
         return flow.F.adaptive_avg_pool1d(x, output_size=self.output_size)
 
