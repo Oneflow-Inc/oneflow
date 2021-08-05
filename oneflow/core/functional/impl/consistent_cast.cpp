@@ -30,12 +30,10 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/rank_group_scope.h"
-#include "oneflow/core/framework/rpc_token.h"
-#include "oneflow/core/framework/rpc_util.h"
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/framework/rpc_util.h"
 
 namespace oneflow {
 namespace one {
@@ -145,16 +143,14 @@ Maybe<one::UserOpExpr> FindOrCreatParallelDistributionOpExpr(
 Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      Symbol<ParallelDesc> parallel_desc,
                                      const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
-  const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*x));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, RpcUtil::TimeoutSeconds()));
-  JUST(ctx->Check());
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
   const auto& parallel_distribution_cast_op_expr =
       JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
-  return JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
-                                                  {consistent_tensor}));
+  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
+                                                             {consistent_tensor}));
+  return ret;
 }
 
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
