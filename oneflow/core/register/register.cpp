@@ -28,7 +28,6 @@ Regst::Regst()
       separated_header_mem_ptr_(nullptr),
       comm_net_token_(nullptr) {
   status_.regst_desc_id = -1;
-  status_.piece_id = -1;
   status_.act_id = -1;
 }
 

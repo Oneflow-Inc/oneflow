@@ -61,10 +61,7 @@ void EsacCompActor::Act() {
 }
 
 void EsacCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
-    regst->set_piece_id(consumed_rs_.Front(cur_processed_regst_desc_id_)->piece_id());
-    return true;
-  });
+  HandleProducedNaiveDataRegstToConsumer();
 }
 
 void EsacCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {

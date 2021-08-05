@@ -32,6 +32,9 @@ class ActorMsgBus final {
  private:
   friend class Global<ActorMsgBus>;
   ActorMsgBus() = default;
+  HashMap<std::pair<int64_t, int64_t>, int64_t>
+      regst_desc_id_dst_actor_id2comm_net_sequence_number_;
+  std::mutex regst_desc_id_dst_actor_id2comm_net_sequence_number_mutex_;
 };
 
 }  // namespace oneflow
