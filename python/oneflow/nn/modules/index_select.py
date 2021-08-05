@@ -18,8 +18,6 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor, register_tensor_op
 from oneflow.nn.module import Module
 
-import pdb
-
 def _input_args_is_int(args):
     return all((isinstance(x, int) for x in args))
 
