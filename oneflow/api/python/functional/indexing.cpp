@@ -148,7 +148,8 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   const DataType dtype = JUST(InferScalarType(object));
   const auto& sizes = JUST(InferArraySizes(object));
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor = JUST(functional::Empty(*sizes, dtype, device));
+  const auto& tensor =
+      std::dynamic_pointer_cast<MirroredTensor>(JUST(functional::Empty(*sizes, dtype, device)));
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
   auto handle = std::shared_ptr<PyObject>(PyObjectPtr(object));
