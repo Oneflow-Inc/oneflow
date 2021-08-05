@@ -63,7 +63,7 @@ REGISTER_USER_OP("logsoftmax_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
+      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("prob", 0);
       FOR_RANGE(int64_t, axis, 0, y_tensor.shape().NumAxes() - 1) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("prob", 0), axis)
@@ -78,14 +78,14 @@ REGISTER_USER_OP_GRAD("logsoftmax").SetGenBackwardOpConfFn([](const user_op::Use
                                                            user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper softmax_grad_op =
+    user_op::UserOpConfWrapper logsoftmax_grad_op =
         builder.Op("logsoftmax_grad")
             .Input("prob", op.output("prob", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Output("dx")
             .Build();
-    op.BindGradTensorWithOpInput(softmax_grad_op.output("dx", 0), "in", 0);
-    AddOp(softmax_grad_op);
+    op.BindGradTensorWithOpInput(logsoftmax_grad_op.output("dx", 0), "in", 0);
+    AddOp(logsoftmax_grad_op);
   }
   return Maybe<void>::Ok();
 });

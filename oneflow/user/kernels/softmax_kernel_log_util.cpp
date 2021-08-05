@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/user/kernels/softmax_kernel_log_util.h"
@@ -65,6 +66,7 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
         Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
     T* tmp = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
                                   + reduce_temp_storage_bytes);
+    
     // max | tmp[i] = Max_j(in[i][j])
     NdarrayUtil<DeviceType::kCPU, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, in),
                                                 reduce_storage_var);
@@ -110,7 +112,7 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastMul(ctx, Var({n, w}, tmp), Val({n, w}, out),
                                                 Val({n, 1}, dx));
 
-    //sum | dx[i][j] = out[i][j]-tmp[i][j]
+    //sum | dx[i][j] = dy[i][j]-tmp[i][j]
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastSub(ctx, Var({n, w}, dx), Val({n, w}, dy),
                                                    Val({n, w}, tmp));
   }

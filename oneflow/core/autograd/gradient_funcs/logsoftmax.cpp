@@ -57,7 +57,7 @@ Maybe<void> LogSoftmax::Capture(LogSoftmaxInterpState* ctx, const TensorTuple& i
 
   if (!ctx->requires_grad) return Maybe<void>::Ok();
 
-  ctx->SaveTensorForBackward(outputs.at(0));
+  ctx->SaveTensorForBackward(outputs.at(1));
   return Maybe<void>::Ok();
 }
 
