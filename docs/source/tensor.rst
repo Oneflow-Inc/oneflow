@@ -60,6 +60,7 @@ OneFlow Tensor Class
             grad_fn, 
             gt, 
             in_top_k, 
+            index_select,
             is_consistent, 
             is_contiguous, 
             is_cuda, 

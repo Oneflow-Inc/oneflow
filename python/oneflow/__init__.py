@@ -258,6 +258,7 @@ from oneflow.nn.modules.gather_nd import gather_nd_op as gather_nd
 from oneflow.nn.modules.greater import greater_op as gt
 from oneflow.nn.modules.greater_equal import greater_equal_op as ge
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
+from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.less import less_op as lt
 from oneflow.nn.modules.less_equal import less_equal_op as le
 from oneflow.nn.modules.log1p import log1p_op as log1p
