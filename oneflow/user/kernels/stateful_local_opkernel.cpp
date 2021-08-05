@@ -193,9 +193,8 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override {
-    // This is a temporary workaround and only supports single card
-    // TODO(jianhao): support multi-card
-    CHECK_EQ(GlobalProcessCtx::WorldSize(), 1);
+    // TODO(jianhao): to support eager consistent, LocalUserKernelInitContext should 
+    // acknowledge op placement info, or invent ConsistentUserKernelInitContext
     static ParallelContext single_card_parallel_ctx;
     single_card_parallel_ctx.set_parallel_id(0);
     single_card_parallel_ctx.set_parallel_num(1);
