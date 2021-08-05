@@ -30,8 +30,6 @@ class TickComputeActor final : public CompActor {
   void VirtualCompActorInit(const TaskProto&) override;
   void Act() override {}
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
-
-  int64_t piece_id_;
 };
 
 }  // namespace oneflow
