@@ -33,8 +33,8 @@ def _test_logical_xor_int(test_case, shape, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 def _test_logical_xor_float(test_case, shape, device):
-    np_input = np.random.uniform(low=0.0, high=1.0, size=shape) * 10 - 5
-    np_other = np.random.uniform(low=0.0, high=1.0, size=shape) * 10 - 5
+    np_input = np.random.uniform(low=-5, high=5, size=shape)
+    np_other = np.random.uniform(low=-5, high=5, size=shape)
     input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
     other = flow.Tensor(np_other, dtype=flow.float32, device=flow.device(device))
     of_out = flow.logical_xor(input, other)
@@ -51,8 +51,8 @@ def _test_tensor_logical_xor_int(test_case, shape, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 def _test_tensor_logical_xor_float(test_case, shape, device):
-    np_input = np.random.uniform(low=0.0, high=1.0, size=shape) * 10 - 5
-    np_other = np.random.uniform(low=0.0, high=1.0, size=shape) * 10 - 5
+    np_input = np.random.uniform(low=-5, high=5, size=shape)
+    np_other = np.random.uniform(low=-5, high=5, size=shape)
     input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
     other = flow.Tensor(np_other, dtype=flow.float32, device=flow.device(device))
     of_out = input.logical_xor(other)
