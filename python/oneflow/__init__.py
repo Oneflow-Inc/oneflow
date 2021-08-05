@@ -335,6 +335,7 @@ from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
+from oneflow.ops.get_variable import api_get_variable as get_variable
 from oneflow.ops.initializer_util import constant_initializer, empty_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
 from oneflow.ops.initializer_util import (
