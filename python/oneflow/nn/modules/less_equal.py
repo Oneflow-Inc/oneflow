@@ -21,14 +21,13 @@ from oneflow.nn.module import Module
 class LessEqual(Module):
     def __init__(self) -> None:
         super().__init__()
+        self.y_scalar_tensor_ = flow.zeros((1,), dtype=flow.float32)
 
     def forward(self, x, y):
         if x.dtype != flow.float32:
             x = flow.cast(x, flow.float32)
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor(
-                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
-            )
+            y = self.y_scalar_tensor_.fill_(float(y)).to(flow.device(x.device.type))
         if y.dtype != flow.float32:
             y = flow.cast(y, flow.float32)
         return flow.F.broadcast_less_equal(x, y)
