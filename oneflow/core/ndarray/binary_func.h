@@ -29,7 +29,7 @@ limitations under the License.
 namespace oneflow {
 
 #define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)(Min)(Max)(FloorMod)(FMod)
-#define LOGICAL_BINARY_FUNC_NAME_SEQ (EQ)(NE)(GT)(GE)(LT)(LE)(AND)(XOR)
+#define LOGICAL_BINARY_FUNC_NAME_SEQ (EQ)(NE)(GT)(GE)(LT)(LE)(AND)(OR)(XOR)
 
 #define PREPEND_PREFIX_BINARY_FUNC(name) OF_PP_CAT(BinaryFunc, name)
 #define ARITHMETIC_BINARY_FUNC_SEQ \
@@ -173,11 +173,16 @@ struct BinaryFuncAND final {
   static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x && y; }
 };
 
+struct BinaryFuncOR final {
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x || y; }
+};
+  
 template<typename T>
 struct BinaryFuncXOR final {
   static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return (!x) != (!y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
+
 
 template<typename T>
 struct BinaryFuncAll final {
@@ -189,7 +194,9 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
 
 template<typename T>
 struct BinaryFuncAny final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x || y; }
+  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) {
+    return BinaryFuncOR<T>::Invoke(x, y);
+  }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAny);
 

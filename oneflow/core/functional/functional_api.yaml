@@ -42,35 +42,35 @@
 
 - name: "sub_scalar_by_tensor"
   signature: "Tensor ScalarSubByTensor(Tensor x, Tensor scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_sub"
   signature: "Tensor BroadcastSub(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "mul"
   signature: "Tensor Multiply(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "mul_scalar"
   signature: "Tensor ScalarMul(Tensor x, *, Scalar alpha)"
-  bind_python: True
+  bind_python: False
 
 - name: "mul_scalar_by_tensor"
   signature: "Tensor ScalarMulByTensor(Tensor x, Tensor scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_mul"
   signature: "Tensor BroadcastMul(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "div_scalar_by_tensor"
   signature: "Tensor ScalarDivByTensor(Tensor x, Tensor scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_div"
   signature: "Tensor BroadcastDiv(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_div_grad"
   signature: "Tensor BroadcastDivGrad(Tensor y, Tensor z, Tensor dz)"
@@ -92,6 +92,14 @@
   signature: "Tensor BroadcastGreaterEqual(Tensor x, Tensor y)"
   bind_python: True
 
+- name: "broadcast_logical_and"
+  signature: "Tensor BroadcastLogicalAnd(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_logical_or"
+  signature: "Tensor BroadcastLogicalOr(Tensor x, Tensor y)"
+  bind_python: True
+ 
 - name: "broadcast_logical_xor"
   signature: "Tensor BroadcastLogicalXor(Tensor x, Tensor y)"
   bind_python: True
