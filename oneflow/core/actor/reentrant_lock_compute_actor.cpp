@@ -77,7 +77,7 @@ bool ReentrantLockCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
 
 void ReentrantLockCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (reentrant_lock_status_.acquired_lock_to_be_sent() == false) { return; }
-  HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) { return true; });
+  HandleProducedNaiveDataRegstToConsumer();
 }
 
 void ReentrantLockCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
