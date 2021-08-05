@@ -60,7 +60,12 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
     shape2dims(out_tensor->shape());
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
-    int64_t upper_bound = input_tensor->shape().At(dim);
+    int64_t upper_bound = 0;
+    if (input_tensor) {
+      upper_bound = input_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
+    } else {
+      upper_bound = like_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
+    }
 
     DimScatterScalarFunctor<device_type, IN_T, IDX_T, Opt>()(
         ctx->device_ctx(), idx_nd_helper, output_nd_helper, ndim, index_tensor->shape().elem_cnt(),
