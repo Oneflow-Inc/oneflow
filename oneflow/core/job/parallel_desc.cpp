@@ -111,6 +111,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
                                                        GlobalProcessCtx::NumOfProcessPerNode()));
     }
   }
+  containing_current_rank_ = machine_id2sorted_dev_phy_ids_->count(GlobalProcessCtx::Rank()) > 0;
   ClearUp();
   JUST(SanityCheck());
   return Maybe<void>::Ok();
@@ -148,15 +149,38 @@ Maybe<int64_t> ParallelDesc::ParallelId4MachineDeviceId(int64_t machine_id,
   return device_iter->second;
 }
 
-Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(int64_t* parallel_id) const {
+Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(
+    Optional<int64_t>* parallel_id) const {
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  if (TryGetParallelId(machine_id, device_id, parallel_id)) {
-    return Device::ThreadLocalGetOrNew(device_tag(), device_id);
+  const auto& device = JUST(Device::ThreadLocalGetOrNew(device_tag(), device_id));
+  int64_t parallel_id_val = -1;
+  if (TryGetParallelId(machine_id, device_id, &parallel_id_val)) {
+    *parallel_id = parallel_id_val;
   } else {
-    return Symbol<Device>();
+    *parallel_id = Optional<int64_t>();
   }
+  return device;
+}
+
+Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
+                                                  Optional<int64_t>* parallel_id) {
+  static thread_local HashMap<Symbol<ParallelDesc>, Optional<int64_t>> parallel_desc2parallel_id;
+  static thread_local HashMap<Symbol<ParallelDesc>, Symbol<Device>> parallel_desc2device;
+  auto parallel_id_iter = parallel_desc2parallel_id.find(parallel_desc);
+  auto device_iter = parallel_desc2device.find(parallel_desc);
+  if (device_iter == parallel_desc2device.end()) {
+    CHECK_OR_RETURN(parallel_id_iter == parallel_desc2parallel_id.end());
+    Optional<int64_t> id_val;
+    const auto& device_symbol = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&id_val));
+    parallel_id_iter = parallel_desc2parallel_id.emplace(parallel_desc, id_val).first;
+    device_iter = parallel_desc2device.emplace(parallel_desc, device_symbol).first;
+  } else {
+    CHECK_OR_RETURN(parallel_id_iter != parallel_desc2parallel_id.end());
+  }
+  *parallel_id = parallel_id_iter->second;
+  return device_iter->second;
 }
 
 bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,

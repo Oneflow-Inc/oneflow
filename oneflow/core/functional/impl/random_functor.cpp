@@ -55,8 +55,7 @@ class BernoulliFunctor {
     const auto& bernoulli_kernel_state = std::make_shared<BernoulliKernelState>(gen);
 
     return OpInterpUtil::Dispatch<Tensor>(
-        *bernoulli_op_, {x},
-        OpExprInterpContext{.attrs = bernoulli_attrs, .state = bernoulli_kernel_state});
+        *bernoulli_op_, {x}, OpExprInterpContext(bernoulli_attrs, bernoulli_kernel_state));
   }
 
  private:

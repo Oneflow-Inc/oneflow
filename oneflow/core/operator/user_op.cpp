@@ -768,12 +768,23 @@ Maybe<void> UserOp::InferParallelDistributionSignature(
     UserOpInferParallelDistributionFnContext ctx(this, parallel_distribution_signature,
                                                  parallel_distribution_constraints,
                                                  ParallelDistributionInferHint4Ibn);
-    return val_->parallel_distribution_infer_fn(&ctx);
+    JUST(val_->parallel_distribution_infer_fn(&ctx));
   } else {
-    return Operator::InferParallelDistributionSignature(
+    JUST(Operator::InferParallelDistributionSignature(
         parallel_distribution_signature, parallel_distribution_constraints, parallel_desc,
-        ParallelDistributionInferHint4Ibn);
+        ParallelDistributionInferHint4Ibn));
   }
+  std::string tick_bn = GenRepeatedBn(user_op::kUserSourceOpTickInputArgName, 0);
+  if (std::find(input_bns().begin(), input_bns().end(), tick_bn) != input_bns().end()) {
+    auto* map = parallel_distribution_signature->mutable_bn_in_op2parallel_distribution();
+    if (map->count(tick_bn) == 0) {
+      auto* sbp_list = (*map)[tick_bn].mutable_sbp_parallel();
+      for (int i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
+        sbp_list->Add()->mutable_broadcast_parallel();
+      }
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {

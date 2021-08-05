@@ -24,6 +24,7 @@ import oneflow.unittest
 from oneflow.framework.multi_client_session import MultiClientSession
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestMultiClientSession(unittest.TestCase):
     def test_case1(self):
         self.assertTrue(flow.distributed.is_multi_client())

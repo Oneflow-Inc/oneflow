@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_concat_origin(test_case, device):
@@ -131,6 +132,14 @@ class TestModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=10, auto_backward=False)
+    def test_concat_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 3, 2, 4).to(device)
+        y = random_pytorch_tensor(4, 2, 3, random(0, 3), 4).to(device)
+        z = torch.cat((x, y), dim=2)
+        return z
 
 
 if __name__ == "__main__":

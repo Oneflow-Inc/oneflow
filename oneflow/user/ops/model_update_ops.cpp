@@ -83,7 +83,9 @@ Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
   const Shape& shape = model.shape();
   const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
-  CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
+  if (shape.NumAxes() > 0 && model_diff.shape().NumAxes() > 0) {
+    CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
+  }
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);

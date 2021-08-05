@@ -327,7 +327,10 @@ class random_device(generator):
         super().__init__([])
 
     def _calc_value(self):
-        return random_util.choice(["cuda", "cpu"])
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            return "cpu"
+        else:
+            return random_util.choice(["cuda", "cpu"])
 
 
 def test_against_pytorch(
@@ -346,6 +349,8 @@ def test_against_pytorch(
     api_flag: int = TEST_MODULE,
 ):
     assert device in ["cuda", "cpu"]
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+        device = "cpu"
     if not training:
         assert not backward
     if extra_annotations is None:

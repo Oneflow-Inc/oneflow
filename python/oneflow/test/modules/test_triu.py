@@ -23,6 +23,7 @@ from test_util import GenArgList
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_triu(test_case, diagonal, device):
@@ -49,6 +50,13 @@ class TestTriu(flow.unittest.TestCase):
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(auto_backward=False)
+    def test_triu_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = torch.triu(x)
+        return y
 
 
 if __name__ == "__main__":

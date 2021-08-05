@@ -50,8 +50,6 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->stop, stop))
         << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
   }
-  CHECK_LT_OR_RETURN(*start, *stop)
-      << "Slice stop must be greater than start since 0 size shape is not allowed currently.";
   return Maybe<void>::Ok();
 }
 

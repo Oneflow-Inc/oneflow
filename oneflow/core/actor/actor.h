@@ -46,6 +46,7 @@ class Actor {
   int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
   int64_t thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
   int64_t actor_id() const { return actor_id_; }
+  int64_t job_id() const { return job_id_; }
 
  protected:
   struct BlobInfo {
@@ -81,8 +82,6 @@ class Actor {
   int64_t ReadingCnt4ProducedRegst(Regst* regst) const;
   void IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val);
   void IncreaseTotalReadingCnt(int64_t val) { total_reading_cnt_ += val; }
-  int64_t GetPieceId4NaiveCurReadableDataRegst() const;
-  int64_t GetPieceId4NaiveOrInplaceCurReadableDataRegst() const;
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -106,20 +105,10 @@ class Actor {
 
   // Util For Derived Actor to Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                              std::function<bool(int64_t)> IsAllowedActor);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer();
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                                std::function<bool(int64_t)> IsAllowedActor);
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedInplaceDataRegstToConsumer();
-  void AsyncSendRegstMsgToConsumer(Regst* regst);
-  void AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
-  void HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
+  void HandleConsumedNaiveDataRegstToProducer();
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -144,13 +133,9 @@ class Actor {
   }
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const;
   void ForEachProducedRegst(const std::function<void(Regst*)>&) const;
-  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
+  int64_t HandleRegstToConsumer(Regst* regst);
 
  protected:
-  int64_t GetGlobalWorkStreamId() const;
-  virtual bool NeedCollectActEvent() const {
-    return Global<RuntimeCtx>::Get()->NeedCollectActEvent();
-  }
   bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {
     return consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
   }
@@ -219,7 +204,9 @@ class Actor {
 
   const JobDesc* job_desc_;
   int64_t actor_id_;
+  int64_t global_work_stream_id_;
   int64_t act_id_;
+  int64_t job_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<std::string, std::vector<int64_t>> name2regst_desc_id_;

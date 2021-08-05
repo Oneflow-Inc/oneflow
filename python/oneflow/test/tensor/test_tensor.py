@@ -26,6 +26,7 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensor(flow.unittest.TestCase):
     def test_numpy_and_default_dtype(test_case):
         shape = (2, 3, 4, 5)
@@ -353,6 +354,24 @@ class TestTensor(flow.unittest.TestCase):
         of_out = input.sum(dim=(2, 1))
         np_out = np.sum(input.numpy(), axis=(2, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+
+    def test_argwhere(test_case):
+        shape = (2, 3, 4, 5)
+        precision = 1e-5
+        np_input = np.random.randn(*shape)
+        input = flow.Tensor(np_input)
+        of_out = input.argwhere()
+        np_out = np.argwhere(np_input)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, precision, precision))
+        test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
+
+    @autotest(n=5, auto_backward=False)
+    def test_tensor_argmax_with_random_data(test_case):
+        device = random_device()
+        ndim = random(1, 6).to(int)
+        x = random_pytorch_tensor(ndim=ndim).to(device)
+        y = x.argmax(dim=random(0, ndim).to(int), keepdim=random().to(bool))
+        return y
 
     @autotest()
     def test_tensor_tanh_with_random_data(test_case):

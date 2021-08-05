@@ -20,7 +20,6 @@ import time
 import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
-import oneflow.utils.vision.transforms as transforms
 
 
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.10_mlp-pytorch
@@ -31,9 +30,9 @@ def load_data_fashion_mnist(
     root = os.path.expanduser(root)
     transformer = []
     if resize:
-        transformer += [transforms.Resize(resize)]
-    transformer += [transforms.ToTensor()]
-    transformer = transforms.Compose(transformer)
+        transformer += [flow.utils.vision.transforms.Resize(resize)]
+    transformer += [flow.utils.vision.transforms.ToTensor()]
+    transformer = flow.utils.vision.transforms.Compose(transformer)
 
     mnist_train = flow.utils.vision.datasets.FashionMNIST(
         root=root,
@@ -112,12 +111,17 @@ def test(test_case):
         nn.Linear(num_hiddens, num_outputs),
     )
 
-    device = flow.device("cuda")
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+        device = flow.device("cpu")
+    else:
+        device = flow.device("cuda")
     net.to(device)
 
     batch_size = 256
     num_epochs = 1
-    data_dir = os.getenv("ONEFLOW_TEST_CACHE_DIR") + "/data-test/fashion-mnist"
+    data_dir = os.path.join(
+        os.getenv("ONEFLOW_TEST_CACHE_DIR", "./data-test"), "fashion-mnist"
+    )
     source_url = "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/Fashion-MNIST/"
     train_iter, test_iter = load_data_fashion_mnist(
         batch_size, root=data_dir, download=True, source_url=source_url
