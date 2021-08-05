@@ -240,14 +240,9 @@ def api_thread_enable_local_message_queue(val: bool) -> None:
     Args:
         val (bool):  True or False
     """
-    return enable_if.unique([thread_enable_local_message_queue, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def thread_enable_local_message_queue(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.thread_enable_local_message_queue = val
+    print(
+        "'thread_enable_local_message_queue' has been deprecated, has no effect and will be removed in the future. Use environment variable 'ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE' instead."
+    )
 
 
 def api_enable_debug_mode(val: bool) -> None:
