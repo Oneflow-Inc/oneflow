@@ -446,13 +446,13 @@ def find_or_create_module(module_name, create, reuse=False):
     return module_name2module[module_name]
 
 
-def api_eager_execution_enabled() -> bool:
-    """Get current setting of the job, if enable eager execution mode ,then return True
+# def api_eager_execution_enabled() -> bool:
+#     """Get current setting of the job, if enable eager execution mode ,then return True
 
-    Returns:
-        bool: [description]
-    """
-    return oneflow._oneflow_internal.EagerExecutionEnabled()
+#     Returns:
+#         bool: [description]
+#     """
+#     return oneflow._oneflow_internal.EagerExecutionEnabled()
 
 
 def api_clear_default_session() -> None:
@@ -501,7 +501,7 @@ def _GetDefaultConfigProto():
     return config_proto
 
 
-def TmpInitEagerGlobalSession():
-    config_pb = _GetDefaultConfigProto()
-    config_proto_str = text_format.MessageToString(config_pb)
-    oneflow._oneflow_internal.InitEagerGlobalSession(config_proto_str)
+# def TmpInitEagerGlobalSession():
+#     config_pb = _GetDefaultConfigProto()
+#     config_proto_str = text_format.MessageToString(config_pb)
+#     oneflow._oneflow_internal.InitEagerGlobalSession(config_proto_str)
