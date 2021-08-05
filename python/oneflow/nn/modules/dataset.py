@@ -59,8 +59,7 @@ class OfrecordReader(Module):
 
         self.placement = placement
         if placement is None:
-            if device is None:
-                self.device = flow.device("cpu")
+            self.device = device or flow.device("cpu")
         else:
             assert device is None
 
