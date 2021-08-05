@@ -142,6 +142,7 @@ class RandomSampler(Sampler[int]):
         if self.generator is None:
             generator = flow.Generator()
             generator.manual_seed(
+                # TODO: replace with flow.randint
                 flow.Tensor(1, dtype=flow.int64).uniform_(0, 999).numpy().item()
             )
         else:
