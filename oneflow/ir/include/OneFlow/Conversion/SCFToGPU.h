@@ -13,30 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_PASSES_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_PASSES_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_SCFTOGPU_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_SCFTOGPU_H_
 
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "OneFlow/Conversion/OneFlowToTosa.h"
-#include "OneFlow/Conversion/SCFToGPU.h"
 
 namespace mlir {
 
-#define GEN_PASS_CLASSES
-#define GEN_PASS_REGISTRATION
-#include "OneFlow/OneFlowPasses.h.inc"
-
 namespace oneflow {
 
-LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
-void populateFuserPasses(::mlir::RewritePatternSet& patterns);
+std::unique_ptr<mlir::Pass> createMapSCFToGPUPass();
 
 }  // namespace oneflow
 
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_PASSES_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_SCFTOGPU_H_

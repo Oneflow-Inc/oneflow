@@ -220,4 +220,10 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "StandardOpsDialect"];
 }
 
+def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "FuncOp"> {
+  let summary = "Greedily maps all parallel loops to gpu hardware ids";
+  let constructor = "mlir::oneflow::createMapSCFToGPUPass()";
+  let dependentDialects = ["scf::SCFDialect"];
+}
+
 #endif // ONEFLOW_PASSES
