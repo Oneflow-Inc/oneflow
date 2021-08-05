@@ -136,6 +136,23 @@ class LocalToConsistentFunctor {
                            const Optional<Shape>& shape) const {
     CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
     const auto& device = JUST(x->device());
+    std::shared_ptr<one::Tensor> input = x;
+    // copy to right device
+    if (JUST(device->of_type()) != parallel_desc->device_tag()) {
+      LOG(INFO)
+          << "The device_type of the input tensor is different from placement, now copy it to "
+          << Device::Type4DeviceTag(parallel_desc->device_tag());
+      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
+                                    GlobalProcessCtx::LocalRank()));
+    }
+    // copy to device of the current rank
+    if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
+      LOG(INFO)
+          << "The tensor isn't on default device of the current rank., now copy it to "
+          << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
+                                    GlobalProcessCtx::LocalRank()));
+    }
     if (device->type() != "cpu") {
       CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
           << Error::Unimplemented() << "tensor must be on default device of the current rank.";
@@ -145,12 +162,12 @@ class LocalToConsistentFunctor {
     if (shape.has_value()) {
       shape_ptr = JUST(shape.value());
     } else {
-      shape_ptr = JUST(GetConsistentShape(*x->shape(), parallel_desc, parallel_distribution));
+      shape_ptr = JUST(GetConsistentShape(*input->shape(), parallel_desc, parallel_distribution));
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", *shape_ptr));
     const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
+        *op_, {input}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
     return output;
   }
 
