@@ -30,8 +30,6 @@ class BlockType:
     MODULE = "MODULE"
     PARAMETER = "PARAMETER"
     BUFFER = "BUFFER"
-    INPUT = "INPUT"
-    OUTPUT = "OUTPUT"
 
 
 class Block(object):
@@ -39,7 +37,7 @@ class Block(object):
         self,
         prefix: str = "",
         name: str = "",
-        value: Union[Module, Parameter, Tensor, str] = None,
+        value: Union[Module, Parameter, Tensor] = None,
     ):
         assert not isinstance(value, Block)
         self._name = name
