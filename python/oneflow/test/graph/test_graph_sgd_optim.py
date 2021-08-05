@@ -74,10 +74,6 @@ def compare_with_numpy_sgd(
         x = init_value
         vt = np.zeros_like(x)
 
-        def train_by_numpy():
-            x = init_value
-            vt = np.zeros_like(x)
-
         def np_train_one_iter(grad):
             grad = grad * scale + weight_decay * x
             v = momentum * vt - learning_rate * grad
