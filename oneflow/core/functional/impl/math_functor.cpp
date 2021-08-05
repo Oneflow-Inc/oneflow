@@ -406,7 +406,8 @@ class MinimumFunctor {
   MinimumFunctor() {
     elementwise_minimum_op_ =
         CHECK_JUST(one::OpBuilder("elementwise_minimum").Input("x").Input("y").Output("z").Build());
-    broadcast_minimum_op_ = CHECK_JUST(one::OpBuilder("broadcast_minimum").Input("x").Input("y").Output("z").Build());
+    broadcast_minimum_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_minimum").Input("x").Input("y").Output("z").Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -428,7 +429,8 @@ class MaximumFunctor {
   MaximumFunctor() {
     elementwise_maximum_op_ =
         CHECK_JUST(one::OpBuilder("elementwise_maximum").Input("x").Input("y").Output("z").Build());
-    broadcast_maximum_op_ = CHECK_JUST(one::OpBuilder("broadcast_maximum").Input("x").Input("y").Output("z").Build());
+    broadcast_maximum_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_maximum").Input("x").Input("y").Output("z").Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
