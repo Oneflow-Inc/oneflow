@@ -454,6 +454,7 @@ def cos_op(input):
     """
     return flow.F.cos(input)
 
+
 def atan_op(input):
     """
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
@@ -713,12 +714,8 @@ def std_op(input, dim, unbiased=False, keepdim=False):
         else:
             for i in axis:
                 reduce_count *= input.shape[i]
-        sum = (
-            flow.sum(flow.F.square(input), axis, keepdim) / reduce_count
-        )
-        square = flow.F.square(
-            flow.sum(input, axis, keepdim) / reduce_count
-        )
+        sum = flow.sum(flow.F.square(input), axis, keepdim) / reduce_count
+        square = flow.F.square(flow.sum(input, axis, keepdim) / reduce_count)
         subtract = flow.F.sub(sum, square)
         res = flow.F.sqrt(subtract)
         return res
@@ -966,16 +963,8 @@ def clip_op_tensor(tensor, min=None, max=None):
     return Clamp(min, max)(tensor)
 
 
-class Cosh(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.cosh(x)
-
-
 @register_tensor_op("cosh")
-def cosh_op(tensor):
+def cosh_op(input):
     """
     Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
 
@@ -999,15 +988,7 @@ def cosh_op(tensor):
         array([1.0133467, 1.7859949, 1.2535787, 1.2804903], dtype=float32)
 
     """
-    return Cosh()(tensor)
-
-
-class Erf(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input):
-        return flow.F.erf(input)
+    return flow.F.cosh(input)
 
 
 @register_tensor_op("erf")
@@ -1055,7 +1036,7 @@ def erf_op(input):
                [ 0.9953223 ,  0.9999779 ,  1.        ]], dtype=float32)
 
     """
-    return Erf()(input)
+    return flow.F.erf(input)
 
 
 @register_tensor_op("erf")
@@ -1063,7 +1044,7 @@ def erf_op_tensor(input):
     """
     See :func:`oneflow.erf`
     """
-    return Erf()(input)
+    return flow.F.erf(input)
 
 
 class Erfc(Module):
@@ -1132,16 +1113,8 @@ def erfc_op_tensor(input):
     return Erfc()(input)
 
 
-class Ceil(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.ceil(x)
-
-
-def ceil_op(x):
-    """Returns a new tensor with the ceil of the elements of :attr:`x`,
+def ceil_op(input):
+    """Returns a new tensor with the ceil of the elements of :attr:`input`,
     the smallest integer greater than or equal to each element.
 
     The equation is: 
@@ -1150,7 +1123,7 @@ def ceil_op(x):
         \\text{out}_{i} = \\left\\lceil \\text{input}_{i} \\right\\rceil = \\left\\lfloor \\text{input}_{i} \\right\\rfloor + 1
 
     Args:
-        x (oneflow.Tensor): A Tensor.
+        input (oneflow.Tensor): A Tensor.
     
     Returns:
         oneflow.Tensor: The result Tensor
@@ -1164,44 +1137,38 @@ def ceil_op(x):
         >>> import numpy as np   
         >>> x = flow.Tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
         >>> y = flow.ceil(x)
-        >>> print(y.shape)
+        >>> y.shape
         flow.Size([3])
-        >>> print(y.numpy())
-        [ 1. -2.  4.]
-
-
+        >>> y
+        tensor([ 1., -2.,  4.], dtype=oneflow.float32)
         >>> x = flow.Tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
         >>> y = x.ceil()
-        >>> print(y.shape)
+        >>> y.shape
         flow.Size([2, 3])
-        >>> print(y.numpy())
-        [[ 3.  5.  1.]
-         [ 8.  9. 10.]]
-
-
-
-
+        >>> y
+        tensor([[ 3.,  5.,  1.],
+                [ 8.,  9., 10.]], dtype=oneflow.float32)
         >>> x = flow.Tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
         >>> y = flow.ceil(x)
-        >>> print(y.shape)
+        >>> y.shape
         flow.Size([2, 2, 3])
-        >>> print(y.numpy())
-        [[[ 3.  5.  7.]
-          [ 8.  9. 10.]]
+        >>> y
+        tensor([[[ 3.,  5.,  7.],
+                 [ 8.,  9., 10.]],
         <BLANKLINE>
-         [[11. 12. 13.]
-          [14. 15. 16.]]]
+                [[11., 12., 13.],
+                 [14., 15., 16.]]], dtype=oneflow.float32)
 
     """
-    return Ceil()(x)
+    return flow.F.ceil(input)
 
 
 @register_tensor_op("ceil")
-def ceil_op_tensor(x):
+def ceil_op_tensor(input):
     """
     See :func:`oneflow.ceil`
     """
-    return Ceil()(x)
+    return flow.F.ceil(input)
 
 
 class Expm1(Module):
@@ -1212,9 +1179,9 @@ class Expm1(Module):
         return flow.F.expm1(x)
 
 
-def expm1_op(x):
+def expm1_op(input):
     """Returns a new tensor with the exponential of the elements minus 1
-    of :attr:`x`.
+    of :attr:`input`.
 
 
     The equation is: 
@@ -1223,7 +1190,7 @@ def expm1_op(x):
         y_{i} = e^{x_{i}} - 1
 
     Args:
-        x (oneflow.Tensor): A Tensor.
+        input (oneflow.Tensor): A Tensor.
     
     Returns:
         oneflow.Tensor: The result Tensor
@@ -1265,15 +1232,15 @@ def expm1_op(x):
 
 
     """
-    return Expm1()(x)
+    return flow.F.expm1(input)
 
 
 @register_tensor_op("expm1")
-def expm1_op_tensor(x):
+def expm1_op_tensor(input):
     """
     See :func:`oneflow.expm1`
     """
-    return Expm1()(x)
+    return flow.F.expm1(input)
 
 
 class Topk(Module):
