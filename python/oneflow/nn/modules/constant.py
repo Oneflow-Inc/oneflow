@@ -30,9 +30,7 @@ class _ConstantBase(Module):
         dtype: Optional[flow.dtype],
         device: Union[flow.device, str] = None,
         placement: flow.placement = None,
-        sbp: Union[
-            flow._oneflow_internal.sbp.sbp, List[flow._oneflow_internal.sbp.sbp]
-        ] = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
         requires_grad: bool = False,
     ) -> None:
         super().__init__()
@@ -92,8 +90,21 @@ class Ones(_ConstantBase):
         super().__init__(size, 1, dtype, device, placement, sbp, requires_grad)
 
 
+def _handle_size_arg(*size):
+    assert len(size) > 0, "size of tensor doesn't exists"
+    if isinstance(size[0], (tuple, flow.Size, list)):
+        assert (
+            len(size) == 1
+        ), "shape should be specified by tuple of ints size, not tuple of tuple/list"
+        if len(size[0]) == 0:
+            size = []
+        else:
+            size = size[0]
+    return size
+
+
 def ones_op(
-    size: Union[_size_any_t, flow.Size],
+    *size: Union[_size_any_t, flow.Size, List[int]],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
@@ -109,8 +120,11 @@ def ones_op(
          a variable number of arguments or a collection like a list or tuple.
         dtype (flow.dtype, optional) – the desired data type of returned tensor.
         device (flow.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
 
+    For example:
 
     .. code-block:: python
 
@@ -118,8 +132,14 @@ def ones_op(
         >>> y = flow.ones(5)
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
+        >>> y = flow.ones(2,3)
+        >>> y
+        tensor([[1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32)
+
 
     """
+    size = _handle_size_arg(*size)
     return Ones(size, dtype, device, placement, sbp, requires_grad)()
 
 
@@ -137,7 +157,7 @@ class Zeros(_ConstantBase):
 
 
 def zeros_op(
-    size: Union[_size_any_t, flow.Size],
+    *size: Union[_size_any_t, flow.Size, List[int]],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
@@ -165,8 +185,13 @@ def zeros_op(
         >>> y = flow.zeros(5)
         >>> y
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
+        >>> y = flow.zeros(2,3)
+        >>> y
+        tensor([[0., 0., 0.],
+                [0., 0., 0.]], dtype=oneflow.float32)
 
     """
+    size = _handle_size_arg(*size)
     return Zeros(size, dtype, device, placement, sbp, requires_grad)()
 
 

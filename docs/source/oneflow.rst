@@ -56,6 +56,8 @@ oneflow
             gelu, 
             gt, 
             in_top_k, 
+            logical_and,
+            logical_or,
             load, 
             log, 
             log1p, 
