@@ -29,7 +29,7 @@ Maybe<void> InitBroadcastRankHeap(std::vector<int64_t>* ranks, const ParallelDes
                                   int64_t root) {
   CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), parallel_desc.sorted_machine_ids().size());
   ranks->resize(parallel_desc.parallel_num());
-  Optional<int64_t> root_index{};
+  Optional<int64_t> root_index;
   for (int64_t parallel_id = 0; parallel_id < parallel_desc.parallel_num(); ++parallel_id) {
     int64_t machine_id = JUST(parallel_desc.MachineId4ParallelId(parallel_id));
     if (machine_id == root) { root_index = parallel_id; }
@@ -49,11 +49,11 @@ Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
   CHECK_EQ_OR_RETURN(parallel_desc->device_type(), DeviceType::kCPU);
   static thread_local std::vector<int64_t> rank_heap{};
   JUST(InitBroadcastRankHeap(&rank_heap, *parallel_desc, root));
-  TransportToken rpc_token = TransportToken::NewDataTransportToken();
+  TransportToken transport_token = TransportToken::NewDataTransportToken();
   CHECK_OR_RETURN(IsPODDataType(dtype));
   size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-  NaiveAsyncTransportCtx rpc_ctx(
-      rpc_token,
+  NaiveAsyncTransportCtx transport_ctx(
+      transport_token,
       [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = (root == GlobalProcessCtx::Rank() ? const_cast<void*>(in) : out);
         *size = buffer_size;
@@ -66,11 +66,11 @@ Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
         *Cb = [] {};
         return Maybe<void>::Ok();
       });
-  JUST(TransportUtil::ReceiveDataFromParentInHeap(rank_heap, rpc_token, &rpc_ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(rpc_ctx, TransportUtil::TimeoutSeconds()));
-  JUST(TransportUtil::SendDataToChildrenInHeap(rank_heap, rpc_token, &rpc_ctx));
+  JUST(TransportUtil::ReceiveDataFromParentInHeap(rank_heap, transport_token, &transport_ctx));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
+  JUST(TransportUtil::SendDataToChildrenInHeap(rank_heap, transport_token, &transport_ctx));
   if (GlobalProcessCtx::Rank() == root && out != in) { std::memcpy(out, in, buffer_size); }
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(rpc_ctx, TransportUtil::TimeoutSeconds()));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
   return Maybe<void>::Ok();
 }
 

@@ -32,7 +32,6 @@ class EagerCclOpKernelState final : public user_op::OpKernelState {
   void Init(user_op::KernelInitContext* ctx) {
     const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
     ParallelConf parallel_conf;
-    std::set<std::pair<int64_t, int64_t>> device_set;
     CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
     parallel_desc_ = SymbolOf(ParallelDesc(parallel_conf));
   }
