@@ -230,9 +230,7 @@ def normalize(
     Returns:
         Tensor: Normalized Tensor image.
     """
-    if not isinstance(tensor, flow.Tensor) and not isinstance(
-        tensor, flow._oneflow_internal.Tensor
-    ):
+    if not isinstance(tensor, flow.Tensor):
         raise TypeError(
             "Input tensor should be a oneflow tensor. Got {}.".format(type(tensor))
         )
@@ -360,7 +358,7 @@ def pad(img: Tensor, padding: List[int], fill: int = 0, padding_mode: str = "con
     """
     if not isinstance(img, flow.Tensor):
         return F_pil.pad(img, padding=padding, fill=fill, padding_mode=padding_mode)
-
+    
     return F_t.pad(img, padding=padding, fill=fill, padding_mode=padding_mode)
 
 

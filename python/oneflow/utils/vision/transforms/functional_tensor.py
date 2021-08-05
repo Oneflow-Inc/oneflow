@@ -251,15 +251,13 @@ def pad(img: Tensor, padding: List[int], fill: int = 0, padding_mode: str = "con
         # https://github.com/pytorch/pytorch/issues/40763
         need_cast = True
         img = img.to(flow.float32)
-
-    img = F.pad(img, p, mode=padding_mode, value=float(fill))
+    img = flow.F.pad(img, pad=p, mode=padding_mode, value=float(fill))
 
     if need_squeeze:
         img = img.squeeze(dim=0)
 
     if need_cast:
         img = img.to(out_dtype)
-
     return img
 
 
@@ -308,7 +306,7 @@ def resize(img: Tensor, size: List[int], interpolation: str = "bilinear") -> Ten
     # Define align_corners to avoid warnings
     align_corners = False if interpolation in ["bilinear", "bicubic"] else None
 
-    img = flow.F.interpolate(
+    img = flow.nn.functional.interpolate(
         img, size=[size_h, size_w], mode=interpolation, align_corners=align_corners
     )
 
