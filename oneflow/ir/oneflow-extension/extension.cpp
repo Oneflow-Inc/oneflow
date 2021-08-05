@@ -122,7 +122,7 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
   return args;
 }
 
-template<DeviceType device_type, typename T>
+template<typename T>
 class MlirJitCpuKernel final : public user_op::OpKernel {
  public:
   MlirJitCpuKernel() = default;
@@ -161,20 +161,20 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 };
 
 // TODO: figure out if device and dtype are necessary for this op?
-#define REGISTER_MLIR_JIT_CPU_KERNEL(device, dtype)                                             \
+#define REGISTER_MLIR_JIT_CPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
-      .SetCreateFn<MlirJitCpuKernel<device, dtype>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+      .SetCreateFn<MlirJitCpuKernel<dtype>>()                                                   \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)                            \
                        & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_MLIR_JIT_CPU_KERNEL(DeviceType::kCPU, float)
-REGISTER_MLIR_JIT_CPU_KERNEL(DeviceType::kCPU, double)
-REGISTER_MLIR_JIT_CPU_KERNEL(DeviceType::kCPU, int32_t)
-REGISTER_MLIR_JIT_CPU_KERNEL(DeviceType::kCPU, int64_t)
+REGISTER_MLIR_JIT_CPU_KERNEL(float)
+REGISTER_MLIR_JIT_CPU_KERNEL(double)
+REGISTER_MLIR_JIT_CPU_KERNEL(int32_t)
+REGISTER_MLIR_JIT_CPU_KERNEL(int64_t)
 
 #undef REGISTER_MLIR_JIT_CPU_KERNEL
 
