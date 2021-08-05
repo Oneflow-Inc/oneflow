@@ -129,6 +129,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
   }
 
   std::vector<ChunkProto> all_chunks;
+  HashSet<int64_t> unique_chunk_ids;
 
   for (auto& pair : mzuid2mem_blocks) {
     int64_t mem_zone_uid = pair.first;
@@ -172,11 +173,45 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
       }
     }
 
+    for (const ChunkProto* exist_chunk : exist_chunks) {
+      all_chunks.push_back(*exist_chunk);
+      CHECK(unique_chunk_ids.insert(exist_chunk->chunk_id()).second);
+    }
+
     if (!remain_blocks.empty()) {
+      auto remain_block_it = remain_blocks.begin();
+      MemBlockProto* first_block = *remain_block_it;
       ChunkProto new_chunk;
-      // TODO(chengcheng);
+      new_chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
+      new_chunk.set_machine_id(first_block->machine_id());
+      *new_chunk.mutable_mem_case() = first_block->mem_case();
+      new_chunk.set_mem_size(first_block->mem_size());
+      first_block->set_chunk_id(new_chunk.chunk_id());
+      first_block->set_chunk_offset(0);
+      ++remain_block_it;
+      std::cout << "cclog: Add MemBlock :[" << first_block->DebugString() << "] to NewChunk :["
+                << new_chunk.DebugString() << "]\n\n";
+
+      while (remain_block_it != remain_blocks.end()) {
+        MemBlockProto* this_block = *remain_block_it;
+        CHECK_EQ(this_block->machine_id(), new_chunk.machine_id());
+        CHECK(this_block->mem_case() == new_chunk.mem_case());
+        this_block->set_chunk_id(new_chunk.chunk_id());
+        this_block->set_chunk_offset(new_chunk.mem_size());
+        new_chunk.set_mem_size(new_chunk.mem_size() + this_block->mem_size());
+        std::cout << "cclog: Add MemBlock :[" << this_block->DebugString() << "] to NewChunk :["
+                  << new_chunk.DebugString() << "]\n\n";
+        ++remain_block_it;
+      }
+
+      all_chunks.push_back(new_chunk);
+      CHECK(unique_chunk_ids.insert(new_chunk.chunk_id()).second);
+
+      Global<ChunkMgr>::Get()->AddChunkProto(new_chunk);
     }
   }
+
+  CHECK_EQ(all_chunks.size(), unique_chunk_ids.size());
 
   for (const ChunkProto& chunk : all_chunks) {
     *(plan->mutable_block_chunk_list()->add_chunk()) = chunk;
