@@ -42,35 +42,35 @@
 
 - name: "sub_scalar_by_tensor"
   signature: "Tensor ScalarSubByTensor(Tensor x, Tensor scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_sub"
   signature: "Tensor BroadcastSub(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "mul"
   signature: "Tensor Multiply(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "mul_scalar"
   signature: "Tensor ScalarMul(Tensor x, *, Scalar alpha)"
-  bind_python: True
+  bind_python: False
 
 - name: "mul_scalar_by_tensor"
   signature: "Tensor ScalarMulByTensor(Tensor x, Tensor scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_mul"
   signature: "Tensor BroadcastMul(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "div_scalar_by_tensor"
   signature: "Tensor ScalarDivByTensor(Tensor x, Tensor scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_div"
   signature: "Tensor BroadcastDiv(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_div_grad"
   signature: "Tensor BroadcastDivGrad(Tensor y, Tensor z, Tensor dz)"
@@ -90,6 +90,14 @@
 
 - name: "broadcast_greater_equal"
   signature: "Tensor BroadcastGreaterEqual(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_logical_and"
+  signature: "Tensor BroadcastLogicalAnd(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_logical_or"
+  signature: "Tensor BroadcastLogicalOr(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "broadcast_less"
@@ -234,10 +242,16 @@
 
 - name: "normalization"
   signature:
-    "Tensor Normalization(Tensor x, Tensor moving_mean, Tensor moving_variance,
+    "Tensor Normalization(Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
                           Tensor gamma, Tensor beta, *, Int32 axis=1, Float epsilon=1e-5,
                           Float momentum=0.9, Bool is_training=False)"
   bind_python: True
+
+- name: "normalization_grad"
+  signature:
+    "TensorTuple NormalizationGrad(Tensor grad, Tensor x, Tensor mean, Tensor inv_variance,
+                                   Tensor gamma, Float epsilon, Int32 axis)"
+  bind_python: False
 
 - name: "range"
   signature: "Tensor Range(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64)"
@@ -827,20 +841,12 @@
                        Int32List stride, Bool ceil_mode, Bool count_include_pad, Int64 divisor_override=0)"
   bind_python: False
   
-- name: "broadcast_min"
-  signature: "Tensor BroadcastMin(Tensor x, Tensor y)"
+- name: "minimum"
+  signature: "Tensor Minimum(Tensor x, Tensor y)"
   bind_python: True
 
-- name: "broadcast_max"
-  signature: "Tensor BroadcastMax(Tensor x, Tensor y)"
-  bind_python: True
-
-- name: "elementwise_min"
-  signature: "Tensor ElementwiseMin(Tensor x, Tensor y)"
-  bind_python: True
-
-- name: "elementwise_max"
-  signature: "Tensor ElementwiseMax(Tensor x, Tensor y)"
+- name: "maximum"
+  signature: "Tensor Maximum(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "elementwise_min_grad"

@@ -28,23 +28,16 @@ class CollectiveBoxingGenericActor : public Actor {
   void Act() override { AsyncLaunchKernel(GenDefaultKernelCtx()); }
 
   void VirtualActorInit(const TaskProto&) override {
-    piece_id_ = 0;
     OF_SET_MSG_HANDLER(&CollectiveBoxingGenericActor::HandlerNormal);
   }
 
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override {
-    HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
-      regst->set_piece_id(piece_id_);
-      return true;
-    });
-    piece_id_ += 1;
+    HandleProducedNaiveDataRegstToConsumer();
   }
 
   void InitDeviceCtx(const ThreadCtx& thread_ctx) override {
     mut_device_ctx().reset(new CollectiveBoxingDeviceCtx());
   }
-
-  int64_t piece_id_ = 0;
 };
 
 REGISTER_ACTOR(TaskType::kCollectiveBoxingGeneric, CollectiveBoxingGenericActor);

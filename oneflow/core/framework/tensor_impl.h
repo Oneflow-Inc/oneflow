@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/tensor_meta.h"
-#include "oneflow/core/framework/rpc_token.h"
+#include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -158,11 +158,11 @@ class ConsistentTensorImpl : public TensorImpl {
     return nullptr;
   }
 
-  const Maybe<RpcToken> rpc_token() const { return rpc_token_; }
+  const Maybe<TransportToken> transport_token() const { return transport_token_; }
 
-  Maybe<void> set_rpc_token(const RpcToken& rpc_token) {
-    CHECK_OR_RETURN(!rpc_token_.IsOk()) << "rpc_token_ is initiliazed";
-    rpc_token_ = rpc_token;
+  Maybe<void> set_transport_token(const TransportToken& transport_token) {
+    CHECK_OR_RETURN(!transport_token_.IsOk()) << "transport_token_ is initiliazed";
+    transport_token_ = transport_token;
     return Maybe<void>::Ok();
   }
 
@@ -171,11 +171,11 @@ class ConsistentTensorImpl : public TensorImpl {
       : TensorImpl(requires_grad, is_leaf),
         tensor_meta_(tensor_meta),
         consumer_parallel_distribution_constraint_(),
-        rpc_token_(Error::ValueError("invalid rpc token")) {}
+        transport_token_(Error::ValueError("invalid rpc token")) {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
   Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
-  Maybe<RpcToken> rpc_token_;
+  Maybe<TransportToken> transport_token_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
