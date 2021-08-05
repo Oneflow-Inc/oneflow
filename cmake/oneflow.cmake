@@ -254,22 +254,24 @@ if (BUILD_SHARED_LIBS)
   target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)
 endif()
 
+target_compile_options(of_ccobj PRIVATE -Werror=return-type)
+
 if (TREAT_WARNING_AS_ERROR)
-  target_compile_options(of_ccobj PUBLIC -Werror)
+  target_compile_options(of_ccobj PRIVATE -Werror)
 
   # TODO: remove it while fixing all deprecated call
-  target_compile_options(of_ccobj PUBLIC -Wno-error=deprecated-declarations)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=deprecated-declarations)
 
   # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
-  target_compile_options(of_ccobj PUBLIC -Wno-error=unused-const-variable)
-  target_compile_options(of_ccobj PUBLIC -Wno-error=unused-private-field)
-  target_compile_options(of_ccobj PUBLIC -Wno-error=unused-variable)
-  target_compile_options(of_ccobj PUBLIC -Wno-error=unused-local-typedef)
-  target_compile_options(of_ccobj PUBLIC -Wno-error=unused-lambda-capture)
-  target_compile_options(of_ccobj PUBLIC -Wno-error=instantiation-after-specialization)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-const-variable)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-private-field)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-variable)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-local-typedef)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-lambda-capture)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=instantiation-after-specialization)
 
   # TODO: remove it while `oneflow/user/kernels/upsample_kernel.h:141:9: error: implicit conversion from 'double' to 'int' changes value from -0.75 to 0 [-Wliteral-conversion]` is fixed
-  target_compile_options(of_ccobj PUBLIC -Wno-error=literal-conversion)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=literal-conversion)
 endif()
 
 # py ext lib
