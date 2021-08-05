@@ -38,7 +38,7 @@ class Thread {
   void JoinAllActor() { actor_thread_.join(); }
 
  protected:
-  Thread() = default;
+  Thread();
   std::thread& mut_actor_thread() { return actor_thread_; }
   void PollMsgChannel(const ThreadCtx& thread_ctx);
   void set_thrd_id(int64_t val) { thrd_id_ = val; }
@@ -53,7 +53,7 @@ class Thread {
   Channel<ActorMsg> msg_channel_;
   HashMap<int64_t, std::unique_ptr<Actor>> id2actor_ptr_;
   std::queue<ActorMsg> local_msg_queue_;
-
+  bool local_msg_queue_enabled_;
   int64_t thrd_id_;
 };
 

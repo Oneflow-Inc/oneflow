@@ -60,6 +60,7 @@ def is_deprecated(func_or_class):
     )
 
 
+from . import sbp
 import atexit
 
 import oneflow.framework.c_api_util
@@ -138,6 +139,8 @@ import oneflow.nn.modules.flip
 import oneflow.nn.modules.floor
 import oneflow.nn.modules.greater
 import oneflow.nn.modules.greater_equal
+import oneflow.nn.modules.logical_and
+import oneflow.nn.modules.logical_or
 import oneflow.nn.modules.in_top_k
 import oneflow.nn.modules.masked_select
 import oneflow.nn.modules.math_ops
@@ -257,6 +260,8 @@ from oneflow.nn.modules.gather import gather_op as gather
 from oneflow.nn.modules.gather_nd import gather_nd_op as gather_nd
 from oneflow.nn.modules.greater import greater_op as gt
 from oneflow.nn.modules.greater_equal import greater_equal_op as ge
+from oneflow.nn.modules.logical_and import logical_and_op as logical_and
+from oneflow.nn.modules.logical_or import logical_or_op as logical_or
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.less import less_op as lt
 from oneflow.nn.modules.less_equal import less_equal_op as le
@@ -356,4 +361,6 @@ from oneflow.ops.initializer_util import (
 )
 from oneflow.nn.modules.scatter import *
 
-from . import autograd, distributed, linalg, optim, saved_model, sbp
+from . import autograd, distributed, linalg, optim, saved_model
+import oneflow.utils.data
+import oneflow.utils.vision

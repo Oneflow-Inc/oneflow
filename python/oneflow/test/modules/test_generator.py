@@ -26,9 +26,10 @@ class TestGenerator(flow.unittest.TestCase):
         auto_gen = flow.Generator(device="auto")
         cpu_gen = flow.Generator(device="cpu")
         test_case.assertTrue(auto_gen.initial_seed(), cpu_gen.initial_seed())
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.UnimplementedException
+        ) as context:
             flow.Generator(device="invalid")
-        test_case.assertTrue("unimplemented" in str(context.exception))
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             cuda_gen = flow.Generator(device="cuda")
             test_case.assertTrue(auto_gen.initial_seed(), cuda_gen.initial_seed())
@@ -58,17 +59,21 @@ class TestDefaultGenerator(flow.unittest.TestCase):
     def test_different_devices(test_case):
         auto_gen = flow.default_generator(device="auto")
         cpu_gen = flow.default_generator(device="cpu")
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.UnimplementedException
+        ) as context:
             flow.default_generator(device="invalid")
-        test_case.assertTrue("unimplemented" in str(context.exception))
-        with test_case.assertRaises(Exception) as context:
+
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.CheckFailedException
+        ) as context:
             flow.default_generator(device="cpu:1000")
-        test_case.assertTrue("check_failed" in str(context.exception))
         test_gens = [cpu_gen]
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            with test_case.assertRaises(Exception) as context:
+            with test_case.assertRaises(
+                oneflow._oneflow_internal.exception.CheckFailedException
+            ) as context:
                 flow.default_generator(device="cuda:1000")
-            test_case.assertTrue("check_failed" in str(context.exception))
             cuda_gen = flow.default_generator(device="cuda")
             cuda0_gen = flow.default_generator(device="cuda:0")
             test_gens += [cuda_gen, cuda0_gen]

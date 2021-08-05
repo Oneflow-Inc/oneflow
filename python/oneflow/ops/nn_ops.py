@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import collections
+from collections import Sized
+
 
 def calc_pool_padding(padding, dhw_offset, ndims):
     if isinstance(padding, str):
@@ -33,7 +34,7 @@ def _GetSequence(value, n, name):
     """Formats value from input"""
     if value is None:
         value = [1]
-    elif not isinstance(value, collections.Sized):
+    elif not isinstance(value, Sized):
         value = [value]
     current_n = len(value)
     if current_n == 1:
