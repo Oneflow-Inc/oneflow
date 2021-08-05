@@ -13,22 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-from typing import Union
+from typing import Optional, Union
 import oneflow as flow
 
 
 class Randint(flow.nn.Module):
     def __init__(
         self,
-        low: flow.int32,
-        high: flow.int32,
+        low: flow.int64,
+        high: flow.int64,
         size: tuple,
         generator: flow.Generator = None,
-        dtype: flow.dtype = flow.int32,
+        dtype: flow.dtype = flow.int64,
         layout=None,
-        device: Union[str, flow.device] = "cpu",
-        requires_grad: bool = False,
+        device=None,
+        placement=None,
+        sbp=None,
+        requires_grad=False,
     ) -> None:
         super().__init__()
 
@@ -40,12 +41,29 @@ class Randint(flow.nn.Module):
                 "oneflow.randperm.layout",
                 "will not be used. Layout is not supported yet.",
             )
-        if isinstance(device, str):
-            self.device = flow.device(device)
-        else:
-            self.device = device
 
+        if isinstance(device, str):
+            device = flow.device(device)
         self.device = device
+        if placement is None:
+            if device is None:
+                self.device = flow.device("cpu")
+        else:
+            assert device is None
+        
+        self.placement = placement
+        self.sbp = sbp
+        if placement is not None:
+            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+            if isinstance(self.sbp, flow.sbp.sbp):
+                self.sbp = (self.sbp,)
+            else:
+                for elem in sbp:
+                    assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+            assert len(self.sbp) == len(placement.hierarchy)
+        else:
+            assert sbp is None, "sbp: %s" % sbp
+
         self.dtype = dtype
         self.requires_grad = requires_grad
         assert low < high
@@ -55,8 +73,12 @@ class Randint(flow.nn.Module):
         self.size = size
 
     def forward(self):
-        res = flow.F.randint(self.low, self.high, self.size, generator=self.generator)
-        res = res.to(self.device, dtype=self.dtype)
+        if self.placement is not None:
+            res = flow.F.consistent_randint(
+                self.low, self.high, self.placement, self.sbp, self.generator
+            )
+        else:
+            res = flow.F.randint(self.low, self.high, self.device, self.generator)
         res.requires_grad = self.requires_grad
         return res
 
@@ -68,8 +90,10 @@ def randint(
     generator: flow.Generator = None,
     dtype: flow.dtype = flow.int64,
     layout=None,
-    device: flow.device = flow.device("cpu"),
-    requires_grad: bool = False,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False
 ) -> flow.Tensor:
     r"""Returns a tensor filled with random integers generated uniformly from  :math:`[ \text{low},\text{high} )`.
     

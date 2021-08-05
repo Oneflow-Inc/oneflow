@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -27,7 +29,8 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/user/kernels/bernoulli_kernel.h"
 #include "oneflow/user/kernels/randint_kernel.h"
-
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/global_for.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -68,6 +71,7 @@ class RandintFunctor {
   RandintFunctor() { randint_op_ = CHECK_JUST(one::OpBuilder("randint").Output("out").Build()); }
 
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
@@ -84,19 +88,86 @@ class RandintFunctor {
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& randint_kernel_state = std::make_shared<RandintKernelState>(gen);
-    return OpInterpUtil::Dispatch<Tensor>(*randint_op_, {},
-                                          OpExprInterpContext{attrs, randint_kernel_state});
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(
+          *randint_op_, {}, OpExprInterpContext(attrs, device_symbol, randint_kernel_state));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*randint_op_, {},
+                                            OpExprInterpContext(attrs, randint_kernel_state));
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> randint_op_;
 };
 
+class ConsistentRandintFunctor {
+ public:
+  ConsistentRandintFunctor() { randint_op_ = CHECK_JUST(one::OpBuilder("randint").Output("out").Build()); }
+  Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const Optional<one::Generator>& generator) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<int64_t>("low", low));
+    JUST(attrs.SetAttr<int64_t>("high", high));
+
+
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& randint_kernel_state = std::make_shared<RandintKernelState>(gen);
+
+    const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
+
+    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(
+        *randint_op_, {},
+        OpExprInterpContext(attrs, placement, parallel_distribution, randint_kernel_state));
+  }
+
+  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
+      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
+                                 Symbol<cfg::ParallelDistribution>>
+        map;
+    auto iter = map.find(sbp_tuple);
+    if (iter == map.end()) {
+      cfg::ParallelDistribution parallel_distribution;
+      for (const auto& sbp_parallel : sbp_tuple) {
+        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
+      }
+      iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
+    }
+    return iter->second;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> randint_op_;
+};
+
+
+
+
+
+
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BernoulliFunctor>("Bernoulli");
   m.add_functor<impl::RandintFunctor>("Randint");
+  m.add_functor<impl::ConsistentRandintFunctor>("ConsistentRandint");
 };
 
 }  // namespace functional
