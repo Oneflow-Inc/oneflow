@@ -34,7 +34,6 @@ class AccCompActor final : public CompActor {
   std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;
   int32_t acc_cnt_;
   int32_t max_acc_cnt_;
-  int64_t next_piece_id_;
 };
 
 void AccCompActor::VirtualCompActorInit(const TaskProto& proto) {
@@ -62,7 +61,6 @@ void AccCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
   OF_SET_MSG_HANDLER(&AccCompActor::HandlerNormal);
   acc_cnt_ = 0;
   max_acc_cnt_ = max_acc_cnt;
-  next_piece_id_ = 0;
 }
 
 int64_t AccCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
@@ -97,12 +95,8 @@ void AccCompActor::Act() {
 
 void AccCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (acc_cnt_ == max_acc_cnt_) {
-    HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
-      regst->set_piece_id(next_piece_id_);
-      return true;
-    });
+    HandleProducedNaiveDataRegstToConsumer();
     acc_cnt_ = 0;
-    next_piece_id_ += 1;
   }
 }
 

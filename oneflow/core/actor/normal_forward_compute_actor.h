@@ -31,8 +31,6 @@ class NormalForwardCompActor final : public CompActor {
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void VirtualAsyncSendInplaceProducedRegstMsgToConsumer() override;
-
-  int64_t cur_piece_id_;
 };
 
 }  // namespace oneflow
