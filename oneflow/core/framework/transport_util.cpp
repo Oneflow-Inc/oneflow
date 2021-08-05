@@ -164,15 +164,10 @@ Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::s
 namespace {
 
 Maybe<int64_t> GetCurrentRankIndex(const std::vector<int64_t>& rank_heap) {
-  Optional<int64_t> current_rank_index{};
   for (int i = 0; i < rank_heap.size(); ++i) {
-    if (rank_heap.at(i) == GlobalProcessCtx::Rank()) {
-      current_rank_index = i;
-      break;
-    }
+    if (rank_heap.at(i) == GlobalProcessCtx::Rank()) { return i; }
   }
-  CHECK_OR_RETURN(current_rank_index.has_value());
-  return current_rank_index.value();
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
 }  // namespace

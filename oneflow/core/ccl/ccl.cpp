@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
@@ -29,14 +28,14 @@ Maybe<void> InitBroadcastRankHeap(std::vector<int64_t>* ranks, const ParallelDes
                                   int64_t root) {
   CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), parallel_desc.sorted_machine_ids().size());
   ranks->resize(parallel_desc.parallel_num());
-  Optional<int64_t> root_index;
+  int64_t root_index = -1;
   for (int64_t parallel_id = 0; parallel_id < parallel_desc.parallel_num(); ++parallel_id) {
     int64_t machine_id = JUST(parallel_desc.MachineId4ParallelId(parallel_id));
     if (machine_id == root) { root_index = parallel_id; }
     (*ranks)[parallel_id] = machine_id;
   }
-  CHECK_OR_RETURN(root_index.has_value());
-  std::swap((*ranks)[0], (*ranks)[JUST(root_index.value())]);
+  CHECK_NE_OR_RETURN(root_index, -1);
+  std::swap((*ranks)[0], (*ranks)[root_index]);
   return Maybe<void>::Ok();
 }
 
