@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 
 import oneflow as flow
-import torch
+import oneflow.unittest
 from automated_test_util import *
 
 

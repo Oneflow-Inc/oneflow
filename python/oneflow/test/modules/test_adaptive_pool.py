@@ -16,7 +16,8 @@ limitations under the License.
 import unittest
 
 import oneflow as flow
-from oneflow.python.nn.common_types import _size_1_t
+import oneflow.unittest
+from oneflow.nn.common_types import _size_1_t
 from packaging import version
 import torch as torch_original
 from typing import Union, Tuple
