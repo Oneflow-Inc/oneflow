@@ -456,6 +456,7 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
     const ComputeType row_max = BlockAllReduce<MaxOp, ComputeType, block_size>(thread_max);
     ComputeType thread_sum = 0;
     for (int col = tid; col < cols; col += block_size) { buf[col] = buf[col] - row_max; }
+    __syncthreads();
     if (!sub_result.empty()) {
       for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
         ComputeType pack[pack_size];
