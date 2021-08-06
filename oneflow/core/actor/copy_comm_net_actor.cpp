@@ -55,19 +55,11 @@ void CopyCommNetActor::ForEachCurCustomizedReadableRegst(
   handler(sequence_number2regst_ctx_.at(next_sequence_number_).regst_raw_ptr);
 }
 
-void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) const {
-  const RegstCtx& regst_ctx = sequence_number2regst_ctx_.at(next_sequence_number_);
-  CHECK(regst == regst_ctx.regst_raw_ptr);
-  info->set_regst_desc_id(in_regst_desc_id_);
-  info->set_act_id(regst_ctx.act_id);
-}
-
 bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg& msg) {
   RegstCtx regst_ctx;
   regst_ctx.comm_net_token = msg.comm_net_token();
   regst_ctx.regst_raw_ptr = msg.regst();
   regst_ctx.producer = msg.src_actor_id();
-  regst_ctx.act_id = msg.act_id();
   regst_ctx.has_sole_empty_blob = msg.has_sole_empty_blob();
   CHECK(sequence_number2regst_ctx_.emplace(msg.comm_net_sequence_number(), regst_ctx).second);
   return true;

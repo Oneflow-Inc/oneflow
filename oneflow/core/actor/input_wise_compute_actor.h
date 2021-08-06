@@ -32,7 +32,6 @@ class InputWiseCompActor : public CompActor {
   int64_t processed_regst_desc_id_cnt() const { return processed_regst_desc_id_cnt_; }
   int64_t RegstDescNum() const { return consumed_rs_.total_regst_desc_cnt(); }
   int64_t InBnId4RegstDescId(int64_t id) const { return regst_desc_id2in_bn_id_.at(id); }
-  int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
 
   bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
 

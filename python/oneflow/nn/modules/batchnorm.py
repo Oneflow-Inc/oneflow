@@ -149,33 +149,25 @@ class _BatchNorm(_NormBase):
             if self.bias:
                 affined = affined + bias
             return affined
-        elif self.track_running_stats:
-            return flow.F.normalization(
-                x,
-                self.running_mean,
-                self.running_var,
-                self.weight,
-                self.bias,
-                axis=1,
-                epsilon=self.eps,
-                momentum=self.momentum,
-                is_training=self.training,
-            )
         else:
-            reduce_axis = []
-            for dim in range(len(x.shape)):
-                if dim != 1:
-                    reduce_axis.append(dim)
+            if self.training:
+                is_training = True
+            else:
+                is_training = (self.running_mean is None) and (self.running_var is None)
             return flow.F.normalization(
                 x,
-                x.mean(dim=reduce_axis, keepdim=False),
-                x.var(dim=reduce_axis, keepdim=False),
+                self.running_mean
+                if not self.training or self.track_running_stats
+                else None,
+                self.running_var
+                if not self.training or self.track_running_stats
+                else None,
                 self.weight,
                 self.bias,
                 axis=1,
                 epsilon=self.eps,
                 momentum=self.momentum,
-                is_training=self.training,
+                is_training=is_training,
             )
 
 
