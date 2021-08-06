@@ -29,5 +29,4 @@ from oneflow.experimental.typing_check import (
 )
 from oneflow.experimental.unique_op import unique_with_counts
 from oneflow.framework.c_api_util import GetJobSet as get_job_set
-from oneflow.ops.assign_op import api_one_to_one_assign as eager_assign_121
 from oneflow.ops.util.custom_op_module import CustomOpModule as custom_op_module
