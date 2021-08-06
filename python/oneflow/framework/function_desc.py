@@ -91,9 +91,3 @@ def GetCurrentLazyGlobalFunctionDesc():
     assert ret is not None
     return ret
 
-
-# def api_current_global_function_desc() -> FunctionDesc:
-#     api_func = enable_if.unique(
-#         [GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc]
-#     )
-#     return api_func()

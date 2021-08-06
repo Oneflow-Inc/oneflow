@@ -480,27 +480,6 @@ def FeedValueToVariable(
         )
 
 
-# @session_ctx.try_init_default_session
-# def LoadVariables(value_dict: Dict[str, ValueContainer], ignore_mismatch: bool = True):
-#     """
-#     Load value in `value_dict` into oneflow variables.
-#     For example, if `value_dict` is {'x', np.ones(x_shape)},
-#     the value of variable "x" will all ones.
-#     If `ignore_mismatch` is False, an exception will be raised when
-#     there is a name in `value_dict` not belonging to any variable.
-#     """
-#     sync_default_session_if_normal()
-#     all_vars = GetAllVariables()
-#     for (name, value) in value_dict.items():
-#         if name in all_vars:
-#             var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(name)
-#             scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(var_blob)
-#             FeedValueToVariable(var_blob, value, scope_symbol_id)
-#         elif not ignore_mismatch:
-#             raise RuntimeError('"{}" is not a variable name'.format(name))
-#     oneflow._oneflow_internal.eager.single_client.Sync()
-
-
 def _ForEachSlice(
     container: ValueContainer,
     f: Union[
