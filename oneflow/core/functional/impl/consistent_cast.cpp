@@ -137,7 +137,7 @@ class LocalToConsistentFunctor {
     CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
     const auto& device = JUST(x->device());
     std::shared_ptr<one::Tensor> input = x;
-    // copy to right device
+    // copy to right device first if input's device type is wrong
     if (JUST(device->of_type()) != parallel_desc->device_tag()) {
       LOG(INFO)
           << "The device_type of the input tensor is different from placement, now copy it to "
@@ -145,11 +145,11 @@ class LocalToConsistentFunctor {
       input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                     GlobalProcessCtx::LocalRank()));
     }
-    // copy to default device of the current rank
+    // copy to default device of the current rank if input's device type is right but not on default
+    // device
     if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
-      LOG(INFO)
-          << "The tensor isn't on default device of the current rank., now copy it to "
-          << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+      LOG(INFO) << "The tensor isn't on default device of the current rank., now copy it to "
+                << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
       input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                     GlobalProcessCtx::LocalRank()));
     }

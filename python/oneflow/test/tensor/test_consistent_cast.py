@@ -34,7 +34,7 @@ class TestConsistentCast(flow.unittest.TestCase):
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
         test_case.assertTrue(consistent_tensor.to_local().device == device)
         test_case.assertTrue(consistent_tensor.placement == placement)
-    
+
     def test_local_to_consistent_with_wrong_device(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
         tensor = flow.Tensor(np_arr, dtype=flow.float32)
@@ -44,7 +44,6 @@ class TestConsistentCast(flow.unittest.TestCase):
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
         test_case.assertTrue(consistent_tensor.to_local().device == device)
         test_case.assertTrue(consistent_tensor.placement == placement)
-        
 
 
 if __name__ == "__main__":
