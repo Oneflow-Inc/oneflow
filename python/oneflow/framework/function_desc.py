@@ -90,4 +90,3 @@ def GetCurrentLazyGlobalFunctionDesc():
     ret = sess.GetLazyFunctionDesc(job_name)
     assert ret is not None
     return ret
-
