@@ -50,10 +50,11 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
-      CHECK_NOTNULL(segment_ids_modifier);
+      CHECK_NOTNULL_OR_RETURN(segment_ids_modifier);
       segment_ids_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t segment_ids_num_axes =
@@ -78,7 +79,8 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
     });
 
 REGISTER_USER_OP_GRAD("unsorted_batch_segment_sum")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       bool need_grad_data = op.NeedGenGradTensor4OpInput("data", 0);
       if (need_grad_data) {
         user_op::UserOpConfWrapperBuilder data_grad_builder(op.op_name() + "_grad");
@@ -91,6 +93,7 @@ REGISTER_USER_OP_GRAD("unsorted_batch_segment_sum")
         op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "data", 0);
         AddOp(data_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

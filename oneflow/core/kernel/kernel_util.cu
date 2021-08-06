@@ -655,6 +655,7 @@ __global__ void CastOnGpu<half, float>(const half* in, float* out, int64_t elem_
 
 template<typename T, typename U>
 void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num) {
+  if (elem_num == 0) { return; }
   if (std::is_same<T, U>::value) {
     Memcpy<DeviceType::kGPU>(ctx, out_dptr, in_dptr, elem_num * sizeof(T));
   } else {
@@ -667,6 +668,7 @@ void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_n
 template<>
 void CopyElemOnGpu<float, float16>(DeviceCtx* ctx, const float* in_dptr, float16* out_dptr,
                                    int64_t elem_num) {
+  if (RoundUp(elem_num, 2) == 0) { return; }
   CastOnGpu<float, half>
       <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kCudaThreadsNumPerBlock, 0,
          ctx->cuda_stream()>>>(in_dptr, reinterpret_cast<half*>(out_dptr), elem_num);
@@ -675,6 +677,7 @@ void CopyElemOnGpu<float, float16>(DeviceCtx* ctx, const float* in_dptr, float16
 template<>
 void CopyElemOnGpu<float16, float>(DeviceCtx* ctx, const float16* in_dptr, float* out_dptr,
                                    int64_t elem_num) {
+  if (RoundUp(elem_num, 2) == 0) { return; }
   CastOnGpu<half, float>
       <<<BlocksNum4ThreadsNum(RoundUp(elem_num, 2) / 2), kCudaThreadsNumPerBlock, 0,
          ctx->cuda_stream()>>>(reinterpret_cast<const half*>(in_dptr), out_dptr, elem_num);

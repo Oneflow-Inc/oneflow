@@ -89,7 +89,11 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
 void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   CudaCBEvent cb_event;
   cb_event.callback = std::move(callback);
-  OF_CUDA_CHECK(cudaEventCreateWithFlags(&(cb_event.event), cudaEventDisableTiming));
+  int flags = cudaEventDisableTiming;
+  if (ParseBooleanFromEnv("ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC", false)) {
+    flags |= cudaEventBlockingSync;
+  }
+  OF_CUDA_CHECK(cudaEventCreateWithFlags(&(cb_event.event), flags));
   OF_CUDA_CHECK(cudaEventRecord(cb_event.event, *cuda_stream()));
   cb_event_chan_->Send(cb_event);
 }

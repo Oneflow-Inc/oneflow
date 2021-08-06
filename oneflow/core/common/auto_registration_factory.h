@@ -47,7 +47,9 @@ struct AutoRegistrationFactory {
 
   Base* New(Key k, Args&&... args) const {
     auto creators_it = creators().find(k);
-    CHECK(creators_it != creators().end()) << "Unregistered: " << k;
+    CHECK(creators_it != creators().end())
+        << "Unregistered: key: " << k << "  Base type name:" << typeid(Base).name()
+        << "  Key type name" << typeid(Key).name();
     return creators_it->second(std::forward<Args>(args)...);
   }
 

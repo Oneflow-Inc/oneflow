@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/scope.cfg.h"
 
@@ -36,8 +37,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return CreateScopeSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
       }))
       .def_property_readonly("symbol_id", [](const Scope& x) { return x.symbol_id().GetOrThrow(); })
+      .def_property_readonly("_proto_str",
+                             [](const Scope& x) { return PbMessage2TxtString(x.scope_proto()); })
       .def("auto_increment_id", &Scope::auto_increment_id)
-      .def_property_readonly("session_id", &Scope::session_id)
       .def_property_readonly("session_id", &Scope::session_id)
       .def_property_readonly("job_desc_symbol", &Scope::job_desc_symbol)
       .def_property_readonly(

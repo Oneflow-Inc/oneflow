@@ -111,20 +111,16 @@ class Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardShape(const KernelCtx& ctx,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  void NaiveForwardShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   // TODO(niuchong) : rename ForwardDataContent to ForwardBody
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual bool IsStateless() const { return false; }
-  virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
-  virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
-  void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
-                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
  private:
   const JobDesc* job_desc_;
   RuntimeBlobShapeInferHelper* shape_infer_helper_;
   KernelConf kernel_conf_;
+  bool blob_access_checker_disabled_;
 };
 
 template<DeviceType device_type>
@@ -185,7 +181,14 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
                                          DEVICE_TYPE_SEQ, data_type_seq)};                   \
     DeviceType device_type =                                                                 \
         CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag())); \
-    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();                  \
+    auto key = GetHashKey(device_type, kernel_conf.data_type());                             \
+    auto it = creators.find(key);                                                            \
+    if (it == creators.end()) {                                                              \
+      LOG(FATAL) << "Error! Cannot find kernel creator: " << kernel_conf.DebugString()       \
+                 << " with device_type = " << device_type                                    \
+                 << ", dtype = " << kernel_conf.data_type();                                 \
+    }                                                                                        \
+    return (it->second)();                                                                   \
   }                                                                                          \
                                                                                              \
   REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                  \
@@ -203,7 +206,12 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
                                          DEVICE_TYPE_SEQ)};                                     \
     DeviceType device_type =                                                                    \
         CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag()));    \
-    return creators.at(device_type)();                                                          \
+    auto it = creators.find(device_type);                                                       \
+    if (it == creators.end()) {                                                                 \
+      LOG(FATAL) << "Error! Cannot find kernel creator: " << kernel_conf.DebugString()          \
+                 << " with device_type = " << device_type;                                      \
+    }                                                                                           \
+    return (it->second)();                                                                      \
   }                                                                                             \
                                                                                                 \
   REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                     \
@@ -220,7 +228,12 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
     static const HashMap<int, std::function<Kernel*()>> creators = {                    \
         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_CPU_KERNEL_CREATOR_ENTRY, (kernel_class), \
                                          data_type_seq)};                               \
-    return creators.at(kernel_conf.data_type())();                                      \
+    auto it = creators.find(kernel_conf.data_type());                                   \
+    if (it == creators.end()) {                                                         \
+      LOG(FATAL) << "Error! Cannot find kernel creator: " << kernel_conf.DebugString()  \
+                 << " with dtype = " << kernel_conf.data_type();                        \
+    }                                                                                   \
+    return (it->second)();                                                              \
   }                                                                                     \
                                                                                         \
   REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
@@ -237,7 +250,14 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
                                       (float16, DataType::kFloat16))};                       \
     DeviceType device_type =                                                                 \
         CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag())); \
-    return creators.at(GetHashKey(device_type, kernel_conf.data_type()))();                  \
+    auto key = GetHashKey(device_type, kernel_conf.data_type());                             \
+    auto it = creators.find(key);                                                            \
+    if (it == creators.end()) {                                                              \
+      LOG(FATAL) << "Error! Cannot find kernel creator: " << kernel_conf.DebugString()       \
+                 << " with device_type = " << device_type                                    \
+                 << ", dtype = " << kernel_conf.data_type();                                 \
+    }                                                                                        \
+    return (it->second)();                                                                   \
   }                                                                                          \
                                                                                              \
   REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                  \

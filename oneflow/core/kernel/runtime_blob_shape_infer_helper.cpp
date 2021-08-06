@@ -24,7 +24,7 @@ namespace oneflow {
 RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_conf,
                                                          const KernelConf& kernel_conf,
                                                          const JobDesc* job_desc) {
-  op_ = ConstructOp(op_conf);
+  op_ = CHECK_JUST(ConstructOp(op_conf));
   const OpAttribute& op_attribute = kernel_conf.op_attribute();
   if (op_attribute.has_parallel_conf_signature()
       && op_attribute.parallel_conf_signature().has_op_parallel_conf()) {

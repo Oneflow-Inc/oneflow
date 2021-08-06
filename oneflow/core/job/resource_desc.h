@@ -37,18 +37,12 @@ class ResourceDesc final {
   const std::set<int64_t>& process_ranks() const { return process_ranks_; }
   __attribute__((deprecated)) Machine machine(int32_t idx) const;
   size_t CommNetWorkerNum() const { return resource_.comm_net_worker_num(); }
-  size_t rdma_mem_block_byte() const { return resource_.rdma_mem_block_mbyte() * kMB; }
-  size_t rdma_recv_msg_buf_byte() const { return resource_.rdma_recv_msg_buf_mbyte() * kMB; }
   int32_t CpuDeviceNum() const { return resource_.cpu_device_num(); }
   int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
   int32_t MemZoneNum() const { return GpuDeviceNum() + 1; }
   int32_t MaxMdSaveWorkerNum() const { return resource_.max_mdsave_worker_num(); }
   size_t reserved_host_mem_byte() const { return resource_.reserved_host_mem_mbyte() * kMB; }
   size_t reserved_device_mem_byte() const { return resource_.reserved_device_mem_mbyte() * kMB; }
-  bool use_rdma() const { return resource_.use_rdma(); }
-  bool thread_enable_local_message_queue() const {
-    return resource_.thread_enable_local_message_queue();
-  }
   bool enable_thread_local_cache() const { return resource_.enable_thread_local_cache(); }
   size_t thread_local_cache_max_size() const { return resource_.thread_local_cache_max_size(); }
   int32_t ComputeThreadPoolSize() const;

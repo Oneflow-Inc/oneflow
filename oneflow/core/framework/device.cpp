@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/memory/memory_case_util.h"
@@ -60,25 +62,26 @@ Maybe<void> Device::Init() {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
-  Device device(type, device_id);
-  JUST(device.Init());
-  return SymbolOf(device);
+/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
+  return ThreadLocalGetOrNew(type, device_id);
 }
 
-/*static*/ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
-                                                             int64_t device_id) {
+/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
+                                                               int64_t device_id) {
   CHECK_GE_OR_RETURN(device_id, 0);
-  static thread_local HashMap<std::string, std::vector<Symbol<Device>>> type2device_id2device;
-  auto* vec = &type2device_id2device[type];
-  if (vec->size() <= device_id) { vec->resize(device_id + 1); }
-  auto* pptr = &vec->at(device_id);
-  if (!*pptr) { *pptr = JUST(New(type, device_id)); }
-  return *pptr;
+  static thread_local HashMap<std::string, HashMap<int64_t, Symbol<Device>>> map;
+  auto* device_id2symbol = &map[type];
+  auto iter = device_id2symbol->find(device_id);
+  if (iter == device_id2symbol->end()) {
+    Device device(type, device_id);
+    JUST(device.Init());
+    iter = device_id2symbol->emplace(device_id, SymbolOf(device)).first;
+  }
+  return iter->second;
 }
 
-/*static*/ Maybe<Symbol<Device>> Device::New(const std::string& type) {
-  return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
+/* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
+  return New(type, GlobalProcessCtx::LocalRank());
 }
 
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
@@ -87,7 +90,8 @@ const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
 
 Maybe<const std::string&> Device::of_type() const {
   static const HashMap<std::string, std::string> type2device_tag{
-      {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}, {"cuda_h2d", "gpu"}, {"cuda_d2h", "gpu"},
+      {"cpu", "cpu"},      {"cuda", "gpu"},     {"gpu", "gpu"},
+      {"cuda_h2d", "gpu"}, {"cuda_d2h", "gpu"}, {"nccl", "gpu"},
   };
   return MapAt(type2device_tag, type());
 }
@@ -96,7 +100,7 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},           {"cuda", "gpu.LocalCallOpKernel"},
       {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
-      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"},
+      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"}, {"nccl", "async.gpu.LocalCallOpKernel"},
   };
   return MapAt(type2instr_name, type);
 }

@@ -88,6 +88,7 @@ def common_cmake_args(cache_dir=None, extra_oneflow_cmake_args=None):
 
 
 def get_build_dir_arg(cache_dir, oneflow_src_dir):
+    return ""
     build_dir_real = os.path.join(cache_dir, "build")
     build_dir_mount = os.path.join(oneflow_src_dir, "build")
     return f"-v {build_dir_real}:{build_dir_mount}"
@@ -138,6 +139,7 @@ def get_common_docker_args(
     current_dir=None,
     house_dir=None,
     use_system_proxy=True,
+    inplace=False,
 ):
     root = Path(cache_dir)
     child = Path(current_dir)
@@ -150,7 +152,10 @@ def get_common_docker_args(
         house_dir_arg = f"-v {house_dir}:{house_dir}"
     build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
     proxy_env_arg = get_proxy_env_args() if use_system_proxy else ""
-    return f"-v {oneflow_src_dir}:{oneflow_src_dir} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir} --shm-size=8g"
+    inplace_attr = ""
+    if inplace == False:
+        inplace_attr = ":ro"
+    return f"-v {oneflow_src_dir}:{oneflow_src_dir}{inplace_attr} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir} --shm-size=8g"
 
 
 def build_third_party(
@@ -221,9 +226,23 @@ def build_oneflow(
     use_system_proxy,
     enter_bash,
     skip_audit,
+    inplace,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
+    oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
+    inplace_arg = ""
+    oneflow_python_dir_cmd = ""
+    if inplace == False:
+        oneflow_python_dir = "/tmp/oneflow_python"
+        inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
+        oneflow_python_dir_cmd = f"""
+        cp -r {oneflow_src_dir}/python {oneflow_python_dir}
+        cd {oneflow_python_dir}
+        git init
+        git clean -fXd
+        cd -
+        """
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -235,6 +254,7 @@ def build_oneflow(
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
             f"-DPython3_EXECUTABLE={python_bin}",
             oneflow_src_dir,
+            inplace_arg,
         ]
     )
     common_docker_args = get_common_docker_args(
@@ -243,6 +263,7 @@ def build_oneflow(
         current_dir=oneflow_build_dir,
         house_dir=house_dir,
         use_system_proxy=use_system_proxy,
+        inplace=inplace,
     )
     docker_cmd = (
         f"docker run --network=host --rm {common_docker_args} {extra_docker_args}"
@@ -254,6 +275,8 @@ export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64:$LD_LIBRARY_PATH
 export ONEFLOW_SRC_DIR={oneflow_src_dir}
+export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
+{oneflow_python_dir_cmd}
 export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
 """
     if enter_bash:
@@ -267,10 +290,9 @@ cmake --build . -j `nproc`
         pass
     else:
         bash_cmd += f"""
-rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
-cd {oneflow_src_dir}
-rm -rf build/*
-{python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
+cd {oneflow_python_dir}
+{python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --package_name {package_name}
+cd -
 """
     if skip_audit:
         bash_cmd += f"""
@@ -358,6 +380,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
     parser.add_argument("--bash", default=False, action="store_true", required=False)
+    parser.add_argument("--inplace", default=False, action="store_true", required=False)
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     if args.skip_img:
@@ -508,6 +531,7 @@ gcc --version
                     args.use_system_proxy,
                     args.bash,
                     args.skip_audit,
+                    args.inplace,
                 )
 
         try:

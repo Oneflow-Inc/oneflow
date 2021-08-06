@@ -24,8 +24,8 @@ namespace oneflow {
 namespace user_op {
 
 using AddOpFn = std::function<void(const UserOpConfWrapper&)>;
-using GenBackwardOpConfFn = std::function<void(const UserOpWrapper&, AddOpFn)>;
-using BackwardOpConfGenFn = std::function<void(BackwardOpConfContext*)>;
+using GenBackwardOpConfFn = std::function<Maybe<void>(const UserOpWrapper&, AddOpFn)>;
+using BackwardOpConfGenFn = std::function<Maybe<void>(BackwardOpConfContext*)>;
 
 struct OpGradRegistryResult {
   std::string op_type_name;

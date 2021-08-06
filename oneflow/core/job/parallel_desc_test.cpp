@@ -25,29 +25,31 @@ namespace test {
 
 namespace {
 
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
-}
-
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+struct GlobaProcessCtxScope final {
+  GlobaProcessCtxScope(int64_t node_size, int64_t world_size) {
+    Global<ProcessCtx>::New();
+    auto* ctx = Global<ProcessCtx>::Get();
+    for (int i = 0; i < world_size; ++i) { ctx->mutable_ctrl_addr()->Add(); }
+    ctx->set_rank(0);
+    ctx->set_node_size(node_size);
+  }
+  ~GlobaProcessCtxScope() { Global<ProcessCtx>::Delete(); }
+};
 
 }  // namespace
 
 TEST(ParallelDesc, continuous_1n4d) {
-  InitNumProcessPerNode();
+  GlobaProcessCtxScope scope(1, 4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
-  DestroyNumProcessPerNode();
 }
 
 TEST(ParallelDesc, continuous_1n4d_multi_process) {
-  InitNumProcessPerNode();
-  Global<NumProcessPerNode>::Get()->set_value(4);
+  GlobaProcessCtxScope scope(1, 4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
@@ -59,12 +61,10 @@ TEST(ParallelDesc, continuous_1n4d_multi_process) {
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 1), 1);
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 2), 1);
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 3), 1);
-  DestroyNumProcessPerNode();
 }
 
 TEST(ParallelDesc, continuous_1n4d_multi_process_with_rank) {
-  InitNumProcessPerNode();
-  Global<NumProcessPerNode>::Get()->set_value(4);
+  GlobaProcessCtxScope scope(1, 4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("@0:0-3");
@@ -74,11 +74,10 @@ TEST(ParallelDesc, continuous_1n4d_multi_process_with_rank) {
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
   ASSERT_EQ(machine_ids.size(), 1);
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 0), 1);
-  DestroyNumProcessPerNode();
 }
 
 TEST(ParallelDesc, discrete_1n4d) {
-  InitNumProcessPerNode();
+  GlobaProcessCtxScope scope(1, 4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
@@ -86,11 +85,10 @@ TEST(ParallelDesc, discrete_1n4d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
-  DestroyNumProcessPerNode();
 }
 
 TEST(ParallelDesc, continuous_2n8d) {
-  InitNumProcessPerNode();
+  GlobaProcessCtxScope scope(2, 8);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
@@ -98,11 +96,10 @@ TEST(ParallelDesc, continuous_2n8d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 8);
-  DestroyNumProcessPerNode();
 }
 
 TEST(ParallelDesc, discrete_2n8d) {
-  InitNumProcessPerNode();
+  GlobaProcessCtxScope scope(2, 8);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
@@ -112,7 +109,6 @@ TEST(ParallelDesc, discrete_2n8d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 8);
-  DestroyNumProcessPerNode();
 }
 
 }  // namespace test

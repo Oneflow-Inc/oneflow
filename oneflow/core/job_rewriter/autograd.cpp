@@ -290,7 +290,7 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     instance_num_op_conf->set_x(GenLogicalBlobName(loss_lbi));
     instance_num_op_conf->set_y("y");
     instance_num_op_conf->set_data_type(op_node->LogicalBlobDesc4Lbi(loss_lbi).data_type());
-    instance_num_op_conf->mutable_include_axis_conf()->add_axis(0);
+    instance_num_op_conf->mutable_include_axis_conf();
     instance_num_op.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
     lbi->set_op_name(instance_num_op.name());
@@ -401,11 +401,11 @@ void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_p
   }
 }
 
-void CalcFwBwObaPairs(const OpGraph& op_graph,
-                      const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
-                      const HashMap<OpBlobArg, LogicalBlobId>& out_oba2out_diff_lbi,
-                      const HashMap<OpBlobArg, LogicalBlobId>& out_oba2clone_bw_add_out_lbi,
-                      const JobBuilder& job_builder, OpBlobArgPairs* fw_bw_oba_pairs) {
+Maybe<void> CalcFwBwObaPairs(const OpGraph& op_graph,
+                             const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
+                             const HashMap<OpBlobArg, LogicalBlobId>& out_oba2out_diff_lbi,
+                             const HashMap<OpBlobArg, LogicalBlobId>& out_oba2clone_bw_add_out_lbi,
+                             const JobBuilder& job_builder, OpBlobArgPairs* fw_bw_oba_pairs) {
   HashMap<LogicalBlobId, OpBlobArg> in_diff_lbi2in_oba;
   op_graph.ReverseTopoForEachNode([&](OpNode* op_node) {
     const auto& op = op_node->op();
@@ -432,7 +432,7 @@ void CalcFwBwObaPairs(const OpGraph& op_graph,
   for (const auto& pair : out_oba2clone_bw_add_out_lbi) {
     CHECK(clone_bw_add_out_lbi2out_oba.emplace(pair.second, pair.first).second);
   }
-  job_builder.ForEachOperator([&](const Operator& op) {
+  JUST(job_builder.ForEachOperator([&](const Operator& op) -> Maybe<void> {
     for (const auto& ibn : op.input_bns()) {
       const auto& out_oba_it = out_diff_lbi2out_oba.find(op.BnInOp2Lbi(ibn));
       if (out_oba_it == out_diff_lbi2out_oba.end()) { continue; }
@@ -457,7 +457,9 @@ void CalcFwBwObaPairs(const OpGraph& op_graph,
         *pair->mutable_second() = clone_out_oba_it->second;
       }
     }
-  });
+    return Maybe<void>::Ok();
+  }));
+  return Maybe<void>::Ok();
 }
 
 void InitOutOba2OutDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph,
@@ -845,8 +847,8 @@ Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_b
     }
   }
   OpBlobArgPairs fw_bw_oba_pairs;
-  CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, out_oba2clone_bw_add_out_lbi,
-                   *job_builder, &fw_bw_oba_pairs);
+  JUST(CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi,
+                        out_oba2clone_bw_add_out_lbi, *job_builder, &fw_bw_oba_pairs));
   BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, identical_sbp_oba_pairs);
   CalcOutLbi2OutDiffLbi(op_graph, out_oba2out_diff_lbi, out_lbi2out_diff_lbi);
   return Maybe<void>::Ok();

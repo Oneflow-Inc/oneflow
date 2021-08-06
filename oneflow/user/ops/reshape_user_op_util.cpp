@@ -70,7 +70,7 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
     HashMap<int, int>* group_start_in_axis2out_axis) {
   CHECK_NE_OR_RETURN(in_shape.NumAxes(), 0);
   CHECK_NE_OR_RETURN(out_shape.NumAxes(), 0);
-  CHECK_EQ(in_shape.elem_cnt(), out_shape.elem_cnt());
+  CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt());
   int in_axis = in_shape.NumAxes() - 1;
   int out_axis = out_shape.NumAxes() - 1;
   while (in_axis >= 0 && out_axis >= 0) {

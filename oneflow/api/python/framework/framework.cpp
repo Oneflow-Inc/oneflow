@@ -22,8 +22,10 @@ limitations under the License.
 namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("RegisterForeignCallbackOnlyOnce", &RegisterForeignCallbackOnlyOnce);
-  m.def("RegisterWatcherOnlyOnce", &RegisterWatcherOnlyOnce);
+  m.def("RegisterGlobalForeignCallback", &RegisterGlobalForeignCallback);
+  m.def("DestroyGlobalForeignCallback", &DestroyGlobalForeignCallback);
+  m.def("RegisterGlobalWatcher", &RegisterGlobalWatcher);
+  m.def("DestroyGlobalWatcher", &DestroyGlobalWatcher);
   m.def("LaunchJob", &LaunchJob, py::call_guard<py::gil_scoped_release>());
 
   m.def("GetSerializedInterUserJobInfo",

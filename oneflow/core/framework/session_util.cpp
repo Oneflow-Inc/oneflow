@@ -31,14 +31,14 @@ HashMap<int64_t, std::shared_ptr<Session>>* GlobalId2SessionMap() {
   return &id2session_map;
 }
 
-int64_t* DefaultSessionId() {
-  static int64_t default_sess_id;
+std::vector<int64_t>* RegsiteredSessionIds() {
+  static std::vector<int64_t> default_sess_id;
   return &default_sess_id;
 }
 
 Maybe<void> SetDefaultSessionId(int64_t val) {
-  int64_t* id = DefaultSessionId();
-  *id = val;
+  std::vector<int64_t>* ids = RegsiteredSessionIds();
+  ids->push_back(val);
   return Maybe<void>::Ok();
 }
 
@@ -78,7 +78,12 @@ Maybe<bool> Session::IsConsistentStrategyEnabled() const {
          && !is_mirrored_strategy_enabled_stack_->back();
 }
 
-Maybe<int64_t> GetDefaultSessionId() { return *(DefaultSessionId()); }
+Maybe<int64_t> GetDefaultSessionId() {
+  std::unique_lock<std::mutex> lock(*GlobalSessionUtilMutex());
+  const auto& regsitered_ids = *(RegsiteredSessionIds());
+  CHECK_GT_OR_RETURN(regsitered_ids.size(), 0);
+  return regsitered_ids.back();
+}
 
 Maybe<Session> RegsiterSession(int64_t id) {
   std::shared_ptr<Session> sess = std::make_shared<Session>(id);
@@ -91,8 +96,10 @@ Maybe<Session> RegsiterSession(int64_t id) {
 }
 
 Maybe<Session> GetDefaultSession() {
-  int64_t default_sess_id = JUST(GetDefaultSessionId());
   std::unique_lock<std::mutex> lock(*GlobalSessionUtilMutex());
+  const auto& regsitered_ids = *(RegsiteredSessionIds());
+  CHECK_GT_OR_RETURN(regsitered_ids.size(), 0);
+  int64_t default_sess_id = regsitered_ids.back();
   auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(default_sess_id) != id2session_map->end());
   return id2session_map->at(default_sess_id);
@@ -103,6 +110,12 @@ Maybe<void> ClearSessionById(int64_t id) {
   auto* id2session_map = GlobalId2SessionMap();
   CHECK_OR_RETURN(id2session_map->find(id) != id2session_map->end());
   id2session_map->erase(id);
+  auto* sess_ids = RegsiteredSessionIds();
+  int32_t i = 0;
+  for (; i < sess_ids->size(); ++i) {
+    if (sess_ids->at(i) == id) { break; }
+  }
+  sess_ids->erase(sess_ids->begin() + i);
   return Maybe<void>::Ok();
 }
 
