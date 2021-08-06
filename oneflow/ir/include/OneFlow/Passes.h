@@ -33,6 +33,9 @@ namespace mlir {
 namespace oneflow {
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module);
+#ifdef WITH_CUDA
+LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module);
+#endif  // WITH_CUDA
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 
 }  // namespace oneflow

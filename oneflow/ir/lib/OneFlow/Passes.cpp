@@ -41,6 +41,10 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+#ifdef WITH_CUDA
+#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
+#endif  // WITH_CUDA
 
 using namespace mlir;
 using namespace mlir::oneflow;
@@ -166,6 +170,30 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   pm.addPass(createLowerToLLVMPass());                            // convert-std-to-llvm
   return pm.run(module);
 }
+
+#ifdef WITH_CUDA
+LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module) {
+  mlir::PassManager pm(context);
+  pm.addPass(createLowerOneFlowToTosaPass());                     // lower-oneflow-to-tosa
+  pm.addPass(createCSEPass());                                    // cse
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());  // tosa-to-linalg-on-tensors
+  pm.addNestedPass<FuncOp>(createLinalgFusionOfTensorOpsPass());  // linalg-fusion-for-tensor-ops
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());          // linalg-bufferize
+  pm.addNestedPass<FuncOp>(createTensorBufferizePass());          // tensor-bufferize
+  pm.addPass(createTensorConstantBufferizePass());                // tensor-constant-bufferize
+  pm.addPass(createFuncBufferizePass());                          // func-bufferize
+  pm.addPass(createBufferResultsToOutParamsPass());               // buffer-results-to-out-params
+  pm.addNestedPass<FuncOp>(
+      createConvertLinalgToParallelLoopsPass());      // convert-linalg-to-parallel-loops
+  pm.addNestedPass<FuncOp>(createMapSCFToGPUPass());  // gpu-greedy-parallel-loop-mapping
+  pm.addPass(createParallelLoopToGpuPass());          // convert-parallel-loops-to-gpu
+  pm.addPass(createConvertLinalgToLLVMPass());        // convert-linalg-to-llvm
+  pm.addPass(createGpuKernelOutliningPass());         // gpu-kernel-outlining
+  pm.addPass(createMemRefToLLVMPass());               // convert-memref-to-llvm
+  pm.addPass(createLowerToLLVMPass());                // convert-std-to-llvm
+  return pm.run(module);
+}
+#endif  // WITH_CUDA
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<OutlineFuseCastScale>(patterns.getContext());
