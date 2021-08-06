@@ -39,8 +39,7 @@ Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
                        *CHECK_JUST(UniqueStr("hierarchical_parallel_cast")))
                  .Input("in")
                  .Output("out")
-                 .Attr<std::vector<std::string>>("parallel_distribution",
-                                                 parallel_distribution)
+                 .Attr<std::vector<std::string>>("parallel_distribution", parallel_distribution)
                  .Attr<std::string>("grad_mode", "restore")
                  .Attr<std::vector<std::string>>("grad_parallel_distribution",
                                                  std::vector<std::string>())

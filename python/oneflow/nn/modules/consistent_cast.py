@@ -69,7 +69,9 @@ def to_consistent_op(input, placement=None, sbp=None, shape=None, grad_sbp=None)
         assert (
             placement is not None or sbp is not None
         ), "Converting a consistent tensor to consistent tensor must have at least one of placement and sbp parameters!"
-        assert (shape is None), "Converting a consistent tensor to consistent tensor can't have shape parameters!"
+        assert (
+            shape is None
+        ), "Converting a consistent tensor to consistent tensor can't have shape parameters!"
         placement = input.placement if placement is None else placement
         sbp = input.sbp if sbp is None else sbp
     return flow.F.to_consistent(input, placement, sbp, shape, grad_sbp)

@@ -153,10 +153,9 @@ Maybe<Tensor> ConsistentToConsistent(
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  static std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> grad_sbp_parallels_ptr = std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>();
-  if (grad_sbp_parallels) {
-    grad_sbp_parallels_ptr = JUST(grad_sbp_parallels.value());
-  }
+  static std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> grad_sbp_parallels_ptr =
+      std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>();
+  if (grad_sbp_parallels) { grad_sbp_parallels_ptr = JUST(grad_sbp_parallels.value()); }
   const auto& parallel_distribution_cast_op_expr =
       JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels, *grad_sbp_parallels_ptr));
   const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
@@ -197,10 +196,10 @@ class ToConsistentFunctor {
         CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           Symbol<ParallelDesc> parallel_desc,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                           const Optional<Shape>& shape, const Optional<std::vector<Symbol<cfg::SbpParallel>>>& grad_sbp_parallels) const {
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& x, Symbol<ParallelDesc> parallel_desc,
+      const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels, const Optional<Shape>& shape,
+      const Optional<std::vector<Symbol<cfg::SbpParallel>>>& grad_sbp_parallels) const {
     if (x->is_consistent()) {
       return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
