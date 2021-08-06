@@ -186,7 +186,22 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
   ~MlirJitGpuKernel() = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {}
+  void Compute(user_op::KernelComputeContext* ctx) const override {  // TODO: extract a function
+    mlir::DialectRegistry registry;
+    registry.insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect,
+                    mlir::memref::MemRefDialect, mlir::tosa::TosaDialect,
+                    mlir::linalg::LinalgDialect>();
+    mlir::registerLLVMDialectTranslation(registry);
+    mlir::MLIRContext mlir_ctx(registry);
+    mlir::OwningModuleRef module =
+        mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"), &mlir_ctx);
+    CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
+    if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(&mlir_ctx, *module)))
+        << "fail to lower OneFlow to LLVM";
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
