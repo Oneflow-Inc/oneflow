@@ -103,7 +103,7 @@ def _str(self):
 
 
 def _repr(self):
-    return tensor_str_util._str_intern(self)
+    return tensor_str_util._gen_tensor_str(self)
 
 
 def _gt(self, other):

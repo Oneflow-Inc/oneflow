@@ -102,63 +102,65 @@ def set_printoptions(
 class _Formatter(object):
     def __init__(self, tensor):
         self.floating_dtype = tensor.dtype.is_floating_point
-        self.int_mode = False
+        self.int_mode = True
         self.sci_mode = False
         self.max_width = 1
+        self.random_sample_num = 50
 
         with flow.no_grad():
             tensor_view = tensor.reshape([-1])
 
-        # TODO: calculate max_width
-        self.max_width = 7
-        #  if not self.floating_dtype:
-        #      for value in tensor_view:
-        #          value_str = '{}'.format(value)
-        #          self.max_width = max(self.max_width, len(value_str))
+        if not self.floating_dtype:
+            # TODO: verify int type tensor
+            max_value = tensor.abs().max().numpy()
+            value_str = '{}'.format(max_value)
+            self.max_width = max(self.max_width, len(value_str))
 
-        #  else:
-        #      nonzero_finite_vals = flow.masked_select(tensor_view, tensor_view.ne(0))
+        else:
+            nonzero_finite_vals = flow.masked_select(tensor_view, tensor_view.ne(0))
+            if tensor_view.numel() == 0:
+                # no valid number, do nothing
+                return
 
-        #      if nonzero_finite_vals.numel() == 0:
-        #          # no valid number, do nothing
-        #          return
+            # Convert to double for easy calculation. HalfTensor overflows with 1e8, and there's no div() on CPU.
+            nonzero_finite_abs = nonzero_finite_vals.abs()
+            nonzero_finite_min = nonzero_finite_abs.min().numpy()
+            nonzero_finite_max = nonzero_finite_abs.max().numpy()
 
-        #      # Convert to double for easy calculation. HalfTensor overflows with 1e8, and there's no div() on CPU.
-        #      nonzero_finite_abs = nonzero_finite_vals.abs()
-        #      nonzero_finite_min = nonzero_finite_abs.min()
-        #      nonzero_finite_max = nonzero_finite_abs.max()
-        #      nonzero_finite_mean = nonzero_finite_abs.mean()
+            # Determines use int mode or not
+            self.random_sample_num = min(self.random_sample_num, tensor_view.numel())
+            rand_idx = np.random.randint(tensor_view.numel(), size=[self.random_sample_num]).tolist()
+            sample_data = nonzero_finite_abs[rand_idx].numpy()
+            for value in sample_data:
+                if value != np.ceil(value):
+                    self.int_mode = False
+                    break
 
-        #      for value in nonzero_finite_vals:
-        #          if value != flow.ceil(value):
-        #              self.int_mode = False
-        #              break
+            if self.int_mode:
+                # in int_mode for floats, all numbers are integers, and we append a decimal to nonfinites
+                # to indicate that the tensor is of floating type. add 1 to the len to account for this.
+                if nonzero_finite_max / nonzero_finite_min > 1000. or nonzero_finite_max > 1.e8:
+                    self.sci_mode = True
+                    value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(nonzero_finite_max)
+                    self.max_width = max(self.max_width, len(value_str))
+                else:
+                    value_str = ('{:.0f}').format(nonzero_finite_max)
+                    self.max_width = max(self.max_width, len(value_str))
+            else:
+                # Check if scientific representation should be used.
+                if nonzero_finite_max / nonzero_finite_min > 1000.\
+                        or nonzero_finite_max > 1.e8\
+                        or nonzero_finite_min < 1.e-4:
+                    self.sci_mode = True
+                    for value in (nonzero_finite_max, nonzero_finite_min):
+                        value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
+                        self.max_width = max(self.max_width, len(value_str))
+                else:
+                    value_str = ('{{:.{}f}}').format(PRINT_OPTS.precision).format(nonzero_finite_max)
+                    self.max_width = max(self.max_width, len(value_str))
 
-        #      if self.int_mode:
-        #          # in int_mode for floats, all numbers are integers, and we append a decimal to nonfinites
-        #          # to indicate that the tensor is of floating type. add 1 to the len to account for this.
-        #          if nonzero_finite_max / nonzero_finite_min > 1000. or nonzero_finite_max > 1.e8:
-        #              self.sci_mode = True
-        #              for value in nonzero_finite_vals:
-        #                  value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
-        #                  self.max_width = max(self.max_width, len(value_str))
-        #          else:
-        #              for value in nonzero_finite_vals:
-        #                  value_str = ('{:.0f}').format(value)
-        #                  self.max_width = max(self.max_width, len(value_str) + 1)
-        #      else:
-        #          # Check if scientific representation should be used.
-        #          if nonzero_finite_max / nonzero_finite_min > 1000.\
-        #                  or nonzero_finite_max > 1.e8\
-        #                  or nonzero_finite_min < 1.e-4:
-        #              self.sci_mode = True
-        #              for value in nonzero_finite_vals:
-        #                  value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
-        #                  self.max_width = max(self.max_width, len(value_str))
-        #          else:
-        #              for value in nonzero_finite_vals:
-        #                  value_str = ('{{:.{}f}}').format(PRINT_OPTS.precision).format(value)
-        #                  self.max_width = max(self.max_width, len(value_str))
+        # add singal position
+        self.max_width += 1
 
         if PRINT_OPTS.sci_mode is not None:
             self.sci_mode = PRINT_OPTS.sci_mode
@@ -288,7 +290,7 @@ def cat_data(inp):
 
 
 def get_summarized_data(self):
-    # TODO: support consistent slice and delete this assert
+    # TODO: supports consistent slice and delete this assert
     assert self.is_local
 
     dim = self.dim()
@@ -309,7 +311,7 @@ def get_summarized_data(self):
         return flow.stack([get_summarized_data(x) for x in self])
 
 
-def _str_intern(inp):
+def _gen_tensor_str(inp):
     prefix = "tensor("
     indent = len(prefix)
     suffixes = []
@@ -337,38 +339,3 @@ def _str_intern(inp):
 
     return _add_suffixes(prefix + tensor_str, suffixes, indent)
 
-
-def _add_suffixes_deprecated(tensor_str, suffixes, indent):
-    tensor_strs = [tensor_str]
-    last_line_len = len(tensor_str) - tensor_str.rfind("\n") + 1
-    linewidth = 80
-    for suffix in suffixes:
-        suffix_len = len(suffix)
-        if last_line_len + suffix_len + 2 > linewidth:
-            tensor_strs.append(",\n" + " " * indent + suffix)
-            last_line_len = indent + suffix_len
-        else:
-            tensor_strs.append(", " + suffix)
-            last_line_len += suffix_len + 2
-    tensor_strs.append(")")
-    return "".join(tensor_strs)
-
-
-def _gen_tensor_str(tensor):
-    prefix = "tensor("
-    indent = len(prefix)
-    suffixes = []
-    if tensor.device.type != "cpu" or (
-        tensor.device.type == "cuda" and tensor.device.index != 0
-    ):
-        suffixes.append("device='" + str(tensor.device) + "'")
-    suffixes.append("dtype=" + str(tensor.dtype))
-    if tensor.grad_fn is not None:
-        name = tensor.grad_fn.name()
-        suffixes.append("grad_fn=<{}>".format(name))
-    elif tensor.requires_grad:
-        suffixes.append("requires_grad=True")
-    tensor_str = np.array2string(
-        tensor.numpy(), precision=4, separator=", ", prefix=prefix
-    )
-    return _add_suffixes(prefix + tensor_str, suffixes, indent)
