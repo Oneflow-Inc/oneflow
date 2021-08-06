@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/of_api_registry.h"
@@ -148,48 +147,6 @@ py::object PySub(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
-py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
-  // Scatter(Tensor input, Int32 dim, Tensor index, Tensor src)
-  // Scatter(Tensor input, Int32 dim, Tensor index, float src)
-
-  PyObject* args = py_args.ptr();
-  size_t nargs = PyTuple_Size(args);
-  CHECK_EQ_OR_THROW(nargs, 4) << "4 positional inputs are required.";
-
-  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
-    PyObject* input = PyTuple_GetItem(args, 0);
-    PyObject* dim = PyTuple_GetItem(args, 1);
-    PyObject* index = PyTuple_GetItem(args, 2);
-    PyObject* src = PyTuple_GetItem(args, 3);
-
-    CHECK_OR_RETURN(PyTensorCheck(input)) << "input type should be Tensor";
-    const auto& in = JUST(PyUnpackTensor(input));
-
-    CHECK_OR_RETURN(PyScalarCheck(dim)) << "dim type should be Scalar";
-    Scalar dim_scalar = *JUST(PyUnpackScalar(dim));
-    int32_t d = JUST(dim_scalar.As<int32_t>());
-
-    CHECK_OR_RETURN(PyTensorCheck(index)) << "index type should be Tensor";
-    const auto& idx = JUST(PyUnpackTensor(index));
-
-    bool is_src_scalar = PyScalarCheck(src);
-    bool is_src_tensor = PyTensorCheck(src);
-
-    if (is_src_tensor) {
-      const auto& src_tensor = JUST(PyUnpackTensor(src));
-      return functional::DimScatter(in, idx, src_tensor, d);
-    } else if (is_src_scalar) {
-      Scalar src_scalar = *JUST(PyUnpackScalar(src));
-      return functional::DimScatterUpdateScalar(in, idx, JUST(src_scalar.As<float>()), d);
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "none of:\n"
-                                     "(Tensor input, Int32 dim, Tensor index, Tensor src)\n"
-                                     "(Tensor input, Int32 dim, Tensor index, float src)";
-    }
-  }();
-  return py::cast(result.GetPtrOrThrow());
-}
-
 py::object PyMul(py::args py_args, py::kwargs py_kwargs) {
   // "Mul(Tensor input, Tensor other, *, bool inplace=False)"
   // "Mul(Tensor input, Scalar other, *, bool inplace=False)"
@@ -231,49 +188,6 @@ py::object PyMul(py::args py_args, py::kwargs py_kwargs) {
       return functional::ScalarMul(b, a);
     }
   }();
-  return py::cast(result.GetPtrOrThrow());
-}
-
-py::object PyClamp(py::args py_args, py::kwargs py_kwargs) {
-  PyObject* args = py_args.ptr();
-  size_t nargs = PyTuple_Size(args);
-  CHECK_EQ_OR_THROW(nargs, 3) << "3 positional inputs are required.";
-
-  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
-    PyObject* input = PyTuple_GetItem(args, 0);
-    PyObject* min = PyTuple_GetItem(args, 1);
-    PyObject* max = PyTuple_GetItem(args, 2);
-
-    CHECK_OR_RETURN(PyTensorCheck(input)) << "input type should be Tensor";
-    const auto& in = JUST(PyUnpackTensor(input));
-
-    bool has_min_bound = PyScalarCheck(min);
-    bool has_max_bound = PyScalarCheck(max);
-    Optional<Scalar> min_scalar;
-    Optional<Scalar> max_scalar;
-
-    if (has_min_bound && has_max_bound) {
-      min_scalar = *JUST(PyUnpackScalar(min));
-      Scalar min_value = *JUST(min_scalar.value());
-      max_scalar = *JUST(PyUnpackScalar(max));
-      Scalar max_value = *JUST(max_scalar.value());
-
-      return functional::ClipByScalar(in, min_value, max_value);
-    } else if (has_min_bound && !has_max_bound) {
-      min_scalar = *JUST(PyUnpackScalar(min));
-      Scalar min_value = *JUST(min_scalar.value());
-
-      return functional::ClipByScalarMin(in, min_value);
-    } else if (!has_min_bound && has_max_bound) {
-      max_scalar = *JUST(PyUnpackScalar(max));
-      Scalar max_value = *JUST(max_scalar.value());
-
-      return functional::ClipByScalarMax(in, max_value);
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "min and max cannot be none at the same time";
-    }
-  }();
-
   return py::cast(result.GetPtrOrThrow());
 }
 
@@ -330,27 +244,98 @@ py::object PyPow(py::args py_args, py::kwargs py_kwargs) {
     PyObject* input = PyTuple_GetItem(args, 0);
     PyObject* exponent = PyTuple_GetItem(args, 1);
 
-    CHECK_OR_RETURN(PyTensorCheck(input)) << "input type should be Tensor";
+    CHECK_OR_RETURN(PyTensorCheck(input)) << "input should be a Tensor.";
     const auto& in = JUST(PyUnpackTensor(input));
 
     bool is_exponent_scalar = PyScalarCheck(exponent);
     bool is_exponent_tensor = PyTensorCheck(exponent);
 
     CHECK_OR_RETURN(is_exponent_scalar || is_exponent_tensor)
-        << "exponent should be Tensor or scalar";
+        << "exponent should be a scalar or Tensor.";
 
     if (is_exponent_scalar) {
       Scalar exponent_scalar = *JUST(PyUnpackScalar(exponent));
       return functional::ScalarPow(in, exponent_scalar);
     } else if (is_exponent_tensor) {
       const auto& exp = JUST(PyUnpackTensor(exponent));
-      CHECK_OR_RETURN(*(exp->shape()) == *(in->shape())) << "shape of input and exp should be same";
+      CHECK_OR_RETURN(*(exp->shape()) == *(in->shape()))
+          << "shape of input and exp should be same.";
       return functional::Pow(in, exp);
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "pow unimplemented branch";
+      UNIMPLEMENTED_THEN_RETURN() << "pow unimplemented branch.";
     }
   }();
 
+  return py::cast(result.GetPtrOrThrow());
+}
+
+py::object PyClamp(py::args py_args, py::kwargs py_kwargs) {
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 3) << "3 positional inputs are required.";
+
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* min = PyTuple_GetItem(args, 1);
+    PyObject* max = PyTuple_GetItem(args, 2);
+
+    CHECK_OR_RETURN(PyTensorCheck(input)) << "input type should be a Tensor.";
+    const auto& in = JUST(PyUnpackTensor(input));
+
+    bool has_min_bound = (min != Py_None);
+    bool has_max_bound = (max != Py_None);
+    if (has_min_bound) { CHECK_OR_RETURN(PyScalarCheck(min)) << "min should be scalar or None."; }
+    if (has_max_bound) { CHECK_OR_RETURN(PyScalarCheck(min)) << "max should be scalar or None."; }
+    if (has_min_bound && has_max_bound) {
+      Scalar min_value = *JUST(PyUnpackScalar(min));
+      Scalar max_value = *JUST(PyUnpackScalar(max));
+      return functional::ClipByScalar(in, min_value, max_value);
+    } else if (has_min_bound && !has_max_bound) {
+      Scalar min_value = *JUST(PyUnpackScalar(min));
+      return functional::ClipByScalarMin(in, min_value);
+    } else if (!has_min_bound && has_max_bound) {
+      Scalar max_value = *JUST(PyUnpackScalar(max));
+      return functional::ClipByScalarMax(in, max_value);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "min and max cannot be None at the same time.";
+    }
+  }();
+
+  return py::cast(result.GetPtrOrThrow());
+}
+
+py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
+  // Scatter(Tensor input, Int32 dim, Tensor index, Tensor src)
+  // Scatter(Tensor input, Int32 dim, Tensor index, float src)
+
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 4) << "4 positional inputs are required.";
+
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* dim = PyTuple_GetItem(args, 1);
+    PyObject* index = PyTuple_GetItem(args, 2);
+    PyObject* src = PyTuple_GetItem(args, 3);
+
+    CHECK_OR_RETURN(PyTensorCheck(input)) << "input should be a Tensor.";
+    const auto& in = JUST(PyUnpackTensor(input));
+
+    CHECK_OR_RETURN(PyScalarCheck(dim)) << "dim should be a scalar.";
+    Scalar dim_scalar = *JUST(PyUnpackScalar(dim));
+    int32_t d = JUST(dim_scalar.As<int32_t>());
+
+    CHECK_OR_RETURN(PyTensorCheck(index)) << "index should be a Tensor.";
+    const auto& idx = JUST(PyUnpackTensor(index));
+
+    if (PyTensorCheck(src)) {
+      const auto& src_tensor = JUST(PyUnpackTensor(src));
+      return functional::DimScatter(in, idx, src_tensor, d);
+    }
+    CHECK_OR_RETURN(PyScalarCheck(src)) << "src should be a scalar or Tensor.";
+    Scalar src_scalar = *JUST(PyUnpackScalar(src));
+    return functional::DimScatterUpdateScalar(in, idx, JUST(src_scalar.As<float>()), d);
+  }();
   return py::cast(result.GetPtrOrThrow());
 }
 
@@ -362,11 +347,11 @@ namespace functional = one::functional;
 ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("add", &functional::PyAdd);
   m.def("sub", &functional::PySub);
-  m.def("scatter", &functional::PyScatter);
-  m.def("clamp", &functional::PyClamp);
   m.def("mul", &functional::PyMul);
   m.def("div", &functional::PyDiv);
   m.def("pow", &functional::PyPow);
+  m.def("clamp", &functional::PyClamp);
+  m.def("scatter", &functional::PyScatter);
 }
 
 }  // namespace oneflow
