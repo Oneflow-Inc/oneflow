@@ -663,7 +663,7 @@ class COCOReader(Module):
             random_seed = random.randrange(sys.maxsize)
 
         parallel_distribution = []
-
+        self.placement = placement
         if placement is None:
             self.device = device or flow.device("cpu")
         else:
@@ -801,6 +801,91 @@ class OFRecordBytesDecoder(Module):
 
     def forward(self, input):
         return self._op(input)[0]
+
+
+class GPTIndexedBinDataReader(Module):
+    def __init__(
+        self,
+        data_file_prefix: str,
+        seq_length: int,
+        num_samples: int,
+        batch_size: int,
+        dtype: flow.dtype = flow.int64,
+        shuffle: bool = True,
+        random_seed: Optional[int] = None,
+        split_sizes: Optional[Sequence[str]] = None,
+        split_index: Optional[int] = None,
+        device: Union[flow.device, str] = None,
+        placement: flow.placement = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
+    ):
+        super().__init__()
+
+        parallel_distribution = []
+        self.placement = placement
+        if placement is None:
+            self.device = device or flow.device("cpu")
+        else:
+            if device is not None:
+                raise ValueError(
+                    "when param sbp is specified, param device should not be specified"
+                )
+
+            if isinstance(sbp, (tuple, list)):
+                for sbp_item in sbp:
+                    if not isinstance(sbp_item, flow.sbp.sbp):
+                        raise ValueError(f"invalid sbp item: {sbp_item}")
+                    parallel_distribution.append(sbp_item._ToAttrStr())
+            elif isinstance(sbp, flow.sbp.sbp):
+                parallel_distribution.append(sbp._ToAttrStr())
+            else:
+                raise ValueError(f"invalid param sbp: {sbp}")
+
+            if len(parallel_distribution) != len(placement.hierarchy):
+                raise ValueError(
+                    "dimensions of sbp and dimensions of hierarchy of placement don't equal"
+                )
+
+        if random_seed is None:
+            random_seed = random.randrange(sys.maxsize)
+
+        if split_index is None:
+            split_index = 0
+
+        if split_sizes is None:
+            split_sizes = (1,)
+
+        if split_index >= len(split_sizes):
+            raise ValueError(
+                "split index {} is out of range, split_sizes {}".formart(
+                    split_index, split_sizes
+                )
+            )
+
+        op_builder = (
+            flow.builtin_op("megatron_gpt_mmap_data_loader")
+            .Output("out")
+            .Attr("data_file_prefix", data_file_prefix)
+            .Attr("seq_length", seq_length)
+            .Attr("label_length", 1)
+            .Attr("num_samples", num_samples)
+            .Attr("batch_size", batch_size)
+            .Attr("dtype", dtype)
+            .Attr("shuffle", shuffle)
+            .Attr("random_seed", random_seed)
+            .Attr("split_sizes", split_sizes)
+            .Attr("split_index", split_index)
+            .Attr("parallel_distribution", parallel_distribution)
+        )
+        self.op_ = op_builder.Build()
+        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
+
+    def forward(self):
+        if self.placement is None:
+            output = self.op_.apply(self.device, self.attrs)[0]
+        else:
+            output = self.op_.apply(self.placement, self.attrs)[0]
+        return output
 
 
 if __name__ == "__main__":
