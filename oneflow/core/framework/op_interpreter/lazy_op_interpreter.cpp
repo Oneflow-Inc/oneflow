@@ -50,9 +50,7 @@ std::string GetDeviceTagByDeviceTypeStr(const std::string& device_type) {
   }
 }
 
-bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
-    return false;
-}
+bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) { return false; }
 
 Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distribution,
                                             const std::shared_ptr<Tensor>& tensor) {
