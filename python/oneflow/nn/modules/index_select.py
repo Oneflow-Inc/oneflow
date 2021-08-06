@@ -21,7 +21,6 @@ def _input_args_is_int(args):
     return all((isinstance(x, int) for x in args))
 
 
-@register_tensor_op("index_select")
 def index_select_op(input, dim, index, sparse_grad=False):
     r"""Select values along an axis specified by `dim`.
 
@@ -50,7 +49,37 @@ def index_select_op(input, dim, index, sparse_grad=False):
         >>> output
         tensor([[1, 2],
                 [4, 5]], dtype=oneflow.int32)
+        >>> output = input.index_select(1, index)
+        >>> output
+        tensor([[1, 2],
+                [4, 5]], dtype=oneflow.int32)
+    """
+    assert sparse_grad is False, "Only support bool = False for now!"
+    assert len(index.shape) == 1, "Dimensions of index should be an LongTensor"
+    assert dim < len(input.shape) and dim > -1, "Value of dim is out of range"
+    assert _input_args_is_int(index.tolist()), "input index parameter is not illegal!"
+    index_rshp = list(input.shape)
 
+    for index_i in index:
+        assert (
+            index_i < index_rshp[dim]
+        ), "value of index out of range(index shuold lower than the first dimension of input)"
+
+    index_rshp[dim] = 1
+    index_gather = index[0].expand(index_rshp)
+    if index.size()[0] > 1:
+        for index_i in index[1:]:
+            x = index_i.expand(index_rshp)
+            index_gather = flow.cat((index_gather, x), dim)
+
+    return flow.gather(input, index_gather, dim, sparse_grad)
+
+
+@register_tensor_op("index_select")
+def index_select_op_tensor(input, dim, index, sparse_grad=False):
+    """
+    input.index_select(dim, index, sparse_grad) -> Tensor
+    See :func:`oneflow.index_select`
     """
     assert sparse_grad is False, "Only support bool = False for now!"
     assert len(index.shape) == 1, "Dimensions of index should be an LongTensor"
