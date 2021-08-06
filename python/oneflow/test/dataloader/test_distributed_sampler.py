@@ -124,7 +124,7 @@ def test(test_case):
     test_case.assertLess(0.70, final_accuracy)
 
 
-@flow.unittest.skip_unless_1n2d()
+@flow.unittest.skip("uncomplete test case")
 class TestFashionMnistDataset(flow.unittest.TestCase):
     def test_fashion_mnist_dataset(test_case):
         test(test_case)
