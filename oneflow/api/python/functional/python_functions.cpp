@@ -321,6 +321,39 @@ py::object PyDiv(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
+py::object PyPow(py::args py_args, py::kwargs py_kwargs) {
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* exponent = PyTuple_GetItem(args, 1);
+
+    CHECK_OR_RETURN(PyTensorCheck(input)) << "input type should be Tensor";
+    const auto& in = JUST(PyUnpackTensor(input));
+
+    bool is_exponent_scalar = PyScalarCheck(exponent);
+    bool is_exponent_tensor = PyTensorCheck(exponent);
+
+    CHECK_OR_RETURN(is_exponent_scalar || is_exponent_tensor)
+        << "exponent should be Tensor or scalar";
+
+    if (is_exponent_scalar) {
+      Scalar exponent_scalar = *JUST(PyUnpackScalar(exponent));
+      return functional::ScalarPow(in, exponent_scalar);
+    } else if (is_exponent_tensor) {
+      const auto& exp = JUST(PyUnpackTensor(exponent));
+      CHECK_OR_RETURN(*(exp->shape()) == *(in->shape())) << "shape of input and exp should be same";
+      return functional::Pow(in, exp);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "pow unimplemented branch";
+    }
+  }();
+
+  return py::cast(result.GetPtrOrThrow());
+}
+
 }  // namespace functional
 }  // namespace one
 
@@ -333,6 +366,7 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("clamp", &functional::PyClamp);
   m.def("mul", &functional::PyMul);
   m.def("div", &functional::PyDiv);
+  m.def("pow", &functional::PyPow);
 }
 
 }  // namespace oneflow

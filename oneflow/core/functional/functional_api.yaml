@@ -110,11 +110,11 @@
 
 - name: "pow"
   signature: "Tensor Pow(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "pow_scalar"
   signature: "Tensor ScalarPow(Tensor x, *, Scalar alpha)"
-  bind_python: True
+  bind_python: False
 
 - name: "reduce_sum"
   signature: "Tensor ReduceSum(Tensor x, *, Int32List axis, Bool keepdims=False)"
