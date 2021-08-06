@@ -36,8 +36,9 @@ def _tensor_numpy(eager_local_tensor):
         return [t.numpy() for t in tensors]
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
+
     ndarray = np.empty(
-        tuple(eager_local_tensor.shape),
+        shape=tuple(eager_local_tensor.shape),
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
     if ndarray.size != 0:
@@ -236,8 +237,10 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
 
 
 def _init_eager_local_tensor_by_initializer_conf(
-    eager_local_tensor, initializer_conf, random_seed=0
+    eager_local_tensor, initializer_conf, random_seed=None
 ):
+    if random_seed is None:
+        random_seed = flow.default_generator().seed()
     shape = tuple(eager_local_tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
     # initializer is None if and only if the initializer_conf is empty_initializer

@@ -40,6 +40,7 @@ class ReluFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, bool inplace) const {
     if (inplace) {
+      JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), AttrMap{}));

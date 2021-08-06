@@ -68,19 +68,18 @@ struct FlatParallelConf {
 }  // namespace
 
 Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> parallel_desc) {
-  const auto& rpc_token =
-      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdSyncSymbolParallelDesc));
-  NaiveAsyncRpcCtx send_ctx(
-      rpc_token, [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+  const auto& transport_token =
+      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncSymbolParallelDesc));
+  const auto& recv_buffer = std::make_shared<FlatParallelConf>();
+  NaiveAsyncTransportCtx ctx(
+      transport_token,
+      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         const auto& send_buffer = JUST(FlatParallelConf::New(symbol_id, parallel_desc));
         *buffer = send_buffer.get();
         *size = send_buffer->available_size();
         *Cb = [send_buffer] {};
         return Maybe<void>::Ok();
-      });
-  const auto& recv_buffer = std::make_shared<FlatParallelConf>();
-  NaiveAsyncRpcCtx recv_ctx(
-      rpc_token,
+      },
       [recv_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = recv_buffer.get();
         *size = recv_buffer->capacity();
@@ -88,10 +87,9 @@ Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> para
         return Maybe<void>::Ok();
       });
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &send_ctx));
-  JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, &recv_ctx));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(send_ctx, RpcUtil::TimeoutSeconds()));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(recv_ctx, RpcUtil::TimeoutSeconds()));
+  JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
   JUST(recv_buffer->Check(symbol_id, parallel_desc));
   return Maybe<void>::Ok();
 }

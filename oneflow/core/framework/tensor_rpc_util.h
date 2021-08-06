@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_RPC_UTIL_H_
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_RPC_UTIL_H_
 
-#include "oneflow/core/framework/rpc_util.h"
+#include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/optional.h"
 
@@ -24,32 +24,36 @@ namespace oneflow {
 
 struct FlatTensorConsistency;
 
-class CheckConsistencyAsyncRpcCtx : public AsyncRpcCtx {
+class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
  public:
-  CheckConsistencyAsyncRpcCtx(
-      const RpcToken& rpc_token, Symbol<one::ConsistentTensorMeta> tensor_meta,
+  CheckConsistencyAsyncTransportCtx(
+      const TransportToken& transport_token, Symbol<one::ConsistentTensorMeta> tensor_meta,
       const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint,
-      const RpcToken& tensor_rpc_token)
-      : AsyncRpcCtx(rpc_token),
+      const TransportToken& tensor_transport_token)
+      : AsyncTransportCtx(transport_token),
         tensor_meta_(tensor_meta),
         consumer_parallel_distribution_constraint_(consumer_parallel_distribution_constraint),
-        tensor_rpc_token_(tensor_rpc_token) {}
+        tensor_transport_token_(tensor_transport_token) {}
 
-  ~CheckConsistencyAsyncRpcCtx() override;
+  ~CheckConsistencyAsyncTransportCtx() override;
 
-  Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                        std::function<void()>* Callback) override;
+  Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                           std::function<void()>* Callback) override;
+
+  Maybe<void> PrepareRecvBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                           std::function<void()>* Callback) override;
 
   Maybe<void> Check() const;
 
  private:
   Symbol<one::ConsistentTensorMeta> tensor_meta_;
   Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
-  RpcToken tensor_rpc_token_;
+  TransportToken tensor_transport_token_;
   std::shared_ptr<FlatTensorConsistency> flat_tensor_consistency_;
 };
 
-Maybe<CheckConsistencyAsyncRpcCtx> LaunchTensorMetaConsistencyCheck(const one::Tensor& tensor);
+Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
+    const one::Tensor& tensor);
 
 }  // namespace oneflow
 

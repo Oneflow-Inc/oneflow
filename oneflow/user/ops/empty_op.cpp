@@ -31,7 +31,6 @@ REGISTER_NO_GRAD_USER_OP("empty")
       if (shape.NumAxes() > 0) {
         dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
       }
-      if (dim_vec.empty()) { dim_vec.push_back(1); }
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
@@ -42,7 +41,6 @@ REGISTER_NO_GRAD_USER_OP("empty")
       if (shape.NumAxes() > 0) {
         dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
       }
-      if (dim_vec.empty()) { dim_vec.push_back(1); }
 
       const cfg::SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       if (out_sbp_para.has_split_parallel()) {

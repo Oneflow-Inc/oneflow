@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/thread/consistent_unique_id.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/rpc_util.h"
+#include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
@@ -34,7 +34,7 @@ class ConsistentUniqueIdStorage final {
 
   Maybe<void> Emplace(int64_t id, const std::string& debug_string) {
     std::unique_lock<std::mutex> lock(mutex_);
-    CHECK_LE_OR_RETURN(id2debug_string_.size(), RpcToken::MaxNumberOfThreadConsistentUId());
+    CHECK_LE_OR_RETURN(id2debug_string_.size(), TransportToken::MaxNumberOfThreadConsistentUId());
     for (const auto& pair : id2debug_string_) { CHECK_NE_OR_RETURN(debug_string, pair.second); }
     CHECK_OR_RETURN(id2debug_string_.emplace(id, debug_string).second);
     return Maybe<void>::Ok();

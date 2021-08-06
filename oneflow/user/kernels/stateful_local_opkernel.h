@@ -141,7 +141,10 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
 
   DeviceType device_type() const { return device_type_; }
   const std::string& device_tag() const { return device_tag_; }
-  const JobDesc& job_desc() const { UNIMPLEMENTED(); }
+  const JobDesc& job_desc() const {
+    UNIMPLEMENTED();
+    return *(const JobDesc*)nullptr;
+  }
 
  private:
   const std::string device_tag_;
@@ -160,6 +163,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                int32_t index) const override {
     UNIMPLEMENTED();
+    return nullptr;
   }
 
   const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
@@ -208,15 +212,23 @@ class LocalUserOpInferContext : public user_op::InferContext {
     UNIMPLEMENTED();
     return nullptr;
   }
-  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); };
-  const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
+  const ParallelContext& parallel_ctx() const override {
+    UNIMPLEMENTED();
+    return *(const ParallelContext*)nullptr;
+  }
+  const ParallelDesc& parallel_desc() const override {
+    UNIMPLEMENTED();
+    return *(const ParallelDesc*)nullptr;
+  }
   const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                       int32_t index) const override {
     UNIMPLEMENTED();
+    return *(const cfg::SbpParallel*)nullptr;
   }
   const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
     UNIMPLEMENTED();
+    return *(const cfg::ParallelDistribution*)nullptr;
   }
 
   int64_t parallel_num() const override { return 1; }
@@ -284,8 +296,14 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); };
-  const JobDesc& job_desc() const override { UNIMPLEMENTED(); };
+  const ParallelContext& parallel_ctx() const override {
+    UNIMPLEMENTED();
+    return *(const ParallelContext*)nullptr;
+  }
+  const JobDesc& job_desc() const override {
+    UNIMPLEMENTED();
+    return *(const JobDesc*)nullptr;
+  }
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); };
   const ArgVec& outputs() const override { return base_ctx_.outputs(); };
