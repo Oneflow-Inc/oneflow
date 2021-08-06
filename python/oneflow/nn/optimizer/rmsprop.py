@@ -16,6 +16,7 @@ limitations under the License.
 import collections
 from typing import Callable, Dict, Iterator, List, Union
 
+import math
 import oneflow as flow
 from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
 from oneflow.nn.parameter import Parameter
@@ -106,10 +107,12 @@ class RMSprop(Optimizer):
         self._default_options["centered"] = centered
         self._default_options["scale"] = scale
         if isinstance(parameters, collections.abc.Iterator):
-            self.param_groups.append(ParamGroup(parameters, self._default_options))
+            self.param_groups.append(ParamGroup(
+                parameters, self._default_options))
         else:
             for param in parameters:
-                self.param_groups.append(ParamGroup(param, self._default_options))
+                self.param_groups.append(
+                    ParamGroup(param, self._default_options))
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
@@ -171,3 +174,34 @@ class RMSprop(Optimizer):
                         self._rmsprop(param, param.grad, ms_tensor, **kwargs)
             self._state["step"] = self._state["step"] + 1
             return loss
+
+    def generate_conf_for_graph(self, train_conf, vars_conf):
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+
+            lr = param_group["lr"]
+            scale = param_group["scale"]
+            decay_rate = param_group["alpha"]
+            centered = param_group["centered"]
+            weight_decay = param_group["weight_decay"]
+
+            epslion = param_group["eps"]
+            base_scale = train_conf.loss_scale_factor()
+            assert math.isclose(base_scale, 1, rel_tol=1e-4) or math.isclose(
+                scale, base_scale, rel_tol=1e-4
+            ), "nn.Graph only support one scale factor at the moment, base_scale {} vs scale {}".format(
+                base_scale, scale
+            )
+
+            train_conf.set_loss_scale_factor(scale)
+            optimizer_conf.set_base_learning_rate(lr)
+
+            optimizer_conf.mutable_rmsprop_conf().set_decay_rate(decay_rate)
+            optimizer_conf.mutable_rmsprop_conf().set_centered(centered)
+            optimizer_conf.mutable_rmsprop_conf().set_epsilon(epslion)
+
+            # Set l2 penalty as weight decay
+            for param in param_group.parameters:
+                vars_conf[param].l2 = weight_decay
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)

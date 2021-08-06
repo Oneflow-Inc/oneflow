@@ -2,7 +2,6 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test.modules.test_util import GenArgList
@@ -87,15 +86,15 @@ def compare_with_numpy_rmsprop(
 
         def np_train_one_iter(grad):
             # ref to: https://github.com/Oneflow-Inc/oneflow/blob/master/python/oneflow/test/modules/test_optim_rmsprop.py#L78-L99
+
             # weight decay is equivalent to l2 penalty
             grad = grad * scale + weight_decay * x
             r_ = alpha * r + (1 - alpha) * grad * grad
-            g_ = alpha * g + (1 - alpha) * grad
             if centered:
+                g_ = alpha * g + (1 - alpha) * grad
                 v_ = momentum * v + learning_rate / \
                     np.sqrt(r_ - g_ * g_ + eps) * grad
             else:
-                r_ = alpha * r + (1 - alpha) * grad * grad
                 g_ = g
                 v_ = momentum * v + learning_rate / np.sqrt(r_ + eps) * grad
             param = x - v_
@@ -119,7 +118,8 @@ class TestRMSprop(flow.unittest.TestCase):
         args_dict = OrderedDict()
         args_dict["device"] = ["cpu", "cuda"]
         args_dict["x_shape"] = [(1,), (10,)]
-        args_dict["scale"] = [1.0, 0.9]
+        # nn.Graph only support one scale factor at the moment
+        args_dict["scale"] = [1.0]
         args_dict["learning_rate"] = [1, 10]
         args_dict["momentum"] = [0.0]  # not supported momentum > 0
         args_dict["train_iters"] = [10]
@@ -130,20 +130,6 @@ class TestRMSprop(flow.unittest.TestCase):
 
         for args in GenArgList(args_dict):
             compare_with_numpy_rmsprop(test_case, *args)
-
-    def test_rmsprop1(test_case):
-        compare_with_numpy_rmsprop(test_case,
-                                   device="cuda",
-                                   x_shape=(1,),
-                                   scale=1.0,
-                                   learning_rate=1.,
-                                   momentum=0.,
-                                   train_iters=20,
-                                   alpha=0.,
-                                   eps=1e-8,
-                                   weight_decay=0.,
-                                   centered=True,
-                                   )
 
 
 if __name__ == "__main__":
