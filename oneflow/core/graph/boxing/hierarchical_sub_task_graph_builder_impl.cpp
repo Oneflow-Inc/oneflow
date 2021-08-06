@@ -182,6 +182,46 @@ class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
   std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
 };
 
+bool IsDistributionEquals(const ParallelDesc& in_parallel_desc, const ParallelDesc& out_parallel_desc, const cfg::ParallelDistribution& in_parallel_distribution,const cfg::ParallelDistribution& out_parallel_distribution) {
+  if(in_parallel_desc.hierarchy()->NumAxes() == 2
+        && out_parallel_desc.hierarchy()->NumAxes() == 2 && in_parallel_distribution.sbp_parallel(0) == out_parallel_distribution.sbp_parallel(1) && in_parallel_distribution.sbp_parallel(1) == out_parallel_distribution.sbp_parallel(0)) {
+          return true;
+  }
+  return false;
+}
+
+class DistributionEqualsTskGphBuilder final : public HierarchicalSubTskGphBuilder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DistributionEqualsTskGphBuilder);
+  DistributionEqualsTskGphBuilder() { sub_tsk_gph_builder_.reset(new OneToOneSubTskGphBuilder()); }
+  ~DistributionEqualsTskGphBuilder() override = default;
+
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_in_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks,
+                                      const ParallelDesc& in_parallel_desc,
+                                      const ParallelDesc& out_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const cfg::ParallelDistribution& in_parallel_distribution,
+                                      const cfg::ParallelDistribution& out_parallel_distribution,
+                                      const Shape& time_shape) const override {
+    if (IsDistributionEquals(in_parallel_desc, out_parallel_desc, in_parallel_distribution, out_parallel_distribution)) {
+      LOG(ERROR)<<"transposed deviceset 121"<<in_parallel_distribution.DebugString()<<"  "<<out_parallel_distribution.DebugString();
+      return sub_tsk_gph_builder_->Build(
+          ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
+          out_parallel_desc, lbi, logical_blob_desc, in_parallel_distribution.sbp_parallel(1),
+          out_parallel_distribution.sbp_parallel(0), time_shape);
+    } else {
+      return Error::BoxingNotSupportedError();
+    }
+  }
+
+ private:
+  std::unique_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
+
+};
+
 class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IntraGroupSubTskGphBuilder);
@@ -689,6 +729,7 @@ struct DispatchHierarchicalSubTskGphBuilder::Impl {
   std::unique_ptr<ExpandToSame2DHierarchySubTskGphBuilder>
       expand_to_same_2d_hierarchy_sub_tsk_gph_builder_;
   std::unique_ptr<Same3DHierarchySubTskGphBuilder> same_3d_hierarchy_sub_tsk_gph_builder_;
+  std::unique_ptr<DistributionEqualsTskGphBuilder> distribution_equals_sub_tsk_gph_builder_;
 };
 
 DispatchHierarchicalSubTskGphBuilder::Impl::Impl() {
@@ -697,6 +738,7 @@ DispatchHierarchicalSubTskGphBuilder::Impl::Impl() {
   expand_to_same_2d_hierarchy_sub_tsk_gph_builder_.reset(
       new ExpandToSame2DHierarchySubTskGphBuilder());
   same_3d_hierarchy_sub_tsk_gph_builder_.reset(new Same3DHierarchySubTskGphBuilder());
+  distribution_equals_sub_tsk_gph_builder_.reset(new DistributionEqualsTskGphBuilder());
 }
 
 DispatchHierarchicalSubTskGphBuilder::DispatchHierarchicalSubTskGphBuilder() {
@@ -722,6 +764,12 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
                          &reduced_out_parallel_distribution);
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
+  if(IsDistributionEquals(in_parallel_desc, out_parallel_desc, in_parallel_distribution, out_parallel_distribution)) {
+    return impl_->distribution_equals_sub_tsk_gph_builder_->Build(
+        ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
+        reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
+        reduced_out_parallel_distribution, time_shape);
+  }
   if (in_hierarchy->NumAxes() == 3 && out_hierarchy->NumAxes() == 3) {
     return impl_->same_3d_hierarchy_sub_tsk_gph_builder_->Build(
         ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
