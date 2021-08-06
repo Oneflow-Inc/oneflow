@@ -59,6 +59,8 @@ class Block(object):
                 self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, p))
             for (n, b) in list(value.named_buffers("", False)):
                 self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, b))
+            self._args_repr = []
+            self._outs_repr = []
         elif isinstance(value, Parameter):
             self._type = BlockType.PARAMETER
             self._lazy_origin = None
@@ -122,7 +124,13 @@ class Block(object):
 
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
+        for idx, arg in enumerate(args):
+            arg_name = "_" + self.name + "-input_" + str(idx)
+            self._args_repr.append(arg_name + ":" + arg._meta_repr())
         result = self._origin.__class__.__call__(self, *args)
+        for idx, out in enumerate(result):
+            out_name = "_" + self.name + "-output_" + str(idx)
+            self._outs_repr.append(out_name + ":" + out._meta_repr())
         return result
 
     def __iter__(self) -> Iterator["Block"]:
@@ -266,6 +274,15 @@ class Block(object):
         lines = None
         if self._type == BlockType.MODULE:
             child_lines = []
+            if len(self._args_repr) > 0:
+                for in_str in self._args_repr:
+                    input_str = add_indent("(" + in_str + ":INPUT)", 2)
+                    child_lines.append(input_str)
+
+            if len(self._outs_repr) > 0:
+                for out_str in self._outs_repr:
+                    output_str = add_indent("(" + out_str + ":OUTPUT)", 2)
+                    child_lines.append(output_str)
 
             def _append_child(d):
                 for (_, n) in d.items():
