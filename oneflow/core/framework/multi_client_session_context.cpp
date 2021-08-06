@@ -142,4 +142,33 @@ Maybe<void> MultiClientSessionContext::TryClose() {
   return Maybe<void>::Ok();
 }
 
+void MultiClientSessionContext::StoreFreeEagerTensorWithNameByGraphName(
+    const std::string& graph_name, const std::shared_ptr<one::Tensor>& tensor,
+    const std::string& tensor_name) {
+  auto it = graph_name2free_eager_tensors_.find(graph_name);
+  if (it == graph_name2free_eager_tensors_.end()) {
+    it = graph_name2free_eager_tensors_
+             .emplace(graph_name,
+                      std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>())
+             .first;
+  }
+  it->second.push_back(std::make_pair(tensor_name, tensor));
+}
+
+const std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>&
+MultiClientSessionContext::GetFreeEagerTensorNamePairByGraphName(const std::string& graph_name) {
+  auto it = graph_name2free_eager_tensors_.find(graph_name);
+  if (it == graph_name2free_eager_tensors_.end()) {
+    it = graph_name2free_eager_tensors_
+             .emplace(graph_name,
+                      std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>())
+             .first;
+  }
+  return it->second;
+}
+
+void MultiClientSessionContext::RemoveGraphFreeEagerTensors(const std::string& graph_name) {
+  graph_name2free_eager_tensors_.erase(graph_name);
+}
+
 }  // namespace oneflow

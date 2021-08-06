@@ -359,6 +359,40 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   return Maybe<void>::Ok();
 }
 
+Maybe<void> AddFreeEagerTensorByVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
+  CHECK_OR_RETURN(input_tensor->is_eager());
+
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
+
+  OperatorConf op_conf;
+  // op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
+  op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
+  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
+  // NOTE(chengcheng):
+  //   We contruct VariableOpConf instead of FeedVariableOpConf because FeedVariableOpExpr JUST
+  //   for getting input EagerTensor.
+  VariableOpConf* var_conf = op_conf.mutable_variable_conf();
+  var_conf->set_out("out");
+  input_tensor->shape()->ToProto(var_conf->mutable_shape());
+  var_conf->set_data_type(input_tensor->dtype());
+  // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
+  //   by EagerTensor.
+  var_conf->mutable_initializer()->mutable_empty_conf();
+  JUST(GenVariableOpConfParallelDistributionStringByTensor(var_conf, input_tensor));
+  var_conf->set_trainable(false);
+
+  auto infer_ctx = JUST(GetCurInferCtx());
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+          << op_conf.DebugString() << std::endl;
+  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " infer and and op attr : \n"
+          << op_attr.DebugString() << std::endl;
+
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
                                                       const TensorTuple& inputs,
                                                       TensorTuple* outputs,
