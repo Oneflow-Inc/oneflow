@@ -75,10 +75,10 @@ class Randint(flow.nn.Module):
     def forward(self):
         if self.placement is not None:
             res = flow.F.consistent_randint(
-                self.low, self.high, self.placement, self.sbp, self.generator
+                self.low, self.high, self.size,self.placement, self.sbp, self.generator
             )
         else:
-            res = flow.F.randint(self.low, self.high, self.device, self.generator)
+            res = flow.F.randint(self.low, self.high,self.size, self.device, self.generator)
         res.requires_grad = self.requires_grad
         return res
 
@@ -132,7 +132,7 @@ def randint(
     if type(high) is tuple:
         size = high
         low, high = 0, low
-    return Randint(low, high, size, generator, dtype, layout, device, requires_grad)()
+    return Randint(low, high, size, generator, dtype, layout, device, placement,sbp,requires_grad)()
 
 
 if __name__ == "__main__":

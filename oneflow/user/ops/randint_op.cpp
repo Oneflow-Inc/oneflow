@@ -20,6 +20,9 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
+
+Maybe<void> InferUniformParallelDistribution(user_op::InferParallelDistributionFnContext* ctx);
+
 REGISTER_NO_GRAD_USER_OP("randint")
     .Output("out")
     .Attr<int64_t>("low")
