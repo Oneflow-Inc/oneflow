@@ -58,9 +58,9 @@ def logical_xor_op(input, other):
 
 
 @register_tensor_op("logical_xor")
-def logical_or_op_tensor(input, other):
+def logical_xor_op_tensor(input, other):
     """
-    logical_or() -> Tensor
+    logical_xor() -> Tensor
 
     See :func:`oneflow.logical_xor`
 

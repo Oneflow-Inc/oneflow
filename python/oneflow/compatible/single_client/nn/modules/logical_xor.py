@@ -30,12 +30,12 @@ class LogicalXor(Module):
 
 def logical_xor_op(input, other):
     """
-    Computes the element-wise logical AND of the given input tensors. 
+    Computes the element-wise logical XOR of the given input tensors. 
     Zeros are treated as False and nonzeros are treated as True.
 
     Args:
         input (oneflow.Tensor): The input Tensor
-        other (oneflow.Tensor): The Tensor to compute AND with
+        other (oneflow.Tensor): The Tensor to compute XOR with
 
     Returns:
         oneflow.Tensor: The output Tensor
@@ -50,7 +50,7 @@ def logical_xor_op(input, other):
         
         >>> input1 = flow.Tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.array([1, 1, 0]).astype(np.float32), dtype=flow.float32)
-        >>> out = flow.logical_and(input1, input2)
+        >>> out = flow.logical_xor(input1, input2)
         >>> out
         tensor([1, 0, 0], dtype=oneflow.int8)
 
@@ -61,9 +61,9 @@ def logical_xor_op(input, other):
 @register_tensor_op("logical_xor")
 def logical_xor_op_tensor(input, other):
     """
-    logical_and() -> Tensor
+    logical_xor() -> Tensor
 
-    See :func:`oneflow.logical_and`
+    See :func:`oneflow.logical_xor`
     
     """
     return LogicalXor()(input, other)
