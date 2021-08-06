@@ -246,7 +246,7 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
     if (!sum_result.empty()) {
 #pragma unroll
       for (int row_id = 0; row_id < rows_per_access; ++row_id) {
-        sum_result.template store<1>(warp_sum + row_id, 0, row_id);
+        sum_result.template store<1>(warp_sum + row_id, 0, row + row_id);
       }
     }
 #pragma unroll
@@ -455,12 +455,22 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
     }
     const ComputeType row_max = BlockAllReduce<MaxOp, ComputeType, block_size>(thread_max);
     ComputeType thread_sum = 0;
+    for (int col = tid; col < cols; col += block_size) { buf[col] = buf[col] - row_max; }
+    if (!sub_result.empty()) {
+      for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
+        ComputeType pack[pack_size];
+#pragma unroll
+        for (int i = 0; i < pack_size; ++i) { pack[i] = buf[i * num_packs + pack_id]; }
+        sub_result.template store<pack_size>(pack, row, pack_id * pack_size);
+      }
+    }
     for (int col = tid; col < cols; col += block_size) {
-      const ComputeType exp_x = Exp(buf[col] - row_max);
+      const ComputeType exp_x = Exp(buf[col]);
       buf[col] = exp_x;
       thread_sum += exp_x;
     }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
+    if (!sum_result.empty()) { sum_result.template store<1>(&row_sum, 0, row); }
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
 #pragma unroll
@@ -575,9 +585,15 @@ __global__ void SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t r
       ComputeType pack[pack_size];
       load.template load<pack_size>(pack, row, pack_id * pack_size);
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) { thread_sum += Exp(pack[i] - row_max); }
+      for (int i = 0; i < pack_size; ++i) { pack[i] = pack[i] - row_max; }
+      if (!sub_result.empty()) {
+        sub_result.template store<pack_size>(pack, row, pack_id * pack_size);
+      }
+#pragma unroll
+      for (int i = 0; i < pack_size; ++i) { thread_sum += Exp(pack[i]); }
     }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
+    if (!sum_result.empty()) { sum_result.template store<1>(&row_sum, 0, row); }
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
       load.template load<pack_size>(pack, row, pack_id * pack_size);
