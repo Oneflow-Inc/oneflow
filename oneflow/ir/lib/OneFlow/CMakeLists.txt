@@ -1,7 +1,7 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 message(STATUS "MLIR_DIALECT_LIBS: ${dialect_libs}")
 if(BUILD_CUDA)
-set(MLIR_GPU_LIBS MLIRSCFToGPU)
+set(MLIR_GPU_LIBS MLIRSCFToGPU MLIRGPUToNVVMTransforms)
 endif(BUILD_CUDA)
 
 add_mlir_dialect_library(MLIROneFlow
