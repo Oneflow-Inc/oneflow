@@ -14,45 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-
 from oneflow.framework.tensor import Tensor, register_tensor_op
-from oneflow.nn.module import Module
 
 
 def _input_args_is_int(args):
     return all((isinstance(x, int) for x in args))
-
-
-class IndexSelect(Module):
-    def __init__(self, dim: int = 0, sparse_grad: bool = False):
-        super().__init__()
-        assert sparse_grad is False, "Only support bool = False for now!"
-        self.dim = dim
-
-    def forward(self, input, index):
-        assert len(index.shape) == 1, "Dimensions of index should be an LongTensor"
-        assert (
-            self.dim < len(input.shape) and self.dim > -1
-        ), "Value of dim is out of range"
-        assert _input_args_is_int(
-            index.tolist()
-        ), "input index parameter is not illegal!"
-
-        index_rshp = list(input.shape)
-
-        for index_i in index:
-            assert (
-                index_i < index_rshp[self.dim]
-            ), "value of index out of range(index shuold lower than the first dimension of input)"
-
-        index_rshp[self.dim] = 1
-        index_gather = index[0].expand(index_rshp)
-        if index.size()[0] > 1:
-            for index_i in index[1:]:
-                x = index_i.expand(index_rshp)
-                index_gather = flow.cat((index_gather, x), self.dim)
-
-        return flow.gather(input, index_gather, self.dim)
 
 
 @register_tensor_op("index_select")
@@ -75,7 +41,6 @@ def index_select_op(input, dim, index, sparse_grad=False):
     .. code-block:: python
     
         >>> import oneflow as flow
-        >>> import numpy as np
         >>> input = flow.tensor([[1,2,3],[4,5,6]], dtype=flow.int32)
         >>> input 
         tensor([[1, 2, 3],
@@ -87,11 +52,28 @@ def index_select_op(input, dim, index, sparse_grad=False):
                 [4, 5]], dtype=oneflow.int32)
 
     """
-    return IndexSelect(dim, sparse_grad)(input, index)
+    assert sparse_grad is False, "Only support bool = False for now!"
+    assert len(index.shape) == 1, "Dimensions of index should be an LongTensor"
+    assert dim < len(input.shape) and dim > -1, "Value of dim is out of range"
+    assert _input_args_is_int(index.tolist()), "input index parameter is not illegal!"
+    index_rshp = list(input.shape)
+
+    for index_i in index:
+        assert (
+            index_i < index_rshp[dim]
+        ), "value of index out of range(index shuold lower than the first dimension of input)"
+
+    index_rshp[dim] = 1
+    index_gather = index[0].expand(index_rshp)
+    if index.size()[0] > 1:
+        for index_i in index[1:]:
+            x = index_i.expand(index_rshp)
+            index_gather = flow.cat((index_gather, x), dim)
+
+    return flow.gather(input, index_gather, dim, sparse_grad)
 
 
 if __name__ == "__main__":
-
     import doctest
 
     doctest.testmod(raise_on_error=True)
