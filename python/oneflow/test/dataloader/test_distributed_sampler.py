@@ -81,10 +81,10 @@ def test(test_case):
     train_sampler= flow.utils.data.DistributedSampler(train_set)
     test_sampler= flow.utils.data.DistributedSampler(test_set)
     train_iter = flow.utils.data.DataLoader(
-        train_sampler, batch_size=batch_size, shuffle=True, num_workers=0
+        train_set, batch_size=batch_size, shuffle=False, num_workers=0, sampler=train_sampler
     )
     test_iter = flow.utils.data.DataLoader(
-        test_sampler, batch_size=batch_size, shuffle=False, num_workers=0
+        test_set, batch_size=batch_size, shuffle=False, num_workers=0, sampler=test_sampler
     )
 
     loss = nn.CrossEntropyLoss()
