@@ -26,8 +26,8 @@ _VT = TypeVar("_VT")
 #     """Set memory sharing strategy for job set.
 
 #     Args:
-#         strategy_str: An optional `string` from: `mem_sharing_priority`, `parallelism_priority` 
-#         or `custom_parallelism`. 
+#         strategy_str: An optional `string` from: `mem_sharing_priority`, `parallelism_priority`
+#         or `custom_parallelism`.
 #         job_set: A `JobSet` object. If None, set default job set.
 #     """
 #     assert type(strategy_str) is str
