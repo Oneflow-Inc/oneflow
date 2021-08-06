@@ -45,15 +45,6 @@ def repeat(input, repeat_num, name=None):
     )
 
 
-# def api_acc(
-#     one: oneflow._oneflow_internal.BlobDesc,
-#     max_acc_num: int,
-#     name: Optional[str] = None,
-# ) -> oneflow._oneflow_internal.BlobDesc:
-#     func = enable_if.unique([acc])
-#     return func(one, max_acc_num, name=name)
-
-
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def acc(one, max_acc_num, name=None):
     assert not oneflow.eager_execution_enabled()
@@ -93,13 +84,6 @@ def unpack(input, unpack_num, name=None):
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-
-
-# def api_pack(
-#     input: oneflow._oneflow_internal.BlobDesc, pack_num: int, name: Optional[str] = None
-# ) -> oneflow._oneflow_internal.BlobDesc:
-#     func = enable_if.unique([pack])
-#     return func(input, pack_num, name=name)
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
@@ -162,23 +146,6 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
         .Build()
     )
     return op.InferAndTryRun().SoleOutputBlob()
-
-
-# def api_hierarchical_parallel_cast(
-#     input: oneflow._oneflow_internal.BlobDesc,
-#     parallel_distribution: Sequence[str],
-#     grad_mode: Optional[str] = None,
-#     grad_parallel_distribution: Sequence[str] = None,
-#     name: Optional[str] = None,
-# ) -> oneflow._oneflow_internal.BlobDesc:
-#     func = enable_if.unique([hierarchical_parallel_cast])
-#     return func(
-#         input,
-#         parallel_distribution=parallel_distribution,
-#         grad_mode=grad_mode,
-#         grad_parallel_distribution=grad_parallel_distribution,
-#         name=name,
-#     )
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
