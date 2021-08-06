@@ -13,25 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_PROFILER_H_
-#define ONEFLOW_CORE_JOB_PROFILER_H_
+#ifndef ONEFLOW_CORE_CCL_CCL_H_
+#define ONEFLOW_CORE_CCL_CCL_H_
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
-class Profiler final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Profiler);
-  Profiler() = default;
-  ~Profiler() = default;
+class DeviceCtx;
+class ParallelDesc;
 
-  void Profile(const Plan& plan, const std::string& act_event_filepath);
+// collective communication library
+namespace ccl {
 
- private:
-};
+template<DeviceType device_type>
+Maybe<void> Broadcast(const void* in, void* out, size_t elem_cnt, DataType dtype, int64_t root,
+                      Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
+
+}
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_PROFILER_H_
+#endif  // ONEFLOW_CORE_CCL_CCL_H_
