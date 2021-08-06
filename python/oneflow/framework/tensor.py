@@ -314,6 +314,7 @@ def _format(self, format_spec):
         return self.tolist().__format__(format_spec)
     return object.__format__(self, format_spec)
 
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)

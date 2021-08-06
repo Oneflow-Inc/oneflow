@@ -17,6 +17,7 @@ import numpy as np
 import oneflow as flow
 
 import math
+
 # from flow._six import inf
 from typing import Optional
 
@@ -41,14 +42,15 @@ def _convert_to_local_tensor(self):
         self = self.to("cuda").to_consistent(placement, sbp).to_local()
     return self
 
+
 # We could use **kwargs, but this will give better docs
 def set_printoptions(
-        precision=None,
-        threshold=None,
-        edgeitems=None,
-        linewidth=None,
-        profile=None,
-        sci_mode=None
+    precision=None,
+    threshold=None,
+    edgeitems=None,
+    linewidth=None,
+    profile=None,
+    sci_mode=None,
 ):
     r"""Set options for printing. Items shamelessly taken from NumPy
 
@@ -167,40 +169,52 @@ class _Formatter(object):
     def format(self, value):
         if self.floating_dtype:
             if self.sci_mode:
-                ret = ('{{:{}.{}e}}').format(self.max_width, PRINT_OPTS.precision).format(value)
+                ret = (
+                    ("{{:{}.{}e}}")
+                    .format(self.max_width, PRINT_OPTS.precision)
+                    .format(value)
+                )
             elif self.int_mode:
-                ret = '{:.0f}'.format(value)
+                ret = "{:.0f}".format(value)
                 if not (math.isinf(value) or math.isnan(value)):
-                    ret += '.'
+                    ret += "."
             else:
-                ret = ('{{:.{}f}}').format(PRINT_OPTS.precision).format(value)
+                ret = ("{{:.{}f}}").format(PRINT_OPTS.precision).format(value)
         else:
-            ret = '{}'.format(value)
-        return (self.max_width - len(ret)) * ' ' + ret
+            ret = "{}".format(value)
+        return (self.max_width - len(ret)) * " " + ret
 
 
 def _scalar_str(self, formatter1, formatter2=None):
-        return formatter1.format(self.tolist())
+    return formatter1.format(self.tolist())
+
 
 def _vector_str(self, indent, summarize, formatter1, formatter2=None):
     # length includes spaces and comma between elements
     element_length = formatter1.width() + 2
-    elements_per_line = max(1, int(math.floor((PRINT_OPTS.linewidth - indent) / (element_length))))
+    elements_per_line = max(
+        1, int(math.floor((PRINT_OPTS.linewidth - indent) / (element_length)))
+    )
     char_per_line = element_length * elements_per_line
 
     def _val_formatter(val, formatter1=formatter1, formatter2=formatter2):
         return formatter1.format(val)
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
-        data = ([_val_formatter(val) for val in self[:PRINT_OPTS.edgeitems].tolist()] +
-                [' ...'] +
-                [_val_formatter(val) for val in self[-PRINT_OPTS.edgeitems:].tolist()])
+        data = (
+            [_val_formatter(val) for val in self[: PRINT_OPTS.edgeitems].tolist()]
+            + [" ..."]
+            + [_val_formatter(val) for val in self[-PRINT_OPTS.edgeitems :].tolist()]
+        )
     else:
         data = [_val_formatter(val) for val in self.tolist()]
 
-    data_lines = [data[i:i + elements_per_line] for i in range(0, len(data), elements_per_line)]
-    lines = [', '.join(line) for line in data_lines]
-    return '[' + (',' + '\n' + ' ' * (indent + 1)).join(lines) + ']'
+    data_lines = [
+        data[i : i + elements_per_line] for i in range(0, len(data), elements_per_line)
+    ]
+    lines = [", ".join(line) for line in data_lines]
+    return "[" + ("," + "\n" + " " * (indent + 1)).join(lines) + "]"
+
 
 # formatter2 is only used for printing complex tensors.
 # For complex tensors, formatter1 and formatter2 are the formatters for tensor.real
@@ -215,17 +229,32 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1, formatter2=N
         return _vector_str(self, indent, summarize, formatter1, formatter2)
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
-        slices = ([_tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1, formatter2)
-                   for i in range(0, PRINT_OPTS.edgeitems)] +
-                  ['...'] +
-                  [_tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1, formatter2)
-                   for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])])
+        slices = (
+            [
+                _tensor_str_with_formatter(
+                    self[i], indent + 1, summarize, formatter1, formatter2
+                )
+                for i in range(0, PRINT_OPTS.edgeitems)
+            ]
+            + ["..."]
+            + [
+                _tensor_str_with_formatter(
+                    self[i], indent + 1, summarize, formatter1, formatter2
+                )
+                for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
+            ]
+        )
     else:
-        slices = [_tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1, formatter2)
-                  for i in range(0, self.size(0))]
+        slices = [
+            _tensor_str_with_formatter(
+                self[i], indent + 1, summarize, formatter1, formatter2
+            )
+            for i in range(0, self.size(0))
+        ]
 
-    tensor_str = (',' + '\n' * (dim - 1) + ' ' * (indent + 1)).join(slices)
-    return '[' + tensor_str + ']'
+    tensor_str = ("," + "\n" * (dim - 1) + " " * (indent + 1)).join(slices)
+    return "[" + tensor_str + "]"
+
 
 def _tensor_str(self, indent):
     summarize = self.numel() > PRINT_OPTS.threshold
@@ -238,35 +267,30 @@ def _tensor_str(self, indent):
     formatter = _Formatter(get_summarized_data(self) if summarize else self)
     return _tensor_str_with_formatter(self, indent, summarize, formatter)
 
+
 def _add_suffixes(tensor_str, suffixes, indent):
     tensor_strs = [tensor_str]
-    last_line_len = len(tensor_str) - tensor_str.rfind('\n') + 1
+    last_line_len = len(tensor_str) - tensor_str.rfind("\n") + 1
     for suffix in suffixes:
         suffix_len = len(suffix)
         if last_line_len + suffix_len + 2 > PRINT_OPTS.linewidth:
-            tensor_strs.append(',\n' + ' ' * indent + suffix)
+            tensor_strs.append(",\n" + " " * indent + suffix)
             last_line_len = indent + suffix_len
         else:
-            tensor_strs.append(', ' + suffix)
+            tensor_strs.append(", " + suffix)
             last_line_len += suffix_len + 2
-    tensor_strs.append(')')
-    return ''.join(tensor_strs)
+    tensor_strs.append(")")
+    return "".join(tensor_strs)
+
 
 def cat_data(inp):
-    if inp.is_consistent:
-        left = inp[:PRINT_OPTS.edgeitems].to_consistent(flow.sbp.broadcast)
-        right = inp[-PRINT_OPTS.edgeitems:].to_consistent(flow.sbp.broadcast)
-        return flow.cat((left, right))
-    else:
-        return flow.cat((inp[:PRINT_OPTS.edgeitems], inp[-PRINT_OPTS.edgeitems:]))
+    return flow.cat((inp[: PRINT_OPTS.edgeitems], inp[-PRINT_OPTS.edgeitems :]))
 
-def self_data(inp):
-    if inp.is_consistent:
-        return inp.to_local(flow.sbp.broadcast)
-    else:
-        return inp
 
 def get_summarized_data(self):
+    # TODO: support consistent slice and delete this assert
+    assert self.is_local
+
     dim = self.dim()
     if dim == 0:
         return self
@@ -274,17 +298,19 @@ def get_summarized_data(self):
         if self.size(0) > 2 * PRINT_OPTS.edgeitems:
             return cat_data(self)
         else:
-            return self_data(self)
+            return self
     if self.size(0) > 2 * PRINT_OPTS.edgeitems:
         start = [self[i] for i in range(0, PRINT_OPTS.edgeitems)]
-        end = ([self[i]
-               for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])])
+        end = [
+            self[i] for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
+        ]
         return flow.stack([get_summarized_data(x) for x in (start + end)])
     else:
         return flow.stack([get_summarized_data(x) for x in self])
 
+
 def _str_intern(inp):
-    prefix = 'tensor('
+    prefix = "tensor("
     indent = len(prefix)
     suffixes = []
     if inp.is_consistent:
@@ -297,17 +323,17 @@ def _str_intern(inp):
     if inp.numel() == 0:
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
         if inp.dim() != 1:
-            suffixes.append('size=' + str(tuple(inp.shape)))
-        suffixes.append('dtype=' + str(inp.dtype))
-        tensor_str = '[]'
+            suffixes.append("size=" + str(tuple(inp.shape)))
+        suffixes.append("dtype=" + str(inp.dtype))
+        tensor_str = "[]"
     else:
-        suffixes.append('dtype=' + str(inp.dtype))
+        suffixes.append("dtype=" + str(inp.dtype))
         tensor_str = _tensor_str(inp, indent)
     if inp.grad_fn is not None:
         name = tensor.grad_fn.name()
-        suffixes.append('grad_fn=<{}>'.format(name))
+        suffixes.append("grad_fn=<{}>".format(name))
     elif inp.requires_grad:
-        suffixes.append('requires_grad=True')
+        suffixes.append("requires_grad=True")
 
     return _add_suffixes(prefix + tensor_str, suffixes, indent)
 
