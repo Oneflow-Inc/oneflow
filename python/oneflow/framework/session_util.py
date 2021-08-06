@@ -446,15 +446,6 @@ def find_or_create_module(module_name, create, reuse=False):
     return module_name2module[module_name]
 
 
-# def api_eager_execution_enabled() -> bool:
-#     """Get current setting of the job, if enable eager execution mode ,then return True
-
-#     Returns:
-#         bool: [description]
-#     """
-#     return oneflow._oneflow_internal.EagerExecutionEnabled()
-
-
 def api_clear_default_session() -> None:
     """Clear the default session. All compiled OneFlow functions will be deleted.
     """
