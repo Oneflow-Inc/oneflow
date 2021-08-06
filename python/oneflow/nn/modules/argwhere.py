@@ -58,7 +58,7 @@ def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
 
 
 @register_tensor_op("argwhere")
-def argwhere_tebsor_op(input, dtype: Optional[flow.dtype] = None):
+def argwhere_tensor_op(input, dtype: Optional[flow.dtype] = flow.int32):
     """
 
     argwhere() -> Tensor
