@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/tensor_meta.h"
-#include "oneflow/core/framework/rpc_token.h"
+#include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -158,11 +158,11 @@ class ConsistentTensorImpl : public TensorImpl {
     return nullptr;
   }
 
-  const Maybe<RpcToken> rpc_token() const { return rpc_token_; }
+  const Maybe<TransportToken> transport_token() const { return transport_token_; }
 
-  Maybe<void> set_rpc_token(const RpcToken& rpc_token) {
-    CHECK_OR_RETURN(!rpc_token_.IsOk()) << "rpc_token_ is initiliazed";
-    rpc_token_ = rpc_token;
+  Maybe<void> set_transport_token(const TransportToken& transport_token) {
+    CHECK_OR_RETURN(!transport_token_.IsOk()) << "transport_token_ is initiliazed";
+    transport_token_ = transport_token;
     return Maybe<void>::Ok();
   }
 
@@ -171,11 +171,11 @@ class ConsistentTensorImpl : public TensorImpl {
       : TensorImpl(requires_grad, is_leaf),
         tensor_meta_(tensor_meta),
         consumer_parallel_distribution_constraint_(),
-        rpc_token_(Error::ValueError("invalid rpc token")) {}
+        transport_token_(Error::ValueError("invalid rpc token")) {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
   Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
-  Maybe<RpcToken> rpc_token_;
+  Maybe<TransportToken> transport_token_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
@@ -266,24 +266,17 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   bool is_lazy() const override { return false; }
 
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override { return cur_rank_phy_tensor_; }
-
-  static Maybe<EagerConsistentTensorImpl> New(
-      const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor,
-      Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc);
+  void reset_cur_rank_phy_tensor(const std::shared_ptr<MirroredTensor>& val) {
+    cur_rank_phy_tensor_ = val;
+  }
 
   static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
                                               bool requires_grad, bool is_leaf);
 
-  static Maybe<EagerConsistentTensorImpl> NewWithPhyTensor(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
-      int64_t parallel_id, bool requires_grad, bool is_leaf);
-
-  static Maybe<EagerConsistentTensorImpl> NewWithoutPhyTensor(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
-      int64_t parallel_id, bool requires_grad, bool is_leaf);
-
-  typedef Maybe<EagerConsistentTensorImpl> (*NewMethod)(Symbol<ConsistentTensorMeta>,
-                                                        Symbol<Device>, int64_t, bool, bool);
+  static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+                                              Symbol<Device> device,
+                                              const Optional<int64_t>& parallel_id,
+                                              bool requires_grad, bool is_leaf);
 
  private:
   EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,

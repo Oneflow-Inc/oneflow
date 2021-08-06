@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/memory/memory_case_util.h"
@@ -79,7 +81,7 @@ Maybe<void> Device::Init() {
 }
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
-  return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
+  return New(type, GlobalProcessCtx::LocalRank());
 }
 
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
@@ -88,7 +90,8 @@ const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
 
 Maybe<const std::string&> Device::of_type() const {
   static const HashMap<std::string, std::string> type2device_tag{
-      {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}, {"cuda_h2d", "gpu"}, {"cuda_d2h", "gpu"},
+      {"cpu", "cpu"},      {"cuda", "gpu"},     {"gpu", "gpu"},
+      {"cuda_h2d", "gpu"}, {"cuda_d2h", "gpu"}, {"nccl", "gpu"},
   };
   return MapAt(type2device_tag, type());
 }
@@ -97,7 +100,7 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},           {"cuda", "gpu.LocalCallOpKernel"},
       {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
-      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"},
+      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"}, {"nccl", "async.gpu.LocalCallOpKernel"},
   };
   return MapAt(type2instr_name, type);
 }
@@ -124,8 +127,7 @@ std::string Device::ToString() const {
 }
 
 Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
-  std::string type = parallel_desc.device_tag();
-  if (parallel_desc.device_tag() == "gpu") { type = "cuda"; }
+  std::string type = Type4DeviceTag(parallel_desc.device_tag());
   std::vector<std::string> machine_device_ids;
   for (const auto& item : parallel_desc.parallel_conf().device_name()) {
     machine_device_ids.emplace_back(item);
@@ -138,6 +140,10 @@ Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& paral
   CHECK_EQ_OR_RETURN(device_id.find('-'), std::string::npos);
   CHECK_OR_RETURN(IsStrInt(device_id));
   return Device::New(type, std::stoi(device_id));
+}
+
+std::string Device::Type4DeviceTag(const std::string& device_tag) {
+  return device_tag == "gpu" ? "cuda" : device_tag;
 }
 
 }  // namespace oneflow

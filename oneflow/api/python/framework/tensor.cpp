@@ -250,7 +250,7 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
 
 Maybe<void> CheckConsistentTensorMeta(const one::Tensor& tensor, int64_t seconds) {
   const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(tensor));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
   JUST(ctx->Check());
   return Maybe<void>::Ok();
 }
@@ -281,7 +281,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
                     || py::isinstance<py::str>(device_kwarg));
 
     if (py::isinstance<py::str>(device_kwarg)) {
-      device = DeviceExportUtil::MakeDevice(py::cast<std::string>(device_kwarg));
+      device = DeviceExportUtil::New(py::cast<std::string>(device_kwarg));
     } else {
       device = py::cast<Symbol<Device>>(device_kwarg);
     }
@@ -353,6 +353,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init(&ApiNewTensor))
       // Properties of pytorch
+      .def_property_readonly("ndim", &Tensor::ndim)
       .def_property_readonly("shape", &Tensor::shape)
       .def_property_readonly("dtype", &GetTensorDType)
       .def_property_readonly("is_cuda", &Tensor::is_cuda)
@@ -411,9 +412,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
       .def_property_readonly("data", &Tensor::data)
-      .def("rpc_token",
+      .def("consistent_id",
            [](const one::Tensor& tensor) -> int64_t {
-             return static_cast<uint64_t>(tensor.rpc_token().GetOrThrow());
+             return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());
            })
       .def("check_meta_consistency",
            [](const one::Tensor& tensor) {
