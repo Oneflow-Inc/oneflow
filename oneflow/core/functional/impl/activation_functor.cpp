@@ -182,7 +182,6 @@ class LogSoftmaxFunctor : public UnaryFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-
 class HardSwishFunctor : public UnaryFunctor {
  public:
   HardSwishFunctor() {

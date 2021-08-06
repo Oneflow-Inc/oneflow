@@ -71,7 +71,6 @@ Maybe<void> LogSoftmax::Apply(const LogSoftmaxInterpState* ctx, const TensorTupl
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {prob, dy}));
   return Maybe<void>::Ok();
 }
-
 REGISTER_OP_EXPR_GRAD_FUNCTION("logsoftmax", LogSoftmax);
 }  // namespace one
 }  // namespace oneflow

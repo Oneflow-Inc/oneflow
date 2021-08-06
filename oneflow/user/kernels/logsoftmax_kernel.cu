@@ -70,7 +70,6 @@ user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
                        & (user_op::HobDataType("prob", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(GenFwInferTmpSizeFn<device, dtype>());
 
-
 REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kGPU, half)
 REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kGPU, float)
 REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kGPU, double) 

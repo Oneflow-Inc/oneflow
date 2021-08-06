@@ -19,13 +19,10 @@ limitations under the License.
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
 #include "oneflow/core/device/cuda_util.h"
 
-//#include "oneflow/core/kernel/new_kernel_util.h"
-
-
 namespace oneflow {
 
-
 namespace {
+
 template<typename T>
 __global__ void ComputeLogGpu(const int64_t len,T* out,T* in){
    CUDA_1D_KERNEL_LOOP(i, len){
@@ -50,8 +47,6 @@ size_t GetReduceTempStorageSize(int64_t n, int64_t w) {
 
 }  // namespace
 
-
-
 template<typename T>
 struct LogSoftmaxKernelUtil<DeviceType::kGPU, T> {
   static size_t GetComputeProbTempStorageSizeInBytes(int64_t n, int64_t w) {
@@ -75,24 +70,22 @@ struct LogSoftmaxKernelUtil<DeviceType::kGPU, T> {
         Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
     T* tmp = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
                                   + reduce_temp_storage_bytes);
+    T* tmp1 = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
+                                  + reduce_temp_storage_bytes); 
     // max | tmp[i] = Max_j(in[i][j])
     NdarrayUtil<DeviceType::kGPU, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, in),
                                                 reduce_storage_var);
     // sub | out[i][j] = in[i][j] - tmp[i]
     NdarrayUtil<DeviceType::kGPU, T>::BroadcastSub(ctx, Var({n, w}, out), Val({n, w}, in),
                                                    Val({n, 1}, tmp));
-    // exp | out[i][j] = exp(out[i][j])
-    NdarrayUtil<DeviceType::kGPU, T>::InplaceExp(ctx,Var({n,w},out));
-    // sum | tmp[i] = Sum_j(out[i][j])
-    NdarrayUtil<DeviceType::kGPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, out),
+    //exp | tmp1[i][j] = exp(out[i][j])
+    NdarrayUtil<DeviceType::kGPU, T>::BroadcastExp(ctx, Var({n, w}, tmp1), Val({n, w}, out));
+    // sum | tmp[i] = Sum_j(tmp1[i][j])
+    NdarrayUtil<DeviceType::kGPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, tmp1),
                                                 reduce_storage_var);
-    // log | out[i][j] = log(out[i][j])
-    // log | tmp[i] = log(tmp[i])
-    ComputeLogGpu<<<BlocksNum4ThreadsNum(n),kCudaThreadsNumPerBlock,0,
-                    ctx->cuda_stream()>>>(n*w,out,out);
+    // tmp | tmp[i] = log(tmp[i])
     ComputeLogGpu<<<BlocksNum4ThreadsNum(n),kCudaThreadsNumPerBlock,0,
                     ctx->cuda_stream()>>>(n,tmp,tmp);
-
     // sub | out[i][j] -= tmp[i]
     NdarrayUtil<DeviceType::kGPU, T>::InplaceBroadcastSub(ctx, Var({n, w}, out), Val({n, 1}, tmp));
   }
@@ -111,14 +104,12 @@ struct LogSoftmaxKernelUtil<DeviceType::kGPU, T> {
         Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
     T* tmp = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
                                   + reduce_temp_storage_bytes);
-    
     //sum | dx[i] = Sum_j(dy[i][j])
     NdarrayUtil<DeviceType::kGPU, T>::ReduceSum(ctx, Var({n, 1}, dx), Val({n, w}, dy),
                                                 reduce_storage_var);
     //mul | tmp[i][j] = out[i][j]*dx[i]
     NdarrayUtil<DeviceType::kGPU, T>::BroadcastMul(ctx, Var({n, w}, tmp), Val({n, w}, out),
                                                 Val({n, 1}, dx));
-
     //sum | dx[i][j] = out[i][j]-tmp[i][j]
     NdarrayUtil<DeviceType::kGPU, T>::BroadcastSub(ctx, Var({n, w}, dx), Val({n, w}, dy),
                                                    Val({n, w}, tmp));

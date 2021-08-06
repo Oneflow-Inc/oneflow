@@ -21,7 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-
 namespace {
 
 template<typename T>
@@ -40,8 +39,6 @@ size_t GetReduceTempStorageSize(int64_t n, int64_t w) {
 }
 
 }  // namespace
-
-
 
 template<typename T>
 struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
@@ -65,23 +62,20 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
     auto reduce_storage_var =
         Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
     T* tmp = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
-                                  + reduce_temp_storage_bytes);
-    
+                                  + reduce_temp_storage_bytes); 
+    T* tmp1 = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
+                                  + reduce_temp_storage_bytes); 
     // max | tmp[i] = Max_j(in[i][j])
     NdarrayUtil<DeviceType::kCPU, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, in),
                                                 reduce_storage_var);
     // sub | out[i][j] = in[i][j] - tmp[i]
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastSub(ctx, Var({n, w}, out), Val({n, w}, in),
                                                    Val({n, 1}, tmp));
-    // exp | out[i][j] = exp(out[i][j])
-    NdarrayUtil<DeviceType::kCPU, T>::InplaceExp(ctx,Var({n,w},out));
-    // sum | tmp[i] = Sum_j(out[i][j])
-    NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, out),
+    //exp | tmp1[i][j] = exp(out[i][j])
+    NdarrayUtil<DeviceType::kCPU, T>::BroadcastExp(ctx, Var({n, w}, tmp1), Val({n, w}, out));
+    // sum | tmp[i] = Sum_j(tmp1[i][j])
+    NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, tmp1),
                                                 reduce_storage_var);
-    // log | out[i][j] = log(out[i][j])
-    FOR_RANGE(int64_t, i, 0, n*w){
-       out[i] = SafeLog(out[i]);
-    }
     // tmp | tmp[i] = log(tmp[i])
     FOR_RANGE(int64_t, i, 0, n){
        tmp[i] = SafeLog(tmp[i]);
@@ -104,14 +98,12 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
         Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
     T* tmp = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
                                   + reduce_temp_storage_bytes);
-    
     //sum | dx[i] = Sum_j(dy[i][j])
     NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(ctx, Var({n, 1}, dx), Val({n, w}, dy),
                                                 reduce_storage_var);
     //mul | tmp[i][j] = out[i][j]*dx[i]
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastMul(ctx, Var({n, w}, tmp), Val({n, w}, out),
                                                 Val({n, 1}, dx));
-
     //sum | dx[i][j] = dy[i][j]-tmp[i][j]
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastSub(ctx, Var({n, w}, dx), Val({n, w}, dy),
                                                    Val({n, w}, tmp));

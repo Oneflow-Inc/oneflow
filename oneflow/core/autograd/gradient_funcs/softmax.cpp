@@ -71,7 +71,6 @@ Maybe<void> Softmax::Apply(const SoftmaxInterpState* ctx, const TensorTuple& out
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {y, dy}));
   return Maybe<void>::Ok();
 }
-
 REGISTER_OP_EXPR_GRAD_FUNCTION("softmax", Softmax);
 }  // namespace one
 }  // namespace oneflow

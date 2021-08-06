@@ -13,11 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_SOFTMAX_KERNEL_LOG_UTIL_H_
-#define ONEFLOW_USER_KERNELS_SOFTMAX_KERNEL_LOG_UTIL_H_
+#ifndef ONEFLOW_USER_KERNELS_LOGSOFTMAX_KERNEL_UTIL_H_
+#define ONEFLOW_USER_KERNELS_LOGSOFTMAX_KERNEL_UTIL_H_
 
 #include "oneflow/core/kernel/kernel_util.h"
-
 
 namespace oneflow {
 
@@ -33,4 +32,4 @@ struct LogSoftmaxKernelUtil {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_SOFTMAX_KERNEL_LOG_UTIL_H_
+#endif  // ONEFLOW_USER_KERNELS_LOGSOFTMAX_KERNEL_UTIL_H_
