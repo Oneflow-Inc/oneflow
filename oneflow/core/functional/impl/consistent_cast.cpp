@@ -121,11 +121,69 @@ Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc
   }
 }
 
+Maybe<one::UserOpExpr> FindOrCreatParallelDistributionOpExpr(
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+  thread_local HashMap<std::vector<Symbol<cfg::SbpParallel>>, std::shared_ptr<one::UserOpExpr>>
+      sbp_list2hierarchical_parallel_cast_op_expr;
+  auto iter = sbp_list2hierarchical_parallel_cast_op_expr.find(sbp_parallels);
+  if (iter == sbp_list2hierarchical_parallel_cast_op_expr.end()) {
+    const auto& op_expr =
+        JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
+                 .Input("in")
+                 .Output("out")
+                 .Attr<std::vector<std::string>>("parallel_distribution",
+                                                 *JUST(GetNdSbpStrList(sbp_parallels)))
+                 .Attr<std::string>("grad_mode", "restore")
+                 .Attr<std::vector<std::string>>("grad_parallel_distribution",
+                                                 std::vector<std::string>())
+                 .Build());
+    iter = sbp_list2hierarchical_parallel_cast_op_expr.emplace(sbp_parallels, op_expr).first;
+  }
+  return iter->second;
+}
+
+Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
+                                     Symbol<ParallelDesc> parallel_desc,
+                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+  const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
+  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
+  const auto& parallel_distribution_cast_op_expr =
+      JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
+  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
+                                                             {consistent_tensor}));
+  return ret;
+}
+
+Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
+                                Symbol<ParallelDesc> parallel_desc,
+                                const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                                const Optional<Shape>& shape, const std::shared_ptr<OpExpr>& op) {
+  CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
+  const auto& device = JUST(x->device());
+  if (device->type() != "cpu") {
+    CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
+        << Error::Unimplemented() << "tensor must be on default device of the current rank.";
+  }
+  Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
+  std::shared_ptr<const Shape> shape_ptr;
+  if (shape.has_value()) {
+    shape_ptr = JUST(shape.value());
+  } else {
+    shape_ptr = JUST(GetConsistentShape(*x->shape(), parallel_desc, parallel_distribution));
+  }
+  MutableAttrMap attrs;
+  JUST(attrs.SetAttr<Shape>("shape", *shape_ptr));
+  const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
+  return output;
+}
+
 }  //  namespace
 
-class LocalToConsistentFunctor {
+class ToConsistentFunctor {
  public:
-  LocalToConsistentFunctor() {
+  ToConsistentFunctor() {
     op_ =
         CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
   }
@@ -134,24 +192,11 @@ class LocalToConsistentFunctor {
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const Optional<Shape>& shape) const {
-    CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
-    const auto& device = JUST(x->device());
-    if (device->type() != "cpu") {
-      CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
-          << Error::Unimplemented() << "tensor must be on default device of the current rank.";
-    }
-    Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
-    std::shared_ptr<const Shape> shape_ptr;
-    if (shape.has_value()) {
-      shape_ptr = JUST(shape.value());
+    if (x->is_consistent()) {
+      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels));
     } else {
-      shape_ptr = JUST(GetConsistentShape(*x->shape(), parallel_desc, parallel_distribution));
+      return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, shape, op_));
     }
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", *shape_ptr));
-    const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
-    return output;
   }
 
  private:
@@ -177,7 +222,7 @@ class ConsistentToLocalFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::LocalToConsistentFunctor>("LocalToConsistent");
+  m.add_functor<impl::ToConsistentFunctor>("ToConsistent");
   m.add_functor<impl::ConsistentToLocalFunctor>("ConsistentToLocal");
 };
 
