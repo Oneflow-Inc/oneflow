@@ -125,12 +125,22 @@ class Block(object):
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
         for idx, arg in enumerate(args):
-            arg_name = "_" + self.name + "-input_" + str(idx)
+            arg_name = "_" + self.name_prefix + self.name + "-input_" + str(idx)
             self._args_repr.append(arg_name + ":" + arg._meta_repr())
+
         result = self._origin.__class__.__call__(self, *args)
-        for idx, out in enumerate(result):
-            out_name = "_" + self.name + "-output_" + str(idx)
+
+        outputs = ()
+        if not (type(result) is tuple or type(result) is list):
+            if result is not None:
+                assert type(result) is Tensor
+                outputs = (result,)
+        else:
+            outputs = result
+        for idx, out in enumerate(outputs):
+            out_name = "_" + self.name_prefix + self.name + "-output_" + str(idx)
             self._outs_repr.append(out_name + ":" + out._meta_repr())
+
         return result
 
     def __iter__(self) -> Iterator["Block"]:

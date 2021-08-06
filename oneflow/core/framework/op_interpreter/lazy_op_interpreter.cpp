@@ -51,11 +51,7 @@ std::string GetDeviceTagByDeviceTypeStr(const std::string& device_type) {
 }
 
 bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
-  if (tensor->is_consistent()) {
     return false;
-  } else {
-    return true;
-  }
 }
 
 Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distribution,
