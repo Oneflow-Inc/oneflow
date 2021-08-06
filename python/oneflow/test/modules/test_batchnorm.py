@@ -488,7 +488,7 @@ class TestBatchNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=40, auto_backward=True)
+    @autotest(n=40, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_batchnorm2d_module_with_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
