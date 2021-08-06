@@ -48,11 +48,11 @@ def logical_xor_op(input, other):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
         
-        >>> input1 = flow.Tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 1, 0]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.Tensor(np.array([0, 0, 1, 1]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.array([0, 1, 0, 1]).astype(np.float32), dtype=flow.float32)
         >>> out = flow.logical_xor(input1, input2)
         >>> out
-        tensor([1, 0, 0], dtype=oneflow.int8)
+        tensor([0, 1, 1, 0], dtype=oneflow.int8)
 
     """
     return LogicalXor()(input, other)
