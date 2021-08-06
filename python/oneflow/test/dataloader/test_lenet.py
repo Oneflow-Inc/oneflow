@@ -163,7 +163,7 @@ def test_train_and_eval(test_case):
                 time.time() - start,
             )
         )
-    test_case.assertLess(0.52, final_accuracy)
+    test_case.assertLess(0.4, final_accuracy)
 
 
 @flow.unittest.skip_unless_1n1d()
