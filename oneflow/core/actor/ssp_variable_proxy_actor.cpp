@@ -33,7 +33,6 @@ class SspVariableProxyCompActor final : public CompActor {
       override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
-  bool CheckOutputActId(int64_t regst_desc_id) const override { return false; }
   bool IsCustomizedReadReady() const override { return consumed_var_rs_.IsCurSlotReady(); }
   bool IsCustomizedWriteReady() const override {
     int64_t cur_staleness = (received_var_piece_id_ - ack_msg_returned_ref_piece_id_);
