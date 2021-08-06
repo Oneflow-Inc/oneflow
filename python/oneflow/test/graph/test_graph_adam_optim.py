@@ -17,7 +17,8 @@ def compare_with_numpy_adam(
     train_iters,
     betas,
     weight_decay,
-    eps,
+    eps, 
+    do_bias_correction
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -47,7 +48,8 @@ def compare_with_numpy_adam(
                     "weight_decay": weight_decay,
                     "scale": scale,
                 }
-            ]
+            ], 
+            do_bias_correction=do_bias_correction
         )
 
     class CustomAdamGraph(flow.nn.Graph):
@@ -81,15 +83,21 @@ def compare_with_numpy_adam(
         beta1 = betas[0]
         beta2 = betas[1]
 
-        def np_train_one_iter(grad):
+        def np_train_one_iter(iter, grad):
             grad = grad * scale + weight_decay * x
+            
+            if do_bias_correction: 
+                lr = learning_rate * np.sqrt(1 - beta2 ** (iter + 1)) / (1 - beta1 ** (iter + 1))
+            else: 
+                lr = learning_rate
+
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
-            param = x - learning_rate * (v / (np.sqrt(s) + eps))
+            param = x - lr * (v / (np.sqrt(s) + eps))
             return (param, v, s)
 
         for i in range(train_iters):
-            (x, vt, st) = np_train_one_iter(random_grad_seq[i])
+            (x, vt, st) = np_train_one_iter(i, random_grad_seq[i])
             np_res_list.append(x)
         return x
 
@@ -111,7 +119,8 @@ class TestAdam(flow.unittest.TestCase):
                                 train_iters=10, 
                                 betas=(0.99, 0.9), 
                                 weight_decay=0.0, 
-                                eps=1e-8)
+                                eps=1e-8, 
+                                do_bias_correction=False)
 
     def test_adam2(test_case):
         compare_with_numpy_adam(test_case, 
@@ -122,7 +131,8 @@ class TestAdam(flow.unittest.TestCase):
                                 train_iters=10, 
                                 betas=(0.99, 0.9), 
                                 weight_decay=0.0005, 
-                                eps=1e-8)
+                                eps=1e-8, 
+                                do_bias_correction=True)
 
 if __name__ == "__main__":
     unittest.main()
