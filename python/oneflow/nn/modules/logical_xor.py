@@ -15,17 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class LogicalXor(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input, other):
-        if other.dtype != input.dtype:
-            other = flow.cast(other, input.dtype)
-        return flow.F.broadcast_logical_xor(input, other)
 
 
 def logical_xor_op(input, other):
@@ -54,7 +43,9 @@ def logical_xor_op(input, other):
         tensor([0, 0, 1], dtype=oneflow.int8)
 
     """
-    return LogicalXor()(input, other)
+    if other.dtype != input.dtype:
+        other = flow.cast(other, input.dtype)
+    return flow.F.broadcast_logical_xor(input, other)
 
 
 @register_tensor_op("logical_xor")
@@ -65,7 +56,7 @@ def logical_xor_op_tensor(input, other):
     See :func:`oneflow.logical_xor`
 
     """
-    return LogicalXor()(input, other)
+    return logical_xor_op(input, other)
 
 
 if __name__ == "__main__":

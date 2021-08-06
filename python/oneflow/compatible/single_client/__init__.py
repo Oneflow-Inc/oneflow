@@ -128,7 +128,6 @@ import oneflow.compatible.single_client.nn.modules.greater
 import oneflow.compatible.single_client.nn.modules.greater_equal
 import oneflow.compatible.single_client.nn.modules.logical_and
 import oneflow.compatible.single_client.nn.modules.logical_or
-import oneflow.compatible.single_client.nn.modules.logical_xor
 import oneflow.compatible.single_client.nn.modules.masked_select
 import oneflow.compatible.single_client.nn.modules.math_ops
 import oneflow.compatible.single_client.nn.modules.norm
