@@ -154,6 +154,7 @@ class Block(object):
             self._args_repr.append(in_str)
             if self._debug:
                 print(in_str)
+
                 def _print_state(d):
                     for (_, n) in d.items():
                         print(n._shallow_repr())
@@ -171,6 +172,7 @@ class Block(object):
         else:
             outputs = result
         for idx, out in enumerate(outputs):
+            out_repr = out._meta_repr() if isinstance(out, Tensor) else str(type(out))
             out_str = (
                 "(OUTPUT:_"
                 + self.name_prefix
@@ -178,9 +180,11 @@ class Block(object):
                 + "-output_"
                 + str(idx)
                 + ":"
-                + out._meta_repr()
+                + out_repr
                 + ")"
             )
+            if not isinstance(out, Tensor):
+                out_str = "[WARNING]" + out_str
             self._outs_repr.append(out_str)
             if self._debug:
                 print(out_str)
