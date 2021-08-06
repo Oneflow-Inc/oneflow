@@ -135,10 +135,9 @@ class LocalToConsistentFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const Optional<Shape>& shape) const {
     CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
-    const auto& device = JUST(x->device());
     std::shared_ptr<one::Tensor> input = x;
     // copy to right device first if input's device type is wrong
-    if (JUST(device->of_type()) != parallel_desc->device_tag()) {
+    if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
       LOG(INFO)
           << "The device_type of the input tensor is different from placement, now copy it to "
           << Device::Type4DeviceTag(parallel_desc->device_tag());
@@ -153,10 +152,11 @@ class LocalToConsistentFunctor {
       input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                     GlobalProcessCtx::LocalRank()));
     }
-    if (device->type() != "cpu") {
-      CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
-          << Error::Unimplemented() << "tensor must be on default device of the current rank.";
-    }
+    const auto& device = JUST(input->device());
+    CHECK_EQ_OR_RETURN(JUST(device->of_type()), parallel_desc->device_tag())
+        << Error::Unimplemented() << "tensor' device type must be same with placement.";
+    CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
+        << Error::Unimplemented() << "tensor must be on default device of the current rank.";
     Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
     std::shared_ptr<const Shape> shape_ptr;
     if (shape.has_value()) {
