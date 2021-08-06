@@ -188,7 +188,6 @@ from oneflow.framework.ops import (
 )
 from oneflow.framework.ops import api_pack as pack
 from oneflow.framework.scope_util import api_current_scope as current_scope
-
 from oneflow.framework.session_util import (
     api_clear_default_session as clear_default_session,
 )
