@@ -89,16 +89,16 @@ def test(test_case):
 
     loss = nn.CrossEntropyLoss()
     loss.to(device)
+    model = ddp(net)
+    optimizer = flow.optim.SGD(model.parameters(), lr=0.1)
 
-    optimizer = flow.optim.SGD(net.parameters(), lr=0.1)
     final_accuracy = 0
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n = 0.0, 0.0, 0
         for X, y in train_iter:
             X = X.to(device=device)
             y = y.to(device=device)
-            m = ddp(net)
-            y_hat = m(X)
+            y_hat = model(X)
 
             l = loss(y_hat, y).sum()
             optimizer.zero_grad()
