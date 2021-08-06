@@ -38,3 +38,4 @@ unittest-log-*
 /oneflow/python/version.py
 /data-test
 /tmp
+/python/oneflow/test/dataloader/data-test/
