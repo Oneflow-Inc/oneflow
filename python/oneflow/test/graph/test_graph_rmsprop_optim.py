@@ -2,10 +2,10 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from numpy.core.defchararray import center
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test.modules.test_util import GenArgList
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -31,7 +31,8 @@ def compare_with_numpy_rmsprop(
     class CustomModel(flow.nn.Module):
         def __init__(self):
             super().__init__()
-            self.param0 = flow.nn.Parameter(flow.Tensor(init_value, device=flow.device(device)))
+            self.param0 = flow.nn.Parameter(flow.Tensor(
+                init_value, device=flow.device(device)))
 
         def forward(self, mask):
             return self.param0 * mask
@@ -86,12 +87,11 @@ def compare_with_numpy_rmsprop(
 
         def np_train_one_iter(grad):
             # ref to: https://github.com/Oneflow-Inc/oneflow/blob/master/python/oneflow/test/modules/test_optim_rmsprop.py#L78-L99
-            if weight_decay != 0:
-                grad = grad + weight_decay * x
-            grad = grad * scale
+            # weight decay is equivalent to l2 penalty
+            grad = grad * scale + weight_decay * x
+            r_ = alpha * r + (1 - alpha) * grad * grad
+            g_ = alpha * g + (1 - alpha) * grad
             if centered:
-                r_ = alpha * r + (1 - alpha) * grad * grad
-                g_ = alpha * g + (1 - alpha) * grad
                 v_ = momentum * v + learning_rate / \
                     np.sqrt(r_ - g_ * g_ + eps) * grad
             else:
@@ -101,7 +101,6 @@ def compare_with_numpy_rmsprop(
             param = x - v_
             return (param, r_, g_, v_)
 
-        from ipdb import set_trace; set_trace()
         for i in range(train_iters):
             (x, r, g, v) = np_train_one_iter(random_grad_seq[i])
             np_res_list.append(x)
@@ -116,60 +115,34 @@ def compare_with_numpy_rmsprop(
 
 @flow.unittest.skip_unless_1n1d()
 class TestRMSprop(flow.unittest.TestCase):
+    def test_rmsprop(test_case):
+        args_dict = OrderedDict()
+        args_dict["device"] = ["cpu", "cuda"]
+        args_dict["x_shape"] = [(1,), (10,)]
+        args_dict["scale"] = [1.0, 0.9]
+        args_dict["learning_rate"] = [1, 10]
+        args_dict["momentum"] = [0.0]  # not supported momentum > 0
+        args_dict["train_iters"] = [10]
+        args_dict["alpha"] = [0.9, 0.99]
+        args_dict["eps"] = [1e-8, 1e-5]
+        args_dict["weight_decay"] = [0.1, 0.9]
+        args_dict["centered"] = [False, True]
+
+        for args in GenArgList(args_dict):
+            compare_with_numpy_rmsprop(test_case, *args)
+
     def test_rmsprop1(test_case):
         compare_with_numpy_rmsprop(test_case,
                                    device="cuda",
                                    x_shape=(1,),
                                    scale=1.0,
-                                   learning_rate=0.1,
+                                   learning_rate=1.,
                                    momentum=0.,
                                    train_iters=20,
                                    alpha=0.,
                                    eps=1e-8,
                                    weight_decay=0.,
                                    centered=True,
-                                   )
-
-    def test_rmsprop2(test_case):
-        compare_with_numpy_rmsprop(test_case,
-                                   device="cuda",
-                                   x_shape=(1,),
-                                   scale=1.0,
-                                   learning_rate=0.1,
-                                   momentum=0.,
-                                   train_iters=20,
-                                   alpha=0.,
-                                   eps=1e-8,
-                                   weight_decay=0.,
-                                   centered=False,
-                                   )
-
-    def test_rmsprop3(test_case):
-        compare_with_numpy_rmsprop(test_case,
-                                   device="cuda",
-                                   x_shape=(1,),
-                                   scale=1.0,
-                                   learning_rate=0.1,
-                                   momentum=0.9,
-                                   train_iters=20,
-                                   alpha=0.99,
-                                   eps=1e-8,
-                                   weight_decay=0.0005,
-                                   centered=True,
-                                   )
-
-    def test_rmsprop4(test_case):
-        compare_with_numpy_rmsprop(test_case,
-                                   device="cuda",
-                                   x_shape=(1,),
-                                   scale=1.0,
-                                   learning_rate=0.1,
-                                   momentum=0.9,
-                                   train_iters=20,
-                                   alpha=0.99,
-                                   eps=1e-8,
-                                   weight_decay=0.0005,
-                                   centered=False,
                                    )
 
 
