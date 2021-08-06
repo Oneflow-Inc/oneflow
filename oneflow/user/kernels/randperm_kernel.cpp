@@ -44,9 +44,8 @@ class CpuRandPermKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("randperm")      
-      .SetCreateFn<CpuRandPermKernel>() 
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu"));
-
+REGISTER_USER_KERNEL("randperm")
+    .SetCreateFn<CpuRandPermKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu"));
 
 }  // namespace oneflow

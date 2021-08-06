@@ -23,7 +23,7 @@ class Randperm(Module):
     def __init__(
         self,
         n,
-        generator:flow.Generator=None,
+        generator: flow.Generator = None,
         dtype: flow.dtype = flow.int32,
         layout=None,
         device: Union[flow.device, str, None] = None,
@@ -85,12 +85,13 @@ class Randperm(Module):
         else:
             res = flow.F.randperm(self.n, self.device, self.generator)
         res.requires_grad = self.requires_grad
-        return res.to(self.device,dtype=self.dtype)
+        return res.to(self.device, dtype=self.dtype)
+
 
 def randperm(
     n: flow.int32,
-    out=None,
-    generator=None,
+    generator: flow.Generator = None,
+    out: Tensor = None,
     dtype: flow.dtype = flow.int32,
     layout=None,
     device: Union[flow.device, str, None] = None,
@@ -107,11 +108,15 @@ def randperm(
     
     Keyword args:
         generator(:class:`oneflow.Generator`, optional):  a pseudorandom number generator for sampling
-        out (Tensor): output Tensor,not supported yet.
+        out (Tensor, optional): output Tensor,not supported yet.
         dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
             Default: ``oneflow.int32``.
         layout: layout is not supported yet.
         device: the desired device of returned tensor. Default: cpu.
+        placement:(flow.placement, optional): The desired device of returned consistent tensor. If None,
+            will construct local tensor.
+        sbp: (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
+            numbers of placement.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
         pin_memory(bool, optional):pin_memory is not supported yet.
 
@@ -125,7 +130,9 @@ def randperm(
         >>> flow.randperm(5, generator=generator)
         tensor([2, 4, 3, 0, 1], dtype=oneflow.int32)
     """
-    return Randperm(n, generator, dtype, layout, device, placement,sbp,requires_grad, pin_memory)(out)
+    return Randperm(
+        n, generator, dtype, layout, device, placement, sbp, requires_grad, pin_memory
+    )(out)
 
 
 if __name__ == "__main__":

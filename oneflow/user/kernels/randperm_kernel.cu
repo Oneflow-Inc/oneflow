@@ -86,25 +86,22 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     OF_CUDA_CHECK(err);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};                                                    
-REGISTER_USER_KERNEL("randperm")                                                           
-      .SetCreateFn<GpuRandPermKernel>()                                                      
-      .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")                                     
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    
-        const int32_t n = ctx->Attr<int32_t>("n");                                           
-        /* Sorted In */                                                                      
-        const int32_t sorted_in_aligned_bytes = 2 * GetCudaAlignedSize(n * sizeof(int32_t)); 
-        /* Indices */                                                                        
-        const int32_t indices_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));       
-        
-        /* CUB Temp Storage */                                                               
-        const int32_t temp_storage_bytes =                                               
-                InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);              
-                                                                         
-        return sorted_in_aligned_bytes                                                       
-            + indices_aligned_bytes + temp_storage_bytes;                                    
-                                 
-                                                                                                                                                                                                                                                                                                             \
-      });
+};
+REGISTER_USER_KERNEL("randperm")
+    .SetCreateFn<GpuRandPermKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
+      const int32_t n = ctx->Attr<int32_t>("n");
+      /* Sorted In */
+      const int32_t sorted_in_aligned_bytes = 2 * GetCudaAlignedSize(n * sizeof(int32_t));
+      /* Indices */
+      const int32_t indices_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));
+
+      /* CUB Temp Storage */
+      const int32_t temp_storage_bytes =
+          InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
+
+      return sorted_in_aligned_bytes + indices_aligned_bytes + temp_storage_bytes;
+    });
 
 }  // namespace oneflow

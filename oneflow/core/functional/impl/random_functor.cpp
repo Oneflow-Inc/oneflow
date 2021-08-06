@@ -100,7 +100,9 @@ class RandPermFunctor {
 
 class ConsistentRandPermFunctor {
  public:
-  ConsistentRandPermFunctor() { randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build()); }
+  ConsistentRandPermFunctor() {
+    randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build());
+  }
   Maybe<Tensor> operator()(const int32_t n, const Optional<Symbol<Device>>& device,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
@@ -128,7 +130,7 @@ class ConsistentRandPermFunctor {
         OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
   }
 
-Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
+  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
       const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
                                  Symbol<cfg::ParallelDistribution>>
@@ -144,11 +146,9 @@ Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
     return iter->second;
   }
 
-private:
+ private:
   std::shared_ptr<OpExpr> randperm_op_;
 };
-
-
 
 }  // namespace impl
 
@@ -160,4 +160,4 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
 
 }  // namespace functional
 }  // namespace one
-} // namespace oneflow
+}  // namespace oneflow
