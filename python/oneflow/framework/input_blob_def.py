@@ -252,4 +252,3 @@ def _MakePushNdarrayCallback(ndarray):
         ofblob.CopyFromNdarray(copied)
 
     return Copy
-
