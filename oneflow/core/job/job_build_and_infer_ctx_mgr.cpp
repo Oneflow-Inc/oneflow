@@ -104,6 +104,7 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
 }
 
 bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
+bool DTREnabled() { return *Global<bool, EnableDTR>::Get(); }
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
   if (JUST(GlobalMultiClientEnv())) {

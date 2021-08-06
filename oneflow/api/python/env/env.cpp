@@ -23,6 +23,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
   m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
+  m.def("EnableDTRStrategy", &EnableDTRStrategy);
 
   m.def("IsEnvInited", &IsEnvInited);
   m.def("InitEnv", &InitEnv);

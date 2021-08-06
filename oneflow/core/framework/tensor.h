@@ -302,7 +302,7 @@ class MirroredTensor : public TensorIf<MirroredTensor>,
 
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                           const Symbol<Device>& device, bool is_lazy,
-                                          bool requires_grad, bool is_leaf, bool enable_dtr=true);
+                                          bool requires_grad, bool is_leaf);
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return impl_->mut_eager_mirrored_tensor_impl();
@@ -323,8 +323,8 @@ class DTRMirroredTensor final : public MirroredTensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DTRMirroredTensor);
   DTRMirroredTensor() = default;
-  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) { impl_ = impl; }
-  ~DTRMirroredTensor() {std::cout << "DTRMirroredTensor is being deleted." << std::endl;}
+  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl) { impl_ = impl; std::cout << "DTRMirroredTensor is being constructed." << std::endl; }
+  ~DTRMirroredTensor() {std::cout << "DTRMirroredTensor is being deleted." << std::endl; }
 };
 
 class ConsistentTensor final : public TensorIf<ConsistentTensor> {

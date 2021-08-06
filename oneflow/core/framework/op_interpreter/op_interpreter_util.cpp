@@ -31,9 +31,8 @@ namespace one {
 namespace {
 
 std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirrored) {
-  bool enable_dtr = true;
   std::shared_ptr<OpExprInterpreter> internal;
-  if (enable_dtr) {
+  if (oneflow::DTREnabled()) {
     internal = std::make_shared<DTREagerMirroredInterpreter>();
   } else if (is_mirrored) {
     internal = std::make_shared<EagerMirroredInterpreter>();

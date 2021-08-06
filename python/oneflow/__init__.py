@@ -84,6 +84,7 @@ session_ctx.OpenDefaultSession(
 )
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
+oneflow._oneflow_internal.EnableDTRStrategy(False)
 del env_util
 from oneflow.framework import python_callback, register_python_callback
 
@@ -160,6 +161,9 @@ from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
 from oneflow.framework.env_util import (
     api_enable_eager_execution as enable_eager_execution,
+)
+from oneflow.framework.env_util import (
+    api_enable_dtr as enable_dtr,
 )
 from oneflow.framework.env_util import api_get_current_machine_id as current_machine_id
 from oneflow.framework.env_util import api_get_current_resource as current_resource

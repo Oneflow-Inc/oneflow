@@ -120,8 +120,12 @@ class DTREagerBlobObject final : public EagerBlobObject {
   const double last_access_time() const { return last_access_time_; }
   const vm::Instruction* compute_path() const { return compute_path_; }
   void set_compute_time(double val) {
-    compute_time_ = val;
-    std::cout << "Compute time: " << val << std::endl;
+    if (val > 0) {
+      compute_time_ = val;
+    } else {
+      compute_time_ = blob_body_bytes_;
+    }
+    // std::cout << "Compute time: " << compute_time_ << std::endl;
   }
   void set_last_access_time(double val) { last_access_time_ = val; }
 

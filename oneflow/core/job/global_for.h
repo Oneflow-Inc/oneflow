@@ -25,6 +25,8 @@ class ForEnv {};
 
 class EagerExecution {};
 
+class EnableDTR {};
+
 class MultiClient {};
 
 }  // namespace oneflow

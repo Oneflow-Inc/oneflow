@@ -56,6 +56,7 @@ session_context.OpenDefaultSession(
     session_util.Session(oneflow._oneflow_internal.NewSessionId())
 )
 oneflow._oneflow_internal.EnableEagerEnvironment(False)
+oneflow._oneflow_internal.EnableDTRStrategy(False)
 del env_util
 del session_util
 del session_context
@@ -158,6 +159,9 @@ from oneflow.compatible.single_client.framework.dtype import (
 )
 from oneflow.compatible.single_client.framework.env_util import (
     api_enable_eager_execution as enable_eager_execution,
+)
+from oneflow.framework.env_util import (
+    api_enable_dtr as enable_dtr,
 )
 from oneflow.compatible.single_client.framework.env_util import (
     api_get_current_machine_id as current_machine_id,

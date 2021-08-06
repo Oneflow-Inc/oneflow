@@ -49,9 +49,23 @@ def api_enable_eager_execution(val: bool = True) -> None:
     return enable_if.unique([enable_eager_environment])(val)
 
 
+def api_enable_dtr(val: bool = False) -> None:
+    """If True, DTR strategy will be launched.
+
+    Args:
+        val (bool, optional): Whether dtr or not.  Defaults to False.
+    """
+    return enable_if.unique([enable_dtr])(val)
+
+
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
 def enable_eager_environment(val=True):
     return oneflow._oneflow_internal.EnableEagerEnvironment(val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
+def enable_dtr(val=False):
+    return oneflow._oneflow_internal.EnableDTRStrategy(val)
 
 
 def api_env_init() -> bool:

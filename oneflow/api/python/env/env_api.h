@@ -26,6 +26,10 @@ inline void EnableEagerEnvironment(bool enable_eager_execution) {
   return oneflow::EnableEagerEnvironment(enable_eager_execution).GetOrThrow();
 }
 
+inline void EnableDTRStrategy(bool enable_dtr) {
+  return oneflow::EnableDTRStrategy(enable_dtr).GetOrThrow();
+}
+
 inline bool IsEnvInited() { return oneflow::IsEnvInited().GetOrThrow(); }
 
 inline void InitEnv(const std::string& env_proto_str, bool is_multi_client) {

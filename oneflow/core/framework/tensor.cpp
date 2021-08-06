@@ -31,14 +31,14 @@ namespace one {
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
-    bool is_lazy, bool requires_grad, bool is_leaf, bool enable_dtr) {
+    bool is_lazy, bool requires_grad, bool is_leaf) {
   const auto& tensor_meta =
       std::make_shared<MirroredTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
   if (is_lazy) {
     const auto& impl =
         std::make_shared<LazyMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<MirroredTensor>(impl);
-  } else if (enable_dtr) {
+  } else if (oneflow::DTREnabled()) {
     const auto& impl =
         std::make_shared<DTREagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
     const auto& tensor = std::make_shared<DTRMirroredTensor>(impl);

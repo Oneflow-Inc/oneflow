@@ -45,6 +45,12 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
   return Maybe<void>::Ok();
 }
 
+inline Maybe<void> EnableDTRStrategy(bool enable_dtr) {
+  CHECK_NOTNULL_OR_RETURN((Global<bool, EnableDTR>::Get()));
+  *Global<bool, EnableDTR>::Get() = enable_dtr;
+  return Maybe<void>::Ok();
+}
+
 inline Maybe<bool>* IsMultiClientPtr() { return Global<Maybe<bool>, MultiClient>::Get(); }
 
 inline Maybe<bool> IsMultiClient() {
