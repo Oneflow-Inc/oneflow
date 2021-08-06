@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -240,7 +241,7 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
       parallel_desc2eager_nccl_broadcast;
   auto iter = parallel_desc2eager_nccl_broadcast.find(parallel_desc);
   if (iter == parallel_desc2eager_nccl_broadcast.end()) {
-    int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));
+    int64_t root = JUST(parallel_desc->MachineId4ParallelId(0));
     std::shared_ptr<UserOpExpr> op_expr = JUST(EagerNcclBroadcast(parallel_desc, root));
     iter = parallel_desc2eager_nccl_broadcast.emplace(parallel_desc, op_expr).first;
   }
@@ -256,12 +257,17 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   const auto& broadcast_parallel_desc =
       JUST(GetBroadcastSubParallelDesc(parallel_desc, parallel_distribution));
   if (broadcast_parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
-  CHECK_EQ_OR_RETURN(broadcast_parallel_desc->device_tag(), "gpu")
-      << Error::Todo() << "supported cuda only now.";
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(FindOrCreatEagerNcclBroadcastOpExpr(broadcast_parallel_desc));
-  return JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
+  if (JUST(broadcast_parallel_desc->MachineId4ParallelId(0)) == GlobalProcessCtx::Rank()) {
+    TensorTuple outputs{tensor};
+    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
+                                one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
+    return tensor;
+  } else {
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(
+        *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
+  }
 }
 
 }  // namespace
