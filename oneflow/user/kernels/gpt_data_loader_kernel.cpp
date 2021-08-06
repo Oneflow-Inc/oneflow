@@ -69,6 +69,8 @@ class GPTDataLoader final : public OpKernelState {
         ctx->Attr<std::vector<int64_t>>("split_sizes"), ctx->Attr<int64_t>("split_index"),
         ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed"));
 
+    batch_size_ = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
+
     // NOTE(zwx): If GPTDataLoader works by DDP, we use world size and rank
     //     as num_shards and shard_index, otherwise use parallel_hierarchy
     //     and parallel_distribution to infer num_shards and shard_index.
@@ -83,14 +85,12 @@ class GPTDataLoader final : public OpKernelState {
       num_shards_ = GetNumShards(hierarchy, paral_dist);
       CHECK_EQ(num_samples % num_shards_, 0);
       shard_index_ = GetShardIndex(hierarchy, paral_dist, ctx->parallel_ctx().parallel_id());
+
+      size_t logical_batch_size = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
+      CHECK_EQ(logical_batch_size % num_shards_, 0);
+      CHECK_EQ(logical_batch_size / num_shards_, batch_size_);
     }
     CHECK_LT(shard_index_, num_shards_);
-
-    size_t logical_batch_size = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
-    size_t device_batch_size = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().At(0);
-    CHECK_EQ(logical_batch_size % num_shards_, 0);
-    CHECK_EQ(logical_batch_size / num_shards_, device_batch_size);
-    batch_size_ = device_batch_size;
   }
   ~GPTDataLoader() = default;
 
