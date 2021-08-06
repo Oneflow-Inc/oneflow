@@ -32,13 +32,11 @@ class CopyCommNetActor final : public Actor {
     void* comm_net_token;
     Regst* regst_raw_ptr;
     int64_t producer;
-    int64_t act_id;
     bool has_sole_empty_blob;
   };
 
   void VirtualActorInit(const TaskProto&) override;
   void InitDeviceCtx(const ThreadCtx&) override;
-  void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const override;
 
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
