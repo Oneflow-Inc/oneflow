@@ -79,7 +79,7 @@ class GPTDataLoaderDistributedTestCase(oneflow.unittest.TestCase):
             placement=flow.placement("cpu", {0: [0, 1]}),
             sbp=[flow.sbp.split(0)],
         )
-        lazy_gpt_loader = DataLoaderGraph(consistent_gpt_loader)
+        gpt_loader_graph = DataLoaderGraph(consistent_gpt_loader)
 
         iteration = 2
         for i in range(iteration):
@@ -89,7 +89,7 @@ class GPTDataLoaderDistributedTestCase(oneflow.unittest.TestCase):
             #     f"\n{tokens.numpy()}"
             # )
 
-            g_tokens = lazy_gpt_loader()
+            g_tokens = gpt_loader_graph()
             # print(
             #     f"rank {rank} graph output tokens: {g_tokens.shape}, {g_tokens.dtype}"
             #     f", placement: {g_tokens.placement}"
