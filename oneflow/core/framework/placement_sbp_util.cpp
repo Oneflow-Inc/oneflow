@@ -180,7 +180,7 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
         // handle `process_id` later.
         remainder_process_ids.push_back(process_id);
       } else {
-        // balancedly put `process_id` into the groups within the same node.
+        // balancedly put `process_id` into the groups within the same node..
         int64_t node_id = node_iter->first;
         const auto& src_process_ids = node_iter->second;
         int64_t src_process_index = (node_id2counter[node_id]++) % src_process_ids.size();
@@ -189,7 +189,7 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
       }
     }
   }
-  // group remainder process ids
+  // put remainder process ids into src groups.
   for (int i = 0; i < remainder_process_ids.size(); ++i) {
     int64_t src_process_id = src_process_ids.at(i % src_process_ids.size());
     JUST(MutMapAt(&process_id2group, src_process_id))->push_back(remainder_process_ids.at(i));
