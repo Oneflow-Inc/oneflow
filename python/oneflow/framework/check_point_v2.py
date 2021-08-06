@@ -568,30 +568,3 @@ def init_by_initializer_conf(
     if sync_between_multi_machine:
         oneflow._oneflow_internal.eager.single_client.Sync()
 
-
-# def Init() -> None:
-#     sync_default_session_if_normal()
-#     sess = session_ctx.GetDefaultSession()
-#     for (op_name, var_blob) in GetAllVariables().items():
-#         var_conf = sess.OpAttribute4InterfaceOpName(op_name).op_conf.variable_conf
-#         if not (
-#             var_conf.HasField("initializer")
-#             or var_conf.HasField("initialize_with_snapshot")
-#         ):
-#             continue
-#         if var_conf.HasField("initialize_with_snapshot"):
-#             initialize_with_snapshot_conf = var_conf.initialize_with_snapshot
-#             if initialize_with_snapshot_conf.HasField("key"):
-#                 snapshot_key = op_name
-#             else:
-#                 snapshot_key = initialize_with_snapshot_conf.key
-#             var_dir = os.path.dirname(
-#                 os.path.join(initialize_with_snapshot_conf.path, snapshot_key)
-#             )
-#             LoadVariables({op_name: GetCheckpoint(var_dir)})
-#             continue
-#         scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(var_blob)
-#         init_by_initializer_conf(
-#             var_blob, var_conf.initializer, False, scope_symbol_id, var_conf.random_seed
-#         )
-#     oneflow._oneflow_internal.eager.single_client.Sync()
