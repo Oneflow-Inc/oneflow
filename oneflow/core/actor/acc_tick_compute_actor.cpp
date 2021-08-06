@@ -31,10 +31,6 @@ void AccTickCompActor::VirtualCompActorInit(const TaskProto& proto) {
   OF_SET_MSG_HANDLER(&AccTickCompActor::HandlerNormal);
 }
 
-int64_t AccTickCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
-  return regst_desc_id == Name2SoleRegstDescId("out") ? max_acc_cnt_ : 1;
-}
-
 void AccTickCompActor::Act() { acc_cnt_ += 1; }
 
 void AccTickCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {

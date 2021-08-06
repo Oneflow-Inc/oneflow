@@ -88,7 +88,6 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<ResourceDesc, ForSession>::Delete();
     }
     Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
-    Global<const ProfilerConf>::New(config_proto.profiler_conf());
     Global<IDMgr>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Global<LazyJobBuildAndInferCtxMgr>::New();
@@ -136,7 +135,6 @@ Maybe<void> MultiClientSessionContext::TryClose() {
 
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
     Global<IDMgr>::Delete();
-    Global<const ProfilerConf>::Delete();
 
     // TODO(chengcheng): remove template ForEnv and ForSession
     Global<ResourceDesc, ForSession>::Delete();
