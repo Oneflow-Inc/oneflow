@@ -30,8 +30,8 @@ namespace {
 
 Maybe<void> CheckCurrentRankGroupConsistency(int64_t seconds) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  const auto& ctx = JUST(CheckRpcToken(rank_group));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
+  const auto& ctx = JUST(CheckTransportToken(rank_group));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
   return Maybe<void>::Ok();
 }
 

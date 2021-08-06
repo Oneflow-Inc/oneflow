@@ -31,6 +31,7 @@ from oneflow.F import sigmoid
 from oneflow.F import prelu
 from oneflow.F import gelu
 from oneflow.F import log_sigmoid as logsigmoid
+from oneflow.F import log_sigmoid
 from oneflow.F import softsign
 from oneflow.F import softmax
 from oneflow.F import softplus

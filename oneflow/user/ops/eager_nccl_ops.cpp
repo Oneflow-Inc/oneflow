@@ -14,8 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
+
+Maybe<Symbol<Device>> DeviceInferFn(user_op::DeviceInferContext* ctx) {
+  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) =
+      ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
+  return Device::New("nccl");
+}
 
 REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
     .Input("in")
@@ -25,6 +32,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))
@@ -37,4 +45,47 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("eager_nccl_broadcast")
+    .Input("in")
+    .Output("out")
+    .Attr<std::string>("parallel_conf")
+    .Attr<int64_t>("root", 0)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("in", 0))
+          .Broadcast(user_op::OpArg("out", 0))
+          .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("in", 0))
+          .Broadcast(user_op::OpArg("out", 0))
+          .Build();
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("in", 0), 0)
+          .Broadcast(user_op::OpArg("out", 0))
+          .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("eager_nccl_reduce")
+    .Input("in")
+    .Output("out")
+    .Attr<std::string>("parallel_conf")
+    .Attr<int64_t>("root", 0)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast)
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    });
 }  // namespace oneflow

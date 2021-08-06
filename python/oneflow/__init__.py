@@ -60,6 +60,7 @@ def is_deprecated(func_or_class):
     )
 
 
+from . import sbp
 import atexit
 
 import oneflow.framework.c_api_util
@@ -79,7 +80,7 @@ if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
 oneflow._oneflow_internal.SetIsMultiClient(True)
 env_util.api_env_init()
-oneflow._oneflow_internal.InitDefaultConsistentRpcTokenScope()
+oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
     MultiClientSession(oneflow._oneflow_internal.NewSessionId())
 )
@@ -138,6 +139,8 @@ import oneflow.nn.modules.flip
 import oneflow.nn.modules.floor
 import oneflow.nn.modules.greater
 import oneflow.nn.modules.greater_equal
+import oneflow.nn.modules.logical_and
+import oneflow.nn.modules.logical_or
 import oneflow.nn.modules.in_top_k
 import oneflow.nn.modules.masked_select
 import oneflow.nn.modules.math_ops
@@ -257,6 +260,8 @@ from oneflow.nn.modules.gather import gather_op as gather
 from oneflow.nn.modules.gather_nd import gather_nd_op as gather_nd
 from oneflow.nn.modules.greater import greater_op as gt
 from oneflow.nn.modules.greater_equal import greater_equal_op as ge
+from oneflow.nn.modules.logical_and import logical_and_op as logical_and
+from oneflow.nn.modules.logical_or import logical_or_op as logical_or
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.less import less_op as lt
 from oneflow.nn.modules.less_equal import less_equal_op as le
@@ -328,6 +333,8 @@ from oneflow.nn.modules.tensor_buffer import (
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
+from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
+from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
@@ -336,8 +343,6 @@ from oneflow.ops.assign_op import assign
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
 from oneflow.ops.categorical_ordinal_encode_op import categorical_ordinal_encode
 from oneflow.ops.constant_op import constant, constant_like, constant_scalar
-from oneflow.ops.count_not_finite import count_not_finite, multi_count_not_finite
-from oneflow.ops.eager_nccl_ops import eager_nccl_all_reduce
 from oneflow.ops.get_variable import api_get_variable as get_variable
 from oneflow.ops.initializer_util import constant_initializer, empty_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
@@ -357,19 +362,8 @@ from oneflow.ops.initializer_util import (
     variance_scaling_initializer,
     zeros_initializer,
 )
-from oneflow.ops.loss_ops import ctc_loss, smooth_l1_loss
-from oneflow.ops.one_hot import one_hot
-from oneflow.ops.partial_fc_sample import distributed_partial_fc_sample
-from oneflow.ops.user_op_builder import (
-    api_consistent_user_op_builder as consistent_user_op_builder,
-)
-from oneflow.ops.user_op_builder import (
-    api_consistent_user_op_module_builder as consistent_user_op_module_builder,
-)
-from oneflow.ops.user_op_builder import api_user_op_builder as user_op_builder
-from oneflow.ops.user_op_builder import (
-    api_user_op_module_builder as user_op_module_builder,
-)
 from oneflow.nn.modules.scatter import *
 
-from . import autograd, distributed, linalg, optim, saved_model, sbp
+from . import autograd, distributed, linalg, optim, saved_model
+import oneflow.utils.data
+import oneflow.utils.vision
