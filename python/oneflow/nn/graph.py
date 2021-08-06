@@ -291,7 +291,6 @@ class Graph(object):
                 output_str = add_indent(out_str, 2)
                 child_lines.append(output_str)
 
-
         main_str = self._shallow_repr() + ": ("
         if len(child_lines) > 0:
             main_str += "\n  " + "\n  ".join(child_lines) + "\n"

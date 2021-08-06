@@ -154,6 +154,7 @@ class Block(object):
             self._args_repr.append(in_str)
             if self._debug:
                 print(in_str)
+
                 def _print_state(d):
                     for (_, n) in d.items():
                         print(n._shallow_repr())
