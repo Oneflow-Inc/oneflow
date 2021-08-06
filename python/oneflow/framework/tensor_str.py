@@ -100,7 +100,7 @@ def set_printoptions(
 class _Formatter(object):
     def __init__(self, tensor):
         self.floating_dtype = tensor.dtype.is_floating_point
-        self.int_mode = True
+        self.int_mode = False
         self.sci_mode = False
         self.max_width = 1
 
@@ -108,7 +108,7 @@ class _Formatter(object):
             tensor_view = tensor.reshape([-1])
 
         # TODO: calculate max_width
-        self.max_width = 5
+        self.max_width = 7
         #  if not self.floating_dtype:
         #      for value in tensor_view:
         #          value_str = '{}'.format(value)
@@ -287,7 +287,13 @@ def _str_intern(inp):
     prefix = 'tensor('
     indent = len(prefix)
     suffixes = []
-    # TODO: print device or placement and sbp
+    if inp.is_consistent:
+        suffixes.append(f"placement={str(inp.placement)}")
+        suffixes.append(f"sbp={str(inp.sbp)}")
+    elif inp.device.type != "cpu" or (
+        inp.device.type == "cuda" and inp.device.index != 0
+    ):
+        suffixes.append("device='" + str(inp.device) + "'")
     if inp.numel() == 0:
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
         if inp.dim() != 1:
