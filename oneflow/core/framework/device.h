@@ -53,7 +53,7 @@ class Device final {
   static Maybe<Symbol<Device>> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
 
-  static std::string DeviceType4ParallelDesc(const std::string& device_tag);
+  static std::string Type4DeviceTag(const std::string& device_tag);
 
   Maybe<const std::string&> local_call_instruction_name() const;
   VmLocalDepObject* mut_compute_local_dep_object() const { return compute_local_dep_object_.get(); }

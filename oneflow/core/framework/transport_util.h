@@ -19,17 +19,17 @@ limitations under the License.
 #include <atomic>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/framework/rpc_token.h"
+#include "oneflow/core/framework/transport_token.h"
 
 namespace oneflow {
 
-class AsyncRpcCtx {
+class AsyncTransportCtx {
  public:
-  explicit AsyncRpcCtx(const RpcToken& rpc_token)
-      : rpc_token_(rpc_token), flying_cnt_(new std::atomic<int64_t>(0)) {}
-  virtual ~AsyncRpcCtx() = default;
+  explicit AsyncTransportCtx(const TransportToken& transport_token)
+      : transport_token_(transport_token), flying_cnt_(new std::atomic<int64_t>(0)) {}
+  virtual ~AsyncTransportCtx() = default;
 
-  const RpcToken& rpc_token() const { return rpc_token_; }
+  const TransportToken& transport_token() const { return transport_token_; }
   std::shared_ptr<std::atomic<int64_t>> flying_cnt() const { return flying_cnt_; }
 
   virtual Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
@@ -39,46 +39,49 @@ class AsyncRpcCtx {
                                                    std::function<void()>* Callback) = 0;
 
  private:
-  RpcToken rpc_token_;
+  TransportToken transport_token_;
   std::shared_ptr<std::atomic<int64_t>> flying_cnt_;
 };
 
-class NaiveAsyncRpcCtx final : public AsyncRpcCtx {
+class NaiveAsyncTransportCtx final : public AsyncTransportCtx {
  public:
-  NaiveAsyncRpcCtx(
-      const RpcToken& rpc_token,
+  NaiveAsyncTransportCtx(
+      const TransportToken& transport_token,
       const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& PrepareSend,
       const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& PrepareRecv)
-      : AsyncRpcCtx(rpc_token), prepare_send_(PrepareSend), prepare_recv_(PrepareRecv) {}
+      : AsyncTransportCtx(transport_token),
+        prepare_send_(PrepareSend),
+        prepare_recv_(PrepareRecv) {}
 
-  NaiveAsyncRpcCtx(
-      const RpcToken& rpc_token,
+  NaiveAsyncTransportCtx(
+      const TransportToken& transport_token,
       const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& PrepareSend,
       const std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>&
           PrepareRecvWithRank)
-      : AsyncRpcCtx(rpc_token),
+      : AsyncTransportCtx(transport_token),
         prepare_send_(PrepareSend),
         prepare_recv_with_rank_(PrepareRecvWithRank) {}
 
-  NaiveAsyncRpcCtx(
-      const RpcToken& rpc_token,
+  NaiveAsyncTransportCtx(
+      const TransportToken& transport_token,
       const std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>&
           PrepareSendWithRank,
       const std::function<Maybe<void>(void**, std::size_t*, std::function<void()>*)>& PrepareRecv)
-      : AsyncRpcCtx(rpc_token),
+      : AsyncTransportCtx(transport_token),
         prepare_send_with_rank_(PrepareSendWithRank),
         prepare_recv_(PrepareRecv) {}
 
-  NaiveAsyncRpcCtx(const RpcToken& rpc_token,
-                   const std::function<Maybe<void>(int64_t, void**, std::size_t*,
-                                                   std::function<void()>*)>& PrepareSendWithRank,
-                   const std::function<Maybe<void>(int64_t, void**, std::size_t*,
-                                                   std::function<void()>*)>& PrepareRecvWithRank)
-      : AsyncRpcCtx(rpc_token),
+  NaiveAsyncTransportCtx(
+      const TransportToken& transport_token,
+      const std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>&
+          PrepareSendWithRank,
+      const std::function<Maybe<void>(int64_t, void**, std::size_t*, std::function<void()>*)>&
+          PrepareRecvWithRank)
+      : AsyncTransportCtx(transport_token),
         prepare_send_with_rank_(PrepareSendWithRank),
         prepare_recv_with_rank_(PrepareRecvWithRank) {}
 
-  ~NaiveAsyncRpcCtx() override = default;
+  ~NaiveAsyncTransportCtx() override = default;
 
   Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
                                            std::function<void()>* Callback) override {
@@ -103,22 +106,27 @@ class NaiveAsyncRpcCtx final : public AsyncRpcCtx {
 
 class RankGroup;
 
-struct RpcUtil final {
+struct TransportUtil final {
   static int64_t TimeoutSeconds() { return 60 * 5; }
 
-  static Maybe<void> WaitUntilDoneOrTimeout(const AsyncRpcCtx& ctx, int64_t seconds);
+  static Maybe<void> WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx, int64_t seconds);
 
-  static Maybe<void> SendToNextRankInRing(Symbol<RankGroup> rank_group, const RpcToken& token,
-                                          AsyncRpcCtx* ctx);
+  static Maybe<void> SendToNextRankInRing(Symbol<RankGroup> rank_group, const TransportToken& token,
+                                          AsyncTransportCtx* ctx);
 
-  static Maybe<void> ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group, const RpcToken& token,
-                                               AsyncRpcCtx* ctx);
+  static Maybe<void> ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group,
+                                               const TransportToken& token, AsyncTransportCtx* ctx);
 
-  static Maybe<void> BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& token,
-                                              AsyncRpcCtx* ctx);
+  static Maybe<void> BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group,
+                                              const TransportToken& token, AsyncTransportCtx* ctx);
 
-  static Maybe<void> CollectFromAllOtherRanks(Symbol<RankGroup> rank_group, const RpcToken& token,
-                                              AsyncRpcCtx* ctx);
+  static Maybe<void> CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
+                                              const TransportToken& token, AsyncTransportCtx* ctx);
+  static Maybe<void> SendDataToChildrenInHeap(const std::vector<int64_t>& rank_heap,
+                                              const TransportToken& token, AsyncTransportCtx* ctx);
+  static Maybe<void> ReceiveDataFromParentInHeap(const std::vector<int64_t>& rank_heap,
+                                                 const TransportToken& token,
+                                                 AsyncTransportCtx* ctx);
 };
 
 }  // namespace oneflow

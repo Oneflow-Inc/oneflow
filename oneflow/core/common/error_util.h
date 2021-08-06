@@ -13,25 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_PROFILER_H_
-#define ONEFLOW_CORE_JOB_PROFILER_H_
+#ifndef ONEFLOW_CORE_COMMON_ERROR_UTIL_H
+#define ONEFLOW_CORE_COMMON_ERROR_UTIL_H
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/plan.pb.h"
+#include <string>
+#include "oneflow/core/common/error.cfg.h"
 
 namespace oneflow {
-
-class Profiler final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Profiler);
-  Profiler() = default;
-  ~Profiler() = default;
-
-  void Profile(const Plan& plan, const std::string& act_event_filepath);
-
- private:
-};
-
+namespace cfg {
+class ErrorProto;
+}
+std::string* MutErrorStr();
+const std::string& GetErrorStr();
+void FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error);
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_PROFILER_H_
+#endif  // ONEFLOW_CORE_COMMON_ERROR_UTIL_H

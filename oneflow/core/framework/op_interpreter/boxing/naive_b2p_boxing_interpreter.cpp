@@ -28,9 +28,9 @@ Maybe<one::Tensor> NaiveB2PBoxingInterpreter::InterpretImpl(
     Symbol<cfg::ParallelDistribution> out_parallel_distribution,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
-  int64_t root = JUST(in_parallel_desc->DeviceId4ParallelId(0));
+  int64_t root = JUST(in_parallel_desc->MachineId4ParallelId(0));
   if (root == GlobalProcessCtx::LocalRank()) {
-    std::string device_type = Device::DeviceType4ParallelDesc(in_parallel_desc->device_tag());
+    std::string device_type = Device::Type4DeviceTag(in_parallel_desc->device_tag());
     return JUST(one::functional::Copy(input, device_type, root));
   } else {
     return JUST(one::functional::ZerosLike(input));
