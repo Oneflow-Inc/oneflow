@@ -500,8 +500,3 @@ def _GetDefaultConfigProto():
     config_proto.session_id = session_ctx.GetDefaultSession().id
     return config_proto
 
-
-# def TmpInitEagerGlobalSession():
-#     config_pb = _GetDefaultConfigProto()
-#     config_proto_str = text_format.MessageToString(config_pb)
-#     oneflow._oneflow_internal.InitEagerGlobalSession(config_proto_str)

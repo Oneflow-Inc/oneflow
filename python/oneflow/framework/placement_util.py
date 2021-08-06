@@ -26,18 +26,6 @@ import oneflow.support.enable_if as enable_if
 from oneflow import oneflow_deprecate
 
 
-# @oneflow_deprecate()
-# def deprecated_placement(*args, **kwargs):
-#     print(
-#         "WARNING:",
-#         "oneflow.device_prior_placement/oneflow.fixed_placement",
-#         "will be removed in the future, use {} instead.".format(
-#             "oneflow.scope.placement"
-#         ),
-#     )
-#     print(traceback.format_stack()[-2])
-#     return api_placement(*args, **kwargs)
-
 
 def api_placement(
     device_tag: str, machine_device_ids: str, hierarchy=None

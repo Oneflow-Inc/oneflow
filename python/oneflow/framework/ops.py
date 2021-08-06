@@ -69,15 +69,6 @@ def acc(one, max_acc_num, name=None):
     )
 
 
-# def api_unpack(
-#     input: oneflow._oneflow_internal.BlobDesc,
-#     unpack_num: int,
-#     name: Optional[str] = None,
-# ) -> oneflow._oneflow_internal.BlobDesc:
-#     func = enable_if.unique([unpack])
-#     return func(input, unpack_num, name=name)
-
-
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def unpack(input, unpack_num, name=None):
     assert not oneflow.eager_execution_enabled()
@@ -117,20 +108,6 @@ def pack(input, pack_num, name=None):
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-
-
-# def api_parallel_cast(
-#     input: oneflow._oneflow_internal.BlobDesc,
-#     name: Optional[str] = None,
-#     distribute: Optional[oneflow._oneflow_internal.distribute.Distribute] = None,
-#     gradient_distribute: Optional[
-#         oneflow._oneflow_internal.distribute.Distribute
-#     ] = None,
-# ) -> oneflow._oneflow_internal.BlobDesc:
-#     func = enable_if.unique([parallel_cast])
-#     return func(
-#         input, name=name, distribute=distribute, gradient_distribute=gradient_distribute
-#     )
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
