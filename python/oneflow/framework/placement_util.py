@@ -26,7 +26,6 @@ import oneflow.support.enable_if as enable_if
 from oneflow import oneflow_deprecate
 
 
-
 def api_placement(
     device_tag: str, machine_device_ids: str, hierarchy=None
 ) -> placement_ctx.PlacementScope:

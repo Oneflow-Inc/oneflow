@@ -490,4 +490,3 @@ def _GetDefaultConfigProto():
         config_proto.resource.gpu_device_num = 0
     config_proto.session_id = session_ctx.GetDefaultSession().id
     return config_proto
-
