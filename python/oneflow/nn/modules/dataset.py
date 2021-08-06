@@ -715,11 +715,11 @@ class COCOReader(Module):
     def forward(self):
         if self.placement is None:
             # local apply
-            output = self._op.apply(self.device, self.attrs)[0]
+            outputs = self._op.apply(self.device, self.attrs)
         else:
             # consistent apply
-            output = self._op.apply(self.placement, self.attrs)[0]
-        return output
+            outputs = self._op.apply(self.placement, self.attrs)
+        return outputs
 
 
 class ImageBatchAlign(Module):
