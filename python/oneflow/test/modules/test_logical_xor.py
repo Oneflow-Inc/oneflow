@@ -32,6 +32,7 @@ def _test_logical_xor_int(test_case, shape, device):
     np_out = np.logical_xor(np_input, np_other)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_logical_xor_float(test_case, shape, device):
     np_input = np.random.uniform(low=-5, high=5, size=shape)
     np_other = np.random.uniform(low=-5, high=5, size=shape)
@@ -40,6 +41,7 @@ def _test_logical_xor_float(test_case, shape, device):
     of_out = flow.logical_xor(input, other)
     np_out = np.logical_xor(np_input, np_other)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
 
 def _test_tensor_logical_xor_int(test_case, shape, device):
     np_input = np.random.randint(-2, 4, size=shape)
@@ -50,6 +52,7 @@ def _test_tensor_logical_xor_int(test_case, shape, device):
     np_out = np.logical_xor(np_input, np_other)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_tensor_logical_xor_float(test_case, shape, device):
     np_input = np.random.uniform(low=-5, high=5, size=shape)
     np_other = np.random.uniform(low=-5, high=5, size=shape)
@@ -58,6 +61,8 @@ def _test_tensor_logical_xor_float(test_case, shape, device):
     of_out = input.logical_xor(other)
     np_out = np.logical_xor(np_input, np_other)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestLogicalXorModule(flow.unittest.TestCase):
     def test_logical_xor(test_case):
