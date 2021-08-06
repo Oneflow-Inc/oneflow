@@ -22,20 +22,21 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__device__ T GenNormal(curandState* state, T mean, T std);
+__device__ T GenNormal(curandState* state, const T mean, const T std);
 
 template<>
-__device__ float GenNormal<float>(curandState* state, float mean, float std) {
+__device__ float GenNormal<float>(curandState* state, const float mean, const float std) {
   return (curand_normal(state) + mean) / std;
 }
 
 template<>
-__device__ double GenNormal<double>(curandState* state, double mean, double std) {
+__device__ double GenNormal<double>(curandState* state, const double mean, const double std) {
   return (curand_normal_double(state) + mean) / std;
 }
 
 template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, T mean, T std) {
+__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, const T mean,
+                            const T std) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
   if (id < elem_cnt) { dptr[id] = GenNormal<T>(&localState, mean, std); }

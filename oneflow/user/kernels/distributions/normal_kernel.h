@@ -51,13 +51,15 @@ class NormalKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const float mean = ctx->Attr<float>("mean");
+    const double std = ctx->Attr<float>("std");
     int64_t elem_cnt = out->shape().elem_cnt();
     T* out_dptr = out->mut_dptr<T>();
     auto* normal_state = dynamic_cast<NormalKernelState*>(state);
     CHECK_NOTNULL(normal_state);
     const auto& generator = normal_state->generator();
     CHECK_NOTNULL(generator);
-    NormalDistribution<device_type, T> distribution(GetZeroVal<T>(), GetOneVal<T>());
+    NormalDistribution<device_type, T> distribution(static_cast<T>(mean), static_cast<T>(std));
     distribution(ctx->device_ctx(), elem_cnt, out_dptr, generator);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

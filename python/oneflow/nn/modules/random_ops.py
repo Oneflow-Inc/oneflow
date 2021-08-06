@@ -71,7 +71,6 @@ class RandN(Module):
         requires_grad=False,
     ) -> None:
         super().__init__()
-        # TODO: make shape process as a util
         assert size is not None, "shape must not be None!"
         assert isinstance(
             size, (int, tuple, list, flow.Size)
@@ -83,17 +82,10 @@ class RandN(Module):
         size = _single(size)
         if dtype is None:
             dtype = flow.float32
-        if dtype not in [flow.float, flow.double]:
-            raise NotImplementedError("Do not support such data type: {}".format(dtype))
 
         if generator is None:
-            generator = flow.default_generator()
+            generator = flow.Generator()
         self.generator = generator
-        if placement is None:
-            if device is None:
-                self.device = flow.device("cpu")
-        else:
-            assert device is None
         self.placement = placement
         self.sbp = sbp
         if placement is not None:
@@ -112,10 +104,10 @@ class RandN(Module):
     def forward(self):
         if self.placement is not None:
             res = flow.F.consistent_randn(
-                self.size, self.dtype, self.placement, self.sbp, self.generator
+                0, 1, self.size, self.dtype, self.placement, self.sbp, self.generator
             )
         else:
-            res = flow.F.randn(self.size, self.dtype, self.device, self.generator)
+            res = flow.F.randn(0, 1, self.size, self.dtype, self.device, self.generator)
         res.requires_grad = self.requires_grad
         return res
 

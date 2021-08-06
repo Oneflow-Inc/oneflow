@@ -26,17 +26,15 @@ Maybe<void> InferNormalParallelDistribution(user_op::InferParallelDistributionFn
 REGISTER_NO_GRAD_USER_OP("normal")
     .Output("out")
     .SetOutputBufferNum(1)
+    .Attr<float>("mean", 0)
+    .Attr<float>("std", 1)
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
     .Attr<std::string>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
-      DimVector dim_vec;
-      if (shape.NumAxes() > 0) {
-        dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
-      }
-      *out_shape = Shape(dim_vec);
+      *out_shape = shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

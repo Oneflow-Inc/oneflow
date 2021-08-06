@@ -37,10 +37,10 @@ def _test_different_dtype(test_case, device, shape):
     y2 = flow.randn(*shape, dtype=flow.float64, device=flow.device(device))
     test_case.assertTrue(not np.array_equal(y1, y2))
     test_case.assertTrue(shape == y1.shape)
-
-    with test_case.assertRaises(Exception) as context:
-        y3 = flow.randn(*shape, dtype=flow.int32, device=flow.device(device))
-    test_case.assertTrue("Do not support such data type" in str(context.exception))
+    with test_case.assertRaises(
+        oneflow._oneflow_internal.exception.UnimplementedException
+    ):
+        flow.randn(*shape, dtype=flow.int32, device=flow.device(device))
 
 
 def _test_backward(test_case, device, shape):

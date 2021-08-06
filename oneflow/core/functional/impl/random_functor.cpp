@@ -71,14 +71,21 @@ class BernoulliFunctor {
 class RandNFunctor {
  public:
   RandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
-                           const Optional<Symbol<Device>>& device,
+  Maybe<Tensor> operator()(const float mean, const float std, const Shape& shape,
+                           const DataType& dtype, const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator) const {
+    if (dtype != DataType::kFloat && dtype != DataType::kDouble) {
+      OF_UNIMPLEMENTED() << dtype << "not supported in randn";
+    }
+
     MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("mean", mean));
+    JUST(attrs.SetAttr<float>("std", std));
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
 
     std::shared_ptr<one::Generator> gen;
+
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
@@ -106,11 +113,13 @@ class RandNFunctor {
 class ConsistentRandNFunctor {
  public:
   ConsistentRandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
-                           const Symbol<ParallelDesc>& placement,
+  Maybe<Tensor> operator()(const float mean, const float std, const Shape& shape,
+                           const DataType& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                            const Optional<one::Generator>& generator) const {
     MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("mean", mean));
+    JUST(attrs.SetAttr<float>("std", std));
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
 

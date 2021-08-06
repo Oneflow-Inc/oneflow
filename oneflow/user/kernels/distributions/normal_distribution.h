@@ -40,8 +40,8 @@ class NormalDistribution<DeviceType::kCPU, T> final {
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
-  T mean_;
-  T std_;
+  const T mean_;
+  const T std_;
 };
 
 #ifdef WITH_CUDA
@@ -56,8 +56,8 @@ class NormalDistribution<DeviceType::kGPU, T> final {
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
-  T mean_;
-  T std_;
+  const T mean_;
+  const T std_;
 };
 #endif
 
