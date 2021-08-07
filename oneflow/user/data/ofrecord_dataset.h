@@ -53,7 +53,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
     // NOTE(zwx): dataset infer the part of the files needed to be read by
     //     1) ddp, when parallel_id == 0 and parallel_num == 1 and world_size > 1,
     //        according to rank and world size.
-    //     2) consistent, when parallel_num > 1 or 
+    //     2) consistent, when parallel_num > 1 or
     //                         parallel_id == 0 and parallel_num == 1 and world_size == 1,
     //        according to parallel_ctx.parallel_id and parallel_ctx.parallel_num.
     if (IsMirroredParallelContext(ctx->parallel_ctx())) {

@@ -97,7 +97,9 @@ class GPTDataLoaderDistributedTestCase(oneflow.unittest.TestCase):
             # )
 
             # print(f"{'-' * 20} rank {rank} iter {i} complete {'-' * 20}")
-            test_case.assertTrue(np.allclose(tokens.numpy(), g_tokens.to_local().numpy()))
+            test_case.assertTrue(
+                np.allclose(tokens.numpy(), g_tokens.to_local().numpy())
+            )
 
 
 if __name__ == "__main__":

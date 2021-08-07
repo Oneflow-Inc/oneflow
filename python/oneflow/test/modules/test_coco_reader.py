@@ -95,9 +95,7 @@ class COCODataLoaderDistributedTestCase(oneflow.unittest.TestCase):
             g_image, g_image_id, g_image_size = coco_loader_graph()
 
             # print(f"{'-' * 20} rank {rank} iter {i} complete {'-' * 20}")
-            test_case.assertTrue(
-                np.allclose(image.numpy(), g_image.to_local().numpy())
-            )
+            test_case.assertTrue(np.allclose(image.numpy(), g_image.to_local().numpy()))
             test_case.assertTrue(
                 np.allclose(image_id.numpy(), g_image_id.to_local().numpy())
             )
