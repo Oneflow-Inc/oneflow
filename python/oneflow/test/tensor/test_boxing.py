@@ -27,8 +27,8 @@ class TestBoxing(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_boxing_single_device(test_case):
         np_arr = np.array([1, 2, 3])
-        x = flow.tensor(np_arr).to('cuda')
-        x = x.to_consistent(flow.placement('cuda', {0: range(1)}), flow.sbp.split(0))
+        x = flow.tensor(np_arr).to("cuda")
+        x = x.to_consistent(flow.placement("cuda", {0: range(1)}), flow.sbp.split(0))
         x = x.to_consistent(sbp=flow.sbp.broadcast)
         test_case.assertTrue(np.array_equal(np_arr, x.to_local().numpy()))
 
@@ -36,27 +36,37 @@ class TestBoxing(flow.unittest.TestCase):
     def test_boxing_two_devices(test_case):
         rank = oneflow.framework.distribute.get_rank()
         np_arr = np.array([1, 2, 3]) * (rank + 1)
-        x = flow.tensor(np_arr).to('cuda')
+        x = flow.tensor(np_arr).to("cuda")
 
         def assert_broadcast(x):
             test_case.assertTrue(x.sbp[0] == flow.sbp.broadcast)
-            test_case.assertTrue(np.array_equal(np.array([1, 2, 3, 2, 4, 6]), x.to_local().numpy()))
+            test_case.assertTrue(
+                np.array_equal(np.array([1, 2, 3, 2, 4, 6]), x.to_local().numpy())
+            )
 
         def assert_partial_sum(x):
             test_case.assertTrue(x.sbp[0] == flow.sbp.partial_sum)
             if rank == 0:
-                test_case.assertTrue(np.array_equal(np.array([1, 2, 3, 2, 4, 6]), x.to_local().numpy()))
+                test_case.assertTrue(
+                    np.array_equal(np.array([1, 2, 3, 2, 4, 6]), x.to_local().numpy())
+                )
             else:
-                test_case.assertTrue(np.array_equal(np.zeros((6,)), x.to_local().numpy()))
+                test_case.assertTrue(
+                    np.array_equal(np.zeros((6,)), x.to_local().numpy())
+                )
 
         def assert_split(x):
             test_case.assertTrue(x.sbp[0] == flow.sbp.split(0))
             if rank == 0:
-                test_case.assertTrue(np.array_equal(np.array([1, 2, 3]), x.to_local().numpy()))
+                test_case.assertTrue(
+                    np.array_equal(np.array([1, 2, 3]), x.to_local().numpy())
+                )
             else:
-                test_case.assertTrue(np.array_equal(np.array([2, 4, 6]), x.to_local().numpy()))
+                test_case.assertTrue(
+                    np.array_equal(np.array([2, 4, 6]), x.to_local().numpy())
+                )
 
-        x = x.to_consistent(flow.placement('cuda', {0: range(2)}), flow.sbp.split(0))
+        x = x.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.split(0))
 
         # S -> B
         x = x.to_consistent(sbp=flow.sbp.broadcast)
@@ -82,6 +92,6 @@ class TestBoxing(flow.unittest.TestCase):
         x = x.to_consistent(sbp=flow.sbp.split(0))
         assert_split(x)
 
+
 if __name__ == "__main__":
     unittest.main()
-
