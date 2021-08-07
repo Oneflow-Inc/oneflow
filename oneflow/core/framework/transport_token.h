@@ -45,7 +45,7 @@ enum RankGroupCtrlCmd {
   kRankGroupCtrlCmdSyncSymbolConsistentTensorMeta,
   kRankGroupCtrlCmdCheckRankGroupConsistency,
   kRankGroupCtrlCmdCheckTensorConsistency,
-  kRankGroupCtrlCmdAll2AllSyncShape,
+  kRankGroupCtrlCmdSyncLocalShapeDtype,
   // End
   kSizeOfRankGroupCtrlCmd
 };
@@ -66,7 +66,8 @@ class TransportToken final {
   static TransportToken NewDataTransportToken();
   static Maybe<TransportToken> NewMetaTransportToken();
   static Maybe<TransportToken> AcquireCtrlTransportToken(RankGroupCtrlCmd cmd);
-  Maybe<void> ReleaseCtrlTransportToken() const;
+  Maybe<void> TryAcquireCtrlTransportTokenLock() const;
+  Maybe<void> ReleaseCtrlTransportTokenLock() const;
 
   static constexpr size_t MaxNumberOfThreadConsistentUId() {
     return (1 << kTransportTokenThreadConsistentUIdBit);

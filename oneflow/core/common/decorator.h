@@ -34,44 +34,115 @@ struct WithDecorator final {
   };
 };
 
-#define DECORATED(decorator, fn_ptr) \
-  &WithDecorator<decorator>::Decorate<decltype(fn_ptr)>::Call<fn_ptr>
+#define DECORATE(fn_ptr, decorator) \
+  (&WithDecorator<decorator>::Decorate<decltype(fn_ptr)>::Call<fn_ptr>)
 
-#define THREAD_LOCAL_STATIC_FUNC_TEMPLATE(T, Args)                           \
-  template<T (*func)(Args...)>                                               \
-  static T Call(Args... args) {                                              \
-    using KeyT = std::tuple<typename std::decay<Args>::type...>;             \
-    static thread_local std::unordered_map<KeyT, T> map;                     \
-    const auto& key = KeyT(args...);                                         \
-    auto iter = map.find(key);                                               \
-    if (iter == map.end()) { iter = map.emplace(key, func(args...)).first; } \
-    return iter->second;                                                     \
+template<typename... Args>
+struct ThreadLocalCopiable;
+
+template<typename RetT>
+struct ThreadLocalCopiable<RetT> {
+  template<RetT (*func)()>
+  static RetT Call() {
+    static thread_local RetT value = func();
+    return value;
   }
+};
+
+template<typename RetT, typename Arg0>
+struct ThreadLocalCopiable<RetT, Arg0> {
+  template<RetT (*func)(Arg0)>
+  static RetT Call(Arg0 arg0) {
+    using KeyT = typename std::decay<Arg0>::type;
+    using MappedT = typename std::decay<RetT>::type;
+    static thread_local std::unordered_map<KeyT, MappedT> map;
+    auto iter = map.find(arg0);
+    if (iter == map.end()) { iter = map.emplace(arg0, func(arg0)).first; }
+    return iter->second;
+  }
+
+ private:
+  static void StaticCheckNotOutArg() {
+    auto* _ = &static_check::ForEachArgsType<static_check::CheckNotOutArg, Arg0>;
+  }
+};
+
+template<typename RetT, typename Arg0, typename Arg1>
+struct ThreadLocalCopiable<RetT, Arg0, Arg1> {
+  template<RetT (*func)(Arg0, Arg1)>
+  static RetT Call(Arg0 arg0, Arg1 arg1) {
+    using KeyT0 = typename std::decay<Arg0>::type;
+    using KeyT1 = typename std::decay<Arg1>::type;
+    using MappedT = typename std::decay<RetT>::type;
+    static thread_local std::unordered_map<KeyT0, std::unordered_map<KeyT1, MappedT>> map;
+    auto* last_map = &map[arg0];
+    auto iter = last_map->find(arg1);
+    if (iter == last_map->end()) { iter = last_map->emplace(arg1, func(arg0, arg1)).first; }
+    return iter->second;
+  }
+
+ private:
+  static void StaticCheckNotOutArg() {
+    auto* _ = &static_check::ForEachArgsType<static_check::CheckNotOutArg, Arg0, Arg1>;
+  }
+};
+
+template<typename RetT, typename Arg0, typename Arg1, typename Arg2>
+struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2> {
+  template<RetT (*func)(Arg0, Arg1, Arg2)>
+  static RetT Call(Arg0 arg0, Arg1 arg1, Arg2 arg2) {
+    using KeyT0 = typename std::decay<Arg0>::type;
+    using KeyT1 = typename std::decay<Arg1>::type;
+    using KeyT2 = typename std::decay<Arg2>::type;
+    using MappedT = typename std::decay<RetT>::type;
+    static thread_local std::unordered_map<
+        KeyT0, std::unordered_map<KeyT1, std::unordered_map<KeyT2, MappedT>>>
+        map;
+    auto* last_map = &map[arg0][arg1];
+    auto iter = last_map->find(arg2);
+    if (iter == last_map->end()) { iter = last_map->emplace(arg2, func(arg0, arg1, arg2)).first; }
+    return iter->second;
+  }
+
+ private:
+  static void StaticCheckNotOutArg() {
+    auto* _ = &static_check::ForEachArgsType<static_check::CheckNotOutArg, Arg0, Arg1, Arg2>;
+  }
+};
+
+template<typename RetT, typename Arg0, typename Arg1, typename Arg2, typename Arg3,
+         typename... Args>
+struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2, Arg3, Args...> {
+  template<RetT (*func)(Arg0, Arg1, Arg2, Arg3, Args...)>
+  static RetT Call(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3, Args... args) {
+    using KeyT0 = typename std::decay<Arg0>::type;
+    using KeyT1 = typename std::decay<Arg1>::type;
+    using KeyT2 = typename std::decay<Arg2>::type;
+    using KeyT3 = typename std::decay<Arg3>::type;
+    using KeyT = std::tuple<KeyT0, KeyT1, KeyT2, KeyT3, typename std::decay<Args>::type...>;
+    using MappedT = typename std::decay<RetT>::type;
+    static thread_local std::unordered_map<KeyT, MappedT> map;
+    const auto& key = KeyT(arg0, arg2, arg2, args...);
+    auto iter = map.find(key);
+    if (iter == map.end()) { iter = map.emplace(key, func(arg0, arg2, arg2, args...)).first; }
+    return iter->second;
+  }
+
+ private:
+  static void StaticCheckNotOutArg() {
+    auto* _ = &static_check::ForEachArgsType<static_check::CheckNotOutArg, Arg0, Arg1, Arg2, Arg3,
+                                             Args...>;
+  }
+};
 
 // for scalar type key.
-template<typename T, typename... Args>
-struct ThreadLocal final {
-  THREAD_LOCAL_STATIC_FUNC_TEMPLATE(T, Args);
-
+template<typename... Args>
+struct ThreadLocal : public ThreadLocalCopiable<Args...> {
  private:
-  static void StaticCheck() {
+  static void StaticCheckIsScalarType() {
     auto* _0 = &static_check::ForEachArgsType<static_check::CheckIsScalarType, Args...>;
-    auto* _1 = &static_check::ForEachArgsType<static_check::CheckNotOutArg, Args...>;
   }
 };
-
-// for deep copiable type key.
-template<typename T, typename... Args>
-struct ThreadLocalDeepCopiable final {
-  THREAD_LOCAL_STATIC_FUNC_TEMPLATE(T, Args);
-
- private:
-  static void StaticCheck() {
-    auto* _ = &static_check::ForEachArgsType<static_check::CheckNotOutArg, Args...>;
-  }
-};
-
-#undef THREAD_LOCAL_STATIC_FUNC_TEMPLATE
 
 }  // namespace oneflow
 

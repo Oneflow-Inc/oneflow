@@ -212,7 +212,7 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
   }
   return map;
 }
-auto* CachedBroadcastGroup = DECORATED(ThreadLocal, &CalcBroadcastGroup);
+auto* CachedBroadcastGroup = DECORATE(&CalcBroadcastGroup, ThreadLocal);
 
 }  // namespace
 

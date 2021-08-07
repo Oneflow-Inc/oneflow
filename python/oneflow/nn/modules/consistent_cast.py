@@ -35,7 +35,7 @@ class ToConsistent(Module):
 
 
 @register_tensor_op("to_consistent")
-def to_consistent_op(input, placement, sbp, shape=None):
+def to_consistent_op(input, placement, sbp):
     """Cast a local tensor to consistent tensor or cast a
     consistent tensor to another consistent tensor with 
     different sbp or placement
@@ -62,7 +62,7 @@ def to_consistent_op(input, placement, sbp, shape=None):
     """
     if isinstance(sbp, flow.sbp.sbp):
         sbp = (sbp,)
-    return flow.F.to_consistent(input, placement, sbp, shape)
+    return flow.F.to_consistent(input, placement, sbp)
 
 
 class ToLocal(Module):
