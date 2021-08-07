@@ -237,6 +237,8 @@ if(BUILD_CUDA)
   add_dependencies(of_cudaobj of_protoobj of_cfgobj prepare_oneflow_third_party)
   target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
   set(ONEFLOW_CUDA_LIBS of_cudaobj)
+
+  target_compile_options(of_cudaobj PRIVATE -Werror=return-type)
 endif()
 
 # cc obj lib
@@ -289,6 +291,7 @@ if(BUILD_SHARED_LIBS AND APPLE)
   target_link_libraries(of_pyext_obj ${Python3_LIBRARIES})
 endif()
 add_dependencies(of_pyext_obj of_ccobj)
+target_compile_options(of_pyext_obj PRIVATE -Werror=return-type)
 
 if(APPLE)
   set(of_libs -Wl,-force_load ${ONEFLOW_CUDA_LIBS} of_ccobj of_protoobj of_cfgobj)
