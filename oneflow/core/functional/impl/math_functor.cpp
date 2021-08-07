@@ -499,6 +499,7 @@ class ScalarLogicalLessEqualFunctor : public ScalarLogicalBaseFunctor {
   }
 };
 
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
