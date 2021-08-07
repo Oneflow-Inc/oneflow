@@ -107,6 +107,10 @@ def _repr(self):
     return tensor_str_util._gen_tensor_str(self)
 
 
+def _meta_repr(self):
+    return tensor_str_util._gen_tensor_meta_str(self)
+
+
 def _gt(self, other):
     return self.gt(other)
 
@@ -353,6 +357,7 @@ def RegisterMethods():
     Tensor._placement_scope = _placement_scope
     Tensor.copy_ = _copy
     Tensor.get_device = _get_device
+    Tensor._meta_repr = _meta_repr
 
 
 def register_tensor_op(op_name):
