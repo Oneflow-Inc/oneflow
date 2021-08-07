@@ -670,11 +670,24 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::OpExprInterpContext& ctx,
     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
     const std::string& instr_type_name) {
+  return LocalCallOpKernel(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr,
+                           nullptr, ctx, parallel_desc_sym, instr_type_name);
+}
+
+Maybe<void> InstructionsBuilder::LocalCallOpKernel(
+    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+    const one::ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
+    const one::ConsistentTensorMetaListPtr& output_consistent_tensor_metas,
+    const one::OpExprInterpContext& ctx,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    const std::string& instr_type_name) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx,
-      *one::CurrentDevVmDepObjectConsumeMode());
+      opkernel, input_eager_blob_objects, output_eager_blob_objects, input_consistent_tensor_metas,
+      output_consistent_tensor_metas, ctx, *one::CurrentDevVmDepObjectConsumeMode());
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));

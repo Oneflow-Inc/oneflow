@@ -252,12 +252,23 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
     return id_cache->FindOrCreate(conf, [&] { return CreateSymbolId<T>(conf); });
   }
 
-  Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-                                const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-                                const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-                                const one::OpExprInterpContext& ctx,
-                                const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-                                const std::string& instr_type_name);
+Maybe<void> LocalCallOpKernel(
+    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+    const one::OpExprInterpContext& ctx,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    const std::string& instr_type_name);
+
+  Maybe<void> LocalCallOpKernel(
+      const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+      const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+      const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+      const one::ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
+      const one::ConsistentTensorMetaListPtr& output_consistent_tensor_metas,
+      const one::OpExprInterpContext& ctx,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+      const std::string& instr_type_name);
 
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,

@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_STATEFUL_LOCAL_OPKERNEL_H_
 
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/device.h"
@@ -44,6 +45,9 @@ using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 using EagerBlobObjectListPtr =
     std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
+
+using ConsistentTensorMetaListPtr =
+    std::shared_ptr<const std::vector<Symbol<ConsistentTensorMeta>>>;
 
 class EagerBlobObjectTensorView final : public user_op::Tensor {
  public:
@@ -99,6 +103,43 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
   const std::function<vm::EagerBlobObject*()> mut_eager_blob_object_;
 };
 
+class ConsistentTensorMetaTensorDescView final : public user_op::TensorDesc {
+ public:
+  ConsistentTensorMetaTensorDescView(
+      const std::function<Symbol<ConsistentTensorMeta>()>& consistent_tensor_meta)
+      : consistent_tensor_meta_(consistent_tensor_meta) {}
+
+  const Shape& shape() const override { return consistent_tensor_meta_()->shape(); }
+
+  Shape* mut_shape() override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  DataType data_type() const override { return consistent_tensor_meta_()->data_type(); }
+
+  DataType* mut_data_type() override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  bool is_dynamic() const override { return false; }
+
+  bool* mut_is_dynamic() override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  void set_is_dynamic(bool val) override { UNIMPLEMENTED(); }
+
+  Symbol<cfg::ParallelDistribution> parallel_distribution() {
+    return consistent_tensor_meta_()->parallel_distribution();
+  }
+
+ private:
+  const std::function<Symbol<ConsistentTensorMeta>()> consistent_tensor_meta_;
+};
+
 class ZeroCopyBaseContext {
  public:
   ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
@@ -111,10 +152,29 @@ class ZeroCopyBaseContext {
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
 
+  const ConsistentTensorMeta* ConsistentTensorMeta4ArgNameAndIndex(const std::string& arg_name,
+                                                                   const int32_t index) const;
+
+  const ConsistentTensorMetaTensorDescView* ConsistentTensorMetaView4ArgNameAndIndex(
+      const std::string& arg_name, const int32_t index) const;
+
+  Optional<Symbol<ParallelDesc>> parallel_desc() const {
+    if (input_consistent_tensor_metas_ != nullptr && !input_consistent_tensor_metas_->empty()) {
+      return input_consistent_tensor_metas_->at(0)->parallel_desc();
+    } else if (output_consistent_tensor_metas_) {
+      CHECK(!output_consistent_tensor_metas_->empty());
+      return output_consistent_tensor_metas_->at(0)->parallel_desc();
+    } else {
+      return Optional<Symbol<ParallelDesc>>();
+    }
+  }
+
   const ArgVec& inputs() const { return input_arg_tuple_->indexed_arg_name_and_index(); }
   const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
 
-  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs);
+  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+              const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
+              const ConsistentTensorMetaListPtr& output_consistent_tensor_metas);
 
  private:
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
@@ -126,6 +186,13 @@ class ZeroCopyBaseContext {
   std::unique_ptr<EagerBlobObjectTensorView> tmp_buffer_view_;
   EagerBlobObjectListPtr input_tensors_;
   EagerBlobObjectListPtr output_tensors_;
+  ConsistentTensorMetaListPtr input_consistent_tensor_metas_;
+  ConsistentTensorMetaListPtr output_consistent_tensor_metas_;
+  std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
+      input_consistent_tensor_meta_views_;
+  std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
+      output_consistent_tensor_meta_views_;
+  ;
 };
 
 class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
@@ -233,7 +300,9 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return 1; }
 
-  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs);
+  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+              const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
+              const ConsistentTensorMetaListPtr& output_consistent_tensor_metas);
 
   const std::string& input(const std::string& arg_name, int32_t index) const override {
     return user_op_conf().input(arg_name, index);
@@ -309,6 +378,8 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   const ArgVec& outputs() const override { return base_ctx_.outputs(); };
 
   void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+              const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
+              const ConsistentTensorMetaListPtr& output_consistent_tensor_metas,
               DeviceCtx* device_ctx);
 
  private:
@@ -348,12 +419,12 @@ class StatefulLocalOpKernel final {
     return output_tuple_indexes4mut2_obns_;
   }
 
-  Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs,
-                              const EagerBlobObjectListPtr& outputs,
-                              LocalUserOpInferContext* op_infer_ctx);
-  Maybe<void> InferDataType(const EagerBlobObjectListPtr& inputs,
-                            const EagerBlobObjectListPtr& outputs,
-                            LocalUserOpInferContext* op_infer_ctx);
+  // Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs,
+  //                             const EagerBlobObjectListPtr& outputs,
+  //                             LocalUserOpInferContext* op_infer_ctx);
+  // Maybe<void> InferDataType(const EagerBlobObjectListPtr& inputs,
+  //                           const EagerBlobObjectListPtr& outputs,
+  //                           LocalUserOpInferContext* op_infer_ctx);
 
   ComposedAttrMap* composed_attrs_for_scheduler_thread() const {
     return composed_attrs_for_scheduler_thread_.get();
@@ -376,16 +447,20 @@ class StatefulLocalOpKernel final {
  private:
   friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
-  LocalUserKernelComputeContext* UpdateComputeContext(const EagerBlobObjectListPtr& inputs,
-                                                      const EagerBlobObjectListPtr& outputs,
-                                                      DeviceCtx* device_ctx);
+  LocalUserKernelComputeContext* UpdateComputeContext(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
+      const ConsistentTensorMetaListPtr& output_consistent_tensor_metas, DeviceCtx* device_ctx);
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
   void TryInitOpKernelState(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
                             const EagerBlobObjectListPtr& inputs,
-                            const EagerBlobObjectListPtr& outputs, user_op::OpKernelState** state);
+                            const EagerBlobObjectListPtr& outputs,
+                            const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
+                            const ConsistentTensorMetaListPtr& output_consistent_tensor_metas,
+                            user_op::OpKernelState** state);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 
@@ -395,8 +470,10 @@ class StatefulLocalOpKernel final {
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
 
-  Maybe<const user_op::OpKernel*> ChooseOpKernel(const EagerBlobObjectListPtr& inputs,
-                                                 const EagerBlobObjectListPtr& outputs);
+  Maybe<const user_op::OpKernel*> ChooseOpKernel(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
+      const ConsistentTensorMetaListPtr& output_consistent_tensor_metas);
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 

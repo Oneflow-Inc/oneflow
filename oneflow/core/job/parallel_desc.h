@@ -96,6 +96,7 @@ class ParallelDesc final {
   Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
   Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Optional<int64_t>* parallel_id) const;
+  Maybe<ParallelContext> GetParallelContext4CurrentProcessCtx() const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
   // this api is exported to python as Containing
   bool Bigger(const ParallelDesc& rhs) const;
