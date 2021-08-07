@@ -32,6 +32,7 @@ np_str_obj_array_pattern = re.compile(r"[SaUO]")
 
 def default_convert(data):
     r"""Converts each NumPy array data field into a tensor"""
+    print("\nEnter collate.py >>>>>>>>>>>>>>>>> default_convert()")
     elem_type = type(data)
     if isinstance(data, (flow.Tensor, flow._oneflow_internal.Tensor)):
         return data
@@ -76,6 +77,7 @@ def default_collate(batch):
 
     elem = batch[0]
     elem_type = type(elem)
+    print("\nEnter collate.py >>>>>>>>>>>>>>>>> default_collate()")
     if isinstance(elem, (flow.Tensor, flow._oneflow_internal.Tensor)):
         # TODO: tensor.storage()._new_shared(numel)
         return flow.stack(batch, dim=0)

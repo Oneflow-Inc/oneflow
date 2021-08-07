@@ -13,21 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-r"""Utility classes & functions for data loading. Code in this folder is mostly
-used by ../dataloder.py.
-
-A lot of multiprocessing is used in data loading, which only supports running
-functions defined in global environment (py2 can't serialize static methods).
-Therefore, for code tidiness we put these functions into different files in this
-folder.
-"""
 import sys
 import atexit
 
 
 IS_WINDOWS = sys.platform == "win32"
 
-MP_STATUS_CHECK_INTERVAL = 5.0
+MP_STATUS_CHECK_INTERVAL = 60.0
 r"""Interval (in seconds) to check status of processes to avoid hanging in
     multiprocessing data loading. This is mainly used in getting data from
     another process, in which case we need to periodically check whether the
@@ -45,6 +37,13 @@ https://github.com/python/cpython/blob/d4d60134b29290049e28df54f23493de4f1824b6/
 """
 
 
+try:
+    import numpy
+    HAS_NUMPY = True
+except ModuleNotFoundError:
+    HAS_NUMPY = False
+
+
 def _set_python_exit_flag():
     global python_exit_status
     python_exit_status = True
@@ -53,4 +52,4 @@ def _set_python_exit_flag():
 atexit.register(_set_python_exit_flag)
 
 
-from . import worker, signal_handling, pin_memory, collate, fetch
+from . import worker, signal_handling, collate, fetch

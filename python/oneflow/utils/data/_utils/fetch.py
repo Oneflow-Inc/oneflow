@@ -61,8 +61,12 @@ class _MapDatasetFetcher(_BaseDatasetFetcher):
         )
 
     def fetch(self, possibly_batched_index):
+        print("\nfetch.py >>>>>>>>>>>> fetch() >> possibly_batched_index: ", possibly_batched_index)
         if self.auto_collation:
+            print("is self.auto_collation: >> True")
             data = [self.dataset[idx] for idx in possibly_batched_index]
         else:
+            print("is self.auto_collation: >> False")
             data = self.dataset[possibly_batched_index]
+        print("fetch.py >>>>>>>>>>>> fetch() >> success ")
         return self.collate_fn(data)
