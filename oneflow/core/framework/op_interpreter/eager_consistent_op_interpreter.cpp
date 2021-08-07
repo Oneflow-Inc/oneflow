@@ -30,7 +30,9 @@ limitations under the License.
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 
 namespace oneflow {
 namespace one {
@@ -60,6 +62,26 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
   return ss.str();
 }
 
+namespace {
+
+Maybe<Tensor> GetBoxingOutput(const std::shared_ptr<Tensor>& input,
+                              Symbol<cfg::ParallelDistribution> parallel_distribution) {
+  const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*input));
+  // Eager boxing
+  const auto& boxing_interpreter =
+      JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
+          JUST(input->parallel_distribution()), parallel_distribution, JUST(input->parallel_desc()),
+          JUST(input->parallel_desc())));
+  const auto& output = JUST(boxing_interpreter->Interpret(
+      input, JUST(input->parallel_distribution()), parallel_distribution,
+      JUST(input->parallel_desc()), JUST(input->parallel_desc())));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+  JUST(ctx->Check());
+  return output;
+}
+
+}  // namespace
+
 }  // namespace
 
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
@@ -86,7 +108,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
-  if (!device) { return Maybe<void>::Ok(); }
+  if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
   // Run instruction LocalCallOpKernel
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
@@ -94,7 +116,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
-    const auto& local_tensor = JUST(inputs.at(i)->cur_rank_phy_tensor());
+    std::shared_ptr<Tensor> input = inputs.at(i);
+    if (result->input_parallel_distributions().at(i) != JUST(input->parallel_distribution())) {
+      input = JUST(GetBoxingOutput(input, result->input_parallel_distributions().at(i)));
+    }
+    const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
