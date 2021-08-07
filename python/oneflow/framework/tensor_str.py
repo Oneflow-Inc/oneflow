@@ -24,7 +24,7 @@ from typing import Optional
 
 class __PrinterOptions(object):
     precision: int = 4
-    threshold: float = 10
+    threshold: float = 1000
     edgeitems: int = 3
     linewidth: int = 80
     sci_mode: Optional[bool] = None
@@ -113,7 +113,7 @@ class _Formatter(object):
         if not self.floating_dtype:
             # TODO: verify int type tensor
             max_value = tensor.abs().max().numpy()
-            value_str = '{}'.format(max_value)
+            value_str = "{}".format(max_value)
             self.max_width = max(self.max_width, len(value_str))
 
         else:
@@ -129,7 +129,9 @@ class _Formatter(object):
 
             # Determines use int mode or not
             self.random_sample_num = min(self.random_sample_num, tensor_view.numel())
-            rand_idx = np.random.randint(tensor_view.numel(), size=[self.random_sample_num]).tolist()
+            rand_idx = np.random.randint(
+                tensor_view.numel(), size=[self.random_sample_num]
+            ).tolist()
             sample_data = nonzero_finite_abs[rand_idx].numpy()
             for value in sample_data:
                 if value != np.ceil(value):
@@ -139,24 +141,39 @@ class _Formatter(object):
             if self.int_mode:
                 # in int_mode for floats, all numbers are integers, and we append a decimal to nonfinites
                 # to indicate that the tensor is of floating type. add 1 to the len to account for this.
-                if nonzero_finite_max / nonzero_finite_min > 1000. or nonzero_finite_max > 1.e8:
+                if (
+                    nonzero_finite_max / nonzero_finite_min > 1000.0
+                    or nonzero_finite_max > 1.0e8
+                ):
                     self.sci_mode = True
-                    value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(nonzero_finite_max)
+                    value_str = (
+                        ("{{:.{}e}}")
+                        .format(PRINT_OPTS.precision)
+                        .format(nonzero_finite_max)
+                    )
                     self.max_width = max(self.max_width, len(value_str))
                 else:
-                    value_str = ('{:.0f}').format(nonzero_finite_max)
+                    value_str = ("{:.0f}").format(nonzero_finite_max)
                     self.max_width = max(self.max_width, len(value_str))
             else:
                 # Check if scientific representation should be used.
-                if nonzero_finite_max / nonzero_finite_min > 1000.\
-                        or nonzero_finite_max > 1.e8\
-                        or nonzero_finite_min < 1.e-4:
+                if (
+                    nonzero_finite_max / nonzero_finite_min > 1000.0
+                    or nonzero_finite_max > 1.0e8
+                    or nonzero_finite_min < 1.0e-4
+                ):
                     self.sci_mode = True
                     for value in (nonzero_finite_max, nonzero_finite_min):
-                        value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
+                        value_str = (
+                            ("{{:.{}e}}").format(PRINT_OPTS.precision).format(value)
+                        )
                         self.max_width = max(self.max_width, len(value_str))
                 else:
-                    value_str = ('{{:.{}f}}').format(PRINT_OPTS.precision).format(nonzero_finite_max)
+                    value_str = (
+                        ("{{:.{}f}}")
+                        .format(PRINT_OPTS.precision)
+                        .format(nonzero_finite_max)
+                    )
                     self.max_width = max(self.max_width, len(value_str))
 
         # add singal position
@@ -202,7 +219,7 @@ def _vector_str(self, indent, summarize, formatter1, formatter2=None):
     def _val_formatter(val, formatter1=formatter1, formatter2=formatter2):
         return formatter1.format(val)
 
-    if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
+    if summarize and self.size(0) >= 2 * PRINT_OPTS.edgeitems:
         data = (
             [_val_formatter(val) for val in self[: PRINT_OPTS.edgeitems].tolist()]
             + [" ..."]
@@ -230,7 +247,7 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1, formatter2=N
     if dim == 1:
         return _vector_str(self, indent, summarize, formatter1, formatter2)
 
-    if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
+    if summarize and self.size(0) >= 2 * PRINT_OPTS.edgeitems:
         slices = (
             [
                 _tensor_str_with_formatter(
@@ -258,15 +275,26 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1, formatter2=N
     return "[" + tensor_str + "]"
 
 
+def _convert_tensor(self):
+    summarize = self.numel() > PRINT_OPTS.threshold
+    if not summarize:
+        print("----not summarization-----")
+        return get_not_summarized_data(self)
+    else:
+        return get_summarized_data(self)
+
+
 def _tensor_str(self, indent):
     summarize = self.numel() > PRINT_OPTS.threshold
     if self.dtype is flow.float16:
         self = self.float()
 
     # TODO: convert to local before slicing consistent tensor
-    self = _convert_to_local_tensor(self)
+    # self = _convert_to_local_tensor(self)
+    # formatter = _Formatter(get_summarized_data(self) if summarize else self)
 
-    formatter = _Formatter(get_summarized_data(self) if summarize else self)
+    self = _convert_tensor(self)
+    formatter = _Formatter(self)
     return _tensor_str_with_formatter(self, indent, summarize, formatter)
 
 
@@ -285,13 +313,30 @@ def _add_suffixes(tensor_str, suffixes, indent):
     return "".join(tensor_strs)
 
 
-def cat_data(inp):
-    return flow.cat((inp[: PRINT_OPTS.edgeitems], inp[-PRINT_OPTS.edgeitems :]))
+def get_not_summarized_data(self):
+    if not self.is_consistent:
+        return self
+    else:
+        print("----consistent-----")
+        return self.to("cuda").to_local()
+        # now single rank not support to_consistent()
+        # return self.to("cuda").to_consistent(sbp=flow.sbp.broadcast).to_local()
+
+
+def cat_data(self):
+    if not self.is_consistent:
+        return flow.cat((self[: PRINT_OPTS.edgeitems], self[-PRINT_OPTS.edgeitems :]))
+    else:
+        left = self[: PRINT_OPTS.edgeitems]
+        right = self[-PRINT_OPTS.edgeitems :]
+        return flow.cat((left, right)).to_local()
+        # now single rank not support to_consistent()
+        # return flow.cat((left, right)).to_consistent(sbp=flow.sbp.broadcast).to_local()
 
 
 def get_summarized_data(self):
     # TODO: supports consistent slice and delete this assert
-    assert self.is_local
+    # assert self.is_local
 
     dim = self.dim()
     if dim == 0:
@@ -338,4 +383,3 @@ def _gen_tensor_str(inp):
         suffixes.append("requires_grad=True")
 
     return _add_suffixes(prefix + tensor_str, suffixes, indent)
-
