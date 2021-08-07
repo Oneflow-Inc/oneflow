@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_DECORATOR_H_
 #define ONEFLOW_CORE_COMMON_DECORATOR_H_
 
+#include <type_traits>
+#include <unordered_map>
 #include "oneflow/core/common/tuple_hash.h"
 #include "oneflow/core/common/static_check.h"
 
@@ -122,9 +124,9 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2, Arg3, Args...> {
     using KeyT = std::tuple<KeyT0, KeyT1, KeyT2, KeyT3, typename std::decay<Args>::type...>;
     using MappedT = typename std::decay<RetT>::type;
     static thread_local std::unordered_map<KeyT, MappedT> map;
-    const auto& key = KeyT(arg0, arg2, arg2, args...);
+    const auto& key = KeyT(arg0, arg1, arg2, arg3, args...);
     auto iter = map.find(key);
-    if (iter == map.end()) { iter = map.emplace(key, func(arg0, arg2, arg2, args...)).first; }
+    if (iter == map.end()) { iter = map.emplace(key, func(arg0, arg1, arg2, arg3, args...)).first; }
     return iter->second;
   }
 
