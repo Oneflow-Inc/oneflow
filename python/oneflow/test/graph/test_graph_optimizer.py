@@ -24,11 +24,55 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@unittest.skip(
-    " NOTE(chengcheng): nn.Graph train cannot run right now for JobCompleter."
-)
+@flow.unittest.skip_unless_1n1d()
 class TestGraphOptimizer(flow.unittest.TestCase):
     def test_optimizer(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.para0 = flow.nn.Parameter(flow.Tensor(10, 4))
+
+            def forward(self, x):
+                x = flow.F.matmul(x, self.para0)
+                return x
+
+        m = CustomModule()
+        learning_rate = 0.1
+        momentum = 0.2
+        scale = 0.3
+        weight_decay = 0.7
+        sgd0 = flow.optim.SGD(
+            [
+                {
+                    "params": [m.para0],
+                    "lr": learning_rate,
+                    "momentum": momentum,
+                    "scale": scale,
+                    "weight_decay": weight_decay,
+                }
+            ]
+        )
+
+        class CustomGraph0(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = m
+                self.add_optimizer("sgd0", sgd0)
+
+            def build(self, x):
+                out = self.m(x)
+                out.backward()
+                return out
+
+        g = CustomGraph0()
+        x = flow.Tensor(4, 10)
+        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
+        z = g._compile(x)
+        print("repr(g): \n", repr(g))
+        print("g.config.proto: \n", g.config.proto)
+        print("graph proto: \n", g._graph_proto)
+
+    def test_multi_optimizer_conf(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -40,7 +84,9 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 self.para4 = flow.nn.Parameter(flow.Tensor(1, 4))
 
             def forward(self, x):
-                return x
+                x = flow.F.matmul(self.para0, x)
+                y = flow.F.matmul(self.para3, x)
+                return x, y
 
         m = CustomModule()
         learning_rate = 0.1
@@ -53,6 +99,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                     "lr": learning_rate,
                     "momentum": momentum,
                     "scale": scale,
+                    "weight_decay": 0.3,
                 }
             ]
         )
@@ -63,12 +110,14 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                     "lr": learning_rate,
                     "momentum": momentum,
                     "scale": scale,
+                    "weight_decay": 0.4,
                 },
                 {
                     "params": [m.para4],
                     "lr": learning_rate,
-                    "momentum": momentum,
+                    "momentum": 0.9,
                     "scale": scale,
+                    "weight_decay": 0.5,
                 },
             ]
         )
@@ -80,18 +129,18 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 self.add_optimizer("sgd0", sgd0)
                 self.add_optimizer("sgd1", sgd1)
 
-            def build(self, x):
-                out = self.m(x)
-                out.backward()
-                return out
+            def build(self, x, y):
+                out0, out1 = self.m(x, y)
+                out0.backward()
+                out1.backward()
+                return out0, out1
 
         g = CustomGraph0()
-        x = flow.Tensor(1, 1, 10, 10)
+        x = flow.Tensor(4, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
-        z = g._compile(x)
-        print(repr(g))
+        g._generate_optimizer_and_variable_configs()
+        print("repr(g): \n", repr(g))
         print("g.config.proto: \n", g.config.proto)
-        print("graph proto: \n", g._graph_proto)
 
 
 if __name__ == "__main__":

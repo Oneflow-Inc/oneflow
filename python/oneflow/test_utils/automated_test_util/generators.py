@@ -330,7 +330,7 @@ class random_tensor(generator):
         if ndim == 5:
             shape[4] = dim4
         if dtype == float:
-            np_arr = rng.random(shape)
+            np_arr = rng.uniform(low=low, high=high, size=shape)
             return torch.Tensor(np_arr)
         elif dtype == int:
             np_arr = rng.integers(low=low, high=high, size=shape)
@@ -349,7 +349,10 @@ class random_device(generator):
         super().__init__([])
 
     def _calc_value(self):
-        return random_util.choice(["cuda", "cpu"])
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            return "cpu"
+        else:
+            return random_util.choice(["cuda", "cpu"])
 
 
 def test_against_pytorch(
@@ -368,6 +371,8 @@ def test_against_pytorch(
     api_flag: int = TEST_MODULE,
 ):
     assert device in ["cuda", "cpu"]
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+        device = "cpu"
     if not training:
         assert not backward
     if extra_annotations is None:

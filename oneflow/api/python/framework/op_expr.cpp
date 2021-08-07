@@ -36,10 +36,7 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple&
   CHECK_EQ_OR_RETURN(op.input_size(), inputs.size())
       << "The operation requires " << op.input_size() << " inputs, but " << inputs.size()
       << " is given.";
-  auto outputs = std::make_shared<one::TensorTuple>(op.output_size());
-  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
-  JUST(interperter->Apply(op, inputs, outputs.get(), attrs));
-  return outputs;
+  return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(op, inputs, attrs));
 }
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,
@@ -48,6 +45,24 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,
   one::TensorTuple input_list(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
   return JUST(Interpret(op, input_list, attrs));
+}
+
+Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<ParallelDesc>& placement,
+                                  const AttrMap& attrs) {
+  CHECK_EQ_OR_RETURN(op.input_size(), 0)
+      << " the op :  " << op.op_type_name()
+      << " is NOT source op with input_size = " << op.input_size();
+  return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(
+      op, {}, one::OpExprInterpContext(attrs, placement)));
+}
+
+Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const Symbol<Device>& device,
+                                  const AttrMap& attrs) {
+  CHECK_EQ_OR_RETURN(op.input_size(), 0)
+      << " the op :  " << op.op_type_name()
+      << " is NOT source op with input_size = " << op.input_size();
+  return JUST(one::OpInterpUtil::Dispatch<one::TensorTuple>(
+      op, {}, one::OpExprInterpContext(attrs, device)));
 }
 
 template<typename OpT, typename ConfT,
@@ -80,9 +95,19 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
               const MutableCfgAttrMap& attrs) {
              return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
            })
-      .def("apply", [](const one::OpExpr& op_expr, const one::TensorTuple& inputs,
+      .def("apply",
+           [](const one::OpExpr& op_expr, const one::TensorTuple& inputs,
+              const MutableCfgAttrMap& attrs) {
+             return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
+           })
+      .def("apply",
+           [](const one::OpExpr& op_expr, const Symbol<ParallelDesc>& placement,
+              const MutableCfgAttrMap& attrs) {
+             return Interpret(op_expr, placement, attrs).GetPtrOrThrow();
+           })
+      .def("apply", [](const one::OpExpr& op_expr, const Symbol<Device>& device,
                        const MutableCfgAttrMap& attrs) {
-        return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
+        return Interpret(op_expr, device, attrs).GetPtrOrThrow();
       });
 
   py::class_<one::BuiltinOpExpr, one::OpExpr, std::shared_ptr<one::BuiltinOpExpr>>(m,

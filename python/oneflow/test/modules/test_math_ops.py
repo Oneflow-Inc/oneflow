@@ -73,29 +73,8 @@ class TestVariance(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-def _test_sinh_impl(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    np_x_grad = np.cosh(np_input)
-    of_out = flow.sinh(of_input)
-    np_out = np.sinh(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_x_grad, 0.0001, 0.0001))
-
-
 @flow.unittest.skip_unless_1n1d()
-class Testsinh(flow.unittest.TestCase):
-    def test_sinh(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_sinh_impl(test_case, *arg)
-
+class TestSinh(flow.unittest.TestCase):
     @autotest()
     def test_flow_sinh_with_random_data(test_case):
         device = random_device()
@@ -104,49 +83,14 @@ class Testsinh(flow.unittest.TestCase):
         return y
 
 
-def _test_sin(test_case, shape, device):
-    input = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
-    of_out = flow.sin(input)
-    np_out = np.sin(input.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-
-def _test_sin_backward(test_case, shape, device):
-    x = flow.Tensor(
-        np.random.randn(*shape), requires_grad=True, device=flow.device(device)
-    )
-    y = flow.sin(x)
-    z = y.sum()
-    z.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np.cos(x.numpy()), 1e-05, 1e-05))
-
-
-def _test_inplace_sin(test_case, shape, device):
-    x = flow.Tensor(
-        np.random.randn(*shape), device=flow.device(device), requires_grad=True
-    )
-    x_inplace = x + 1
-    np_out = np.sin(x_inplace.numpy())
-    id_old = id(x_inplace)
-    x_inplace.sin_()
-    test_case.assertEqual(id_old, id(x_inplace))
-    test_case.assertTrue(np.allclose(x_inplace.numpy(), np_out, 1e-05, 1e-05))
-    of_x_inplace = x_inplace.sum()
-    of_x_inplace.backward()
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np.cos(x_inplace.numpy()), 1e-05, 1e-05)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSin(flow.unittest.TestCase):
-    def test_sin(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_sin, _test_sin_backward, _test_inplace_sin]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_flow_sin_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.sin(x)
+        return y
 
 
 def _test_cos(test_case, shape, device):
@@ -264,40 +208,42 @@ class TestStd(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skip("std has bug")
+    @autotest()
+    def test_std_flow_with_random_data(test_case):
+        device = random_device()
+        all_dim = random().to(int)
+        dim = random(low=0, high=all_dim).to(int)
+        x = random_pytorch_tensor(ndim=all_dim).to(device)
+        z = torch.std(x, dim=dim)
+        return z
 
-def _test_sqrt(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_arr = np.abs(np_arr)
-    np_out = np.sqrt(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device))
-    of_out = flow.sqrt(input=x)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
-def _test_sqrt_backward(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_arr = np.abs(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
-    y = flow.sqrt(input=x)
-    z = y.sum()
-    z.backward()
-    np_grad = 0.5 * 1 / np.sqrt(x.numpy())
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
-    )
+    @unittest.skip("std has bug")
+    @autotest()
+    def test_std_tensor_with_random_data(test_case):
+        device = random_device()
+        all_dim = random().to(int)
+        dim = random(low=0, high=all_dim).to(int)
+        x = random_pytorch_tensor(ndim=all_dim).to(device)
+        z = x.std(dim=dim)
+        return z
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestSqrt(flow.unittest.TestCase):
-    def test_sqrt(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_sqrt, _test_sqrt_backward]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_sqrt_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.sqrt(x)
+        return z
+
+    @autotest()
+    def test_sqrt_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.sqrt()
+        return z
 
 
 def _test_rsqrt(test_case, shape, device):
@@ -335,179 +281,53 @@ class TestRsqrt(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-def _test_square(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_out = np.square(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device))
-    of_out = flow.square(x)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
-def _test_square_backward(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_out = np.square(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
-    y = flow.square(x)
-    z = y.sum()
-    z.backward()
-    np_grad = 2 * np_arr
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSquare(flow.unittest.TestCase):
-    def test_square(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_square, _test_square_backward]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_square_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.square(x)
+        return z
 
-
-def _test_pow(test_case, shape, device):
-    input = flow.Tensor(
-        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
-    )
-    of_out = flow.pow(input, 2.1)
-    np_out = np.power(input.numpy(), 2.1)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
-def _test_pow_backward(test_case, shape, device):
-    x = flow.Tensor(
-        np.random.randn(*shape),
-        dtype=flow.float32,
-        device=flow.device(device),
-        requires_grad=True,
-    )
-    y = flow.pow(x, 2.34)
-    z = y.sum()
-    z.backward()
-    np_grad = 2.34 * x.numpy() ** (2.34 - 1)
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
-    )
+    @autotest()
+    def test_square_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = x.square()
+        return z
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
-    def test_pow(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_pow, _test_pow_backward]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
-
-def _test_asin(test_case, shape, device):
-    np_input = np.random.random(shape) - 0.5
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.asin(of_input)
-    np_out = np.arcsin(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = 1 / np.sqrt(1 - np_input ** 2)
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 0.0001, 0.0001)
-    )
-
-
-def _test_arcsin(test_case, shape, device):
-    np_input = np.random.random(shape) - 0.5
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.arcsin(of_input)
-    np_out = np.arcsin(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = 1 / np.sqrt(1 - np_input ** 2)
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 0.0001, 0.0001)
-    )
+    @autotest()
+    def test_flow_pow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = random().to(float)
+        z = torch.pow(x, y)
+        return z
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestAsin(flow.unittest.TestCase):
-    def test_asin(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_asin(test_case, *arg)
-            _test_arcsin(test_case, *arg)
-
-    @unittest.skip("asin has bug")
     @autotest()
     def test_flow_asin_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
         y = torch.asin(x)
         return y
 
-    @unittest.skip("arcsin has bug")
     @autotest()
     def test_flow_arcsin_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
         y = torch.arcsin(x)
         return y
 
 
-def _test_asinh(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.asinh(of_input)
-    np_out = np.arcsinh(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = 1 / np.sqrt(1 + np_input ** 2)
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 0.0001, 0.0001)
-    )
-
-
-def _test_arcsinh(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.arcsinh(of_input)
-    np_out = np.arcsinh(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = 1 / np.sqrt(1 + np_input ** 2)
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 0.0001, 0.0001)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestAsinh(flow.unittest.TestCase):
-    def test_asinh(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_asinh(test_case, *arg)
-            _test_arcsinh(test_case, *arg)
-
     @autotest()
     def test_flow_asinh_with_random_data(test_case):
         device = random_device()
@@ -520,6 +340,55 @@ class TestAsinh(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.arcsinh(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestTan(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_tan_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.tan(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestAtan(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_atan_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.atan(x)
+        return y
+
+    @autotest()
+    def test_flow_arctan_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.arctan(x)
+        return y
+
+    @autotest()
+    def test_flow_atan2_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        y = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        z = torch.atan2(x, y)
+        return z
+
+    @autotest()
+    def test_flow_atanh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
+        y = torch.atanh(x)
+        return y
+
+    @autotest()
+    def test_flow_arctanh_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
+        y = torch.arctanh(x)
         return y
 
 
@@ -690,65 +559,18 @@ class TestTopk(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-def arccosh_input_tensor(shape):
-    def generator(_):
-        low = 1
-        high = 2
-        rng = np.random.default_rng()
-        np_arr = rng.random(size=shape) * (high - low) + low
-        return (
-            flow.Tensor(np_arr, dtype=flow.float32),
-            torch.tensor(np_arr, dtype=torch.float32),
-        )
-
-    return generator
-
-
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 @flow.unittest.skip_unless_1n1d()
 class TestArccosh(flow.unittest.TestCase):
-    @unittest.skip("arccosh has bug")
     @autotest()
     def test_arccosh_flow_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_pytorch_tensor(low=2, high=3).to(device)
         y = torch.arccosh(x)
         return y
-
-
-def _test_acosh_impl(test_case, shape, device):
-    np_input = np.random.rand(*shape) + 2.0
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.acosh(of_input)
-    np_out = np.arccosh(np_input)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001, equal_nan=True)
-    )
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = 1.0 / np.sqrt(np.square(np_input) - 1)
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_grad, 0.0001, 0.0001, equal_nan=True)
-    )
-
-
-def acosh_input_tensor(shape):
-    def generator(_):
-        low = 1
-        high = 2
-        rng = np.random.default_rng()
-        np_arr = rng.random(size=shape) * (high - low) + low
-        return (
-            flow.Tensor(np_arr, dtype=flow.float32),
-            torch.tensor(np_arr, dtype=torch.float32),
-        )
-
-    return generator
 
 
 @unittest.skipIf(
@@ -757,98 +579,12 @@ def acosh_input_tensor(shape):
 )
 @flow.unittest.skip_unless_1n1d()
 class TestAcosh(flow.unittest.TestCase):
-    def test_acosh(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_acosh_impl(test_case, *arg)
-
-    @unittest.skip("acosh has bug")
     @autotest()
     def test_acosh_flow_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_pytorch_tensor(low=2, high=3).to(device)
         y = torch.acosh(x)
         return y
-
-
-def _test_atan2_forward(test_case, shape, scalar, device):
-    np_input_x = 10 * np.random.rand(*shape)
-    np_input_y = 10 * np.random.randn(*shape)
-    of_input_x = flow.Tensor(np_input_x, dtype=flow.float32, device=flow.device(device))
-    of_input_y = flow.Tensor(np_input_y, dtype=flow.float32, device=flow.device(device))
-    of_out = flow.atan2(of_input_x, of_input_y)
-    np_out = np.arctan2(np_input_x, np_input_y)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-
-def _test_atan2_backward(test_case, device):
-    np_input_x = np.random.rand(2, 3)
-    np_input_y = np.random.rand(2, 3)
-    np_y_grad = -1 * np_input_x / (np_input_x * np_input_x + np_input_y * np_input_y)
-    np_x_grad = np_input_y / (np_input_x * np_input_x + np_input_y * np_input_y)
-
-    def test_x_y_grad():
-        of_input_x = flow.Tensor(
-            np_input_x,
-            dtype=flow.float32,
-            device=flow.device(device),
-            requires_grad=True,
-        )
-        of_input_y = flow.Tensor(
-            np_input_y,
-            dtype=flow.float32,
-            device=flow.device(device),
-            requires_grad=True,
-        )
-        of_out = flow.atan2(of_input_x, of_input_y)
-        of_out_sum = of_out.sum()
-        of_out_sum.backward()
-        test_case.assertTrue(
-            np.allclose(of_input_x.grad.numpy(), np_x_grad, 0.0001, 0.0001)
-        )
-        test_case.assertTrue(
-            np.allclose(of_input_y.grad.numpy(), np_y_grad, 0.0001, 0.0001)
-        )
-
-    def test_x_grad():
-        of_input_x = flow.Tensor(
-            np_input_x,
-            dtype=flow.float32,
-            device=flow.device(device),
-            requires_grad=True,
-        )
-        of_input_y = flow.Tensor(
-            np_input_y, dtype=flow.float32, device=flow.device(device)
-        )
-        of_out = flow.atan2(of_input_x, of_input_y)
-        of_out_sum = of_out.sum()
-        of_out_sum.backward()
-        test_case.assertTrue(
-            np.allclose(of_input_x.grad.numpy(), np_x_grad, 0.0001, 0.0001)
-        )
-
-    def test_y_grad():
-        of_input_x = flow.Tensor(
-            np_input_x, dtype=flow.float32, device=flow.device(device)
-        )
-        of_input_y = flow.Tensor(
-            np_input_y,
-            dtype=flow.float32,
-            device=flow.device(device),
-            requires_grad=True,
-        )
-        of_out = flow.atan2(of_input_x, of_input_y)
-        of_out_sum = of_out.sum()
-        of_out_sum.backward()
-        test_case.assertTrue(
-            np.allclose(of_input_y.grad.numpy(), np_y_grad, 0.0001, 0.0001)
-        )
-
-    test_x_y_grad()
-    test_x_grad()
-    test_y_grad()
 
 
 @unittest.skipIf(
@@ -857,20 +593,6 @@ def _test_atan2_backward(test_case, device):
 )
 @flow.unittest.skip_unless_1n1d()
 class TestAtan2(flow.unittest.TestCase):
-    def test_atan2_forward(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["scalar"] = [2.1, 0.8]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_atan2_forward(test_case, *arg)
-
-    def test_atan2_backward(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_atan2_backward(test_case, *arg)
-
     @autotest()
     def test_flow_atan2_with_random_data(test_case):
         device = random_device()
@@ -878,6 +600,161 @@ class TestAtan2(flow.unittest.TestCase):
         x2 = random_pytorch_tensor(ndim=1, dim0=1).to(device)
         y = torch.atan2(x1, x2)
         return y
+
+
+def _test_elementwise_minimum(test_case, device):
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [(10, 10, 200), (3, 12), (12,)]
+    arg_dict["data_type"] = ["float32", "double"]
+    for (shape, data_type) in GenArgList(arg_dict):
+        input_x = flow.Tensor(
+            np.random.randn(*shape),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        input_y = flow.Tensor(
+            np.random.randn(*shape),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        of_values = flow.minimum(input_x, input_y)
+        np_values = np.minimum(input_x.numpy(), input_y.numpy())
+        test_case.assertTrue(
+            np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+        )
+
+
+def _test_broadcast_minimum(test_case, device):
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [[(10, 10, 200), (10, 1, 1)], [(3, 12), (1, 12)]]
+    arg_dict["data_type"] = ["float32", "double"]
+    for (shape, data_type) in GenArgList(arg_dict):
+        input_x = flow.Tensor(
+            np.random.randn(*shape[0]),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        input_y = flow.Tensor(
+            np.random.randn(*shape[1]),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        of_values = flow.minimum(input_x, input_y)
+        np_values = np.minimum(input_x.numpy(), input_y.numpy())
+        test_case.assertTrue(
+            np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+        )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+@flow.unittest.skip_unless_1n1d()
+class TestMinimum(flow.unittest.TestCase):
+    def test_minimum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_elementwise_minimum,
+            _test_broadcast_minimum,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_elementwise_minimum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        return torch.minimum(x, y)
+
+    @autotest()
+    def test_flow_broadcast_minimum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_pytorch_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
+        y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        return torch.minimum(x, y)
+
+
+def _test_elementwise_maximum(test_case, device):
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [(10, 10, 200), (3, 12), (12,)]
+    arg_dict["data_type"] = ["float32", "double"]
+    for (shape, data_type) in GenArgList(arg_dict):
+        input_x = flow.Tensor(
+            np.random.randn(*shape),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        input_y = flow.Tensor(
+            np.random.randn(*shape),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        of_values = flow.maximum(input_x, input_y)
+        np_values = np.maximum(input_x.numpy(), input_y.numpy())
+        test_case.assertTrue(
+            np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+        )
+
+
+def _test_broadcast_maximum(test_case, device):
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [[(10, 10, 200), (10, 1, 1)], [(3, 12), (1, 12)]]
+    arg_dict["data_type"] = ["float32", "double"]
+    for (shape, data_type) in GenArgList(arg_dict):
+        input_x = flow.Tensor(
+            np.random.randn(*shape[0]),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        input_y = flow.Tensor(
+            np.random.randn(*shape[1]),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        of_values = flow.maximum(input_x, input_y)
+        np_values = np.maximum(input_x.numpy(), input_y.numpy())
+        test_case.assertTrue(
+            np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+        )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestMaximum(flow.unittest.TestCase):
+    def test_maximum(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_elementwise_maximum,
+            _test_broadcast_maximum,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_flow_elementwise_mximum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2)
+        return torch.maximum(x, y)
+
+    @autotest()
+    def test_flow_broadcast_maximum_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        k3 = random(2, 6)
+        x = random_pytorch_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
+        y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        return torch.maximum(x, y)
 
 
 if __name__ == "__main__":

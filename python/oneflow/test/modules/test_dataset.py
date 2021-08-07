@@ -65,15 +65,15 @@ class TestOFRecordModule(flow.unittest.TestCase):
         val_record = record_reader()
         label = record_label_decoder(val_record)
         image_raw_buffer = record_image_decoder(val_record)
-        image_raw_buffer_nd = image_raw_buffer.numpy()[0]
+        image_raw_buffer_nd = image_raw_buffer.numpy()
         gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
-        test_case.assertTrue(np.array_equal(image_raw_buffer_nd, gt_np))
+        test_case.assertTrue(np.array_equal(image_raw_buffer_nd[0], gt_np))
         image = resize(image_raw_buffer)[0]
-        resized_image_raw_buffer_nd = image.numpy()[0]
+        resized_image_raw_buffer_nd = image.numpy()
         gt_np = cv2.imread(
             "/dataset/imagenette/ofrecord/gt_tensor_buffer_resized_image.png"
         )
-        test_case.assertTrue(np.array_equal(resized_image_raw_buffer_nd, gt_np))
+        test_case.assertTrue(np.array_equal(resized_image_raw_buffer_nd[0], gt_np))
         image = crop_mirror_normal(image)
         image_np = image.numpy()
         image_np = np.squeeze(image_np)
@@ -82,7 +82,7 @@ class TestOFRecordModule(flow.unittest.TestCase):
         image_np = cv2.cvtColor(np.float32(image_np), cv2.COLOR_RGB2BGR)
         image_np = image_np.astype(np.uint8)
         gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_val_image.png")
-        test_case.assertEqual(label.numpy()[0], 5)
+        test_case.assertEqual(label.numpy(), 5)
         test_case.assertTrue(np.array_equal(image_np, gt_np))
 
 
@@ -275,6 +275,27 @@ class TestCocoReader(flow.unittest.TestCase):
                 test_case.assertTrue(
                     np.array_equal(segm_index_list[i], sample["poly_index"])
                 )
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestOFRecordBytesDecoder(flow.unittest.TestCase):
+    def test_OFRecordBytesDecoder(test_case):
+        batch_size = 16
+        record_reader = flow.nn.OfrecordReader(
+            "/dataset/imagenette/ofrecord",
+            batch_size=batch_size,
+            part_name_suffix_length=5,
+        )
+        val_record = record_reader()
+
+        bytesdecoder_img = flow.nn.OFRecordBytesDecoder("encoded")
+
+        image_raw_buffer = bytesdecoder_img(val_record)
+
+        image_raw_buffer_nd = image_raw_buffer.numpy()[0]
+        gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
+        img = cv2.imdecode(image_raw_buffer_nd, cv2.IMREAD_COLOR)
+        test_case.assertTrue(np.array_equal(img, gt_np))
 
 
 if __name__ == "__main__":

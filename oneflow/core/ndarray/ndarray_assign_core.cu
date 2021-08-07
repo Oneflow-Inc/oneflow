@@ -33,6 +33,7 @@ struct NdarrayAssignCoreWrapper<DeviceType::kGPU, T, NDIMS> final {
   static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                      const XpuReducedNdarray<T, NDIMS>& reduced) {
     size_t n = y.host_shape().HostElemNum();
+    if (n == 0) { return; }
     RUN_CUDA_KERNEL((NdarrayAssignGpu<T, NDIMS>), ctx, n, y, reduced);
   }
 };

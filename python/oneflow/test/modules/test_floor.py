@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_floor(test_case, shape, device):
@@ -50,6 +51,13 @@ class TestFloor(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_floor(test_case, *arg)
+
+    @autotest()
+    def test_flow_floor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.floor(x)
+        return y
 
 
 if __name__ == "__main__":

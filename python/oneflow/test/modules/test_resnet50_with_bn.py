@@ -24,7 +24,7 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-@flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestResNet50(flow.unittest.TestCase):
     def test_resnet50_with_batchnorm(test_case):
         batch_size = 32
@@ -89,7 +89,7 @@ class TestResNet50(flow.unittest.TestCase):
             loss.backward()
             of_sgd.step()
             of_sgd.zero_grad()
-            l = loss.numpy()[0]
+            l = loss.numpy()
         test_case.assertTrue(l < 3.5)
 
 

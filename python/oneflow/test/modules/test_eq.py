@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_eq(test_case, shape, device):
@@ -98,6 +99,14 @@ class TestEq(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(auto_backward=False)
+    def test_eq_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(3, 2, 0, 3).to(device)
+        y = random_pytorch_tensor(3, 2, 0, 3).to(device)
+        z = torch.eq(x, y)
+        return z
 
 
 if __name__ == "__main__":

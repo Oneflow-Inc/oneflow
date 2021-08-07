@@ -111,6 +111,80 @@ struct HardtanhGradFunctor {
   const T max_val;
 };
 
+template<typename T>
+struct MishFunctor {
+  OF_DEVICE_FUNC explicit MishFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    T soft_plus_val = log(static_cast<T>(1) + exp(x));
+    T exp_val = exp(soft_plus_val);
+    T neg_exp_val = exp(-soft_plus_val);
+    T tanh_val = (exp_val - neg_exp_val) / (exp_val + neg_exp_val);
+    return x * tanh_val;
+  }
+};
+
+template<typename T>
+struct MishGradFunctor {
+  OF_DEVICE_FUNC explicit MishGradFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const {
+    T sp = log(static_cast<T>(1) + exp(x));
+    T grad_sp = static_cast<T>(1) - exp(-sp);
+    T tsp = (exp(sp) - exp(-sp)) / (exp(sp) + exp(-sp));
+    T grad_tsp = (static_cast<T>(1) - tsp * tsp) * grad_sp;
+    return dy * (x * grad_tsp + tsp);
+  }
+};
+
+template<typename T>
+struct SiluFunctor {
+  OF_DEVICE_FUNC explicit SiluFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x) const { return (x / (static_cast<T>(1) + exp(-x))); }
+};
+
+template<typename T>
+struct SiluGradFunctor {
+  OF_DEVICE_FUNC explicit SiluGradFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const {
+    T sig = static_cast<T>(1) / (static_cast<T>(1) + exp(-x));
+    return dy * (sig * (static_cast<T>(1) + x * (static_cast<T>(1) - sig)));
+  }
+};
+
+template<typename T>
+struct SeluFunctor {
+  OF_DEVICE_FUNC explicit SeluFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    return (x > static_cast<T>(0)) ? scale * x : scale * alpha * (exp(x) - static_cast<T>(1));
+  }
+  const T scale = 1.0507009873554804934193349852946;
+  const T alpha = 1.6732632423543772848170429916717;
+};
+
+template<typename T>
+struct SeluGradFunctor {
+  OF_DEVICE_FUNC explicit SeluGradFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const {
+    return (x > static_cast<T>(0)) ? scale * dy : dy * scale * alpha * (exp(x));
+  }
+  const T scale = 1.0507009873554804934193349852946;
+  const T alpha = 1.6732632423543772848170429916717;
+};
+
+template<typename T>
+struct SoftSignFunctor {
+  OF_DEVICE_FUNC explicit SoftSignFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x) const { return x / (static_cast<T>(1) + abs(x)); }
+};
+
+template<typename T>
+struct SoftSignGradFunctor {
+  OF_DEVICE_FUNC explicit SoftSignGradFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const {
+    T val = (static_cast<T>(1) + abs(x));
+    return dy / (val * val);
+  }
+};
+
 #define REGISTER_ELU_KERNEL(device, dtype)                        \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                            \
       device, "elu", EluFunctor, dtype, dtype,                    \
@@ -178,6 +252,42 @@ struct HardtanhGradFunctor {
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
         return Maybe<void>::Ok();                                                               \
       });
+
+#define REGISTER_MISH_KERNEL(device, dtype)                                                   \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                        \
+      device, "mish", MishFunctor, dtype, dtype,                                              \
+      [](user_op::KernelComputeContext* ctx) { return MishFunctor<dtype>(); }, "out", "in");  \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                       \
+      device, "mish_grad", MishGradFunctor, dtype, dtype, dtype,                              \
+      [](user_op::KernelComputeContext* ctx) { return MishGradFunctor<dtype>(); }, "dx", "x", \
+      "dy");
+
+#define REGISTER_SILU_KERNEL(device, dtype)                                                   \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                        \
+      device, "silu", SiluFunctor, dtype, dtype,                                              \
+      [](user_op::KernelComputeContext* ctx) { return SiluFunctor<dtype>(); }, "out", "in");  \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                       \
+      device, "silu_grad", SiluGradFunctor, dtype, dtype, dtype,                              \
+      [](user_op::KernelComputeContext* ctx) { return SiluGradFunctor<dtype>(); }, "dx", "x", \
+      "dy");
+
+#define REGISTER_SELU_KERNEL(device, dtype)                                                   \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                        \
+      device, "selu", SeluFunctor, dtype, dtype,                                              \
+      [](user_op::KernelComputeContext* ctx) { return SeluFunctor<dtype>(); }, "out", "in");  \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                       \
+      device, "selu_grad", SeluGradFunctor, dtype, dtype, dtype,                              \
+      [](user_op::KernelComputeContext* ctx) { return SeluGradFunctor<dtype>(); }, "dx", "x", \
+      "dy");
+
+#define REGISTER_SOFTSIGN_KERNEL(device, dtype)                                                   \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                            \
+      device, "softsign", SoftSignFunctor, dtype, dtype,                                          \
+      [](user_op::KernelComputeContext* ctx) { return SoftSignFunctor<dtype>(); }, "out", "in");  \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                           \
+      device, "softsign_grad", SoftSignGradFunctor, dtype, dtype, dtype,                          \
+      [](user_op::KernelComputeContext* ctx) { return SoftSignGradFunctor<dtype>(); }, "dx", "x", \
+      "dy");
 
 }  // namespace oneflow
 

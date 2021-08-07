@@ -18,12 +18,32 @@ from typing import Optional
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
+from oneflow.nn.modules.utils import _single
+
+
+def _input_args_is_int(args):
+    return all((isinstance(x, int) for x in args))
+
+
+def _input_args_is_tuple_int(args):
+    return all((_input_args_is_int(x) for x in args))
+
+
+def _input_args_is_flow_size(args):
+    return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
 
 
 class Expand(Module):
     def __init__(self, *sizes) -> None:
         super().__init__()
-        self.expand_size = list(*sizes)
+        if _input_args_is_int(sizes):
+            self.expand_size = _single(sizes)
+        elif _input_args_is_tuple_int(sizes):
+            self.expand_size = _single(*sizes)
+        elif _input_args_is_flow_size(sizes):
+            self.expand_size = _single(*sizes)[0]
+        else:
+            raise ValueError("input sizes parameter is not illegal!")
 
     def forward(self, x):
         if x.dtype == flow.int8:
@@ -65,7 +85,7 @@ def expand_op(x, *sizes):
         flow.Size([1, 3, 2, 2])
 
     """
-    return Expand(sizes)(x)
+    return Expand(*sizes)(x)
 
 
 if __name__ == "__main__":

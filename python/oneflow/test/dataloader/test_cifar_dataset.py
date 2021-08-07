@@ -19,8 +19,6 @@ import unittest
 import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
-import oneflow.utils.vision.datasets as datasets
-import oneflow.utils.vision.transforms as transforms
 import oneflow.optim as optim
 
 
@@ -59,7 +57,10 @@ class Net(nn.Module):
 
 
 def test(test_case):
-    device = flow.device("cuda")
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+        device = flow.device("cpu")
+    else:
+        device = flow.device("cuda")
     net = Net()
     net.to(device)
 
@@ -67,15 +68,20 @@ def test(test_case):
     criterion = nn.CrossEntropyLoss()
     criterion.to(device)
 
-    transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+    transform = flow.utils.vision.transforms.Compose(
+        [
+            flow.utils.vision.transforms.ToTensor(),
+            flow.utils.vision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        ]
     )
 
     train_epoch = 1
     batch_size = 4
-    data_dir = os.getenv("ONEFLOW_TEST_CACHE_DIR") + "/data-test/cifar10"
+    data_dir = os.path.join(
+        os.getenv("ONEFLOW_TEST_CACHE_DIR", "./data-test"), "cifar10"
+    )
 
-    trainset = datasets.CIFAR10(
+    trainset = flow.utils.vision.datasets.CIFAR10(
         root=data_dir,
         train=True,
         download=True,

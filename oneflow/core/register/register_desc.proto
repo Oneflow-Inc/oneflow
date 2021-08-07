@@ -44,4 +44,6 @@ message RegstDescProto {
     int64 hint_inplace_consumed_regst_desc_id = 14 [default = -1];
     int64 force_inplace_consumed_regst_desc_id = 15 [default = -1];
   }
+  // NOTE(chengcheng): mark this regst memory is shared with EagerParameter.
+  optional string variable_op_name = 16 [default = ""];
 }

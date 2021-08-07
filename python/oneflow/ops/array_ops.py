@@ -44,7 +44,7 @@ def check_slice_tup_list(slice_tup_list, shape):
         if start is None:
             start = 0 if step > 0 else np.iinfo(np.int64).max
         elif start < -dim_size or start >= dim_size:
-            raise ValueError("slice start must be in range [-size, size)")
+            start, stop, step = 0, 0, 1
         if stop is None:
             stop = np.iinfo(np.int64).max if step > 0 else np.iinfo(np.int64).min
         elif stop < -dim_size - 1 or stop > dim_size:
