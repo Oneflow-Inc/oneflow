@@ -134,6 +134,7 @@ Maybe<void> ParallelDesc::SetMachineIdAndDeviceIdsByParsingDeviceName(
       (*machine_id2sorted_dev_phy_ids_)[mchn_id] = std::make_shared<std::vector<int64_t>>();
     }
     (*machine_id2sorted_dev_phy_ids_)[mchn_id]->push_back(dev_phy_id);
+    machine_id_device_id_pairs_.push_back(std::make_pair(mchn_id, dev_phy_id));
   }
   return Maybe<void>::Ok();
 }
@@ -159,6 +160,12 @@ bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
          || (device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
              && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_);
 }
+
+//bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
+//  return (this == &rhs)
+//         || (device_type_ == rhs.device_type_ && machine_id_device_id_pairs_ == rhs.machine_id_device_id_pairs_ &&
+//             *hierarchy_ == *rhs.hierarchy_);
+//}
 
 bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
   return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs)
@@ -210,13 +217,21 @@ void ParallelDesc::ClearUp() {
   cfg_parallel_conf_.reset(new cfg::ParallelConf(parallel_conf_));
   SortAndRemoveDuplication(&sorted_machine_ids_);
   int64_t parallel_id = 0;
-  for (int64_t machine_id : sorted_machine_ids_) {
-    for (int64_t device_id : *machine_id2sorted_dev_phy_ids_->at(machine_id)) {
-      parallel_id2machine_id_[parallel_id] = machine_id;
-      parallel_id2device_id_[parallel_id] = device_id;
-      machine_id2device_id2parallel_id_[machine_id][device_id] = parallel_id;
-      parallel_id += 1;
-    }
+  //for (int64_t machine_id : sorted_machine_ids_) {
+  //  for (int64_t device_id : *machine_id2sorted_dev_phy_ids_->at(machine_id)) {
+  //    parallel_id2machine_id_[parallel_id] = machine_id;
+  //    parallel_id2device_id_[parallel_id] = device_id;
+  //    machine_id2device_id2parallel_id_[machine_id][device_id] = parallel_id;
+  //    parallel_id += 1;
+  //  }
+  //}
+  for(const auto& pair : machine_id_device_id_pairs_) {
+    int64_t machine_id = pair.first;
+    int64_t device_id = pair.second;
+    parallel_id2machine_id_[parallel_id] = machine_id; 
+    parallel_id2device_id_[parallel_id] = device_id; 
+    machine_id2device_id2parallel_id_[machine_id][device_id] = parallel_id;
+    parallel_id += 1;
   }
 }
 

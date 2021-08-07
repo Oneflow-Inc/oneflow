@@ -124,6 +124,7 @@ class ParallelDesc final {
   // TODO(lixinqi): merge cfg_parallel_conf_ and parallel_conf_ after cfg::ParallelConf taken as the
   // constructor argument
   std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf_;
+  std::vector<std::pair<int64_t, int64_t>> machine_id_device_id_pairs_;
 };
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
