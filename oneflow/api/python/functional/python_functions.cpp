@@ -285,7 +285,7 @@ py::object PyClamp(py::args py_args, py::kwargs py_kwargs) {
     bool has_min_bound = (min != Py_None);
     bool has_max_bound = (max != Py_None);
     if (has_min_bound) { CHECK_OR_RETURN(PyScalarCheck(min)) << "min should be scalar or None."; }
-    if (has_max_bound) { CHECK_OR_RETURN(PyScalarCheck(min)) << "max should be scalar or None."; }
+    if (has_max_bound) { CHECK_OR_RETURN(PyScalarCheck(max)) << "max should be scalar or None."; }
     if (has_min_bound && has_max_bound) {
       Scalar min_value = *JUST(PyUnpackScalar(min));
       Scalar max_value = *JUST(PyUnpackScalar(max));
