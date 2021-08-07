@@ -43,6 +43,14 @@ class InputAndOutputListScope {
   T* ctx_;
 };
 
+int32_t TryGetTensorTupleIndex(const std::unordered_map<std::string, std::vector<int32_t>>&
+                                   arg_name2bn_index2tensor_tuple_index,
+                               const std::string& arg_name, const int32_t arg_index) {
+  auto it = arg_name2bn_index2tensor_tuple_index.find(arg_name);
+  if (it != arg_name2bn_index2tensor_tuple_index.end()) { return it->second.at(arg_index); }
+  return -1;
+};
+
 ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                          const std::shared_ptr<const ArgTuple>& output_arg_tuple)
     : ZeroCopyBaseContext(input_arg_tuple, output_arg_tuple, nullptr) {}
@@ -87,14 +95,6 @@ void ZeroCopyBaseContext::Update(
   input_consistent_tensor_metas_ = input_consistent_tensor_metas;
   output_consistent_tensor_metas_ = output_consistent_tensor_metas;
 }
-
-int32_t TryGetTensorTupleIndex(const std::unordered_map<std::string, std::vector<int32_t>>&
-                                   arg_name2bn_index2tensor_tuple_index,
-                               const std::string& arg_name, const int32_t arg_index) {
-  auto it = arg_name2bn_index2tensor_tuple_index.find(arg_name);
-  if (it != arg_name2bn_index2tensor_tuple_index.end()) { return it->second.at(arg_index); }
-  return -1;
-};
 
 #define RETURN_IF_FOUND(inputs, outputs, post_action)                                             \
   int32_t i = TryGetTensorTupleIndex(input_arg_tuple_->arg_name2bn_index2tensor_tuple_index(),    \
@@ -504,22 +504,6 @@ user_op::DataTypeInferFn StatefulLocalOpKernel::DataTypeInferFn() const {
   return data_type_infer_fn_;
 }
 
-// Maybe<void> StatefulLocalOpKernel::InferTensorDesc(const EagerBlobObjectListPtr& inputs,
-//                                                    const EagerBlobObjectListPtr& outputs,
-//                                                    LocalUserOpInferContext* op_infer_ctx) {
-//   InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
-//   JUST(tensor_desc_infer_fn_(op_infer_ctx));
-//   return Maybe<void>::Ok();
-// }
-//
-// Maybe<void> StatefulLocalOpKernel::InferDataType(const EagerBlobObjectListPtr& inputs,
-//                                                  const EagerBlobObjectListPtr& outputs,
-//                                                  LocalUserOpInferContext* op_infer_ctx) {
-//   InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
-//   JUST(data_type_infer_fn_(op_infer_ctx));
-//   return Maybe<void>::Ok();
-// }
-//
 LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(
     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
     const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
