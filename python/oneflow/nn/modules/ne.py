@@ -33,7 +33,7 @@ class Ne(Module):
                 if input.dtype != other.dtype:
                     other = other.to(dtype=input.dtype)
         elif isinstance(other, int) or isinstance(other, float):
-            other = flow.Tensor([other], dtype=input.dtype, device=input.device)
+            return flow.F.scalar_logical_not_equal(input, float(other))
         else:
             raise NotImplementedError(
                 "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
