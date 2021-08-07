@@ -526,6 +526,24 @@ class GatherNdFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ScatterNdFunctor {
+ public:
+  ScatterNdFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("scatter_nd").Input("indices").Input("updates").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& indices const std::shared_ptr<one::Tensor>& updates,
+      const Shape& shape) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScatterNdLikeFunctor {
  public:
   ScatterNdLikeFunctor() {
@@ -1331,6 +1349,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
+  m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");
