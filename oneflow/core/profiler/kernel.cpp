@@ -28,10 +28,14 @@ namespace {
 bool profile_cuda_memory_bandwidth = false;
 bool profile_kernel_forward_range = false;
 
-COMMAND(ParseBoolFlagFromEnv("ONEFLOW_PROFILER_KERNEL_PROFILE_CUDA_MEMORY_BANDWIDTH",
-                             &profile_cuda_memory_bandwidth));
-COMMAND(ParseBoolFlagFromEnv("ONEFLOW_PROFILER_KERNEL_PROFILE_KERNEL_FORWARD_RANGE",
-                             &profile_kernel_forward_range));
+void Init() {
+  profile_cuda_memory_bandwidth =
+      ParseBooleanFromEnv("ONEFLOW_PROFILER_KERNEL_PROFILE_CUDA_MEMORY_BANDWIDTH", false);
+  profile_kernel_forward_range =
+      ParseBooleanFromEnv("ONEFLOW_PROFILER_KERNEL_PROFILE_KERNEL_FORWARD_RANGE", false);
+}
+
+COMMAND(Init());
 
 #if defined(WITH_CUDA)
 thread_local cudaEvent_t cuda_memory_bandwidth_profile_start_event = nullptr;

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -157,14 +158,14 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
   }
 }
 
-OperatorConf* JobBuilder::MutableOpConf4OpName(const std::string& op_name) {
+Maybe<OperatorConf*> JobBuilder::MutableOpConf4OpName(const std::string& op_name) {
   const auto& it = op_name2op_conf_.find(op_name);
-  CHECK(it != op_name2op_conf_.end());
+  CHECK_OR_RETURN(it != op_name2op_conf_.end());
   return it->second;
 }
 
-const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const {
-  return *op_name2op_conf_.at(op_name);
+Maybe<const OperatorConf&> JobBuilder::OpConf4OpName(const std::string& op_name) const {
+  return *JUST(MapAt(op_name2op_conf_, op_name));
 }
 
 const ParallelConf& JobBuilder::ParallelConf4Lbi(const LogicalBlobId& lbi) const {

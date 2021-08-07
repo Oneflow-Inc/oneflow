@@ -39,7 +39,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
-#include "oneflow/api/python/env/env.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 
@@ -673,7 +673,8 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx);
+      opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx,
+      *one::CurrentDevVmDepObjectConsumeMode());
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
@@ -1578,7 +1579,7 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
 }
 
 Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
-  if (JUST(IsMultiClient())) {
+  if (JUST(GlobalMultiClientEnv())) {
     // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
     //   because each rank will process instructions ONLY from itself, NOT the master.
     return PhysicalRun(Build);
@@ -1600,7 +1601,7 @@ Maybe<void> LogicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& B
 Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
   vm::cfg::EagerSymbolList eager_symbol_list;
-  InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
+  InstructionsBuilder instructions_builder(std::make_shared<vm::PhysicalIdGenerator>(),
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
   JUST(Build(&instructions_builder));

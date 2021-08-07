@@ -23,7 +23,7 @@ namespace oneflow {
 class OpGraph;
 class Job;
 
-void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder);
+Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder);
 
 }  // namespace oneflow
 

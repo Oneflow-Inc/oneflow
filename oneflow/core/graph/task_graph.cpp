@@ -532,8 +532,7 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
   CHECK_EQ(src_task_nodes.size(), dst_task_nodes.size());
   FOR_RANGE(int32_t, i, 0, src_task_nodes.size()) {
     std::string regst_desc_name;
-    RegstDesc* ctrl_regst_desc =
-        src_task_nodes.at(i)->BuildCtrlRegstDesc(dst_task_nodes.at(i), &regst_desc_name);
+    src_task_nodes.at(i)->BuildCtrlRegstDesc(dst_task_nodes.at(i), &regst_desc_name);
     TaskEdge* edge = NewEdge();
     Connect<TaskNode>(src_task_nodes.at(i), edge, dst_task_nodes.at(i));
     src_task_nodes.at(i)->BindEdgeWithProducedRegst(edge, regst_desc_name);
@@ -541,7 +540,7 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
 }
 
 void TaskGraph::RemoveEmptyRegsts() {
-  ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedBlob(); });
+  ForEachNode([&](TaskNode* node) { node->EraseUninitializedShapeProducedBlob(); });
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeConsumedRegst(); });
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedRegst(); });
   ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });

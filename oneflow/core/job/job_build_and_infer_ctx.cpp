@@ -322,12 +322,14 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
       int64_t num_axes = logical_blob_desc.shape().NumAxes();
       if (axis < 0) { axis += num_axes; }
       CHECK_GE_OR_RETURN(axis, 0);
-      CHECK_LT_OR_RETURN(axis, num_axes)
+      CHECK_LE_OR_RETURN(axis, num_axes)
           << "op: " << op->op_name() << ", blob: " << pair.first << ", axis: " << axis
           << ", shape: " << logical_blob_desc.shape();
-      CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
-          << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
-          << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
+      if (logical_blob_desc.shape().NumAxes() > 0) {
+        CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
+            << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
+            << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
+      }
     }
   } else {
     for (const auto& pair :
@@ -967,6 +969,8 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  CHECK_GT_OR_RETURN(job().net().op_size(), 0)
+      << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
@@ -1319,12 +1323,9 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
   } else {
     op_type_name = "SystemOp";
   }
-  std::string op_name = op_name_prefix + op_type_name + "-" + std::to_string(unique_op_name_index_);
+  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
   ++unique_op_name_index_;
 
-  // temp debug log
-  std::cout << "cclog: Lazy nn.Graph AddOpName: " << op_name << std::endl
-            << " and the origin op_conf is :" << op_conf.DebugString();
   return op_name;
 }
 

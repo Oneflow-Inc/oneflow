@@ -29,9 +29,6 @@ class SinkTickKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
-  const PbMessage& GetCustomizedOpConf() const override {
-    return this->op_conf().source_tick_conf();
-  }
 };
 
 }  // namespace oneflow

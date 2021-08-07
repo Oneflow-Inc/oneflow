@@ -23,20 +23,12 @@ namespace {
 Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   const Shape& x_shape = ctx->InputShape("x", 0);
-  int h = 0;
-  int w = 0;
-  if (output_size.size() >= 1) {
-    h = output_size[0];  // h
-    w = output_size[0];
-    if (output_size.size() == 2) {
-      w = output_size[1];  // w
-    }
-  }
-  DimVector out_shape(4);
+  DimVector out_shape(x_shape.NumAxes());
   out_shape[0] = x_shape.dim_vec()[0];
   out_shape[1] = x_shape.dim_vec()[1];
-  out_shape[2] = h;
-  out_shape[3] = w;
+  for (int i = 2; i < out_shape.size(); ++i) {
+    out_shape[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
+  }
 
   *ctx->OutputShape("y", 0) = Shape(out_shape);
   return Maybe<void>::Ok();
@@ -80,6 +72,41 @@ Maybe<void> InferBWDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+REGISTER_USER_OP("adaptive_avg_pool1d")
+    .Input("x")
+    .Attr<std::vector<int64_t>>("output_size")
+    .Output("y")
+    .SetTensorDescInferFn(InferFWTensorDesc)
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetDataTypeInferFn(InferFWDataType);
+
+REGISTER_USER_OP("adaptive_avg_pool1d_grad")
+    .Input("x")
+    .Input("dy")
+    .Attr<std::vector<int64_t>>("output_size")
+    .Output("dx")
+    .SetTensorDescInferFn(InferBWTensorDesc)
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetDataTypeInferFn(InferBWDataType);
+
+REGISTER_USER_OP_GRAD("adaptive_avg_pool1d")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const auto adaptive_avg_pool1d_grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(adaptive_avg_pool1d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("adaptive_avg_pool1d_grad")
+            .InputBind("x", ctx->FwOp().input("x", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
+            .Output("dx")
+            .Build();
+      });
+      ctx->FwOp().InputGradBind(
+          user_op::OpArg("x", 0),
+          [&ctx, &adaptive_avg_pool1d_grad_op_name]() -> const std::string& {
+            return ctx->GetOp(adaptive_avg_pool1d_grad_op_name).output("dx", 0);
+          });
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_USER_OP("adaptive_avg_pool2d")
     .Input("x")
     .Attr<std::vector<int64_t>>("output_size")
@@ -98,7 +125,7 @@ REGISTER_USER_OP("adaptive_avg_pool2d_grad")
     .SetDataTypeInferFn(InferBWDataType);
 
 REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto adaptive_avg_pool2d_grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(adaptive_avg_pool2d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("adaptive_avg_pool2d_grad")
@@ -112,6 +139,42 @@ REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
           [&ctx, &adaptive_avg_pool2d_grad_op_name]() -> const std::string& {
             return ctx->GetOp(adaptive_avg_pool2d_grad_op_name).output("dx", 0);
           });
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("adaptive_avg_pool3d")
+    .Input("x")
+    .Attr<std::vector<int64_t>>("output_size")
+    .Output("y")
+    .SetTensorDescInferFn(InferFWTensorDesc)
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetDataTypeInferFn(InferFWDataType);
+
+REGISTER_USER_OP("adaptive_avg_pool3d_grad")
+    .Input("x")
+    .Input("dy")
+    .Attr<std::vector<int64_t>>("output_size")
+    .Output("dx")
+    .SetTensorDescInferFn(InferBWTensorDesc)
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetDataTypeInferFn(InferBWDataType);
+
+REGISTER_USER_OP_GRAD("adaptive_avg_pool3d")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const auto adaptive_avg_pool3d_grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(adaptive_avg_pool3d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("adaptive_avg_pool3d_grad")
+            .InputBind("x", ctx->FwOp().input("x", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
+            .Output("dx")
+            .Build();
+      });
+      ctx->FwOp().InputGradBind(
+          user_op::OpArg("x", 0),
+          [&ctx, &adaptive_avg_pool3d_grad_op_name]() -> const std::string& {
+            return ctx->GetOp(adaptive_avg_pool3d_grad_op_name).output("dx", 0);
+          });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace

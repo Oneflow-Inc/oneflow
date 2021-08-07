@@ -51,7 +51,7 @@ REGISTER_USER_OP("elu_grad")
       const Shape& x_shape = ctx->InputShape("x", 0);
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      CHECK(dy_shape == x_shape);
+      CHECK_OR_RETURN(dy_shape == x_shape);
       *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
@@ -72,21 +72,23 @@ REGISTER_USER_OP("elu_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("elu").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto elu_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(elu_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("elu_grad")
-        .InputBind("x", ctx->FwOp().input("in", 0))
-        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr("alpha", ctx->FwOp().attr<double>("alpha"))
-        .Output("dx")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                            [&ctx, &elu_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(elu_grad_op_name).output("dx", 0);
-                            });
-});
+REGISTER_USER_OP_GRAD("elu").SetBackwardOpConfGenFn(
+    [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const auto elu_grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(elu_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("elu_grad")
+            .InputBind("x", ctx->FwOp().input("in", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+            .Attr("alpha", ctx->FwOp().attr<double>("alpha"))
+            .Output("dx")
+            .Build();
+      });
+      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
+                                [&ctx, &elu_grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(elu_grad_op_name).output("dx", 0);
+                                });
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace
 

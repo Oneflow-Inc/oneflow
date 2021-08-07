@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) {
+Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) {
   HashMap<LogicalBlobId, HashMap<std::pair<ParallelDesc, cfg::ParallelDistribution>,
                                  std::vector<std::pair<const OpNode*, std::string>>>>
       lbi2consumer_grouped_by_parallel;
@@ -76,13 +76,14 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
         OperatorConf& consumer_op_conf = op_node2op_conf[consumer];
         const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn,
                                                                 GenLogicalBlobName(grouped_lbi));
-        CHECK_EQ(GenLogicalBlobName(lbi), old_val);
+        CHECK_EQ_OR_RETURN(GenLogicalBlobName(lbi), old_val);
       }
     }
   }
   for (const auto& op_node7op_conf : op_node2op_conf) {
-    job_builder->MutOpsOnlyOnce({op_node7op_conf.second});
+    JUST(job_builder->MutOpOnlyOnce(op_node7op_conf.second));
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
