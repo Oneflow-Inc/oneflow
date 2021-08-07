@@ -36,7 +36,6 @@ namespace one {
 namespace functional {
 
 namespace impl {
-
 class ConsistentConstantFunctor {
  public:
   ConsistentConstantFunctor() {
@@ -81,6 +80,11 @@ class ConsistentConstantFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class RollFunctor : public UnaryFunctor {
+public:
+  RollFunctor() { op_ = CHECK_JUST(one::OpBuilder("roll").Input("in").Output("out").Build()); }
 };
 
 class ConstantFunctor {

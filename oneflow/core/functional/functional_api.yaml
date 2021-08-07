@@ -120,6 +120,10 @@
   signature: "Tensor ReduceSum(Tensor x, *, Int32List axis, Bool keepdims=False)"
   bind_python: True
 
+- name: "roll"
+  signature: "Tensor Roll(Tensor x)"
+  bind_python: True
+
 - name: "reduce_mean"
   signature: "Tensor ReduceMean(Tensor x, *, Int32List axis, Bool keepdims=False)"
   bind_python: True
