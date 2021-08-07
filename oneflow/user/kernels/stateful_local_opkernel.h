@@ -419,13 +419,6 @@ class StatefulLocalOpKernel final {
     return output_tuple_indexes4mut2_obns_;
   }
 
-  // Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs,
-  //                             const EagerBlobObjectListPtr& outputs,
-  //                             LocalUserOpInferContext* op_infer_ctx);
-  // Maybe<void> InferDataType(const EagerBlobObjectListPtr& inputs,
-  //                           const EagerBlobObjectListPtr& outputs,
-  //                           LocalUserOpInferContext* op_infer_ctx);
-
   ComposedAttrMap* composed_attrs_for_scheduler_thread() const {
     return composed_attrs_for_scheduler_thread_.get();
   }

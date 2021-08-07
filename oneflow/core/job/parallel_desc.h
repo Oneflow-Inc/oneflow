@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/cached_caller.h"
 
 namespace oneflow {
 
@@ -96,13 +97,15 @@ class ParallelDesc final {
   Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
   Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Optional<int64_t>* parallel_id) const;
-  Maybe<ParallelContext> GetParallelContext4CurrentProcessCtx() const;
+
   bool Containing(int64_t machine_id, int64_t device_id) const;
   // this api is exported to python as Containing
   bool Bigger(const ParallelDesc& rhs) const;
   bool ContainingMachineId(int64_t machine_id) const;
 
   std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf() const { return cfg_parallel_conf_; }
+
+  bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
@@ -114,7 +117,6 @@ class ParallelDesc final {
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
-  bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
 
   Maybe<int64_t> symbol_id_;
   DeviceType device_type_;
@@ -137,6 +139,10 @@ class ParallelDesc final {
 
 Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
                                                   Optional<int64_t>* parallel_id);
+
+std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc);
+
+auto* CachedGetParallelContext4CurrentProcessCtx = THREAD_LOCAL_CACHED(&GetParallelContext4CurrentProcessCtx);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
