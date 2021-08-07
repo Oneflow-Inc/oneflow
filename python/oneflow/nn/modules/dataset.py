@@ -561,9 +561,9 @@ class ImageFlip(Module):
 
     1 (0x01): Horizontal Flip
 
-    16 (0x10): Vertical Flip
+    2 (0x02): Vertical Flip
 
-    17 (0x11): Both Horizontal and Vertical Flip
+    3 (0x03): Both Horizontal and Vertical Flip
 
     Args:
         images: The input images.
@@ -607,8 +607,7 @@ class ImageFlip(Module):
         self.flip_code = flip_code
 
     def forward(self, images):
-        flip_codes = flow.Tensor([self.flip_code] * images.shape[0], dtype=flow.int8)
-        return flow.F.image_flip(images, flip_codes)
+        return flow.F.image_flip(images, flip_code=self.flip_code)
 
 
 class ImageDecode(Module):
