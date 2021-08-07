@@ -120,7 +120,6 @@ def test(test_case):
 
 
     print("final loss : ", final_loss)
-    # TODO:set a random seed to dataloader
     # test_case.assertLess(final_loss, 1.50)
 
 
