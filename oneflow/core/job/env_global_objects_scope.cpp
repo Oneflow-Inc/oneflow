@@ -35,7 +35,6 @@ limitations under the License.
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
-#include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
@@ -196,12 +195,10 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     }
 #endif  // __linux__
   }
-  Global<boxing::collective::CollectiveBoxingExecutor>::New();
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
-  Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
