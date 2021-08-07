@@ -19,10 +19,15 @@ limitations under the License.
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "OneFlow/Conversion/OneFlowToTosa.h"
 #include "OneFlow/Conversion/SCFToGPU.h"
+#ifdef WITH_CUDA
+#include "OneFlow/Conversion/PTXToCubin.h"
+#endif  // WITH_CUDA
 
 namespace mlir {
 
