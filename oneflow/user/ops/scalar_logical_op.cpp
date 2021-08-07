@@ -33,7 +33,6 @@ namespace oneflow {
         FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {                         \
           ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();   \
         }                                                                               \
-        ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build(); \
         return Maybe<void>::Ok();                                                       \
       })                                                                                \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {               \
