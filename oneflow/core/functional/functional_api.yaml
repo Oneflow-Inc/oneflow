@@ -285,6 +285,14 @@
   signature: "Tensor ConsistentConstant(*, Shape shape, Scalar value, DataType dtype, Placement placement, SbpList sbp_tuple)"
   bind_python: True
 
+- name: "empty"
+  signature: "Tensor Empty(*, Shape shape, DataType dtype, Device device=None)"
+  bind_python: True
+
+- name: "consistent_empty"
+  signature: "Tensor ConsistentEmpty(*, Shape shape, DataType dtype, Placement placement, SbpList sbp_tuple)"
+  bind_python: True
+
 - name: "zeros_like"
   signature: "Tensor ZerosLike(Tensor x)"
   bind_python: True
