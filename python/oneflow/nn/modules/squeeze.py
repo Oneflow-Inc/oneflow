@@ -48,7 +48,7 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
 
     """
     if dim == None:
-        return x
+        return input
 
     if isinstance(dim, int):
         dim = [dim]
