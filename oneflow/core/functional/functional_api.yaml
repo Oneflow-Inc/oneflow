@@ -137,7 +137,7 @@
   bind_python: True
 
 - name: "image_flip"
-  signature: "Tensor ImageFlip(Tensor x, Tensor flip_code)"
+  signature: "Tensor ImageFlip(Tensor x, *, Int32 flip_code)"
   bind_python: True
 
 - name: "sin"
