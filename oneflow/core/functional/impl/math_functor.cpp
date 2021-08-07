@@ -452,7 +452,7 @@ class ScalarLogicalBaseFunctor {
   explicit ScalarLogicalBaseFunctor(std::string op_name) {
     op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
   }
-  virtual ~ScalarLogicalBaseFunctor() = default; 
+  virtual ~ScalarLogicalBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& scalar) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("scalar", scalar));
@@ -465,40 +465,36 @@ class ScalarLogicalBaseFunctor {
 
 class ScalarLogicalEqualFunctor : public ScalarLogicalBaseFunctor {
  public:
-  ScalarLogicalEqualFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_equal") {
-  }
+  ScalarLogicalEqualFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_equal") {}
 };
 
 class ScalarLogicalNotEqualFunctor : public ScalarLogicalBaseFunctor {
  public:
-  ScalarLogicalNotEqualFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_not_equal") {
-  }
+  ScalarLogicalNotEqualFunctor()
+      : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_not_equal") {}
 };
 
 class ScalarLogicalGreaterFunctor : public ScalarLogicalBaseFunctor {
  public:
-  ScalarLogicalGreaterFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_greater") {
-  }
+  ScalarLogicalGreaterFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_greater") {}
 };
 
 class ScalarLogicalGreaterEqualFunctor : public ScalarLogicalBaseFunctor {
  public:
-  ScalarLogicalGreaterEqualFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_greater_equal") {
-  }
+  ScalarLogicalGreaterEqualFunctor()
+      : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_greater_equal") {}
 };
 
 class ScalarLogicalLessFunctor : public ScalarLogicalBaseFunctor {
  public:
-  ScalarLogicalLessFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_less") {
-  }
+  ScalarLogicalLessFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_less") {}
 };
 
 class ScalarLogicalLessEqualFunctor : public ScalarLogicalBaseFunctor {
  public:
-  ScalarLogicalLessEqualFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_less_equal") {
-  }
+  ScalarLogicalLessEqualFunctor()
+      : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_less_equal") {}
 };
-
 
 }  // namespace impl
 

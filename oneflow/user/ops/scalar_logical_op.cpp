@@ -17,35 +17,35 @@ limitations under the License.
 
 namespace oneflow {
 
-#define REGISTER_SCALAR_LOGICAL_OP(op_name) \
-    REGISTER_USER_OP(op_name) \
-        .Input("in") \
-        .Output("out") \
-        .Attr<double>("scalar") \
-        .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> { \
-            *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0); \
-            *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0); \
-            return Maybe<void>::Ok(); \
-        }) \
-        .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { \
-        const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0); \
-        FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) { \
-            ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build(); \
-        } \
+#define REGISTER_SCALAR_LOGICAL_OP(op_name)                                             \
+  REGISTER_USER_OP(op_name)                                                             \
+      .Input("in")                                                                      \
+      .Output("out")                                                                    \
+      .Attr<double>("scalar")                                                           \
+      .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {             \
+        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);                         \
+        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                 \
+        return Maybe<void>::Ok();                                                       \
+      })                                                                                \
+      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {                        \
+        const user_op::TensorDesc& in_tensor =                                          \
+            ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);                       \
+        FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {                         \
+          ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();   \
+        }                                                                               \
         ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build(); \
-        return Maybe<void>::Ok(); \
-        }) \
-        .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { \
-            *ctx->OutputDType("out", 0) = DataType::kInt8; \
-            return Maybe<void>::Ok(); \
-        }); \
+        return Maybe<void>::Ok();                                                       \
+      })                                                                                \
+      .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {               \
+        *ctx->OutputDType("out", 0) = DataType::kInt8;                                  \
+        return Maybe<void>::Ok();                                                       \
+      });
 
-
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_equal"); 
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_not_equal"); 
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_greater"); 
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_greater_equal"); 
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_less"); 
-REGISTER_SCALAR_LOGICAL_OP("scalar_logical_less_equal"); 
+REGISTER_SCALAR_LOGICAL_OP("scalar_logical_equal");
+REGISTER_SCALAR_LOGICAL_OP("scalar_logical_not_equal");
+REGISTER_SCALAR_LOGICAL_OP("scalar_logical_greater");
+REGISTER_SCALAR_LOGICAL_OP("scalar_logical_greater_equal");
+REGISTER_SCALAR_LOGICAL_OP("scalar_logical_less");
+REGISTER_SCALAR_LOGICAL_OP("scalar_logical_less_equal");
 
 }  // namespace oneflow
