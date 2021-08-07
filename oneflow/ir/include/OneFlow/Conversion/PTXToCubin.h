@@ -23,6 +23,7 @@ namespace mlir {
 namespace oneflow {
 
 std::unique_ptr<mlir::Pass> createSerializeToCubinPass();
+void InitializeLLVMNVPTXBackend();
 void registerGpuSerializeToCubinPass();
 
 }  // namespace oneflow

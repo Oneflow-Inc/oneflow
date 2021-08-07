@@ -131,14 +131,16 @@ namespace mlir {
 
 namespace oneflow {
 
+void InitializeLLVMNVPTXBackend() {
+  LLVMInitializeNVPTXTarget();
+  LLVMInitializeNVPTXTargetInfo();
+  LLVMInitializeNVPTXTargetMC();
+  LLVMInitializeNVPTXAsmPrinter();
+}
+
 void registerGpuSerializeToCubinPass() {
   PassRegistration<SerializeToCubinPass> registerSerializeToCubin([] {
-    // Initialize LLVM NVPTX backend.
-    LLVMInitializeNVPTXTarget();
-    LLVMInitializeNVPTXTargetInfo();
-    LLVMInitializeNVPTXTargetMC();
-    LLVMInitializeNVPTXAsmPrinter();
-
+    InitializeLLVMNVPTXBackend();
     return std::make_unique<SerializeToCubinPass>();
   });
 }

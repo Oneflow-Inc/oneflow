@@ -176,6 +176,7 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
 #ifdef WITH_CUDA
 
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module) {
+  InitializeLLVMNVPTXBackend();
   mlir::PassManager pm(context);
   pm.addPass(createLowerOneFlowToTosaPass());                     // lower-oneflow-to-tosa
   pm.addPass(createCSEPass());                                    // cse
@@ -195,6 +196,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());
   // pm.addPass(createMemRefToLLVMPass());  // convert-memref-to-llvm
   // pm.addPass(createLowerToLLVMPass());   // convert-std-to-llvm
   return pm.run(module);
