@@ -64,11 +64,6 @@ add_docstr(
         ... )
         >>> x = flow.Tensor(arr)
         >>> y = flow.F.dropout(x, p=0) 
-        >>> y #doctest: +ELLIPSIS
-        tensor([[-0.7797,  0.2264,  0.2458,  0.4163],
-                ...
-                [-1.4115,  1.2183, -0.5503,  0.652 ]], dtype=oneflow.float32)
-
 
         >>> arr = np.array(
         ...    [

@@ -108,7 +108,7 @@ add_docstr(
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)  
         >>> output = flow.F.upsample(input, height_scale=2.0, width_scale=2.0, align_corners=False, interpolation="nearest")
     
-        >>> output #doctest: +ELLIPSIS
+        >>> output
         tensor([[[[1., 1., 2., 2.],
                   [1., 1., 2., 2.],
                   [3., 3., 4., 4.],
