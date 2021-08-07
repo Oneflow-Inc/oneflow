@@ -892,3 +892,28 @@
 - name: "reduce_sum_like"
   signature: "Tensor ReduceSumLike(Tensor in, Tensor like, *,Int32List axis)"
   bind_python: True
+
+- name: "scalar_logical_equal"
+  signature: "Tensor ScalarLogicalEqual(Tensor in, Double scalar)"
+  bind_python: True
+
+- name: "scalar_logical_not_equal"
+  signature: "Tensor ScalarLogicalNotEqual(Tensor in, Double scalar)"
+  bind_python: True
+
+- name: "scalar_logical_greater"
+  signature: "Tensor ScalarLogicalGreater(Tensor in, Double scalar)"
+  bind_python: True
+
+- name: "scalar_logical_greater_equal"
+  signature: "Tensor ScalarLogicalGreaterEqual(Tensor in, Double scalar)"
+  bind_python: True
+
+- name: "scalar_logical_less"
+  signature: "Tensor ScalarLogicalLess(Tensor in, Double scalar)"
+  bind_python: True
+
+- name: "scalar_logical_less_equal"
+  signature: "Tensor ScalarLogicalLessEqual(Tensor in, Double scalar)"
+  bind_python: True
+  
