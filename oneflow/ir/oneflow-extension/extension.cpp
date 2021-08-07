@@ -200,7 +200,7 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(&mlir_ctx, *module)))
-        << "fail to lower OneFlow to LLVM";
+        << "fail to lower OneFlow to CUDA LLVM";
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
