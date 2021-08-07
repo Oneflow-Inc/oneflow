@@ -24,7 +24,6 @@ class AccCompActor final : public CompActor {
   ~AccCompActor() override = default;
 
  private:
-  int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 
@@ -61,10 +60,6 @@ void AccCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
   OF_SET_MSG_HANDLER(&AccCompActor::HandlerNormal);
   acc_cnt_ = 0;
   max_acc_cnt_ = max_acc_cnt;
-}
-
-int64_t AccCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
-  return regst_desc_id == Name2SoleRegstDescId("out") ? max_acc_cnt_ : 1;
 }
 
 void AccCompActor::Act() {

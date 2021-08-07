@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.framework.config_util import api_collect_act_event as collect_act_event
 from oneflow.framework.config_util import api_comm_net_worker_num as comm_net_worker_num
 from oneflow.framework.config_util import (
     api_compute_thread_pool_size as compute_thread_pool_size,
@@ -47,21 +46,8 @@ from oneflow.framework.config_util import (
     api_nccl_use_compute_stream as nccl_use_compute_stream,
 )
 from oneflow.framework.config_util import (
-    api_numa_aware_cuda_malloc_host as enable_numa_aware_cuda_malloc_host,
-)
-from oneflow.framework.config_util import (
-    api_rdma_mem_block_mbyte as rdma_mem_block_mbyte,
-)
-from oneflow.framework.config_util import (
-    api_rdma_recv_msg_buf_mbyte as rdma_recv_msg_buf_mbyte,
-)
-from oneflow.framework.config_util import (
     api_reserved_device_mem_mbyte as reserved_device_mem_mbyte,
 )
 from oneflow.framework.config_util import (
     api_reserved_host_mem_mbyte as reserved_host_mem_mbyte,
 )
-from oneflow.framework.config_util import (
-    api_thread_enable_local_message_queue as thread_enable_local_message_queue,
-)
-from oneflow.framework.config_util import api_use_rdma as use_rdma
