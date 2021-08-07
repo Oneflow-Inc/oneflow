@@ -36,6 +36,9 @@ limitations under the License.
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/version.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/job/collective_boxing_executor.h"
+#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
+
 
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_device_descriptor.h"
@@ -129,6 +132,8 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<ThreadMgr>::New();
     Global<RuntimeJobDescs>::New();
     Global<summary::EventsWriter>::New();
+    Global<boxing::collective::CollectiveBoxingExecutor>::New();
+    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   }
 
   return Maybe<void>::Ok();
@@ -146,6 +151,8 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
     // NOTE(chengcheng): Delete Global Runtime objects.
+    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
+    Global<boxing::collective::CollectiveBoxingExecutor>::New();
     Global<summary::EventsWriter>::Delete();
     Global<RuntimeJobDescs>::Delete();
     Global<ThreadMgr>::Delete();
