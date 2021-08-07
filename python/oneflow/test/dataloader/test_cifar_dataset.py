@@ -118,7 +118,6 @@ def test(test_case):
                 running_loss = 0.0
                 break
 
-
     print("final loss : ", final_loss)
     # test_case.assertLess(final_loss, 1.50)
 
