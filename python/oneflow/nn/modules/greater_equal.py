@@ -26,9 +26,7 @@ class GreaterEqual(Module):
         if x.dtype != flow.float32:
             x = flow.cast(x, flow.float32)
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor(
-                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
-            )
+            return flow.F.scalar_logical_greater_equal(x, float(y))
         if y.dtype != flow.float32:
             y = flow.cast(y, flow.float32)
         return flow.F.broadcast_greater_equal(x, y)
