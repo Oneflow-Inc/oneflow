@@ -19,18 +19,9 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/job/collective_boxing_executor.h"
 
 namespace oneflow {
-
-namespace boxing {
-
-namespace collective {
-
-class CollectiveBoxingExecutorPlanToken;
-
-}
-
-}  // namespace boxing
 
 class Runtime final {
  public:
