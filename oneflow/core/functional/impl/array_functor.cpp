@@ -532,9 +532,8 @@ class ScatterNdFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("scatter_nd").Input("indices").Input("updates").Output("out").Build());
   }
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& indices const std::shared_ptr<one::Tensor>& updates,
-      const Shape& shape) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& indices,
+                           const std::shared_ptr<one::Tensor>& updates, const Shape& shape) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates}, attrs);
