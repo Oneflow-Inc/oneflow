@@ -140,9 +140,11 @@ class ParallelDesc final {
 Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
                                                   Optional<int64_t>* parallel_id);
 
-std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc);
+std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc);
 
-auto* CachedGetParallelContext4CurrentProcessCtx = THREAD_LOCAL_CACHED(&GetParallelContext4CurrentProcessCtx);
+auto* CachedGetParallelContext4CurrentProcessCtx =
+    THREAD_LOCAL_CACHED(&GetParallelContext4CurrentProcessCtx);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);

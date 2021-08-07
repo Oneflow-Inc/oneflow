@@ -183,7 +183,8 @@ Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_
   return device_iter->second;
 }
 
-std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
+std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc) {
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
