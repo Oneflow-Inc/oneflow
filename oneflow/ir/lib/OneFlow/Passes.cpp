@@ -43,6 +43,7 @@ limitations under the License.
 #include "mlir/Transforms/Passes.h"
 #ifdef WITH_CUDA
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
@@ -197,8 +198,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());
-  // pm.addPass(createMemRefToLLVMPass());  // convert-memref-to-llvm
-  // pm.addPass(createLowerToLLVMPass());   // convert-std-to-llvm
+  pm.addPass(createGpuToLLVMConversionPass());
   return pm.run(module);
 }
 
