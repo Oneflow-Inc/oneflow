@@ -149,8 +149,10 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   const auto& parallel_distribution_cast_op_expr =
       JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
-  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
-                                                             {consistent_tensor}));
+  Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
+  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *parallel_distribution_cast_op_expr, {consistent_tensor},
+      OpExprInterpContext(AttrMap{}, parallel_desc, parallel_distribution)));
   return ret;
 }
 
