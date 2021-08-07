@@ -147,7 +147,6 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
-  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
   const auto& parallel_distribution_cast_op_expr =
       JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
   const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
