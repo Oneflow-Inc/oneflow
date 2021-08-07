@@ -35,7 +35,7 @@ class ToConsistent(Module):
 
 
 @register_tensor_op("to_consistent")
-def to_consistent_op(input, placement, sbp):
+def to_consistent_op(input, placement=None, sbp=None):
     """Cast a local tensor to consistent tensor or cast a
     consistent tensor to another consistent tensor with 
     different sbp or placement
@@ -43,9 +43,8 @@ def to_consistent_op(input, placement, sbp):
 
     Args:
         input (Tensor): the input tensor.
-        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        shape (flow.Size, optional) the logical shape of returned consistent tensor.
+        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own placement.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
 
     For example:
 
@@ -62,6 +61,15 @@ def to_consistent_op(input, placement, sbp):
     """
     if isinstance(sbp, flow.sbp.sbp):
         sbp = (sbp,)
+    if placement is None or sbp is None:
+        assert (
+            input.is_consistent
+        ), "Converting a local tensor to consistent tensor must have placement and sbp parameters!"
+        assert (
+            placement is not None or sbp is not None
+        ), "Converting a consistent tensor to consistent tensor must have at least one of placement and sbp parameters!"
+        placement = input.placement if placement is None else placement
+        sbp = input.sbp if sbp is None else sbp
     return flow.F.to_consistent(input, placement, sbp)
 
 
