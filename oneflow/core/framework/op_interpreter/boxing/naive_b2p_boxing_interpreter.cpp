@@ -29,7 +29,7 @@ Maybe<one::Tensor> NaiveB2PBoxingInterpreter::InterpretImpl(
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   int64_t root = JUST(in_parallel_desc->MachineId4ParallelId(0));
-  if (root == GlobalProcessCtx::LocalRank()) {
+  if (root == GlobalProcessCtx::Rank()) {
     std::string device_type = Device::Type4DeviceTag(in_parallel_desc->device_tag());
     return JUST(one::functional::Copy(input, device_type, root));
   } else {
