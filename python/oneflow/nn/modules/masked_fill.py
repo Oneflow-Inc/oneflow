@@ -15,19 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class MaskedFill(Module):
-    def __init__(self, value) -> None:
-        super().__init__()
-        self.value = value
-
-    def forward(self, input, mask):
-        in_shape = tuple(input.shape)
-        value_like_x = flow.Tensor(*in_shape, device=input.device)
-        value_like_x.fill_(self.value)
-        return flow.F.where(mask, value_like_x, input)
 
 
 @register_tensor_op("masked_fill")
@@ -68,7 +55,11 @@ def masked_fill_op(input, mask, value):
         #  [-1.9009,  8.7654,  8.7654,  8.7654]]], dtype=oneflow.float32)
 
     """
-    return MaskedFill(value)(input, mask)
+
+    in_shape = tuple(input.shape)
+    value_like_x = flow.Tensor(*in_shape, device=input.device)
+    value_like_x.fill_(value)
+    return flow.F.where(mask, value_like_x, input)
 
 
 if __name__ == "__main__":
