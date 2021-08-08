@@ -192,8 +192,9 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
       createConvertLinalgToParallelLoopsPass());      // convert-linalg-to-parallel-loops
   pm.addNestedPass<FuncOp>(createMapSCFToGPUPass());  // gpu-greedy-parallel-loop-mapping
   pm.addPass(createParallelLoopToGpuPass());          // convert-parallel-loops-to-gpu
-  pm.addPass(createConvertLinalgToLLVMPass());        // convert-linalg-to-llvm
-  pm.addPass(createGpuKernelOutliningPass());         // gpu-kernel-outlining
+  // NOTE: in newer version of upstream, memref will also be lowered to llvm in linalg to llvm pass
+  pm.addPass(createConvertLinalgToLLVMPass());  // convert-linalg-to-llvm
+  pm.addPass(createGpuKernelOutliningPass());   // gpu-kernel-outlining
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
