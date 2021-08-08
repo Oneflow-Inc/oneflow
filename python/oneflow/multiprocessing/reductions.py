@@ -23,7 +23,7 @@ def reduce_tensor(tensor):
 
 def reduce_local_tensor(tensor):
     print("\nreductions.py >>>>>>>>>>>>>>>>> reduce_local_tensor")
-    return flow.Tensor(tensor.numpy())
+    return tensor
 
 def init_reductions():
     ForkingPickler.register(Tensor, reduce_tensor)

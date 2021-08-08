@@ -88,6 +88,7 @@ _collate_fn_t = Callable[[List[T]], Any]
 # aspect.
 default_collate: _collate_fn_t = _utils.collate.default_collate
 
+get_worker_info = _utils.worker.get_worker_info
 
 class _DatasetKind(object):
     Map = 0

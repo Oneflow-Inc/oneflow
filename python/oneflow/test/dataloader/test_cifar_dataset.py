@@ -89,7 +89,7 @@ def test(test_case):
         source_url="https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/cifar/cifar-10-python.tar.gz",
     )
     trainloader = flow.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=False, num_workers=1
+        trainset, batch_size=batch_size, shuffle=False, num_workers=2
     )
 
     final_loss = 0
