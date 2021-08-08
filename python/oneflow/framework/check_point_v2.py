@@ -566,3 +566,7 @@ def init_by_initializer_conf(
         pass
     if sync_between_multi_machine:
         oneflow._oneflow_internal.eager.single_client.Sync()
+
+
+def Init() -> None:
+    raise NotImplemented()
