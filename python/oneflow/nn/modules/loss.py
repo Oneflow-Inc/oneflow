@@ -215,6 +215,8 @@ class CrossEntropyLoss(Module):
         elif self.reduction == "sum":
             return out.sum()
         else:
+            if input_shape_len == 3:
+                out = out.reshape((b, -1))
             if input_shape_len == 4:
                 out = out.reshape((b, h, w))
             return out
