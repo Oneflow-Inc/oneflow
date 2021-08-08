@@ -406,9 +406,6 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
   TensorNameScope::Global()->Record(input_tensor, lbn);
 
-  std::cout << "cclog: this job name is : " << graph_name << " and store tensor with name: " << lbn
-            << "\n";
-
   return Maybe<void>::Ok();
 }
 

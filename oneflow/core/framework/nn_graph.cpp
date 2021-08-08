@@ -79,7 +79,6 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
 }
 
 Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
-  std::cout << "cclog: this graph name is : " << name_ << "\n";
   const auto& free_eager_tensors =
       Global<MultiClientSessionContext>::Get()->GetFreeEagerTensorNamePairByGraphName(name_);
   for (const auto& pair : free_eager_tensors) {
@@ -93,7 +92,6 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
     } else {
       var_blob = JUST(var->eager_blob_object())->mut_blob();
     }
-    std::cout << "cclog: register free eager tensor name: " << var_name << "\n";
     CHECK_OR_RETURN(!var_name.empty());
     CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
