@@ -78,11 +78,6 @@ def env_init():
     return True
 
 
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_current_machine_id() -> int:
-    return oneflow._oneflow_internal.CurrentMachineId()
-
-
 def api_machine(*val: list) -> None:
     """Set machines' hostnames.
 
