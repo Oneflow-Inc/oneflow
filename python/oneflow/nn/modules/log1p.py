@@ -39,7 +39,7 @@ def log1p_op(input):
 
 
 @register_tensor_op("log1p")
-def erfc_op_tensor(input):
+def log1p_op_tensor(input):
     """
     See :func:`oneflow.log1p`
     """
