@@ -365,18 +365,14 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddFreeEagerTensorByVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
+Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
   CHECK_OR_RETURN(input_tensor->is_eager());
-
+  const std::string& lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  CHECK_OR_RETURN(lbn.empty());
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
-
   OperatorConf op_conf;
-  // op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
   op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
   op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
-  // NOTE(chengcheng):
-  //   We contruct VariableOpConf instead of FeedVariableOpConf because FeedVariableOpExpr JUST
-  //   for getting input EagerTensor.
   VariableOpConf* var_conf = op_conf.mutable_variable_conf();
   var_conf->set_out("out");
   input_tensor->shape()->ToProto(var_conf->mutable_shape());
@@ -385,16 +381,25 @@ Maybe<void> AddFreeEagerTensorByVariableOp(const std::shared_ptr<Tensor>& input_
   //   by EagerTensor.
   var_conf->mutable_initializer()->mutable_empty_conf();
   JUST(GenVariableOpConfParallelDistributionStringByTensor(var_conf, input_tensor));
+  // NOTE(chengcheng): Free EagerTensor not trainable
   var_conf->set_trainable(false);
 
   auto infer_ctx = JUST(GetCurInferCtx());
+  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp, FreeEagerTensor has no
+  //  name so just new a unique name for it.
+  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(op_conf));
+  op_conf.set_name(new_op_name);
+
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
 
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
-          << op_conf.DebugString() << std::endl;
+          << op_conf.DebugString() << " for FreeEagerTensor.\n";
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
           << " infer and and op attr : \n"
-          << op_attr.DebugString() << std::endl;
+          << op_attr.DebugString() << " for FreeEagerTensor.\n";
+
+  // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
+  TensorNameScope::Global()->Record(input_tensor, GenLogicalBlobName(new_op_name, "out"));
 
   return Maybe<void>::Ok();
 }
@@ -408,7 +413,11 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   CHECK_OR_RETURN(input_tensor->is_lazy());
-  const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  if (input_lbn.empty()) {
+    JUST(AddFreeEagerTensorToVariableOp(input_tensor));
+    input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  }
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
   std::string device_type = JUST(ctx.attrs.GetAttr<std::string>("device_type"));
   int64_t device_id = JUST(ctx.attrs.GetAttr<int64_t>("device_id"));
@@ -440,16 +449,7 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
 Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());
-  if (inputs.size() == 0) {
-    // NOTE(chengcheng): handle for source UserOp like OFRecordReader, CoinFlip
-    return LazyInterpreterApplyImplForSourceUserOpExpr(op_expr, outputs, ctx);
-  }
-  if (op_expr.op_type_name() == "copy") {
-    // NOTE(chengcheng): handle for copy UserOp which will NOT add op to job.
-    return LazyInterpreterApplyImplForCopyUserOpExpr(op_expr, inputs, outputs, ctx);
-  }
 
-  auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   // NOTE(chengcheng): Handle special UserOp such as:
   //     1. [Source UserOp] : OFRecordReader, CoinFlip
   //     2. [Change Placement/ParallelDesc UserOp] : to(copy)/to_consistent/parallel_cast
@@ -463,10 +463,19 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   //     3. op_parallel_conf for build new scope with parallel_desc
   //     4. output blob (different with tensor) -> parallel_conf
   //     5. need add to JobBuildAndInferCtx (like copy will NOT need)
+  if (inputs.size() == 0) {
+    // NOTE(chengcheng): handle for source UserOp like OFRecordReader, CoinFlip
+    return LazyInterpreterApplyImplForSourceUserOpExpr(op_expr, outputs, ctx);
+  }
+  if (op_expr.op_type_name() == "copy") {
+    // NOTE(chengcheng): handle for copy UserOp which will NOT add op to job.
+    return LazyInterpreterApplyImplForCopyUserOpExpr(op_expr, inputs, outputs, ctx);
+  }
 
   // NOTE(chengcheng):
   //   Normal UserOp inputs size >= 1 for infer parallel_desc.
   CHECK_GE_OR_RETURN(inputs.size(), 1);
+  auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(inputs.at(0)));
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
   const std::string device_tag = GetDeviceTagOfTensor(inputs.at(0));
@@ -482,17 +491,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
         parallel_desc->EqualsIgnoringHierarchy(*JUST(GetParallelDescOfTensor(input_tensor))));
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
     const std::string& ibn = op_expr.indexed_ibns().at(i);
-    const std::string& lbn = TensorNameScope::Global()->Lookup(inputs[i]);
+    std::string lbn = TensorNameScope::Global()->Lookup(input_tensor);
     if (lbn.empty()) {
-      CHECK_OR_RETURN(input_tensor->is_eager());  // NOTE(chengcheng): lazy_tensor MUST has lbn.
-
-      // TODO(chengcheng):
-      //     this is free EagerTensor which NOT captured by nn.Graph (inputs/params).
-      //     Need Create a VariableOpConf for this inputs tensor, and Record name for itself.
-      OF_UNIMPLEMENTED()
-          << " Sorry! nn.Graph does NOT support free eager tensor which NOT captured"
-          << " by nn.Graph. Please using nn.Graph.build() args or nn.Module.__init__() to handle "
-          << "all eager tensor.";
+      JUST(AddFreeEagerTensorToVariableOp(input_tensor));
+      lbn = TensorNameScope::Global()->Lookup(input_tensor);
     }
     CHECK_OR_RETURN(!lbn.empty());  // NOTE(chengcheng): lbn must not empty now.
     ReplaceInputLbnInOpCustomizedConf(op_conf.get(), ibn, lbn);
@@ -538,7 +540,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       (*outputs)[i] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr,
                                                      /* is_lazy= */ true, is_local));
     } else {
-      std::shared_ptr<Tensor> inplace_out = outputs->at(i);
+      const std::shared_ptr<Tensor>& inplace_out = outputs->at(i);
       JUST(OpInterpUtil::CheckTensorMatchAttr(inplace_out, blob_attr, parallel_attr,
                                               /* is_lazy= */ true, is_local,
                                               /* requires_grad */ false,
