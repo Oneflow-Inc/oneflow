@@ -20,107 +20,48 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
-struct ScalarLogicalEqualFunctor {
-  OF_DEVICE_FUNC explicit ScalarLogicalEqualFunctor(double scalar) : scalar(scalar) {}
-  OF_DEVICE_FUNC int8_t operator()(T x) const { return BinaryFuncEQ<T>::Invoke(x, scalar); }
+template<template<typename> class UnaryFunctor, typename T>
+struct ScalarLogicalFunctor {
+  OF_DEVICE_FUNC explicit ScalarLogicalFunctor(double scalar) : scalar(scalar) {}
+  OF_DEVICE_FUNC int8_t operator()(T x) const { return UnaryFunctor<T>::Invoke(x, scalar); }
   const T scalar;
 };
 
-template<typename T>
-struct ScalarLogicalNotEqualFunctor {
-  OF_DEVICE_FUNC explicit ScalarLogicalNotEqualFunctor(double scalar) : scalar(scalar) {}
-  OF_DEVICE_FUNC int8_t operator()(T x) const { return BinaryFuncNE<T>::Invoke(x, scalar); }
-  const T scalar;
-};
-
-template<typename T>
-struct ScalarLogicalGreaterFunctor {
-  OF_DEVICE_FUNC explicit ScalarLogicalGreaterFunctor(double scalar) : scalar(scalar) {}
-  OF_DEVICE_FUNC int8_t operator()(T x) const { return BinaryFuncGT<T>::Invoke(x, scalar); }
-  const T scalar;
-};
-
-template<typename T>
-struct ScalarLogicalGreaterEqualFunctor {
-  OF_DEVICE_FUNC explicit ScalarLogicalGreaterEqualFunctor(double scalar) : scalar(scalar) {}
-  OF_DEVICE_FUNC int8_t operator()(T x) const { return BinaryFuncGE<T>::Invoke(x, scalar); }
-  const T scalar;
-};
-
-template<typename T>
-struct ScalarLogicalLessFunctor {
-  OF_DEVICE_FUNC explicit ScalarLogicalLessFunctor(double scalar) : scalar(scalar) {}
-  OF_DEVICE_FUNC int8_t operator()(T x) const { return BinaryFuncLT<T>::Invoke(x, scalar); }
-  const T scalar;
-};
-
-template<typename T>
-struct ScalarLogicalLessEqualFunctor {
-  OF_DEVICE_FUNC explicit ScalarLogicalLessEqualFunctor(double scalar) : scalar(scalar) {}
-  OF_DEVICE_FUNC int8_t operator()(T x) const { return BinaryFuncLE<T>::Invoke(x, scalar); }
-  const T scalar;
-};
-
-#define REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                                      \
-    device, kernel_name, functor, out_dtype, input_a_dtype, create_function, out_name,           \
-    input_a_name)                                                                                \
+#define REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, kernel_name, bin_op, input_dtype)  \
   REGISTER_USER_KERNEL(kernel_name)                                                              \
       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                       \
-        return new UnaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype>( \
-            create_function, out_name, input_a_name);                                            \
+        return new UnaryElemwiseXpuKernel<device, ScalarLogicalFunctor<bin_op, int8_t>, int8_t, input_dtype>( \
+            [](user_op::KernelComputeContext* ctx) {return ScalarLogicalFunctor<bin_op, int8_t>(ctx->Attr<double>("scalar")); }, \
+            "out", "in");                                            \
       })                                                                                         \
       .SetIsMatchedHob(                                                                          \
           (user_op::HobDeviceTag() == device)                                                    \
-          & (user_op::HobDataType(input_a_name, 0) == GetDataType<input_a_dtype>::value));
+          & (user_op::HobDataType("in", 0) == GetDataType<input_dtype>::value));
 
 #define REGISTER_SCALAR_LOGICAL_EQUAL_KERNEL(device, dtype)                     \
   REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                           \
-      device, "scalar_logical_equal", ScalarLogicalEqualFunctor, int8_t, dtype, \
-      [](user_op::KernelComputeContext* ctx) {                                  \
-        return ScalarLogicalEqualFunctor<int8_t>(ctx->Attr<double>("scalar"));  \
-      },                                                                        \
-      "out", "in");
+      device, "scalar_logical_equal", BinaryFuncEQ, dtype);
 
-#define REGISTER_SCALAR_LOGICAL_NOTEQUAL_KERNEL(device, dtype)                         \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                                  \
-      device, "scalar_logical_not_equal", ScalarLogicalNotEqualFunctor, int8_t, dtype, \
-      [](user_op::KernelComputeContext* ctx) {                                         \
-        return ScalarLogicalNotEqualFunctor<int8_t>(ctx->Attr<double>("scalar"));      \
-      },                                                                               \
-      "out", "in");
+#define REGISTER_SCALAR_LOGICAL_NOTEQUAL_KERNEL(device, dtype)                     \
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                           \
+      device, "scalar_logical_not_equal", BinaryFuncNE, dtype);
 
 #define REGISTER_SCALAR_LOGICAL_GREATER_KERNEL(device, dtype)                       \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                               \
-      device, "scalar_logical_greater", ScalarLogicalGreaterFunctor, int8_t, dtype, \
-      [](user_op::KernelComputeContext* ctx) {                                      \
-        return ScalarLogicalGreaterFunctor<int8_t>(ctx->Attr<double>("scalar"));    \
-      },                                                                            \
-      "out", "in");
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                           \
+      device, "scalar_logical_greater", BinaryFuncGT, dtype);
 
 #define REGISTER_SCALAR_LOGICAL_GREATER_EQUAL_KERNEL(device, dtype)                            \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                                          \
-      device, "scalar_logical_greater_equal", ScalarLogicalGreaterEqualFunctor, int8_t, dtype, \
-      [](user_op::KernelComputeContext* ctx) {                                                 \
-        return ScalarLogicalGreaterEqualFunctor<int8_t>(ctx->Attr<double>("scalar"));          \
-      },                                                                                       \
-      "out", "in");
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                           \
+      device, "scalar_logical_greater_equal", BinaryFuncGE, dtype);
 
 #define REGISTER_SCALAR_LOGICAL_LESS_KERNEL(device, dtype)                    \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                         \
-      device, "scalar_logical_less", ScalarLogicalLessFunctor, int8_t, dtype, \
-      [](user_op::KernelComputeContext* ctx) {                                \
-        return ScalarLogicalLessFunctor<int8_t>(ctx->Attr<double>("scalar")); \
-      },                                                                      \
-      "out", "in");
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                           \
+      device, "scalar_logical_less", BinaryFuncLT, dtype);
+
 
 #define REGISTER_SCALAR_LOGICAL_LESS_EQUAL_KERNEL(device, dtype)                         \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                                    \
-      device, "scalar_logical_less_equal", ScalarLogicalLessEqualFunctor, int8_t, dtype, \
-      [](user_op::KernelComputeContext* ctx) {                                           \
-        return ScalarLogicalLessEqualFunctor<int8_t>(ctx->Attr<double>("scalar"));       \
-      },                                                                                 \
-      "out", "in");
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(                           \
+      device, "scalar_logical_less_equal", BinaryFuncLE, dtype);
 
 }  // namespace oneflow
 
