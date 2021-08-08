@@ -45,21 +45,6 @@ def repeat(input, repeat_num, name=None):
     )
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def acc(one, max_acc_num, name=None):
-    assert not oneflow.eager_execution_enabled()
-    return (
-        oneflow.user_op_builder(name if name is not None else id_util.UniqueStr("Acc_"))
-        .Op("acc")
-        .Input("in", [one])
-        .Output("out")
-        .Attr("max_acc_num", max_acc_num)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
 def api_unpack(
     input: oneflow._oneflow_internal.BlobDesc,
     unpack_num: int,
@@ -80,23 +65,6 @@ def unpack(input, unpack_num, name=None):
         .Input("in", [input])
         .Output("out")
         .Attr("unpack_num", unpack_num)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def pack(input, pack_num, name=None):
-    assert not oneflow.eager_execution_enabled()
-    return (
-        oneflow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Pack_")
-        )
-        .Op("pack")
-        .Input("in", [input])
-        .Output("out")
-        .Attr("pack_num", pack_num)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -147,41 +115,3 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
     )
     return op.InferAndTryRun().SoleOutputBlob()
 
-
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def hierarchical_parallel_cast(
-    input, parallel_distribution, grad_mode, grad_parallel_distribution, name
-):
-    if name is None:
-        name = id_util.UniqueStr("HierarchicalParallelCast_")
-
-    def distribute_to_str(dist):
-        if dist is None:
-            return ""
-        elif type(dist) is str:
-            return dist
-        elif type(dist) is oneflow._oneflow_internal.distribute.SplitDistribute:
-            return "S({})".format(dist.axis)
-        elif type(dist) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
-            return "B"
-        else:
-            raise ValueError("unsupported distribute")
-
-    op = (
-        oneflow.user_op_builder(name)
-        .Op("hierarchical_parallel_cast")
-        .Input("in", [input])
-        .Output("out")
-        .Attr(
-            "parallel_distribution", list(map(distribute_to_str, parallel_distribution))
-        )
-        .Attr("grad_mode", grad_mode or "restore")
-        .Attr(
-            "grad_parallel_distribution",
-            list(map(distribute_to_str, grad_parallel_distribution))
-            if grad_parallel_distribution
-            else [],
-        )
-        .Build()
-    )
-    return op.InferAndTryRun().SoleOutputBlob()
