@@ -56,7 +56,7 @@ def bmm_op_tensor(input, mat2):
     See :func:`oneflow.bmm`
 
     """
-    return BMM()(input, mat2)
+    return flow.F.batch_matmul(input, mat2)
 
 
 if __name__ == "__main__":

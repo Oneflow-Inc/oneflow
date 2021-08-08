@@ -58,7 +58,7 @@ def diag_op_tensor(input, diagonal=0):
     See :func:`oneflow.diag`
     
     """
-    return Diag(diagonal)(input)
+    return flow.F.diag(input, diagonal)
 
 
 if __name__ == "__main__":

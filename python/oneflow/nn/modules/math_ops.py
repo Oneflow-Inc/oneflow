@@ -1171,14 +1171,6 @@ def ceil_op_tensor(input):
     return flow.F.ceil(input)
 
 
-class Expm1(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.expm1(x)
-
-
 def expm1_op(input):
     """Returns a new tensor with the exponential of the elements minus 1
     of :attr:`input`.
