@@ -227,10 +227,16 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
   }
   auto* result =
       new ConsistentTensorInferResult(user_op_expr.input_size(), user_op_expr.output_size());
-  auto* input_pd = result->mut_input_parallel_distributions();
+  auto* input_metas = result->mut_input_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.input_size(); ++i) {
+    const auto& old_consistent_tensor_meta =
+        infer_args.input_consistent_tensor_metas().at(i).tensor_meta();
     const auto& ibn = user_op_expr.input_arg_tuple()->indexed_bns().at(i);
-    input_pd->at(i) = SymbolOf(*JUST(op->ParallelDistribution4BnInOp(ibn)));
+    const auto& parallel_distribution = SymbolOf(*JUST(op->ParallelDistribution4BnInOp(ibn)));
+    ConsistentTensorMeta consistent_tensor_meta(
+        old_consistent_tensor_meta->shape_ptr(), old_consistent_tensor_meta->dtype(),
+        parallel_distribution, old_consistent_tensor_meta->parallel_desc());
+    input_metas->at(i) = SymbolOf(consistent_tensor_meta);
   }
   auto* output_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
