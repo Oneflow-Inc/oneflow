@@ -64,7 +64,7 @@ Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_o
     Global<ThreadMgr>::Get()->AddPlan(plan);
     Global<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_executor_plan_token_ =
-      Global<boxing::collective::CollectiveBoxingExecutor>::Get()->AddPlan(plan);
+        Global<boxing::collective::CollectiveBoxingExecutor>::Get()->AddPlan(plan);
   }
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
