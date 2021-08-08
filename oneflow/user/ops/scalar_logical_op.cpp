@@ -21,7 +21,10 @@ namespace oneflow {
   REGISTER_USER_OP(op_name)                                                             \
       .Input("in")                                                                      \
       .Output("out")                                                                    \
-      .Attr<double>("scalar")                                                           \
+      .Attr<bool>("has_int_operand") \
+      .Attr<bool>("has_float_operand") \
+      .Attr<int64_t>("int_operand") \
+      .Attr<double>("float_operand")                                                    \
       .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {             \
         *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);                         \
         *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                 \
