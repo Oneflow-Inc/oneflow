@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
@@ -253,6 +254,10 @@ py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
 
 Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype,
                         bool treat_single_int_as_size) {
+  // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
+  //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
+  //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
+  auto lazy_mode_disabled_grad = std::make_shared<LazyMode::Gard>(/* is_enabled */ false);
   Symbol<Device> device;
   if (kwargs.contains("device")) {
     const auto& device_kwarg = kwargs["device"];
