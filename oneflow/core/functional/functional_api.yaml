@@ -110,11 +110,11 @@
 
 - name: "pow"
   signature: "Tensor Pow(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "pow_scalar"
   signature: "Tensor ScalarPow(Tensor x, *, Scalar alpha)"
-  bind_python: True
+  bind_python: False
 
 - name: "reduce_sum"
   signature: "Tensor ReduceSum(Tensor x, *, Int32List axis, Bool keepdims=False)"
@@ -137,7 +137,7 @@
   bind_python: True
 
 - name: "image_flip"
-  signature: "Tensor ImageFlip(Tensor x, Tensor flip_code)"
+  signature: "Tensor ImageFlip(Tensor x, *, Int32 flip_code)"
   bind_python: True
 
 - name: "sin"
@@ -187,6 +187,10 @@
 - name: "hardtanh_grad"
   signature: "Tensor HardTanhGrad(Tensor y, Tensor dy, *, Double min_val, Double max_val)"
   bind_python: False
+
+- name: "tan"
+  signature: "Tensor Tan(Tensor x)"
+  bind_python: True
 
 - name: "tanh"
   signature: "Tensor Tanh(Tensor x)"
@@ -285,6 +289,14 @@
   signature: "Tensor ConsistentConstant(*, Shape shape, Scalar value, DataType dtype, Placement placement, SbpList sbp_tuple)"
   bind_python: True
 
+- name: "empty"
+  signature: "Tensor Empty(*, Shape shape, DataType dtype, Device device=None)"
+  bind_python: True
+
+- name: "consistent_empty"
+  signature: "Tensor ConsistentEmpty(*, Shape shape, DataType dtype, Placement placement, SbpList sbp_tuple)"
+  bind_python: True
+
 - name: "zeros_like"
   signature: "Tensor ZerosLike(Tensor x)"
   bind_python: True
@@ -367,6 +379,10 @@
 
 - name: "gather_nd"
   signature: "Tensor GatherNd(Tensor params, Tensor indices, *)"
+  bind_python: True
+
+- name: "scatternd"
+  signature: "Tensor ScatterNd(Tensor indices, Tensor updates, Shape shape)"
   bind_python: True
 
 - name: "scatterndlike"
@@ -663,6 +679,10 @@
   signature: "Tensor Erf(Tensor x)"
   bind_python: True
 
+- name: "erfc"
+  signature: "Tensor Erfc(Tensor x)"
+  bind_python: True
+
 - name: "expm1"
   signature: "Tensor Expm1(Tensor x)"
   bind_python: True
@@ -714,7 +734,7 @@
   
 - name: "clip_by_scalar"
   signature: "Tensor ClipByScalar(Tensor x, *, Scalar min, Scalar max)"
-  bind_python: True
+  bind_python: false
 
 - name: "clip_by_scalar_grad"
   signature: "Tensor ClipByScalarGrad(Tensor dy, Tensor x, *, Scalar min, Scalar max)"
@@ -722,7 +742,7 @@
 
 - name: "clip_by_scalar_min"
   signature: "Tensor ClipByScalarMin(Tensor x, *, Scalar min)"
-  bind_python: True
+  bind_python: false
 
 - name: "clip_by_scalar_min_grad"
   signature: "Tensor ClipByScalarMinGrad(Tensor dy, Tensor x, *, Scalar min)"
@@ -730,7 +750,7 @@
 
 - name: "clip_by_scalar_max"
   signature: "Tensor ClipByScalarMax(Tensor x, *, Scalar max)"
-  bind_python: True
+  bind_python: false
 
 - name: "clip_by_scalar_max_grad"
   signature: "Tensor ClipByScalarMaxGrad(Tensor dy, Tensor x, *, Scalar max)"
@@ -738,7 +758,7 @@
 
 - name: "dropout"
   signature:
-    "Tensor Dropout(Tensor x, *, Float p, Generator generator=None)"
+    "Tensor Dropout(Tensor x, *, Float p=0.5, Generator generator=None)"
   bind_python: True
 
 - name: "pad"
@@ -795,7 +815,7 @@
 
 - name: "dim_scatter"
   signature: "Tensor DimScatter(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
-  bind_python: True
+  bind_python: False
 
 - name: "dim_scatter_add"
   signature: "Tensor DimScatterAdd(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
@@ -803,7 +823,7 @@
 
 - name: "dim_scatter_scalar"
   signature: "Tensor DimScatterUpdateScalar(Tensor input, Tensor index, *, Float src, Int32 dim)"
-  bind_python: True
+  bind_python: False
 
 - name: "dim_scatter_add_scalar"
   signature: "Tensor DimScatterAddScalar(Tensor input, Tensor index, *, Float src, Int32 dim)"
@@ -862,7 +882,7 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor LocalToConsistent(Tensor x, *, Placement placement, SbpList sbp, Shape shape=None)"
+  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, Shape shape=None)"
   bind_python: True
 
 - name: "to_local"
