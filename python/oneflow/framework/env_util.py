@@ -79,11 +79,6 @@ def env_init():
 
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_current_resource():
-    return c_api_util.CurrentResource()
-
-
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
 def get_current_machine_id() -> int:
     return oneflow._oneflow_internal.CurrentMachineId()
 
