@@ -15,9 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -37,19 +36,12 @@ class Where : public OpExprGradFunction<WhereInterpState> {
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> zero_like_op_;
-  std::shared_ptr<OpExpr> where_op_x_;
-  std::shared_ptr<OpExpr> where_op_y_;
 };
 
 Maybe<void> Where::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  zero_like_op_ = JUST(op_expr_helper::ZeroLikeOp("zeros_like_" + GradientOpName(op_name)));
-  where_op_x_ = JUST(op_expr_helper::WhereOp("where_x_" + GradientOpName(op_name)));
-  where_op_y_ = JUST(op_expr_helper::WhereOp("where_y_" + GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -73,15 +65,12 @@ Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_gra
   const std::shared_ptr<oneflow::one::Tensor>& condtion = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(1);
 
-  std::shared_ptr<oneflow::one::Tensor> zero_out =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*zero_like_op_, {x}));
+  std::shared_ptr<oneflow::one::Tensor> zero_out = JUST(functional::ZerosLike(x));
   in_grads->resize(3);
   if (ctx->requires_grad_x)
-    in_grads->at(1) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_x_, {condtion, out_grads.at(0), zero_out}));
+    in_grads->at(1) = JUST(functional::Where(condtion, out_grads.at(0), zero_out));
   if (ctx->requires_grad_y)
-    in_grads->at(2) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_y_, {condtion, zero_out, out_grads.at(0)}));
+    in_grads->at(2) = JUST(functional::Where(condtion, zero_out, out_grads.at(0)));
   return Maybe<void>::Ok();
 }
 
