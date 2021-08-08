@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/where_kernel_util.h"
+#include "oneflow/core/ndarray/ndarray_util.h"
 
 namespace oneflow {
 
@@ -29,10 +30,33 @@ class WhereKernel final : public user_op::OpKernel {
     const user_op::Tensor* cond = ctx->Tensor4ArgNameAndIndex("condition", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    WhereKernelUtil<device_type, T, CondT>::Where(ctx->device_ctx(), out->shape().elem_cnt(),
-                                                  cond->dptr<CondT>(), x->dptr<T>(), y->dptr<T>(),
-                                                  out->mut_dptr<T>());
+    if (!(x->shape() == y->shape() && y->shape() == cond->shape())) {
+      size_t num_axes = out->shape().NumAxes();
+      int64_t elem_cnt = out->shape().elem_cnt();
+      const size_t x_bytes = GetCudaAlignedSize(elem_cnt * sizeof(T));
+      const size_t y_bytes = GetCudaAlignedSize(elem_cnt * sizeof(T));
+      T* y_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + x_bytes);
+      CondT* cond_tmp_buf =
+          reinterpret_cast<CondT*>(tmp_buffer->mut_dptr<char>() + x_bytes + y_bytes);
+      NdarrayUtil<device_type, T>::BroadcastTo(
+          ctx->device_ctx(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
+          XpuVarNdarray<const T>(x->shape(), x->dptr<T>(), num_axes));
+      NdarrayUtil<device_type, T>::BroadcastTo(
+          ctx->device_ctx(), XpuVarNdarray<T>(out->shape(), y_tmp_buf),
+          XpuVarNdarray<const T>(y->shape(), y->dptr<T>(), num_axes));
+      NdarrayUtil<device_type, CondT>::BroadcastTo(
+          ctx->device_ctx(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
+          XpuVarNdarray<const CondT>(cond->shape(), cond->dptr<CondT>(), num_axes));
+      WhereKernelUtil<device_type, T, CondT>::Where(ctx->device_ctx(), out->shape().elem_cnt(),
+                                                    cond_tmp_buf, tmp_buffer->mut_dptr<T>(),
+                                                    y_tmp_buf, out->mut_dptr<T>());
+    } else {
+      WhereKernelUtil<device_type, T, CondT>::Where(ctx->device_ctx(), out->shape().elem_cnt(),
+                                                    cond->dptr<CondT>(), x->dptr<T>(), y->dptr<T>(),
+                                                    out->mut_dptr<T>());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -43,7 +67,17 @@ class WhereKernel final : public user_op::OpKernel {
                                OF_PP_PAIR_FIRST(ctype_pair)>>()                                  \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
                        & (user_op::HobDataType("condition", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        Shape* out_shape = ctx->OutputShape("out", 0);                                           \
+        const size_t x_bytes =                                                                   \
+            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));    \
+        const size_t y_bytes =                                                                   \
+            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair)));    \
+        const size_t cond_bytes =                                                                \
+            GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(OF_PP_PAIR_FIRST(ctype_pair)));    \
+        return x_bytes + y_bytes + cond_bytes;                                                   \
+      });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_WHERE_KERNEL, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ)

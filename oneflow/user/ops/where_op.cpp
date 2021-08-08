@@ -21,9 +21,26 @@ namespace {
 
 Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   const Shape& cond_shape = ctx->InputShape("condition", 0);
-  CHECK_EQ_OR_RETURN(cond_shape, ctx->InputShape("x", 0));
-  CHECK_EQ_OR_RETURN(cond_shape, ctx->InputShape("y", 0));
-  *ctx->OutputShape("out", 0) = cond_shape;
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const Shape& y_shape = ctx->InputShape("y", 0);
+  if (x_shape == y_shape && y_shape == cond_shape) {
+    *ctx->OutputShape("out", 0) = cond_shape;
+  } else {
+    Shape max_shape =
+        Shape::Ones(std::max(x_shape.NumAxes(), std::max(y_shape.NumAxes(), cond_shape.NumAxes())));
+    const Shape& x_extend_shape = CreateLeftExtendedShape(ShapeView(x_shape), max_shape.NumAxes());
+    const Shape& y_extend_shape = CreateLeftExtendedShape(ShapeView(y_shape), max_shape.NumAxes());
+    const Shape& cond_extend_shape =
+        CreateLeftExtendedShape(ShapeView(cond_shape), max_shape.NumAxes());
+    FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
+      max_shape.Set(i, std::max(x_extend_shape.At(i),
+                                std::max(y_extend_shape.At(i), cond_extend_shape.At(i))));
+    }
+    *ctx->OutputShape("out", 0) = max_shape;
+  }
+  // CHECK_EQ_OR_RETURN(cond_shape, ctx->InputShape("x", 0));
+  // CHECK_EQ_OR_RETURN(cond_shape, ctx->InputShape("y", 0));
+  //*ctx->OutputShape("out", 0) = cond_shape;
   return Maybe<void>::Ok();
 }
 
