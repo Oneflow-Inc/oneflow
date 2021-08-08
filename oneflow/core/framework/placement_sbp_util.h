@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/decorator.h"
 
 namespace oneflow {
 
@@ -30,12 +31,35 @@ class ParallelDistribution;
 
 }
 
+// 1) src_nd_sbp.sbp_parallel_size() == 1
+// 2) dst_nd_sbp.sbp_parallel_size() == 1
+struct NaiveBoxingTransformation {
+  Symbol<ParallelDesc> parallel_desc;
+  Symbol<cfg::ParallelDistribution> src_nd_sbp;
+  Symbol<cfg::ParallelDistribution> dst_nd_sbp;
+};
+
+namespace private_details {
+
+Maybe<std::vector<int64_t>> GetSelectedParallelIds(const Shape& hierarchy_shape,
+                                                   const std::vector<int>& axis2is_selected,
+                                                   int64_t parallel_id);
+
 Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
     Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution);
 
-Maybe<std::vector<int64_t>> GetBroadcastParallelIds(const Shape& hierarchy_shape,
-                                                    const std::vector<bool>& dim2is_broadcast,
-                                                    int64_t parallel_id);
+Maybe<std::vector<NaiveBoxingTransformation>> DecomposeByParallelId(
+    Symbol<ParallelDesc> parallel_desc, int64_t parallel_id,
+    Symbol<cfg::ParallelDistribution> src_nd_sbp, Symbol<cfg::ParallelDistribution> dst_nd_sbp);
+
+}  // namespace private_details
+
+static constexpr auto* GetBroadcastSubParallelDesc =
+    DECORATE(&private_details::GetBroadcastSubParallelDesc, ThreadLocal);
+
+Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
+    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> src_nd_sbp,
+    Symbol<cfg::ParallelDistribution> dst_nd_sbp);
 
 }  // namespace oneflow
 
