@@ -57,6 +57,7 @@ Operators for neural networks
         OFRecordImageDecoderRandomCrop,
         OfrecordRawDecoder,
         OfrecordReader,
+        OFRecordBytesDecoder,
         PReLU,
         Parameter,
         ParameterDict,
@@ -83,3 +84,4 @@ Operators for neural networks
         MovingAverageMinMaxObserver,
         FakeQuantization,
         Quantization
+

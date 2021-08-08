@@ -108,8 +108,12 @@ def _run_test_min_max_observer(
     tensor_weight = flow.Tensor(
         weight, device=flow.device(device_type), dtype=flow.float32
     )
-    min_max_observer = flow.nn.MinMaxObserver(quantization_formula=quantization_formula, quantization_bit=quantization_bit, 
-                                            quantization_scheme=quantization_scheme, per_layer_quantization=per_layer_quantization)
+    min_max_observer = flow.nn.MinMaxObserver(
+        quantization_formula=quantization_formula,
+        quantization_bit=quantization_bit,
+        quantization_scheme=quantization_scheme,
+        per_layer_quantization=per_layer_quantization,
+    )
     scale, zero_point = min_max_observer(tensor_weight)
     _check_min_max_observer(
         test_case,

@@ -89,6 +89,7 @@ class FakeQuantization(Module):
         ... )
 
     """
+
     def __init__(
         self,
         quantization_formula: str = "google",
@@ -109,6 +110,7 @@ class FakeQuantization(Module):
             self.quantization_bit,
             self.quantization_scheme,
         )
+
 
 if __name__ == "__main__":
     import doctest

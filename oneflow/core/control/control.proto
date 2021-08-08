@@ -1,8 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/actor/act_event.proto";
-
 message LoadServerRequest {
   required string addr = 1;
   optional int64 rank = 2 [default = -1];
@@ -68,13 +66,6 @@ message PullKVRequest {
 
 message PullKVResponse {
   required bytes val = 1;
-}
-
-message PushActEventRequest {
-  required ActEvent act_event = 1;
-}
-
-message PushActEventResponse {
 }
 
 message ClearRequest {

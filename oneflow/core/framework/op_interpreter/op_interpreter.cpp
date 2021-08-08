@@ -56,11 +56,14 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(VariableOp);
   APPLY_IF(CastToMirroredOp);
   APPLY_IF(CastFromMirroredOp);
+  APPLY_IF(CastToConsistentOp);
+  APPLY_IF(CastFromConsistentOp);
   APPLY_IF(DistributeSplitOp);
   APPLY_IF(DistributeCloneOp);
   APPLY_IF(DistributeConcatOp);
   APPLY_IF(DistributeAddOp);
   APPLY_IF(FunctionOp);
+  APPLY_IF(SelectFirstOp)
 #undef APPLY_IF
 
   OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
@@ -106,7 +109,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   }
   if (requires_grad) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
-    JUST(grad_closure->Capture(inputs, *outputs, ctx.attrs));
+    JUST(grad_closure->Capture(inputs, *outputs, ctx));
 
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(

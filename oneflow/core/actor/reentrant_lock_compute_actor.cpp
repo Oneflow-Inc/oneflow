@@ -18,6 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 void ReentrantLockCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+  act_id_ = 0;
   CHECK_EQ(1, exec_kernel_vec().size());
   const auto& kernel_conf = task_proto.exec_sequence().exec_node().Get(0).kernel_conf();
   const auto& ibns = kernel_conf.op_attribute().input_bns();
@@ -60,7 +61,8 @@ void ReentrantLockCompActor::Act() {
   cur_processed_regst_desc_id_ = GetCurProcessedRegstDescId();
   Regst* const cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   reentrant_lock_status_.set_cur_ibn(Ibn4RegstDescId(cur_processed_regst_desc_id_));
-  reentrant_lock_status_.set_cur_act_id(act_id());
+  reentrant_lock_status_.set_cur_act_id(act_id_);
+  act_id_ += 1;
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &reentrant_lock_status_;
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
@@ -77,7 +79,7 @@ bool ReentrantLockCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
 
 void ReentrantLockCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (reentrant_lock_status_.acquired_lock_to_be_sent() == false) { return; }
-  HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) { return true; });
+  HandleProducedNaiveDataRegstToConsumer();
 }
 
 void ReentrantLockCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {

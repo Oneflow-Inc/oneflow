@@ -44,10 +44,6 @@ void InputWiseCompActor::Init(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&InputWiseCompActor::HandlerNormal);
 }
 
-int64_t InputWiseCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
-  return regst_desc_id2in_bn_id_.size();
-}
-
 void InputWiseCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(0, consumed_rs_.TryPushBackRegst(msg.regst()));
 }
@@ -78,10 +74,7 @@ void InputWiseCompActor::Act() {
 
 void InputWiseCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (processed_regst_desc_id_cnt_ == regst_desc_id2is_processed_.size()) {
-    HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
-      regst->set_piece_id(consumed_rs_.Front(cur_processed_regst_desc_id_)->piece_id());
-      return true;
-    });
+    HandleProducedNaiveDataRegstToConsumer();
     for (auto& pair : regst_desc_id2is_processed_) {
       CHECK(pair.second);
       pair.second = false;

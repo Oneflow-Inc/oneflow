@@ -89,6 +89,7 @@ class Quantization(Module):
         ... )
 
     """
+
     def __init__(
         self,
         quantization_formula: str = "google",
