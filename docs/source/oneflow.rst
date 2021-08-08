@@ -4,8 +4,7 @@ oneflow
 ----------------------------------
 .. currentmodule:: oneflow
 .. automodule:: oneflow
-    :members: advanced, 
-            argsort, 
+    :members: argsort, 
             argwhere, 
             cat, 
             clamp, 
