@@ -15,20 +15,10 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Triu(Module):
-    def __init__(self, diagonal=0):
-        super().__init__()
-        self.diagonal = diagonal
-
-    def forward(self, x):
-        return flow.F.triu(x, self.diagonal)
 
 
 @register_tensor_op("triu")
-def triu_op(x, diagonal=0):
+def triu_op(input, diagonal=0):
     """Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input, 
     the other elements of the result tensor out are set to 0.
     
@@ -50,7 +40,7 @@ def triu_op(x, diagonal=0):
                 [0., 0., 1.]], dtype=oneflow.float32)
 
     """
-    return Triu(diagonal)(x)
+    return flow.F.triu(input, diagonal)
 
 
 if __name__ == "__main__":
