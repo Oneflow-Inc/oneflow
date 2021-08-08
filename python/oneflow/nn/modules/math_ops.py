@@ -721,19 +721,8 @@ def std_op(input, dim, unbiased=False, keepdim=False):
         return res
 
 
-class Pow(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        if isinstance(y, (int, float)):
-            return flow.F.pow_scalar(x, alpha=y)
-        else:
-            return flow.F.pow(x, y)
-
-
 @register_tensor_op("pow")
-def pow_op(tensor, exponent):
+def pow_op(input, exponent):
     """Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
     When exponent is a scalar value, the operation applied is:
 
@@ -760,18 +749,18 @@ def pow_op(tensor, exponent):
         >>> import numpy as np
         
         >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]))
-        >>> out = flow.pow(x, 2).numpy()
+        >>> out = flow.pow(x, 2)
         >>> out
-        array([ 1.,  4.,  9., 16., 25., 36.], dtype=float32)
+        tensor([ 1.,  4.,  9., 16., 25., 36.], dtype=oneflow.float32)
 
         >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
         >>> y = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
-        >>> out = flow.pow(x, y).numpy()
+        >>> out = flow.pow(x, y)
         >>> out
-        array([  1.,   4.,  27., 256.], dtype=float32)
+        tensor([  1.,   4.,  27., 256.], dtype=oneflow.float32)
         
     """
-    return Pow()(tensor, exponent)
+    return flow.F.pow(input, exponent)
 
 
 def addmm(x, mat1, mat2, alpha=1, beta=1):
@@ -890,7 +879,7 @@ class Clamp(Module):
         return self._op(x)[0]
 
 
-def clamp_op(tensor, min=None, max=None):
+def clamp_op(input, min=None, max=None):
     """
     Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
     a resulting tensor:
@@ -937,7 +926,7 @@ def clamp_op(tensor, min=None, max=None):
         tensor([ 0.2,  0.6, -0.5, -0.3], dtype=oneflow.float32)
 
     """
-    return Clamp(min, max)(tensor)
+    return flow.F.clamp(input, min, max)
 
 
 @register_tensor_op("clamp")
