@@ -18,7 +18,7 @@ def gen_cmds(cmd=None, dir=None, doctest=False):
         for p in paths:
             with open(p) as f:
                 content = f.read()
-                if "doctest" in content:
+                if "import doctest" in content:
                     with_doctest.append("{} {} -v".format(cmd, p))
         print(with_doctest)
         return with_doctest

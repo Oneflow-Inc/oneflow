@@ -122,6 +122,11 @@ struct TransportUtil final {
 
   static Maybe<void> CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
                                               const TransportToken& token, AsyncTransportCtx* ctx);
+  static Maybe<void> SendDataToChildrenInHeap(const std::vector<int64_t>& rank_heap,
+                                              const TransportToken& token, AsyncTransportCtx* ctx);
+  static Maybe<void> ReceiveDataFromParentInHeap(const std::vector<int64_t>& rank_heap,
+                                                 const TransportToken& token,
+                                                 AsyncTransportCtx* ctx);
 };
 
 }  // namespace oneflow

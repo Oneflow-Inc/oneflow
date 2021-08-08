@@ -27,11 +27,14 @@ limitations under the License.
 
 namespace oneflow {
 
+class ParallelDesc;
+
 class RankGroup final {
  public:
   ~RankGroup() = default;
 
   static Maybe<Symbol<RankGroup>> New(const std::set<int64_t>& ranks);
+  static Maybe<Symbol<RankGroup>> New(Symbol<ParallelDesc> parallel_desc);
   static Maybe<Symbol<RankGroup>> DefaultRankGroup();
 
   bool operator==(const RankGroup& that) const { return this->ranks_ == that.ranks_; }
