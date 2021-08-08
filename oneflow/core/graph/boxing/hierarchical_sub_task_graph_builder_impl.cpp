@@ -323,7 +323,7 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         out_parallel_conf.mutable_hierarchy()->add_dim(group_size);
         FOR_RANGE(int64_t, j, 0, group_size) {
           const int64_t parallel_id = i * group_size + j;
-          in_tasks.push_back(sorted_in_tasks.at(parallel_id));
+          in_tasks.push_back(sorted_in_tasks.at(in_map_id2parallel_id.at(parallel_id)));
           in_parallel_conf.add_device_name(
               std::to_string(JUST(
                   in_parallel_desc.MachineId4ParallelId(in_map_id2parallel_id.at(parallel_id))))
@@ -358,7 +358,7 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         CHECK_EQ_OR_RETURN(out_tasks.size(), group_size);
         FOR_RANGE(int64_t, j, 0, group_size) {
           const int64_t parallel_id = i * group_size + j;
-          sorted_out_tasks->at(parallel_id) = out_tasks.at(j);
+          sorted_out_tasks->at(out_map_id2parallel_id.at(parallel_id)) = out_tasks.at(j);
           if (!ctrl_tasks.empty()) {
             for (TaskNode* ctrl_node : ctrl_tasks.at(j)) {
               sorted_ctrl_tasks->at(parallel_id).push_back(ctrl_node);
