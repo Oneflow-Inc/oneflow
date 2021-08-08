@@ -71,17 +71,18 @@ void SparseSoftmaxCrossEntropyComputePart(DeviceCtx* ctx, const int64_t num_inst
   auto reduce_storage_var =
       Var({static_cast<int64_t>(reduce_operation_size / sizeof(T))}, reduce_storage);
 
+  // max | sum_result[i] = Max_j(in[i][j])
   NdarrayUtil<device_type, T>::ReduceMax(ctx, Var({num_instances, 1}, sum_result),
                                          Val({num_instances, num_classes}, in), reduce_storage_var);
-  // sub | prob[i][j] = in[i][j] - tmp[i]
+  // sub | sub_result[i][j] = in[i][j] - sum_result[i]
   NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({num_instances, num_classes}, sub_result),
                                             Val({num_instances, num_classes}, in),
                                             Val({num_instances, 1}, sum_result));
-  // exp | prob[i][j] = exp(prob[i][j])
+  // copy | sub_result => prob
   AutoMemcpy(ctx, prob, sub_result, reduce_operation_size, prob_mem_case, tmp_buffer_mem_case);
-  // tmp_buffer_mem_case);
+  // exp | prob[i][j] = exp(prob[i][j])
   NdarrayUtil<device_type, T>::InplaceExp(ctx, Var({num_instances, num_classes}, prob));
-  // sum | tmp[i] = Sum_j(prob[i][j])
+  // sum | sum_result[i] = Sum_j(prob[i][j])
   NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({num_instances, 1}, sum_result),
                                          Val({num_instances, num_classes}, prob),
                                          reduce_storage_var);

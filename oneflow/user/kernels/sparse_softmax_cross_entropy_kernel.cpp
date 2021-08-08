@@ -106,6 +106,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
+// low-performance implementation
 // OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
 //                                  (SparseSoftmaxCrossEntropyKernel),
 //                                  ("sparse_softmax_cross_entropy"),

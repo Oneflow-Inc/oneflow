@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.cuh"
-// #include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.h"
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/softmax.cuh"
