@@ -6,35 +6,6 @@ import oneflow as flow
 import oneflow.unittest
 
 
-class MyModule(flow.nn.Module):
-    def __init__(self, weight):
-        assert isinstance(weight, flow._oneflow_internal.Tensor)
-        super().__init__()
-        self.weight = flow.nn.Parameter(weight)
-        self.activation = flow.nn.ReLU()
-
-    def forward(self, x):
-        # print(f"x shape: {x.shape}, placement: {x.placement}, sbp: {x.sbp}")
-        # print(
-        #     f"weight shape: {self.weight.shape}, placement: {self.weight.placement}, sbp: {self.weight.sbp}"
-        # )
-        y = flow.F.matmul(x, self.weight, transpose_b=True)
-        # print(f"y shape: {y.shape}, placement: {y.placement}, sbp: {y.sbp}")
-        if y.is_consistent:
-            y = y.to_consistent(placement=self.weight.placement, sbp=flow.sbp.broadcast)
-            # print(f"post y shape: {y.shape}, placement: {y.placement}, sbp: {y.sbp}")
-        return self.activation(y)
-
-
-class MyGraph(flow.nn.Graph):
-    def __init__(self, module):
-        super().__init__()
-        self.module = module
-
-    def build(self, x):
-        return self.module(x)
-
-
 x = np.array(
     [
         [
@@ -106,14 +77,61 @@ y = np.array(
 )
 
 
+class MyModule1(flow.nn.Module):
+    def __init__(self, weight):
+        assert isinstance(weight, flow._oneflow_internal.Tensor)
+        super().__init__()
+        self.weight = flow.nn.Parameter(weight)
+        self.activation = flow.nn.ReLU()
+
+    def forward(self, x):
+        # print(f"x shape: {x.shape}, placement: {x.placement}, sbp: {x.sbp}")
+        # print(
+        #     f"weight shape: {self.weight.shape}, placement: {self.weight.placement}, sbp: {self.weight.sbp}"
+        # )
+        y = flow.F.matmul(x, self.weight, transpose_b=True)
+        # print(f"y shape: {y.shape}, placement: {y.placement}, sbp: {y.sbp}")
+        if y.is_consistent:
+            y = y.to_consistent(sbp=flow.sbp.broadcast)
+            # print(f"post y shape: {y.shape}, placement: {y.placement}, sbp: {y.sbp}")
+        return self.activation(y)
+
+
+class MyModule2(flow.nn.Module):
+    def __init__(self, weight):
+        assert isinstance(weight, flow._oneflow_internal.Tensor)
+        super().__init__()
+        self.weight = flow.nn.Parameter(weight)
+        self.activation = flow.nn.ReLU()
+
+    def forward(self, x):
+        y = flow.F.matmul(self.weight, x, transpose_b=True)
+        if y.is_consistent:
+            y = y.to_consistent(grad_sbp=flow.sbp.broadcast)
+        return self.activation(y)
+
+
+class MyGraph(flow.nn.Graph):
+    def __init__(self, module, optimizer=None):
+        super().__init__()
+        self.module = module
+        if optimizer is not None:
+            self.add_optimizer("sgd", optimizer)
+
+    def build(self, x):
+        y = self.module(x)
+        if self.config.training:
+            y.backward()
+        return y
+
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
-    def test_case1(test_case):
+    def test_fwd_P2B(test_case):
         rank = flow.distributed.get_rank()
-        print(
-            f"GPTDataLoaderDistributedTestCase.test_case1 on rank {rank} {os.getpid()}"
-        )
+        # pid = os.getpid()
+        # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_fwd_P2B")
 
         local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
         local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
@@ -130,16 +148,49 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         c_x = local_x.to_consistent(placement=placement, sbp=sbp)
         c_y = local_y.to_consistent(placement=placement, sbp=sbp)
 
-        print(f"c_x shape: {c_x.shape}, placement: {c_x.placement}, sbp: {c_x.sbp}")
-        print(f"c_y shape: {c_y.shape}, placement: {c_y.placement}, sbp: {c_y.sbp}")
+        # print(f"c_x shape: {c_x.shape}, placement: {c_x.placement}, sbp: {c_x.sbp}")
+        # print(f"c_y shape: {c_y.shape}, placement: {c_y.placement}, sbp: {c_y.sbp}")
 
-        m = MyModule(c_y)
+        m = MyModule1(c_y)
         g = MyGraph(m)
 
         g_z = g(c_x)
-        print(f"g_z shape: {g_z.shape}, placement: {g_z.placement}, sbp: {g_z.sbp}")
+        # print(f"g_z shape: {g_z.shape}, placement: {g_z.placement}, sbp: {g_z.sbp}")
 
         test_case.assertTrue(np.allclose(z.numpy(), g_z.to_local().numpy()))
+
+    def test_bwd_P2B(test_case):
+        rank = flow.distributed.get_rank()
+        # pid = os.getpid()
+        # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_bwd_P2B")
+
+        local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+
+        z = flow.F.matmul(
+            local_y,
+            flow.cat([local_x, local_x], dim=0),
+            transpose_b=True,
+        )
+        z = flow.F.relu(z)
+
+        placement = flow.placement("cuda", {0: [0, 1]})
+        c_x = local_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        c_y = local_y.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+
+        m = MyModule2(c_y)
+        optimizer = flow.optim.SGD(m.parameters(), lr=0.001)
+        g = MyGraph(m, optimizer)
+
+        g_z = g(c_x)
+        # print(f"g_z shape: {g_z.shape}, placement: {g_z.placement}, sbp: {g_z.sbp}")
+        test_case.assertTrue(g_z.is_consistent)
+        test_case.assertTrue(g_z.sbp[0] == flow.sbp.split(1))
+        # S(1) -> B not supported yet
+        # c_z = g_z.to_consistent(sbp=flow.sbp.broadcast)
+        c_z = g_z.transpose(0, 1).to_consistent(sbp=flow.sbp.broadcast)
+        # print(f"c_z shape: {c_z.shape}, placement: {c_z.placement}, sbp: {c_z.sbp}")
+        test_case.assertTrue(np.allclose(z.numpy().T, c_z.to_local().numpy()))
 
 
 if __name__ == "__main__":
