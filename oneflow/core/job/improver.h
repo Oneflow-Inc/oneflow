@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
-#include "oneflow/core/graph/chain_act_graph.h"
 
 namespace oneflow {
 

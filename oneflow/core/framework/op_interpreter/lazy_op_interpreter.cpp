@@ -139,7 +139,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
 
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(input_tensor->dtype());
-  blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
+  // NOTE(chengcheng): is_dynamic true has conflict in consistent lazy job even if world size 1.
+  //     this flag will be removed in the future.
+  // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
+  blob_conf->set_is_dynamic(false);
   JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
@@ -259,7 +262,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   InterfaceBlobConf* blob_conf = output_conf->mutable_blob_conf();
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(input_tensor->dtype());
-  blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
+  // NOTE(chengcheng): is_dynamic true has conflict in consistent lazy job even if world size 1.
+  //     this flag will be removed in the future.
+  // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
+  blob_conf->set_is_dynamic(false);
   JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());

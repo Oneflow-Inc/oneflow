@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/memory/memory_case_util.h"
@@ -36,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -50,6 +52,30 @@ Maybe<Symbol<Device>> GetDefaultDevice(const OpExprInterpContext& ctx) {
 Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
   CHECK_OR_RETURN(static_cast<bool>(tensor));
   return tensor->mut_eager_mirrored_tensor_impl();
+}
+
+class MutMirroredTensorMeta : public TensorMeta {
+ public:
+  MutMirroredTensorMeta() : TensorMeta(std::make_shared<const Shape>(), kInvalidDataType) {}
+  MutMirroredTensorMeta(const MutMirroredTensorMeta&) = default;
+  MutMirroredTensorMeta(MutMirroredTensorMeta&&) = default;
+  ~MutMirroredTensorMeta() override = default;
+};
+
+std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
+  static thread_local std::vector<MutMirroredTensorMeta> struct_vec;
+  static thread_local std::vector<TensorMeta*> ptr_vec;
+  struct_vec.resize(size);
+  ptr_vec.resize(size);
+  if (size == 1) {
+    ptr_vec.at(0) = &struct_vec.at(0);  // unfold loop
+  } else if (size == 2) {
+    ptr_vec.at(0) = &struct_vec.at(0);  // unfold loop
+    ptr_vec.at(1) = &struct_vec.at(1);  // unfold loop
+  } else {
+    for (int i = 0; i < size; ++i) { ptr_vec.at(i) = &struct_vec.at(i); }
+  }
+  return &ptr_vec;
 }
 
 }  // namespace
@@ -69,12 +95,15 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
+  auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
-      outputs->at(i) =
-          std::make_shared<MirroredTensor>(std::make_shared<EagerMirroredTensorImpl>());
-    }
-    if (JUST(outputs->at(i)->has_eager_blob_object())) {
+      const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
+      outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);
+      output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+    } else {
+      bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
+      CHECK_OR_RETURN(has_eager_blob_object);
       output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
     }
   }
@@ -109,14 +138,22 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
       },
       [&](int32_t i) -> TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(outputs->at(i)))->mut_tensor_meta();
+        // using thread_local TensorMeta pointer if inplace.
+        // using tensor_impl TensorMeta pointer if not inplace.
+        return output_tensor_metas->at(i);
       }));
 
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
+    auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
-      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
+      tensor_impl->mut_tensor_meta()->set_stride(std::make_shared<Stride>(*tensor_impl->shape()));
       JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
+    } else {
+      // output i is inplaced.
+      // check thread_local TensorMeta and tensor_impl TensorMeta.
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas->at(i)->shape());
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
 
@@ -204,7 +241,7 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
       parallel_desc2eager_nccl_broadcast;
   auto iter = parallel_desc2eager_nccl_broadcast.find(parallel_desc);
   if (iter == parallel_desc2eager_nccl_broadcast.end()) {
-    int64_t root = JUST(parallel_desc->DeviceId4ParallelId(0));
+    int64_t root = JUST(parallel_desc->MachineId4ParallelId(0));
     std::shared_ptr<UserOpExpr> op_expr = JUST(EagerNcclBroadcast(parallel_desc, root));
     iter = parallel_desc2eager_nccl_broadcast.emplace(parallel_desc, op_expr).first;
   }
@@ -220,12 +257,17 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   const auto& broadcast_parallel_desc =
       JUST(GetBroadcastSubParallelDesc(parallel_desc, parallel_distribution));
   if (broadcast_parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
-  CHECK_EQ_OR_RETURN(broadcast_parallel_desc->device_tag(), "gpu")
-      << Error::Todo() << "supported cuda only now.";
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(FindOrCreatEagerNcclBroadcastOpExpr(broadcast_parallel_desc));
-  return JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
+  if (JUST(broadcast_parallel_desc->MachineId4ParallelId(0)) == GlobalProcessCtx::Rank()) {
+    TensorTuple outputs{tensor};
+    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
+                                one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
+    return tensor;
+  } else {
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(
+        *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
+  }
 }
 
 }  // namespace
