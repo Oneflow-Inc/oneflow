@@ -15,35 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Where(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, condition, x, y):
-        assert condition.dtype == flow.int32 or condition.dtype == flow.int8
-        if isinstance(x, int) or isinstance(x, float):
-            x = flow.Tensor(
-                [float(x)],
-                dtype=flow.float32,
-                device=flow.device(condition.device.type),
-            )
-        if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor(
-                [float(y)],
-                dtype=flow.float32,
-                device=flow.device(condition.device.type),
-            )
-        assert (
-            condition.device.type == x.device.type
-            and condition.device.type == y.device.type
-        )
-        assert len(condition.shape) == len(x.shape) and len(condition.shape) == len(
-            y.shape
-        ), f"The dim of where module's inputs can not match, please check!"
-        return flow.F.where(condition, x, y)
 
 
 @register_tensor_op("where")
@@ -86,7 +57,24 @@ def where_op(condition, x, y):
                 [0.0478, 1.    ]], dtype=oneflow.float32)
 
     """
-    return Where()(condition, x, y)
+
+    assert condition.dtype == flow.int32 or condition.dtype == flow.int8
+    if isinstance(x, int) or isinstance(x, float):
+        x = flow.Tensor(
+            [float(x)], dtype=flow.float32, device=flow.device(condition.device.type),
+        )
+    if isinstance(y, int) or isinstance(y, float):
+        y = flow.Tensor(
+            [float(y)], dtype=flow.float32, device=flow.device(condition.device.type),
+        )
+    assert (
+        condition.device.type == x.device.type
+        and condition.device.type == y.device.type
+    )
+    assert len(condition.shape) == len(x.shape) and len(condition.shape) == len(
+        y.shape
+    ), f"The dim of where module's inputs can not match, please check!"
+    return flow.F.where(condition, x, y)
 
 
 if __name__ == "__main__":

@@ -117,8 +117,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
       std::make_shared<EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
     std::shared_ptr<Tensor> input = inputs.at(i);
-    if (result->input_parallel_distributions().at(i) != JUST(input->parallel_distribution())) {
-      input = JUST(GetBoxingOutput(input, result->input_parallel_distributions().at(i)));
+    const auto& infered_input_meta = result->input_tensor_metas().at(i);
+    if (infered_input_meta->parallel_distribution() != JUST(input->parallel_distribution())) {
+      input = JUST(GetBoxingOutput(input, infered_input_meta->parallel_distribution()));
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
