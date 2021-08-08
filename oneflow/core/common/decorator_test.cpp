@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/cached_caller.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -24,14 +24,14 @@ Maybe<int> Inc(int x) { return x + 1; }
 Maybe<int> IncByConstRef(const int& x) { return x + 1; }
 
 TEST(ThreadLocal, scalar) {
-  auto* CachedInc = THREAD_LOCAL_CACHED(&Inc);
+  auto* CachedInc = DECORATE(&Inc, ThreadLocal);
 
   int x = CHECK_JUST(CachedInc(0));
   ASSERT_EQ(x, 1);
 }
 
 TEST(ThreadLocal, const_ref) {
-  auto* CachedIncByConstRef = THREAD_LOCAL_CACHED(&IncByConstRef);
+  auto* CachedIncByConstRef = DECORATE(&IncByConstRef, ThreadLocal);
 
   int x = CHECK_JUST(CachedIncByConstRef(0));
   ASSERT_EQ(x, 1);
@@ -48,7 +48,7 @@ struct Foo {
 }  // namespace
 
 TEST(ThreadLocal, _class) {
-  auto* CachedFooNew = THREAD_LOCAL_CACHED(&Foo::New);
+  auto* CachedFooNew = DECORATE(&Foo::New, ThreadLocal);
   const auto& foo = CHECK_JUST(CachedFooNew(10));
   const auto& bar = CHECK_JUST(CachedFooNew(10));
   ASSERT_EQ(foo->x, 10);
