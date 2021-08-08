@@ -75,9 +75,6 @@ llvm_config.with_environment(
 tool_dirs = [config.oneflow_tools_dir, config.llvm_tools_dir]
 tools = ["oneflow-opt", "oneflow-translate"]
 tools.extend(
-    [
-        ToolSubst("%linalg_test_lib_dir", config.llvm_lib_dir, unresolved="ignore"),
-        ToolSubst("%mlir_runner_utils_dir", config.llvm_lib_dir, unresolved="ignore"),
-    ]
+    [ToolSubst("%linalg_test_lib_dir", config.llvm_lib_dir, unresolved="ignore"),]
 )
 llvm_config.add_tool_substitutions(tools, tool_dirs)
