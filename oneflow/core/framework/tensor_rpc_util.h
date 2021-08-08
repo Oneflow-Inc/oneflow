@@ -55,6 +55,43 @@ class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
 Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
     const one::Tensor& tensor);
 
+template<typename... Args>
+struct CheckConsistentTensorMeta;
+
+template<typename RetT, typename... Args>
+struct CheckConsistentTensorMeta<RetT, const one::Tensor&, Args...> {
+  static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
+  template<RetT (*func)(const one::Tensor&, Args...)>
+  static RetT Call(const one::Tensor& tensor, Args... args) {
+    const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(tensor));
+    RetT&& ret = func(tensor, args...);
+    if (ret.IsOk()) {
+      JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+      JUST(ctx->Check());
+    } else {
+      JUST(ctx->transport_token().TryReleaseCtrlTransportTokenLock());
+    }
+    return ret;
+  }
+};
+
+template<typename RetT, typename... Args>
+struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args...> {
+  static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
+  template<RetT (*func)(const std::shared_ptr<one::Tensor>&, Args...)>
+  static RetT Call(const std::shared_ptr<one::Tensor>& tensor, Args... args) {
+    const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*tensor));
+    RetT&& ret = func(tensor, args...);
+    if (ret.IsOk()) {
+      JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+      JUST(ctx->Check());
+    } else {
+      JUST(ctx->transport_token().TryReleaseCtrlTransportTokenLock());
+    }
+    return ret;
+  }
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_RPC_UTIL_H_

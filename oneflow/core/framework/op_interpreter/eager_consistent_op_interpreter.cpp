@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/common/decorator.h"
 
 namespace oneflow {
 namespace one {
@@ -64,9 +65,8 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
 
 namespace {
 
-Maybe<Tensor> GetBoxingOutput(const std::shared_ptr<Tensor>& input,
-                              Symbol<cfg::ParallelDistribution> out_parallel_distribution) {
-  const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*input));
+Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input,
+                               Symbol<cfg::ParallelDistribution> out_parallel_distribution) {
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
   // Eager boxing
   const auto& in_parallel_distribution = JUST(input->parallel_distribution());
@@ -77,10 +77,11 @@ Maybe<Tensor> GetBoxingOutput(const std::shared_ptr<Tensor>& input,
   const auto& output =
       JUST(boxing_interpreter->Interpret(input, in_parallel_distribution, out_parallel_distribution,
                                          in_parallel_desc, out_parallel_desc));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
-  JUST(ctx->Check());
   return output;
 }
+
+auto* GetBoxingOutput =
+    DECORATE(DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta), DisableRecusiveBoxingCall);
 
 }  // namespace
 

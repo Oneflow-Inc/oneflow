@@ -67,7 +67,7 @@ class TransportToken final {
   static Maybe<TransportToken> NewMetaTransportToken();
   static Maybe<TransportToken> AcquireCtrlTransportToken(RankGroupCtrlCmd cmd);
   Maybe<void> TryAcquireCtrlTransportTokenLock() const;
-  Maybe<void> ReleaseCtrlTransportTokenLock() const;
+  Maybe<void> TryReleaseCtrlTransportTokenLock() const;
 
   static constexpr size_t MaxNumberOfThreadConsistentUId() {
     return (1 << kTransportTokenThreadConsistentUIdBit);
