@@ -73,4 +73,3 @@ class FunctionDesc(object):
             return attr_value.at_string
         else:
             raise NotImplementedError()
-
