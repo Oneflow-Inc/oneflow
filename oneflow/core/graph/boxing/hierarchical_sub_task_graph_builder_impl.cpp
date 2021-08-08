@@ -333,11 +333,6 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
               + std::to_string(JUST(
                   out_parallel_desc.DeviceId4ParallelId(out_map_id2parallel_id.at(parallel_id)))));
         }
-        LOG(INFO) << "IntraGroupSubTskGphBuilder " << i
-                  << "\n in: " << in_parallel_conf.DebugString()
-                  << "\n out:" << out_parallel_conf.DebugString() << " "
-                  << in_parallel_distribution.sbp_parallel(1).DebugString() << " to "
-                  << out_parallel_distribution.sbp_parallel(1).DebugString();
         DimVector dim_vec = logical_blob_desc.shape().dim_vec();
         if (in_parallel_distribution.sbp_parallel(0).has_split_parallel()) {
           const int64_t axis = in_parallel_distribution.sbp_parallel(0).split_parallel().axis();
