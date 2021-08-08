@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/one_to_one_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -183,14 +184,26 @@ class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
   std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
 };
 
-bool IsParallelDistributionTransposed(const Shape& in_parallel_hierarchy, const Shape& out_parallel_hierarchy, const cfg::ParallelDistribution& in_parallel_distribution,const cfg::ParallelDistribution& out_parallel_distribution) {
-  if(in_parallel_hierarchy.NumAxes() != out_parallel_hierarchy.NumAxes()) {return false;}
-  if(in_parallel_hierarchy.NumAxes() == 2 && in_parallel_hierarchy.At(0) == out_parallel_hierarchy.At(1) && in_parallel_hierarchy.At(1) == out_parallel_hierarchy.At(0) && in_parallel_distribution.sbp_parallel(0) == out_parallel_distribution.sbp_parallel(1) && in_parallel_distribution.sbp_parallel(1) == out_parallel_distribution.sbp_parallel(0)) {
+bool IsParallelDistributionTransposed(const Shape& in_parallel_hierarchy,
+                                      const Shape& out_parallel_hierarchy,
+                                      const cfg::ParallelDistribution& in_parallel_distribution,
+                                      const cfg::ParallelDistribution& out_parallel_distribution) {
+  if (in_parallel_hierarchy.NumAxes() != out_parallel_hierarchy.NumAxes()) { return false; }
+  if (in_parallel_hierarchy.NumAxes() == 2
+      && in_parallel_hierarchy.At(0) == out_parallel_hierarchy.At(1)
+      && in_parallel_hierarchy.At(1) == out_parallel_hierarchy.At(0)
+      && in_parallel_distribution.sbp_parallel(0) == out_parallel_distribution.sbp_parallel(1)
+      && in_parallel_distribution.sbp_parallel(1) == out_parallel_distribution.sbp_parallel(0)) {
     return true;
-  } else if(in_parallel_hierarchy.NumAxes() == 3) {
-    for(int64_t i=0; i<2; ++i) {  
-      for(int64_t j=i+1; i<3; ++j) { 
-        if(!(in_parallel_hierarchy.At(i) == out_parallel_hierarchy.At(j) && in_parallel_hierarchy.At(j) == out_parallel_hierarchy.At(i) && in_parallel_distribution.sbp_parallel(i) == out_parallel_distribution.sbp_parallel(j) && in_parallel_distribution.sbp_parallel(j) == out_parallel_distribution.sbp_parallel(i))) {
+  } else if (in_parallel_hierarchy.NumAxes() == 3) {
+    for (int64_t i = 0; i < 2; ++i) {
+      for (int64_t j = i + 1; i < 3; ++j) {
+        if (!(in_parallel_hierarchy.At(i) == out_parallel_hierarchy.At(j)
+              && in_parallel_hierarchy.At(j) == out_parallel_hierarchy.At(i)
+              && in_parallel_distribution.sbp_parallel(i)
+                     == out_parallel_distribution.sbp_parallel(j)
+              && in_parallel_distribution.sbp_parallel(j)
+                     == out_parallel_distribution.sbp_parallel(i))) {
           return false;
         }
       }
@@ -201,25 +214,34 @@ bool IsParallelDistributionTransposed(const Shape& in_parallel_hierarchy, const 
   }
 }
 
-bool IsDistributionEquals(const ParallelDesc& in_parallel_desc, const ParallelDesc& out_parallel_desc, const cfg::ParallelDistribution& in_parallel_distribution,const cfg::ParallelDistribution& out_parallel_distribution, const Shape& logical_shape) {
-  if(IsParallelDistributionTransposed(*in_parallel_desc.hierarchy(), *out_parallel_desc.hierarchy(), in_parallel_distribution, out_parallel_distribution)) {
-    for (int64_t machine_id : in_parallel_desc.sorted_machine_ids()) {
-      for(int64_t dev_phy_id : in_parallel_desc.sorted_dev_phy_ids(machine_id)) {
-        int64_t in_parallel_id = CHECK_JUST(in_parallel_desc.ParallelId4MachineDeviceId(machine_id, dev_phy_id));
-        int64_t out_parallel_id = CHECK_JUST(out_parallel_desc.ParallelId4MachineDeviceId(machine_id, dev_phy_id));
-        const TensorSliceView& in_tensor_slice_view = GetTensorSliceView4ParallelId(*in_parallel_desc.hierarchy(), in_parallel_distribution, logical_shape, in_parallel_id);
-        const TensorSliceView& out_tensor_slice_view = GetTensorSliceView4ParallelId(*out_parallel_desc.hierarchy(), out_parallel_distribution, logical_shape, out_parallel_id);
-        TensorSliceViewProto in_proto;
-        in_tensor_slice_view.ToProto(&in_proto);
-        TensorSliceViewProto out_proto;
-        out_tensor_slice_view.ToProto(&out_proto);
-        LOG(INFO)<<"machine id "<<machine_id<<" dev_phy_id "<<dev_phy_id;
-        LOG(INFO)<<"in_parallel_id "<<in_parallel_id<<" in_tensor_slice_view "<<in_proto.DebugString();
-        LOG(INFO)<<"out_parallel_id "<<out_parallel_id<<" out_tensor_slice_view "<<out_proto.DebugString();
-        if(in_tensor_slice_view != out_tensor_slice_view) {
-          return false;
-        }
-      }
+bool IsDistributionEquals(const ParallelDesc& in_parallel_desc,
+                          const ParallelDesc& out_parallel_desc,
+                          const cfg::ParallelDistribution& in_parallel_distribution,
+                          const cfg::ParallelDistribution& out_parallel_distribution,
+                          const Shape& logical_shape) {
+  if (IsParallelDistributionTransposed(*in_parallel_desc.hierarchy(),
+                                       *out_parallel_desc.hierarchy(), in_parallel_distribution,
+                                       out_parallel_distribution)) {
+    HashMap<int64_t, int64_t> in_parallel_id2map_id;
+    HashMap<int64_t, int64_t> out_parallel_id2map_id;
+    CHECK_JUST(GetIdMap(in_parallel_desc, &in_parallel_id2map_id, nullptr));
+    CHECK_JUST(GetIdMap(out_parallel_desc, &out_parallel_id2map_id, nullptr));
+    for (int64_t parallel_id = 0; parallel_id < in_parallel_desc.parallel_num(); ++parallel_id) {
+      const TensorSliceView& in_tensor_slice_view =
+          GetTensorSliceView4ParallelId(*in_parallel_desc.hierarchy(), in_parallel_distribution,
+                                        logical_shape, in_parallel_id2map_id.at(parallel_id));
+      const TensorSliceView& out_tensor_slice_view =
+          GetTensorSliceView4ParallelId(*out_parallel_desc.hierarchy(), out_parallel_distribution,
+                                        logical_shape, out_parallel_id2map_id.at(parallel_id));
+      TensorSliceViewProto in_proto;
+      in_tensor_slice_view.ToProto(&in_proto);
+      TensorSliceViewProto out_proto;
+      out_tensor_slice_view.ToProto(&out_proto);
+      LOG(INFO) << parallel_id << " in_map_id " << in_parallel_id2map_id.at(parallel_id)
+                << " in_tensor_slice_view " << in_proto.DebugString();
+      LOG(INFO) << parallel_id << " out_map_id " << out_parallel_id2map_id.at(parallel_id)
+                << " out_tensor_slice_view " << out_proto.DebugString();
+      if (in_tensor_slice_view != out_tensor_slice_view) { return false; }
     }
     return true;
   }
@@ -242,8 +264,10 @@ class DistributionEqualsTskGphBuilder final : public HierarchicalSubTskGphBuilde
                                       const cfg::ParallelDistribution& in_parallel_distribution,
                                       const cfg::ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
-    if (IsDistributionEquals(in_parallel_desc, out_parallel_desc, in_parallel_distribution, out_parallel_distribution, logical_blob_desc.shape())) {
-      LOG(ERROR)<<"transposed deviceset 121"<<in_parallel_distribution.DebugString()<<"  "<<out_parallel_distribution.DebugString();
+    if (IsDistributionEquals(in_parallel_desc, out_parallel_desc, in_parallel_distribution,
+                             out_parallel_distribution, logical_blob_desc.shape())) {
+      LOG(ERROR) << "transposed deviceset 121" << in_parallel_distribution.DebugString() << "  "
+                 << out_parallel_distribution.DebugString();
       return sub_tsk_gph_builder_->Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
           out_parallel_desc, lbi, logical_blob_desc, in_parallel_distribution.sbp_parallel(1),
@@ -255,7 +279,6 @@ class DistributionEqualsTskGphBuilder final : public HierarchicalSubTskGphBuilde
 
  private:
   std::unique_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
-
 };
 
 class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
@@ -278,6 +301,10 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         && in_parallel_desc.hierarchy()->NumAxes() == 2
         && in_parallel_distribution.sbp_parallel(0) == out_parallel_distribution.sbp_parallel(0)
         && in_parallel_distribution.sbp_parallel(1) != out_parallel_distribution.sbp_parallel(1)) {
+      HashMap<int64_t, int64_t> in_map_id2parallel_id;
+      HashMap<int64_t, int64_t> out_map_id2parallel_id;
+      CHECK_JUST(GetIdMap(in_parallel_desc, nullptr, &in_map_id2parallel_id));
+      CHECK_JUST(GetIdMap(out_parallel_desc, nullptr, &out_map_id2parallel_id));
       const auto& hierarchy = in_parallel_desc.hierarchy();
       std::vector<SubTskGphBuilderStatus> status;
       const int64_t num_groups = hierarchy->At(0);
@@ -298,13 +325,23 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
           const int64_t parallel_id = i * group_size + j;
           in_tasks.push_back(sorted_in_tasks.at(parallel_id));
           in_parallel_conf.add_device_name(
-              std::to_string(JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
-              + std::to_string(JUST(in_parallel_desc.DeviceId4ParallelId(parallel_id))));
+              std::to_string(JUST(
+                  in_parallel_desc.MachineId4ParallelId(in_map_id2parallel_id.at(parallel_id))))
+              + ":"
+              + std::to_string(JUST(
+                  in_parallel_desc.DeviceId4ParallelId(in_map_id2parallel_id.at(parallel_id)))));
           out_parallel_conf.add_device_name(
-              std::to_string(JUST(out_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
-              + std::to_string(JUST(out_parallel_desc.DeviceId4ParallelId(parallel_id))));
+              std::to_string(JUST(
+                  out_parallel_desc.MachineId4ParallelId(out_map_id2parallel_id.at(parallel_id))))
+              + ":"
+              + std::to_string(JUST(
+                  out_parallel_desc.DeviceId4ParallelId(out_map_id2parallel_id.at(parallel_id)))));
         }
-        LOG(INFO)<<"IntraGroupSubTskGphBuilder "<<i<<"\n in: "<<in_parallel_conf.DebugString()<<"\n out:"<<out_parallel_conf.DebugString()<<" "<<in_parallel_distribution.sbp_parallel(1).DebugString()<<" to "<<out_parallel_distribution.sbp_parallel(1).DebugString();
+        LOG(INFO) << "IntraGroupSubTskGphBuilder " << i
+                  << "\n in: " << in_parallel_conf.DebugString()
+                  << "\n out:" << out_parallel_conf.DebugString() << " "
+                  << in_parallel_distribution.sbp_parallel(1).DebugString() << " to "
+                  << out_parallel_distribution.sbp_parallel(1).DebugString();
         DimVector dim_vec = logical_blob_desc.shape().dim_vec();
         if (in_parallel_distribution.sbp_parallel(0).has_split_parallel()) {
           const int64_t axis = in_parallel_distribution.sbp_parallel(0).split_parallel().axis();
@@ -801,7 +838,8 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
                          &reduced_out_parallel_distribution);
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
-  if(IsDistributionEquals(in_parallel_desc, out_parallel_desc, in_parallel_distribution, out_parallel_distribution, logical_blob_desc.shape())) {
+  if (IsDistributionEquals(in_parallel_desc, out_parallel_desc, in_parallel_distribution,
+                           out_parallel_distribution, logical_blob_desc.shape())) {
     return impl_->distribution_equals_sub_tsk_gph_builder_->Build(
         ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
         reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,

@@ -141,6 +141,10 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
 ParallelConf GenParallelConfOfCpuZeroOnMaster();
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
 
+Maybe<void> GetIdMap(const ParallelDesc& parallel_desc,
+                     HashMap<int64_t, int64_t>* parallel_id2map_id,
+                     HashMap<int64_t, int64_t>* map_id2parallel_id);
+
 }  // namespace oneflow
 
 namespace std {

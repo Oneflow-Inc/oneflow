@@ -69,6 +69,36 @@ Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
   return machine2device_list;
 }
 
+Maybe<void> GetIdMap(const ParallelDesc& parallel_desc,
+                     HashMap<int64_t, int64_t>* parallel_id2map_id,
+                     HashMap<int64_t, int64_t>* map_id2parallel_id) {
+  size_t cols = GlobalProcessCtx::NumOfProcessPerNode();
+  int64_t map_id = 0;
+  for (const std::string& device_name : parallel_desc.parallel_conf().device_name()) {
+    int64_t node_id = -1;
+    std::string device_id_str;
+    JUST(ParseDeviceNameConf(device_name, &node_id, &device_id_str));
+    int64_t minus_pos = device_id_str.find("-");
+    if (minus_pos == std::string::npos) {
+      device_id_str = device_id_str + "-" + device_id_str;
+      minus_pos = device_id_str.find("-");
+    }
+    int64_t min_id = oneflow_cast<int64_t>(device_id_str.substr(0, minus_pos));
+    int64_t max_id = oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1));
+    CHECK_LE(min_id, max_id);
+
+    for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
+      int64_t mchn_id = dev_phy_id % cols + node_id * cols;
+      int64_t parallel_id =
+          CHECK_JUST(parallel_desc.ParallelId4MachineDeviceId(mchn_id, dev_phy_id));
+      if (parallel_id2map_id != nullptr) { (*parallel_id2map_id)[parallel_id] = map_id; }
+      if (map_id2parallel_id != nullptr) { (*map_id2parallel_id)[map_id] = parallel_id; }
+      map_id += 1;
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
     : symbol_id_(Error::SymbolIdUninitialized()) {
   CHECK_JUST(MaybeInit(user_conf));
@@ -158,14 +188,9 @@ Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int6
 bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
   return (this == &rhs)
          || (device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
-             && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_);
+             && EqualsMachineId2SortedDevPhyIds(rhs) && *hierarchy_ == *rhs.hierarchy_)
+                && machine_id_device_id_pairs_ == rhs.machine_id_device_id_pairs_;
 }
-
-//bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
-//  return (this == &rhs)
-//         || (device_type_ == rhs.device_type_ && machine_id_device_id_pairs_ == rhs.machine_id_device_id_pairs_ &&
-//             *hierarchy_ == *rhs.hierarchy_);
-//}
 
 bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
   return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs)
@@ -217,21 +242,13 @@ void ParallelDesc::ClearUp() {
   cfg_parallel_conf_.reset(new cfg::ParallelConf(parallel_conf_));
   SortAndRemoveDuplication(&sorted_machine_ids_);
   int64_t parallel_id = 0;
-  //for (int64_t machine_id : sorted_machine_ids_) {
-  //  for (int64_t device_id : *machine_id2sorted_dev_phy_ids_->at(machine_id)) {
-  //    parallel_id2machine_id_[parallel_id] = machine_id;
-  //    parallel_id2device_id_[parallel_id] = device_id;
-  //    machine_id2device_id2parallel_id_[machine_id][device_id] = parallel_id;
-  //    parallel_id += 1;
-  //  }
-  //}
-  for(const auto& pair : machine_id_device_id_pairs_) {
-    int64_t machine_id = pair.first;
-    int64_t device_id = pair.second;
-    parallel_id2machine_id_[parallel_id] = machine_id; 
-    parallel_id2device_id_[parallel_id] = device_id; 
-    machine_id2device_id2parallel_id_[machine_id][device_id] = parallel_id;
-    parallel_id += 1;
+  for (int64_t machine_id : sorted_machine_ids_) {
+    for (int64_t device_id : *machine_id2sorted_dev_phy_ids_->at(machine_id)) {
+      parallel_id2machine_id_[parallel_id] = machine_id;
+      parallel_id2device_id_[parallel_id] = device_id;
+      machine_id2device_id2parallel_id_[machine_id][device_id] = parallel_id;
+      parallel_id += 1;
+    }
   }
 }
 
