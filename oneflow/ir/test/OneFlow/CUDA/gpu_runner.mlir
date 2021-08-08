@@ -1,69 +1,60 @@
-// RUN: mlir-opt %s \
+// RUN: mlir-opt %s -convert-linalg-to-llvm \
 // RUN:   -gpu-kernel-outlining \
-// RUN:   -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,gpu-to-cubin)' \
+// RUN:   -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,gpu-to-cubin)' \
 // RUN:   -gpu-to-llvm \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
-// RUN:   --entry-point-result=void \
-// RUN: | FileCheck %s
+// RUN:   --entry-point-result=void
+#map0 = affine_map<(d0)[s0, s1] -> ((d0 - s0) ceildiv s1)>
+#map1 = affine_map<(d0)[s0, s1] -> (d0 * s0 + s1)>
+module  {
+  func @main() {
+    %c96 = constant 96 : index
+    %c0 = constant 0 : index
+    %c1 = constant 1 : index
+    %arg0 = memref.alloc() :  memref<96x96xi64>
+    %arg1 = memref.alloc() :  memref<1xf32>
+    %arg2 = memref.alloc() :  memref<96x96xf32>
 
-func @main() {
-  %data = memref.alloc() : memref<2x6xi32>
-  %sum = memref.alloc() : memref<2xi32>
-  %cst0 = constant 0 : i32
-  %cst1 = constant 1 : i32
-  %cst2 = constant 2 : i32
-  %cst4 = constant 4 : i32
-  %cst8 = constant 8 : i32
-  %cst16 = constant 16 : i32
+    %0 = linalg.collapse_shape %arg1 [] : memref<1xf32> into memref<f32>
 
-  %cst3 = constant 3 : i32
-  %cst6 = constant 6 : i32
-  %cst7 = constant 7 : i32
-  %cst10 = constant 10 : i32
-  %cst11 = constant 11 : i32
+    %cast_arg0 = memref.cast %arg0 : memref<96x96xi64> to memref<*xi64>
+    gpu.host_register %cast_arg0 : memref<*xi64>
+    %cast_arg1 = memref.cast %arg1 : memref<1xf32> to memref<*xf32>
+    gpu.host_register %cast_arg1 : memref<*xf32>
+    %cast_arg2 = memref.cast %arg2 : memref<96x96xf32> to memref<*xf32>
+    gpu.host_register %cast_arg2 : memref<*xf32>
+    // %cast0 = memref.cast %0 : memref<f32> to memref<*xf32>
+    // gpu.host_register %cast0 : memref<*xf32>
 
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c3 = constant 3 : index
-  %c4 = constant 4 : index
-  %c5 = constant 5 : index
-  %c6 = constant 6 : index
+    %1 = memref.alloc() : memref<96x96xf32>
+    %cast_1 = memref.cast %1 : memref<96x96xf32> to memref<*xf32>
+    gpu.host_register %cast_1 : memref<*xf32>
 
-  %cast_data = memref.cast %data : memref<2x6xi32> to memref<*xi32>
-  gpu.host_register %cast_data : memref<*xi32>
-  %cast_sum = memref.cast %sum : memref<2xi32> to memref<*xi32>
-  gpu.host_register %cast_sum : memref<*xi32>
-
-  memref.store %cst0, %data[%c0, %c0] : memref<2x6xi32>
-  memref.store %cst1, %data[%c0, %c1] : memref<2x6xi32>
-  memref.store %cst2, %data[%c0, %c2] : memref<2x6xi32>
-  memref.store %cst4, %data[%c0, %c3] : memref<2x6xi32>
-  memref.store %cst8, %data[%c0, %c4] : memref<2x6xi32>
-  memref.store %cst16, %data[%c0, %c5] : memref<2x6xi32>
-
-  memref.store %cst2, %data[%c1, %c0] : memref<2x6xi32>
-  memref.store %cst3, %data[%c1, %c1] : memref<2x6xi32>
-  memref.store %cst6, %data[%c1, %c2] : memref<2x6xi32>
-  memref.store %cst7, %data[%c1, %c3] : memref<2x6xi32>
-  memref.store %cst10, %data[%c1, %c4] : memref<2x6xi32>
-  memref.store %cst11, %data[%c1, %c5] : memref<2x6xi32>
-
-  // XOR
-  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c2, %grid_y = %c1, %grid_z = %c1)
-             threads(%tx, %ty, %tz) in (%block_x = %c6, %block_y = %c1, %block_z = %c1) {
-    %val = memref.load %data[%bx, %tx] : memref<2x6xi32>
-    %reduced = "gpu.all_reduce"(%val) ({}) { op = "xor" } : (i32) -> (i32)
-    memref.store %reduced, %sum[%bx] : memref<2xi32>
-    gpu.terminator
+    %c1_0 = constant 1 : index
+    %2 = affine.apply #map0(%c96)[%c0, %c1]
+    %3 = affine.apply #map0(%c96)[%c0, %c1]
+    gpu.launch blocks(%arg3, %arg4, %arg5) in (%arg9 = %2, %arg10 = %3, %arg11 = %c1_0) threads(%arg6, %arg7, %arg8) in (%arg12 = %c1_0, %arg13 = %c1_0, %arg14 = %c1_0) {
+      %6 = affine.apply #map1(%arg3)[%c1, %c0]
+      %7 = affine.apply #map1(%arg4)[%c1, %c0]
+      %8 = memref.load %arg0[%6, %7] : memref<96x96xi64>
+      %9 = memref.load %0[] : memref<f32>
+      %10 = sitofp %8 : i64 to f32
+      %11 = mulf %10, %9 : f32
+      memref.store %11, %1[%6, %7] : memref<96x96xf32>
+      gpu.terminator
+    }
+    %c1_1 = constant 1 : index
+    %4 = affine.apply #map0(%c96)[%c0, %c1]
+    %5 = affine.apply #map0(%c96)[%c0, %c1]
+    gpu.launch blocks(%arg3, %arg4, %arg5) in (%arg9 = %4, %arg10 = %5, %arg11 = %c1_1) threads(%arg6, %arg7, %arg8) in (%arg12 = %c1_1, %arg13 = %c1_1, %arg14 = %c1_1) {
+      %6 = affine.apply #map1(%arg3)[%c1, %c0]
+      %7 = affine.apply #map1(%arg4)[%c1, %c0]
+      %8 = memref.load %1[%6, %7] : memref<96x96xf32>
+      memref.store %8, %arg2[%6, %7] : memref<96x96xf32>
+      gpu.terminator
+    }
+    return
   }
-
-  call @print_memref_i32(%cast_sum) : (memref<*xi32>) -> ()
-  // CHECK: [31, 1]
-
-  return
 }
-
-func private @print_memref_i32(memref<*xi32>)
