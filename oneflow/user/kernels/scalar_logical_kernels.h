@@ -27,11 +27,11 @@ struct ScalarLogicalFunctor {
   const T scalar;
 };
 
-#define REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, kernel_name, bin_op, input_dtype)  \
+#define REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op, input_dtype)  \
   REGISTER_USER_KERNEL(kernel_name)                                                              \
       .SetCreateFn([](user_op::KernelCreateContext* ctx) {                                       \
-        return new UnaryElemwiseXpuKernel<device, ScalarLogicalFunctor<bin_op, int8_t>, int8_t, input_dtype>( \
-            [](user_op::KernelComputeContext* ctx) {return ScalarLogicalFunctor<bin_op, int8_t>(ctx->Attr<double>("scalar")); }, \
+        return new UnaryElemwiseXpuKernel<device, ScalarLogicalFunctor<binary_op, int8_t>, int8_t, input_dtype>( \
+            [](user_op::KernelComputeContext* ctx) {return ScalarLogicalFunctor<binary_op, int8_t>(ctx->Attr<double>("scalar")); }, \
             "out", "in");                                            \
       })                                                                                         \
       .SetIsMatchedHob(                                                                          \
