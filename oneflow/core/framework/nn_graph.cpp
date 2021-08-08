@@ -75,7 +75,11 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
+  return Maybe<void>::Ok();
+}
 
+Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
+  std::cout << "cclog: this graph name is : " << name_ << "\n";
   const auto& free_eager_tensors =
       Global<MultiClientSessionContext>::Get()->GetFreeEagerTensorNamePairByGraphName(name_);
   for (const auto& pair : free_eager_tensors) {
@@ -89,15 +93,16 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     } else {
       var_blob = JUST(var->eager_blob_object())->mut_blob();
     }
+    std::cout << "cclog: register free eager tensor name: " << var_name << "\n";
     CHECK_OR_RETURN(!var_name.empty());
     CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
-
   return Maybe<void>::Ok();
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
+  JUST(RegisterFreeEagerTensorsToVariableOpNames());
   CHECK_OR_RETURN(!runtime_inited_);
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
   job_ = job_ctx->job();
@@ -199,7 +204,11 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
                            const std::shared_ptr<NNGraph>& nn_graph) {
   CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size());
   CHECK_EQ_OR_RETURN(outputs.size(), nn_graph->outputs_op_names().size());
-  CHECK_EQ_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
+  // NOTE(chengcheng):
+  //   parameters not used in RunLazyJobInstrucntion;
+  //   the args: parameters is all variable tensor hold by nn.Graph
+  //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
+  CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
   std::vector<std::shared_ptr<vm::EagerBlobObject>> input_blobs;
   std::vector<std::shared_ptr<vm::EagerBlobObject>> output_blobs;
   std::vector<std::shared_ptr<vm::EagerBlobObject>> var_blobs;

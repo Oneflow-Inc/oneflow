@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/op_interpreter.h"
-
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
@@ -367,8 +367,8 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
 
 Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
   CHECK_OR_RETURN(input_tensor->is_eager());
-  const std::string& lbn = TensorNameScope::Global()->Lookup(input_tensor);
-  CHECK_OR_RETURN(lbn.empty());
+  const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  CHECK_OR_RETURN(empty_lbn.empty());
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
   OperatorConf op_conf;
   op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
@@ -398,8 +398,16 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
           << " infer and and op attr : \n"
           << op_attr.DebugString() << " for FreeEagerTensor.\n";
 
+  // NOTE(chengcheng): MUST store this tensor to MultiClientSessionContext for graph runtime bind.
+  const std::string graph_name = *JUST(JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName());
+  const std::string lbn = GenLogicalBlobName(new_op_name, "out");
+  Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
+      graph_name, input_tensor, lbn);
   // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
-  TensorNameScope::Global()->Record(input_tensor, GenLogicalBlobName(new_op_name, "out"));
+  TensorNameScope::Global()->Record(input_tensor, lbn);
+
+  std::cout << "cclog: this job name is : " << graph_name << " and store tensor with name: " << lbn
+            << "\n";
 
   return Maybe<void>::Ok();
 }
