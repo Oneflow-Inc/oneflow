@@ -69,23 +69,6 @@ def acc(one, max_acc_num, name=None):
     )
 
 
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def unpack(input, unpack_num, name=None):
-    assert not oneflow.eager_execution_enabled()
-    return (
-        oneflow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("Unpack_")
-        )
-        .Op("unpack")
-        .Input("in", [input])
-        .Output("out")
-        .Attr("unpack_num", unpack_num)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
 def api_pack(
     input: oneflow._oneflow_internal.BlobDesc, pack_num: int, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -108,37 +91,6 @@ def pack(input, pack_num, name=None):
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-
-
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
-    if name is None:
-        name = id_util.UniqueStr("ParallelCast_")
-
-    def distribute_to_str(dist):
-        dist_str = ""
-        if dist is None:
-            pass
-        elif type(dist) is oneflow._oneflow_internal.distribute.SplitDistribute:
-            dist_str = "S({})".format(dist.axis)
-        elif type(dist) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
-            dist_str = "B"
-        else:
-            raise ValueError("unsupported distribute")
-        return dist_str
-
-    sbp_parallel = distribute_to_str(distribute)
-    grad_sbp_parallel = distribute_to_str(gradient_distribute)
-    op = (
-        oneflow.user_op_builder(name)
-        .Op("parallel_cast")
-        .Input("in", [input])
-        .Output("out")
-        .Attr("sbp_parallel", sbp_parallel)
-        .Attr("grad_sbp_parallel", grad_sbp_parallel)
-        .Build()
-    )
-    return op.InferAndTryRun().SoleOutputBlob()
 
 
 def api_hierarchical_parallel_cast(
