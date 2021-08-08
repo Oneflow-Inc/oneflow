@@ -247,6 +247,7 @@ from oneflow.nn.modules.constant import ones_like_op as ones_like
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_like_op as zeros_like
 from oneflow.nn.modules.constant import zeros_op as zeros
+from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow.nn.modules.diag import diag_op as diag
 from oneflow.nn.modules.eq import eq_op as eq
@@ -340,10 +341,7 @@ from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
-from oneflow.ops.assign_op import assign
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
-from oneflow.ops.categorical_ordinal_encode_op import categorical_ordinal_encode
-from oneflow.ops.constant_op import constant, constant_like, constant_scalar
 from oneflow.ops.get_variable import api_get_variable as get_variable
 from oneflow.ops.initializer_util import constant_initializer, empty_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
