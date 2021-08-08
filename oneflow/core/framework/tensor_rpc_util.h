@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -65,12 +66,9 @@ struct CheckConsistentTensorMeta<RetT, const one::Tensor&, Args...> {
   static RetT Call(const one::Tensor& tensor, Args... args) {
     const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(tensor));
     RetT&& ret = func(tensor, args...);
-    if (ret.IsOk()) {
-      JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
-      JUST(ctx->Check());
-    } else {
-      JUST(ctx->transport_token().TryReleaseCtrlTransportTokenLock());
-    }
+    // Always synchronize consistent tensor meta even if `func` failed.
+    JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+    JUST(ctx->Check());
     return ret;
   }
 };
@@ -81,13 +79,12 @@ struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args
   template<RetT (*func)(const std::shared_ptr<one::Tensor>&, Args...)>
   static RetT Call(const std::shared_ptr<one::Tensor>& tensor, Args... args) {
     const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*tensor));
+    LOG(ERROR) << "rank: " << GlobalProcessCtx::Rank()
+               << "\ntransport_token:" << static_cast<int64_t>(ctx->transport_token());
     RetT&& ret = func(tensor, args...);
-    if (ret.IsOk()) {
-      JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
-      JUST(ctx->Check());
-    } else {
-      JUST(ctx->transport_token().TryReleaseCtrlTransportTokenLock());
-    }
+    // Always synchronize consistent tensor meta even if `func` failed.
+    JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+    JUST(ctx->Check());
     return ret;
   }
 };

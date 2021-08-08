@@ -73,8 +73,9 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
     Symbol<cfg::ParallelDistribution> out_parallel_distribution,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) {
-  if (in_parallel_distribution == out_parallel_distribution
-      && in_parallel_desc == out_parallel_desc) {
+  if (in_parallel_desc == out_parallel_desc
+      && (in_parallel_desc->parallel_num() == 1
+          || in_parallel_distribution == out_parallel_distribution)) {
     static std::shared_ptr<EagerBoxingInterpreter> identity_boxing_interpreter =
         std::make_shared<IdentityBoxingInterpreter>();
     return identity_boxing_interpreter;

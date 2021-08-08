@@ -27,10 +27,10 @@ const static int kTransportTokenRankGroupLevelBit = 3;
 
 enum TransportTokenType {
   // Begin
-  kDataTransportTokenType = 0,  // e.g. for tensor data transportation
-  kMetaTransportTokenType,      // e.g. for tensor meta checking
-  kCtrlTransportTokenType,      // e.g. for rank_group or thread checking. see RankGroupCtrlCmd
-  kExtendedTransportTokenType,  // for compatibility
+  kInvalidTransportTokenType = 0,
+  kDataTransportTokenType,  // e.g. for tensor data transportation
+  kMetaTransportTokenType,  // e.g. for tensor meta checking
+  kCtrlTransportTokenType,  // e.g. for rank_group or thread checking. see RankGroupCtrlCmd
   // End
   kTransportTokenTypeSize,
 };
@@ -59,6 +59,7 @@ struct IsScalarType<TransportToken> final {
 
 class TransportToken final {
  public:
+  TransportToken() : TransportToken(kInvalidTransportTokenType) {}
   TransportToken(const TransportToken&) = default;
   TransportToken(TransportToken&) = default;
   ~TransportToken() = default;
