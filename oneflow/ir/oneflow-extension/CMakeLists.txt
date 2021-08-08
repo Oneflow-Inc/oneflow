@@ -13,6 +13,10 @@ add_llvm_library(MLIROneFlowExtension
 
 llvm_update_compile_flags(MLIROneFlowExtension)
 
+if(BUILD_CUDA)
+  set(MLIR_RUNTIME_GPU_LIBS -Wl,--no-as-needed mlir_cuda_runtime -Wl,--as-needed)
+endif(BUILD_CUDA)
+
 target_link_libraries(MLIROneFlowExtension
   PRIVATE
   ${dialect_libs}
@@ -27,6 +31,8 @@ target_link_libraries(MLIROneFlowExtension
   MLIRExecutionEngine
   of_protoobj
   of_ccobj
+  PUBLIC
+  ${MLIR_RUNTIME_GPU_LIBS}
 )
 
 if (BUILD_SHARED_LIBS)

@@ -202,6 +202,22 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
     CHECK(mlir::succeeded(mlir::oneflow::LowerModuleToCUDALLVM(&mlir_ctx, *module)))
         << "fail to lower OneFlow to CUDA LLVM";
     if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
+    // TODO: replace absolute path with something more idiomatic
+    llvm::SmallVector<llvm::StringRef> ext_libs(
+        {"/home/caishenghang/ir_cuda/build/_deps/llvm_monorepo-build/lib/"
+         "libMLIROneFlowExtension.so.13git"});
+    auto jit_or_error = mlir::ExecutionEngine::create(
+        /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
+        /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);
+    CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
+                          << llvm::toString(jit_or_error.takeError());
+    auto jit = std::move(jit_or_error.get());
+    llvm::SmallVector<OpaqueMemRefDescriptor> args /* args must outlive JIT invocation */ =
+        GetMLIRCInterfaceArgs(ctx);
+    llvm::SmallVector<void*> packed_args{};
+    for (auto& arg /* arg must be a reference*/ : args) { packed_args.push_back(&arg); }
+    auto error = jit->invokePacked(GetMLIRCInterface(ctx->op_name()), packed_args);
+    CHECK(!error) << "fail to invoke jit engine, error: " << llvm::toString(std::move(error));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

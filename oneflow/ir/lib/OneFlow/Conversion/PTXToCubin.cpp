@@ -152,4 +152,5 @@ std::unique_ptr<Pass> createSerializeToCubinPass() {
 }  // namespace oneflow
 
 }  // namespace mlir
+
 #endif  // WITH_CUDA
