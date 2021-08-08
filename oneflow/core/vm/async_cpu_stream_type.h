@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_CPU_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_CPU_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_ASYNC_CPU_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_ASYNC_CPU_STREAM_TYPE_H_
 
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -49,4 +49,4 @@ class AsyncCpuStreamType final : public StreamType {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_CPU_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_ASYNC_CPU_STREAM_TYPE_H_
