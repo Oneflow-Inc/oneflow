@@ -16,7 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_SPARSE_SOFTMAX__CROSS_ENTROPY_KERNEL_UTIL_H_
 
+#include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ndarray/xpu_var_ndarray.h"
 
 namespace oneflow {
 namespace user_op {
@@ -52,6 +55,41 @@ struct SparseSoftmaxCrossEntropyKernelUtil {
                           const int64_t depth, const int64_t lower_bound, const T* prob,
                           const K* labels, const T* dy, T* dx);
 };
+
+template<DeviceType device_type, typename T, typename K>
+void SparseSoftmaxCrossEntropyComputePart(DeviceCtx* ctx, const int64_t num_instances,
+                                          const int64_t num_classes, const T* in, T* prob,
+                                          void* temp_storage, const size_t reduce_operation_size,
+                                          T* sum_result, T* sub_result,
+                                          const MemoryCase& prob_mem_case,
+                                          const MemoryCase& tmp_buffer_mem_case) {
+  auto Val = NdarrayUtil<device_type, T>::GetValNdarrayBuilder();
+  auto Var = NdarrayUtil<device_type, T>::GetVarNdarrayBuilder();
+
+  T* reduce_storage = reinterpret_cast<T*>(temp_storage);
+
+  auto reduce_storage_var =
+      Var({static_cast<int64_t>(reduce_operation_size / sizeof(T))}, reduce_storage);
+
+  NdarrayUtil<device_type, T>::ReduceMax(ctx, Var({num_instances, 1}, sum_result),
+                                         Val({num_instances, num_classes}, in), reduce_storage_var);
+  // sub | prob[i][j] = in[i][j] - tmp[i]
+  NdarrayUtil<device_type, T>::BroadcastSub(ctx, Var({num_instances, num_classes}, sub_result),
+                                            Val({num_instances, num_classes}, in),
+                                            Val({num_instances, 1}, sum_result));
+  // exp | prob[i][j] = exp(prob[i][j])
+  AutoMemcpy(ctx, prob, sub_result, reduce_operation_size, prob_mem_case, tmp_buffer_mem_case);
+  // tmp_buffer_mem_case);
+  NdarrayUtil<device_type, T>::InplaceExp(ctx, Var({num_instances, num_classes}, prob));
+  // sum | tmp[i] = Sum_j(prob[i][j])
+  NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({num_instances, 1}, sum_result),
+                                         Val({num_instances, num_classes}, prob),
+                                         reduce_storage_var);
+
+  NdarrayUtil<device_type, T>::InplaceBroadcastDiv(
+      ctx, Var({num_instances, num_classes}, prob),
+      Val({num_instances, 1}, sum_result));  // for backward
+}
 }  // namespace user_op
 }  // namespace oneflow
 

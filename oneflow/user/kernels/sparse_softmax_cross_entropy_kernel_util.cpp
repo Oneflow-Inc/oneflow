@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
-#include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.h"
 
 namespace oneflow {
@@ -28,47 +25,22 @@ struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
                       const int64_t depth, const int64_t lower_bound, const T* in, T* prob,
                       const K* labels, T* y, void* temp_storage, const size_t temp_storage_bytes,
                       const MemoryCase& prob_mem_case, const MemoryCase& tmp_buffer_mem_case) {
-    auto Val = NdarrayUtil<DeviceType::kCPU, T>::GetValNdarrayBuilder();
-    auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
-
     const size_t min_temp_storage_bytes =
         SparseSoftmaxCrossEntropyTempStorageSize<T>(num_instances, num_classes);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
 
-    const size_t reduce_temp_storage_bytes =
+    const size_t reduce_operation_size =
         SparseSoftmaxCrossEntropyReduceOperationSize<T>(num_instances, num_classes);
-    const size_t temp_storage_bytes_offset =
-        SparseSoftmaxCrossEntropySumResultSize<T>(num_instances);
+    const size_t sum_result_size = SparseSoftmaxCrossEntropySumResultSize<T>(num_instances);
 
-    T* reduce_storage = reinterpret_cast<T*>(temp_storage);
-    auto reduce_storage_var =
-        Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
     T* sum_result = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
-                                         + reduce_temp_storage_bytes);
+                                         + reduce_operation_size);
     T* sub_result = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
-                                         + reduce_temp_storage_bytes + temp_storage_bytes_offset);
+                                         + reduce_operation_size + sum_result_size);
 
-    // max | tmp[i] = Max_j(in[i][j])
-    NdarrayUtil<DeviceType::kCPU, T>::ReduceMax(ctx, Var({num_instances, 1}, sum_result),
-                                                Val({num_instances, num_classes}, in),
-                                                reduce_storage_var);
-    // sub | prob[i][j] = in[i][j] - tmp[i]
-    NdarrayUtil<DeviceType::kCPU, T>::BroadcastSub(
-        ctx, Var({num_instances, num_classes}, sub_result), Val({num_instances, num_classes}, in),
-        Val({num_instances, 1}, sum_result));
-    // exp | prob[i][j] = exp(prob[i][j])
-
-    AutoMemcpy(ctx, prob, sub_result, reduce_temp_storage_bytes, prob_mem_case,
-               tmp_buffer_mem_case);
-    NdarrayUtil<DeviceType::kCPU, T>::InplaceExp(ctx, Var({num_instances, num_classes}, prob));
-    // sum | tmp[i] = Sum_j(prob[i][j])
-    NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(ctx, Var({num_instances, 1}, sum_result),
-                                                Val({num_instances, num_classes}, prob),
-                                                reduce_storage_var);
-
-    NdarrayUtil<DeviceType::kCPU, T>::InplaceBroadcastDiv(
-        ctx, Var({num_instances, num_classes}, prob),
-        Val({num_instances, 1}, sum_result));  // for backward
+    SparseSoftmaxCrossEntropyComputePart<DeviceType::kCPU, T, K>(
+        ctx, num_instances, num_classes, in, prob, temp_storage, reduce_operation_size, sum_result,
+        sub_result, prob_mem_case, tmp_buffer_mem_case);
     FOR_RANGE(int64_t, i, 0, num_instances) {
       CHECK_GE(labels[i], 0);
       CHECK_LT(labels[i], depth);
