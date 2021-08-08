@@ -842,19 +842,8 @@ def std_op(tensor, dim, unbiased=False, keepdim=False):
     return Std(dim, unbiased, keepdim)(tensor)
 
 
-class Pow(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        if isinstance(y, (int, float)):
-            return flow.F.pow_scalar(x, alpha=y)
-        else:
-            return flow.F.pow(x, y)
-
-
 @register_tensor_op("pow")
-def pow_op(tensor, exponent):
+def pow_op(input, exponent):
     """Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
     When exponent is a scalar value, the operation applied is:
 
@@ -881,18 +870,18 @@ def pow_op(tensor, exponent):
         >>> import numpy as np
         
         >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]))
-        >>> out = flow.pow(x, 2).numpy()
+        >>> out = flow.pow(x, 2)
         >>> out
-        array([ 1.,  4.,  9., 16., 25., 36.], dtype=float32)
+        tensor([ 1.,  4.,  9., 16., 25., 36.], dtype=oneflow.float32)
 
         >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
         >>> y = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
-        >>> out = flow.pow(x, y).numpy()
+        >>> out = flow.pow(x, y)
         >>> out
-        array([  1.,   4.,  27., 256.], dtype=float32)
+        tensor([  1.,   4.,  27., 256.], dtype=oneflow.float32)
         
     """
-    return Pow()(tensor, exponent)
+    return flow.F.pow(input, exponent)
 
 
 def addmm(x, mat1, mat2, alpha=1, beta=1):
@@ -1011,7 +1000,7 @@ class Clamp(Module):
         return self._op(x)[0]
 
 
-def clamp_op(tensor, min=None, max=None):
+def clamp_op(input, min=None, max=None):
     """
     Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
     a resulting tensor:
@@ -1058,7 +1047,7 @@ def clamp_op(tensor, min=None, max=None):
         tensor([ 0.2,  0.6, -0.5, -0.3], dtype=oneflow.float32)
 
     """
-    return Clamp(min, max)(tensor)
+    return flow.F.clamp(input, min, max)
 
 
 @register_tensor_op("clamp")
@@ -1184,15 +1173,6 @@ def erf_op_tensor(input):
     return Erf()(input)
 
 
-class Erfc(Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.erfc_op = flow.builtin_op("erfc").Input("x").Output("y").Build()
-
-    def forward(self, input):
-        return self.erfc_op(input)[0]
-
-
 @register_tensor_op("erfc")
 def erfc_op(input):
     """Computes the complementary error function of each element of input. The complementary error 
@@ -1216,30 +1196,17 @@ def erfc_op(input):
         
         >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erfc(x)
-        >>> out.shape
-        flow.Size([3])
-        >>> out.numpy()
-        array([1.0000000e+00, 1.8427007e+00, 2.8025969e-45], dtype=float32)
+        >>> out
+        tensor([1.0000e+00, 1.8427e+00, 2.8026e-45], dtype=oneflow.float32)
 
         >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
         >>> out = flow.erfc(x)
-        >>> out.shape
-        flow.Size([2, 3])
-        >>> out.numpy()
-        array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
-               [1.5374597e-12, 4.1838257e-23, 2.5789905e-01]], dtype=float32)
-
-        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
-        >>> out = x.erfc()
-        >>> out.shape
-        flow.Size([3, 3])
-        >>> out.numpy()
-        array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
-               [1.5374597e-12, 4.1838257e-23, 2.5789905e-01],
-               [4.6777348e-03, 2.2090499e-05, 1.5417259e-08]], dtype=float32)
+        >>> out
+        tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
+                [1.5375e-12, 4.1838e-23, 2.5790e-01]], dtype=oneflow.float32)
         
     """
-    return Erfc()(input)
+    return flow.F.erfc(input)
 
 
 @register_tensor_op("erfc")
@@ -1247,7 +1214,7 @@ def erfc_op_tensor(input):
     """
     See :func:`oneflow.erfc`
     """
-    return Erfc()(input)
+    return flow.F.erfc(input)
 
 
 class Ceil(Module):
