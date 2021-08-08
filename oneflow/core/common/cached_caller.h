@@ -82,23 +82,6 @@ std::function<Ret(const Arg&)> WithResultCached(F f) {
   };
 }
 
-template<typename T, typename = void>
-struct ThreadLocalStruct;
-
-template<typename T, typename... Args>
-struct ThreadLocalStruct<T (*)(Args...)> final {
-  template<T (*func)(Args...)>
-  static T Call(Args... args) {
-    using KeyT = std::tuple<typename std::decay<Args>::type...>;
-    static thread_local std::unordered_map<KeyT, T> map;
-    const auto& key = KeyT(args...);
-    auto iter = map.find(key);
-    if (iter == map.end()) { iter = map.emplace(key, func(args...)).first; }
-    return iter->second;
-  }
-};
-#define THREAD_LOCAL_CACHED(fn_ptr) &ThreadLocalStruct<decltype(fn_ptr)>::template Call<fn_ptr>
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_CACHED_CALLER_H_
