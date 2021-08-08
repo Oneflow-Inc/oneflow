@@ -1036,15 +1036,6 @@ def erf_op_tensor(input):
     return flow.F.erf(input)
 
 
-class Erfc(Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.erfc_op = flow.builtin_op("erfc").Input("x").Output("y").Build()
-
-    def forward(self, input):
-        return self.erfc_op(input)[0]
-
-
 @register_tensor_op("erfc")
 def erfc_op(input):
     """Computes the complementary error function of each element of input. The complementary error 
@@ -1068,30 +1059,17 @@ def erfc_op(input):
         
         >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erfc(x)
-        >>> out.shape
-        flow.Size([3])
-        >>> out.numpy()
-        array([1.0000000e+00, 1.8427007e+00, 2.8025969e-45], dtype=float32)
+        >>> out
+        tensor([1.0000e+00, 1.8427e+00, 2.8026e-45], dtype=oneflow.float32)
 
         >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
         >>> out = flow.erfc(x)
-        >>> out.shape
-        flow.Size([2, 3])
-        >>> out.numpy()
-        array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
-               [1.5374597e-12, 4.1838257e-23, 2.5789905e-01]], dtype=float32)
-
-        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
-        >>> out = x.erfc()
-        >>> out.shape
-        flow.Size([3, 3])
-        >>> out.numpy()
-        array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
-               [1.5374597e-12, 4.1838257e-23, 2.5789905e-01],
-               [4.6777348e-03, 2.2090499e-05, 1.5417259e-08]], dtype=float32)
+        >>> out
+        tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
+                [1.5375e-12, 4.1838e-23, 2.5790e-01]], dtype=oneflow.float32)
         
     """
-    return Erfc()(input)
+    return flow.F.erfc(input)
 
 
 @register_tensor_op("erfc")
@@ -1099,7 +1077,7 @@ def erfc_op_tensor(input):
     """
     See :func:`oneflow.erfc`
     """
-    return Erfc()(input)
+    return flow.F.erfc(input)
 
 
 def ceil_op(input):
