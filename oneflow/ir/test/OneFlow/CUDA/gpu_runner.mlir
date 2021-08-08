@@ -25,8 +25,6 @@ module  {
     gpu.host_register %cast_arg1 : memref<*xf32>
     %cast_arg2 = memref.cast %arg2 : memref<96x96xf32> to memref<*xf32>
     gpu.host_register %cast_arg2 : memref<*xf32>
-    // %cast0 = memref.cast %0 : memref<f32> to memref<*xf32>
-    // gpu.host_register %cast0 : memref<*xf32>
 
     %1 = memref.alloc() : memref<96x96xf32>
     %cast_1 = memref.cast %1 : memref<96x96xf32> to memref<*xf32>
