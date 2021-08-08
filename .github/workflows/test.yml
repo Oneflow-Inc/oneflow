@@ -658,6 +658,23 @@ jobs:
               repo: context.repo.repo,
               body: 'CI failed, removing label automerge'
             })
+      - name: Print stacks in all core files
+        timeout-minutes: 45
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) == false && failure()
+        run: |
+          set -x
+          docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            ${image_name} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/print_stack_in_all_dirs.sh"
+      - name: Print stacks in all core files (new interface)
+        timeout-minutes: 45
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) && failure()
+        run: |
+          set -x
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/print_stack_in_all_dirs.sh"
       - name: Query system status
         timeout-minutes: 45
         if: failure()

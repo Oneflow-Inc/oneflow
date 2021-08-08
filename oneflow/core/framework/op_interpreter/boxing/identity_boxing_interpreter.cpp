@@ -13,25 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_PROFILER_H_
-#define ONEFLOW_CORE_JOB_PROFILER_H_
-
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/framework/op_interpreter/boxing/identity_boxing_interpreter.h"
 
 namespace oneflow {
 
-class Profiler final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Profiler);
-  Profiler() = default;
-  ~Profiler() = default;
-
-  void Profile(const Plan& plan, const std::string& act_event_filepath);
-
- private:
-};
+Maybe<one::Tensor> IdentityBoxingInterpreter::InterpretImpl(
+    const std::shared_ptr<one::Tensor>& input,
+    Symbol<cfg::ParallelDistribution> in_parallel_distribution,
+    Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+    Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
+  CHECK_EQ_OR_RETURN(in_parallel_distribution, out_parallel_distribution);
+  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  return input;
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_PROFILER_H_

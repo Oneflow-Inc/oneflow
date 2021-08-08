@@ -1,7 +1,7 @@
 set -ex
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"/test_tmp_dir"}
+test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"./test_tmp_dir"}
 
 rm -rf $test_tmp_dir
 mkdir -p $test_tmp_dir
