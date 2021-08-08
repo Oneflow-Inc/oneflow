@@ -183,27 +183,27 @@ namespace one {
 class ConsistentTensorInferResult final {
  public:
   ConsistentTensorInferResult(size_t input_size, size_t output_size)
-      : input_parallel_distributions_(input_size), output_tensor_metas_(output_size) {}
+      : input_tensor_metas_(input_size), output_tensor_metas_(output_size) {}
   ConsistentTensorInferResult(const ConsistentTensorInferResult&) = delete;
   ConsistentTensorInferResult(ConsistentTensorInferResult&&) = delete;
   ~ConsistentTensorInferResult() = default;
 
-  const std::vector<Symbol<cfg::ParallelDistribution>>& input_parallel_distributions() const {
-    return input_parallel_distributions_;
+  const std::vector<Symbol<ConsistentTensorMeta>>& input_tensor_metas() const {
+    return input_tensor_metas_;
   }
   const std::vector<Symbol<ConsistentTensorMeta>>& output_tensor_metas() const {
     return output_tensor_metas_;
   }
 
-  std::vector<Symbol<cfg::ParallelDistribution>>* mut_input_parallel_distributions() {
-    return &input_parallel_distributions_;
+  std::vector<Symbol<ConsistentTensorMeta>>* mut_input_tensor_metas() {
+    return &input_tensor_metas_;
   }
   std::vector<Symbol<ConsistentTensorMeta>>* mut_output_tensor_metas() {
     return &output_tensor_metas_;
   }
 
  private:
-  std::vector<Symbol<cfg::ParallelDistribution>> input_parallel_distributions_;
+  std::vector<Symbol<ConsistentTensorMeta>> input_tensor_metas_;
   std::vector<Symbol<ConsistentTensorMeta>> output_tensor_metas_;
 };
 

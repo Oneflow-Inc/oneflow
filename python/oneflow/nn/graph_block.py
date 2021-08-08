@@ -47,6 +47,7 @@ class Block(object):
         self.config = BlockConfig()
         self._scope = None
         self._prev_scope = None
+        self._debug = False
         if isinstance(value, Module):
             self._type = BlockType.MODULE
             self._is_executing_forward = False
@@ -59,6 +60,8 @@ class Block(object):
                 self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, p))
             for (n, b) in list(value.named_buffers("", False)):
                 self.__setattr__(n, Block(self._name_prefix + self._name + ".", n, b))
+            self._args_repr = []
+            self._outs_repr = []
         elif isinstance(value, Parameter):
             self._type = BlockType.PARAMETER
             self._lazy_origin = None
@@ -117,12 +120,75 @@ class Block(object):
             self._scope = graph_build_util.make_new_block_scope(self.prev_scope, self)
         return self._scope
 
+    def debug(self, mode: bool = True) -> None:
+        self._debug = mode
+        if self._type == BlockType.MODULE:
+
+            def _set_child(d):
+                for (_, n) in d.items():
+                    n.debug(mode)
+
+            _set_child(self._modules)
+            _set_child(self._parameters)
+            _set_child(self._buffers)
+
     def scope_context(self):
         return graph_build_util.BlockScopeContext(self.prev_scope, self.scope)
 
     def __call__(self, *args):
         assert self._type == BlockType.MODULE
+        if self._debug:
+            print(self._shallow_repr())
+
+        for idx, arg in enumerate(args):
+            in_str = (
+                "(INPUT:_"
+                + self.name_prefix
+                + self.name
+                + "-input_"
+                + str(idx)
+                + ":"
+                + arg._meta_repr()
+                + ")"
+            )
+            self._args_repr.append(in_str)
+            if self._debug:
+                print(in_str)
+
+                def _print_state(d):
+                    for (_, n) in d.items():
+                        print(n._shallow_repr())
+
+                _print_state(self._parameters)
+                _print_state(self._buffers)
+
         result = self._origin.__class__.__call__(self, *args)
+
+        outputs = ()
+        if not (type(result) is tuple or type(result) is list):
+            if result is not None:
+                assert type(result) is Tensor
+                outputs = (result,)
+        else:
+            outputs = result
+        for idx, out in enumerate(outputs):
+            out_repr = out._meta_repr() if isinstance(out, Tensor) else str(type(out))
+            out_str = (
+                "(OUTPUT:_"
+                + self.name_prefix
+                + self.name
+                + "-output_"
+                + str(idx)
+                + ":"
+                + out_repr
+                + ")"
+            )
+            if not isinstance(out, Tensor):
+                out_str = "[WARNING]" + out_str
+            self._outs_repr.append(out_str)
+            if self._debug:
+                print(out_str)
+
         return result
 
     def __iter__(self) -> Iterator["Block"]:
@@ -266,6 +332,10 @@ class Block(object):
         lines = None
         if self._type == BlockType.MODULE:
             child_lines = []
+            if len(self._args_repr) > 0:
+                for in_str in self._args_repr:
+                    input_str = add_indent(in_str, 2)
+                    child_lines.append(input_str)
 
             def _append_child(d):
                 for (_, n) in d.items():
@@ -273,25 +343,39 @@ class Block(object):
                     n_str = add_indent(n_str, 2)
                     child_lines.append(n_str)
 
-            _append_child(self._modules)
             _append_child(self._parameters)
             _append_child(self._buffers)
+            _append_child(self._modules)
+
+            if len(self._outs_repr) > 0:
+                for out_str in self._outs_repr:
+                    output_str = add_indent(out_str, 2)
+                    child_lines.append(output_str)
+
             if len(child_lines) > 0:
                 lines = child_lines
-        main_str = (
-            "("
-            + self._name_prefix
-            + self._name
-            + ":"
-            + self._origin.__class__.__name__
-            + ":"
-            + self._type
-            + "): ("
-        )
+        main_str = self._shallow_repr() + ": ("
         if lines is not None:
             main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
+
+    def _shallow_repr(self):
+        shallow_repr = (
+            "("
+            + self._type
+            + ":"
+            + self._name_prefix
+            + self._name
+            + ":"
+            + (
+                self._origin._shallow_repr()
+                if self._type == BlockType.MODULE
+                else (self._origin._meta_repr())
+            )
+            + ")"
+        )
+        return shallow_repr
 
 
 class BlockConfig(object):
