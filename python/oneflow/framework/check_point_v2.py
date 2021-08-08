@@ -35,7 +35,6 @@ import oneflow.framework.id_util as id_util
 import oneflow.framework.remote_blob as remote_blob_util
 import oneflow.framework.runtime_mode as rt_mode
 import oneflow.framework.session_context as session_ctx
-import oneflow.ops.get_variable as get_variable
 import oneflow.ops.initializer_util as initializer_util
 import oneflow.support.async_util as async_util
 from oneflow._oneflow_internal import EagerBlobTrait
@@ -125,23 +124,6 @@ ValueContainer = Union[
 
 def _ElemCnt(shape):
     return np.prod(shape).astype(int).item()
-
-
-@session_ctx.try_init_default_session
-def GetAllVariables() -> Dict[str, oneflow._oneflow_internal.EagerConsistentBlob]:
-    """
-    Get all variables of all jobs as a dict.
-    """
-    sync_default_session_if_normal()
-    sess = session_ctx.GetDefaultSession()
-    interface_ops = sess.interface_ops
-    variables = {}
-    for op in interface_ops:
-        op_attr = sess.OpAttribute4InterfaceOpName(op)
-        if op_attr.op_conf.WhichOneof("op_type") != "variable_conf":
-            continue
-        variables[op] = interface_op_read_and_write.GetEagerInterfaceBlob(op)
-    return variables
 
 
 def _LoadSingleVariable(path: str) -> Optional[FileBackendVariableBlob]:

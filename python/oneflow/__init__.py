@@ -39,8 +39,6 @@ locals()["long"] = oneflow._oneflow_internal.int64
 locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
-from oneflow.core.job.job_conf_pb2 import JobConfigProto
-from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.version import __version__
 
 _DEPRECATED = set()
@@ -74,7 +72,6 @@ import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
-from oneflow.framework.session_util import Session
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
@@ -152,12 +149,6 @@ import oneflow.nn.modules.sinh
 import oneflow.nn.modules.tan
 import oneflow.nn.modules.tensor_ops
 import oneflow.tmp
-from oneflow.advanced.distribute_ops import cast_to_current_logical_view
-from oneflow.deprecated.initializer_util import (
-    truncated_normal_initializer as truncated_normal,
-)
-from oneflow.experimental.namescope import deprecated_name_scope as name_scope
-from oneflow.framework.check_point_v2 import GetAllVariables as get_all_variables
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import LoadVariables as load_variables
 from oneflow.framework.check_point_v2 import save
@@ -235,6 +226,7 @@ from oneflow.nn.modules.constant import ones_like_op as ones_like
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_like_op as zeros_like
 from oneflow.nn.modules.constant import zeros_op as zeros
+from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow.nn.modules.diag import diag_op as diag
 from oneflow.nn.modules.eq import eq_op as eq
@@ -327,10 +319,7 @@ from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
-from oneflow.ops.assign_op import assign
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
-from oneflow.ops.categorical_ordinal_encode_op import categorical_ordinal_encode
-from oneflow.ops.constant_op import constant, constant_like, constant_scalar
 from oneflow.ops.get_variable import api_get_variable as get_variable
 from oneflow.ops.initializer_util import constant_initializer, empty_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer

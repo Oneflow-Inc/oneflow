@@ -17,29 +17,10 @@ from typing import Optional, Sequence
 
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Permute(Module):
-    def __init__(self, *dims) -> None:
-        super().__init__()
-        self.perm = list(*dims)
-
-    def forward(self, x):
-        assert len(self.perm) == len(x.shape)
-        new_perm = []
-        for dim in self.perm:
-            if dim < 0:
-                dim += len(self.perm)
-            assert dim >= 0 and dim < len(
-                x.shape
-            ), "Invalid dim0 {}, len(shape): {}".format(dim, len(x.shape))
-            new_perm.append(dim)
-        return flow.F.transpose(x, perm=new_perm)
 
 
 @register_tensor_op("permute")
-def permute_op(tensor, *dims):
+def permute_op(input, *dims):
     """Returns a view of the original tensor with its dimensions permuted.
 
     Args:
@@ -58,7 +39,18 @@ def permute_op(tensor, *dims):
         flow.Size([6, 2, 5, 3])
 
     """
-    return Permute(dims)(tensor)
+
+    perm = list(dims)
+    assert len(perm) == len(input.shape)
+    new_perm = []
+    for dim in perm:
+        if dim < 0:
+            dim += len(perm)
+        assert dim >= 0 and dim < len(
+            input.shape
+        ), "Invalid dim0 {}, len(shape): {}".format(dim, len(input.shape))
+        new_perm.append(dim)
+    return flow.F.transpose(input, perm=new_perm)
 
 
 if __name__ == "__main__":
