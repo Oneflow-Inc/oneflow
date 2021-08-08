@@ -237,10 +237,6 @@ bool IsDistributionEquals(const ParallelDesc& in_parallel_desc,
       in_tensor_slice_view.ToProto(&in_proto);
       TensorSliceViewProto out_proto;
       out_tensor_slice_view.ToProto(&out_proto);
-      LOG(INFO) << parallel_id << " in_map_id " << in_parallel_id2map_id.at(parallel_id)
-                << " in_tensor_slice_view " << in_proto.DebugString();
-      LOG(INFO) << parallel_id << " out_map_id " << out_parallel_id2map_id.at(parallel_id)
-                << " out_tensor_slice_view " << out_proto.DebugString();
       if (in_tensor_slice_view != out_tensor_slice_view) { return false; }
     }
     return true;
