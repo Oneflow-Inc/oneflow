@@ -15,23 +15,14 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Negative(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.negative(x)
 
 
 @register_tensor_op("negative")
-def negative_op(x):
+def negative_op(input):
     """This operator computes the negative value of Tensor.
 
     Args:
-        x (oneflow.Tensor): A Tensor
+        input (oneflow.Tensor): A Tensor
 
     Returns:
         oneflow.Tensor: The result Tensor
@@ -51,7 +42,7 @@ def negative_op(x):
         tensor([-1. ,  1. , -2.3], dtype=oneflow.float32)
 
     """
-    return Negative()(x)
+    return flow.F.negative(input)
 
 
 if __name__ == "__main__":
