@@ -71,7 +71,7 @@ class BernoulliFunctor {
 class RandNFunctor {
  public:
   RandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const float mean, const float std, const Shape& shape,
+  Maybe<Tensor> operator()(const double mean, const double std, const Shape& shape,
                            const DataType& dtype, const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator) const {
     if (dtype != DataType::kFloat && dtype != DataType::kDouble) {
@@ -79,8 +79,8 @@ class RandNFunctor {
     }
 
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("mean", mean));
-    JUST(attrs.SetAttr<float>("std", std));
+    JUST(attrs.SetAttr<double>("mean", mean));
+    JUST(attrs.SetAttr<double>("std", std));
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
 
@@ -113,13 +113,13 @@ class RandNFunctor {
 class ConsistentRandNFunctor {
  public:
   ConsistentRandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const float mean, const float std, const Shape& shape,
+  Maybe<Tensor> operator()(const double mean, const double std, const Shape& shape,
                            const DataType& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                            const Optional<one::Generator>& generator) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("mean", mean));
-    JUST(attrs.SetAttr<float>("std", std));
+    JUST(attrs.SetAttr<double>("mean", mean));
+    JUST(attrs.SetAttr<double>("std", std));
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
 
