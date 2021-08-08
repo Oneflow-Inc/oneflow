@@ -670,6 +670,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::OpExprInterpContext& ctx,
     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
     const std::string& instr_type_name) {
+  printf("\ninstructions_builder.cpp >> ::LocalCallOpKernel() >> instr_type_name: %s", instr_type_name.c_str());
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(

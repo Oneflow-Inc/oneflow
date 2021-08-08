@@ -516,11 +516,13 @@ void VirtualMachine::DispatchAndPrescheduleInstructions(
   auto* active_stream_list = mut_active_stream_list();
   auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(ready_instruction_list, instruction) {
+    printf("\nvirtual_machine.cpp >> VirtualMachine::DispatchAndPrescheduleInstructions()");
     vm_stat_running_list->PushBack(instruction);
     auto* stream = instruction->mut_stream();
     ready_instruction_list->MoveToDstBack(instruction, stream->mut_running_instruction_list());
     if (stream->is_active_stream_link_empty()) { active_stream_list->PushBack(stream); }
     const auto& stream_type = stream->stream_type();
+    printf("\nvirtual_machine.cpp >> stream_type.SharingVirtualMachineThread() >> %d", stream_type.SharingVirtualMachineThread());
     if (stream_type.SharingVirtualMachineThread()) {
       stream_type.Run(this, instruction);
     } else {
@@ -606,8 +608,11 @@ void VirtualMachine::TryRunFrontSeqInstruction(
   const auto& instr_type_id = instruction->instr_msg().instr_type_id();
   const auto& instruction_type = instr_type_id.instruction_type();
   if (!instruction_type.IsFrontSequential()) { return; }
+  // printf("\nVirtualMachine::TryRunFrontSeqInstruction() >> instruction_type.IsFrontSequential() >> %d", instruction_type.IsFrontSequential());
+  printf("\nVirtualMachine::TryRunFrontSeqInstruction() >> instruction->is_vm_stat_running_instruction_link_empty() >> %d", instruction->is_vm_stat_running_instruction_link_empty());
   if (!instruction->is_vm_stat_running_instruction_link_empty()) { return; }
   const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
+  printf("\nVirtualMachine::TryRunFrontSeqInstruction() >> stream_type.SharingVirtualMachineThread() >> %d", stream_type.SharingVirtualMachineThread());
   if (stream_type.SharingVirtualMachineThread()) {
     stream_type.Run(this, instruction);
     front_seq_list->Erase(instruction);
@@ -653,6 +658,7 @@ void VirtualMachine::Schedule() {
   TryRunFrontSeqInstruction(/*out*/ ready_instruction_list);
   auto* waiting_instruction_list = mut_waiting_instruction_list();
   if (pending_msg_list().size() > 0) {
+    printf("\npending_msg_list().size() >>>>>>>>>>>>>> %zu",pending_msg_list().size());
     TmpPendingInstrMsgList tmp_pending_msg_list;
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
     FilterAndRunInstructionsInAdvance(&tmp_pending_msg_list);

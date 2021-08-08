@@ -113,6 +113,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   bool need_event_record = false;
 
   // Infer devices
+  printf("\neager_mirrored_op_interpreter.cpp >> NaiveInterpret() >> Infer devices");
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
     op_parallel_desc = op_device->parallel_desc_ptr();
@@ -131,6 +132,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   // Infer shapes and dtypes
+  printf("\neager_mirrored_op_interpreter.cpp >> NaiveInterpret() >> Infer shapes and dtypes");
   const auto& device_tag = JUST(op_device->of_type());
   JUST(user_op_expr.InferLogicalShapeAndDType(
       attrs, device_tag,
@@ -164,6 +166,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
+  printf("\neager_mirrored_op_interpreter.cpp >> NaiveInterpret() >> PhysicalRun");
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     if (need_event_record) {

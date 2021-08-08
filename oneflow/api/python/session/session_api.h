@@ -39,6 +39,7 @@ inline void CreateMultiClientSessionContext() {
 }
 
 inline void InitMultiClientSessionContext(const std::string& config_proto_str) {
+  printf("\nsession_api.h >> InitMultiClientSessionContext()");
   return oneflow::InitMultiClientSessionContext(config_proto_str).GetOrThrow();
 }
 

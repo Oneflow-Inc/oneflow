@@ -1286,8 +1286,10 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
     CHECK(op_name2is_mirrored.find(op_conf.name()) != op_name2is_mirrored.end());
     bool is_mirrored = op_name2is_mirrored.at(op_conf.name());
     if (is_mirrored) {
+      printf("\njob_build_and_infer_ctx.cpp >> is mirrored");
       CHECK_JUST(AddAndInferMirroredOp(op_conf));
     } else {
+      printf("\njob_build_and_infer_ctx.cpp >> is consistent");
       CHECK_JUST(AddAndInferConsistentOp(op_conf));
     }
   });
