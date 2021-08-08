@@ -15,16 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Diag(Module):
-    def __init__(self, diagonal=0):
-        super().__init__()
-        self.diagonal = diagonal
-
-    def forward(self, input):
-        return flow.F.diag(input, self.diagonal)
 
 
 def diag_op(input, diagonal=0):
@@ -58,7 +48,7 @@ def diag_op(input, diagonal=0):
         >>> flow.diag(input)
         tensor([1., 5., 9.], dtype=oneflow.float32)
     """
-    return Diag(diagonal)(input)
+    return flow.F.diag(input, diagonal)
 
 
 @register_tensor_op("diag")
@@ -68,7 +58,7 @@ def diag_op_tensor(input, diagonal=0):
     See :func:`oneflow.diag`
     
     """
-    return Diag(diagonal)(input)
+    return flow.F.diag(input, diagonal)
 
 
 if __name__ == "__main__":
