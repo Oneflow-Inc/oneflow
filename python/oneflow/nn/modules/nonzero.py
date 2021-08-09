@@ -22,7 +22,7 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-def nonzero_op(input, as_tuple = False):
+def nonzero_op(input, as_tuple=False):
     """nonzero(input, *, out=None, as_tuple=False) -> LongTensor or tuple of LongTensors
 
     .. note::
@@ -105,13 +105,13 @@ def nonzero_op(input, as_tuple = False):
     slice_tup_list = [[0, int(size.numpy()), 1]]
     res = flow.slice(res, slice_tup_list=slice_tup_list)
     if as_tuple:
-        return tuple([flow.F.transpose(res,[1,0])[x] for x in range(res.shape[1])])
+        return tuple([flow.F.transpose(res, [1, 0])[x] for x in range(res.shape[1])])
     else:
         return res
 
 
 @register_tensor_op("nonzero")
-def nonzero_tensor_op(input, as_tuple = False):
+def nonzero_tensor_op(input, as_tuple=False):
     """
 
     nonzero(input, as_tuple=False) -> Tensor
@@ -126,4 +126,3 @@ if __name__ == "__main__":
     import doctest
 
     doctest.testmod(raise_on_error=True)
-

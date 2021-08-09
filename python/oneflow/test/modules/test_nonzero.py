@@ -24,19 +24,23 @@ import oneflow as flow
 import oneflow.unittest
 from automated_test_util import *
 
+
 def np_nonzero(input, as_tuple):
     if as_tuple:
         return np.nonzero(input)
     else:
         return np.transpose(np.nonzero(input))
 
+
 def _test_nonzero(test_case, shape, as_tuple, device):
     np_input = np.random.randn(*shape)
     input = flow.Tensor(np_input, device=flow.device(device))
-    of_out = flow.nonzero(input,as_tuple)
-    np_out = np_nonzero(np_input,as_tuple)
+    of_out = flow.nonzero(input, as_tuple)
+    np_out = np_nonzero(np_input, as_tuple)
     if as_tuple:
-        test_case.assertTrue(np.allclose(tuple(x.numpy() for x in of_out), np_out, 0.0001, 0.0001))
+        test_case.assertTrue(
+            np.allclose(tuple(x.numpy() for x in of_out), np_out, 0.0001, 0.0001)
+        )
     else:
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
 
@@ -58,6 +62,7 @@ class TestNonzero(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=random(2, 5).to(int)).to(device)
         y = torch.nonzero(x)
         return y
+
 
 if __name__ == "__main__":
     unittest.main()
