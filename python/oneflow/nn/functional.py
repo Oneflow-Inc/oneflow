@@ -14,3 +14,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.modules.interpolate import interpolate
+from oneflow.nn.modules.one_hot import one_hot_op as one_hot

@@ -22,24 +22,27 @@ from oneflow.framework.tensor import register_tensor_op
 
 
 class One_hot(Module):
-    def __init__(self, on_value=1, off_value=0, depth, dtype=None) -> None:
+    def __init__(self, depth=-1, on_value=1, off_value=0, dtype=None) -> None:
         super().__init__()
+        self.depth = depth       
         self.on_value = on_value
         self.off_value = off_value
-        self.depth = depth
         if dtype == None:
-            dtype = flow.int32
+            dtype = flow.int64
         self.dtype = dtype
 
     def forward(self, x):
-        return flow.F.one_hot(x, self.on_value, self.off_value, self.depth, self.dtype)
-
-
+        if self.depth == -1:
+            depth = flow.max(x) + 1
+            depth = depth.numpy()
+        else:
+            depth = self.depth
+        return flow.F.one_hot(x, depth, self.on_value, self.off_value, self.dtype)
 
 
 def one_hot_op(
     x, 
-    depth: int, 
+    depth=-1, 
     on_value: Union[int, float] = 1,
     off_value: Union[int, float] = 0,
     dtype: Optional[flow.dtype] = None,
@@ -79,7 +82,7 @@ def one_hot_op(
                 [0., 0., 1.]], dtype=oneflow.float32)
     
     """
-    return One_hot(on_value, off_value, depth, dtype)(x)
+    return One_hot(depth, on_value, off_value, dtype)(x)
 
 
 if __name__ == "__main__":
