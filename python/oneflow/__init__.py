@@ -139,9 +139,6 @@ import oneflow.nn.modules.flip
 import oneflow.nn.modules.floor
 import oneflow.nn.modules.greater
 import oneflow.nn.modules.greater_equal
-import oneflow.nn.modules.logical_and
-import oneflow.nn.modules.logical_or
-import oneflow.nn.modules.logical_xor
 import oneflow.nn.modules.in_top_k
 import oneflow.nn.modules.masked_select
 import oneflow.nn.modules.math_ops

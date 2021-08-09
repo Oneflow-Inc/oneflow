@@ -43,6 +43,8 @@ def logical_xor_op(input, other):
         tensor([0, 0, 1], dtype=oneflow.int8)
 
     """
+    assert input.shape == other.shape, "shape of input and other should be same"
+    
     if other.dtype != input.dtype:
         other = flow.cast(other, input.dtype)
     return flow.F.broadcast_logical_xor(input, other)
