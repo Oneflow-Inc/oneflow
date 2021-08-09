@@ -60,5 +60,7 @@ int32_t main(int32_t argc, char** argv) {
   registry.insert<mlir::linalg::LinalgDialect>();
   registry.insert<mlir::memref::MemRefDialect>();
   registry.insert<mlir::LLVM::LLVMDialect>();
+  registry.insert<mlir::gpu::GPUDialect>();
+  registry.insert<mlir::AffineDialect>();
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }

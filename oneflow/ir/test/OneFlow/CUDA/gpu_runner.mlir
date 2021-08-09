@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-linalg-to-llvm \
+// RUN: oneflow-opt %s --convert-linalg-to-parallel-loops \
 // RUN:   -gpu-kernel-outlining \
 // RUN:   -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,gpu-to-cubin)' \
 // RUN:   -gpu-to-llvm \
@@ -17,7 +17,7 @@ module  {
     %arg1 = memref.alloc() :  memref<1xf32>
     %arg2 = memref.alloc() :  memref<96x96xf32>
 
-    %0 = linalg.collapse_shape %arg1 [] : memref<1xf32> into memref<f32>
+    %0 = memref.collapse_shape %arg1 [] : memref<1xf32> into memref<f32>
 
     %cast_arg0 = memref.cast %arg0 : memref<96x96xi64> to memref<*xi64>
     gpu.host_register %cast_arg0 : memref<*xi64>
