@@ -19,6 +19,7 @@ import traceback
 from typing import List, Optional, Sequence, Tuple, Union
 
 import oneflow as flow
+from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
@@ -721,6 +722,7 @@ class COCOReader(Module):
 
         # COCOReader has multiple output, so it return a TensorTuple
         # convert TensorTuple to tuple of Tensor
+        assert isinstance(outputs, TensorTuple)
         ret = tuple(out for out in outputs)
         return ret
 
