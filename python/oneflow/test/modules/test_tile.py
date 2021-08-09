@@ -26,14 +26,14 @@ class TestTile(flow.unittest.TestCase):
     @autotest()
     def test_flow_tile_with_random_data(test_case):
         x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
-        reps = (random(1, 5), random(1, 5), random(1, 5))
+        reps = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
         z = torch.tile(x, reps)
         return z
 
     @autotest()
     def test_flow_tensor_tile_with_random_data(test_case):
         x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
-        reps = (random(1, 5), random(1, 5), random(1, 5))
+        reps = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
         y = x.tile(reps)
         return y
 

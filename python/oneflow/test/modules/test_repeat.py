@@ -23,17 +23,9 @@ from automated_test_util import *
 @flow.unittest.skip_unless_1n1d()
 class TestRepeat(flow.unittest.TestCase):
     @autotest()
-    def test_flow_repeat_with_random_data(test_case):
-        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
-
-        sizes = (random(1, 5), random(1, 5), random(1, 5))
-        z = torch.repeat(x, sizes)
-        return z
-
-    @autotest()
     def test_flow_tensor_repeat_with_random_data(test_case):
         x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
-        sizes = (random(1, 5), random(1, 5), random(1, 5))
+        sizes = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
         y = x.repeat(sizes)
         return y
 
