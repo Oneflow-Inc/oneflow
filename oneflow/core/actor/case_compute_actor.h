@@ -39,7 +39,6 @@ class CaseCompActor final : public CompActor {
   bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
-  bool CheckOutputActId(int64_t regst_desc_id) const override;
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});

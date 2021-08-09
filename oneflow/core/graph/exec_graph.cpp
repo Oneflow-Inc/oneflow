@@ -76,8 +76,8 @@ Maybe<void> CheckPhysicalBlobDesc(const BlobDesc& logical,
                                   const ParallelDesc& parallel_desc,
                                   const ParallelContext* parallel_ctx, const BlobDesc& physical) {
   CHECK_EQ_OR_RETURN(physical.shape(),
-                     *CHECK_JUST(GetPhysicalShape(logical.shape(), parallel_distribution,
-                                                  parallel_desc, *parallel_ctx)));
+                     *JUST(GetPhysicalShape(logical.shape(), parallel_distribution, parallel_desc,
+                                            *parallel_ctx)));
   return Maybe<void>::Ok();
 }
 
@@ -87,16 +87,16 @@ Maybe<void> CheckPhysicalBlobDesc(
     const cfg::ParallelDistributionSignature* parallel_distribution_signature,
     const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& GetPhysicalBlobDesc) {
-  const std::shared_ptr<const ParallelDesc> op_parallel_desc = CHECK_JUST(op.GetOpParallelDesc());
+  const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(op.GetOpParallelDesc());
   for (const auto& bn : bns) {
     const BlobDesc* physical_blob_desc = GetPhysicalBlobDesc(bn);
     if (physical_blob_desc == nullptr) {
       // TODO(liujuncheng): remove this hotfix
       continue;
     }
-    if (*CHECK_JUST(op.GetParallelDesc4BnInOp(bn)) == *op_parallel_desc) {
-      CHECK_JUST(CheckPhysicalBlobDesc(
-          *CHECK_JUST(GetLogicalBlobDesc(bn)),
+    if (*JUST(op.GetParallelDesc4BnInOp(bn)) == *op_parallel_desc) {
+      JUST(CheckPhysicalBlobDesc(
+          *JUST(GetLogicalBlobDesc(bn)),
           parallel_distribution_signature->bn_in_op2parallel_distribution().at(bn),
           *op_parallel_desc, parallel_ctx, *physical_blob_desc));
     }
