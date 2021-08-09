@@ -292,12 +292,12 @@ class Graph(object):
                         seq_eager_outputs.append(eager_out)
                         eager_tensor_outputs.append(eager_out)
                         eager_output_op_names.append(op_name)
-                        out_str = "(OUTPUT:" + op_name + ":" + out._meta_repr() + ")"
+                        out_str = "(OUTPUT:" + op_name + ":" + out[i]._meta_repr() + ")"
                         self._outs_repr.append(out_str)
                         if self._debug:
                             print(out_str)
                     eager_outputs.append(seq_eager_outputs)
-                elif isinstance(out, None):
+                elif out is None:
                     op_name = "_" + self.name + "-output_" + str(idx)
                     eager_outputs.append(None)
                     out_str = "[WARNING](OUTPUT:" + op_name + ":" + str(type(out)) + ")"
