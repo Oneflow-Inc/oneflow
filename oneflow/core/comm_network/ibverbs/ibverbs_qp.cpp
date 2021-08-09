@@ -69,16 +69,17 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK(send_msg_buf_.empty());
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
-  recv_msg_buf_ = new MessagePool(pd_,kDefaultMessageSize,queue_depth);
-  sendMsgBuf_ = new MessagePool(pd_,kDefaultMemBlockSize, queue_depth);
+  recv_msg_buf_ = new MessagePool(pd_,queue_depth);
+  sendMsgBuf_ = new MessagePool(pd_, queue_depth);
 }
 
 IBVerbsQP::~IBVerbsQP() {
   CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
-  /*while (send_msg_buf_.empty() == false) {
-    delete send_msg_buf_.front();
-    send_msg_buf_.pop();
-  }*/
+  // while (send_msg_buf_.empty() == false) {
+  //   delete send_msg_buf_.front();
+  //   send_msg_buf_.pop();
+  // }
+  // while(recv_msg_buf_.em)
   //todo lambda:这里要加上recv_msg_buf_和sendMsgbuf_的析构
  // for (ActorMsgMR* msg_mr : recv_msg_buf_) { delete msg_mr; }
 }
@@ -146,22 +147,12 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-  if(recv_msg_buf_->isEmpty() == true) {
-    recv_msg_buf_->RegisterMessagePool();
     std::queue<ActorMsgMR *> messageBuf = recv_msg_buf_->getMessageBuf();
     while(messageBuf.empty() == false) {
       ActorMsgMR * msg_mr = std::move(messageBuf.front());
       messageBuf.pop();
       PostRecvRequest(msg_mr);
     } 
-  } else {
-    std::queue<ActorMsgMR *> messageBuf = recv_msg_buf_->getMessageBuf();
-    while(messageBuf.empty() == false) {
-      ActorMsgMR * msg_mr = std::move(messageBuf.front());
-      messageBuf.pop();
-      PostRecvRequest(msg_mr);
-    } 
-  }
 }
 
 void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,

@@ -57,7 +57,9 @@ class MessagePool final {
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
     MessagePool() = default; //todo:这里可能要修改
     ~MessagePool() = default;//todo:这里可能要修改
-    MessagePool(ibv_pd* pd,uint32_t size, uint32_t number_of_message): pd_(pd),num_of_message_(number_of_message) {}
+    MessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd),num_of_message_(number_of_message) {
+      RegisterMessagePool();
+    }
     //以后这里可以切割内存，注册一块大的，再不断的分割
     void RegisterMessagePool() {
       for(int i =0; i < num_of_message_; i++){
@@ -141,7 +143,6 @@ class MessagePool final {
 
   private:
     ibv_pd* pd_;
- //   uint32_t size_;
     uint32_t num_of_message_;
     std::queue<ActorMsgMR*> message_buf_;
 };
