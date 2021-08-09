@@ -23,48 +23,51 @@ from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPooling(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=100)
     def test_maxpool1d_with_random_data(test_case):
         m = torch.nn.MaxPool1d(
             kernel_size=random(4, 6).to(_size_1_t),
-            stride=random(1, 3).to(_size_1_t),
-            padding=random(0, 2).to(_size_1_t),
-            dilation=random(1, 3).to(_size_1_t),
+            stride=random(1, 3).to(_size_1_t) | nothing(),
+            padding=random(1, 3).to(_size_1_t) | nothing(),
+            dilation=random(2, 4).to(_size_1_t) | nothing(),
+            ceil_mode=random()
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=3, dim2=random(10, 12)).to(device)
+        x = random_pytorch_tensor(ndim=3, dim2=random(20, 22)).to(device)
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=100)
     def test_maxpool2d_with_random_data(test_case):
         m = torch.nn.MaxPool2d(
             kernel_size=random(4, 6).to(_size_2_t),
-            stride=random(1, 3).to(_size_2_t),
-            padding=random(0, 2).to(_size_2_t),
-            dilation=random(1, 3).to(_size_2_t),
+            stride=random(1, 3).to(_size_2_t) | nothing(),
+            padding=random(1, 3).to(_size_2_t) | nothing(),
+            dilation=random(2, 4).to(_size_2_t) | nothing(),
+            ceil_mode=random()
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim2=random(10, 12), dim3=random(10, 12)).to(device)
+        x = random_pytorch_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=100)
     def test_maxpool3d_with_random_data(test_case):
         m = torch.nn.MaxPool3d(
             kernel_size=random(4, 6).to(_size_3_t),
-            stride=random(1, 3).to(_size_3_t),
-            padding=random(0, 2).to(_size_3_t),
-            dilation=random(1, 3).to(_size_3_t),
+            stride=random(1, 3).to(_size_3_t) | nothing(),
+            padding=random(1, 3).to(_size_3_t) | nothing(),
+            dilation=random(2, 4).to(_size_3_t) | nothing(),
+            ceil_mode=random()
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim2=random(10, 12), dim3=random(10, 12), dim4=random(10, 12)).to(device)
+        x = random_pytorch_tensor(ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)).to(device)
         y = m(x)
         return y
 

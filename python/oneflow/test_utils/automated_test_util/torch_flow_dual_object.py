@@ -230,9 +230,9 @@ def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05):
                 break
     assert checker is not None, (
         "checker not found for type "
-        + type(dual_object.pytorch)
+        + str(type(dual_object.pytorch))
         + " and "
-        + type(dual_object.oneflow)
+        + str(type(dual_object.oneflow))
     )
     return checker(dual_object.pytorch, dual_object.oneflow, rtol, atol)
 
@@ -248,7 +248,7 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
         flow_grad = flow_tensor.grad.numpy()
         if not np.allclose(torch_grad, flow_grad, rtol=rtol, atol=atol):
             print(
-                "Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
+                f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
             return False
     return np.allclose(
