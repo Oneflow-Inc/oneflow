@@ -22,7 +22,6 @@ from automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestTile(flow.unittest.TestCase):
-
     @autotest()
     def test_flow_tile_with_random_data(test_case):
         x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)

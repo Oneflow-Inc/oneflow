@@ -25,9 +25,7 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
     @autotest()
     def test_avgpool1d_with_random_data(test_case):
         m = torch.nn.AvgPool1d(
-            kernel_size=random(4, 6),
-            stride=random(1, 3),
-            padding=random(0, 2),
+            kernel_size=random(4, 6), stride=random(1, 3), padding=random(0, 2),
         )
         m.train(random())
         device = random_device()
@@ -39,28 +37,28 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
     @autotest()
     def test_avgpool2d_with_random_data(test_case):
         m = torch.nn.AvgPool2d(
-            kernel_size=random(4, 6),
-            stride=random(1, 3),
-            padding=random(0, 2),
+            kernel_size=random(4, 6), stride=random(1, 3), padding=random(0, 2),
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim2=random(10, 12), dim3=random(10, 12)).to(device)
+        x = random_pytorch_tensor(ndim=4, dim2=random(10, 12), dim3=random(10, 12)).to(
+            device
+        )
         y = m(x)
         return y
 
     @autotest()
     def test_avgpool3d_with_random_data(test_case):
         m = torch.nn.AvgPool3d(
-            kernel_size=random(4, 6),
-            stride=random(1, 3),
-            padding=random(0, 2),
+            kernel_size=random(4, 6), stride=random(1, 3), padding=random(0, 2),
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim2=random(10, 12), dim3=random(10, 12), dim4=random(10, 12)).to(device)
+        x = random_pytorch_tensor(
+            ndim=5, dim2=random(10, 12), dim3=random(10, 12), dim4=random(10, 12)
+        ).to(device)
         y = m(x)
         return y
 

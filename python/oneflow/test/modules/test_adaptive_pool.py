@@ -27,7 +27,9 @@ from automated_test_util import *
 NoneType = type(None)
 # Not the same as those in PyTorch because 'output_size' cannot be NoneType (even in 'torch.nn.AdaptiveAvgPoolXd')
 _size_2_opt_t_not_none = Union[int, Tuple[Union[int, NoneType], Union[int, NoneType]]]
-_size_3_opt_t_not_none = Union[int, Tuple[Union[int, NoneType], Union[int, NoneType], Union[int, NoneType]]]
+_size_3_opt_t_not_none = Union[
+    int, Tuple[Union[int, NoneType], Union[int, NoneType], Union[int, NoneType]]
+]
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -54,7 +56,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
 
     @unittest.skipIf(
         version.parse(torch_original.__version__) < version.parse("1.10.0"),
-        "GPU version 'nn.AdaptiveAvgPool3d' has a bug in PyTorch before '1.10.0'"
+        "GPU version 'nn.AdaptiveAvgPool3d' has a bug in PyTorch before '1.10.0'",
     )
     @autotest()
     def test_adaptive_avgpool3d(test_case):

@@ -49,7 +49,9 @@ class TestMaxPooling(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim2=random(10, 12), dim3=random(10, 12)).to(device)
+        x = random_pytorch_tensor(ndim=4, dim2=random(10, 12), dim3=random(10, 12)).to(
+            device
+        )
         y = m(x)
         return y
 
@@ -64,7 +66,9 @@ class TestMaxPooling(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim2=random(10, 12), dim3=random(10, 12), dim4=random(10, 12)).to(device)
+        x = random_pytorch_tensor(
+            ndim=5, dim2=random(10, 12), dim3=random(10, 12), dim4=random(10, 12)
+        ).to(device)
         y = m(x)
         return y
 
