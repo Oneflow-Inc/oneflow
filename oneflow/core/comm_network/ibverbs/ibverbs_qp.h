@@ -34,8 +34,16 @@ class ActorMsgMR final {
   }
   ~ActorMsgMR() { mem_desc_.reset(); }
 
-  const ActorMsg& msg() const { return msg_; }
-  void set_msg(const ActorMsg& val) { msg_ = val; }
+  ActorMsg& msg()  {
+    void * mem_ptr = mem_desc_->mem_ptr();
+    std::memcpy((char*)&msg_, mem_ptr, sizeof(msg_));
+  }
+
+  void set_msg(const ActorMsg& val) {
+    void * mem_ptr = mem_desc_->mem_ptr();
+    std::memcpy(mem_ptr, (char*)&val, sizeof(val));
+  }
+
   const IBVerbsMemDesc& mem_desc() const { return *mem_desc_; }
 
  private:
@@ -62,8 +70,15 @@ class MessagePool final {
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
     void RegisterMessagePool() {
+      std::uint64_t RegisterMemorySize  = sizeof(ActorMsg) * num_of_message_;
+      std::uint64_t ActorMsgSize = sizeof(ActorMsg);
+      void * addr = malloc(RegisterMemorySize);
+      IBVerbsMemDesc *  mem_desc = new IBVerbsMemDesc(pd_, addr, RegisterMemorySize ); 
+       const ibv_mr* mr = mem_desc->mr();
       for(uint32_t i =0; i < num_of_message_; i++){
-        ActorMsgMR * msg_mr = new ActorMsgMR(pd_);
+        ibv_mr * split_mr =(ibv_mr*) (mr + ActorMsgSize * i);
+        IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(split_mr,addr + ActorMsgSize * i,ActorMsgSize);
+        ActorMsgMR * msg_mr= new ActorMsgMR(mem_desc);
         message_buf_.push(msg_mr);
     }
   }
