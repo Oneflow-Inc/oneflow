@@ -197,18 +197,17 @@ bool IsParallelDistributionTransposed(const Shape& in_parallel_hierarchy,
     return true;
   } else if (in_parallel_hierarchy.NumAxes() == 3) {
     for (int64_t i = 0; i < 2; ++i) {
-      for (int64_t j = i + 1; i < 3; ++j) {
-        if (!(in_parallel_hierarchy.At(i) == out_parallel_hierarchy.At(j)
-              && in_parallel_hierarchy.At(j) == out_parallel_hierarchy.At(i)
-              && in_parallel_distribution.sbp_parallel(i)
-                     == out_parallel_distribution.sbp_parallel(j)
-              && in_parallel_distribution.sbp_parallel(j)
-                     == out_parallel_distribution.sbp_parallel(i))) {
-          return false;
+      for (int64_t j = i + 1; j < 3; ++j) {
+        if (in_parallel_hierarchy.At(i) == out_parallel_hierarchy.At(j)
+            && in_parallel_hierarchy.At(j) == out_parallel_hierarchy.At(i)
+            && in_parallel_distribution.sbp_parallel(i) == out_parallel_distribution.sbp_parallel(j)
+            && in_parallel_distribution.sbp_parallel(j)
+                   == out_parallel_distribution.sbp_parallel(i)) {
+          return true;
         }
       }
     }
-    return true;
+    return false;
   } else {
     return false;
   }
@@ -233,10 +232,6 @@ bool IsDistributionEquals(const ParallelDesc& in_parallel_desc,
       const TensorSliceView& out_tensor_slice_view =
           GetTensorSliceView4ParallelId(*out_parallel_desc.hierarchy(), out_parallel_distribution,
                                         logical_shape, out_parallel_id2map_id.at(parallel_id));
-      TensorSliceViewProto in_proto;
-      in_tensor_slice_view.ToProto(&in_proto);
-      TensorSliceViewProto out_proto;
-      out_tensor_slice_view.ToProto(&out_proto);
       if (in_tensor_slice_view != out_tensor_slice_view) { return false; }
     }
     return true;
@@ -262,12 +257,12 @@ class DistributionEqualsTskGphBuilder final : public HierarchicalSubTskGphBuilde
                                       const Shape& time_shape) const override {
     if (IsDistributionEquals(in_parallel_desc, out_parallel_desc, in_parallel_distribution,
                              out_parallel_distribution, logical_blob_desc.shape())) {
-      LOG(ERROR) << "transposed deviceset 121" << in_parallel_distribution.DebugString() << "  "
-                 << out_parallel_distribution.DebugString();
-      return sub_tsk_gph_builder_->Build(
-          ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
-          out_parallel_desc, lbi, logical_blob_desc, in_parallel_distribution.sbp_parallel(1),
-          out_parallel_distribution.sbp_parallel(0), time_shape);
+      SbpParallel one2one_sbp_parallel;
+      one2one_sbp_parallel.mutable_broadcast_parallel();
+      return sub_tsk_gph_builder_->Build(ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks,
+                                         in_parallel_desc, out_parallel_desc, lbi,
+                                         logical_blob_desc, one2one_sbp_parallel,
+                                         one2one_sbp_parallel, time_shape);
     } else {
       return Error::BoxingNotSupportedError();
     }
