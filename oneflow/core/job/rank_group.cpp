@@ -15,11 +15,25 @@ limitations under the License.
 */
 #include <map>
 #include "oneflow/core/job/rank_group.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
+
+/*static*/ Maybe<Symbol<RankGroup>> RankGroup::New(Symbol<ParallelDesc> parallel_desc) {
+  CHECK_EQ_OR_RETURN(parallel_desc->sorted_machine_ids().size(), parallel_desc->parallel_num());
+  static thread_local HashMap<Symbol<ParallelDesc>, Symbol<RankGroup>> map;
+  auto iter = map.find(parallel_desc);
+  if (iter == map.end()) {
+    const auto& sorted_machine_ids = parallel_desc->sorted_machine_ids();
+    std::set<int64_t> machine_ids{sorted_machine_ids.begin(), sorted_machine_ids.end()};
+    const auto& rank_group = JUST(New(machine_ids));
+    iter = map.emplace(parallel_desc, rank_group).first;
+  }
+  return iter->second;
+}
 
 /*static*/ Maybe<Symbol<RankGroup>> RankGroup::New(const std::set<int64_t>& ranks) {
   static thread_local std::map<std::set<int64_t>, Symbol<RankGroup>> map;

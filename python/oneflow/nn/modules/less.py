@@ -15,32 +15,15 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Less(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        if x.dtype != flow.float32:
-            x = flow.cast(x, flow.float32)
-        if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor(
-                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
-            )
-        if y.dtype != flow.float32:
-            y = flow.cast(y, flow.float32)
-        return flow.F.broadcast_less(x, y)
 
 
 @register_tensor_op("lt")
-def less_op(x, y):
-    """Returns the truth value of :math:`x < y` element-wise.
+def less_op(input, other):
+    """Returns the truth value of :math:`input < other` element-wise.
 
     Args:
-        x (oneflow.Tensor): A Tensor
-        y (oneflow.Tensor): A Tensor
+        input (oneflow.Tensor): A Tensor
+        other (oneflow.Tensor): A Tensor
 
     Returns:
         oneflow.Tensor: A Tensor with int8 type.
@@ -60,7 +43,15 @@ def less_op(x, y):
         tensor([0, 0, 1], dtype=oneflow.int8)
 
     """
-    return Less()(x, y)
+    if input.dtype != flow.float32:
+        input = flow.cast(input, flow.float32)
+    if isinstance(other, int) or isinstance(other, float):
+        other = flow.Tensor(
+            [float(other)], dtype=flow.float32, device=flow.device(input.device.type)
+        )
+    if other.dtype != flow.float32:
+        other = flow.cast(other, flow.float32)
+    return flow.F.broadcast_less(input, other)
 
 
 if __name__ == "__main__":
