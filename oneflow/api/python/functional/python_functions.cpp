@@ -339,6 +339,162 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
+py::object PyEqual(py::args py_args, py::kwargs py_kwargs) {
+  // "broadcast_equal(Tensor x, Tensor y)"
+  // "scalar_logical_equal(Tensor in, Scalar scalar)"
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+        << "Inputs must have one tensor at least.";
+    auto a = JUST(PyUnpackTensor(input));
+
+    if (PyScalarCheck(other)) {
+      auto b = *JUST(PyUnpackScalar(other));
+      return functional::ScalarLogicalEqual(a, b);
+    } else {
+      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::BroadcastEqual(a, b);
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
+py::object PyNotEqual(py::args py_args, py::kwargs py_kwargs) {
+  // "broadcast_not_equal(Tensor x, Tensor y)"
+  // "scalar_logical_not_equal(Tensor in, Scalar scalar)"
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+        << "Inputs must have one tensor at least.";
+    auto a = JUST(PyUnpackTensor(input));
+
+    if (PyScalarCheck(other)) {
+      auto b = *JUST(PyUnpackScalar(other));
+      return functional::ScalarLogicalNotEqual(a, b);
+    } else {
+      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::BroadcastNotEqual(a, b);
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
+py::object PyGreater(py::args py_args, py::kwargs py_kwargs) {
+  // "broadcast_greater(Tensor x, Tensor y)"
+  // "scalar_logical_greater(Tensor in, Scalar scalar)"
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+        << "Inputs must have one tensor at least.";
+    auto a = JUST(PyUnpackTensor(input));
+
+    if (PyScalarCheck(other)) {
+      auto b = *JUST(PyUnpackScalar(other));
+      return functional::ScalarLogicalGreater(a, b);
+    } else {
+      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::BroadcastGreater(a, b);
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
+py::object PyGreaterEqual(py::args py_args, py::kwargs py_kwargs) {
+  // "broadcast_greater_equal(Tensor x, Tensor y)"
+  // "scalar_logical_greater_equal(Tensor in, Scalar scalar)"
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+        << "Inputs must have one tensor at least.";
+    auto a = JUST(PyUnpackTensor(input));
+
+    if (PyScalarCheck(other)) {
+      auto b = *JUST(PyUnpackScalar(other));
+      return functional::ScalarLogicalGreaterEqual(a, b);
+    } else {
+      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::BroadcastGreaterEqual(a, b);
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
+py::object PyLess(py::args py_args, py::kwargs py_kwargs) {
+  // "broadcast_less(Tensor x, Tensor y)"
+  // "scalar_logical_less(Tensor in, Scalar scalar)"
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+        << "Inputs must have one tensor at least.";
+    auto a = JUST(PyUnpackTensor(input));
+
+    if (PyScalarCheck(other)) {
+      auto b = *JUST(PyUnpackScalar(other));
+      return functional::ScalarLogicalLess(a, b);
+    } else {
+      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::BroadcastLess(a, b);
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
+py::object PyLessEqual(py::args py_args, py::kwargs py_kwargs) {
+  // "broadcast_less_equal(Tensor x, Tensor y)"
+  // "scalar_logical_less_equal(Tensor in, Scalar scalar)"
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+        << "Inputs must have one tensor at least.";
+    auto a = JUST(PyUnpackTensor(input));
+
+    if (PyScalarCheck(other)) {
+      auto b = *JUST(PyUnpackScalar(other));
+      return functional::ScalarLogicalLessEqual(a, b);
+    } else {
+      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::BroadcastLessEqual(a, b);
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
 }  // namespace functional
 }  // namespace one
 
@@ -352,6 +508,13 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("pow", &functional::PyPow);
   m.def("clamp", &functional::PyClamp);
   m.def("scatter", &functional::PyScatter);
+  m.def("equal", &functional::PyEqual);
+  m.def("not_equal", &functional::PyNotEqual);
+  m.def("greater", &functional::PyGreater);
+  m.def("greater_equal", &functional::PyGreaterEqual);
+  m.def("less", &functional::PyLess);
+  m.def("less_equal", &functional::PyLessEqual);
+
 }
 
 }  // namespace oneflow
