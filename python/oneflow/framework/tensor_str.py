@@ -56,10 +56,9 @@ class _Formatter(object):
             tensor_view = tensor.reshape([-1])
 
         if not self.floating_dtype:
-            # TODO: verify int type tensor
-            max_value = tensor.abs().max().numpy()
-            value_str = "{}".format(max_value)
-            self.max_width = max(self.max_width, len(value_str))
+            for value in tensor_view:
+                value_str = '{}'.format(value)
+                self.max_width = max(self.max_width, len(value_str))
 
         else:
             nonzero_finite_vals = flow.masked_select(tensor_view, tensor_view.ne(0))
@@ -68,8 +67,8 @@ class _Formatter(object):
                 return
 
             nonzero_finite_abs = nonzero_finite_vals.abs()
-            nonzero_finite_min = nonzero_finite_abs.min().numpy()
-            nonzero_finite_max = nonzero_finite_abs.max().numpy()
+            nonzero_finite_min = nonzero_finite_abs.min().numpy().astype(float64)
+            nonzero_finite_max = nonzero_finite_abs.max().numpy().astype(float64)
 
             for value in nonzero_finite_abs.numpy():
                 if value != np.ceil(value):
@@ -83,15 +82,13 @@ class _Formatter(object):
                     or nonzero_finite_max > 1.0e8
                 ):
                     self.sci_mode = True
-                    value_str = (
-                        ("{{:.{}e}}")
-                        .format(PRINT_OPTS.precision)
-                        .format(nonzero_finite_max)
-                    )
-                    self.max_width = max(self.max_width, len(value_str))
+                    for value in nonzero_finite_vals:
+                        value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
+                        self.max_width = max(self.max_width, len(value_str))
                 else:
-                    value_str = ("{:.0f}").format(nonzero_finite_max)
-                    self.max_width = max(self.max_width, len(value_str))
+                     for value in nonzero_finite_vals:
+                        value_str = ('{:.0f}').format(value)
+                        self.max_width = max(self.max_width, len(value_str) + 1)
             else:
                 if (
                     nonzero_finite_max / nonzero_finite_min > 1000.0
@@ -99,21 +96,13 @@ class _Formatter(object):
                     or nonzero_finite_min < 1.0e-4
                 ):
                     self.sci_mode = True
-                    for value in (nonzero_finite_max, nonzero_finite_min):
-                        value_str = (
-                            ("{{:.{}e}}").format(PRINT_OPTS.precision).format(value)
-                        )
+                    for value in nonzero_finite_vals:
+                        value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
                         self.max_width = max(self.max_width, len(value_str))
                 else:
-                    value_str = (
-                        ("{{:.{}f}}")
-                        .format(PRINT_OPTS.precision)
-                        .format(nonzero_finite_max)
-                    )
-                    self.max_width = max(self.max_width, len(value_str))
-
-        # add singal position
-        self.max_width += 1
+                    for value in nonzero_finite_vals:
+                        value_str = ('{{:.{}f}}').format(PRINT_OPTS.precision).format(value)
+                        self.max_width = max(self.max_width, len(value_str))
 
         if PRINT_OPTS.sci_mode is not None:
             self.sci_mode = PRINT_OPTS.sci_mode
