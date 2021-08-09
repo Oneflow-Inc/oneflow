@@ -15,16 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Cast(Module):
-    def __init__(self, dtype: flow.dtype) -> None:
-        super().__init__()
-        self.dtype = dtype
-
-    def forward(self, x):
-        return flow.F.cast(x, dtype=self.dtype)
 
 
 @register_tensor_op("cast")
@@ -51,7 +41,7 @@ def cast_op(x, dtype):
         True
 
     """
-    return Cast(dtype)(x)
+    return flow.F.cast(x, dtype)
 
 
 if __name__ == "__main__":

@@ -15,21 +15,12 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
-class Round(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.round(x)
-
-
-def round_op(x):
+def round_op(input):
     """This operator rounds the value of Blob to the nearest integer.
     Args:
-        x (oneflow.Tensor): A Tensor
+        input (oneflow.Tensor): A Tensor
     Returns:
         oneflow.Tensor: The result Tensor
     For example:
@@ -48,18 +39,18 @@ def round_op(x):
         array([2., 8., 5., 7.], dtype=float32)
 
     """
-    return Round()(x)
+    return flow.F.round(input)
 
 
 @register_tensor_op("round")
-def round_op_tensor(x):
+def round_op_tensor(input):
     """
     round() -> Tensor
 
     See :func:`oneflow.round`
 
     """
-    return Round()(x)
+    return flow.F.round(input)
 
 
 if __name__ == "__main__":
