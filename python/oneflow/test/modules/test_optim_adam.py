@@ -34,8 +34,8 @@ def compare_with_numpy_adam(
     train_iters,
     betas,
     weight_decay,
-    eps, 
-    do_bias_correction
+    eps,
+    do_bias_correction,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -54,8 +54,8 @@ def compare_with_numpy_adam(
                     "weight_decay": weight_decay,
                     "scale": scale,
                 }
-            ], 
-            do_bias_correction=do_bias_correction
+            ],
+            do_bias_correction=do_bias_correction,
         )
 
         def train_one_iter(grad):
@@ -80,10 +80,14 @@ def compare_with_numpy_adam(
 
         def train_one_iter(iter, grad):
             grad = grad * scale + weight_decay * x
-            
-            if do_bias_correction: 
-                lr = learning_rate * np.sqrt(1 - beta2 ** (iter + 1)) / (1 - beta1 ** (iter + 1))
-            else: 
+
+            if do_bias_correction:
+                lr = (
+                    learning_rate
+                    * np.sqrt(1 - beta2 ** (iter + 1))
+                    / (1 - beta1 ** (iter + 1))
+                )
+            else:
                 lr = learning_rate
 
             v = beta1 * vt + (1 - beta1) * grad

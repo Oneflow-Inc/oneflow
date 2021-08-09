@@ -70,8 +70,8 @@ class Adam(Optimizer):
         eps: float = 1e-08,
         weight_decay: float = 0,
         amsgrad: bool = False,
-        scale: float = 1.0, 
-        do_bias_correction: bool = False
+        scale: float = 1.0,
+        do_bias_correction: bool = False,
     ):
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
@@ -134,8 +134,12 @@ class Adam(Optimizer):
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
                 }
-                if self.do_bias_correction: 
-                    kwargs["learning_rate_val"] = param_group["lr"] * math.sqrt(1 - kwargs["beta2"] ** (self._state["step"] + 1)) / (1 - kwargs["beta1"] ** (self._state["step"] + 1))
+                if self.do_bias_correction:
+                    kwargs["learning_rate_val"] = (
+                        param_group["lr"]
+                        * math.sqrt(1 - kwargs["beta2"] ** (self._state["step"] + 1))
+                        / (1 - kwargs["beta1"] ** (self._state["step"] + 1))
+                    )
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
