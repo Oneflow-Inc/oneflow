@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 #define REGISTER_SCALAR_LOGICAL_OP(op_name)                                             \
-  REGISTER_USER_OP(op_name)                                                             \
+  REGISTER_NO_GRAD_USER_OP(op_name)                                                             \
       .Input("in")                                                                      \
       .Output("out")                                                                    \
       .Attr<bool>("has_int_operand") \
