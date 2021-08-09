@@ -141,6 +141,8 @@ class Block(object):
             print(self._shallow_repr())
 
         for idx, arg in enumerate(args):
+            assert isinstance(arg, Tensor) or arg is None
+            in_repr = arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
             in_str = (
                 "(INPUT:_"
                 + self.name_prefix
@@ -148,9 +150,11 @@ class Block(object):
                 + "-input_"
                 + str(idx)
                 + ":"
-                + arg._meta_repr()
+                + in_repr
                 + ")"
             )
+            if not isinstance(arg, Tensor):
+                in_str = "[WARNING]" + in_str
             self._args_repr.append(in_str)
             if self._debug:
                 print(in_str)
@@ -172,6 +176,7 @@ class Block(object):
         else:
             outputs = result
         for idx, out in enumerate(outputs):
+            assert isinstance(out, Tensor) or out is None
             out_repr = out._meta_repr() if isinstance(out, Tensor) else str(type(out))
             out_str = (
                 "(OUTPUT:_"

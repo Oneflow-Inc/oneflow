@@ -134,6 +134,7 @@ class Graph(object):
             lazy_args = []
             lazy_arg_op_names = []
             for idx, arg in enumerate(args):
+                assert isinstance(arg, Tensor)
                 op_name = "_" + self.name + "-input_" + str(idx)
                 lazy_args.append(graph_build_util.build_graph_input_arg(op_name, arg))
                 lazy_arg_op_names.append(op_name)
@@ -177,6 +178,7 @@ class Graph(object):
             eager_outputs = []
             eager_output_op_names = []
             for idx, out in enumerate(outputs):
+                assert isinstance(out , Tensor)
                 op_name = "_" + self.name + "-output_" + str(idx)
                 eager_outputs.append(graph_build_util.build_graph_output(op_name, out))
                 eager_output_op_names.append(op_name)
