@@ -113,7 +113,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   bool need_event_record = false;
 
   // Infer devices
-  printf("\neager_mirrored_op_interpreter.cpp >> NaiveInterpret() >> Infer devices");
+  printf("\neager_mirrored_op_interpreter.cpp >> NaiveInterpret() >> Infer devices\n");
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
     op_parallel_desc = op_device->parallel_desc_ptr();
@@ -179,6 +179,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                                      JUST(tensor->device())->parallel_desc_ptr()));
       }
     }
+    printf("\neager_mirrored_op_interpreter.cpp >> builder->LocalCallOpKernel()\n");
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, op_parallel_desc, instr_type_name);
   }));

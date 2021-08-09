@@ -35,6 +35,7 @@ ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name) 
 }
 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
+  printf("\nvm_util.cpp >> Run(vm::InstructionMsgList* instr_msg_list)");
   auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
   auto* vm = oneflow_vm->mut_vm();
   vm->Receive(instr_msg_list);
@@ -42,6 +43,7 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 }
 
 Maybe<void> SingleClientSync() {
+  printf("\nvm_util.cpp >>>>>>>>>>>>>>>> SingleClientSync()");
   BlockingCounter bc(1);
   JUST(LogicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->ComputeGlobalFrontSeqBarrier());
@@ -55,6 +57,7 @@ Maybe<void> SingleClientSync() {
 }
 
 Maybe<void> MultiClientSync() {
+  printf("\nvm_util.cpp >>>>>>>>>>>>>>>> MultiClientSync()");
   BlockingCounter bc(1);
   JUST(PhysicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->ComputeGlobalFrontSeqBarrier());
