@@ -1,14 +1,15 @@
 # ref:https://zhuanlan.zhihu.com/p/178402798
 import argparse
 from tqdm import tqdm
-import torch
-import torchvision as vision
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.utils as utils
-import torch.optim as optim
-import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
+
+import oneflow as flow
+import oneflow.utils.vision as vision
+import oneflow.nn as nn
+import oneflow.F as F
+import oneflow.utils as utils
+import oneflow.optim as optim
+import oneflow.distributed as dist
+from oneflow.nn.parallel import DistributedDataParallel as DDP
 
 
 class ToyModel(nn.Module):
@@ -46,20 +47,22 @@ def get_dataset():
 parser = argparse.ArgumentParser()
 parser.add_argument("--local_rank", default=-1, type=int)
 FLAGS = parser.parse_args()
-local_rank = FLAGS.local_rank
+# local_rank = FLAGS.local_rank
+local_rank = flow.device("cuda")
 
-torch.cuda.set_device(local_rank)
-dist.init_process_group(backend='nccl')
+# torch.cuda.set_device(local_rank)
+# dist.init_process_group(backend='nccl')
 
 trainloader = get_dataset()
 
 model = ToyModel().to(local_rank)
 
 ckpt_path = None
-if dist.get_rank() == 0 and ckpt_path is not None:
-    model.load_state_dict(torch.load(ckpt_path))
+# if dist.get_rank() == 0 and ckpt_path is not None:
+#     model.load_state_dict(torch.load(ckpt_path))
 # DDP model
-model = DDP(model, device_ids=[local_rank], output_device=local_rank)
+# model = DDP(model, device_ids=[local_rank], output_device=local_rank)
+model = DDP(model)
 optimizer = optim.SGD(model.parameters(), lr=0.001)
 loss_func = nn.CrossEntropyLoss().to(local_rank)
 
@@ -74,7 +77,7 @@ for epoch in iterator:
         prediction = model(data)
         loss = loss_func(prediction, label)
         loss.backward()
-        iterator.desc = "loss = %0.3f" % loss
+        iterator.desc = "loss = %0.3f" % loss.numpy()
         optimizer.step()
 
     # if dist.get_rank() == 0:
@@ -82,4 +85,4 @@ for epoch in iterator:
 
 ################
 # export CUDA_VISIBLE_DEVICES="0,1"
-# python -m torch.distributed.launch --nproc_per_node 2 test_ddp_torch.py
+# python -m oneflow.distributed.launch --nproc_per_node 2 test_ddp_flow.py
