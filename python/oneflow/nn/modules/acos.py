@@ -15,19 +15,10 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Acos(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.acos(x)
 
 
 @register_tensor_op("acos")
-def acos_op(tensor):
+def acos_op(input):
     """
     Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
 
@@ -51,7 +42,7 @@ def acos_op(tensor):
         tensor([1.0472, 0.9273, 0.7954], dtype=oneflow.float32)
 
     """
-    return Acos()(tensor)
+    return flow.F.acos(input)
 
 
 if __name__ == "__main__":

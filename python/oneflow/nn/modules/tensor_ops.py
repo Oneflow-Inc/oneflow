@@ -15,15 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class TypeAs(Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, input, target):
-        return input.to(dtype=target.dtype)
 
 
 @register_tensor_op("type_as")
@@ -49,15 +40,7 @@ def type_as_op(input, target):
         oneflow.int32
 
     """
-    return TypeAs()(input, target)
-
-
-class Long(Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, input):
-        return input.to(dtype=flow.int64)
+    return input.to(dtype=target.dtype)
 
 
 @register_tensor_op("long")
@@ -80,7 +63,7 @@ def long_op(input):
         oneflow.int64
 
     """
-    return Long()(input)
+    return input.to(dtype=flow.int64)
 
 
 if __name__ == "__main__":
