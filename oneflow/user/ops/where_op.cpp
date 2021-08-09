@@ -85,6 +85,31 @@ REGISTER_USER_OP("where")
     })
     .SetGetSbpFn(GetWhereSbpSignatures);
 
+REGISTER_USER_OP("where_scalar_x")
+    .Input("condition")
+    .Input("y")
+    .Output("out")
+    .Attr<bool>("has_int_operand")
+    .Attr<bool>("has_float_operand")
+    .Attr<int64_t>("int_operand")
+    .Attr<int64_t>("float_operand")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const Shape& cond_shape = ctx->InputShape("condition", 0);
+      const Shape& y_shape = ctx->InputShape("y", 0);
+      if (cond_shape == y_shape) {
+        *ctx->OutputShape("out", 0) = cond_shape;
+      } else {
+        Shape max_shape = Shape::Ones(std::max(y_shape.NumAxes(), condition.NumAxes()));
+        const Shape& y_extend_shape = CreateLeftExtendedShape(ShapeView(y_shape), max_shape.NumAxes());
+        const Shape& cond_extend_shape = CreateLeftExtendedShape(ShapeView(cond_shape), max_shape.NumAxes());
+        FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
+          max_shape.Set(i, std::max(y_extend_shape.At(i), cond_extend_shape.At(i)));
+        }
+        *ctx->OutputShape("out", 0) = max_shape;
+      }
+      return Maybe<void>::Ok();
+    })；
+
 REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn(
     [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto zero_op_name = ctx->FwOp().op_name() + "_zero_grad";
