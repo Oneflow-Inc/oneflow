@@ -81,8 +81,8 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, double) \
 
 #define REGISTER_SCALAR_LOGICAL_GPU_KERNELS() \
-  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, int32_t) \
-  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, int64_t) \
+  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, int32_t) \
+  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, int64_t) \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, float) \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, double)
 

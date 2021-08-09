@@ -21,7 +21,9 @@ limitations under the License.
 
 namespace oneflow {
 
-#define INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(device_type, binary_op)               \
+#define INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(device_type, binary_op) \
+  template struct ScalarLogicalFunctor<device_type, binary_op, int32_t>; \
+  template struct ScalarLogicalFunctor<device_type, binary_op, int64_t>; \
   template struct ScalarLogicalFunctor<device_type, binary_op, float>; \
   template struct ScalarLogicalFunctor<device_type, binary_op, double>; \
 
