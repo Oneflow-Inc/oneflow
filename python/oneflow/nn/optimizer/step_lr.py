@@ -57,3 +57,6 @@ class StepLR(LrScheduler):
             return [group["lr"] for group in self._optimizer.param_groups]
         else:
             return [group["lr"] * self.gamma for group in self._optimizer.param_groups]
+    
+    def _generate_conf_for_graph(self, opt_conf):
+        ...
