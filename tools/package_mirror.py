@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import hashlib
 import base64
 import tempfile
-
+import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--src_path", type=str, required=False)
@@ -24,6 +24,7 @@ def glob_by_pattern(dir_path, pattern):
 def scan_urls(dir_path):
     cmakes = glob_by_pattern(dir_path, "**/*.cmake")
     cmakes += glob_by_pattern(dir_path, "**/*.bzl")
+    cmakes += glob_by_pattern(dir_path, "**/CMakeLists.txt")
     urls = []
     for cmake_path in cmakes:
         with open(cmake_path) as f:
@@ -65,7 +66,7 @@ def should_be_mirrored(url: str):
         not parsed.port
         and not parsed.query
         and not parsed.params
-        and url.endswith(("gz", "tar", "zip"))
+        and url.endswith(("gz", "tar", "zip", "xz"))
         and not "mirror.tensorflow.org" in url
         and not "mirror.bazel.build" in url
         and not "aliyuncs.com" in url
@@ -92,15 +93,16 @@ def upload_one_to_aliyun(url: str):
     if bucket.object_exists(key):
         print("exists: ", key)
     else:
-        import requests
-
-        with requests.get(url, stream=True) as r:
-            r.raise_for_status()
-            with tempfile.NamedTemporaryFile() as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-                headers = {}
-                bucket.put_object_from_file(key, f.name, headers=headers)
+        d = tempfile.gettempdir()
+        dst = os.path.join(d, os.path.basename(key))
+        if os.path.isdir(dst):
+            raise ValueError("must not be a dir", dst)
+        else:
+            if os.path.isfile(dst):
+                print("[removing]", dst)
+                os.remove(dst)
+        subprocess.check_call(f"wget {url} -O {dst}", shell=True)
+        bucket.put_object_from_file(key, dst)
 
 
 def upload_to_aliyun(dir_path):
@@ -119,4 +121,4 @@ if __name__ == "__main__":
         upload_to_aliyun(args.src_path)
     if args.url != None:
         oss_url = convert_url_to_oss_https_url(args.url)
-        print(oss_url)
+        print(oss_url, end="")
