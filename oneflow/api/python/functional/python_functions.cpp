@@ -352,6 +352,10 @@ py::object PyEqual(py::args py_args, py::kwargs py_kwargs) {
     bool other_is_tensor = PyTensorCheck(other);
     CHECK_OR_RETURN(input_is_tensor || other_is_tensor)
         << "Inputs must have one tensor at least.";
+    CHECK_OR_RETURN(PyTensorCheck(input) || PyScalarCheck(input)) 
+        << "The first input should be a tensor or scalar.";    
+    CHECK_OR_RETURN(PyTensorCheck(other) || PyScalarCheck(other)) 
+        << "The second input should be a tensor or scalar.";    
 
     if (PyTensorCheck(input) && PyTensorCheck(other)) {
       auto a = JUST(PyUnpackTensor(input));
@@ -385,8 +389,13 @@ py::object PyNotEqual(py::args py_args, py::kwargs py_kwargs) {
     PyObject* input = PyTuple_GetItem(args, 0);
     PyObject* other = PyTuple_GetItem(args, 1);
     bool input_is_tensor = PyTensorCheck(input);
-    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor)
         << "Inputs must have one tensor at least.";
+    CHECK_OR_RETURN(PyTensorCheck(input) || PyScalarCheck(input)) 
+        << "The first input should be a tensor or scalar.";  
+    CHECK_OR_RETURN(PyTensorCheck(other) || PyScalarCheck(other)) 
+        << "The second input should be a tensor or scalar.";  
 
     if (PyTensorCheck(input) && PyTensorCheck(other)) {
       auto a = JUST(PyUnpackTensor(input));
@@ -420,9 +429,14 @@ py::object PyGreater(py::args py_args, py::kwargs py_kwargs) {
     PyObject* input = PyTuple_GetItem(args, 0);
     PyObject* other = PyTuple_GetItem(args, 1);
     bool input_is_tensor = PyTensorCheck(input);
-    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor)
         << "Inputs must have one tensor at least.";
-
+    CHECK_OR_RETURN(PyTensorCheck(input) || PyScalarCheck(input)) 
+        << "The first input should be a tensor or scalar.";  
+    CHECK_OR_RETURN(PyTensorCheck(other) || PyScalarCheck(other)) 
+        << "The second input should be a tensor or scalar."; 
+        
     if (PyTensorCheck(input) && PyTensorCheck(other)) {
       auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
@@ -455,9 +469,14 @@ py::object PyGreaterEqual(py::args py_args, py::kwargs py_kwargs) {
     PyObject* input = PyTuple_GetItem(args, 0);
     PyObject* other = PyTuple_GetItem(args, 1);
     bool input_is_tensor = PyTensorCheck(input);
-    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor)
         << "Inputs must have one tensor at least.";
-
+    CHECK_OR_RETURN(PyTensorCheck(input) || PyScalarCheck(input)) 
+        << "The first input should be a tensor or scalar.";   
+    CHECK_OR_RETURN(PyTensorCheck(other) || PyScalarCheck(other)) 
+        << "The second input should be a tensor or scalar.";  
+        
     if (PyTensorCheck(input) && PyTensorCheck(other)) {
       auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
@@ -490,9 +509,14 @@ py::object PyLess(py::args py_args, py::kwargs py_kwargs) {
     PyObject* input = PyTuple_GetItem(args, 0);
     PyObject* other = PyTuple_GetItem(args, 1);
     bool input_is_tensor = PyTensorCheck(input);
-    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor)
         << "Inputs must have one tensor at least.";
-
+    CHECK_OR_RETURN(PyTensorCheck(input) || PyScalarCheck(input)) 
+        << "The first input should be a tensor or scalar.";    
+    CHECK_OR_RETURN(PyTensorCheck(other) || PyScalarCheck(other)) 
+        << "The second input should be a tensor or scalar."; 
+        
     if (PyTensorCheck(input) && PyTensorCheck(other)) {
       auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
@@ -525,9 +549,14 @@ py::object PyLessEqual(py::args py_args, py::kwargs py_kwargs) {
     PyObject* input = PyTuple_GetItem(args, 0);
     PyObject* other = PyTuple_GetItem(args, 1);
     bool input_is_tensor = PyTensorCheck(input);
-    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor)
         << "Inputs must have one tensor at least.";
-
+    CHECK_OR_RETURN(PyTensorCheck(input) || PyScalarCheck(input)) 
+        << "The first input should be a tensor or scalar.";   
+    CHECK_OR_RETURN(PyTensorCheck(other) || PyScalarCheck(other)) 
+        << "The second input should be a tensor or scalar.";
+        
     if (PyTensorCheck(input) && PyTensorCheck(other)) {
       auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
