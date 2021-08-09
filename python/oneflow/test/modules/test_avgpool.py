@@ -23,32 +23,44 @@ from automated_test_util import *
 @flow.unittest.skip_unless_1n1d()
 class TestAvgPoolingModule(flow.unittest.TestCase):
     @autotest()
-    def test_avgpool2d_with_random_data(test_case):
-        m = torch.nn.AvgPool2d(
-            kernel_size=random(2, 3).to(int),
-            stride=random(1, 3).to(int),
-            padding=random(0, 1).to(int),
+    def test_avgpool1d_with_random_data(test_case):
+        m = torch.nn.AvgPool1d(
+            kernel_size=random(4, 6),
+            stride=random(1, 3),
+            padding=random(0, 2),
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim0=random(1, 2), dim1=random(1, 3), dim2=random(5, 7), dim4=random(5, 7)) \
-            .to(device)
+        x = random_pytorch_tensor(ndim=3, dim2=random(10, 12)).to(device)
+        y = m(x)
+        return y
+
+    @autotest()
+    def test_avgpool2d_with_random_data(test_case):
+        m = torch.nn.AvgPool2d(
+            kernel_size=random(4, 6),
+            stride=random(1, 3),
+            padding=random(0, 2),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4, dim2=random(10, 12), dim3=random(10, 12)).to(device)
         y = m(x)
         return y
 
     @autotest()
     def test_avgpool3d_with_random_data(test_case):
         m = torch.nn.AvgPool3d(
-            kernel_size=random(2, 3).to(int),
-            stride=random(1, 3).to(int),
-            padding=(0, 0, 0),
+            kernel_size=random(4, 6),
+            stride=random(1, 3),
+            padding=random(0, 2),
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim0=random(3, 4), dim1=random(3, 4), dim2=random(5, 7),
-                                  dim3=random(4, 7), dim4=random(4, 7)).to(device)
+        x = random_pytorch_tensor(ndim=5, dim2=random(10, 12), dim3=random(10, 12), dim4=random(10, 12)).to(device)
         y = m(x)
         return y
 
