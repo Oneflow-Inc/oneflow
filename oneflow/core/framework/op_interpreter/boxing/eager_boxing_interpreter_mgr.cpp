@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <utility>
 #include "oneflow/core/common/constant.h"
-#include "oneflow/core/common/cached_caller.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
@@ -102,7 +102,7 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(
   }
 }
 
-auto* CachedGetBoxingInterpreter = THREAD_LOCAL_CACHED(&GetBoxingInterpreter);
+auto* CachedGetBoxingInterpreter = DECORATE(&GetBoxingInterpreter, ThreadLocal);
 
 }  // namespace
 
