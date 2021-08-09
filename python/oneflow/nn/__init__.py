@@ -114,6 +114,7 @@ from oneflow.nn.modules.upsampling import (
     UpsamplingNearest2d,
 )
 from oneflow.nn.modules.zeropad2d import ZeroPad2d
+from oneflow.nn.modules.rnn import RNN
 from oneflow.nn.parameter import Parameter
 from oneflow.nn import utils
 
