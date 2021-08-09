@@ -26,12 +26,13 @@ FetchContent_Declare(
   llvm_monorepo
   FETCHCONTENT_QUIET FALSE
   USES_TERMINAL_DOWNLOAD TRUE
-  URL ${LLVM_MONO_REPO_URL}
-  URL_HASH MD5=${LLVM_MONO_REPO_MD5}
 )
 FetchContent_GetProperties(llvm_monorepo)
 if(NOT llvm_monorepo_POPULATED)
-  FetchContent_Populate(llvm_monorepo)
+  FetchContent_Populate(llvm_monorepo
+    URL ${LLVM_MONO_REPO_URL}
+    URL_HASH MD5=${LLVM_MONO_REPO_MD5}
+  )
   SET(LLVM_ROOT ${llvm_monorepo_SOURCE_DIR})
   set(LLVM_BINARY_DIR ${llvm_monorepo_BINARY_DIR})
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/bin)
