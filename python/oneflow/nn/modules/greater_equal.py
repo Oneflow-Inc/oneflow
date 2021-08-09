@@ -42,13 +42,7 @@ def greater_equal_op(input, other):
         tensor([1, 1, 0], dtype=oneflow.int8)
 
     """
-    if input.dtype != flow.float32:
-        input = flow.cast(input, flow.float32)
-    if isinstance(other, int) or isinstance(other, float):
-        return flow.F.scalar_logical_greater_equal(x, y)
-    if other.dtype != flow.float32:
-        other = flow.cast(other, flow.float32)
-    return flow.F.broadcast_greater_equal(input, other)
+    return flow.F.equal(input, other)
 
 
 @register_tensor_op("ge")
