@@ -66,9 +66,12 @@ class AdaptiveAvgPool1d(Module):
         self.output_size = _single(output_size)
 
     def forward(self, x):
-        assert len(x.shape) == 3 and len(self.output_size) == 1, \
-            "the length of 'output_size' does not match the input size, 1 expected"
-        assert isinstance(self.output_size[0], int), "numbers in 'output_size' should be integer"
+        assert (
+            len(x.shape) == 3 and len(self.output_size) == 1
+        ), "the length of 'output_size' does not match the input size, 1 expected"
+        assert isinstance(
+            self.output_size[0], int
+        ), "numbers in 'output_size' should be integer"
         return flow.F.adaptive_avg_pool1d(x, output_size=self.output_size)
 
 
@@ -130,7 +133,9 @@ class AdaptiveAvgPool2d(Module):
         self.output_size = _pair(output_size)
 
     def forward(self, x):
-        assert len(x.shape) == 4, f"expected 4-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
+        assert (
+            len(x.shape) == 4
+        ), f"expected 4-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
         new_output_size = _generate_output_size(x.shape, self.output_size)
         return flow.F.adaptive_avg_pool2d(x, output_size=new_output_size)
 
@@ -193,7 +198,9 @@ class AdaptiveAvgPool3d(Module):
         self.output_size = _triple(output_size)
 
     def forward(self, x):
-        assert len(x.shape) == 5, f"expected 5-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
+        assert (
+            len(x.shape) == 5
+        ), f"expected 5-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
         new_output_size = _generate_output_size(x.shape, self.output_size)
         return flow.F.adaptive_avg_pool3d(x, output_size=new_output_size)
 
