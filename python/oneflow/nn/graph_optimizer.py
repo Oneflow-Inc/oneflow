@@ -22,8 +22,9 @@ class OptimizerConfig(object):
         name: str,
         optimizer: Optimizer = None,
         lr_scheduler=None,
-        grad_clipping_conf=None,
-        weight_decay_conf=None,
+        # TODO(): support grad clipping and weight_decay
+        # grad_clipping_conf=None,
+        # weight_decay_conf=None,
     ):
         self.name = name
         self.optimizer = optimizer
