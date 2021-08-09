@@ -67,8 +67,9 @@ Maybe<one::Tensor> NaiveNdSbpBoxingInterpreter::InterpretImpl(
     Symbol<cfg::ParallelDistribution> out_parallel_distribution,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
-  const auto& naive_transformations = JUST(DecomposeIntoNaiveTransformations(
-      in_parallel_desc, in_parallel_distribution, out_parallel_distribution));
+  const auto& tensor_meta = JUST(input->consistent_tensor_meta());
+  const auto& naive_transformations =
+      JUST(DecomposeIntoNaiveTransformations(tensor_meta, out_parallel_distribution));
   std::shared_ptr<one::Tensor> tensor = input;
   for (const auto& naive_transformation : *naive_transformations) {
     tensor = JUST(ReinterpterConsistentTensor(tensor, naive_transformation.parallel_desc,

@@ -32,6 +32,12 @@ class ParallelDistribution;
 
 }
 
+namespace one {
+
+class ConsistentTensorMeta;
+
+}
+
 // 1) src_nd_sbp.sbp_parallel_size() == 1
 // 2) dst_nd_sbp.sbp_parallel_size() == 1
 struct NaiveBoxingTransformation {
@@ -50,8 +56,8 @@ Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
     Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution);
 
 Maybe<std::vector<NaiveBoxingTransformation>> DecomposeByParallelId(
-    Symbol<ParallelDesc> parallel_desc, int64_t parallel_id,
-    Symbol<cfg::ParallelDistribution> src_nd_sbp, Symbol<cfg::ParallelDistribution> dst_nd_sbp);
+    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp,
+    int64_t parallel_id);
 
 }  // namespace private_details
 
@@ -59,8 +65,7 @@ static constexpr auto* GetBroadcastSubParallelDesc =
     DECORATE(&private_details::GetBroadcastSubParallelDesc, ThreadLocal);
 
 Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
-    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> src_nd_sbp,
-    Symbol<cfg::ParallelDistribution> dst_nd_sbp);
+    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp);
 
 Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroup(
     Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc);

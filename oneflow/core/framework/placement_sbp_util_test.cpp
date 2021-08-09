@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/placement_sbp_util.h"
+#include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
@@ -140,6 +141,13 @@ Symbol<cfg::ParallelDistribution> Get2dSbp(const std::string& sbp0, const std::s
   return SymbolOf(nd_sbp);
 }
 
+Symbol<one::ConsistentTensorMeta> MakeConsistentTensorMeta(
+    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> nd_sbp) {
+  const auto& shape = std::make_shared<const Shape>(DimVector{256, 256});
+  one::ConsistentTensorMeta tensor_meta(shape, DataType::kInt32, nd_sbp, parallel_desc);
+  return SymbolOf(tensor_meta);
+}
+
 }  // namespace
 
 TEST(DecomposeByParallelId, decompose_axis0) {
@@ -154,8 +162,9 @@ TEST(DecomposeByParallelId, decompose_axis0) {
   const auto& src_nd_sbp = Get2dSbp("P", "B");
   const auto& dst_nd_sbp = Get2dSbp("S0", "B");
   for (int i = 0; i < 8; ++i) {
-    const auto& transformations = CHECK_JUST(
-        private_details::DecomposeByParallelId(parallel_desc, i, src_nd_sbp, dst_nd_sbp));
+    const auto& tensor_meta = MakeConsistentTensorMeta(parallel_desc, src_nd_sbp);
+    const auto& transformations =
+        CHECK_JUST(private_details::DecomposeByParallelId(tensor_meta, dst_nd_sbp, i));
     ASSERT_EQ(transformations->size(), 1);
     ParallelConf expected_parallel_conf;
     expected_parallel_conf.set_device_tag("cpu");
@@ -183,8 +192,9 @@ TEST(DecomposeByParallelId, decompose_axis1) {
   const auto& src_nd_sbp = Get2dSbp("S0", "P");
   const auto& dst_nd_sbp = Get2dSbp("S0", "S0");
   for (int i = 0; i < 8; ++i) {
-    const auto& transformations = CHECK_JUST(
-        private_details::DecomposeByParallelId(parallel_desc, i, src_nd_sbp, dst_nd_sbp));
+    const auto& tensor_meta = MakeConsistentTensorMeta(parallel_desc, src_nd_sbp);
+    const auto& transformations =
+        CHECK_JUST(private_details::DecomposeByParallelId(tensor_meta, dst_nd_sbp, i));
     ASSERT_EQ(transformations->size(), 1);
     ParallelConf expected_parallel_conf;
     expected_parallel_conf.set_device_tag("cpu");
@@ -211,8 +221,9 @@ TEST(DecomposeByParallelId, decompose_two_axes) {
   const auto& src_nd_sbp = Get2dSbp("S0", "P");
   const auto& dst_nd_sbp = Get2dSbp("B", "S0");
   for (int i = 0; i < 8; ++i) {
-    const auto& transformations = CHECK_JUST(
-        private_details::DecomposeByParallelId(parallel_desc, i, src_nd_sbp, dst_nd_sbp));
+    const auto& tensor_meta = MakeConsistentTensorMeta(parallel_desc, src_nd_sbp);
+    const auto& transformations =
+        CHECK_JUST(private_details::DecomposeByParallelId(tensor_meta, dst_nd_sbp, i));
     ASSERT_EQ(transformations->size(), 2);
     {
       ParallelConf expected_parallel_conf;
