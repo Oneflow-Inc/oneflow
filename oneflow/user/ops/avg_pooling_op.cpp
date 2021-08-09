@@ -55,8 +55,6 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
 }
 
 Maybe<void> ForwardGetSbpFn(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
   FOR_RANGE(int64_t, i, 0, 2) {
     ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
   }
@@ -69,8 +67,6 @@ Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> BackwardGetSbpFn(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
   FOR_RANGE(int64_t, i, 0, 2) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
