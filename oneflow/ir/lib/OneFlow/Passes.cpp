@@ -179,15 +179,15 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module) {
   InitializeLLVMNVPTXBackend();
   mlir::PassManager pm(context);
-  pm.addPass(createLowerOneFlowToTosaPass());                     // lower-oneflow-to-tosa
-  pm.addPass(createCSEPass());                                    // cse
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());  // tosa-to-linalg-on-tensors
-  pm.addNestedPass<FuncOp>(createLinalgFusionOfTensorOpsPass());  // linalg-fusion-for-tensor-ops
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());          // linalg-bufferize
-  pm.addNestedPass<FuncOp>(createTensorBufferizePass());          // tensor-bufferize
-  pm.addPass(createTensorConstantBufferizePass());                // tensor-constant-bufferize
-  pm.addPass(createFuncBufferizePass());                          // func-bufferize
-  pm.addPass(createBufferResultsToOutParamsPass());               // buffer-results-to-out-params
+  pm.addPass(createLowerOneFlowToTosaPass());                       // lower-oneflow-to-tosa
+  pm.addPass(createCSEPass());                                      // cse
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());    // tosa-to-linalg-on-tensors
+  pm.addNestedPass<FuncOp>(createLinalgElementwiseOpFusionPass());  // linalg-fuse-elementwise-ops
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());            // linalg-bufferize
+  pm.addNestedPass<FuncOp>(createTensorBufferizePass());            // tensor-bufferize
+  pm.addPass(createTensorConstantBufferizePass());                  // tensor-constant-bufferize
+  pm.addPass(createFuncBufferizePass());                            // func-bufferize
+  pm.addPass(createBufferResultsToOutParamsPass());                 // buffer-results-to-out-params
   pm.addNestedPass<FuncOp>(
       createConvertLinalgToParallelLoopsPass());      // convert-linalg-to-parallel-loops
   pm.addNestedPass<FuncOp>(createMapSCFToGPUPass());  // gpu-greedy-parallel-loop-mapping

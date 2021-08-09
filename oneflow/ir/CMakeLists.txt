@@ -24,8 +24,6 @@ message("-- LLVM_MONO_REPO_URL: " ${LLVM_MONO_REPO_URL})
 message("-- LLVM_MONO_REPO_MD5: " ${LLVM_MONO_REPO_MD5})
 FetchContent_Declare(
   llvm_monorepo
-  FETCHCONTENT_QUIET FALSE
-  USES_TERMINAL_DOWNLOAD TRUE
 )
 FetchContent_GetProperties(llvm_monorepo)
 if(NOT llvm_monorepo_POPULATED)
