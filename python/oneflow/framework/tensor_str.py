@@ -210,7 +210,7 @@ def _tensor_str(self, indent):
     # TODO: convert to local before slicing consistent tensor
     # self = _convert_to_local_tensor(self)
     if self.is_consistent:
-        return "[]"
+        return "[...]"
 
     formatter = _Formatter(get_summarized_data(self) if summarize else self)
     return _tensor_str_with_formatter(self, indent, summarize, formatter)
