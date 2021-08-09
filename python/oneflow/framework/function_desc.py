@@ -73,27 +73,3 @@ class FunctionDesc(object):
             return attr_value.at_string
         else:
             raise NotImplementedError()
-
-
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def GetCurrentEagerGlobalFunctionDesc():
-    sess = session_ctx.GetDefaultSession()
-    ret = sess.CurrentEagerGlobalFunctionDesc()
-    assert ret is not None
-    return ret
-
-
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def GetCurrentLazyGlobalFunctionDesc():
-    sess = session_ctx.GetDefaultSession()
-    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
-    ret = sess.GetLazyFunctionDesc(job_name)
-    assert ret is not None
-    return ret
-
-
-def api_current_global_function_desc() -> FunctionDesc:
-    api_func = enable_if.unique(
-        [GetCurrentLazyGlobalFunctionDesc, GetCurrentEagerGlobalFunctionDesc]
-    )
-    return api_func()

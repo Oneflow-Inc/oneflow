@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/job/job_desc.h"
@@ -37,6 +36,8 @@ limitations under the License.
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/version.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/job/collective_boxing_executor.h"
+#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_device_descriptor.h"
@@ -105,12 +106,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   DumpVersionInfo();
   Global<ResourceDesc, ForSession>::New(config_proto.resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
-  Global<const ProfilerConf>::New(config_proto.profiler_conf());
   Global<IDMgr>::New();
-  if (GlobalProcessCtx::IsThisProcessMaster()
-      && Global<const ProfilerConf>::Get()->collect_act_event()) {
-    Global<Profiler>::New();
-  }
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
     if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -135,6 +131,8 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<ThreadMgr>::New();
     Global<RuntimeJobDescs>::New();
     Global<summary::EventsWriter>::New();
+    Global<boxing::collective::CollectiveBoxingExecutor>::New();
+    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
   }
 
   return Maybe<void>::Ok();
@@ -145,11 +143,6 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
   Global<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
   Global<ResourceDesc, ForSession>::New(config_proto.resource());
-  Global<const ProfilerConf>::New(config_proto.profiler_conf());
-  if (GlobalProcessCtx::IsThisProcessMaster()
-      && Global<const ProfilerConf>::Get()->collect_act_event()) {
-    Global<Profiler>::New();
-  }
   for (const std::string lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   return Maybe<void>::Ok();
 }
@@ -157,6 +150,8 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
     // NOTE(chengcheng): Delete Global Runtime objects.
+    Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
+    Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
     Global<summary::EventsWriter>::Delete();
     Global<RuntimeJobDescs>::Delete();
     Global<ThreadMgr>::Delete();
@@ -175,9 +170,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
     Global<JobName2JobId>::Delete();
     Global<AvailableMemDesc>::Delete();
   }
-  if (Global<Profiler>::Get() != nullptr) { Global<Profiler>::Delete(); }
   Global<IDMgr>::Delete();
-  Global<const ProfilerConf>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());

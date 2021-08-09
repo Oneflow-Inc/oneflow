@@ -42,7 +42,6 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
   global_work_stream_id_ = Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id_);
-  act_id_ = -1;
   job_id_ = task_proto.job_id();
   InitDeviceCtx(thread_ctx);
   if (task_proto.has_parallel_ctx()) {
@@ -69,7 +68,6 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
     });
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
-    produced_regst2expected_act_id_[regst_desc_id] = act_id_;
     if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
       produced_ctrl_regst_desc_ids_.insert(regst_desc_id);
     }
@@ -246,11 +244,6 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   return ctx;
 }
 
-void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) const {
-  info->set_regst_desc_id(regst->regst_desc_id());
-  info->set_act_id(regst->act_id());
-}
-
 void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> func) const {
   naive_consumed_rs_.ForEachFrontRegst([func](int64_t regst_desc_id, Regst* regst) {
     if (Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(regst_desc_id)) { return; }
@@ -355,42 +348,8 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   return 0;
 }
 
-void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
-  if (false) {
-    auto act_event = std::make_shared<ActEvent>();
-    act_event->set_actor_id(actor_id());
-    act_event->set_work_stream_id(global_work_stream_id_);
-    act_event->set_act_id(act_id_);
-    act_event->set_ready_time(GetCurTime());
-    naive_consumed_rs_.ForEachFrontRegst([&](int64_t regst_desc_id, const Regst* readable_regst) {
-      if (Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(regst_desc_id)) { return; }
-      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-      Actor::SetReadableRegstInfo(readable_regst, info);
-    });
-    ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
-      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-      SetReadableRegstInfo(readable_regst, info);
-    });
-    device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
-
-    DoAct();
-
-    device_ctx_->AddCallBack([act_event]() {
-      act_event->set_stop_time(GetCurTime());
-      // The stream poller thread is not allowed to perform blocking RPC call. Hence, the
-      // RPC call is forwarded to the thread pool and will be executed there.
-      Global<ThreadPool>::Get()->AddWork(
-          [act_event]() { Global<CtrlClient>::Get()->PushActEvent(*act_event); });
-    });
-  } else {
-    DoAct();
-  }
-}
-
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
-    act_id_ += 1;
-    // TryLogActEvent([&] { Act(); }); NOTE(chengcheng): LogActEvent NOT ready now.
     Act();
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
@@ -485,7 +444,6 @@ void Actor::AsyncSendProducedCtrlRegstMsgToConsumer() {
 int64_t Actor::HandleRegstToConsumer(Regst* regst) {
   auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   CHECK_EQ(regst_reading_cnt_it->second, 0);
-  regst->set_act_id(act_id_);
 
   int64_t real_consumer_cnt = 0;
   for (int64_t consumer : regst->consumers_actor_id()) {
@@ -622,12 +580,6 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   } else if (naive_produced_rs_.TryPushBackRegst(regst) != 0) {
     UpdtStateAsCustomizedProducedRegst(regst);
   }
-
-  int64_t& expected_act_id = produced_regst2expected_act_id_[regst->regst_desc_id()];
-  if (expected_act_id >= 0 && CheckOutputActId(regst->regst_desc_id())) {
-    CHECK_EQ(regst->act_id(), expected_act_id);
-  }
-  expected_act_id = regst->act_id() + ActNumForEachOutput(regst->regst_desc_id());
   return 0;
 }
 

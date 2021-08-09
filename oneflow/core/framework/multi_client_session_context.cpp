@@ -30,6 +30,8 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/job/collective_boxing_executor.h"
+#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -87,7 +89,6 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<ResourceDesc, ForSession>::Delete();
     }
     Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
-    Global<const ProfilerConf>::New(config_proto.profiler_conf());
     Global<IDMgr>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Global<LazyJobBuildAndInferCtxMgr>::New();
@@ -107,6 +108,8 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<ThreadMgr>::New();
       Global<RuntimeJobDescs>::New();
       Global<summary::EventsWriter>::New();
+      Global<boxing::collective::CollectiveBoxingExecutor>::New();
+      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
     }
 
     is_inited_ = true;
@@ -121,6 +124,8 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     VLOG(2) << "Start to delete multi client session." << std::endl;
     {
       // NOTE(chengcheng): delete runtime global objects
+      Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
+      Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
       Global<summary::EventsWriter>::Delete();
       Global<RuntimeJobDescs>::Delete();
       Global<ThreadMgr>::Delete();
@@ -133,7 +138,6 @@ Maybe<void> MultiClientSessionContext::TryClose() {
 
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
     Global<IDMgr>::Delete();
-    Global<const ProfilerConf>::Delete();
 
     // TODO(chengcheng): remove template ForEnv and ForSession
     Global<ResourceDesc, ForSession>::Delete();
