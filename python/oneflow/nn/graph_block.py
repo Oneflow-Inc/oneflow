@@ -141,6 +141,9 @@ class Block(object):
             print(self._shallow_repr())
 
         for idx, arg in enumerate(args):
+            meta_repr_str = (
+                arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+            )
             in_str = (
                 "(INPUT:_"
                 + self.name_prefix
@@ -148,7 +151,7 @@ class Block(object):
                 + "-input_"
                 + str(idx)
                 + ":"
-                + arg._meta_repr()
+                + meta_repr_str
                 + ")"
             )
             self._args_repr.append(in_str)
