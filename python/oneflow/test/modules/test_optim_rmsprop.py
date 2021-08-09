@@ -82,13 +82,13 @@ def compare_with_numpy_rmsprop(
         g = np.zeros_like(x)
 
         def train_one_iter(grad):
-            grad = grad * scale
+
+            grad = grad * scale + weight_decay * x
+            r_ = alpha * r + (1 - alpha) * grad * grad
             if centered:
-                r_ = alpha * r + (1 - alpha) * grad * grad
                 g_ = alpha * g + (1 - alpha) * grad
                 v_ = momentum * v + learning_rate / np.sqrt(r_ - g_ * g_ + eps) * grad
             else:
-                r_ = alpha * r + (1 - alpha) * grad * grad
                 g_ = g
                 v_ = momentum * v + learning_rate / np.sqrt(r_ + eps) * grad
             param = x - v_
