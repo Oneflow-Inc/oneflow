@@ -25,6 +25,7 @@ import oneflow.unittest
 
 class TestBoxing(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_boxing_single_device(test_case):
         np_arr = np.array([1, 2, 3])
         x = flow.tensor(np_arr).to("cuda")
@@ -33,6 +34,7 @@ class TestBoxing(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(np_arr, x.to_local().numpy()))
 
     @flow.unittest.skip_unless_1n2d()
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_boxing_two_devices(test_case):
         rank = oneflow.framework.distribute.get_rank()
         np_arr = np.array([1, 2, 3]) * (rank + 1)
