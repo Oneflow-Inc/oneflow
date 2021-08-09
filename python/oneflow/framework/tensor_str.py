@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+"""
+This file is mostly copied from PyTorch v1.8.1 torch/_tensor_str.py
+"""
 import numpy as np
-import oneflow as flow
-
 import math
-
 from typing import Optional
+
+import oneflow as flow
 
 
 class __PrinterOptions(object):
