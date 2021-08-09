@@ -71,18 +71,22 @@ class BernoulliFunctor {
 class RandNFunctor {
  public:
   RandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const double mean, const double std, const Shape& shape,
-                           const DataType& dtype, const Optional<Symbol<Device>>& device,
+  Maybe<Tensor> operator()(const Shape& shape, const Optional<DataType>& dtype,
+                           const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator) const {
-    if (dtype != DataType::kFloat && dtype != DataType::kDouble) {
-      OF_UNIMPLEMENTED() << dtype << "not supported in randn";
+    DataType dtype_val = DataType::kFloat;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype.value());
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+      }
     }
 
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("mean", mean));
-    JUST(attrs.SetAttr<double>("std", std));
+    JUST(attrs.SetAttr<double>("mean", 0));
+    JUST(attrs.SetAttr<double>("std", 1));
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
 
     std::shared_ptr<one::Generator> gen;
 
@@ -113,15 +117,23 @@ class RandNFunctor {
 class ConsistentRandNFunctor {
  public:
   ConsistentRandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const double mean, const double std, const Shape& shape,
-                           const DataType& dtype, const Symbol<ParallelDesc>& placement,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const Optional<DataType>& dtype,
                            const Optional<one::Generator>& generator) const {
+    DataType dtype_val = DataType::kFloat;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype.value());
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+      }
+    }
+
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("mean", mean));
-    JUST(attrs.SetAttr<double>("std", std));
+    JUST(attrs.SetAttr<double>("mean", 0));
+    JUST(attrs.SetAttr<double>("std", 1));
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
 
     std::shared_ptr<one::Generator> gen;
     if (!generator) {

@@ -80,8 +80,6 @@ class RandN(Module):
             self.device = flow.device(self.device)
         self.requires_grad = requires_grad
         size = _single(size)
-        if dtype is None:
-            dtype = flow.float32
 
         if generator is None:
             generator = flow.Generator()
@@ -104,10 +102,10 @@ class RandN(Module):
     def forward(self):
         if self.placement is not None:
             res = flow.F.consistent_randn(
-                0, 1, self.size, self.dtype, self.placement, self.sbp, self.generator
+                self.size, self.placement, self.sbp, self.dtype, self.generator
             )
         else:
-            res = flow.F.randn(0, 1, self.size, self.dtype, self.device, self.generator)
+            res = flow.F.randn(self.size, self.dtype, self.device, self.generator)
         res.requires_grad = self.requires_grad
         return res
 
@@ -162,6 +160,8 @@ def randn_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
+    if generator is None:
+        generator = flow.default_generator()
     return RandN(
         size, generator, dtype, layout, device, placement, sbp, requires_grad
     )()
