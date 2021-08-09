@@ -103,7 +103,7 @@ def _test_alexnet_graph_repr(test_case, args):
     alexnet_graph.debug()
 
     alexnet_module.train()
-    image, label = train_data_loader.get_batch()
+    image, label = train_data_loader()
     image = image.to(args.device)
     label = label.to(args.device)
     loss = alexnet_graph(image, label)
@@ -143,11 +143,15 @@ def _test_alexnet_graph(test_case, args):
     class AlexNetGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
+            self.train_data_loader = train_data_loader
             self.alexnet = alexnet_module
             self.cross_entropy = of_cross_entropy
             self.add_optimizer("sgd", of_sgd)
 
-        def build(self, image, label):
+        def build(self):
+            image, label = self.train_data_loader()
+            image = image.to(args.device)
+            label = label.to(args.device)
             logits = self.alexnet(image)
             loss = self.cross_entropy(logits, label)
             loss.backward()
@@ -158,13 +162,16 @@ def _test_alexnet_graph(test_case, args):
     class AlexNetEvalGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
+            self.val_data_loader = val_data_loader
             self.alexnet = alexnet_module
 
-        def build(self, image):
+        def build(self):
             with flow.no_grad():
+                image, label = self.val_data_loader()
+                image = image.to(args.device)
                 logits = self.alexnet(image)
                 predictions = logits.softmax()
-            return predictions
+            return predictions, label
 
     alexnet_eval_graph = AlexNetEvalGraph()
 
@@ -176,15 +183,9 @@ def _test_alexnet_graph(test_case, args):
         alexnet_module.train()
 
         for b in range(len(train_data_loader)):
-            image, label = train_data_loader.get_batch()
-
             # oneflow graph train
             start_t = time.time()
-            image = image.to(args.device)
-            label = label.to(args.device)
-
-            loss = alexnet_graph(image, label)
-
+            loss = alexnet_graph()
             end_t = time.time()
             if b % print_interval == 0:
                 l = loss.numpy()
@@ -199,11 +200,9 @@ def _test_alexnet_graph(test_case, args):
         alexnet_module.eval()
         correct_of = 0.0
         for b in range(len(val_data_loader)):
-            image, label = val_data_loader.get_batch()
 
             start_t = time.time()
-            image = image.to(args.device)
-            predictions = alexnet_eval_graph(image)
+            predictions, label = alexnet_eval_graph()
             of_predictions = predictions.numpy()
             clsidxs = np.argmax(of_predictions, axis=1)
 
@@ -232,7 +231,7 @@ class TestAlexnetGraph(oneflow.unittest.TestCase):
     def test_alexnet_graph_cpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cpu"
-        args.train_dataset_size = 40
+        args.train_batch_size = 40
         _test_alexnet_graph(test_case, args)
 
 
