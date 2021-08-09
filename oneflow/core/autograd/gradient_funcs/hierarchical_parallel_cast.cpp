@@ -77,8 +77,10 @@ class HerarchicalParallelCast
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override {
     const auto& grad_op =
         JUST(FindOrCreatHierarchicalParallelCastOpExpr(ctx->parallel_distribution));
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {out_grads.at(0)}));
+    in_grads->at(0) = out_grads.at(0);
+    JUST(OpInterpUtil::Dispatch(*grad_op, {out_grads.at(0)}, in_grads));
     return Maybe<void>::Ok();
   }
 };
