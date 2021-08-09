@@ -44,7 +44,10 @@ def _parse_args():
         help="dataset path",
     )
     parser.add_argument(
-        "--train_dataset_size", type=int, default=40, help="train_dataset size"
+        "--train_dataset_size", type=int, default=400, help="train_dataset size"
+    )
+    parser.add_argument(
+        "--val_dataset_size", type=int, default=40, help="val_dataset size"
     )
     # training hyper-parameters
     parser.add_argument(
@@ -115,13 +118,16 @@ def _test_alexnet_graph(test_case, args):
         dataset_size=args.train_dataset_size,
         batch_size=args.train_batch_size,
     )
+    val_data_loader = OFRecordDataLoader(
+        ofrecord_root=args.ofrecord_path,
+        mode="val",
+        dataset_size=args.val_dataset_size,
+        batch_size=args.val_batch_size,
+    )
 
     # oneflow init
     start_t = time.time()
     alexnet_module = alexnet()
-    if args.load_checkpoint != "":
-        print("load_checkpoint >>>>>>>>> ", args.load_checkpoint)
-        alexnet_module.load_state_dict(flow.load(args.load_checkpoint))
     end_t = time.time()
     print("init time : {}".format(end_t - start_t))
 
@@ -149,8 +155,22 @@ def _test_alexnet_graph(test_case, args):
 
     alexnet_graph = AlexNetGraph()
 
+    class AlexNetEvalGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.alexnet = alexnet_module
+
+        def build(self, image):
+            with flow.no_grad():
+                logits = self.alexnet(image)
+                predictions = logits.softmax()
+            return predictions
+
+    alexnet_eval_graph = AlexNetEvalGraph()
+
     of_losses = []
-    print_interval = 1
+    all_samples = len(val_data_loader) * args.val_batch_size
+    print_interval = 10
 
     for epoch in range(args.epochs):
         alexnet_module.train()
@@ -174,6 +194,26 @@ def _test_alexnet_graph(test_case, args):
                         epoch, b, l, end_t - start_t
                     )
                 )
+        print("epoch %d train done, start validation" % epoch)
+
+        alexnet_module.eval()
+        correct_of = 0.0
+        for b in range(len(val_data_loader)):
+            image, label = val_data_loader.get_batch()
+
+            start_t = time.time()
+            image = image.to(args.device)
+            predictions = alexnet_eval_graph(image)
+            of_predictions = predictions.numpy()
+            clsidxs = np.argmax(of_predictions, axis=1)
+
+            label_nd = label.numpy()
+            for i in range(args.val_batch_size):
+                if clsidxs[i] == label_nd[i]:
+                    correct_of += 1
+            end_t = time.time()
+
+        print("epoch %d, oneflow top1 val acc: %f" % (epoch, correct_of / all_samples))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -192,6 +232,7 @@ class TestAlexnetGraph(oneflow.unittest.TestCase):
     def test_alexnet_graph_cpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cpu"
+        args.train_dataset_size = 40
         _test_alexnet_graph(test_case, args)
 
 
