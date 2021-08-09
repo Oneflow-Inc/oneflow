@@ -121,13 +121,13 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<LazyJobBuildAndInferCtxMgr>::New();
     Global<JobSetCompileCtx>::New();
     Global<RuntimeBufferManagersScope>::New();
-    Global<ChunkMgr>::New();
   }
   for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   {
     // NOTE(chengcheng): Init Global Runtime objects.
     Global<RuntimeCtx>::New();
     Global<MemoryAllocator>::New();
+    Global<ChunkMgr>::New();
     Global<RegstMgr>::New();
     Global<ActorMsgBus>::New();
     Global<ThreadMgr>::New();
@@ -159,12 +159,12 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
     Global<ThreadMgr>::Delete();
     Global<ActorMsgBus>::Delete();
     Global<RegstMgr>::Delete();
+    Global<ChunkMgr>::Delete();
     Global<MemoryAllocator>::Delete();
     Global<RuntimeCtx>::Delete();
   }
 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    Global<ChunkMgr>::Delete();
     Global<RuntimeBufferManagersScope>::Delete();
     Global<JobSetCompileCtx>::Delete();
     Global<LazyJobBuildAndInferCtxMgr>::Delete();
