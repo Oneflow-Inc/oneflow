@@ -19,7 +19,7 @@ from typing import Iterator, Optional, Set, Union
 
 import oneflow._oneflow_internal
 import oneflow.framework.graph_build_util as graph_build_util
-from oneflow.framework.tensor import Tensor
+from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.util import add_indent
@@ -164,13 +164,17 @@ class Block(object):
 
         result = self._origin.__class__.__call__(self, *args)
 
-        outputs = ()
-        if not (type(result) is tuple or type(result) is list):
-            if result is not None:
-                assert type(result) is Tensor
-                outputs = (result,)
-        else:
+        if result is None:
+            outputs = tuple()
+        elif isinstance(result, (tuple, list)):
             outputs = result
+        elif isinstance(result, Tensor):
+            outputs = (result,)
+        elif isinstance(result, TensorTuple):
+            outputs = result
+        else:
+            raise ValueError(f"Unsupported result type {type(result)}")
+
         for idx, out in enumerate(outputs):
             out_repr = out._meta_repr() if isinstance(out, Tensor) else str(type(out))
             out_str = (
@@ -185,6 +189,7 @@ class Block(object):
             )
             if not isinstance(out, Tensor):
                 out_str = "[WARNING]" + out_str
+
             self._outs_repr.append(out_str)
             if self._debug:
                 print(out_str)

@@ -70,9 +70,9 @@ class DataLoaderGraph(flow.nn.Graph):
 class COCODataLoaderDistributedTestCase(oneflow.unittest.TestCase):
     def test_case1(test_case):
         rank = flow.distributed.get_rank()
-        # print(
-        #     f"GPTDataLoaderDistributedTestCase.test_case1 on rank {rank} {os.getpid()}"
-        # )
+        # pid = os.getpid()
+        # print(f"[{pid}][{rank}] COCODataLoaderDistributedTestCase.test_case1")
+
         eager_coco_loader = COCODataLoader(
             batch_size=2, device=flow.device("cpu", rank)
         )
