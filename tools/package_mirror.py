@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import hashlib
 import base64
 import tempfile
-
+import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--src_path", type=str, required=False)
@@ -93,15 +93,16 @@ def upload_one_to_aliyun(url: str):
     if bucket.object_exists(key):
         print("exists: ", key)
     else:
-        import requests
-
-        with requests.get(url, stream=True) as r:
-            r.raise_for_status()
-            with tempfile.NamedTemporaryFile() as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-                headers = {}
-                bucket.put_object_from_file(key, f.name, headers=headers)
+        d = tempfile.gettempdir()
+        dst = os.path.join(d, os.path.basename(key))
+        if os.path.isdir(dst):
+            raise ValueError("must not be a dir", dst)
+        else:
+            if os.path.isfile(dst):
+                print("[removing]", dst)
+                os.remove(dst)
+        subprocess.check_call(f"wget {url} -O {dst}", shell=True)
+        bucket.put_object_from_file(key, dst)
 
 
 def upload_to_aliyun(dir_path):
