@@ -196,8 +196,6 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
-    # TODO: convert to local before slicing consistent tensor
-    # self = _convert_to_local_tensor(self)
     if self.is_consistent:
         return "[...]"
 
