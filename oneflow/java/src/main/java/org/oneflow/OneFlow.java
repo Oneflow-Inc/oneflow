@@ -43,10 +43,10 @@ class OneFlow {
 
     // forward
     static native void runSinglePushJob(Buffer data,
-                                                Buffer shape,
-                                                int dTypeCode,
-                                                String jobName,
-                                                String opName);
+                                        Buffer shape,
+                                        int dTypeCode,
+                                        String jobName,
+                                        String opName);
     static native void runInferenceJob(String jobName);
     static native Tensor runPullJob(String jobName, String opName);
 

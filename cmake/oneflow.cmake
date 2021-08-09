@@ -423,8 +423,7 @@ add_dependencies(oneflow_py of_include_copy)
 
 if (BUILD_JNI)
   add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/api/java)
-
-  target_link_libraries(oneflow 
+  target_link_libraries(oneflow_java
     ${of_libs}
     "${oneflow_exe_third_party_libs}"
     "${oneflow_third_party_libs}"

@@ -25,8 +25,8 @@ execute_process(
 
 execute_process(
   COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
-    --get_message_type=build_proto_java
-  OUTPUT_VARIABLE BUILD_PROTO_JAVA)
+    --get_message_type=build_oneflow_proto_java
+  OUTPUT_VARIABLE BUILD_ONEFLOW_PROTO_JAVA)
 
 include_directories(${CFG_INCLUDE_DIR})
 

@@ -12,7 +12,7 @@ parser.add_argument(
         "copy_pyproto_python_script",
         "pybind_registry_cc",
         "template_files",
-        "build_proto_java",
+        "build_oneflow_proto_java",
     ],
     required=True,
 )
@@ -54,8 +54,8 @@ def get_template_files():
     return connector.join(src_files)
 
 
-def get_build_proto_java():
-    return os.path.join(SCRIPT_DIR, "build_proto_for_java.py")
+def get_build_oneflow_proto_java():
+    return os.path.join(SCRIPT_DIR, "build_oneflow_proto_java.py")
 
 
 if __name__ == "__main__":
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         print(get_convert_src_file(), end="")
     elif message_type == "template_files":
         print(get_template_files(), end="")
-    elif message_type == "build_proto_java":
-        print(get_build_proto_java(), end="")
+    elif message_type == "build_oneflow_proto_java":
+        print(get_build_oneflow_proto_java(), end="")
     else:
         raise NotImplementedError
