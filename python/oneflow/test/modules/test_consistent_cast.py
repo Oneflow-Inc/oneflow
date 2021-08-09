@@ -23,24 +23,36 @@ import oneflow.unittest
 
 
 class TestConsistentCast(flow.unittest.TestCase):
-    @flow.unittest.skip_unless_1n1d()
+    @flow.unittest.skip_unless_1n4d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cpu_local_tensor_to_gpu_placement(test_case):
-        np_arr = np.array([4, 6], dtype=np.float32)
+        if flow.distributed.get_rank() == 0:
+            np_arr = np.array([4, 6, 7, 8], dtype=np.float32)
+        else:
+            np_arr = np.array([0, 0, 0, 0], dtype=np.float32)
         tensor = flow.Tensor(np_arr, dtype=flow.float32)
-        placement = flow.placement("cuda", {0: [0]})
+        placement = flow.placement("cuda", {0: range(4)})
         device = flow.device("cuda")
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
         test_case.assertTrue(consistent_tensor.to_local().device == device)
         test_case.assertTrue(consistent_tensor.placement == placement)
+        test_case.assertTrue(
+            np.array_equal(
+                consistent_tensor.to_local().numpy(),
+                np.array([4, 6, 7, 8], dtype=np.float32),
+            )
+        )
 
-    @flow.unittest.skip_unless_1n2d()
+    @flow.unittest.skip_unless_1n4d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_consistent_with_wrong_device(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
-        tensor = flow.Tensor(np_arr, dtype=flow.float32)
-        tensor.to("cuda:1")
-        placement = flow.placement("cuda", {0: [0]})
+        tensor = flow.Tensor(
+            np_arr,
+            device=flow.device("cuda:%d" % ((flow.distributed.get_rank() + 1) % 4)),
+            dtype=flow.float32,
+        )
+        placement = flow.placement("cuda", {0: range(4)})
         device = flow.device("cuda")
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
         test_case.assertTrue(consistent_tensor.to_local().device == device)
