@@ -936,25 +936,25 @@
 
 - name: "scalar_logical_equal"
   signature: "Tensor ScalarLogicalEqual(Tensor in, Scalar scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "scalar_logical_not_equal"
   signature: "Tensor ScalarLogicalNotEqual(Tensor in, Scalar scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "scalar_logical_greater"
   signature: "Tensor ScalarLogicalGreater(Tensor in, Scalar scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "scalar_logical_greater_equal"
   signature: "Tensor ScalarLogicalGreaterEqual(Tensor in, Scalar scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "scalar_logical_less"
   signature: "Tensor ScalarLogicalLess(Tensor in, Scalar scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "scalar_logical_less_equal"
   signature: "Tensor ScalarLogicalLessEqual(Tensor in, Scalar scalar)"
-  bind_python: True
+  bind_python: False
   
