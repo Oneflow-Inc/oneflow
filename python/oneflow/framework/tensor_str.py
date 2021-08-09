@@ -113,7 +113,7 @@ class _Formatter(object):
         if not self.floating_dtype:
             # TODO: verify int type tensor
             max_value = tensor.abs().max().numpy()
-            value_str = '{}'.format(max_value)
+            value_str = "{}".format(max_value)
             self.max_width = max(self.max_width, len(value_str))
 
         else:
@@ -129,7 +129,9 @@ class _Formatter(object):
 
             # Determines use int mode or not
             self.random_sample_num = min(self.random_sample_num, tensor_view.numel())
-            rand_idx = np.random.randint(tensor_view.numel(), size=[self.random_sample_num]).tolist()
+            rand_idx = np.random.randint(
+                tensor_view.numel(), size=[self.random_sample_num]
+            ).tolist()
             sample_data = nonzero_finite_abs[rand_idx].numpy()
             for value in sample_data:
                 if value != np.ceil(value):
@@ -139,24 +141,39 @@ class _Formatter(object):
             if self.int_mode:
                 # in int_mode for floats, all numbers are integers, and we append a decimal to nonfinites
                 # to indicate that the tensor is of floating type. add 1 to the len to account for this.
-                if nonzero_finite_max / nonzero_finite_min > 1000. or nonzero_finite_max > 1.e8:
+                if (
+                    nonzero_finite_max / nonzero_finite_min > 1000.0
+                    or nonzero_finite_max > 1.0e8
+                ):
                     self.sci_mode = True
-                    value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(nonzero_finite_max)
+                    value_str = (
+                        ("{{:.{}e}}")
+                        .format(PRINT_OPTS.precision)
+                        .format(nonzero_finite_max)
+                    )
                     self.max_width = max(self.max_width, len(value_str))
                 else:
-                    value_str = ('{:.0f}').format(nonzero_finite_max)
+                    value_str = ("{:.0f}").format(nonzero_finite_max)
                     self.max_width = max(self.max_width, len(value_str))
             else:
                 # Check if scientific representation should be used.
-                if nonzero_finite_max / nonzero_finite_min > 1000.\
-                        or nonzero_finite_max > 1.e8\
-                        or nonzero_finite_min < 1.e-4:
+                if (
+                    nonzero_finite_max / nonzero_finite_min > 1000.0
+                    or nonzero_finite_max > 1.0e8
+                    or nonzero_finite_min < 1.0e-4
+                ):
                     self.sci_mode = True
                     for value in (nonzero_finite_max, nonzero_finite_min):
-                        value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
+                        value_str = (
+                            ("{{:.{}e}}").format(PRINT_OPTS.precision).format(value)
+                        )
                         self.max_width = max(self.max_width, len(value_str))
                 else:
-                    value_str = ('{{:.{}f}}').format(PRINT_OPTS.precision).format(nonzero_finite_max)
+                    value_str = (
+                        ("{{:.{}f}}")
+                        .format(PRINT_OPTS.precision)
+                        .format(nonzero_finite_max)
+                    )
                     self.max_width = max(self.max_width, len(value_str))
 
         # add singal position
@@ -187,11 +204,11 @@ class _Formatter(object):
         return (self.max_width - len(ret)) * " " + ret
 
 
-def _scalar_str(self, formatter1, formatter2=None):
+def _scalar_str(self, formatter1):
     return formatter1.format(self.tolist())
 
 
-def _vector_str(self, indent, summarize, formatter1, formatter2=None):
+def _vector_str(self, indent, summarize, formatter1):
     # length includes spaces and comma between elements
     element_length = formatter1.width() + 2
     elements_per_line = max(
@@ -199,7 +216,7 @@ def _vector_str(self, indent, summarize, formatter1, formatter2=None):
     )
     char_per_line = element_length * elements_per_line
 
-    def _val_formatter(val, formatter1=formatter1, formatter2=formatter2):
+    def _val_formatter(val, formatter1=formatter1):
         return formatter1.format(val)
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
@@ -218,39 +235,30 @@ def _vector_str(self, indent, summarize, formatter1, formatter2=None):
     return "[" + ("," + "\n" + " " * (indent + 1)).join(lines) + "]"
 
 
-# formatter2 is only used for printing complex tensors.
-# For complex tensors, formatter1 and formatter2 are the formatters for tensor.real
-# and tensor.imag respesectively
-def _tensor_str_with_formatter(self, indent, summarize, formatter1, formatter2=None):
+def _tensor_str_with_formatter(self, indent, summarize, formatter1):
     dim = self.dim()
 
     if dim == 0:
-        return _scalar_str(self, formatter1, formatter2)
+        return _scalar_str(self, formatter1)
 
     if dim == 1:
-        return _vector_str(self, indent, summarize, formatter1, formatter2)
+        return _vector_str(self, indent, summarize, formatter1)
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
         slices = (
             [
-                _tensor_str_with_formatter(
-                    self[i], indent + 1, summarize, formatter1, formatter2
-                )
+                _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
                 for i in range(0, PRINT_OPTS.edgeitems)
             ]
             + ["..."]
             + [
-                _tensor_str_with_formatter(
-                    self[i], indent + 1, summarize, formatter1, formatter2
-                )
+                _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
                 for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
             ]
         )
     else:
         slices = [
-            _tensor_str_with_formatter(
-                self[i], indent + 1, summarize, formatter1, formatter2
-            )
+            _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
             for i in range(0, self.size(0))
         ]
 
@@ -264,7 +272,9 @@ def _tensor_str(self, indent):
         self = self.float()
 
     # TODO: convert to local before slicing consistent tensor
-    self = _convert_to_local_tensor(self)
+    # self = _convert_to_local_tensor(self)
+    if self.is_consistent:
+        return "[]"
 
     formatter = _Formatter(get_summarized_data(self) if summarize else self)
     return _tensor_str_with_formatter(self, indent, summarize, formatter)
@@ -338,4 +348,3 @@ def _gen_tensor_str(inp):
         suffixes.append("requires_grad=True")
 
     return _add_suffixes(prefix + tensor_str, suffixes, indent)
-
