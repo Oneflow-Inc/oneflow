@@ -23,7 +23,7 @@ from oneflow.nn.module import Module
 
 
 def nonzero_op(input, as_tuple=False):
-    """nonzero(input, *, out=None, as_tuple=False) -> LongTensor or tuple of LongTensors
+    """nonzero(input, *, out=None, as_tuple=False) -> Tensor or tuple of Tensors
 
     .. note::
         When :attr:`as_tuple` is ``False`` (default):  returns a
@@ -64,10 +64,10 @@ def nonzero_op(input, as_tuple=False):
         input(Tensor): the input tensor.
 
     Keyword args:
-        out (LongTensor, optional): the output tensor containing indices
+        out (Tensor, optional): the output tensor containing indices
 
     Returns:
-        LongTensor or tuple of LongTensor: If :attr:`as_tuple` is ``False``, the output
+        Tensor or tuple of Tensors: If :attr:`as_tuple` is ``False``, the output
         tensor containing indices. If :attr:`as_tuple` is ``True``, one 1-D tensor for
         each dimension, containing the indices of each nonzero element along that
         dimension.
