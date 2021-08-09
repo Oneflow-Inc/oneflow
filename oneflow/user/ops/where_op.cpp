@@ -38,9 +38,6 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
     }
     *ctx->OutputShape("out", 0) = max_shape;
   }
-  // CHECK_EQ_OR_RETURN(cond_shape, ctx->InputShape("x", 0));
-  // CHECK_EQ_OR_RETURN(cond_shape, ctx->InputShape("y", 0));
-  //*ctx->OutputShape("out", 0) = cond_shape;
   return Maybe<void>::Ok();
 }
 
