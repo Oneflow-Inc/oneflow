@@ -150,7 +150,7 @@ template<>
         blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
-    const auto& parallel_distribution = std::make_shared<cfg::ParallelDistribution>();
+    const auto& parallel_distribution = std::make_shared<cfg::NdSbp>();
     *parallel_distribution->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
     const auto& tensor = JUST(
         ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, SymbolOf(*parallel_distribution),
@@ -177,7 +177,7 @@ template<>
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
     CHECK_EQ_OR_RETURN(JUST(tensor->device()), device);
   } else {
-    const auto& parallel_distribution = std::make_shared<cfg::ParallelDistribution>();
+    const auto& parallel_distribution = std::make_shared<cfg::NdSbp>();
     *parallel_distribution->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
     CHECK_EQ_OR_RETURN(JUST(tensor->parallel_distribution()), SymbolOf(*parallel_distribution));
     CHECK_EQ_OR_RETURN(JUST(tensor->parallel_desc()),

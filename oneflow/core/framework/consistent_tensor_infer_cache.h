@@ -28,7 +28,7 @@ limitations under the License.
 namespace oneflow {
 
 namespace cfg {
-class ParallelDistribution;
+class NdSbp;
 }
 
 class ParallelDesc;
@@ -42,7 +42,7 @@ class InputConsistentTensorMeta final {
   InputConsistentTensorMeta() : tensor_meta_(), consumer_parallel_distribution_constraint_() {}
   InputConsistentTensorMeta(
       Symbol<ConsistentTensorMeta> tensor_meta,
-      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint)
+      const Optional<Symbol<cfg::NdSbp>>& consumer_parallel_distribution_constraint)
       : tensor_meta_(tensor_meta),
         consumer_parallel_distribution_constraint_(consumer_parallel_distribution_constraint) {}
 
@@ -53,17 +53,17 @@ class InputConsistentTensorMeta final {
   size_t hash_value() const;
   bool operator==(const InputConsistentTensorMeta& other) const;
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
-  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint()
+  const Optional<Symbol<cfg::NdSbp>>& consumer_parallel_distribution_constraint()
       const {
     return consumer_parallel_distribution_constraint_;
   }
   void assign(
       Symbol<ConsistentTensorMeta> tensor_meta,
-      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint);
+      const Optional<Symbol<cfg::NdSbp>>& consumer_parallel_distribution_constraint);
 
  private:
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
+  Optional<Symbol<cfg::NdSbp>> consumer_parallel_distribution_constraint_;
 };
 
 class TensorTuple;
@@ -84,16 +84,16 @@ class ConsistentTensorMetaInferArgs final {
 
   bool operator==(const ConsistentTensorMetaInferArgs& other) const;
 
-  Maybe<void> MakeParallelDistributionConstraints(
+  Maybe<void> MakeNdSbpConstraints(
       const UserOpExpr& user_op_expr,
-      cfg::ParallelDistributionSignature* parallel_distribution_signature) const;
+      cfg::NdSbpSignature* parallel_distribution_signature) const;
 
   Maybe<void> MakeInputBlobDescs(const UserOpExpr& user_op_expr,
                                  std::vector<BlobDesc>* blob_descs) const;
 
-  Maybe<void> MakeParallelDistributionInferHints(
+  Maybe<void> MakeNdSbpInferHints(
       const UserOpExpr& user_op_expr, const std::vector<BlobDesc>& blob_descs,
-      std::vector<ParallelDistributionInferHint>* hints) const;
+      std::vector<NdSbpInferHint>* hints) const;
 
   static Maybe<ConsistentTensorMetaInferArgs> New(const AttrMap& attrs,
                                                   const TensorTuple& input_tensors);
@@ -113,7 +113,7 @@ class SrcOpConsistentTensorMetaInferArgs final {
   ~SrcOpConsistentTensorMetaInferArgs() = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
-  Symbol<cfg::ParallelDistribution> parallel_distribution() const { return parallel_distribution_; }
+  Symbol<cfg::NdSbp> parallel_distribution() const { return parallel_distribution_; }
   const AttrMap& attrs() const { return attrs_; }
 
   size_t hash_value() const;
@@ -122,14 +122,14 @@ class SrcOpConsistentTensorMetaInferArgs final {
 
   static Maybe<SrcOpConsistentTensorMetaInferArgs> New(
       const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
-      Symbol<cfg::ParallelDistribution> parallel_distribution);
+      Symbol<cfg::NdSbp> parallel_distribution);
 
  private:
   SrcOpConsistentTensorMetaInferArgs() = default;
 
   AttrMap attrs_;
   Symbol<ParallelDesc> parallel_desc_;
-  Symbol<cfg::ParallelDistribution> parallel_distribution_;
+  Symbol<cfg::NdSbp> parallel_distribution_;
 };
 
 class OpArgMutConsistentTensorMeta final {

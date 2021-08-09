@@ -52,15 +52,15 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx)
                                         -> Maybe<void> {
       const Shape& hierarchy = ctx->parallel_hierarchy();
-      cfg::ParallelDistribution* output_dist = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      cfg::NdSbp* output_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
       // the input may be produced by tick which should be broadcast parallel dist
-      std::vector<cfg::ParallelDistribution*> inputs_dist;
+      std::vector<cfg::NdSbp*> inputs_dist;
       for (const auto& arg_pair : ctx->inputs()) {
         inputs_dist.emplace_back(
-            ctx->ParallelDistribution4ArgNameAndIndex(arg_pair.first, arg_pair.second));
+            ctx->NdSbp4ArgNameAndIndex(arg_pair.first, arg_pair.second));
       }
       const auto& dist_conf =
           ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");

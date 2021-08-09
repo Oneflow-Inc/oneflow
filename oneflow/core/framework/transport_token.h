@@ -41,7 +41,7 @@ enum RankGroupCtrlCmd {
   // Begin
   kRankGroupCtrlCmdInvalid = 0,
   kRankGroupCtrlCmdSyncSymbolParallelDesc,
-  kRankGroupCtrlCmdSyncSymbolParallelDistribution,
+  kRankGroupCtrlCmdSyncSymbolNdSbp,
   kRankGroupCtrlCmdSyncSymbolConsistentTensorMeta,
   kRankGroupCtrlCmdCheckRankGroupConsistency,
   kRankGroupCtrlCmdCheckTensorConsistency,

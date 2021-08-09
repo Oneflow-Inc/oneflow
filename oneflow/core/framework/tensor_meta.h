@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 namespace cfg {
 
-class ParallelDistribution;
+class NdSbp;
 }
 
 class Shape;
@@ -90,7 +90,7 @@ class MirroredTensorMeta : public TensorMeta {
 class ConsistentTensorMeta : public TensorMeta {
  public:
   ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                       Symbol<cfg::ParallelDistribution> parallel_distribution,
+                       Symbol<cfg::NdSbp> parallel_distribution,
                        Symbol<ParallelDesc> parallel_desc)
       : TensorMeta(shape, dtype),
         parallel_distribution_(parallel_distribution),
@@ -101,10 +101,10 @@ class ConsistentTensorMeta : public TensorMeta {
 
   bool operator==(const ConsistentTensorMeta& other) const;
 
-  Symbol<cfg::ParallelDistribution> parallel_distribution() const { return parallel_distribution_; }
+  Symbol<cfg::NdSbp> parallel_distribution() const { return parallel_distribution_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
-  void set_parallel_distribution(Symbol<cfg::ParallelDistribution> val) {
+  void set_parallel_distribution(Symbol<cfg::NdSbp> val) {
     parallel_distribution_ = val;
   }
 
@@ -113,7 +113,7 @@ class ConsistentTensorMeta : public TensorMeta {
   size_t CalcHashValue() const;
 
  private:
-  Symbol<cfg::ParallelDistribution> parallel_distribution_;
+  Symbol<cfg::NdSbp> parallel_distribution_;
   Symbol<ParallelDesc> parallel_desc_;
 };
 

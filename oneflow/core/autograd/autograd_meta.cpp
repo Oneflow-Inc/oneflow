@@ -32,8 +32,8 @@ TensorInfo::TensorInfo(const Tensor& tensor) : shape_(tensor.shape()), dtype_(te
 }
 
 Maybe<const std::vector<Symbol<cfg::SbpParallel>>&> GetSbpTuple(
-    Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  static thread_local HashMap<Symbol<cfg::ParallelDistribution>,
+    Symbol<cfg::NdSbp> parallel_distribution) {
+  static thread_local HashMap<Symbol<cfg::NdSbp>,
                               std::vector<Symbol<cfg::SbpParallel>>>
       map;
   auto iter = map.find(parallel_distribution);

@@ -33,8 +33,8 @@ class DispatchHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphB
                                       const ParallelDesc& in_parallel_desc,
                                       const ParallelDesc& out_parallel_desc,
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                      const cfg::ParallelDistribution& in_parallel_distribution,
-                                      const cfg::ParallelDistribution& out_parallel_distribution,
+                                      const cfg::NdSbp& in_parallel_distribution,
+                                      const cfg::NdSbp& out_parallel_distribution,
                                       const Shape& time_shape) const override;
 
  private:
@@ -44,12 +44,12 @@ class DispatchHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphB
 
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc,
-                            const cfg::ParallelDistribution& in_parallel_distribution,
-                            const cfg::ParallelDistribution& out_parallel_distribution,
+                            const cfg::NdSbp& in_parallel_distribution,
+                            const cfg::NdSbp& out_parallel_distribution,
                             ParallelDesc* reduced_in_parallel_desc,
                             ParallelDesc* reduced_out_parallel_desc,
-                            cfg::ParallelDistribution* reduced_in_parallel_distribution,
-                            cfg::ParallelDistribution* reduced_out_parallel_distribution);
+                            cfg::NdSbp* reduced_in_parallel_distribution,
+                            cfg::NdSbp* reduced_out_parallel_distribution);
 
 }  // namespace oneflow
 

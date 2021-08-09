@@ -29,8 +29,8 @@ namespace one {
 namespace {
 
 Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
-    Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  thread_local HashMap<Symbol<cfg::ParallelDistribution>, std::shared_ptr<one::UserOpExpr>>
+    Symbol<cfg::NdSbp> parallel_distribution) {
+  thread_local HashMap<Symbol<cfg::NdSbp>, std::shared_ptr<one::UserOpExpr>>
       parallel_distribution2hierarchical_parallel_cast_op_expr;
   auto iter = parallel_distribution2hierarchical_parallel_cast_op_expr.find(parallel_distribution);
   if (iter == parallel_distribution2hierarchical_parallel_cast_op_expr.end()) {
@@ -55,7 +55,7 @@ Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
 }  // namespace
 
 struct HerarchicalParallelCastOpExprInterpState : public OpExprInterpState {
-  Symbol<cfg::ParallelDistribution> parallel_distribution;
+  Symbol<cfg::NdSbp> parallel_distribution;
 };
 
 class HerarchicalParallelCast

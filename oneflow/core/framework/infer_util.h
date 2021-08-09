@@ -76,7 +76,7 @@ class InferContext {
   virtual const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
 
-  virtual const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
+  virtual const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&,
                                                                                 int32_t) const = 0;
 
   virtual bool InputIsDynamic(const std::string&, int32_t) const = 0;

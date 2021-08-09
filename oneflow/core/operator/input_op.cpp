@@ -64,23 +64,23 @@ Maybe<void> InputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InputOp::InferParallelDistributionSignature(
-    cfg::ParallelDistributionSignature* parallel_distribution_signature,
-    const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+Maybe<void> InputOp::InferNdSbpSignature(
+    cfg::NdSbpSignature* parallel_distribution_signature,
+    const cfg::NdSbpSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
-    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-        ParallelDistributionInferHint4Ibn) const {
+    std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+        NdSbpInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const InterfaceBlobConf& blob_conf = op_conf().input_conf().blob_conf();
-  cfg::ParallelDistribution& tick_parallel_distribution =
+  cfg::NdSbp& tick_parallel_distribution =
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["tick"];
   tick_parallel_distribution.clear_sbp_parallel();
   FOR_RANGE(int64_t, i, 0, parallel_hierarchy->NumAxes()) {
     tick_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
   }
-  cfg::ParallelDistribution& out_parallel_distribution =
+  cfg::NdSbp& out_parallel_distribution =
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
-  JUST(InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc,
                                                               &out_parallel_distribution));
   return Maybe<void>::Ok();
 }

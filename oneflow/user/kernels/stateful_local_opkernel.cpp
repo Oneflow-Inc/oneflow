@@ -214,7 +214,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
     UNIMPLEMENTED();
   }
 
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
     UNIMPLEMENTED();
   }

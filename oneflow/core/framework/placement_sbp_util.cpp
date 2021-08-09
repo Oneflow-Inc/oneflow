@@ -73,7 +73,7 @@ Maybe<const Shape> GetBroadcastShape(const Shape& hierarchy_shape,
 }
 
 Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
-    const ParallelDesc& parallel_desc, const cfg::ParallelDistribution& parallel_distribution,
+    const ParallelDesc& parallel_desc, const cfg::NdSbp& parallel_distribution,
     int64_t parallel_id) {
   const auto& hierarchy_shape = *parallel_desc.hierarchy();
   std::vector<bool> dim2is_broadcast(parallel_distribution.sbp_parallel_size());
@@ -99,8 +99,8 @@ Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
 }  // namespace
 
 Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
-    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  using PlacementSbp = std::pair<Symbol<ParallelDesc>, Symbol<cfg::ParallelDistribution>>;
+    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::NdSbp> parallel_distribution) {
+  using PlacementSbp = std::pair<Symbol<ParallelDesc>, Symbol<cfg::NdSbp>>;
   static thread_local HashMap<PlacementSbp, Symbol<ParallelDesc>> map;
   const auto& key = std::make_pair(parallel_desc, parallel_distribution);
   auto iter = map.find(key);

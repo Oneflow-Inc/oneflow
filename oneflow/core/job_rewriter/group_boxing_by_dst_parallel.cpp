@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) {
-  HashMap<LogicalBlobId, HashMap<std::pair<ParallelDesc, cfg::ParallelDistribution>,
+  HashMap<LogicalBlobId, HashMap<std::pair<ParallelDesc, cfg::NdSbp>,
                                  std::vector<std::pair<const OpNode*, std::string>>>>
       lbi2consumer_grouped_by_parallel;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
@@ -30,10 +30,10 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
-      const cfg::ParallelDistribution& producer_parallel_distribution =
-          producer.ParallelDistribution4Lbi(lbi);
-      const cfg::ParallelDistribution& consumer_parallel_distribution =
-          node->ParallelDistribution4BnInOp(ibn);
+      const cfg::NdSbp& producer_parallel_distribution =
+          producer.NdSbp4Lbi(lbi);
+      const cfg::NdSbp& consumer_parallel_distribution =
+          node->NdSbp4BnInOp(ibn);
 
       if (producer.parallel_desc() != node->parallel_desc()
           || (node->parallel_desc().parallel_num() != 1
@@ -52,19 +52,19 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
     for (const auto& parallel7group : lbi7groups.second) {
       if (parallel7group.second.size() < 2) { continue; }
       const ParallelDesc& dst_parallel_desc = parallel7group.first.first;
-      const cfg::ParallelDistribution& dst_parallel_distribution = parallel7group.first.second;
+      const cfg::NdSbp& dst_parallel_distribution = parallel7group.first.second;
       OperatorConf identity_op_conf{};
       identity_op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
       identity_conf->set_in(GenLogicalBlobName(lbi));
       identity_conf->set_out("out");
       job_builder->AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
-      cfg::ParallelDistributionSignature identity_parallel_distribution_signature;
+      cfg::NdSbpSignature identity_parallel_distribution_signature;
       (*identity_parallel_distribution_signature.mutable_bn_in_op2parallel_distribution())["in"] =
           dst_parallel_distribution;
       (*identity_parallel_distribution_signature.mutable_bn_in_op2parallel_distribution())["out"] =
           dst_parallel_distribution;
-      job_builder->AddParallelDistributionSignature4OpName(
+      job_builder->AddNdSbpSignature4OpName(
           identity_op_conf.name(), identity_parallel_distribution_signature);
 
       LogicalBlobId grouped_lbi;

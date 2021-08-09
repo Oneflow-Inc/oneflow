@@ -175,7 +175,7 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
 
 void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(
     const OperatorConf& operator_conf, const ParallelDesc& parallel_desc,
-    const cfg::ParallelDistributionSignature& parallel_distribution_signature,
+    const cfg::NdSbpSignature& parallel_distribution_signature,
     bool is_mirrored_parallel_view) const {
   auto* op_name2sbp_sig =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
@@ -187,7 +187,7 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(
         &(*op_name2parallel_distribution_sig)[operator_conf.name()]);
     if (parallel_desc.hierarchy()->NumAxes() == 1) {
       cfg::SbpSignature sbp_signature;
-      ParallelDistributionSignatureToSbpSignature(parallel_distribution_signature, &sbp_signature);
+      NdSbpSignatureToSbpSignature(parallel_distribution_signature, &sbp_signature);
       sbp_signature.ToProto(&(*op_name2sbp_sig)[operator_conf.name()]);
     }
   }
@@ -229,10 +229,10 @@ Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobBuildAndInferCtx::InferOpOutParallelDistribution(
-    Operator* op, const cfg::ParallelDistributionSignature& parallel_distribution_sig_conf,
+Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(
+    Operator* op, const cfg::NdSbpSignature& parallel_distribution_sig_conf,
     const ParallelDesc& parallel_desc) {
-  HashMap<std::string, ParallelDistributionInferHint> ibn2parallel_distribution_infer_hint;
+  HashMap<std::string, NdSbpInferHint> ibn2parallel_distribution_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
     auto logical_blob_desc_it = lbi2logical_blob_desc_.find(lbi);
@@ -247,18 +247,18 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutParallelDistribution(
         << Error::LogicalBlobNameNotExistError() << "when infer op_name: " << op->op_name()
         << " consumed op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
         << " not infer parallel distribution";
-    const cfg::ParallelDistribution* parallel_distribution = &parallel_distribution_it->second;
+    const cfg::NdSbp* parallel_distribution = &parallel_distribution_it->second;
     ibn2parallel_distribution_infer_hint.emplace(
-        ibn, ParallelDistributionInferHint(pd, logical_blob_desc, parallel_distribution));
+        ibn, NdSbpInferHint(pd, logical_blob_desc, parallel_distribution));
   }
 
-  const auto ParallelDistributionInferHint4Ibn =
-      [&](const std::string& bn) -> Maybe<const ParallelDistributionInferHint*> {
+  const auto NdSbpInferHint4Ibn =
+      [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
     return &ibn2parallel_distribution_infer_hint.at(bn);
   };
 
-  JUST(op->InferParallelDistributionSignatureIf(parallel_distribution_sig_conf, parallel_desc,
-                                                ParallelDistributionInferHint4Ibn));
+  JUST(op->InferNdSbpSignatureIf(parallel_distribution_sig_conf, parallel_desc,
+                                                NdSbpInferHint4Ibn));
 
   const auto& bn2parallel_distribution =
       JUST(op->parallel_distribution_signature())->bn_in_op2parallel_distribution();
@@ -601,11 +601,11 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
 
   // infer parallel_distribution signature
-  cfg::ParallelDistributionSignature parallel_distribution_sig_conf;
-  SbpSignatureToParallelDistributionSignature(sbp_sig_conf, &parallel_distribution_sig_conf);
+  cfg::NdSbpSignature parallel_distribution_sig_conf;
+  SbpSignatureToNdSbpSignature(sbp_sig_conf, &parallel_distribution_sig_conf);
   AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_desc, parallel_distribution_sig_conf,
                                     is_mirrored_parallel_view);
-  JUST(InferOpOutParallelDistribution(op, parallel_distribution_sig_conf, parallel_desc));
+  JUST(InferOpOutNdSbp(op, parallel_distribution_sig_conf, parallel_desc));
 
   // infer logical blob desc
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));
@@ -1293,7 +1293,7 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   });
   // updata job_helper
   op_graph.DumpLogicalBlobDesc(job_);
-  op_graph.DumpParallelDistributionSignature(job_);
+  op_graph.DumpNdSbpSignature(job_);
   return Maybe<void>::Ok();
 }
 

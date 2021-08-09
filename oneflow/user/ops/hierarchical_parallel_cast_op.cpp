@@ -29,12 +29,12 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    .SetNdSbpInferFn(
+        [](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+          cfg::NdSbp* in_distribution =
+              ctx->NdSbp4ArgNameAndIndex("in", 0);
+          cfg::NdSbp* out_distribution =
+              ctx->NdSbp4ArgNameAndIndex("out", 0);
           const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
           const auto& conf =
               ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
@@ -62,16 +62,16 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-          cfg::ParallelDistribution* like_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("like", 0);
-          const cfg::ParallelDistribution& hint_distribution =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("like", 0);
+    .SetNdSbpInferFn(
+        [](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+          cfg::NdSbp* in_distribution =
+              ctx->NdSbp4ArgNameAndIndex("in", 0);
+          cfg::NdSbp* out_distribution =
+              ctx->NdSbp4ArgNameAndIndex("out", 0);
+          cfg::NdSbp* like_distribution =
+              ctx->NdSbp4ArgNameAndIndex("like", 0);
+          const cfg::NdSbp& hint_distribution =
+              ctx->NdSbpHint4InputArgNameAndIndex("like", 0);
           *in_distribution = hint_distribution;
           *out_distribution = hint_distribution;
           *like_distribution = hint_distribution;

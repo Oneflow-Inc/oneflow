@@ -24,7 +24,7 @@ namespace one {
 
 struct CastConsistentOpExprInterpState : public OpExprInterpState {
   Symbol<ParallelDesc> parallel_desc;
-  Symbol<cfg::ParallelDistribution> parallel_distribution;
+  Symbol<cfg::NdSbp> parallel_distribution;
   std::shared_ptr<const Shape> shape;
 };
 

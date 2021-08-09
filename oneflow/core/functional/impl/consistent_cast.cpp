@@ -109,7 +109,7 @@ Maybe<Shape> GetConcatenatedShape(
 }
 
 Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc> parallel_desc,
-                                Symbol<cfg::ParallelDistribution> parallel_distribution) {
+                                Symbol<cfg::NdSbp> parallel_distribution) {
   if (parallel_distribution->sbp_parallel_size() == 1
       && parallel_distribution->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape = JUST(All2AllSyncShape(physical_shape));
@@ -121,7 +121,7 @@ Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc
   }
 }
 
-Maybe<one::UserOpExpr> FindOrCreatParallelDistributionOpExpr(
+Maybe<one::UserOpExpr> FindOrCreatNdSbpOpExpr(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
   thread_local HashMap<std::vector<Symbol<cfg::SbpParallel>>, std::shared_ptr<one::UserOpExpr>>
       sbp_list2hierarchical_parallel_cast_op_expr;
@@ -149,7 +149,7 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
   const auto& parallel_distribution_cast_op_expr =
-      JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
+      JUST(FindOrCreatNdSbpOpExpr(sbp_parallels));
   const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
                                                              {consistent_tensor}));
   return ret;
@@ -165,7 +165,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
     CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
         << Error::Unimplemented() << "tensor must be on default device of the current rank.";
   }
-  Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
+  Symbol<cfg::NdSbp> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
   std::shared_ptr<const Shape> shape_ptr;
   if (shape.has_value()) {
     shape_ptr = JUST(shape.value());

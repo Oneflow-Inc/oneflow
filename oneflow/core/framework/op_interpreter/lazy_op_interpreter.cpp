@@ -58,7 +58,7 @@ bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
   }
 }
 
-Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distribution,
+Maybe<void> GenNdSbpByTensor(NdSbp* parallel_distribution,
                                             const std::shared_ptr<Tensor>& tensor) {
   parallel_distribution->clear_sbp_parallel();
   if (tensor->is_local()) {
@@ -72,7 +72,7 @@ Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* parallel_distr
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenVariableOpConfParallelDistributionStringByTensor(
+Maybe<void> GenVariableOpConfNdSbpStringByTensor(
     VariableOpConf* var_conf, const std::shared_ptr<Tensor>& tensor) {
   var_conf->clear_parallel_distribution();
   if (tensor->is_local()) {
@@ -80,7 +80,7 @@ Maybe<void> GenVariableOpConfParallelDistributionStringByTensor(
     broadcast.mutable_broadcast_parallel();
     var_conf->add_parallel_distribution(SbpParallelToString(broadcast));
   } else {
-    const cfg::ParallelDistribution& parallel_distribution = *JUST(tensor->parallel_distribution());
+    const cfg::NdSbp& parallel_distribution = *JUST(tensor->parallel_distribution());
     for (const auto& sbp_parallel : parallel_distribution.sbp_parallel()) {
       var_conf->add_parallel_distribution(SbpParallelToString(sbp_parallel));
     }
@@ -143,7 +143,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   //     this flag will be removed in the future.
   // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
   blob_conf->set_is_dynamic(false);
-  JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
+  JUST(GenNdSbpByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
@@ -198,7 +198,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
   //   by EagerTensor.
   var_conf->mutable_initializer()->mutable_empty_conf();
-  JUST(GenVariableOpConfParallelDistributionStringByTensor(var_conf, input_tensor));
+  JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
   if (!input_tensor->requires_grad()) { var_conf->set_trainable(false); }
   if (input_tensor->requires_grad()) {
     double l2 = JUST(ctx.attrs.GetAttr<double>("l2"));
@@ -266,7 +266,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   //     this flag will be removed in the future.
   // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
   blob_conf->set_is_dynamic(false);
-  JUST(GenParallelDistributionByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
+  JUST(GenNdSbpByTensor(blob_conf->mutable_parallel_distribution(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));

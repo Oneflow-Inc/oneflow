@@ -173,18 +173,18 @@ std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
   return sbp_str;
 }
 
-void SbpSignatureToParallelDistributionSignature(
+void SbpSignatureToNdSbpSignature(
     const cfg::SbpSignature& sbp_signature,
-    cfg::ParallelDistributionSignature* parallel_distribution_signature) {
+    cfg::NdSbpSignature* parallel_distribution_signature) {
   for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
     *((*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[pair.first]
           .add_sbp_parallel()) = pair.second;
   }
 }
 
-template<typename ParallelDistributionSignatureT>
-void ParallelDistributionSignatureToSbpSignature(
-    const ParallelDistributionSignatureT& parallel_distribution_signature,
+template<typename NdSbpSignatureT>
+void NdSbpSignatureToSbpSignature(
+    const NdSbpSignatureT& parallel_distribution_signature,
     cfg::SbpSignature* sbp_signature) {
   for (const auto& pair : parallel_distribution_signature.bn_in_op2parallel_distribution()) {
     CHECK_EQ(pair.second.sbp_parallel_size(), 1);
@@ -193,17 +193,17 @@ void ParallelDistributionSignatureToSbpSignature(
   }
 }
 
-template void ParallelDistributionSignatureToSbpSignature(
-    const ParallelDistributionSignature& parallel_distribution_signature,
+template void NdSbpSignatureToSbpSignature(
+    const NdSbpSignature& parallel_distribution_signature,
     cfg::SbpSignature* sbp_signature);
 
-template void ParallelDistributionSignatureToSbpSignature(
-    const cfg::ParallelDistributionSignature& parallel_distribution_signature,
+template void NdSbpSignatureToSbpSignature(
+    const cfg::NdSbpSignature& parallel_distribution_signature,
     cfg::SbpSignature* sbp_signature);
 
-void CheckSbpSignatureAndParallelDistributionEquals(
+void CheckSbpSignatureAndNdSbpEquals(
     const cfg::SbpSignature& sbp_sig,
-    const cfg::ParallelDistributionSignature& parallel_distribution_sig) {
+    const cfg::NdSbpSignature& parallel_distribution_sig) {
   CHECK_EQ(sbp_sig.bn_in_op2sbp_parallel_size(),
            parallel_distribution_sig.bn_in_op2parallel_distribution_size());
   for (const auto& pair : parallel_distribution_sig.bn_in_op2parallel_distribution()) {

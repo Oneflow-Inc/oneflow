@@ -226,7 +226,7 @@ class UserOpInferContext final : public user_op::InferContext {
     return it->second;
   }
 
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
     const auto& bn2parallel_distribution =
         CHECK_JUST(op_->parallel_distribution_signature())->bn_in_op2parallel_distribution();
@@ -413,19 +413,19 @@ class UserOpInferOutputBlobTimeShapeFnContext : public user_op::InferOutputBlobT
   Shape* output_blob_time_shape_;
 };
 
-class UserOpInferParallelDistributionFnContext
-    : public user_op::InferParallelDistributionFnContext {
+class UserOpInferNdSbpFnContext
+    : public user_op::InferNdSbpFnContext {
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
-  UserOpInferParallelDistributionFnContext(
-      const UserOp* op, cfg::ParallelDistributionSignature* parallel_distribution_signature,
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
-      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn)
+  UserOpInferNdSbpFnContext(
+      const UserOp* op, cfg::NdSbpSignature* parallel_distribution_signature,
+      const cfg::NdSbpSignature& parallel_distribution_constraints,
+      std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+          NdSbpInferHint4Ibn)
       : op_(op),
         parallel_distribution_signature_(parallel_distribution_signature),
         parallel_distribution_constraints_(parallel_distribution_constraints),
-        parallel_distribution_infer_hint4ibn_fn_(std::move(ParallelDistributionInferHint4Ibn)) {
+        parallel_distribution_infer_hint4ibn_fn_(std::move(NdSbpInferHint4Ibn)) {
     const auto& user_op_conf = op->op_conf().user_conf();
     for (const auto& it : user_op_conf.input()) {
       const std::string& arg_name = it.first;
@@ -439,7 +439,7 @@ class UserOpInferParallelDistributionFnContext
       }
     }
   }
-  ~UserOpInferParallelDistributionFnContext() override = default;
+  ~UserOpInferNdSbpFnContext() override = default;
 
   const user_op::TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
       const std::string& input_arg_name, int32_t index) const override {
@@ -449,17 +449,17 @@ class UserOpInferParallelDistributionFnContext
     return it->second;
   }
 
-  const cfg::ParallelDistributionSignature& parallel_distribution_constraints() const override {
+  const cfg::NdSbpSignature& parallel_distribution_constraints() const override {
     return parallel_distribution_constraints_;
   }
 
-  cfg::ParallelDistribution* ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
+  cfg::NdSbp* NdSbp4ArgNameAndIndex(const std::string& arg_name,
                                                                   int32_t index) override {
     return &(*parallel_distribution_signature_
                   ->mutable_bn_in_op2parallel_distribution())[GenRepeatedBn(arg_name, index)];
   }
 
-  const cfg::ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
+  const cfg::NdSbp& NdSbpHint4InputArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
     auto hint =
         CHECK_JUST(parallel_distribution_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, index)));
@@ -482,9 +482,9 @@ class UserOpInferParallelDistributionFnContext
  private:
   const UserOp* op_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
-  cfg::ParallelDistributionSignature* parallel_distribution_signature_;
-  cfg::ParallelDistributionSignature parallel_distribution_constraints_;
-  std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+  cfg::NdSbpSignature* parallel_distribution_signature_;
+  cfg::NdSbpSignature parallel_distribution_constraints_;
+  std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
       parallel_distribution_infer_hint4ibn_fn_;
 };
 
@@ -749,30 +749,30 @@ Maybe<void> UserOp::InferOpTimeShape(
 
 namespace {
 
-bool IgnoreInferParallelDistributionFnWhenFlatHierarchy(const std::string& op_type_name) {
+bool IgnoreInferNdSbpFnWhenFlatHierarchy(const std::string& op_type_name) {
   return (op_type_name == "reshape" || op_type_name == "reshape_like");
 }
 
 }  // namespace
 
-Maybe<void> UserOp::InferParallelDistributionSignature(
-    cfg::ParallelDistributionSignature* parallel_distribution_signature,
-    const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+Maybe<void> UserOp::InferNdSbpSignature(
+    cfg::NdSbpSignature* parallel_distribution_signature,
+    const cfg::NdSbpSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
-    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-        ParallelDistributionInferHint4Ibn) const {
+    std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+        NdSbpInferHint4Ibn) const {
   if (val_->parallel_distribution_infer_fn
       && (parallel_desc.hierarchy()->NumAxes() > 1
-          || !IgnoreInferParallelDistributionFnWhenFlatHierarchy(
+          || !IgnoreInferNdSbpFnWhenFlatHierarchy(
               this->user_op_conf().op_type_name()))) {
-    UserOpInferParallelDistributionFnContext ctx(this, parallel_distribution_signature,
+    UserOpInferNdSbpFnContext ctx(this, parallel_distribution_signature,
                                                  parallel_distribution_constraints,
-                                                 ParallelDistributionInferHint4Ibn);
+                                                 NdSbpInferHint4Ibn);
     JUST(val_->parallel_distribution_infer_fn(&ctx));
   } else {
-    JUST(Operator::InferParallelDistributionSignature(
+    JUST(Operator::InferNdSbpSignature(
         parallel_distribution_signature, parallel_distribution_constraints, parallel_desc,
-        ParallelDistributionInferHint4Ibn));
+        NdSbpInferHint4Ibn));
   }
   std::string tick_bn = GenRepeatedBn(user_op::kUserSourceOpTickInputArgName, 0);
   if (std::find(input_bns().begin(), input_bns().end(), tick_bn) != input_bns().end()) {

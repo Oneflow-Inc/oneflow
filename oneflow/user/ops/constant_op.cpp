@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> InferConstantParallelDistribution(user_op::InferParallelDistributionFnContext* ctx);
+Maybe<void> InferConstantNdSbp(user_op::InferNdSbpFnContext* ctx);
 
 REGISTER_NO_GRAD_USER_OP("constant")
     .Output("out")
@@ -51,16 +51,16 @@ REGISTER_NO_GRAD_USER_OP("constant")
       *ctx->OutputDType("out", 0) = dtype;
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx)
                                         -> Maybe<void> {
       const Shape& hierarchy = ctx->parallel_hierarchy();
-      cfg::ParallelDistribution* output_dist = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      cfg::NdSbp* output_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
       // the input may be produced by iteration variable or tick, and all of them should be
       // broadcast parallel dist
-      std::vector<cfg::ParallelDistribution*> inputs_dist;
+      std::vector<cfg::NdSbp*> inputs_dist;
       for (const auto& arg_pair : ctx->inputs()) {
         inputs_dist.emplace_back(
-            ctx->ParallelDistribution4ArgNameAndIndex(arg_pair.first, arg_pair.second));
+            ctx->NdSbp4ArgNameAndIndex(arg_pair.first, arg_pair.second));
       }
       const auto& dist_conf =
           ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");

@@ -23,19 +23,19 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(Symbol<cfg::ParallelDistribution> sbp_list);
+Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> sbp_list);
 
-Maybe<Symbol<cfg::ParallelDistribution>> GetNdSbp(
+Maybe<Symbol<cfg::NdSbp>> GetNdSbp(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
 
 Maybe<std::vector<std::string>> GetNdSbpStrList(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
 
 Maybe<std::vector<std::string>> GetNdSbpStrList(
-    Symbol<cfg::ParallelDistribution> parallel_distribution);
+    Symbol<cfg::NdSbp> parallel_distribution);
 
 Maybe<std::vector<std::string>> GetDualNdSbpStrList(
-    Symbol<cfg::ParallelDistribution> parallel_distribution);
+    Symbol<cfg::NdSbp> parallel_distribution);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_ND_SBP_H_

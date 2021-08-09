@@ -250,7 +250,7 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
 
 Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
                                          Symbol<ParallelDesc> parallel_desc,
-                                         Symbol<cfg::ParallelDistribution> parallel_distribution) {
+                                         Symbol<cfg::NdSbp> parallel_distribution) {
   Optional<int64_t> parallel_id;
   JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }

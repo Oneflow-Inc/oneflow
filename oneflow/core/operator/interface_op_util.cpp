@@ -58,8 +58,8 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
                                               BlobDesc* out_blob_desc,
                                               const ParallelContext* parallel_ctx,
                                               const ParallelDesc& parallel_desc) {
-  cfg::ParallelDistribution parallel_distribution;
-  JUST(ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc, &parallel_distribution));
+  cfg::NdSbp parallel_distribution;
+  JUST(ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &parallel_distribution));
   out_blob_desc->mut_shape() = *JUST(GetPhysicalShape(
       Shape(blob_conf.shape()), parallel_distribution, parallel_desc, *parallel_ctx));
   out_blob_desc->set_data_type(blob_conf.data_type());
@@ -107,12 +107,12 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InterfaceOpUtil::ParseParallelDistributionFromBlobConf(
+Maybe<void> InterfaceOpUtil::ParseNdSbpFromBlobConf(
     const InterfaceBlobConf& blob_conf, const ParallelDesc& parallel_desc,
-    cfg::ParallelDistribution* parallel_distribution) {
+    cfg::NdSbp* parallel_distribution) {
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
   if (blob_conf.has_parallel_distribution()) {
-    *parallel_distribution = cfg::ParallelDistribution(blob_conf.parallel_distribution());
+    *parallel_distribution = cfg::NdSbp(blob_conf.parallel_distribution());
   } else {
     parallel_distribution->clear_sbp_parallel();
     FOR_RANGE(int64_t, i, 0, num_axes) {

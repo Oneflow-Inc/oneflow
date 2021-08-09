@@ -22,8 +22,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<cfg::ParallelDistribution>> GetBroadcastParallelDistribution() {
-  cfg::ParallelDistribution broadcast_parallel_distribution;
+Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp() {
+  cfg::NdSbp broadcast_parallel_distribution;
   broadcast_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
   return SymbolOf(broadcast_parallel_distribution);
 }
@@ -32,14 +32,14 @@ Maybe<Symbol<cfg::ParallelDistribution>> GetBroadcastParallelDistribution() {
 
 Maybe<one::Tensor> NcclS2PBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input,
-    Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-    Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+    Symbol<cfg::NdSbp> in_parallel_distribution,
+    Symbol<cfg::NdSbp> out_parallel_distribution,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2P(
       in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
-  static Symbol<cfg::ParallelDistribution> mid_parallel_distribution =
-      JUST(GetBroadcastParallelDistribution());
+  static Symbol<cfg::NdSbp> mid_parallel_distribution =
+      JUST(GetBroadcastNdSbp());
   static std::shared_ptr<NcclCollectiveAllGatherBoxingInterpreter> s2b_interpreter =
       std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>();
   static std::shared_ptr<NaiveB2PBoxingInterpreter> b2p_interpreter =

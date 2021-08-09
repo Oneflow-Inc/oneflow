@@ -42,15 +42,15 @@ class ModelInitV2Op : public Operator {
   }
 
  private:
-  Maybe<void> InferParallelDistributionSignature(
-      cfg::ParallelDistributionSignature* parallel_distribution_signature,
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+  Maybe<void> InferNdSbpSignature(
+      cfg::NdSbpSignature* parallel_distribution_signature,
+      const cfg::NdSbpSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
-      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn) const override {
+      std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+          NdSbpInferHint4Ibn) const override {
     for (const auto& bn : input_bns()) {
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[bn] =
-          JUST(ParallelDistributionInferHint4Ibn(bn))->parallel_distribution();
+          JUST(NdSbpInferHint4Ibn(bn))->parallel_distribution();
     }
     return Maybe<void>::Ok();
   }
@@ -82,16 +82,16 @@ class ModelLoadV2Op : public Operator {
   }
 
  private:
-  Maybe<void> InferParallelDistributionSignature(
-      cfg::ParallelDistributionSignature* parallel_distribution_signature,
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+  Maybe<void> InferNdSbpSignature(
+      cfg::NdSbpSignature* parallel_distribution_signature,
+      const cfg::NdSbpSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
-      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn) const override {
+      std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+          NdSbpInferHint4Ibn) const override {
     FOR_RANGE(int64_t, i, 0, op_conf().model_load_v2_conf().ref_size()) {
       const std::string ref_bn = GenRepeatedBn("ref", i);
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[ref_bn] =
-          JUST(ParallelDistributionInferHint4Ibn(ref_bn))->parallel_distribution();
+          JUST(NdSbpInferHint4Ibn(ref_bn))->parallel_distribution();
     }
     const auto& hierarchy = parallel_desc.hierarchy();
     for (int64_t i = 0; i < hierarchy->NumAxes(); ++i) {
@@ -131,16 +131,16 @@ class ModelSaveV2Op final : public Operator {
   }
 
  private:
-  Maybe<void> InferParallelDistributionSignature(
-      cfg::ParallelDistributionSignature* parallel_distribution_signature,
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+  Maybe<void> InferNdSbpSignature(
+      cfg::NdSbpSignature* parallel_distribution_signature,
+      const cfg::NdSbpSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
-      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn) const override {
+      std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+          NdSbpInferHint4Ibn) const override {
     FOR_RANGE(int64_t, i, 0, op_conf().model_save_v2_conf().in_size()) {
       const std::string in_bn = GenRepeatedBn("in", i);
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[in_bn] =
-          JUST(ParallelDistributionInferHint4Ibn(in_bn))->parallel_distribution();
+          JUST(NdSbpInferHint4Ibn(in_bn))->parallel_distribution();
     }
     const auto& hierarchy = parallel_desc.hierarchy();
     for (int64_t i = 0; i < hierarchy->NumAxes(); ++i) {

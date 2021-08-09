@@ -40,10 +40,10 @@ class GatherOpKernelState final : public user_op::OpKernelState {
   const int64_t upper_;
 };
 
-void CheckParallelDistribution(const Shape& hierarchy, int64_t gather_axis,
-                               const cfg::ParallelDistribution& in_parallel_distribution,
-                               const cfg::ParallelDistribution& indices_parallel_distribution,
-                               const cfg::ParallelDistribution& out_parallel_distribution) {
+void CheckNdSbp(const Shape& hierarchy, int64_t gather_axis,
+                               const cfg::NdSbp& in_parallel_distribution,
+                               const cfg::NdSbp& indices_parallel_distribution,
+                               const cfg::NdSbp& out_parallel_distribution) {
   CHECK_EQ(hierarchy.NumAxes(), in_parallel_distribution.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), indices_parallel_distribution.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), in_parallel_distribution.sbp_parallel_size());
@@ -69,12 +69,12 @@ class GatherKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const auto axis = ctx->Attr<int64_t>("axis");
-      const cfg::ParallelDistribution& in_parallel_distribution =
-          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      const cfg::NdSbp& in_parallel_distribution =
+          ctx->NdSbp4ArgNameAndIndex("in", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-      CheckParallelDistribution(hierarchy, axis, in_parallel_distribution,
-                                ctx->ParallelDistribution4ArgNameAndIndex("indices", 0),
-                                ctx->ParallelDistribution4ArgNameAndIndex("out", 0));
+      CheckNdSbp(hierarchy, axis, in_parallel_distribution,
+                                ctx->NdSbp4ArgNameAndIndex("indices", 0),
+                                ctx->NdSbp4ArgNameAndIndex("out", 0));
       const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("in", 0);
       TensorSliceView view = GetTensorSliceView4ParallelId(hierarchy, in_parallel_distribution,
                                                            in_logical_desc->shape(),

@@ -67,9 +67,9 @@ FLAT_MSG_DEFINE_ONEOF(parallel_type,
                               FLAT_MSG_ONEOF_FIELD(FlatPartialSumParallel, partial_sum_parallel));
 FLAT_MSG_END(FlatSbpParallel);
 
-FLAT_MSG_BEGIN(FlatParallelDistribution);
+FLAT_MSG_BEGIN(FlatNdSbp);
 OF_PUBLIC Maybe<void> Init(uint64_t symbol_id,
-                           Symbol<cfg::ParallelDistribution> parallel_distribution) {
+                           Symbol<cfg::NdSbp> parallel_distribution) {
   this->set_symbol_id(symbol_id);
   this->set_size(parallel_distribution->sbp_parallel_size());
   for (int i = 0; i < this->size(); ++i) {
@@ -80,7 +80,7 @@ OF_PUBLIC Maybe<void> Init(uint64_t symbol_id,
 }
 
 OF_PUBLIC Maybe<void> Check(uint64_t symbol_id,
-                            Symbol<cfg::ParallelDistribution> parallel_distribution) const {
+                            Symbol<cfg::NdSbp> parallel_distribution) const {
   CHECK_EQ_OR_RETURN(this->symbol_id(), symbol_id);
   CHECK_EQ_OR_RETURN(this->size(), parallel_distribution->sbp_parallel_size());
   for (int i = 0; i < this->size(); ++i) {
@@ -92,34 +92,34 @@ OF_PUBLIC Maybe<void> Check(uint64_t symbol_id,
 FLAT_MSG_DEFINE_OPTIONAL(uint64_t, symbol_id);
 FLAT_MSG_DEFINE_OPTIONAL(size_t, size);
 FLAT_MSG_DEFINE_REPEATED(FlatSbpParallel, sbp_parallel, SHAPE_MAX_AXIS_SIZE);
-FLAT_MSG_END(FlatParallelDistribution);
+FLAT_MSG_END(FlatNdSbp);
 
-class FlatParallelDistributionAsyncTransportCtx : public AsyncTransportCtx {
+class FlatNdSbpAsyncTransportCtx : public AsyncTransportCtx {
  public:
-  FlatParallelDistributionAsyncTransportCtx(const TransportToken& transport_token,
+  FlatNdSbpAsyncTransportCtx(const TransportToken& transport_token,
                                             uint64_t symbol_id,
-                                            Symbol<cfg::ParallelDistribution> parallel_distribution)
+                                            Symbol<cfg::NdSbp> parallel_distribution)
       : AsyncTransportCtx(transport_token),
         symbol_id_(symbol_id),
         parallel_distribution_(parallel_distribution) {}
 
-  ~FlatParallelDistributionAsyncTransportCtx() override {}
+  ~FlatNdSbpAsyncTransportCtx() override {}
 
   Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
                                            std::function<void()>* Callback) override {
-    const auto& flat_parallel_distribution = std::make_shared<FlatParallelDistribution>();
+    const auto& flat_parallel_distribution = std::make_shared<FlatNdSbp>();
     JUST(flat_parallel_distribution->Init(symbol_id_, parallel_distribution_));
     *buffer = flat_parallel_distribution.get();
-    *size = sizeof(FlatParallelDistribution);
+    *size = sizeof(FlatNdSbp);
     *Callback = [flat_parallel_distribution]() {};
     return Maybe<void>::Ok();
   }
 
   Maybe<void> PrepareRecvBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
                                            std::function<void()>* Callback) override {
-    const auto& flat_parallel_distribution = std::make_shared<FlatParallelDistribution>();
+    const auto& flat_parallel_distribution = std::make_shared<FlatNdSbp>();
     *buffer = flat_parallel_distribution.get();
-    *size = sizeof(FlatParallelDistribution);
+    *size = sizeof(FlatNdSbp);
     *Callback = [flat_parallel_distribution]() {};
     flat_parallel_distribution_ = flat_parallel_distribution;
     return Maybe<void>::Ok();
@@ -133,20 +133,20 @@ class FlatParallelDistributionAsyncTransportCtx : public AsyncTransportCtx {
 
  private:
   uint64_t symbol_id_;
-  Symbol<cfg::ParallelDistribution> parallel_distribution_;
-  std::shared_ptr<FlatParallelDistribution> flat_parallel_distribution_;
+  Symbol<cfg::NdSbp> parallel_distribution_;
+  std::shared_ptr<FlatNdSbp> flat_parallel_distribution_;
 };
 
 }  // namespace
 
 namespace {}
 
-Maybe<void> SyncSymbolParallelDistribution(uint64_t symbol_id,
-                                           Symbol<cfg::ParallelDistribution> symbol) {
+Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id,
+                                           Symbol<cfg::NdSbp> symbol) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token = JUST(
-      TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncSymbolParallelDistribution));
-  FlatParallelDistributionAsyncTransportCtx ctx(transport_token, symbol_id, symbol);
+      TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncSymbolNdSbp));
+  FlatNdSbpAsyncTransportCtx ctx(transport_token, symbol_id, symbol);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));

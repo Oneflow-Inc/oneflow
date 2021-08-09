@@ -118,7 +118,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
-    parallel_distribution_signature_ = new cfg::ParallelDistributionSignature(
+    parallel_distribution_signature_ = new cfg::NdSbpSignature(
         kernel_conf.op_attribute().parallel_distribution_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = new cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
@@ -158,7 +158,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
     return it->second;
   }
 
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
     const auto& bn2parallel_distribution =
         parallel_distribution_signature_->bn_in_op2parallel_distribution();
@@ -186,7 +186,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const cfg::SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
-  const cfg::ParallelDistributionSignature* parallel_distribution_signature_;
+  const cfg::NdSbpSignature* parallel_distribution_signature_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
@@ -289,7 +289,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     CHECK(it != bn2sbp.end());
     return it->second;
   }
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
     const auto& bn2parallel_distribution =
         parallel_distribution_signature_.bn_in_op2parallel_distribution();
@@ -350,7 +350,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
   cfg::SbpSignature sbp_signature_;
-  cfg::ParallelDistributionSignature parallel_distribution_signature_;
+  cfg::NdSbpSignature parallel_distribution_signature_;
   ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;

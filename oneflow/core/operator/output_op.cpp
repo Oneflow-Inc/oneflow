@@ -64,20 +64,20 @@ Maybe<void> OutputOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> OutputOp::InferParallelDistributionSignature(
-    cfg::ParallelDistributionSignature* parallel_distribution_signature,
-    const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+Maybe<void> OutputOp::InferNdSbpSignature(
+    cfg::NdSbpSignature* parallel_distribution_signature,
+    const cfg::NdSbpSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
-    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-        ParallelDistributionInferHint4Ibn) const {
+    std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+        NdSbpInferHint4Ibn) const {
   const InterfaceBlobConf& blob_conf = op_conf().output_conf().blob_conf();
-  cfg::ParallelDistribution& in_parallel_distribution =
+  cfg::NdSbp& in_parallel_distribution =
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["in"];
-  cfg::ParallelDistribution& out_parallel_distribution =
+  cfg::NdSbp& out_parallel_distribution =
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
-  JUST(InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc,
                                                               &in_parallel_distribution));
-  JUST(InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc,
                                                               &out_parallel_distribution));
 
   return Maybe<void>::Ok();

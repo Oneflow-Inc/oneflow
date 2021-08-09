@@ -30,14 +30,14 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_reduce")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    .SetNdSbpInferFn(
+        [](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+          const cfg::NdSbp& in_dis_hint =
+              ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+          cfg::NdSbp* in_distribution =
+              ctx->NdSbp4ArgNameAndIndex("in", 0);
+          cfg::NdSbp* out_distribution =
+              ctx->NdSbp4ArgNameAndIndex("out", 0);
           CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
           for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
             CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel());
@@ -69,14 +69,14 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_reduce_scatter")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    .SetNdSbpInferFn(
+        [](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+          const cfg::NdSbp& in_dis_hint =
+              ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+          cfg::NdSbp* in_distribution =
+              ctx->NdSbp4ArgNameAndIndex("in", 0);
+          cfg::NdSbp* out_distribution =
+              ctx->NdSbp4ArgNameAndIndex("out", 0);
           CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
           for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
             CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel());
@@ -108,14 +108,14 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    .SetNdSbpInferFn(
+        [](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+          const cfg::NdSbp& in_dis_hint =
+              ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+          cfg::NdSbp* in_distribution =
+              ctx->NdSbp4ArgNameAndIndex("in", 0);
+          cfg::NdSbp* out_distribution =
+              ctx->NdSbp4ArgNameAndIndex("out", 0);
           CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
           for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
             CHECK_OR_RETURN(sbp_hint.has_split_parallel());
@@ -149,10 +149,10 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather_noncontinuous")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+    .SetNdSbpInferFn(
+        [](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+          const cfg::NdSbp& in_dis_hint =
+              ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
           CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
           const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
           CHECK_GE_OR_RETURN(in_split_axis, 1);
@@ -161,10 +161,10 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather_noncontinuous")
             CHECK_EQ_OR_RETURN(sbp_hint.split_parallel().axis(), in_split_axis);
           }
 
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+          cfg::NdSbp* in_distribution =
+              ctx->NdSbp4ArgNameAndIndex("in", 0);
+          cfg::NdSbp* out_distribution =
+              ctx->NdSbp4ArgNameAndIndex("out", 0);
           in_distribution->clear_sbp_parallel();
           out_distribution->clear_sbp_parallel();
 
@@ -193,16 +193,16 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_s2s")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx)
                                         -> Maybe<void> {
       const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
       const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_split_axis");
-      const cfg::ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      cfg::ParallelDistribution* in_distribution =
-          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-      cfg::ParallelDistribution* out_distribution =
-          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      const cfg::NdSbp& in_dis_hint =
+          ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+      cfg::NdSbp* in_distribution =
+          ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution =
+          ctx->NdSbp4ArgNameAndIndex("out", 0);
       CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
       for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
         CHECK_OR_RETURN(sbp_hint.has_split_parallel());

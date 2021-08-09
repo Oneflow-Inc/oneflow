@@ -21,9 +21,9 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> ParseParallelDistributionFromConf(const VariableOpConf& conf,
+Maybe<void> ParseNdSbpFromConf(const VariableOpConf& conf,
                                               const ParallelDesc& parallel_desc,
-                                              cfg::ParallelDistribution* parallel_distribution) {
+                                              cfg::NdSbp* parallel_distribution) {
   const bool has_parallel_distribution_conf = (conf.parallel_distribution_size() != 0);
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
   if (has_parallel_distribution_conf) { CHECK_EQ(conf.parallel_distribution_size(), num_axes); }
@@ -68,8 +68,8 @@ Maybe<void> VariableOp::InferOutBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   CHECK_OR_RETURN(variable_conf.has_data_type());
   out_blob_desc->set_data_type(variable_conf.data_type());
-  cfg::ParallelDistribution parallel_distribution;
-  JUST(ParseParallelDistributionFromConf(variable_conf, parallel_desc, &parallel_distribution));
+  cfg::NdSbp parallel_distribution;
+  JUST(ParseNdSbpFromConf(variable_conf, parallel_desc, &parallel_distribution));
   out_blob_desc->mut_shape() = *JUST(GetPhysicalShape(
       Shape(variable_conf.shape()), parallel_distribution, parallel_desc, *parallel_ctx));
   return Maybe<void>::Ok();
@@ -111,19 +111,19 @@ Symbol<OperatorConf> VariableOp::GetOpConfWithoutOpNameAndLbn() const {
   return SymbolOf(this->op_conf());
 }
 
-Maybe<void> VariableOp::InferParallelDistributionSignature(
-    cfg::ParallelDistributionSignature* parallel_distribution_signature,
-    const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+Maybe<void> VariableOp::InferNdSbpSignature(
+    cfg::NdSbpSignature* parallel_distribution_signature,
+    const cfg::NdSbpSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
-    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-        ParallelDistributionInferHint4Ibn) const {
+    std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+        NdSbpInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const VariableOpConf& conf = this->op_conf().variable_conf();
-  cfg::ParallelDistribution& out_parallel_distribution =
+  cfg::NdSbp& out_parallel_distribution =
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
-  JUST(ParseParallelDistributionFromConf(conf, parallel_desc, &out_parallel_distribution));
+  JUST(ParseNdSbpFromConf(conf, parallel_desc, &out_parallel_distribution));
   if (conf.has_tick()) {
-    cfg::ParallelDistribution& tick_parallel_distribution =
+    cfg::NdSbp& tick_parallel_distribution =
         (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["tick"];
     for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
       tick_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
