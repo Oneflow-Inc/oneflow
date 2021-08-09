@@ -55,10 +55,34 @@ struct WorkRequestId {
 class MessagePool final {
   public:
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
-    MessagePool() = delete;
-    MessagePool(ibv_pd* pd,uint32_t size, uint32_t number_of_message): pd_(pd),size_(size),num_of_message_(number_of_message), {
+    MessagePool() = default; //todo:这里可能要修改
+    ~MessagePool() = default;//todo:这里可能要修改
+    MessagePool(ibv_pd* pd,uint32_t size, uint32_t number_of_message): pd_(pd),size_(size),num_of_message_(number_of_message) {}
+    //以后这里可以切割内存，注册一块大的，再不断的分割
+    void RegisterMessagePool() {
+      for(int i =0; i < num_of_message_; i++){
+      void * addr = malloc(size_);
+      IBVerbsMemDesc * mem_desc =new IBVerbsMemDesc(pd_,addr,size_);
+      ActorMsgMR * msg_mr = new ActorMsgMR(mem_desc);
+      message_buf_.push(msg_mr);
     }
-    ActorMsgMR * GetMessage(){
+  }
+
+  ActorMsgMR *  GetMessage(){
+    if(isEmpty() == false)  {
+      return GetMessageFromBuf();
+    } else {
+      RegisterMessagePool();
+      return GetMessageFromBuf();
+    }
+  }
+
+  ActorMsgMR * GetMessageFromBuf() {
+      ActorMsgMR * msg_mr = std::move(message_buf_.front());
+      message_buf_.pop();
+      return msg_mr;
+  }
+    /*ActorMsgMR * GetMessage(){
       if(message_buf_.empty() == false) {
           ActorMsgMR * msg_mr  =message_buf_.front();
           message_buf_.pop();
@@ -103,11 +127,20 @@ class MessagePool final {
         ActorMsgMR * msg_mr  =message_buf_.front();
         msg_mr->set_msg(msg);
       }
+    }*/
+    void PutMessage(ActorMsgMR * msg_mr) {
+      message_buf_.push(msg_mr);
     }
+    std::queue<ActorMsgMR*> getMessageBuf() {
+      return message_buf_;
+    }
+
+    bool isEmpty() {
+      return message_buf_.empty();
+    }
+
   private:
     ibv_pd* pd_;
-    void *addr_;
-    IBVerbsMemDesc * mem_desc_;
     uint32_t size_;
     uint32_t num_of_message_;
     std::queue<ActorMsgMR*> message_buf_;
@@ -145,7 +178,7 @@ class IBVerbsQP final {
   ibv_pd* pd_;
   uint8_t port_num_;
   ibv_qp* qp_;
-  std::vector<ActorMsgMR*> recv_msg_buf_;
+ // std::vector<ActorMsgMR*> recv_msg_buf_;
 
   std::mutex send_msg_buf_mtx_;
   std::queue<ActorMsgMR*> send_msg_buf_;
@@ -153,7 +186,9 @@ class IBVerbsQP final {
   uint32_t num_outstanding_send_wr_;
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
-
+  
+  MessagePool  *  recv_msg_buf_;
+  MessagePool  * sendMsgBuf_;
 };
 
 }  // namespace oneflow

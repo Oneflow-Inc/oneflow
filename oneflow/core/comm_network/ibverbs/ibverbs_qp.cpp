@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
+#include <cstdint>
+#include <vector>
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
@@ -30,6 +32,7 @@ namespace {
 
 constexpr uint32_t kDefaultQueueDepth = 1024;
 constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
+constexpr uint32_t kDefaultMessageSize = 512; // 512 byte
 
 }  // namespace
 
@@ -66,15 +69,18 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK(send_msg_buf_.empty());
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
+  recv_msg_buf_ = new MessagePool(pd_,kDefaultMessageSize,queue_depth);
+  sendMsgBuf_ = new MessagePool(pd_,kDefaultMemBlockSize, queue_depth);
 }
 
 IBVerbsQP::~IBVerbsQP() {
   CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
-  while (send_msg_buf_.empty() == false) {
+  /*while (send_msg_buf_.empty() == false) {
     delete send_msg_buf_.front();
     send_msg_buf_.pop();
-  }
-  for (ActorMsgMR* msg_mr : recv_msg_buf_) { delete msg_mr; }
+  }*/
+  //todo lambda:这里要加上recv_msg_buf_和sendMsgbuf_的析构
+ // for (ActorMsgMR* msg_mr : recv_msg_buf_) { delete msg_mr; }
 }
 
 void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
@@ -140,8 +146,22 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-  //we register a big memory 
-  for (ActorMsgMR* msg_mr : recv_msg_buf_) { PostRecvRequest(msg_mr); }
+  if(recv_msg_buf_->isEmpty() == true) {
+    recv_msg_buf_->RegisterMessagePool();
+    std::queue<ActorMsgMR *> messageBuf = recv_msg_buf_->getMessageBuf();
+    while(messageBuf.empty() == false) {
+      ActorMsgMR * msg_mr = std::move(messageBuf.front());
+      messageBuf.pop();
+      PostRecvRequest(msg_mr);
+    } 
+  } else {
+    std::queue<ActorMsgMR *> messageBuf = recv_msg_buf_->getMessageBuf();
+    while(messageBuf.empty() == false) {
+      ActorMsgMR * msg_mr = std::move(messageBuf.front());
+      messageBuf.pop();
+      PostRecvRequest(msg_mr);
+    } 
+  }
 }
 
 void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
@@ -173,7 +193,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 }
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
-  ActorMsgMR* msg_mr = GetOneSendMsgMRFromBuf();
+  ActorMsgMR * msg_mr = sendMsgBuf_->GetMessage();
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
@@ -218,7 +238,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
   {
     std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
-    send_msg_buf_.push(wr_id->msg_mr);
+    sendMsgBuf_->PutMessage(wr_id->msg_mr);
   }
   DeleteWorkRequestId(wr_id);
   PostPendingSendWR();
@@ -229,6 +249,7 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   CHECK(ibv_comm_net != nullptr);
   ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
+  recv_msg_buf_->PutMessage(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
 }
 
