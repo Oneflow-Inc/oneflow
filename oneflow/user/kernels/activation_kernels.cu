@@ -56,11 +56,87 @@ struct HardswishGradFunctor<half> {
   }
 };
 
+template<>
+struct MishFunctor<half> {
+  OF_DEVICE_FUNC explicit MishFunctor() : float_functor(MishFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  MishFunctor<float> float_functor;
+};
+
+template<>
+struct MishGradFunctor<half> {
+  OF_DEVICE_FUNC explicit MishGradFunctor() : float_functor(MishGradFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  MishGradFunctor<float> float_functor;
+};
+
+template<>
+struct SiluFunctor<half> {
+  OF_DEVICE_FUNC explicit SiluFunctor() : float_functor(SiluFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  SiluFunctor<float> float_functor;
+};
+
+template<>
+struct SiluGradFunctor<half> {
+  OF_DEVICE_FUNC explicit SiluGradFunctor() : float_functor(SiluGradFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  SiluGradFunctor<float> float_functor;
+};
+
+template<>
+struct SeluFunctor<half> {
+  OF_DEVICE_FUNC explicit SeluFunctor() : float_functor(SeluFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  SeluFunctor<float> float_functor;
+};
+
+template<>
+struct SeluGradFunctor<half> {
+  OF_DEVICE_FUNC explicit SeluGradFunctor() : float_functor(SeluGradFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  SeluGradFunctor<float> float_functor;
+};
+
+template<>
+struct SoftSignFunctor<half> {
+  OF_DEVICE_FUNC explicit SoftSignFunctor() : float_functor(SoftSignFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  SoftSignFunctor<float> float_functor;
+};
+
+template<>
+struct SoftSignGradFunctor<half> {
+  OF_DEVICE_FUNC explicit SoftSignGradFunctor() : float_functor(SoftSignGradFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  SoftSignGradFunctor<float> float_functor;
+};
+
 #define REGISTER_ACTIVATION_GPU_KERNEL(dtype)           \
   REGISTER_ELU_KERNEL(DeviceType::kGPU, dtype);         \
   REGISTER_HARDSWISH_KERNEL(DeviceType::kGPU, dtype);   \
   REGISTER_HARDSIGMOID_KERNEL(DeviceType::kGPU, dtype); \
-  REGISTER_HARDTANH_KERNEL(DeviceType::kGPU, dtype);
+  REGISTER_HARDTANH_KERNEL(DeviceType::kGPU, dtype);    \
+  REGISTER_MISH_KERNEL(DeviceType::kGPU, dtype);        \
+  REGISTER_SILU_KERNEL(DeviceType::kGPU, dtype);        \
+  REGISTER_SELU_KERNEL(DeviceType::kGPU, dtype);        \
+  REGISTER_SOFTSIGN_KERNEL(DeviceType::kGPU, dtype);
 
 REGISTER_ACTIVATION_GPU_KERNEL(half);
 REGISTER_ACTIVATION_GPU_KERNEL(float);

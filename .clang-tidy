@@ -1,0 +1,4 @@
+# maybe-* checks are only available on OneFlow custom clang-tidy and clangd
+Checks: '-*, maybe-*'
+# TODO: treat all maybe warnings as errors when existing warnings are all fixed
+WarningsAsErrors: 'maybe-unused'

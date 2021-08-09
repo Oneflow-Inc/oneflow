@@ -68,7 +68,6 @@ REGISTER_USER_OP("layer_norm")
       param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                                  x.shape().dim_vec().cbegin() + begin_params_axis,
                                  x.shape().dim_vec().cend());
-      if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
       const Shape param_shape(param_shape_dim_vec);
       if (center) {
         const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
@@ -140,7 +139,7 @@ REGISTER_USER_OP("layer_norm_grad")
       user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
       CHECK_EQ_OR_RETURN(dy.shape(), x.shape());
       const int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
-      CHECK_GT(begin_norm_axis, 0);
+      CHECK_GT_OR_RETURN(begin_norm_axis, 0);
       const Shape& bn_param_shape = InferBnParamShape(x.shape(), begin_norm_axis);
       CHECK_EQ_OR_RETURN(mean.shape(), bn_param_shape);
       CHECK_EQ_OR_RETURN(inv_variance.shape(), bn_param_shape);
@@ -214,7 +213,6 @@ REGISTER_USER_OP("layer_norm_param_grad")
       param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                                  dy.shape().dim_vec().cbegin() + begin_params_axis,
                                  dy.shape().dim_vec().cend());
-      if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
       const Shape param_shape(param_shape_dim_vec);
       if (has_beta_diff) {
         user_op::TensorDesc* beta_diff = ctx->OutputTensorDesc("beta_diff", 0);
@@ -283,7 +281,8 @@ REGISTER_USER_OP("layer_norm_param_grad")
     });
 
 REGISTER_USER_OP_GRAD("layer_norm")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       const bool center = op.attr<bool>("center");
       const bool scale = op.attr<bool>("scale");
       const bool has_beta = center;
@@ -337,6 +336,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

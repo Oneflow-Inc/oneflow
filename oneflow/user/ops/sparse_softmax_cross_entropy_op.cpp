@@ -134,9 +134,9 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name,
-                                                 const user_op::UserOpWrapper& op,
-                                                 user_op::AddOpFn AddOp) {
+Maybe<void> GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name,
+                                                        const user_op::UserOpWrapper& op,
+                                                        user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op(op_type_name)
@@ -149,6 +149,7 @@ void GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name
     op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -162,10 +163,11 @@ void GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name
       .Attr<int64_t>("depth")                                                          \
       .SetTensorDescInferFn(InferTensorDescFn)                                         \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,      \
-                              const user_op::UserOpConfWrapper&) {                     \
+                              const user_op::UserOpConfWrapper&) -> Maybe<void> {      \
         user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0); \
-        CHECK(label_modifier != nullptr);                                              \
+        CHECK_OR_RETURN(label_modifier != nullptr);                                    \
         label_modifier->set_requires_grad(false);                                      \
+        return Maybe<void>::Ok();                                                      \
       })                                                                               \
       .SetGetSbpFn(GetSbpFn<sbp_sig>)                                                  \
       .SetDataTypeInferFn(InferDataType);
@@ -189,13 +191,15 @@ REGISTER_SPAESE_SOFTMAX_CROSS_ENTROPY_GRAD_USER_OP("sparse_softmax_cross_entropy
                                                    AddGradMsSignature);
 
 REGISTER_USER_OP_GRAD("sparse_softmax_cross_entropy")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       return GenBackwardOpConf4SparseSoftmaxCrossEntropy("sparse_softmax_cross_entropy_grad", op,
                                                          AddOp);
     });
 
 REGISTER_USER_OP_GRAD("sparse_softmax_cross_entropy_ms")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       return GenBackwardOpConf4SparseSoftmaxCrossEntropy("sparse_softmax_cross_entropy_ms_grad", op,
                                                          AddOp);
     });

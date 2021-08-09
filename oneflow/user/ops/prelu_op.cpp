@@ -121,7 +121,7 @@ REGISTER_USER_OP("prelu_grad")
     });
 
 REGISTER_USER_OP_GRAD("prelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) {
+                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("x", 0) || op.NeedGenGradTensor4OpInput("alpha", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op("prelu_grad")
@@ -146,6 +146,7 @@ REGISTER_USER_OP_GRAD("prelu").SetGenBackwardOpConfFn([](const user_op::UserOpWr
       op.BindGradTensorWithOpInput(alpha_identity_op.output("out", 0), "alpha", 0);
     }
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

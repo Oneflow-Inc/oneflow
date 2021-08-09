@@ -90,6 +90,7 @@ class GpuTriuKernel final : public user_op::OpKernel {
     const int64_t num_cols = shape.At(shape.NumAxes() - 1);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t elem_cnt = shape.elem_cnt();
+    if (elem_cnt == 0) { return; }
     if (num_cols % (kCudaWarpSize * 2) == 0) {
       const int64_t total_rows = elem_cnt / num_cols;
       TriuWarpProcessRowGpu<<<BlocksNum4ThreadsNum(total_rows * kCudaWarpSize),

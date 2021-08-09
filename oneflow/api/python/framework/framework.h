@@ -37,8 +37,7 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Maybe<void> RegisterForeignCallbackOnlyOnce(
-    const std::shared_ptr<ForeignCallback>& callback) {
+inline Maybe<void> RegisterGlobalForeignCallback(const std::shared_ptr<ForeignCallback>& callback) {
   CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignCallback>>::Get())
       << "foreign callback registered";
   // Global<T>::SetAllocated is preferred since Global<T>::New will output logs but
@@ -48,13 +47,27 @@ inline Maybe<void> RegisterForeignCallbackOnlyOnce(
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> RegisterWatcherOnlyOnce(const std::shared_ptr<ForeignWatcher>& watcher) {
+inline Maybe<void> DestroyGlobalForeignCallback() {
+  if (Global<std::shared_ptr<ForeignCallback>>::Get()) {
+    Global<std::shared_ptr<ForeignCallback>>::Delete();
+  }
+  return Maybe<void>::Ok();
+}
+
+inline Maybe<void> RegisterGlobalWatcher(const std::shared_ptr<ForeignWatcher>& watcher) {
   CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignWatcher>>::Get())
       << "foreign watcher registered";
   // Global<T>::SetAllocated is preferred since Global<T>::New will output logs but
   // glog is not constructed yet.
   Global<std::shared_ptr<ForeignWatcher>>::SetAllocated(
       new std::shared_ptr<ForeignWatcher>(watcher));
+  return Maybe<void>::Ok();
+}
+
+inline Maybe<void> DestroyGlobalWatcher() {
+  if (Global<std::shared_ptr<ForeignWatcher>>::Get()) {
+    Global<std::shared_ptr<ForeignWatcher>>::Delete();
+  }
   return Maybe<void>::Ok();
 }
 

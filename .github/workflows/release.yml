@@ -125,6 +125,7 @@ jobs:
           if [ ! -z "${{ matrix.package_name }}"] && [ "${{ matrix.package_name }}" != "oneflow" ]; then
               extra_flags+=" --package_name=${{ matrix.package_name }}"
           fi
+          extra_flags+=" --extra_oneflow_cmake_args=-DBUILD_PROFILER=OFF"
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
           echo "python_version=${python_version}" >> $GITHUB_ENV
           echo "compute_platforms=${compute_platforms}" >> $GITHUB_ENV
@@ -162,17 +163,17 @@ jobs:
         if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
         uses: ./.github/actions/whl
         with:
-          tmp_dir: ${ci_tmp_dir}
-          cuda_version: ${cuda_version}
-          python_version: ${python_version}
-          extra_flags: ${extra_flags}
-          extra_docker_args: $extra_docker_args
+          tmp_dir: ${{ env.ci_tmp_dir }}
+          cuda_version: ${{ env.cuda_version }}
+          python_version: ${{ env.python_version }}
+          extra_flags: ${{ env.extra_flags }}
+          extra_docker_args: ${{ env.extra_docker_args }}
       - name: Upload wheel
         if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
         uses: ./.github/actions/upload_oss
         with:
-          src_path: ${wheelhouse_dir}
-          oss_dst_path: oss://oneflow-staging/${oss_dir}
+          src_path: ${{ env.wheelhouse_dir }}
+          oss_dst_path: oss://oneflow-staging/${{ env.oss_dir }}
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update pip index

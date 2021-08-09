@@ -1098,7 +1098,7 @@ Maybe<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type)
 }
 
 Maybe<Operator> ConstructOp(const OperatorConf& op_conf) {
-  if (IsCpuOnly(op_conf)) { return ConstructOp(op_conf, DeviceType::kCPU); }
+  if (IsCpuOnly(op_conf)) { return JUST(ConstructOp(op_conf, DeviceType::kCPU)); }
   return CheckAndConstructOp(std::make_shared<OperatorConf>(op_conf));
 }
 
@@ -1421,11 +1421,14 @@ Maybe<Shape> Get1dHierarchyPhysicalShape(const Shape& logical_shape,
                                          const SbpParallelT& sbp_parallel,
                                          const int64_t parallel_num, const int64_t parallel_id) {
   std::shared_ptr<Shape> physical = std::make_shared<Shape>(logical_shape);
+
   if (sbp_parallel.has_split_parallel()) {
     const int64_t axis = sbp_parallel.split_parallel().axis();
-    CHECK_GE_OR_RETURN(logical_shape.At(axis), parallel_num);
-    const BalancedSplitter bs(logical_shape.At(axis), parallel_num);
-    physical->Set(axis, bs.At(parallel_id).size());
+    if (logical_shape.At(axis) > 0) {
+      CHECK_GE_OR_RETURN(logical_shape.At(axis), parallel_num);
+      const BalancedSplitter bs(logical_shape.At(axis), parallel_num);
+      physical->Set(axis, bs.At(parallel_id).size());
+    }
   } else if (sbp_parallel.has_broadcast_parallel() || sbp_parallel.has_partial_sum_parallel()) {
     // do nothing
   } else {

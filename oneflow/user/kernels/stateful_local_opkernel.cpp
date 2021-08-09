@@ -303,7 +303,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
       auto* map = arg_modifier_signature.mutable_ibn2input_blob_modifier();
       return &map->at(ibn);
     };
-    op_reg_val->input_arg_modify_fn(GetInputArgModifierFn, op_conf_wrapper);
+    JUST(op_reg_val->input_arg_modify_fn(GetInputArgModifierFn, op_conf_wrapper));
   }
   if (op_reg_val->output_arg_modify_fn) {
     user_op::GetOutputArgModifier GetOutputArgModifierFn =

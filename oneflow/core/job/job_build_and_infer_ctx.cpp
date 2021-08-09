@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
@@ -99,7 +100,8 @@ void UpdateOpName2AncestorsNeedNoGrad(
 
 }  // namespace
 
-JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
+JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id)
+    : job_(job), job_id_(job_id), unique_op_name_index_(0) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
 }
@@ -320,12 +322,14 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
       int64_t num_axes = logical_blob_desc.shape().NumAxes();
       if (axis < 0) { axis += num_axes; }
       CHECK_GE_OR_RETURN(axis, 0);
-      CHECK_LT_OR_RETURN(axis, num_axes)
+      CHECK_LE_OR_RETURN(axis, num_axes)
           << "op: " << op->op_name() << ", blob: " << pair.first << ", axis: " << axis
           << ", shape: " << logical_blob_desc.shape();
-      CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
-          << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
-          << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
+      if (logical_blob_desc.shape().NumAxes() > 0) {
+        CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
+            << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
+            << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
+      }
     }
   } else {
     for (const auto& pair :
@@ -965,6 +969,8 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  CHECK_GT_OR_RETURN(job().net().op_size(), 0)
+      << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
@@ -1295,6 +1301,32 @@ Maybe<std::string> JobBuildAndInferCtx::GetOpBlobLbn(const std::string& op_name,
                                                      const std::string& bn_in_op) const {
   const auto& lbi = JUST(Op4OpName(op_name))->BnInOp2Lbi(bn_in_op);
   return GenLogicalBlobName(lbi);
+}
+
+Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
+    const OperatorConf& op_conf) {
+  // NOTE(chengcheng): arg op_conf has a default global op_name because it is created by
+  //  static functional op expr, so we need reset a unique op name for each functional op.
+  //  This op_conf can NOT be a input/output/varible op which has set correct name in nn.Graph.
+  CHECK_OR_RETURN(
+      !(op_conf.has_input_conf() || op_conf.has_variable_conf() || op_conf.has_output_conf()));
+
+  const auto& scope = JUST(GetCurrentScope());
+
+  std::string op_name_prefix;
+  for (const std::string& prefix : scope->scope_proto().scope_op_name_prefixes()) {
+    op_name_prefix += (prefix + "-");
+  }
+  std::string op_type_name;
+  if (op_conf.has_user_conf()) {
+    op_type_name = op_conf.user_conf().op_type_name();
+  } else {
+    op_type_name = "SystemOp";
+  }
+  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
+  ++unique_op_name_index_;
+
+  return op_name;
 }
 
 }  // namespace oneflow
