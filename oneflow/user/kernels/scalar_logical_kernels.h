@@ -21,11 +21,11 @@ limitations under the License.
 
 namespace oneflow {
 
-#define INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(device_type, binary_op) \
+#define INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(device_type, binary_op)      \
   template struct ScalarLogicalFunctor<device_type, binary_op, int32_t>; \
   template struct ScalarLogicalFunctor<device_type, binary_op, int64_t>; \
-  template struct ScalarLogicalFunctor<device_type, binary_op, float>; \
-  template struct ScalarLogicalFunctor<device_type, binary_op, double>; \
+  template struct ScalarLogicalFunctor<device_type, binary_op, float>;   \
+  template struct ScalarLogicalFunctor<device_type, binary_op, double>;
 
 template<DeviceType device_type, template<typename T> class BIN_OP, typename T>
 struct ScalarLogicalFunctor final {
@@ -33,10 +33,9 @@ struct ScalarLogicalFunctor final {
 };
 
 template<template<typename> class UnaryFunctor, typename T>
-OF_DEVICE_FUNC void DoScalarLogical(const int64_t elem_cnt, const T scalar, const T* in, int8_t* out){
-  XPU_1D_KERNEL_LOOP(idx, elem_cnt){
-    out[idx] = UnaryFunctor<T>::Invoke(in[idx], scalar);
-  }
+OF_DEVICE_FUNC void DoScalarLogical(const int64_t elem_cnt, const T scalar, const T* in,
+                                    int8_t* out) {
+  XPU_1D_KERNEL_LOOP(idx, elem_cnt) { out[idx] = UnaryFunctor<T>::Invoke(in[idx], scalar); }
 }
 
 }  // namespace oneflow

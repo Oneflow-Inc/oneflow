@@ -48,6 +48,7 @@ def eq_op(input, other):
     """
     return flow.F.equal(input, other)
 
+
 if __name__ == "__main__":
     import doctest
 

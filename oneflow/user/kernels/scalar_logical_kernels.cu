@@ -19,15 +19,17 @@ limitations under the License.
 namespace oneflow {
 
 template<template<typename T> class BIN_OP, typename T>
-__global__ void DoCUDAScalarLogical(const int64_t elem_cnt, const T scalar, const T* in, int8_t* out) {
+__global__ void DoCUDAScalarLogical(const int64_t elem_cnt, const T scalar, const T* in,
+                                    int8_t* out) {
   DoScalarLogical<BIN_OP, T>(elem_cnt, scalar, in, out);
 }
 
-
 template<template<typename T> class BIN_OP, typename T>
 struct ScalarLogicalFunctor<DeviceType::kGPU, BIN_OP, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in, int8_t* out) {
-    RUN_CUDA_KERNEL((DoCUDAScalarLogical<BIN_OP, T>), ctx, BlocksNum4ThreadsNum(elem_cnt), elem_cnt, scalar, in, out);
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in,
+                  int8_t* out) {
+    RUN_CUDA_KERNEL((DoCUDAScalarLogical<BIN_OP, T>), ctx, BlocksNum4ThreadsNum(elem_cnt), elem_cnt,
+                    scalar, in, out);
   }
 };
 
