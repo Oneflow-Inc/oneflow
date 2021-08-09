@@ -141,6 +141,7 @@ import oneflow.nn.modules.logical_or
 import oneflow.nn.modules.in_top_k
 import oneflow.nn.modules.masked_select
 import oneflow.nn.modules.math_ops
+import oneflow.nn.modules.nonzero
 import oneflow.nn.modules.norm
 import oneflow.nn.modules.permute
 import oneflow.nn.modules.round
@@ -268,6 +269,7 @@ from oneflow.nn.modules.ne import ne_op as ne
 from oneflow.nn.modules.ne import ne_op as not_equal
 from oneflow.nn.modules.negative import negative_op as neg
 from oneflow.nn.modules.negative import negative_op as negative
+from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.random_ops import bernoulli
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.reduce_ops import _max as max
