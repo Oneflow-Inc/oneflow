@@ -16,6 +16,7 @@ limitations under the License.
 from collections import OrderedDict
 from functools import partial
 from typing import Dict
+import sys
 
 import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
@@ -121,9 +122,46 @@ class Graph(object):
         assert not self._is_compiled, (
             "nn.Graph " + self._name + " has already been compiled."
         )
-        if self._debug:
-            print(self._shallow_repr() + " start graph construting.")
 
+        # Build forward graph
+        if self._debug:
+            print(self._shallow_repr() + " start building forward graph.")
+
+        try:
+            eager_outputs = self._build_forward_graph(*args)
+        except:
+            print(
+                "[ERROR]",
+                self._shallow_repr(),
+                "(nn.Graph build forward graph got error type : ",
+                sys.exc_info()[0],
+                ")",
+            )
+            raise
+        if self._debug:
+            print(self._shallow_repr() + " end building forward graph.")
+
+        # Complie and init Runtime
+        if self._debug:
+            print(self._shallow_repr() + " start compiling and init graph runtime.")
+        try:
+            self._c_nn_graph.complie_and_init_runtime()
+        except:
+            print(
+                "[ERROR]",
+                self._shallow_repr(),
+                "(nn.Graph compiling and init graph runtime got error type : ",
+                sys.exc_info()[0],
+                ")",
+            )
+            raise
+        self._is_compiled = True
+        if self._debug:
+            print(self._shallow_repr() + " end compiling and init graph rumtime.")
+
+        return eager_outputs
+
+    def _build_forward_graph(self, *args):
         self._generate_optimizer_and_variable_configs()
 
         session = session_ctx.GetDefaultSession()
@@ -178,7 +216,7 @@ class Graph(object):
             eager_outputs = []
             eager_output_op_names = []
             for idx, out in enumerate(outputs):
-                assert isinstance(out , Tensor)
+                assert isinstance(out, Tensor)
                 op_name = "_" + self.name + "-output_" + str(idx)
                 eager_outputs.append(graph_build_util.build_graph_output(op_name, out))
                 eager_output_op_names.append(op_name)
@@ -208,27 +246,33 @@ class Graph(object):
             # Save job proto for debug
             self._job_proto = c_api_util.GetCurrentJob()
 
-        # Complie and init Runtime
-        self._c_nn_graph.complie_and_init_runtime()
-        self._is_compiled = True
-        if self._debug:
-            print(self._shallow_repr() + " end graph construting.")
         return eager_outputs
 
-    def _launch(self, *args):
-        # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
-        oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
-            convert_to_tensor_tuple(args),
-            self._outputs,
-            self._variables,
-            self._c_nn_graph,
-        )
+    def _run(self, *args):
+        try:
+            # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
+            oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
+                convert_to_tensor_tuple(args),
+                self._outputs,
+                self._variables,
+                self._c_nn_graph,
+            )
+        except:
+            print(
+                "[ERROR]",
+                self._shallow_repr(),
+                "(nn.Graph run got error type : ",
+                sys.exc_info()[0],
+                ")",
+            )
+            raise
         return self._eager_outputs
 
     def __call__(self, *args):
         if not self._is_compiled:
             self._compile(*args)
-        return self._launch(*args)
+
+        return self._run(*args)
 
     def _add_block(self, name: str, module: Module = None) -> None:
         r"""Adds a module to the current graph as a block.

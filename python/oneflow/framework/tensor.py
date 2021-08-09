@@ -28,6 +28,9 @@ Tensor = flow._oneflow_internal.Tensor
 
 
 def _tensor_numpy(eager_local_tensor):
+    assert (
+        not eager_local_tensor.is_lazy
+    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
     if eager_local_tensor.dtype == flow.tensor_buffer:
         shapes, dtypes = eager_local_tensor._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(
