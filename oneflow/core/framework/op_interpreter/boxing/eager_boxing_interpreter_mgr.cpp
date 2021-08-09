@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/boxing/identity_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_b2p_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_s2p_boxing_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/boxing/naive_nd_sbp_boxing_interpreter.h"
 
 namespace oneflow {
 
@@ -96,6 +97,11 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
+  } else if (in_parallel_distribution->sbp_parallel_size()
+             == out_parallel_distribution->sbp_parallel_size()) {
+    std::shared_ptr<EagerBoxingInterpreter> boxing_interpreter =
+        std::make_shared<NaiveNdSbpBoxingInterpreter>();
+    return boxing_interpreter;
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }

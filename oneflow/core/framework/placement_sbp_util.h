@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_PLACEMENT_SBP_UTIL_H_
 #define ONEFLOW_CORE_FRAMEWORK_PLACEMENT_SBP_UTIL_H_
 
+#include <unordered_map>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/decorator.h"
@@ -60,6 +61,12 @@ static constexpr auto* GetBroadcastSubParallelDesc =
 Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
     Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> src_nd_sbp,
     Symbol<cfg::ParallelDistribution> dst_nd_sbp);
+
+Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroup(
+    Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc);
+
+Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroupWithoutAcrossNode(
+    Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc);
 
 }  // namespace oneflow
 

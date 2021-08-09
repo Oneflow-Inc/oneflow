@@ -65,16 +65,18 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
 namespace {
 
 Maybe<Tensor> GetBoxingOutput(const std::shared_ptr<Tensor>& input,
-                              Symbol<cfg::ParallelDistribution> parallel_distribution) {
+                              Symbol<cfg::ParallelDistribution> out_parallel_distribution) {
   const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*input));
+  const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
   // Eager boxing
-  const auto& boxing_interpreter =
-      JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
-          JUST(input->parallel_distribution()), parallel_distribution, JUST(input->parallel_desc()),
-          JUST(input->parallel_desc())));
-  const auto& output = JUST(boxing_interpreter->Interpret(
-      input, JUST(input->parallel_distribution()), parallel_distribution,
-      JUST(input->parallel_desc()), JUST(input->parallel_desc())));
+  const auto& in_parallel_distribution = JUST(input->parallel_distribution());
+  const auto& in_parallel_desc = JUST(input->parallel_desc());
+  const auto& out_parallel_desc = in_parallel_desc;
+  const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
+      in_parallel_distribution, out_parallel_distribution, in_parallel_desc, out_parallel_desc));
+  const auto& output =
+      JUST(boxing_interpreter->Interpret(input, in_parallel_distribution, out_parallel_distribution,
+                                         in_parallel_desc, out_parallel_desc));
   JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
   JUST(ctx->Check());
   return output;

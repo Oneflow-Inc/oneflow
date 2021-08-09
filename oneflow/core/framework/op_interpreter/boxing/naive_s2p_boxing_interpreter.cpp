@@ -38,11 +38,11 @@ Maybe<one::Tensor> NcclS2PBoxingInterpreter::InterpretImpl(
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2P(
       in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
-  static Symbol<cfg::ParallelDistribution> mid_parallel_distribution =
+  static thread_local Symbol<cfg::ParallelDistribution> mid_parallel_distribution =
       JUST(GetBroadcastParallelDistribution());
-  static std::shared_ptr<NcclCollectiveAllGatherBoxingInterpreter> s2b_interpreter =
+  static thread_local std::shared_ptr<NcclCollectiveAllGatherBoxingInterpreter> s2b_interpreter =
       std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>();
-  static std::shared_ptr<NaiveB2PBoxingInterpreter> b2p_interpreter =
+  static thread_local std::shared_ptr<NaiveB2PBoxingInterpreter> b2p_interpreter =
       std::make_shared<NaiveB2PBoxingInterpreter>();
   const auto& mid_tesnor =
       JUST(s2b_interpreter->Interpret(input, in_parallel_distribution, mid_parallel_distribution,
