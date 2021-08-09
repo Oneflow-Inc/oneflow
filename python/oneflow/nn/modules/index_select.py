@@ -21,19 +21,21 @@ def _input_args_is_int(args):
     return all((isinstance(x, int) for x in args))
 
 
-def index_select_op(input, dim, index, sparse_grad=False):
-    r"""Select values along an axis specified by `dim`.
+def index_select_op(input, dim, index):
+    r"""The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch-cn.readthedocs.io/zh/latest/package_references/torch/#torchindex_select
 
-    :attr:`index` must be an Int32 Tensor with dimension=1.
+    Select values along an axis specified by `dim`.
+
+    :attr:`index` must be an Int32 Tensor with 1-D.
     :attr:`dim` must be in the range of input Dimensions.
-    value of :attr:`index` must be in the range of the dim(th) of input.
-    :attr:`out` will have the same shape as :attr:`index`.
+    value of :attr:`index` must be in the range of the dim-th of input.
     Note that ``input`` and ``index`` do not broadcast against each other.  
     
     Args:
         input (Tensor): the source tensor
         dim (int): the axis along which to index
-        index (LongTensor): the indices of elements to select
+        index (Tensor): the 1-D tensor containing the indices to index
     
     For example:
 
@@ -54,8 +56,7 @@ def index_select_op(input, dim, index, sparse_grad=False):
         tensor([[1, 2],
                 [4, 5]], dtype=oneflow.int32)
     """
-    assert sparse_grad is False, "Only support bool = False for now!"
-    assert len(index.shape) == 1, "Dimensions of index should be an LongTensor"
+    assert len(index.shape) == 1, "Dimensions of index should be 1-D"
     assert dim < len(input.shape) and dim > -1, "Value of dim is out of range"
     assert _input_args_is_int(index.tolist()), "input index parameter is not illegal!"
     index_rshp = list(input.shape)
@@ -63,7 +64,7 @@ def index_select_op(input, dim, index, sparse_grad=False):
     for index_i in index:
         assert (
             index_i < index_rshp[dim]
-        ), "value of index out of range(index shuold lower than the first dimension of input)"
+        ), "index is out of range(index shuold lower than the dim-th dimension of input)"
 
     index_rshp[dim] = 1
     index_gather = index[0].expand(index_rshp)
@@ -72,34 +73,17 @@ def index_select_op(input, dim, index, sparse_grad=False):
             x = index_i.expand(index_rshp)
             index_gather = flow.cat((index_gather, x), dim)
 
-    return flow.gather(input, index_gather, dim, sparse_grad)
+    return flow.gather(input, index_gather, dim)
 
 
 @register_tensor_op("index_select")
-def index_select_op_tensor(input, dim, index, sparse_grad=False):
+def index_select_op_tensor(input, dim, index):
     """
-    input.index_select(dim, index, sparse_grad) -> Tensor
+    input.index_select(dim, index) -> Tensor
     See :func:`oneflow.index_select`
     """
-    assert sparse_grad is False, "Only support bool = False for now!"
-    assert len(index.shape) == 1, "Dimensions of index should be an LongTensor"
-    assert dim < len(input.shape) and dim > -1, "Value of dim is out of range"
-    assert _input_args_is_int(index.tolist()), "input index parameter is not illegal!"
-    index_rshp = list(input.shape)
 
-    for index_i in index:
-        assert (
-            index_i < index_rshp[dim]
-        ), "value of index out of range(index shuold lower than the first dimension of input)"
-
-    index_rshp[dim] = 1
-    index_gather = index[0].expand(index_rshp)
-    if index.size()[0] > 1:
-        for index_i in index[1:]:
-            x = index_i.expand(index_rshp)
-            index_gather = flow.cat((index_gather, x), dim)
-
-    return flow.gather(input, index_gather, dim, sparse_grad)
+    return index_select_op(input, dim, index)
 
 
 if __name__ == "__main__":
