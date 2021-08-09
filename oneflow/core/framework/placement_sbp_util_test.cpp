@@ -125,6 +125,8 @@ namespace {
 void InitSbpParallel(cfg::SbpParallel* sbp_parallel, const std::string& sbp_tag) {
   if (sbp_tag == "S0") {
     sbp_parallel->mutable_split_parallel()->set_axis(0);
+  } elseif (sbp_tag == "S1") {
+    sbp_parallel->mutable_split_parallel()->set_axis(1);
   } else if (sbp_tag == "B") {
     sbp_parallel->mutable_broadcast_parallel();
   } else if (sbp_tag == "P") {
