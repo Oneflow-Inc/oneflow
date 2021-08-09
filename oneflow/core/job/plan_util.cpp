@@ -119,6 +119,10 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     CHECK(mem_block->has_chunk_offset() == false);
     if (mem_block->has_variable_op_name()) { continue; }
     if (!mem_block->enable_reuse_mem()) { continue; }
+    // NOTE(chengcheng):
+    //   only reused mem in cuda device.
+    //   special cpu memory like OFRecord pb and TensorBuffer CANNOT reused by another plan.
+    if (mem_block->mem_case().has_host_mem()) { continue; }
     int64_t mem_zone_uid =
         MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
     auto it = mzuid2mem_blocks.find(mem_zone_uid);
