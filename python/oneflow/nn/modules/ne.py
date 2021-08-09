@@ -15,30 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Ne(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input, other):
-        if isinstance(other, flow.Tensor) or isinstance(
-            other, flow._oneflow_internal.Tensor
-        ):
-            for i in range(len(input.size())):
-                assert (
-                    input.shape[i] >= other.shape[i]
-                ), "The second tensor's shape should broadcastable with the first argument."
-                if input.dtype != other.dtype:
-                    other = other.to(dtype=input.dtype)
-        elif isinstance(other, int) or isinstance(other, float):
-            return flow.F.scalar_logical_not_equal(input, float(other))
-        else:
-            raise NotImplementedError(
-                "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
-            )
-        return flow.F.broadcast_not_equal(input, other)
 
 
 @register_tensor_op("ne")
@@ -70,7 +46,22 @@ def ne_op(input, other):
         tensor([0, 0, 0, 1], dtype=oneflow.int8)
 
     """
-    return Ne()(input, other)
+    if isinstance(other, flow.Tensor) or isinstance(
+        other, flow._oneflow_internal.Tensor
+    ):
+        for i in range(len(input.size())):
+            assert (
+                input.shape[i] >= other.shape[i]
+            ), "The second tensor's shape should broadcastable with the first argument."
+            if input.dtype != other.dtype:
+                other = other.to(dtype=input.dtype)
+    elif isinstance(other, int) or isinstance(other, float):
+        return flow.F.scalar_logical_not_equal(input, float(other))
+    else:
+        raise NotImplementedError(
+            "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
+        )
+    return flow.F.broadcast_not_equal(input, other)
 
 
 if __name__ == "__main__":
