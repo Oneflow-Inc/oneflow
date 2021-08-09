@@ -110,6 +110,14 @@ def _meta_repr(self):
     return tensor_str_util._gen_tensor_meta_str(self)
 
 
+def _eq(self, other):
+    return self.eq(other)
+
+
+def _ne(self, other):
+    return self.ne(other)
+
+
 def _gt(self, other):
     return self.gt(other)
 
@@ -331,6 +339,8 @@ def RegisterMethods():
     Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
+    Tensor.__eq__ = _eq
+    Tensor.__ne__ = _ne
     Tensor.__gt__ = _gt
     Tensor.__lt__ = _lt
     Tensor.__ge__ = _ge
