@@ -21,17 +21,6 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-class Squeeze(Module):
-    def __init__(self, dim: Optional[Sequence[int]] = None) -> None:
-        super().__init__()
-        self.dim = dim
-
-    def forward(self, x):
-        if self.dim is None:
-            return x
-        return flow.F.squeeze(x, dim=self.dim)
-
-
 @register_tensor_op("squeeze")
 def squeeze_op(input, dim: Optional[Sequence[int]] = None):
     """This operator removes the specified dimention which size is 1 of the input Tensor.
@@ -58,12 +47,16 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         flow.Size([1, 3])
 
     """
+    if dim == None:
+        return input
+
     if isinstance(dim, int):
         dim = [dim]
     elif dim is None:
         dim = range(input.ndim)
     dim = list(filter(lambda i: input.size(i) == 1, dim))
-    return Squeeze(dim=dim)(input)
+
+    return flow.F.squeeze(input, dim)
 
 
 if __name__ == "__main__":

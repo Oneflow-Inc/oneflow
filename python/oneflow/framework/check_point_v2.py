@@ -126,23 +126,6 @@ def _ElemCnt(shape):
     return np.prod(shape).astype(int).item()
 
 
-@session_ctx.try_init_default_session
-def GetAllVariables() -> Dict[str, oneflow._oneflow_internal.EagerConsistentBlob]:
-    """
-    Get all variables of all jobs as a dict.
-    """
-    sync_default_session_if_normal()
-    sess = session_ctx.GetDefaultSession()
-    interface_ops = sess.interface_ops
-    variables = {}
-    for op in interface_ops:
-        op_attr = sess.OpAttribute4InterfaceOpName(op)
-        if op_attr.op_conf.WhichOneof("op_type") != "variable_conf":
-            continue
-        variables[op] = interface_op_read_and_write.GetEagerInterfaceBlob(op)
-    return variables
-
-
 def _LoadSingleVariable(path: str) -> Optional[FileBackendVariableBlob]:
     if os.path.isfile(os.path.join(path, DATA_FILENAME)):
         return FileBackendVariableBlob(path)
@@ -479,27 +462,6 @@ def FeedValueToVariable(
         )
 
 
-@session_ctx.try_init_default_session
-def LoadVariables(value_dict: Dict[str, ValueContainer], ignore_mismatch: bool = True):
-    """
-    Load value in `value_dict` into oneflow variables.
-    For example, if `value_dict` is {'x', np.ones(x_shape)},
-    the value of variable "x" will all ones.
-    If `ignore_mismatch` is False, an exception will be raised when
-    there is a name in `value_dict` not belonging to any variable.
-    """
-    sync_default_session_if_normal()
-    all_vars = GetAllVariables()
-    for (name, value) in value_dict.items():
-        if name in all_vars:
-            var_blob = interface_op_read_and_write.GetEagerInterfaceBlob(name)
-            scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(var_blob)
-            FeedValueToVariable(var_blob, value, scope_symbol_id)
-        elif not ignore_mismatch:
-            raise RuntimeError('"{}" is not a variable name'.format(name))
-    oneflow._oneflow_internal.eager.single_client.Sync()
-
-
 def _ForEachSlice(
     container: ValueContainer,
     f: Union[
@@ -590,28 +552,4 @@ def init_by_initializer_conf(
 
 
 def Init() -> None:
-    sync_default_session_if_normal()
-    sess = session_ctx.GetDefaultSession()
-    for (op_name, var_blob) in GetAllVariables().items():
-        var_conf = sess.OpAttribute4InterfaceOpName(op_name).op_conf.variable_conf
-        if not (
-            var_conf.HasField("initializer")
-            or var_conf.HasField("initialize_with_snapshot")
-        ):
-            continue
-        if var_conf.HasField("initialize_with_snapshot"):
-            initialize_with_snapshot_conf = var_conf.initialize_with_snapshot
-            if initialize_with_snapshot_conf.HasField("key"):
-                snapshot_key = op_name
-            else:
-                snapshot_key = initialize_with_snapshot_conf.key
-            var_dir = os.path.dirname(
-                os.path.join(initialize_with_snapshot_conf.path, snapshot_key)
-            )
-            LoadVariables({op_name: GetCheckpoint(var_dir)})
-            continue
-        scope_symbol_id = _GetScopeSymbolIdFromEagerBlob(var_blob)
-        init_by_initializer_conf(
-            var_blob, var_conf.initializer, False, scope_symbol_id, var_conf.random_seed
-        )
-    oneflow._oneflow_internal.eager.single_client.Sync()
+    raise NotImplemented()

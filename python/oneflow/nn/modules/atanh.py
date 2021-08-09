@@ -15,15 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Atanh(Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.atanh(x)
 
 
 def atanh_op(input):
@@ -48,17 +39,17 @@ def atanh_op(input):
         tensor([0.5493, 0.6931, 0.8673], dtype=oneflow.float32)
 
     """
-    return Atanh()(input)
+    return flow.F.atanh(input)
 
 
 @register_tensor_op("atanh")
-def atanh_op_tensor(x):
+def atanh_op_tensor(input):
     """
     atanh() -> Tensor
     See :func:`oneflow.atanh`
 
     """
-    return Atanh()(x)
+    return flow.F.atanh(input)
 
 
 def arctanh_op(input):
@@ -66,7 +57,7 @@ def arctanh_op(input):
 
     Alias for :func:`oneflow.atanh`
     """
-    return Atanh()(input)
+    return flow.F.atanh(input)
 
 
 @register_tensor_op("arctanh")
@@ -75,7 +66,7 @@ def arctanh_op_tensor(input):
 
     Alias for :func:`oneflow.atanh`
     """
-    return Atanh()(input)
+    return flow.F.atanh(input)
 
 
 if __name__ == "__main__":
