@@ -186,16 +186,15 @@ add_docstr(
     The formula is: 
 
     .. math::
-    
-        \text{silu}(x) = x * sigmoid(x)
 
-   For example:
-    
+        \text{silu}(x) = x * sigmoid(x)
+        
+    For example:
+
     .. code-block:: python
-    
+
         >>> import numpy as np
         >>> import oneflow as flow
-
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)       
@@ -204,7 +203,7 @@ add_docstr(
         tensor([0.7311, 1.7616, 2.8577], dtype=oneflow.float32)
 
     See :class:`~oneflow.nn.SiLU` for more details.
-    
+
     """,
 )
 
@@ -234,8 +233,7 @@ add_docstr(
         >>> out
         tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
 
-    See :
-    class:`~oneflow.nn.Mish` for more details.
+    See :class:`~oneflow.nn.Mish` for more details.
     
     """,
 )
@@ -248,7 +246,7 @@ add_docstr(
 
     Applies the rectified linear unit function element-wise. See
     :class:`~oneflow.nn.ReLU` for more details.
-    
+
     Args:
         inplace: If set to ``True``, will do this operation in-place. Default: ``False``
 
@@ -371,10 +369,7 @@ add_docstr(
     r"""
     selu(x: Tensor) -> Tensor
 
-    Applies element-wise,
-        :math:`\text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`,
-        with :math:`\alpha=1.6732632423543772848170429916717` and
-        :math:`scale=1.0507009873554804934193349852946`.
+    Applies element-wise function :math:`\text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`, with :math:`\alpha=1.6732632423543772848170429916717` and  :math:`scale=1.0507009873554804934193349852946`.
 
     See :class:`~oneflow.nn.SELU` for more details.
 

@@ -53,9 +53,7 @@ add_docstr(
                   [15., 15., 15., 16., 17., 17., 17.],
                   [15., 15., 15., 16., 17., 17., 17.]]]], dtype=oneflow.float32)
 
-    See :class:`oneflow.nn.ConstantPad2d`, :class:`ooneflow.nn.ReflectionPad2d`, and
-        :class:`ooneflow.nn.ReplicationPad2d` for concrete examples on how each of the
-        padding modes works.
+    See :class:`oneflow.nn.ConstantPad2d`, :class:`oneflow.nn.ReflectionPad2d`, and :class:`oneflow.nn.ReplicationPad2d` for concrete examples on how each of the padding modes works.
         
     """,
 )
