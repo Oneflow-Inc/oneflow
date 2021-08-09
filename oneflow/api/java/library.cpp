@@ -117,9 +117,6 @@ void JNICALL Java_org_oneflow_OneFlow_setScopeForCurJob(JNIEnv* env, jobject obj
 JNIEXPORT
 void JNICALL Java_org_oneflow_OneFlow_curJobAddOp(JNIEnv* env, jobject obj, jstring op_conf_proto) {
   std::string op_conf_proto_ = ConvertToString(env, op_conf_proto);
-  op_conf_proto_ = Subreplace(op_conf_proto_, "user_input", "input");
-  op_conf_proto_ = Subreplace(op_conf_proto_, "user_output", "output");
-
   return CurJobAddOp(op_conf_proto_);
 }
 
