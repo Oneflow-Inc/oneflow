@@ -19,18 +19,22 @@ from automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
     @autotest()
-    def test_CrossEntropyLoss_with_random_data(test_case):
+    def test_cross_entropy_loss_with_random_data(test_case):
         num_classes = random(low=2)
-        shape = (
-            random_tensor(
-                ndim=random(3, 5), dim0=random(low=10, high=100), dim1=num_classes
-            )
-            .value()
-            .shape
-        )
+        device = random_device()
+        batch_size = random(low=10, high=100)
+
+        x = random_pytorch_tensor(
+            ndim=random(3, 5), dim0=batch_size, dim1=num_classes
+        ).to(device)
+        target = random_pytorch_tensor(
+            2, batch_size, 1, low=0, high=num_classes, dtype=int
+        ).to(device)
+
         ignore_index = (
             random(0, num_classes) | nothing() if num_classes.value() > 2 else nothing()
         )
@@ -39,12 +43,8 @@ class TestCrossEntropyLossModule(flow.unittest.TestCase):
             ignore_index=ignore_index,
         )
         m.train(random())
-        device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(len(shape), *shape).to(device)
-        target = random_pytorch_tensor(
-            2, shape[0], 1, low=0, high=num_classes, dtype=int
-        ).to(device)
+
         y = m(x, target)
         return y
 
