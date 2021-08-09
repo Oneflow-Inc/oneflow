@@ -156,7 +156,7 @@ class RMSprop(Optimizer):
                     "scale": param_group["scale"],
                     "epsilon": param_group["eps"],
                     "decay_rate": param_group["alpha"],
-                    "weight_decay": param_group["weight_decay"],
+                    "l2": param_group["weight_decay"],
                 }
                 for param in param_group.parameters:
                     if param.grad is None:
