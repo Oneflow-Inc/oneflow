@@ -248,6 +248,10 @@ add_docstr(
 
     Applies the rectified linear unit function element-wise. See
     :class:`~oneflow.nn.ReLU` for more details.
+    
+    Args:
+        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
+
 
     """,
 )
@@ -265,9 +269,7 @@ add_docstr(
             x / 6 + 1 / 2 & \text{otherwise}
         \end{cases}
 
-    Args:
-        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
-
+    
     See :class:`~oneflow.nn.Hardsigmoid` for more details.
     """,
 )
@@ -334,7 +336,7 @@ add_docstr(
     leaky_relu(x: Tensor,  alpha :Float) -> Tensor
 
     Applies element-wise,
-    :math:`\text{LeakyReLU}(x) = \max(0, x) + \text{negative\_slope} * \min(0, x)`
+    :math:`\text{LeakyReLU}(x) = \max(0, x) + \text{negative_slope} * \min(0, x)`
 
     See :class:`~oneflow.nn.LeakyReLU` for more details.
 

@@ -40,10 +40,6 @@ add_docstr(
           a tuple `(dW,)`. Default: 1
         groups: split input into groups, :math:`\text{in_channels}` should be divisible by the
           number of groups. Default: 1
-        padding_mode: the padding mode to use. Only "zeros" is supported for quantized convolution at the moment. Default: "zeros"
-        scale: quantization scale for the output. Default: 1.0
-        zero_point: quantization zero_point for the output. Default: 0
-        dtype: quantization data type to use. Default: ``torch.quint8``
 
     For examples:
 
@@ -61,7 +57,7 @@ add_docstr(
 add_docstr(
     oneflow.F.conv2d,
     r"""
-    conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1) -> Tensor
+    conv2d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv2d.html?highlight=conv2d
 
@@ -82,10 +78,6 @@ add_docstr(
           a tuple `(dH, dW)`. Default: 1
         groups: split input into groups, :math:`\text{in_channels}` should be divisible by the
           number of groups. Default: 1
-        padding_mode: the padding mode to use. Only "zeros" is supported for quantized convolution at the moment. Default: "zeros"
-        scale: quantization scale for the output. Default: 1.0
-        zero_point: quantization zero_point for the output. Default: 0
-        dtype: quantization data type to use. Default: ``torch.quint8``
     
     
         """,
@@ -93,7 +85,7 @@ add_docstr(
 add_docstr(
     oneflow.F.conv3d,
     r"""
-    conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1) -> Tensor
+    conv3d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv3d.html?highlight=conv3d
 
@@ -118,11 +110,7 @@ add_docstr(
           a tuple `(dD, dH, dW)`. Default: 1
         groups: split input into groups, :math:`\text{in_channels}` should be
           divisible by the number of groups. Default: 1
-        padding_mode: the padding mode to use. Only "zeros" is supported for
-          quantized convolution at the moment. Default: "zeros"
-        scale: quantization scale for the output. Default: 1.0
-        zero_point: quantization zero_point for the output. Default: 0
-        dtype: quantization data type to use. Default: ``torch.quint8``
+        
         
     """,
 )

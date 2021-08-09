@@ -27,6 +27,7 @@ add_docstr(
     See :class:`~oneflow.nn.AdaptiveAvgPool1d` for details and output shape.
 
     Args:
+        input: the input tensor
         output_size: the target output size (single integer)
 
     For examples:
@@ -54,6 +55,7 @@ add_docstr(
     See :class:`~oneflow.nn.AdaptiveAvgPool2d` for details and output shape.
 
     Args:
+        input: the input tensor
         output_size: the target output size (single integer or
             double-integer tuple)
 
@@ -81,6 +83,7 @@ add_docstr(
     See :class:`~oneflow.nn.AdaptiveAvgPool3d` for details and output shape.
 
     Args:
+        input: the input tensor
         output_size: the target output size (single integer or
             triple-integer tuple)
 
