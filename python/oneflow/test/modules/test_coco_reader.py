@@ -83,6 +83,7 @@ class COCODataLoaderDistributedTestCase(oneflow.unittest.TestCase):
             sbp=[flow.sbp.split(0)],
         )
         coco_loader_graph = DataLoaderGraph(consistent_coco_loader)
+        # coco_loader_graph.debug()
 
         iteration = 1
         for i in range(iteration):

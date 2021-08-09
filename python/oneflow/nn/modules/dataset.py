@@ -718,7 +718,11 @@ class COCOReader(Module):
         else:
             # consistent apply
             outputs = self._op.apply(self.placement, self.attrs)
-        return outputs
+
+        # COCOReader has multiple output, so it return a TensorTuple
+        # convert TensorTuple to tuple of Tensor
+        ret = tuple(out for out in outputs)
+        return ret
 
 
 class ImageBatchAlign(Module):
