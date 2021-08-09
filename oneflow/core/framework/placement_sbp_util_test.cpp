@@ -190,7 +190,7 @@ TEST(DecomposeByParallelId, decompose_axis1) {
   parallel_conf.mutable_hierarchy()->add_dim(4);
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
   const auto& src_nd_sbp = Get2dSbp("S0", "P");
-  const auto& dst_nd_sbp = Get2dSbp("S0", "S0");
+  const auto& dst_nd_sbp = Get2dSbp("S0", "S1");
   for (int i = 0; i < 8; ++i) {
     const auto& tensor_meta = MakeConsistentTensorMeta(parallel_desc, src_nd_sbp);
     const auto& transformations =
@@ -205,7 +205,7 @@ TEST(DecomposeByParallelId, decompose_axis1) {
     ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel_size(), 1);
     ASSERT_TRUE(transformations->at(0).src_nd_sbp->sbp_parallel(0).has_partial_sum_parallel());
     ASSERT_TRUE(transformations->at(0).dst_nd_sbp->sbp_parallel(0).has_split_parallel());
-    ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel(0).split_parallel().axis(), 0);
+    ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel(0).split_parallel().axis(), 1);
   }
 }
 
