@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 """
-This file is mostly copied from PyTorch v1.8.1 torch/_tensor_str.py
+This file is mostly referenced from PyTorch v1.8.1 torch/_tensor_str.py
 """
 import numpy as np
 import math
@@ -71,13 +71,7 @@ class _Formatter(object):
             nonzero_finite_min = nonzero_finite_abs.min().numpy()
             nonzero_finite_max = nonzero_finite_abs.max().numpy()
 
-            # Determines use int mode or not
-            self.random_sample_num = min(self.random_sample_num, tensor_view.numel())
-            rand_idx = np.random.randint(
-                tensor_view.numel(), size=[self.random_sample_num]
-            ).tolist()
-            sample_data = nonzero_finite_abs[rand_idx].numpy()
-            for value in sample_data:
+            for value in nonzero_finite_abs.numpy():
                 if value != np.ceil(value):
                     self.int_mode = False
                     break
