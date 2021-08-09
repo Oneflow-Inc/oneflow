@@ -17,17 +17,6 @@ limitations under the License.
 
 namespace oneflow {
 
-// #define REGISTER_SCALAR_LOGICAL_CPU_KERNEL(dtype)                        \
-//   REGISTER_SCALAR_LOGICAL_EQUAL_KERNEL(DeviceType::kCPU, dtype);         \
-//   REGISTER_SCALAR_LOGICAL_NOTEQUAL_KERNEL(DeviceType::kCPU, dtype);      \
-//   REGISTER_SCALAR_LOGICAL_GREATER_KERNEL(DeviceType::kCPU, dtype);       \
-//   REGISTER_SCALAR_LOGICAL_GREATER_EQUAL_KERNEL(DeviceType::kCPU, dtype); \
-//   REGISTER_SCALAR_LOGICAL_LESS_KERNEL(DeviceType::kCPU, dtype);          \
-//   REGISTER_SCALAR_LOGICAL_LESS_EQUAL_KERNEL(DeviceType::kCPU, dtype);
-
-// REGISTER_SCALAR_LOGICAL_CPU_KERNEL(float);
-// REGISTER_SCALAR_LOGICAL_CPU_KERNEL(double);
-
 template<template<typename T> class BIN_OP, typename T>
 struct ScalarLogicalFunctor<DeviceType::kCPU, BIN_OP, T> final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in, int8_t* out){
@@ -102,6 +91,5 @@ REGISTER_SCALAR_LOGICAL_CPU_KERNELS();
 #ifdef WITH_CUDA
 REGISTER_SCALAR_LOGICAL_GPU_KERNELS();
 #endif  // WITH_CUDA
-
 
 }  // namespace oneflow
