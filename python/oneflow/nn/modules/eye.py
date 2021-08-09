@@ -16,50 +16,7 @@ limitations under the License.
 from typing import Union
 
 import oneflow as flow
-from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
-
-
-class Eye(Module):
-    def __init__(
-        self,
-        n: int,
-        m: int = None,
-        device: Union[str, flow.device] = "cpu",
-        requires_grad: bool = False,
-    ) -> None:
-        super().__init__()
-        self.n = n
-        self.m = m
-        self.device = device
-        self.requires_grad = requires_grad
-
-    def forward(self):
-        n = self.n
-        m = self.m
-        if m is None:
-            m = n
-
-        if m == n:
-            res = flow.diag(flow.ones(n))
-        elif m < n:
-            tmp = flow.ones(m)
-            input1 = flow.zeros((n - m, m))
-            input2 = flow.diag(tmp)
-            res = flow.cat([input2, input1], dim=0)
-        else:
-            tmp = flow.ones(n)
-            input1 = flow.zeros((n, m - n))
-            input2 = flow.diag(tmp)
-            res = flow.cat([input2, input1], dim=1)
-
-        res.requires_grad = self.requires_grad
-        if isinstance(self.device, str):
-            device = flow.device(self.device)
-        else:
-            device = self.device
-        re = res.to(device)
-        return re
 
 
 def eye_op(
@@ -90,7 +47,28 @@ def eye_op(
                 [0., 0., 1.]], dtype=oneflow.float32)
     
     """
-    return Eye(n, m, device, requires_grad)()
+    if m is None:
+        m = n
+
+    if m == n:
+        res = flow.diag(flow.ones(n))
+    elif m < n:
+        tmp = flow.ones(m)
+        input1 = flow.zeros((n - m, m))
+        input2 = flow.diag(tmp)
+        res = flow.cat([input2, input1], dim=0)
+    else:
+        tmp = flow.ones(n)
+        input1 = flow.zeros((n, m - n))
+        input2 = flow.diag(tmp)
+        res = flow.cat([input2, input1], dim=1)
+
+    res.requires_grad = requires_grad
+    if isinstance(device, str):
+        device = flow.device(device)
+
+    re = res.to(device)
+    return re
 
 
 if __name__ == "__main__":
