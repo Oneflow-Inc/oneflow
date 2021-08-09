@@ -83,8 +83,7 @@ class _Formatter(object):
                     break
 
             if self.int_mode:
-                # in int_mode for floats, all numbers are integers, and we append a decimal to nonfinites
-                # to indicate that the tensor is of floating type. add 1 to the len to account for this.
+                # Check if scientific representation should be used.
                 if (
                     nonzero_finite_max / nonzero_finite_min > 1000.0
                     or nonzero_finite_max > 1.0e8
@@ -100,7 +99,6 @@ class _Formatter(object):
                     value_str = ("{:.0f}").format(nonzero_finite_max)
                     self.max_width = max(self.max_width, len(value_str))
             else:
-                # Check if scientific representation should be used.
                 if (
                     nonzero_finite_max / nonzero_finite_min > 1000.0
                     or nonzero_finite_max > 1.0e8
