@@ -23,6 +23,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestConsistentCast(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cpu_local_tensor_to_gpu_placement(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
         tensor = flow.Tensor(np_arr, dtype=flow.float32)
@@ -32,6 +33,7 @@ class TestConsistentCast(flow.unittest.TestCase):
         test_case.assertTrue(consistent_tensor.to_local().device == device)
         test_case.assertTrue(consistent_tensor.placement == placement)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_consistent_with_wrong_device(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
         tensor = flow.Tensor(np_arr, dtype=flow.float32)
