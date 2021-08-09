@@ -17,31 +17,11 @@ from typing import Union
 from typing import Optional
 
 import oneflow as flow
-from oneflow.nn.module import Module
 from oneflow.framework.tensor import register_tensor_op
 
 
-class One_hot(Module):
-    def __init__(self, depth=-1, on_value=1, off_value=0, dtype=None) -> None:
-        super().__init__()
-        self.depth = depth       
-        self.on_value = on_value
-        self.off_value = off_value
-        if dtype == None:
-            dtype = flow.int64
-        self.dtype = dtype
-
-    def forward(self, x):
-        if self.depth == -1:
-            depth = flow.max(x) + 1
-            depth = depth.numpy()
-        else:
-            depth = self.depth
-        return flow.F.one_hot(x, depth, self.on_value, self.off_value, self.dtype)
-
-
 def one_hot_op(
-    x, 
+    input, 
     depth=-1, 
     on_value: Union[int, float] = 1,
     off_value: Union[int, float] = 0,
@@ -54,7 +34,7 @@ def one_hot_op(
     The locations represented by `x` take value `on_value`, while other locations take `off_value`.
 
     Args:
-        x (Tensor): The input Tensor.
+        input (Tensor): The input Tensor.
         depth (int): The length of onehot Blob.
         on_value (Union[int, float], optional): The fill value when `x[i] == i`. Defaults to 1.
         off_value (Union[int, float], optional): The fill value when `x[i] != i`. Defaults to 0.
@@ -74,8 +54,8 @@ def one_hot_op(
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> x=flow.Tensor(np.array([0, 3, 1, 2]).astype(np.int32), dtype=flow.int64)
-        >>> out = flow.one_hot(x, depth=5)
+        >>> input=flow.Tensor(np.array([0, 3, 1, 2]).astype(np.int32), dtype=flow.int64)
+        >>> out = flow.one_hot(input, depth=5)
         >>> out
         tensor([[1, 0, 0, 0, 0],
                 [0, 0, 0, 1, 0],
@@ -83,7 +63,12 @@ def one_hot_op(
                 [0, 0, 1, 0, 0]], dtype=oneflow.int64)
     
     """
-    return One_hot(depth, on_value, off_value, dtype)(x)
+    if depth == -1:
+        depth = flow.max(input) + 1
+        depth = depth.numpy()
+    if dtype == None:
+        dtype = flow.int64
+    return flow.F.one_hot(input, depth, on_value, off_value, dtype)
 
 
 if __name__ == "__main__":
