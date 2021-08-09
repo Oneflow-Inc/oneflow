@@ -16,6 +16,27 @@ target_include_directories(
     ${JNI_INCLUDE_DIRS}
 )
 
+# find maven, maybe we should make it a function or seperate it into a new file
+execute_process(
+  COMMAND which mvn
+  RESULT_VARIABLE STATUS
+  OUTPUT_VARIABLE OUTPUT
+  ERROR_QUIET
+)
+if(STATUS EQUAL 0)
+  string(STRIP ${OUTPUT} STRIPPED)
+  message(STATUS "Using Maven from 'which mvn': ${STRIPPED}")
+  set(MAVEN_EXECUTABLE ${STRIPPED})
+else()
+message (FATAL_ERROR "Maven is not found on your machine")
+endif()
+
+# export path to LD_LIBRARY_PATH
+add_custom_target(export_to_library
+    COMMAND echo export LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}:$$LD_LIBRARY_PATH" > source.sh
+  )
+add_dependencies(oneflow export_to_library)
+
 # find java
 find_package(Java REQUIRED)
 include(UseJava)
@@ -27,7 +48,7 @@ set(PROTOBUF_JAR ${PROTOBUF_SRC_DIR}/java/core/target/protobuf-java-3.9.2.jar)
 
 add_custom_target(build_protobuf_java
     COMMAND cp ${PROTOBUF_PROTOC_EXECUTABLE} "${PROTOBUF_SRC_DIR}/src"
-    COMMAND mvn package -Dmaven.test.skip=true
+    COMMAND ${MAVEN_EXECUTABLE} package -Dmaven.test.skip=true
     WORKING_DIRECTORY "${PROTOBUF_SRC_DIR}/java"
     DEPENDS protobuf
   )
