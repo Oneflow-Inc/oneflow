@@ -67,8 +67,8 @@ class _Formatter(object):
                 return
 
             nonzero_finite_abs = nonzero_finite_vals.abs()
-            nonzero_finite_min = nonzero_finite_abs.min().numpy().astype(float64)
-            nonzero_finite_max = nonzero_finite_abs.max().numpy().astype(float64)
+            nonzero_finite_min = nonzero_finite_abs.min().numpy().astype(np.float64)
+            nonzero_finite_max = nonzero_finite_abs.max().numpy().astype(np.float64)
 
             for value in nonzero_finite_abs.numpy():
                 if value != np.ceil(value):
@@ -253,10 +253,10 @@ def _gen_tensor_str(inp):
     if inp.is_consistent:
         suffixes.append(f"placement={str(inp.placement)}")
         suffixes.append(f"sbp={str(inp.sbp)}")
-    elif inp.device.type != "cpu" or (
-        inp.device.type == "cuda" and inp.device.index != 0
-    ):
+    elif inp.device.type == "cuda":
         suffixes.append("device='" + str(inp.device) + "'")
+    elif inp.device.type != "cpu":
+        raise RunTimeError("unknow device type")
     if inp.numel() == 0:
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
         if inp.dim() != 1:
