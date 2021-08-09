@@ -25,12 +25,12 @@ namespace {
 
 template<typename T>
 size_t GetProbTmpSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * sizeof(T));
+  return GetCudaAlignedSize(n * w * sizeof(T));
 }
 
 template<typename T>
 size_t GetDiffTmpSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * sizeof(T));
+  return GetCudaAlignedSize(n * w * sizeof(T));
 }
 
 template<typename T>
@@ -54,16 +54,16 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
                           void* temp_storage, const size_t temp_storage_bytes) {
     auto Val = NdarrayUtil<DeviceType::kCPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
-    const size_t min_temp_storage_bytes =
-        LogSoftmaxKernelUtil<DeviceType::kCPU, T>::GetComputeProbTempStorageSizeInBytes(n, w);
+    const size_t min_temp_storage_bytes =  
+        LogSoftmaxKernelUtil<DeviceType::kCPU, T>::GetComputeProbTempStorageSizeInBytes(n, w);  
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
-    const size_t reduce_temp_storage_bytes = GetReduceTempStorageSize<T>(n, w);
-    T* reduce_storage = reinterpret_cast<T*>(temp_storage);
+    const size_t reduce_temp_storage_bytes = GetReduceTempStorageSize<T>(n, w);                
+    T* reduce_storage = reinterpret_cast<T*>(temp_storage);                                    
     auto reduce_storage_var =
-        Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);
-    T* tmp = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
+        Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);     
+    T* tmp = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)                
                                   + reduce_temp_storage_bytes); 
-    T* tmp1 = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
+    T* tmp1 = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)             
                                   + reduce_temp_storage_bytes); 
     // max | tmp[i] = Max_j(in[i][j])
     NdarrayUtil<DeviceType::kCPU, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, in),
@@ -90,7 +90,7 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
     auto Val = NdarrayUtil<DeviceType::kCPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
     const size_t min_temp_storage_bytes =
-        LogSoftmaxKernelUtil<DeviceType::kCPU, T>::GetComputeProbTempStorageSizeInBytes(n, w);
+        LogSoftmaxKernelUtil<DeviceType::kCPU, T>::GetComputeDiffTempStorageSizeInBytes(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
     const size_t reduce_temp_storage_bytes = GetReduceTempStorageSize<T>(n, w);
     T* reduce_storage = reinterpret_cast<T*>(temp_storage);

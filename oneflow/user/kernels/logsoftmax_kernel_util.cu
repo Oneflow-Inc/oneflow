@@ -32,12 +32,12 @@ __global__ void ComputeLogGpu(const int64_t len,T* out,T* in){
 
 template<typename T>
 size_t GetProbTmpSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * sizeof(T));
+  return GetCudaAlignedSize(n * w * sizeof(T));
 }
 
 template<typename T>
 size_t GetDiffTmpSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * sizeof(T));
+  return GetCudaAlignedSize(n * w * sizeof(T));
 }
 
 template<typename T>
@@ -96,7 +96,7 @@ struct LogSoftmaxKernelUtil<DeviceType::kGPU, T> {
     auto Val = NdarrayUtil<DeviceType::kGPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kGPU, T>::GetVarNdarrayBuilder();
     const size_t min_temp_storage_bytes =
-        LogSoftmaxKernelUtil<DeviceType::kGPU, T>::GetComputeProbTempStorageSizeInBytes(n, w);
+        LogSoftmaxKernelUtil<DeviceType::kGPU, T>::GetComputeDiffTempStorageSizeInBytes(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
     const size_t reduce_temp_storage_bytes = GetReduceTempStorageSize<T>(n, w);
     T* reduce_storage = reinterpret_cast<T*>(temp_storage);
