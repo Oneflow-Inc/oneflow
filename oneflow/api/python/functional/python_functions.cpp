@@ -349,17 +349,27 @@ py::object PyEqual(py::args py_args, py::kwargs py_kwargs) {
     PyObject* input = PyTuple_GetItem(args, 0);
     PyObject* other = PyTuple_GetItem(args, 1);
     bool input_is_tensor = PyTensorCheck(input);
-    CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor)
         << "Inputs must have one tensor at least.";
-    auto a = JUST(PyUnpackTensor(input));
 
-    if (PyScalarCheck(other)) {
-      auto b = *JUST(PyUnpackScalar(other));
-      return functional::ScalarLogicalEqual(a, b);
-    } else {
-      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+    if (PyTensorCheck(input) && PyTensorCheck(other)) {
+      auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
       return functional::BroadcastEqual(a, b);
+    } else {
+      if(PyTensorCheck(input)){
+        CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar.";
+        auto a = JUST(PyUnpackTensor(input));
+        auto b = *JUST(PyUnpackScalar(other));
+        return functional::ScalarLogicalEqual(a, b);
+      }
+      else{
+        CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar.";
+        auto a = *JUST(PyUnpackScalar(input));
+        auto b = JUST(PyUnpackTensor(other));
+        return functional::ScalarLogicalEqual(b, a);
+      }
     }
   }();
   return py::cast(result.GetPtrOrThrow());
@@ -377,15 +387,24 @@ py::object PyNotEqual(py::args py_args, py::kwargs py_kwargs) {
     bool input_is_tensor = PyTensorCheck(input);
     CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
         << "Inputs must have one tensor at least.";
-    auto a = JUST(PyUnpackTensor(input));
 
-    if (PyScalarCheck(other)) {
-      auto b = *JUST(PyUnpackScalar(other));
-      return functional::ScalarLogicalNotEqual(a, b);
-    } else {
-      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+    if (PyTensorCheck(input) && PyTensorCheck(other)) {
+      auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
       return functional::BroadcastNotEqual(a, b);
+    } else {
+      if(PyTensorCheck(input)){
+        CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar.";
+        auto a = JUST(PyUnpackTensor(input));
+        auto b = *JUST(PyUnpackScalar(other));
+        return functional::ScalarLogicalNotEqual(a, b);
+      }
+      else{
+        CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar.";
+        auto a = *JUST(PyUnpackScalar(input));
+        auto b = JUST(PyUnpackTensor(other));
+        return functional::ScalarLogicalNotEqual(b, a);
+      }
     }
   }();
   return py::cast(result.GetPtrOrThrow());
@@ -403,15 +422,24 @@ py::object PyGreater(py::args py_args, py::kwargs py_kwargs) {
     bool input_is_tensor = PyTensorCheck(input);
     CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
         << "Inputs must have one tensor at least.";
-    auto a = JUST(PyUnpackTensor(input));
 
-    if (PyScalarCheck(other)) {
-      auto b = *JUST(PyUnpackScalar(other));
-      return functional::ScalarLogicalGreater(a, b);
-    } else {
-      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+    if (PyTensorCheck(input) && PyTensorCheck(other)) {
+      auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
       return functional::BroadcastGreater(a, b);
+    } else {
+      if(PyTensorCheck(input)){
+        CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar.";
+        auto a = JUST(PyUnpackTensor(input));
+        auto b = *JUST(PyUnpackScalar(other));
+        return functional::ScalarLogicalGreater(a, b);
+      }
+      else{
+        CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar.";
+        auto a = *JUST(PyUnpackScalar(input));
+        auto b = JUST(PyUnpackTensor(other));
+        return functional::ScalarLogicalGreater(b, a);
+      }
     }
   }();
   return py::cast(result.GetPtrOrThrow());
@@ -429,15 +457,24 @@ py::object PyGreaterEqual(py::args py_args, py::kwargs py_kwargs) {
     bool input_is_tensor = PyTensorCheck(input);
     CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
         << "Inputs must have one tensor at least.";
-    auto a = JUST(PyUnpackTensor(input));
 
-    if (PyScalarCheck(other)) {
-      auto b = *JUST(PyUnpackScalar(other));
-      return functional::ScalarLogicalGreaterEqual(a, b);
-    } else {
-      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+    if (PyTensorCheck(input) && PyTensorCheck(other)) {
+      auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
       return functional::BroadcastGreaterEqual(a, b);
+    } else {
+      if(PyTensorCheck(input)){
+        CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar.";
+        auto a = JUST(PyUnpackTensor(input));
+        auto b = *JUST(PyUnpackScalar(other));
+        return functional::ScalarLogicalGreaterEqual(a, b);
+      }
+      else{
+        CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar.";
+        auto a = *JUST(PyUnpackScalar(input));
+        auto b = JUST(PyUnpackTensor(other));
+        return functional::ScalarLogicalGreaterEqual(b, a);
+      }
     }
   }();
   return py::cast(result.GetPtrOrThrow());
@@ -455,15 +492,24 @@ py::object PyLess(py::args py_args, py::kwargs py_kwargs) {
     bool input_is_tensor = PyTensorCheck(input);
     CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
         << "Inputs must have one tensor at least.";
-    auto a = JUST(PyUnpackTensor(input));
 
-    if (PyScalarCheck(other)) {
-      auto b = *JUST(PyUnpackScalar(other));
-      return functional::ScalarLogicalLess(a, b);
-    } else {
-      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+    if (PyTensorCheck(input) && PyTensorCheck(other)) {
+      auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
       return functional::BroadcastLess(a, b);
+    } else {
+      if(PyTensorCheck(input)){
+        CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar.";
+        auto a = JUST(PyUnpackTensor(input));
+        auto b = *JUST(PyUnpackScalar(other));
+        return functional::ScalarLogicalLess(a, b);
+      }
+      else{
+        CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar.";
+        auto a = *JUST(PyUnpackScalar(input));
+        auto b = JUST(PyUnpackTensor(other));
+        return functional::ScalarLogicalLess(b, a);
+      }
     }
   }();
   return py::cast(result.GetPtrOrThrow());
@@ -481,15 +527,24 @@ py::object PyLessEqual(py::args py_args, py::kwargs py_kwargs) {
     bool input_is_tensor = PyTensorCheck(input);
     CHECK_OR_RETURN(input_is_tensor || PyTensorCheck(other))
         << "Inputs must have one tensor at least.";
-    auto a = JUST(PyUnpackTensor(input));
 
-    if (PyScalarCheck(other)) {
-      auto b = *JUST(PyUnpackScalar(other));
-      return functional::ScalarLogicalLessEqual(a, b);
-    } else {
-      CHECK_OR_RETURN(PyTensorCheck(other)) << "The second input should be a scalar or tensor.";
+    if (PyTensorCheck(input) && PyTensorCheck(other)) {
+      auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
       return functional::BroadcastLessEqual(a, b);
+    } else {
+      if(PyTensorCheck(input)){
+        CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar.";
+        auto a = JUST(PyUnpackTensor(input));
+        auto b = *JUST(PyUnpackScalar(other));
+        return functional::ScalarLogicalLessEqual(a, b);
+      }
+      else{
+        CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar.";
+        auto a = *JUST(PyUnpackScalar(input));
+        auto b = JUST(PyUnpackTensor(other));
+        return functional::ScalarLogicalLessEqual(b, a);
+      }
     }
   }();
   return py::cast(result.GetPtrOrThrow());
