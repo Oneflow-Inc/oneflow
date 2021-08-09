@@ -15,15 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.module import Module
-
-
-class Gather_nd(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input, index):
-        return flow.F.gather_nd(input, index)
 
 
 def gather_nd_op(input, index):
@@ -61,7 +52,7 @@ def gather_nd_op(input, index):
         tensor([3., 8.], dtype=oneflow.float32)
 
     """
-    return Gather_nd()(input, index)
+    return flow.F.gather_nd(input, index)
 
 
 if __name__ == "__main__":
