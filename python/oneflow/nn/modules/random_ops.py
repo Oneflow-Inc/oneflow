@@ -58,6 +58,60 @@ def bernoulli(input, *, generator=None, out=None):
     return flow.F.bernoulli(input, flow.float32, generator)
 
 
+class RandN(Module):
+    def __init__(
+        self,
+        size,
+        generator=None,
+        dtype=None,
+        layout=None,
+        device=None,
+        placement=None,
+        sbp=None,
+        requires_grad=False,
+    ) -> None:
+        super().__init__()
+        assert size is not None, "shape must not be None!"
+        assert isinstance(
+            size, (int, tuple, list, flow.Size)
+        ), "shape should be int or tuple int!"
+        self.device = device
+        if isinstance(self.device, str):
+            self.device = flow.device(self.device)
+        self.requires_grad = requires_grad
+        size = _single(size)
+        if dtype is None:
+            dtype = flow.float32
+
+        if generator is None:
+            generator = flow.Generator()
+        self.generator = generator
+        self.placement = placement
+        self.sbp = sbp
+        if placement is not None:
+            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+            if isinstance(self.sbp, flow.sbp.sbp):
+                self.sbp = (self.sbp,)
+            else:
+                for elem in sbp:
+                    assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+            assert len(self.sbp) == len(placement.hierarchy)
+        else:
+            assert sbp is None, "sbp: %s" % sbp
+        self.size = size
+        self.dtype = dtype
+
+    def forward(self):
+        if self.placement is not None:
+            res = flow.F.consistent_randn(
+                0, 1, self.size, self.dtype, self.placement, self.sbp, self.generator
+            )
+        else:
+            res = flow.F.randn(0, 1, self.size, self.dtype, self.device, self.generator)
+        res.requires_grad = self.requires_grad
+        return res
+
+
 def randn_op(
     *size,
     out=None,
@@ -95,10 +149,8 @@ def randn_op(
 
         >>> import oneflow as flow
         >>> x = flow.randn(3,3)
-        >>> print(x)
-        tensor([[-0.6867,  0.3185, -1.0193],
-                [ 0.1489,  1.7357,  2.3629],
-                [ 0.583 ,  0.3924,  0.6975]], dtype=oneflow.float32)
+        >>> x.shape
+        flow.Size([3, 3])
         >>> x.is_consistent
         False
         >>> placement = flow.placement("cpu", {0:[0]})
@@ -110,37 +162,9 @@ def randn_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-
-    assert size is not None, "shape must not be None!"
-    assert isinstance(
-        size, (int, tuple, list, flow.Size)
-    ), "shape should be int or tuple int!"
-    if isinstance(device, str):
-        device = flow.device(device)
-    requires_grad = requires_grad
-    size = _single(size)
-    if dtype is None:
-        dtype = flow.float32
-
-    if generator is None:
-        generator = flow.Generator()
-    if placement is not None:
-        assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
-        if isinstance(sbp, flow.sbp.sbp):
-            sbp = (sbp,)
-        else:
-            for elem in sbp:
-                assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-        assert len(sbp) == len(placement.hierarchy)
-    else:
-        assert sbp is None, "sbp: %s" % sbp
-
-    if placement is not None:
-        res = flow.F.consistent_randn(0, 1, size, dtype, placement, sbp, generator)
-    else:
-        res = flow.F.randn(0, 1, size, dtype, device, generator)
-    res.requires_grad = requires_grad
-    return res
+    return RandN(
+        size, generator, dtype, layout, device, placement, sbp, requires_grad
+    )()
 
 
 if __name__ == "__main__":
