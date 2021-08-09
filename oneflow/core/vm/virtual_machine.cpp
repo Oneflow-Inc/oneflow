@@ -131,8 +131,7 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
     const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
     if (stream_rt_desc == nullptr) {
       const auto& stream_type = stream_type_id.stream_type();
-      LOG(FATAL) << typeid(instruction_type).name() << " "
-                 << typeid(stream_type).name();
+      LOG(FATAL) << typeid(instruction_type).name() << " " << typeid(stream_type).name();
     }
     bool is_front_seq = instruction_type.IsFrontSequential();
     if (is_front_seq) { CHECK_EQ(stream_rt_desc->stream_id2stream().size(), 1); }

@@ -249,8 +249,7 @@ UserOpConfWrapper& BackwardOpConfContext::GetOp(const std::string& op_name) {
     CHECK(fn_it != op_builder_fns_.end()) << " op_name " << op_name << " has no builder function.";
     CHECK(fn_it->second != nullptr) << " op_name " << op_name << " builder function is null.";
     UserOpConfWrapperBuilder builder(op_name);
-    auto ret =
-        op_builder_results_.emplace(std::make_pair(op_name, fn_it->second(builder)));
+    auto ret = op_builder_results_.emplace(std::make_pair(op_name, fn_it->second(builder)));
     CHECK(ret.second == true) << " op_name " << op_name << " build result insert failed.";
 
     // add new op conf

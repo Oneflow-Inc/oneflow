@@ -61,8 +61,8 @@ class UserStatelessCallOpKernelInstructionType : public vm::InstructionType {
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
 
-  using vm::InstructionType::Infer;
   using vm::InstructionType::Compute;
+  using vm::InstructionType::Infer;
 
  protected:
   UserStatelessCallOpKernelInstructionType() = default;
@@ -84,8 +84,8 @@ class SystemStatelessCallOpKernelInstructionType : public vm::InstructionType {
   virtual std::shared_ptr<MemoryCase> GetOutBlobMemCase(const DeviceType device_type,
                                                         const int64_t device_id) const;
 
-  using vm::InstructionType::Infer;
   using vm::InstructionType::Compute;
+  using vm::InstructionType::Infer;
 
  protected:
   SystemStatelessCallOpKernelInstructionType() = default;

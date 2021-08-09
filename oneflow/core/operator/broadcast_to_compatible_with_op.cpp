@@ -80,7 +80,8 @@ class BroadcastToCompatibleWithOp final : public Operator {
 
  private:
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const override {
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override {
     auto* conf = kernel_conf->mutable_broadcast_to_compatible_with_conf();
     const BlobDesc* x_desc = GetBlobDesc4BnInOp("x");
     const BlobDesc* y_desc = GetBlobDesc4BnInOp("y");
