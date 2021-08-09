@@ -90,10 +90,10 @@ class MirroredTensorMeta : public TensorMeta {
 class ConsistentTensorMeta : public TensorMeta {
  public:
   ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                       Symbol<cfg::ParallelDistribution> parallel_distribution,
+                       Symbol<cfg::ParallelDistribution> nd_sbp,
                        Symbol<ParallelDesc> parallel_desc)
       : TensorMeta(shape, dtype),
-        parallel_distribution_(parallel_distribution),
+        nd_sbp_(nd_sbp),
         parallel_desc_(parallel_desc) {}
   ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
   ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
@@ -101,11 +101,11 @@ class ConsistentTensorMeta : public TensorMeta {
 
   bool operator==(const ConsistentTensorMeta& other) const;
 
-  Symbol<cfg::ParallelDistribution> parallel_distribution() const { return parallel_distribution_; }
+  Symbol<cfg::ParallelDistribution> nd_sbp() const { return nd_sbp_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
-  void set_parallel_distribution(Symbol<cfg::ParallelDistribution> val) {
-    parallel_distribution_ = val;
+  void set_nd_sbp(Symbol<cfg::ParallelDistribution> val) {
+    nd_sbp_ = val;
   }
 
   void set_parallel_desc(Symbol<ParallelDesc> val) { parallel_desc_ = val; }
@@ -113,7 +113,7 @@ class ConsistentTensorMeta : public TensorMeta {
   size_t CalcHashValue() const;
 
  private:
-  Symbol<cfg::ParallelDistribution> parallel_distribution_;
+  Symbol<cfg::ParallelDistribution> nd_sbp_;
   Symbol<ParallelDesc> parallel_desc_;
 };
 

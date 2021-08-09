@@ -42,7 +42,7 @@ struct InterfaceOpUtil final {
 
   static Maybe<void> ParseParallelDistributionFromBlobConf(
       const InterfaceBlobConf& blob_conf, const ParallelDesc& parallel_desc,
-      cfg::ParallelDistribution* parallel_distribution);
+      cfg::ParallelDistribution* nd_sbp);
 };
 
 }  // namespace oneflow

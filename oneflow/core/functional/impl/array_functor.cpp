@@ -59,17 +59,17 @@ class ConsistentConstantFunctor {
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
     if (LazyMode::is_enabled()) {
-      std::vector<std::string> parallel_distribution(sbp_tuple.size());
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
         for (int i = 0; i < sbp_tuple.size(); ++i) {
-          parallel_distribution.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
         }
       }
-      JUST(attrs.SetAttr<std::vector<std::string>>("parallel_distribution", parallel_distribution));
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
     }
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
  private:
@@ -133,17 +133,17 @@ class ConsistentEmptyFunctor {
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
     if (LazyMode::is_enabled()) {
-      std::vector<std::string> parallel_distribution(sbp_tuple.size());
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
         for (int i = 0; i < sbp_tuple.size(); ++i) {
-          parallel_distribution.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
         }
       }
-      JUST(attrs.SetAttr<std::vector<std::string>>("parallel_distribution", parallel_distribution));
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
     }
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
  private:

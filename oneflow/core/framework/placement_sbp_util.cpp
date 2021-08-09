@@ -73,12 +73,12 @@ Maybe<const Shape> GetBroadcastShape(const Shape& hierarchy_shape,
 }
 
 Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
-    const ParallelDesc& parallel_desc, const cfg::ParallelDistribution& parallel_distribution,
+    const ParallelDesc& parallel_desc, const cfg::ParallelDistribution& nd_sbp,
     int64_t parallel_id) {
   const auto& hierarchy_shape = *parallel_desc.hierarchy();
-  std::vector<bool> dim2is_broadcast(parallel_distribution.sbp_parallel_size());
+  std::vector<bool> dim2is_broadcast(nd_sbp.sbp_parallel_size());
   for (int i = 0; i < dim2is_broadcast.size(); ++i) {
-    dim2is_broadcast.at(i) = parallel_distribution.sbp_parallel(i).has_broadcast_parallel();
+    dim2is_broadcast.at(i) = nd_sbp.sbp_parallel(i).has_broadcast_parallel();
   }
   const auto& broadcast_parallel_ids =
       JUST(GetBroadcastParallelIds(hierarchy_shape, dim2is_broadcast, parallel_id));
@@ -99,17 +99,17 @@ Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
 }  // namespace
 
 Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
-    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution) {
+    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> nd_sbp) {
   using PlacementSbp = std::pair<Symbol<ParallelDesc>, Symbol<cfg::ParallelDistribution>>;
   static thread_local HashMap<PlacementSbp, Symbol<ParallelDesc>> map;
-  const auto& key = std::make_pair(parallel_desc, parallel_distribution);
+  const auto& key = std::make_pair(parallel_desc, nd_sbp);
   auto iter = map.find(key);
   if (iter == map.end()) {
     Optional<int64_t> opt_parallel_id;
     JUST(GetDevice4CurrentProcessCtx(parallel_desc, &opt_parallel_id));
     int64_t parallel_id = JUST(opt_parallel_id.value());
     const auto& sub_parallel_desc =
-        JUST(GetBroadcastSubParallelDesc(*parallel_desc, *parallel_distribution, parallel_id));
+        JUST(GetBroadcastSubParallelDesc(*parallel_desc, *nd_sbp, parallel_id));
     iter = map.emplace(key, sub_parallel_desc).first;
   }
   return iter->second;

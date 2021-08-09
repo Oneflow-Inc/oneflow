@@ -43,8 +43,8 @@ class ModelSaveOp final : public Operator {
   };
 
   Maybe<void> InferParallelDistributionSignature(
-      cfg::ParallelDistributionSignature* parallel_distribution_signature,
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+      cfg::ParallelDistributionSignature* nd_sbp_signature,
+      const cfg::ParallelDistributionSignature& nd_sbp_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const override {
@@ -53,11 +53,11 @@ class ModelSaveOp final : public Operator {
       broadcast_distribution.add_sbp_parallel()->mutable_broadcast_parallel();
     }
     for (const std::string& ibn : input_bns()) {
-      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[ibn] =
+      (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[ibn] =
           broadcast_distribution;
     }
     for (const std::string& obn : output_bns()) {
-      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[obn] =
+      (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[obn] =
           broadcast_distribution;
     }
     return Maybe<void>::Ok();

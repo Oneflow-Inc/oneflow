@@ -21,9 +21,9 @@ namespace oneflow {
 REGISTER_USER_OP("hierarchical_parallel_cast")
     .Input("in")
     .Output("out")
-    .Attr<std::vector<std::string>>("parallel_distribution")
+    .Attr<std::vector<std::string>>("nd_sbp")
     .Attr<std::string>("grad_mode")
-    .Attr<std::vector<std::string>>("grad_parallel_distribution")
+    .Attr<std::vector<std::string>>("grad_nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
@@ -37,7 +37,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
               ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
           const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
           const auto& conf =
-              ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
+              ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
           CHECK_EQ_OR_RETURN(conf.size(), parallel_hierarchy.NumAxes());
           for (const std::string& sbp_str : conf) {
             cfg::SbpParallel sbp_parallel;
@@ -97,9 +97,9 @@ REGISTER_USER_OP_GRAD("hierarchical_parallel_cast")
                 .InputBind("in", ctx->FwOp().output_grad("out", 0))
                 .Output("out")
                 .Attr<std::vector<std::string>>(
-                    "parallel_distribution",
-                    ctx->FwOp().attr<std::vector<std::string>>("grad_parallel_distribution"))
-                .Attr<std::vector<std::string>>("grad_parallel_distribution",
+                    "nd_sbp",
+                    ctx->FwOp().attr<std::vector<std::string>>("grad_nd_sbp"))
+                .Attr<std::vector<std::string>>("grad_nd_sbp",
                                                 std::vector<std::string>())
                 .Build();
           });

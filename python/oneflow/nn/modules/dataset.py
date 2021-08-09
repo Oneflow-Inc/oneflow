@@ -55,7 +55,7 @@ class OfrecordReader(Module):
         if name is not None:
             print("WARNING: name has been deprecated and has NO effect.\n")
 
-        parallel_distribution = []
+        nd_sbp = []
 
         self.placement = placement
         if placement is None:
@@ -67,13 +67,13 @@ class OfrecordReader(Module):
         if placement is not None:
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(sbp, flow.sbp.sbp):
-                parallel_distribution.append(sbp._ToAttrStr())
+                nd_sbp.append(sbp._ToAttrStr())
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-                    parallel_distribution.append(elem._ToAttrStr())
-            assert len(parallel_distribution) == len(placement.hierarchy)
-            print("cclog: ", parallel_distribution)
+                    nd_sbp.append(elem._ToAttrStr())
+            assert len(nd_sbp) == len(placement.hierarchy)
+            print("cclog: ", nd_sbp)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
@@ -90,7 +90,7 @@ class OfrecordReader(Module):
             .Attr("shuffle_after_epoch", shuffle_after_epoch)
             .Attr("part_name_suffix_length", part_name_suffix_length)
             .Attr("seed", seed)
-            .Attr("parallel_distribution", parallel_distribution)
+            .Attr("nd_sbp", nd_sbp)
             .Build()
         )
         self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
@@ -149,7 +149,7 @@ class CoinFlip(Module):
         sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     ):
         super().__init__()
-        parallel_distribution = []
+        nd_sbp = []
 
         self.placement = placement
         if placement is None:
@@ -161,12 +161,12 @@ class CoinFlip(Module):
         if placement is not None:
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(sbp, flow.sbp.sbp):
-                parallel_distribution.append(sbp._ToAttrStr())
+                nd_sbp.append(sbp._ToAttrStr())
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-                    parallel_distribution.append(elem._ToAttrStr())
-            assert len(parallel_distribution) == len(placement.hierarchy)
+                    nd_sbp.append(elem._ToAttrStr())
+            assert len(nd_sbp) == len(placement.hierarchy)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
@@ -179,7 +179,7 @@ class CoinFlip(Module):
             .Attr("probability", probability)
             .Attr("has_seed", has_seed)
             .Attr("seed", seed)
-            .Attr("parallel_distribution", parallel_distribution)
+            .Attr("nd_sbp", nd_sbp)
             .Build()
         )
         self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
