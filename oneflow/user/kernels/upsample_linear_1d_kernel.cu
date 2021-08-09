@@ -146,6 +146,5 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
 
 REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(float)
 REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(double)
-REGISTER_UPSAMPLELINEAR1D_GPU_KERNEL(int)
 
 }  // namespace oneflow
