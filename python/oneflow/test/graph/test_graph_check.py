@@ -21,33 +21,12 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow._oneflow_internal import Tensor, TensorTuple
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraphCheck(flow.unittest.TestCase):
-    def test_graph_input_output(test_case):
-        class CustomModuleIOCheck(flow.nn.Module):
-            def __init__(self):
-                super().__init__()
-
-            def forward(self, x):
-                return x
-
-        class CustomGraphIOCheck(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.m = CustomModuleIOCheck()
-
-            def build(self, x):
-                return self.m(x)
-
-        g = CustomGraphIOCheck()
-        x = np.ones((10, 10))
-        x = flow.tensor(x, dtype=flow.float32)
-        out = g(x)
-        test_case.assertTrue(np.array_equal(x.numpy(), out.numpy()))
-
     def test_tensor_numpy_check(test_case):
         class CustomModuleNumpyCheck(flow.nn.Module):
             def __init__(self):
@@ -72,6 +51,38 @@ class TestGraphCheck(flow.unittest.TestCase):
             out = g(x)
         except:
             print(sys.exc_info())
+
+    def test_non_tensor_types_of_module(test_case):
+        class CustomModuleIOCheck(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self, t, tp, i, s, n):
+                return t, tp, i, s, n
+
+        t0 = np.ones((10, 10))
+        t0 = flow.tensor(t0, dtype=flow.float32)
+        t1 = np.ones((10, 10))
+        t1 = flow.tensor(t1, dtype=flow.float32)
+        tp0 = TensorTuple()
+        tp0.append(t0)
+        tp0.append(t1)
+
+        class CustomGraphIOCheck(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = CustomModuleIOCheck()
+
+            def build(self, t):
+                rt, rtp, ri, rs, n = self.m(t, tp0, 1, "2", None)
+                return t
+
+        g = CustomGraphIOCheck()
+        g.debug()
+        x = np.ones((10, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+        out = g(x)
+        test_case.assertTrue(np.array_equal(x.numpy(), out.numpy()))
 
 
 if __name__ == "__main__":

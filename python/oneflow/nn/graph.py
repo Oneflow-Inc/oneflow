@@ -133,9 +133,9 @@ class Graph(object):
             print(
                 "[ERROR]",
                 self._shallow_repr(),
-                "(nn.Graph build forward graph got error type : ",
+                " build forward graph got error type : ",
                 sys.exc_info()[0],
-                ")",
+                ".",
             )
             raise
         if self._debug:
@@ -150,9 +150,9 @@ class Graph(object):
             print(
                 "[ERROR]",
                 self._shallow_repr(),
-                "(nn.Graph compiling and init graph runtime got error type : ",
+                " compiling and initialing graph runtime got error type : ",
                 sys.exc_info()[0],
-                ")",
+                ".",
             )
             raise
         self._is_compiled = True
@@ -261,9 +261,9 @@ class Graph(object):
             print(
                 "[ERROR]",
                 self._shallow_repr(),
-                "(nn.Graph run got error type : ",
+                " run got error type : ",
                 sys.exc_info()[0],
-                ")",
+                ".",
             )
             raise
         return self._eager_outputs

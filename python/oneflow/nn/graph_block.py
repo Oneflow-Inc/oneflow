@@ -141,7 +141,6 @@ class Block(object):
             print(self._shallow_repr())
 
         for idx, arg in enumerate(args):
-            assert isinstance(arg, Tensor) or arg is None
             in_repr = arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
             in_str = (
                 "(INPUT:_"
@@ -170,13 +169,10 @@ class Block(object):
 
         outputs = ()
         if not (type(result) is tuple or type(result) is list):
-            if result is not None:
-                assert type(result) is Tensor
-                outputs = (result,)
+            outputs = (result,)
         else:
             outputs = result
         for idx, out in enumerate(outputs):
-            assert isinstance(out, Tensor) or out is None
             out_repr = out._meta_repr() if isinstance(out, Tensor) else str(type(out))
             out_str = (
                 "(OUTPUT:_"
