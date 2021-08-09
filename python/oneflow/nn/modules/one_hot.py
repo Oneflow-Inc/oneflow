@@ -58,7 +58,7 @@ def one_hot_op(
         depth (int): The length of onehot Blob.
         on_value (Union[int, float], optional): The fill value when `x[i] == i`. Defaults to 1.
         off_value (Union[int, float], optional): The fill value when `x[i] != i`. Defaults to 0.
-        dtype (Optional[flow.dtype], optional): The output data type, it can be "oneflow.compatible.single_client.int32", "oneflow.compatible.single_client.int64", "oneflow.compatible.single_client.float", "oneflow.compatible.single_client.double". Defaults to None.
+        dtype (Optional[flow.dtype], optional): The output data type, it can be "oneflow.int32", "oneflow.int64", "oneflow.float", "oneflow.double". Defaults to None.
 
     Note:
 
@@ -74,12 +74,13 @@ def one_hot_op(
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> x=flow.Tensor(np.array([0, 3, 1, 2].astype(np.int32)))
+        >>> x=flow.Tensor(np.array([0, 3, 1, 2]).astype(np.int32), dtype=flow.int64)
         >>> out = flow.one_hot(x, depth=5)
         >>> out
-        tensor([[1., 0., 0.],
-                [0., 1., 0.],
-                [0., 0., 1.]], dtype=oneflow.float32)
+        tensor([[1, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0],
+                [0, 1, 0, 0, 0],
+                [0, 0, 1, 0, 0]], dtype=oneflow.int64)
     
     """
     return One_hot(depth, on_value, off_value, dtype)(x)
