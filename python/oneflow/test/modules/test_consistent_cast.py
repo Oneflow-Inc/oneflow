@@ -40,6 +40,35 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         test_case.assertEqual(tuple(y.shape), (32, 16))
         test_case.assertEqual(y.dtype, flow.int32)
 
+    def test_local_to_consistent_2d_sbp(test_case):
+        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+        sbp = (flow.sbp.split(0), flow.sbp.partial_sum)
+        y = x.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
+
+    def test_local_to_consistent_sp_2_bb(test_case):
+        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+        sbp = (flow.sbp.split(0), flow.sbp.partial_sum)
+        y = x.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
+        y = y.to_consistent(sbp=(flow.sbp.broadcast, flow.sbp.broadcast))
+        test_case.assertEqual(y.sbp, (flow.sbp.broadcast, flow.sbp.broadcast))
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
+        z = y.to_local()
+        test_case.assertTrue(
+            np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32) * 2)
+        )
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestConsistentCastModule_1n2d(flow.unittest.TestCase):

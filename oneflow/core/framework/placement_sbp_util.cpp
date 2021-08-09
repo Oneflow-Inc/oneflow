@@ -193,7 +193,6 @@ Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
   JUST(GetDevice4CurrentProcessCtx(parallel_desc, &opt_parallel_id));
   int64_t parallel_id = JUST(opt_parallel_id.value());
   return DecomposeByParallelId(parallel_desc, parallel_id, src_nd_sbp, dst_nd_sbp);
-
 }
 
 namespace {
