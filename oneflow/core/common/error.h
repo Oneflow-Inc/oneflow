@@ -35,8 +35,8 @@ class Error final {
   void Assign(const Error& other) { error_proto_ = other.error_proto_; }
 
   // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
-  // "Bar") << "invalid value"` because operator<<() need r-value reference
-  Error&& AddStackFrame(const std::string& location, const std::string& function);
+  // ,"line", "Bar") << "invalid value"` because operator<<() need r-value reference
+  Error&& AddStackFrame(const std::string& file, const int64_t& line, const std::string& function);
 
   static Error Ok();
   static Error ProtoParseFailedError();
