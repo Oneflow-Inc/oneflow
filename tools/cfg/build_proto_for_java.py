@@ -20,8 +20,9 @@ def copy_append_proto(src_proto_files, project_source_dir, dst_proto_java_dir):
     dst_proto_java_dir = os.path.join(dst_proto_java_dir, 'src')
     for proto_file in src_proto_files:
         proto_file = proto_file[(len(project_source_dir) + 1):]
-        package_name = re.sub(r'/[a-zA-Z_]*.proto', '', proto_file)
-        package_name = re.sub(r'/', '.', package_name)
+        package_name = re.sub('/[a-zA-Z_]*.proto', '', proto_file)
+        package_name = re.sub('oneflow/core', 'oneflow/proto/core', package_name)
+        package_name = re.sub('/', '.', package_name)
         package_name = 'org.' + package_name
 
         src_file = os.path.join(project_source_dir, proto_file)
@@ -80,6 +81,9 @@ def main():
     dst_proto_java_dir = args.dst_proto_java_dir
     protoc_exe = args.protoc_exe
     protobuf_jar = args.protobuf_jar
+
+    # org/oneflow/core -> org/oneflow/proto/core
+    dst_proto_java_dir = re.sub('oneflow/core', 'oneflow/proto/core', dst_proto_java_dir)
 
     dst_files = copy_append_proto(src_proto_files, project_source_dir, dst_proto_java_dir)
     build_proto(dst_files, dst_proto_java_dir, protoc_exe)

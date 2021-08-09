@@ -14,36 +14,60 @@ import static org.junit.Assert.*;
 public class InferenceSessionTest {
 
     @Test
-    public void testInference() {
+    public void main() {
         String jobName = "mlp_inference";
-        String savedModelDir = "/home/percent1/tmp/target/models";
-        float[] image = readImage("/home/percent1/tmp/target/7.png");
+        String savedModelDir = "./models";
+        float[] image = readImage("./7.png");
         Tensor imageTensor = Tensor.fromBlob(image, new long[]{ 1, 1, 28, 28 });
-        Tensor tagTensor = Tensor.fromBlob(new int[]{ 1 }, new long[]{ 1 });
         Map<String, Tensor> tensorMap = new HashMap<>();
-        tensorMap.put("Input_14", imageTensor);
-        tensorMap.put("Input_15", tagTensor);
+        tensorMap.put("image", imageTensor);
 
-        InferenceSession inferenceSession = new InferenceSession(8888);
+        // Option
+        Option option = new Option();
+        option.setDeviceTag("cpu");
+
+        InferenceSession inferenceSession = new InferenceSession(option);
         inferenceSession.open();
         inferenceSession.loadModel(savedModelDir);
         inferenceSession.launch();
 
         Map<String, Tensor> resultMap = inferenceSession.run(jobName, tensorMap);
+        for (Map.Entry<String, Tensor> entry : resultMap.entrySet()) {
+            Tensor resTensor = entry.getValue();
+            float[] resFloatArray = resTensor.getDataAsFloatArray();
+            for (float v : resFloatArray) {
+                System.out.print(v + " ");
+            }
+            System.out.println();
+        }
+
+        int forwardTimes = 10;
+        long curTime = System.currentTimeMillis();
+        for (int i = 0; i < forwardTimes; i++) {
+            resultMap = inferenceSession.run(jobName, tensorMap);
+            for (Map.Entry<String, Tensor> entry : resultMap.entrySet()) {
+                Tensor resTensor = entry.getValue();
+                resTensor.getDataAsFloatArray();
+            }
+        }
+        System.out.printf("It takes %fs to forward %d times\n",
+                (System.currentTimeMillis() - curTime) / 1000.0f,
+                forwardTimes);
+
         inferenceSession.close();
 
         // assert
-        float[] vector = resultMap.get("Return_17").getDataAsFloatArray();
-        assertEquals(10, vector.length);
-        float[] expectedVector = { -129.57167f, -89.084816f, -139.21355f , -103.455025f, -9.179366f,
-                -69.568474f, -133.39594f,  -16.204329f, -114.90876f,  -47.933548f };
+        float[] vector = resultMap.get("output").getDataAsFloatArray();
+        assertEquals(vector.length, 10);
+        float[] expectedVector = { -130.93361f, -72.18875f, -165.4578f, -114.832054f, -21.068695f,
+                -88.18618f, -151.45547f, 19.964626f, -142.91219f, -43.097794f};
         float delta = 0.0001f;
         for (int i = 0; i < 10; i++) {
             assertEquals(expectedVector[i], vector[i], delta);
         }
     }
 
-    public static float[] readImage(String filePath) {
+    public float[] readImage(String filePath) {
         File file = new File(filePath);
         BufferedImage image = null;
         try {
