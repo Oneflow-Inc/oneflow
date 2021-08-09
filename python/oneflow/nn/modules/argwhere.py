@@ -53,8 +53,17 @@ def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
     """
 
     (res, size) = flow.F.argwhere(input, dtype=dtype)
-    slice_tup_list = [[0, int(size.numpy()), 1]]
-    return flow.slice(res, slice_tup_list=slice_tup_list)
+    if input.is_lazy:
+        raise NotImplementedError
+        # return flow.F.sync_dynamic_resize(res, size, dim=0)
+    else:
+        end = (
+            size.to_local().numpy().item()
+            if size.is_consistent
+            else size.numpy().item()
+        )
+        slice_tup_list = [(0, end, 1)]
+        return flow.slice(res, slice_tup_list=slice_tup_list)
 
 
 @register_tensor_op("argwhere")

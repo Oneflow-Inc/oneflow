@@ -207,12 +207,6 @@ class ArgWhereFunctor {
                                 const DataType& dtype) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    if (LazyMode::is_enabled()) {
-      const auto& lazy_argwhere_out = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs));
-      TensorTuple res;
-      res.push_back(lazy_argwhere_out->at(0));
-      return res;
-    }
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
