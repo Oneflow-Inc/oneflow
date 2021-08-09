@@ -62,8 +62,8 @@ class MessagePool final {
     void RegisterMessagePool() {
       for(int i =0; i < num_of_message_; i++){
       void * addr = malloc(size_);
-      IBVerbsMemDesc * mem_desc =new IBVerbsMemDesc(pd_,addr,size_);
-      ActorMsgMR * msg_mr = new ActorMsgMR(mem_desc);
+    //  IBVerbsMemDesc * mem_desc =new IBVerbsMemDesc(pd_,addr,size_);
+      ActorMsgMR * msg_mr = new ActorMsgMR(pd_);
       message_buf_.push(msg_mr);
     }
   }
