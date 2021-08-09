@@ -34,6 +34,11 @@ class TestGenerator(flow.unittest.TestCase):
             cuda_gen = flow.Generator(device="cuda")
             test_case.assertTrue(auto_gen.initial_seed(), cuda_gen.initial_seed())
 
+    def test_generator_initial_seed(test_case):
+        generator_a = flow.Generator()
+        generator_b = flow.Generator()
+        test_case.assertTrue(generator_a.initial_seed() == generator_b.initial_seed())
+
     def test_generator_manual_seed(test_case):
         generator = flow.Generator()
         generator.manual_seed(1)
