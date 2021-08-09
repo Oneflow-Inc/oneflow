@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, Iterator, Union
 
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
+from oneflow.nn.utils.clip_grad import clip_grad_norm_
 
 
 class ParamGroup(object):
@@ -28,6 +29,7 @@ class ParamGroup(object):
         parameters: Union[Iterator[Parameter], Dict[str, Any]],
         default_options: Dict,
     ):
+        self.enable_clip_grad = False
         if isinstance(parameters, collections.abc.Iterator):
             self._parameters = list(parameters)
             self._options = deepcopy(default_options)
@@ -38,6 +40,14 @@ class ParamGroup(object):
             for key in self._options:
                 if key in parameters:
                     self._options[key] = parameters[key]
+
+            if (
+                "clip_grad_max_norm" in parameters
+                and "clip_grad_norm_type" in parameters
+            ):
+                self.enable_clip_grad = True
+                self._options["clip_grad_max_norm"] = parameters["clip_grad_max_norm"]
+                self._options["clip_grad_norm_type"] = parameters["clip_grad_norm_type"]
 
     def __getitem__(self, key):
         return self._options[key]
@@ -73,6 +83,19 @@ class Optimizer(object):
 
     def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
         raise NotImplementedError()
+
+    def clip_grad(self):
+        r"""Clips the gradient of parameters in param_groups.
+    
+        """
+        for param_group in self.param_groups:
+            if param_group.enable_clip_grad:
+                clip_grad_norm_(
+                    param_group.parameters,
+                    param_group["clip_grad_max_norm"],
+                    param_group["clip_grad_norm_type"],
+                    True,
+                )
 
     def zero_grad(self, set_to_none: bool = False):
         """Sets the gradients of all optimized torch.Tensor s to zero.
