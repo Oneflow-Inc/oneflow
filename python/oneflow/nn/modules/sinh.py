@@ -15,18 +15,9 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
-class Sinh(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.sinh(x)
-
-
-def sinh_op(x):
+def sinh_op(input):
     """Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
 
     .. math::
@@ -54,11 +45,11 @@ def sinh_op(x):
         array([ 1.1752012,  0.       , -1.1752012], dtype=float32)
 
     """
-    return Sinh()(x)
+    return flow.F.sinh(input)
 
 
 @register_tensor_op("sinh")
-def sinh_op_tensor(x):
+def sinh_op_tensor(input):
     """
 
     sinh() -> Tensor
@@ -66,7 +57,7 @@ def sinh_op_tensor(x):
     See :func:`oneflow.sinh`
 
     """
-    return Sinh()(x)
+    return flow.F.sinh(input)
 
 
 if __name__ == "__main__":
