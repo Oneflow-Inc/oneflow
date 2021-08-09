@@ -57,14 +57,18 @@ def index_select_op(input, dim, index):
                 [4, 5]], dtype=oneflow.int32)
     """
     assert len(index.shape) == 1, "Dimensions of index should be 1-D"
-    assert dim < len(input.shape) and dim > -1, "Value of dim is out of range"
-    assert _input_args_is_int(index.tolist()), "input index parameter is not illegal!"
+    assert (
+        dim < len(input.shape) and dim >= 0
+    ), "Value of dim is out of range(dim should be in the range of [0, input dimensions) )"
+    assert _input_args_is_int(
+        index.tolist()
+    ), "input index parameter is not illegal!(index should be an 1-D int tensor)"
     index_rshp = list(input.shape)
 
     for index_i in index:
         assert (
             index_i < index_rshp[dim]
-        ), "index is out of range(index shuold lower than the dim-th dimension of input)"
+        ), "index is out of range(index shuold be lower than the dim-th dimension of input)"
 
     index_rshp[dim] = 1
     index_gather = index[0].expand(index_rshp)
