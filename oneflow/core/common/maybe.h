@@ -30,6 +30,16 @@ template<typename T, typename Enabled = void>
 class Maybe;
 
 template<typename T>
+struct is_maybe {
+  static const bool value = false;
+};
+
+template<typename T>
+struct is_maybe<Maybe<T>> {
+  static const bool value = true;
+};
+
+template<typename T>
 class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScalarType<T>::value)
                                        && !std::is_reference<T>::value>::type>
     final {

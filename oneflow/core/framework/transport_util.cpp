@@ -36,9 +36,7 @@ namespace oneflow {
     CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
         << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
   }
-  if (ctx.transport_token().type() == kCtrlTransportTokenType) {
-    JUST(ctx.transport_token().ReleaseCtrlTransportTokenLock());
-  }
+  JUST(ctx.transport_token().TryReleaseCtrlTransportTokenLock());
   return Maybe<void>::Ok();
 }
 

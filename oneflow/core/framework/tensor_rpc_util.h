@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -54,6 +55,39 @@ class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
 
 Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
     const one::Tensor& tensor);
+
+template<typename... Args>
+struct CheckConsistentTensorMeta;
+
+template<typename RetT, typename... Args>
+struct CheckConsistentTensorMeta<RetT, const one::Tensor&, Args...> {
+  static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
+  template<RetT (*func)(const one::Tensor&, Args...)>
+  static RetT Call(const one::Tensor& tensor, Args... args) {
+    const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(tensor));
+    RetT&& ret = func(tensor, args...);
+    // Always synchronize consistent tensor meta even if `func` failed.
+    JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+    JUST(ctx->Check());
+    return ret;
+  }
+};
+
+template<typename RetT, typename... Args>
+struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args...> {
+  static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
+  template<RetT (*func)(const std::shared_ptr<one::Tensor>&, Args...)>
+  static RetT Call(const std::shared_ptr<one::Tensor>& tensor, Args... args) {
+    const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*tensor));
+    LOG(ERROR) << "rank: " << GlobalProcessCtx::Rank()
+               << "\ntransport_token:" << static_cast<int64_t>(ctx->transport_token());
+    RetT&& ret = func(tensor, args...);
+    // Always synchronize consistent tensor meta even if `func` failed.
+    JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+    JUST(ctx->Check());
+    return ret;
+  }
+};
 
 }  // namespace oneflow
 

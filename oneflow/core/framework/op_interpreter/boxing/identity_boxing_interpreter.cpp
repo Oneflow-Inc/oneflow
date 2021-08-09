@@ -22,8 +22,9 @@ Maybe<one::Tensor> IdentityBoxingInterpreter::InterpretImpl(
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
     Symbol<cfg::ParallelDistribution> out_parallel_distribution,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
-  CHECK_EQ_OR_RETURN(in_parallel_distribution, out_parallel_distribution);
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc->parallel_num() == 1
+                  || in_parallel_distribution == out_parallel_distribution);
   return input;
 }
 
