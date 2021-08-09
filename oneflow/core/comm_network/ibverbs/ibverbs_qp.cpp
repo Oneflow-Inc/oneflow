@@ -66,11 +66,11 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   //recv_msg_buf_.assign(queue_depth, nullptr);
  // FOR_RANGE(size_t, i, 0, recv_msg_buf_.size()) { recv_msg_buf_.at(i) = new ActorMsgMR(pd_); }
   // send_msg_buf_
-  CHECK(send_msg_buf_.empty());
+  //CHECK(send_msg_buf_.isempty());
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
   recv_msg_buf_ = new MessagePool(pd_,queue_depth);
-  sendMsgBuf_ = new MessagePool(pd_, queue_depth);
+  send_msg_buf_ = new MessagePool(pd_, queue_depth);
 }
 
 IBVerbsQP::~IBVerbsQP() {
@@ -147,6 +147,7 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
+  std::unique_lock<std::mutex> lck(recv_msg_buf_mtx_);
     std::queue<ActorMsgMR *> messageBuf = recv_msg_buf_->getMessageBuf();
     while(messageBuf.empty() == false) {
       ActorMsgMR * msg_mr = std::move(messageBuf.front());
@@ -184,7 +185,8 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 }
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
-  ActorMsgMR * msg_mr = sendMsgBuf_->GetMessage();
+  std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
+  ActorMsgMR * msg_mr = send_msg_buf_->GetMessage();
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
@@ -229,7 +231,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
   {
     std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
-    sendMsgBuf_->PutMessage(wr_id->msg_mr);
+    send_msg_buf_->PutMessage(wr_id->msg_mr);
   }
   DeleteWorkRequestId(wr_id);
   PostPendingSendWR();
@@ -240,6 +242,7 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   CHECK(ibv_comm_net != nullptr);
   ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
+  std::unique_lock<std::mutex> lck(recv_msg_buf_mtx_);
   recv_msg_buf_->PutMessage(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
 }
@@ -274,13 +277,13 @@ void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
   CHECK_EQ(ibv_post_recv(qp_, &wr, &bad_wr), 0);
 }
 
-ActorMsgMR* IBVerbsQP::GetOneSendMsgMRFromBuf() {
+/*ActorMsgMR* IBVerbsQP::GetOneSendMsgMRFromBuf() {
   std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
   if (send_msg_buf_.empty()) { send_msg_buf_.push(new ActorMsgMR(pd_)); }
   ActorMsgMR* msg_mr = send_msg_buf_.front();
   send_msg_buf_.pop();
   return msg_mr;
-}
+}*/
 
 WorkRequestId* IBVerbsQP::NewWorkRequestId() {
   WorkRequestId* wr_id = new WorkRequestId;

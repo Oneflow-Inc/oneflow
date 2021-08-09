@@ -55,18 +55,16 @@ struct WorkRequestId {
 class MessagePool final {
   public:
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
-    MessagePool() = default; //todo:这里可能要修改
-    ~MessagePool() = default;//todo:这里可能要修改
+    MessagePool() = delete; //todo:这里可能要修改
+    ~MessagePool() = delete;//todo:这里可能要修改
     MessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd),num_of_message_(number_of_message) {
       RegisterMessagePool();
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
     void RegisterMessagePool() {
-      for(int i =0; i < num_of_message_; i++){
-    //  void * addr = malloc(size_);
-    //  IBVerbsMemDesc * mem_desc =new IBVerbsMemDesc(pd_,addr,size_);
-      ActorMsgMR * msg_mr = new ActorMsgMR(pd_);
-      message_buf_.push(msg_mr);
+      for(uint32_t i =0; i < num_of_message_; i++){
+        ActorMsgMR * msg_mr = new ActorMsgMR(pd_);
+        message_buf_.push(msg_mr);
     }
   }
 
@@ -182,14 +180,15 @@ class IBVerbsQP final {
  // std::vector<ActorMsgMR*> recv_msg_buf_;
 
   std::mutex send_msg_buf_mtx_;
-  std::queue<ActorMsgMR*> send_msg_buf_;
+  //std::queue<ActorMsgMR*> send_msg_buf_;
   std::mutex pending_send_wr_mutex_;
   uint32_t num_outstanding_send_wr_;
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
   
   MessagePool  *  recv_msg_buf_;
-  MessagePool  * sendMsgBuf_;
+  std::mutex recv_msg_buf_mtx_;
+  MessagePool  * send_msg_buf_;
 };
 
 }  // namespace oneflow
