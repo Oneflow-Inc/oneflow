@@ -39,15 +39,15 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 void MessagePool::RegisterMessagePool() {
       size_t ActorMsgSize = sizeof(ActorMsg);
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
-      void * addr = malloc(RegisterMemorySize);
-      IBVerbsMemDesc *  mem_desc = new IBVerbsMemDesc(pd_, addr, RegisterMemorySize ); 
+      char * addr =(char*) malloc(RegisterMemorySize);
+      IBVerbsMemDesc *  mem_desc = new IBVerbsMemDesc(pd_,(void*) addr, RegisterMemorySize ); 
       const ibv_mr* mr = mem_desc->mr();
       std::cout<<"mr:"<<mr<<std::endl;
       for(uint32_t i =0; i < num_of_message_; i++){
         ibv_mr * split_mr =(ibv_mr*) (mr + ActorMsgSize * i);
         std::cout<<"split_mr:"<<split_mr<<std::endl;
-        IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(split_mr,(void*)((char*)addr + ActorMsgSize * i),ActorMsgSize);
-        std::cout<<"addr:" << (char*)addr+ActorMsgSize * i<< std::endl;
+        IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(split_mr,(void*)(addr + ActorMsgSize * i),ActorMsgSize);
+        std::cout<<"addr:" << addr+ActorMsgSize * i<< std::endl;
         ActorMsgMR * msg_mr= new ActorMsgMR(mem_desc);
         message_buf_.push(msg_mr);
   }
