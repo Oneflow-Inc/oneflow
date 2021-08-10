@@ -21,7 +21,7 @@ import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
-from oneflow.framework.tensor import Tensor
+from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
@@ -166,14 +166,17 @@ class Graph(object):
 
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
+            if outputs is None:
+                outputs = tuple()
+            elif isinstance(outputs, (list, tuple)):
+                outputs = tuple(outputs)
+            elif isinstance(outputs, Tensor):
+                outputs = (outputs,)
+            elif isinstance(outputs, TensorTuple):
+                pass
+            else:
+                raise RuntimeError(f"invalid outputs with type {type(outputs)}")
 
-            # Deal with outputs
-            if not (type(outputs) is tuple or type(outputs) is list):
-                if outputs is None:
-                    outputs = ()
-                else:
-                    assert type(outputs) is Tensor
-                    outputs = (outputs,)
             eager_outputs = []
             eager_output_op_names = []
             for idx, out in enumerate(outputs):
