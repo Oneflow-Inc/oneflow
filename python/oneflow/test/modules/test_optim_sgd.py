@@ -29,7 +29,6 @@ def compare_with_numpy_sgd(
     test_case,
     device,
     x_shape,
-    scale,
     momentum,
     weight_decay,
     learning_rate,
@@ -48,7 +47,6 @@ def compare_with_numpy_sgd(
                     "params": [x],
                     "lr": learning_rate,
                     "momentum": momentum,
-                    "scale": scale,
                     "weight_decay": weight_decay,
                 }
             ]
@@ -72,7 +70,7 @@ def compare_with_numpy_sgd(
         vt = np.zeros_like(x)
 
         def train_one_iter(grad):
-            grad = grad * scale + weight_decay * x
+            grad = grad + weight_decay * x
             v = momentum * vt - learning_rate * grad
             param = x + v
             return (param, v)
@@ -96,7 +94,6 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["scale"] = [1.0, 0.9]
         arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1, 0.1]
