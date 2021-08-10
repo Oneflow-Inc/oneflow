@@ -24,12 +24,6 @@ from automated_test_util import *
 @flow.unittest.skip_unless_1n1d()
 class TestRound(flow.unittest.TestCase):
     @autotest()
-    def test_flow_tensor_round_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        return x.round()
-
-    @autotest()
     def test_flow_round_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)

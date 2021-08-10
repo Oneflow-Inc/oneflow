@@ -29,12 +29,6 @@ from automated_test_util import *
 @flow.unittest.skip_unless_1n1d()
 class TestErfcModule(flow.unittest.TestCase):
     @autotest()
-    def test_flow_tensor_erfc_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        return x.erfc()
-
-    @autotest()
     def test_flow_erfc_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)

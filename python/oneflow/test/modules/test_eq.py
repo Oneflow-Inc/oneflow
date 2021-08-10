@@ -50,20 +50,5 @@ class TestEq(flow.unittest.TestCase):
         x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         return torch.eq(x, x)
 
-    @autotest(auto_backward=False)
-    def test_flow_tensor_eq_with_random_data(test_case):
-        device = random_device()
-        shape = random_tensor().value().shape
-        x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
-        y = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
-        return x.eq(y)
-
-    @autotest(auto_backward=False)
-    def test_flow_tensor_eq_with_same_random_data(test_case):
-        device = random_device()
-        shape = random_tensor().value().shape
-        x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
-        return x.eq(x)
-
 if __name__ == "__main__":
     unittest.main()

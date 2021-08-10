@@ -1132,6 +1132,44 @@ class TestTensor(flow.unittest.TestCase):
         of_out.backward()
         test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
+    @autotest(auto_backward=False)
+    def test_eq_tensor_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        return x.eq(y)
+
+    @autotest(auto_backward=False)
+    def test_eq_tensor_with_same_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        return x.eq(x)
+
+    @autotest()
+    def test_erf_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.erf()
+
+    @autotest()
+    def test_erfc_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.erfc()
+
+    @autotest()
+    def test_exp_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.exp()
+
+    @autotest()
+    def test_round_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.round()
 
 if __name__ == "__main__":
     unittest.main()

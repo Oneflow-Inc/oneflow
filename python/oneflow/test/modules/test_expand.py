@@ -28,7 +28,7 @@ def random_expand(x, ndim, expand_size):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestModule(flow.unittest.TestCase):
+class TestExpand(flow.unittest.TestCase):
     @autotest()
     def test_flow_tensor_expand_with_random_data(test_case):
         random_expand_size = random(1, 6).to(int).value()
