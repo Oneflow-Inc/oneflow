@@ -259,10 +259,7 @@ def _init_eager_local_tensor_by_initializer_conf(
 
 def _init_by_initializer_conf(tensor, initializer_conf):
     if tensor.is_consistent:
-        with tensor._placement_scope():
-            check_point_v2.init_by_initializer_conf(
-                tensor, initializer_conf, True, None
-            )
+        raise NotImplementedError(" consistent initializer unvailiable now")
     else:
         _init_eager_local_tensor_by_initializer_conf(tensor, initializer_conf)
     return tensor
