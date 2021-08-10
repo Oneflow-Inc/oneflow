@@ -102,14 +102,13 @@ class SGD(Optimizer):
                 loss = closure()
             for param_group in self.param_groups:
                 lr = param_group["lr"]
-                scale = param_group["scale"]
                 l2 = param_group["weight_decay"]
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
                     if param_group["momentum"] == 0.0:
                         self._sgd(
-                            param, param.grad, learning_rate_val=lr, l2=l2, scale=scale
+                            param, param.grad, learning_rate_val=lr, l2=l2
                         )
                     else:
                         momentum_buf = self._state[param]["momentum_buf"]
@@ -120,7 +119,6 @@ class SGD(Optimizer):
                             momentum_buf,
                             learning_rate_val=lr,
                             l2=l2,
-                            scale=scale,
                             beta=beta,
                         )
             self._state["step"] = self._state["step"] + 1
@@ -134,10 +132,8 @@ class SGD(Optimizer):
             l2 = param_group["weight_decay"]
             # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
             base_scale = train_conf.loss_scale_factor()
-            assert math.isclose(base_scale, 1, rel_tol=1e-4) or math.isclose(
-                scale, base_scale, rel_tol=1e-4
-            ), "nn.Graph only support one scale factor at the moment, base_scale {} vs scale {}".format(
-                base_scale, scale
+            assert math.isclose(base_scale, 1, rel_tol=1e-4), "nn.Graph only support one scale factor at the moment, base_scale {} vs scale {}".format(
+                base_scale, 1
             )
 
             optimizer_conf.set_base_learning_rate(lr)
