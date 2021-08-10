@@ -26,7 +26,7 @@ from oneflow.nn.parameter import Parameter
 
 
 def compare_with_numpy_adamw(
-    test_case, device, x_shape, scale, learning_rate, train_iters, weight_decay
+    test_case, device, x_shape, learning_rate, train_iters, weight_decay
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -41,7 +41,6 @@ def compare_with_numpy_adamw(
                     "params": [x],
                     "lr": learning_rate,
                     "weight_decay": weight_decay,
-                    "scale": scale,
                 }
             ]
         )
@@ -67,7 +66,6 @@ def compare_with_numpy_adamw(
         beta2 = 0.999
 
         def train_one_iter(grad):
-            grad = grad * scale
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
             g = (
@@ -96,7 +94,6 @@ class TestAdamW(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["scale"] = [1.0, 0.9]
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
         arg_dict["weight_decay"] = [0.001, 0.0]

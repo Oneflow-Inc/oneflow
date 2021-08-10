@@ -51,7 +51,6 @@ class Adam(Optimizer):
         eps (float, optional): term added to the denominator to improve
             numerical stability (default: 1e-8)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
-        scale (float, optional): the scale factor of loss (default: 1.0)
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
@@ -68,7 +67,6 @@ class Adam(Optimizer):
         eps: float = 1e-08,
         weight_decay: float = 0,
         amsgrad: bool = False,
-        scale: float = 1.0,
     ):
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
@@ -80,14 +78,12 @@ class Adam(Optimizer):
             betas[1] >= 0.0 and betas[1] < 1.0
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
-        assert scale > 0.0, f"Invalid scale factor: {scale}"
         assert amsgrad is False, "Not support AMSGrad now!"
         self._default_options["lr"] = lr
         self._default_options["eps"] = eps
         self._default_options["betas"] = betas
         self._default_options["weight_decay"] = weight_decay
         self._default_options["amsgrad"] = amsgrad
-        self._default_options["scale"] = scale
         if isinstance(parameters, collections.abc.Iterator):
             self.param_groups.append(ParamGroup(parameters, self._default_options))
         else:
@@ -124,7 +120,6 @@ class Adam(Optimizer):
             for param_group in self.param_groups:
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
-                    "scale": param_group["scale"],
                     "l2": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
