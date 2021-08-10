@@ -30,17 +30,13 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
-      const cfg::ParallelDistribution& producer_nd_sbp =
-          producer.ParallelDistribution4Lbi(lbi);
-      const cfg::ParallelDistribution& consumer_nd_sbp =
-          node->ParallelDistribution4BnInOp(ibn);
+      const cfg::ParallelDistribution& producer_nd_sbp = producer.ParallelDistribution4Lbi(lbi);
+      const cfg::ParallelDistribution& consumer_nd_sbp = node->ParallelDistribution4BnInOp(ibn);
 
       if (producer.parallel_desc() != node->parallel_desc()
-          || (node->parallel_desc().parallel_num() != 1
-              && producer_nd_sbp != consumer_nd_sbp)) {
-        lbi2consumer_grouped_by_parallel[lbi]
-                                        [{node->parallel_desc(), consumer_nd_sbp}]
-                                            .push_back({node, ibn});
+          || (node->parallel_desc().parallel_num() != 1 && producer_nd_sbp != consumer_nd_sbp)) {
+        lbi2consumer_grouped_by_parallel[lbi][{node->parallel_desc(), consumer_nd_sbp}].push_back(
+            {node, ibn});
         if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
           op_node2op_conf[node] = node->op().op_conf();
         }
@@ -60,12 +56,10 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
       identity_conf->set_out("out");
       job_builder->AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
       cfg::ParallelDistributionSignature identity_nd_sbp_signature;
-      (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["in"] =
-          dst_nd_sbp;
-      (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["out"] =
-          dst_nd_sbp;
-      job_builder->AddParallelDistributionSignature4OpName(
-          identity_op_conf.name(), identity_nd_sbp_signature);
+      (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["in"] = dst_nd_sbp;
+      (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["out"] = dst_nd_sbp;
+      job_builder->AddParallelDistributionSignature4OpName(identity_op_conf.name(),
+                                                           identity_nd_sbp_signature);
 
       LogicalBlobId grouped_lbi;
       grouped_lbi.set_op_name(identity_op_conf.name());

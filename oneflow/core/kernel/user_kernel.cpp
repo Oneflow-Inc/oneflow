@@ -118,8 +118,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
-    nd_sbp_signature_ = new cfg::ParallelDistributionSignature(
-        kernel_conf.op_attribute().nd_sbp_signature());
+    nd_sbp_signature_ =
+        new cfg::ParallelDistributionSignature(kernel_conf.op_attribute().nd_sbp_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = new cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
@@ -160,8 +160,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
 
   const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
-    const auto& bn2nd_sbp =
-        nd_sbp_signature_->bn_in_op2nd_sbp();
+    const auto& bn2nd_sbp = nd_sbp_signature_->bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
     CHECK(it != bn2nd_sbp.end());
@@ -195,8 +194,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         job_desc_(job_desc),
         parallel_ctx_(kernel_conf.parallel_ctx()),
-        nd_sbp_signature_(
-            kernel_conf.op_attribute().nd_sbp_signature()),
+        nd_sbp_signature_(kernel_conf.op_attribute().nd_sbp_signature()),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
@@ -291,8 +289,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
   const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
-    const auto& bn2nd_sbp =
-        nd_sbp_signature_.bn_in_op2nd_sbp();
+    const auto& bn2nd_sbp = nd_sbp_signature_.bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
     CHECK(it != bn2nd_sbp.end());

@@ -137,8 +137,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferBlobLastUsed() const;
   void InferTimeShape() const;
   void InferOpNodeParallelDistributionSignature(
-      OpNode* op_node,
-      const cfg::ParallelDistributionSignature& nd_sbp_sig_conf) const;
+      OpNode* op_node, const cfg::ParallelDistributionSignature& nd_sbp_sig_conf) const;
   Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;

@@ -22,7 +22,7 @@ namespace {
 
 #define OF_BOXING_LOGGER_CSV_COLNUM_NAME_FIELD                   \
   "src_op_name,dst_op_name,src_parallel_desc,dst_parallel_desc," \
-  "src_nd_sbp,"                                   \
+  "src_nd_sbp,"                                                  \
   "dst_nd_sbp,lbi,dtype,shape,builder,comment\n"
 
 std::string ShapeToString(const Shape& shape) {
@@ -61,11 +61,9 @@ std::string ParallelDistributionToString(const cfg::ParallelDistribution& nd_sbp
   const int64_t num_axes = nd_sbp.sbp_parallel_size();
   serialized_nd_sbp += "[";
   for (int64_t i = 0; i < num_axes - 1; ++i) {
-    serialized_nd_sbp +=
-        SbpParallelToString(nd_sbp.sbp_parallel(i)) + " ";
+    serialized_nd_sbp += SbpParallelToString(nd_sbp.sbp_parallel(i)) + " ";
   }
-  serialized_nd_sbp +=
-      SbpParallelToString(nd_sbp.sbp_parallel(num_axes - 1)) + "]";
+  serialized_nd_sbp += SbpParallelToString(nd_sbp.sbp_parallel(num_axes - 1)) + "]";
   return serialized_nd_sbp;
 }
 
@@ -109,11 +107,11 @@ void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status, const std::strin
                           const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
                           const ParallelDesc& dst_parallel_desc,
                           const cfg::ParallelDistribution& src_nd_sbp,
-                          const cfg::ParallelDistribution& dst_nd_sbp,
-                          const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc) {
+                          const cfg::ParallelDistribution& dst_nd_sbp, const LogicalBlobId& lbi,
+                          const BlobDesc& logical_blob_desc) {
   log_stream_ << MakeBoxingLoggerCsvRow(status, src_op_name, dst_op_name, src_parallel_desc,
-                                        dst_parallel_desc, src_nd_sbp,
-                                        dst_nd_sbp, lbi, logical_blob_desc);
+                                        dst_parallel_desc, src_nd_sbp, dst_nd_sbp, lbi,
+                                        logical_blob_desc);
 }
 
 }  // namespace oneflow

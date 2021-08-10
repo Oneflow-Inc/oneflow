@@ -65,10 +65,8 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     const std::vector<int32_t> axis_vec(1, split_axis);
 
     std::string op_name = node->op().op_name();
-    const auto& op_nd_sbp_sig =
-        job_builder->ParallelDistributionSignature4OpName(op_name);
-    const auto& nd_sbp_map =
-        op_nd_sbp_sig.bn_in_op2nd_sbp();
+    const auto& op_nd_sbp_sig = job_builder->ParallelDistributionSignature4OpName(op_name);
+    const auto& nd_sbp_map = op_nd_sbp_sig.bn_in_op2nd_sbp();
     const auto it = nd_sbp_map.find("prediction_0");
     CHECK(it != nd_sbp_map.end());
     const auto& prediction_nd_sbp = it->second;
@@ -76,8 +74,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     cfg::ParallelDistribution stat_distribution_for_consumer;
 
     bool has_split_axis_parallel = false;
-    CHECK_EQ(prediction_nd_sbp.sbp_parallel_size(),
-             node->parallel_desc().hierarchy()->NumAxes());
+    CHECK_EQ(prediction_nd_sbp.sbp_parallel_size(), node->parallel_desc().hierarchy()->NumAxes());
     for (int64_t i = 0; i < node->parallel_desc().hierarchy()->NumAxes(); ++i) {
       const auto& sbp = prediction_nd_sbp.sbp_parallel(i);
       if (sbp.has_split_parallel() && sbp.split_parallel().axis() == split_axis) {
@@ -130,8 +127,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     cfg::ParallelDistributionSignature reduce_max_global_stage_signature;
     (*reduce_max_global_stage_signature.mutable_bn_in_op2nd_sbp())["in_0"] =
         stat_distribution_for_consumer;
-    (*reduce_max_global_stage_signature
-          .mutable_bn_in_op2nd_sbp())["device_count_0"] =
+    (*reduce_max_global_stage_signature.mutable_bn_in_op2nd_sbp())["device_count_0"] =
         stat_distribution_for_consumer;
     (*reduce_max_global_stage_signature.mutable_bn_in_op2nd_sbp())["out_0"] =
         stat_distribution_for_consumer;
@@ -179,8 +175,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
               .Output("out")
               .Attr<std::vector<std::string>>("nd_sbp", nd_sbp_conf)
               .Attr<std::string>("grad_mode", "auto")
-              .Attr<std::vector<std::string>>("grad_nd_sbp",
-                                              std::vector<std::string>())
+              .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
               .ScopeSymbolId(scope_symbol_id)
               .Build();
       job_builder->AddOps(node->parallel_desc().parallel_conf(), {parallel_cast_sum_op.op_conf()});

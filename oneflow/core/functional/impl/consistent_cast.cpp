@@ -110,8 +110,7 @@ Maybe<Shape> GetConcatenatedShape(
 
 Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc> parallel_desc,
                                 Symbol<cfg::ParallelDistribution> nd_sbp) {
-  if (nd_sbp->sbp_parallel_size() == 1
-      && nd_sbp->sbp_parallel(0).has_split_parallel()) {
+  if (nd_sbp->sbp_parallel_size() == 1 && nd_sbp->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape = JUST(All2AllSyncShape(physical_shape));
     int64_t concat_axis = nd_sbp->sbp_parallel(0).split_parallel().axis();
     return GetConcatenatedShape(*rank2flat_shape, parallel_desc, concat_axis);
@@ -131,11 +130,9 @@ Maybe<one::UserOpExpr> FindOrCreatParallelDistributionOpExpr(
         JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
                  .Input("in")
                  .Output("out")
-                 .Attr<std::vector<std::string>>("nd_sbp",
-                                                 *JUST(GetNdSbpStrList(sbp_parallels)))
+                 .Attr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(sbp_parallels)))
                  .Attr<std::string>("grad_mode", "restore")
-                 .Attr<std::vector<std::string>>("grad_nd_sbp",
-                                                 std::vector<std::string>())
+                 .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
                  .Build());
     iter = sbp_list2hierarchical_parallel_cast_op_expr.emplace(sbp_parallels, op_expr).first;
   }
@@ -148,10 +145,9 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& nd_sbp_cast_op_expr =
-      JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
-  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*nd_sbp_cast_op_expr,
-                                                             {consistent_tensor}));
+  const auto& nd_sbp_cast_op_expr = JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
+  const auto& ret =
+      JUST(OpInterpUtil::Dispatch<one::Tensor>(*nd_sbp_cast_op_expr, {consistent_tensor}));
   return ret;
 }
 

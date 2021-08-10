@@ -38,8 +38,7 @@ struct InitializeWithConfUtil final {
 
 cfg::ParallelDistribution GetParallelDistribution(const KernelConf& kernel_conf,
                                                   const std::string& bn_in_op) {
-  const auto& nd_sbp_map =
-      kernel_conf.op_attribute().nd_sbp_signature().bn_in_op2nd_sbp();
+  const auto& nd_sbp_map = kernel_conf.op_attribute().nd_sbp_signature().bn_in_op2nd_sbp();
   const auto& it = nd_sbp_map.find(bn_in_op);
   CHECK(it != nd_sbp_map.end());
   return cfg::ParallelDistribution(it->second);

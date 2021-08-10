@@ -35,8 +35,7 @@ size_t GetNumShards(const Shape& hierarchy, const cfg::ParallelDistribution& nd_
   return num_shards;
 }
 
-size_t GetShardIndex(const Shape& hierarchy, const cfg::ParallelDistribution& nd_sbp,
-                     size_t rank) {
+size_t GetShardIndex(const Shape& hierarchy, const cfg::ParallelDistribution& nd_sbp, size_t rank) {
   using index_helper_t = NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE>;
   size_t ndim = hierarchy.NumAxes();
   CHECK_GT(ndim, 0);

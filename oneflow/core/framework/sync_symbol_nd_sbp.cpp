@@ -68,8 +68,7 @@ FLAT_MSG_DEFINE_ONEOF(parallel_type,
 FLAT_MSG_END(FlatSbpParallel);
 
 FLAT_MSG_BEGIN(FlatParallelDistribution);
-OF_PUBLIC Maybe<void> Init(uint64_t symbol_id,
-                           Symbol<cfg::ParallelDistribution> nd_sbp) {
+OF_PUBLIC Maybe<void> Init(uint64_t symbol_id, Symbol<cfg::ParallelDistribution> nd_sbp) {
   this->set_symbol_id(symbol_id);
   this->set_size(nd_sbp->sbp_parallel_size());
   for (int i = 0; i < this->size(); ++i) {
@@ -79,8 +78,7 @@ OF_PUBLIC Maybe<void> Init(uint64_t symbol_id,
   return Maybe<void>::Ok();
 }
 
-OF_PUBLIC Maybe<void> Check(uint64_t symbol_id,
-                            Symbol<cfg::ParallelDistribution> nd_sbp) const {
+OF_PUBLIC Maybe<void> Check(uint64_t symbol_id, Symbol<cfg::ParallelDistribution> nd_sbp) const {
   CHECK_EQ_OR_RETURN(this->symbol_id(), symbol_id);
   CHECK_EQ_OR_RETURN(this->size(), nd_sbp->sbp_parallel_size());
   for (int i = 0; i < this->size(); ++i) {
@@ -99,9 +97,7 @@ class FlatParallelDistributionAsyncTransportCtx : public AsyncTransportCtx {
   FlatParallelDistributionAsyncTransportCtx(const TransportToken& transport_token,
                                             uint64_t symbol_id,
                                             Symbol<cfg::ParallelDistribution> nd_sbp)
-      : AsyncTransportCtx(transport_token),
-        symbol_id_(symbol_id),
-        nd_sbp_(nd_sbp) {}
+      : AsyncTransportCtx(transport_token), symbol_id_(symbol_id), nd_sbp_(nd_sbp) {}
 
   ~FlatParallelDistributionAsyncTransportCtx() override {}
 

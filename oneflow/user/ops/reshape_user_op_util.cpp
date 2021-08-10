@@ -130,8 +130,8 @@ Maybe<void> GetInputParallelDistribution(user_op::InferParallelDistributionFnCon
   *distribution = ctx->ParallelDistributionHint4InputArgNameAndIndex(in_arg.name(), in_arg.index());
   const auto& constraints = ctx->nd_sbp_constraints();
   if (constraints.bn_in_op2nd_sbp_size() != 0) {
-    const auto it = constraints.bn_in_op2nd_sbp().find(
-        GenRepeatedBn(in_arg.name(), in_arg.index()));
+    const auto it =
+        constraints.bn_in_op2nd_sbp().find(GenRepeatedBn(in_arg.name(), in_arg.index()));
     if (it != constraints.bn_in_op2nd_sbp().end()) { *distribution = it->second; }
   }
   return Maybe<void>::Ok();
@@ -164,8 +164,7 @@ Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
         ctx->ParallelDistribution4ArgNameAndIndex(arg.name(), arg.index());
     JUST(GetInputParallelDistribution(ctx, arg, in_distribution));
     CHECK_OR_RETURN(
-        ibn2nd_sbp.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution)
-            .second);
+        ibn2nd_sbp.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution).second);
   }
   cfg::ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
 
@@ -198,8 +197,7 @@ Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
       bool all_match = true;
       for (const auto& in_arg : in_args) {
         std::string ibn = GenRepeatedBn(in_arg.name(), in_arg.index());
-        if (sbp_signature.bn_in_op2sbp_parallel().at(ibn)
-            != ibn2nd_sbp.at(ibn).sbp_parallel(i)) {
+        if (sbp_signature.bn_in_op2sbp_parallel().at(ibn) != ibn2nd_sbp.at(ibn).sbp_parallel(i)) {
           all_match = false;
           break;
         }

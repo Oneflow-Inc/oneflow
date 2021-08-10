@@ -117,9 +117,7 @@ void OpArgParallelAttribute::DumpToInterfaceBlobConf(
   if (sbp_parallel_->has_split_parallel()) {
     *interface_blob_conf->mutable_nd_sbp()->add_sbp_parallel() = *sbp_parallel_;
   } else {
-    interface_blob_conf->mutable_nd_sbp()
-        ->add_sbp_parallel()
-        ->mutable_broadcast_parallel();
+    interface_blob_conf->mutable_nd_sbp()->add_sbp_parallel()->mutable_broadcast_parallel();
   }
 }
 

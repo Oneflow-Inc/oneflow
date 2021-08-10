@@ -24,15 +24,16 @@ namespace oneflow {
 std::vector<TensorSliceView> GetTensorSliceView(int64_t parallel_num,
                                                 const cfg::SbpParallel& sbp_parallel,
                                                 const BlobDesc& blob_desc);
-std::vector<TensorSliceView> GetTensorSliceView(
-    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& nd_sbp,
-    const Shape& logical_shape);
-TensorSliceView GetTensorSliceView4ParallelRank(
-    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& nd_sbp,
-    const Shape& logical_shape, const std::vector<int64_t>& parallel_rank);
-TensorSliceView GetTensorSliceView4ParallelId(
-    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& nd_sbp,
-    const Shape& logical_shape, int64_t parallel_id);
+std::vector<TensorSliceView> GetTensorSliceView(const Shape& parallel_hierarchy,
+                                                const cfg::ParallelDistribution& nd_sbp,
+                                                const Shape& logical_shape);
+TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
+                                                const cfg::ParallelDistribution& nd_sbp,
+                                                const Shape& logical_shape,
+                                                const std::vector<int64_t>& parallel_rank);
+TensorSliceView GetTensorSliceView4ParallelId(const Shape& parallel_hierarchy,
+                                              const cfg::ParallelDistribution& nd_sbp,
+                                              const Shape& logical_shape, int64_t parallel_id);
 TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc);
 
 }  // namespace oneflow

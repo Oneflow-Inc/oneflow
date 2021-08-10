@@ -151,8 +151,7 @@ class ConsistentRandNFunctor {
       JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
     }
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {},
-        OpExprInterpContext(attrs, placement, nd_sbp, normal_kernel_state));
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, normal_kernel_state));
   }
 
  private:

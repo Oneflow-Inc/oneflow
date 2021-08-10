@@ -390,11 +390,11 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
     ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
     parallel_conf.set_device_tag(GetDeviceTagByDeviceTypeStr(device_type));
     ParallelDesc parallel_desc(parallel_conf);
-    (*outputs)[0] = JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype(),
-                                                      JUST(input_tensor->nd_sbp()),
-                                                      SymbolOf(parallel_desc),
-                                                      /* is_lazy= */ true,
-                                                      /*requires_grad=*/false, /*is_leaf=*/true));
+    (*outputs)[0] =
+        JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype(),
+                                          JUST(input_tensor->nd_sbp()), SymbolOf(parallel_desc),
+                                          /* is_lazy= */ true,
+                                          /*requires_grad=*/false, /*is_leaf=*/true));
   }
   // NOTE(chengcheng): output tensor lbn is SAME with input tensor.
   TensorNameScope::Global()->Record(outputs->at(0), input_lbn);

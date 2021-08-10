@@ -74,13 +74,8 @@ def _make_gpt_data_loader_func(
                 start_from_saved_progress=start_from_saved_progress,
                 name="GPTDataLoader",
             )
-            if (
-                isinstance(nd_sbp, list)
-                and len(nd_sbp) > 1
-            ):
-                tokens = flow.hierarchical_parallel_cast(
-                    tokens, nd_sbp=["B", "B"]
-                )
+            if isinstance(nd_sbp, list) and len(nd_sbp) > 1:
+                tokens = flow.hierarchical_parallel_cast(tokens, nd_sbp=["B", "B"])
         tokens = flow.hierarchical_parallel_cast(tokens, nd_sbp=["B"])
         return tokens
 

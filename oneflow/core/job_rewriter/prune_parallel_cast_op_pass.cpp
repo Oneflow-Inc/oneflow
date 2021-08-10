@@ -68,26 +68,20 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
     const cfg::ParallelDistribution& producer_nd_sbp =
         producer->ParallelDistribution4Lbi(parallel_cast_in_lbi);
     if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
-    if (parallel_cast_nd_sbp != producer_nd_sbp
-        && op_node->out_edges().size() > 1) {
-      return;
-    }
+    if (parallel_cast_nd_sbp != producer_nd_sbp && op_node->out_edges().size() > 1) { return; }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       if (IsParallelCastOp(consumer->op().op_conf())) { return; }
       if (consumer->parallel_desc() != op_node->parallel_desc()) { return; }
-      if (consumer->ParallelDistribution4Lbi(parallel_cast_out_lbi)
-          != parallel_cast_nd_sbp) {
+      if (consumer->ParallelDistribution4Lbi(parallel_cast_out_lbi) != parallel_cast_nd_sbp) {
         return;
       }
     }
-    op_name2nd_sbp_signature[producer->op().op_name()] =
-        producer->nd_sbp_signature();
+    op_name2nd_sbp_signature[producer->op().op_name()] = producer->nd_sbp_signature();
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       const std::string& consumer_op_name = consumer->op().op_name();
-      op_name2nd_sbp_signature[consumer_op_name] =
-          consumer->nd_sbp_signature();
+      op_name2nd_sbp_signature[consumer_op_name] = consumer->nd_sbp_signature();
       if (op_name2op_conf.find(consumer_op_name) == op_name2op_conf.end()) {
         op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
       }

@@ -31,24 +31,20 @@ Maybe<Symbol<cfg::ParallelDistribution>> GetBroadcastParallelDistribution() {
 }  // namespace
 
 Maybe<one::Tensor> NcclS2PBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input,
-    Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp,
-    Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2P(
-      in_nd_sbp->sbp_parallel(0), out_nd_sbp->sbp_parallel(0)));
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
+    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    Symbol<ParallelDesc> out_parallel_desc) const {
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2P(in_nd_sbp->sbp_parallel(0),
+                                                          out_nd_sbp->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
-  static Symbol<cfg::ParallelDistribution> mid_nd_sbp =
-      JUST(GetBroadcastParallelDistribution());
+  static Symbol<cfg::ParallelDistribution> mid_nd_sbp = JUST(GetBroadcastParallelDistribution());
   static std::shared_ptr<NcclCollectiveAllGatherBoxingInterpreter> s2b_interpreter =
       std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>();
   static std::shared_ptr<NaiveB2PBoxingInterpreter> b2p_interpreter =
       std::make_shared<NaiveB2PBoxingInterpreter>();
-  const auto& mid_tesnor =
-      JUST(s2b_interpreter->Interpret(input, in_nd_sbp, mid_nd_sbp,
-                                      in_parallel_desc, out_parallel_desc));
-  return JUST(b2p_interpreter->Interpret(mid_tesnor, mid_nd_sbp,
-                                         out_nd_sbp, in_parallel_desc,
+  const auto& mid_tesnor = JUST(s2b_interpreter->Interpret(input, in_nd_sbp, mid_nd_sbp,
+                                                           in_parallel_desc, out_parallel_desc));
+  return JUST(b2p_interpreter->Interpret(mid_tesnor, mid_nd_sbp, out_nd_sbp, in_parallel_desc,
                                          out_parallel_desc));
 }
 

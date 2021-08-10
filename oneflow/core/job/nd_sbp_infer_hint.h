@@ -27,9 +27,7 @@ class ParallelDistributionInferHint final {
   ParallelDistributionInferHint(const ParallelDesc* parallel_desc,
                                 const BlobDesc* logical_blob_desc,
                                 const cfg::ParallelDistribution* nd_sbp)
-      : parallel_desc_(parallel_desc),
-        logical_blob_desc_(logical_blob_desc),
-        nd_sbp_(nd_sbp) {}
+      : parallel_desc_(parallel_desc), logical_blob_desc_(logical_blob_desc), nd_sbp_(nd_sbp) {}
   ParallelDistributionInferHint(const ParallelDistributionInferHint&) = default;
   ~ParallelDistributionInferHint() = default;
 

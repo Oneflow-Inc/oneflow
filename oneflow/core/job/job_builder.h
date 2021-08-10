@@ -68,8 +68,7 @@ class JobBuilder final {
 
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
   void SetSbpParallel4Oba(const OpBlobArg& oba, const cfg::SbpParallel& sbp_parallel);
-  void SetParallelDistribution4Oba(const OpBlobArg& oba,
-                                   const cfg::ParallelDistribution& nd_sbp);
+  void SetParallelDistribution4Oba(const OpBlobArg& oba, const cfg::ParallelDistribution& nd_sbp);
   Maybe<void> ForEachOperator(const std::function<Maybe<void>(const Operator&)>& Handler) const;
 
   const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
@@ -81,8 +80,7 @@ class JobBuilder final {
   const ParallelDistributionSignature& ParallelDistributionSignature4OpName(
       const std::string& op_name) const;
   void AddParallelDistributionSignature4OpName(
-      const std::string& op_name,
-      const cfg::ParallelDistributionSignature& nd_sbp_signature);
+      const std::string& op_name, const cfg::ParallelDistributionSignature& nd_sbp_signature);
 
  private:
   void AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
@@ -95,8 +93,7 @@ class JobBuilder final {
   HashSet<std::string> modified_op_conf_op_names_;
   HashSet<std::string> modified_parallel_conf_op_names_;
 
-  HashMap<std::string, ParallelDistributionSignature*>
-      op_name2nd_sbp_signature_conf_;
+  HashMap<std::string, ParallelDistributionSignature*> op_name2nd_sbp_signature_conf_;
   HashMap<ParallelConf, PlacementGroup*> parallel_conf2placement_group_;
 };
 

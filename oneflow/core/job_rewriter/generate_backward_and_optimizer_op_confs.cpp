@@ -52,8 +52,7 @@ void SetParallelDistributionSignatureHintByIdenticalSbpObaPairs(
     };
     ForEachBn([&](const std::string& bn_in_op) {
       const auto& oba = GenOpBlobArg(op_node->op().op_name(), bn_in_op);
-      oba2nd_sbp[oba] =
-          &op_node->ParallelDistribution4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
+      oba2nd_sbp[oba] = &op_node->ParallelDistribution4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
     });
   });
   auto HasParallelDistribution = [&](const OpBlobArg& oba) {
@@ -62,8 +61,7 @@ void SetParallelDistributionSignatureHintByIdenticalSbpObaPairs(
   for (const auto& pair : identical_sbp_oba_pairs.pair()) {
     const cfg::ParallelDistribution* nd_sbp = nullptr;
     if (HasParallelDistribution(pair.first()) && HasParallelDistribution(pair.second())) {
-      CHECK(oba2nd_sbp.at(pair.first())
-            == oba2nd_sbp.at(pair.second()));
+      CHECK(oba2nd_sbp.at(pair.first()) == oba2nd_sbp.at(pair.second()));
       nd_sbp = oba2nd_sbp.at(pair.first());
     } else if (HasParallelDistribution(pair.first())) {
       nd_sbp = oba2nd_sbp.at(pair.first());

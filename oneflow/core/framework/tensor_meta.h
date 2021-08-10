@@ -90,11 +90,8 @@ class MirroredTensorMeta : public TensorMeta {
 class ConsistentTensorMeta : public TensorMeta {
  public:
   ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                       Symbol<cfg::ParallelDistribution> nd_sbp,
-                       Symbol<ParallelDesc> parallel_desc)
-      : TensorMeta(shape, dtype),
-        nd_sbp_(nd_sbp),
-        parallel_desc_(parallel_desc) {}
+                       Symbol<cfg::ParallelDistribution> nd_sbp, Symbol<ParallelDesc> parallel_desc)
+      : TensorMeta(shape, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
   ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
   ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
   virtual ~ConsistentTensorMeta() = default;
@@ -104,9 +101,7 @@ class ConsistentTensorMeta : public TensorMeta {
   Symbol<cfg::ParallelDistribution> nd_sbp() const { return nd_sbp_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
-  void set_nd_sbp(Symbol<cfg::ParallelDistribution> val) {
-    nd_sbp_ = val;
-  }
+  void set_nd_sbp(Symbol<cfg::ParallelDistribution> val) { nd_sbp_ = val; }
 
   void set_parallel_desc(Symbol<ParallelDesc> val) { parallel_desc_ = val; }
 

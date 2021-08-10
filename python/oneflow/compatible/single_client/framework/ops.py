@@ -178,18 +178,12 @@ def api_hierarchical_parallel_cast(
 ) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([hierarchical_parallel_cast])
     return func(
-        input,
-        nd_sbp=nd_sbp,
-        grad_mode=grad_mode,
-        grad_nd_sbp=grad_nd_sbp,
-        name=name,
+        input, nd_sbp=nd_sbp, grad_mode=grad_mode, grad_nd_sbp=grad_nd_sbp, name=name,
     )
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def hierarchical_parallel_cast(
-    input, nd_sbp, grad_mode, grad_nd_sbp, name
-):
+def hierarchical_parallel_cast(input, nd_sbp, grad_mode, grad_nd_sbp, name):
     if name is None:
         name = id_util.UniqueStr("HierarchicalParallelCast_")
 
@@ -210,15 +204,11 @@ def hierarchical_parallel_cast(
         .Op("hierarchical_parallel_cast")
         .Input("in", [input])
         .Output("out")
-        .Attr(
-            "nd_sbp", list(map(distribute_to_str, nd_sbp))
-        )
+        .Attr("nd_sbp", list(map(distribute_to_str, nd_sbp)))
         .Attr("grad_mode", grad_mode or "restore")
         .Attr(
             "grad_nd_sbp",
-            list(map(distribute_to_str, grad_nd_sbp))
-            if grad_nd_sbp
-            else [],
+            list(map(distribute_to_str, grad_nd_sbp)) if grad_nd_sbp else [],
         )
         .Build()
     )

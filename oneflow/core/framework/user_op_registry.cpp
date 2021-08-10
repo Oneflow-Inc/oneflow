@@ -220,22 +220,20 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
         logical_fn(ctx);
       } else {
         for (const auto& pair : ctx->inputs()) {
-          const auto& nd_sbp =
-              ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
+          const auto& nd_sbp = ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
           const TensorDesc* in_logical =
               ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
           const TensorDesc* in_physical = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), nd_sbp,
-                                                 ctx->parallel_desc(), ctx->parallel_ctx()))
+          CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), nd_sbp, ctx->parallel_desc(),
+                                                 ctx->parallel_ctx()))
                           == in_physical->shape());
         }
         for (const auto& pair : ctx->outputs()) {
           TensorDesc* desc = ctx->OutputTensorDesc(pair.first, pair.second);
           *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          const auto& nd_sbp =
-              ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
-          *desc->mut_shape() = *JUST(GetPhysicalShape(desc->shape(), nd_sbp,
-                                                      ctx->parallel_desc(), ctx->parallel_ctx()));
+          const auto& nd_sbp = ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
+          *desc->mut_shape() = *JUST(
+              GetPhysicalShape(desc->shape(), nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
         }
       }
       return Maybe<void>::Ok();

@@ -297,19 +297,16 @@ void OpGraph::InferTimeShape() const {
 }
 
 void OpGraph::InferOpNodeParallelDistributionSignature(
-    OpNode* op_node,
-    const cfg::ParallelDistributionSignature& nd_sbp_sig_conf) const {
+    OpNode* op_node, const cfg::ParallelDistributionSignature& nd_sbp_sig_conf) const {
   HashMap<std::string, ParallelDistributionInferHint> ibn2nd_sbp_infer_hint;
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
-    const cfg::ParallelDistribution* nd_sbp =
-        &producer->ParallelDistribution4Lbi(lbi);
+    const cfg::ParallelDistribution* nd_sbp = &producer->ParallelDistribution4Lbi(lbi);
     ibn2nd_sbp_infer_hint.emplace(
-        ibn,
-        ParallelDistributionInferHint(parallel_desc, logical_blob_desc, nd_sbp));
+        ibn, ParallelDistributionInferHint(parallel_desc, logical_blob_desc, nd_sbp));
   }
   const auto ParallelDistributionInferHint4Ibn =
       [&](const std::string& bn) -> Maybe<const ParallelDistributionInferHint*> {
@@ -373,8 +370,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     JUST(InferOpNodeMirroredSignature(op_node, is_mirrored_conf));
     cfg::ParallelDistributionSignature nd_sbp_sig_conf;
     {
-      const auto& op_name2nd_sbp_sig_conf =
-          job_parallel_view_conf.op_name2nd_sbp_signature_conf();
+      const auto& op_name2nd_sbp_sig_conf = job_parallel_view_conf.op_name2nd_sbp_signature_conf();
       const auto& iter = op_name2nd_sbp_sig_conf.find(op_node->op().op_name());
       if (iter != op_name2nd_sbp_sig_conf.end()) {
         nd_sbp_sig_conf = cfg::ParallelDistributionSignature(iter->second);
@@ -505,9 +501,8 @@ void OpGraph::DumpLogicalBlobDesc(Job* job) const {
 void OpGraph::DumpParallelDistributionSignature(Job* job) const {
   ForEachNode([&](const OpNode* node) -> void {
     CHECK_JUST(node->op().nd_sbp_signature())
-        ->ToProto(
-            &(*job->mutable_job_parallel_view_conf()
-                   ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]);
+        ->ToProto(&(*job->mutable_job_parallel_view_conf()
+                         ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]);
     if (node->parallel_desc().hierarchy()->NumAxes() == 1) {
       node->sbp_signature().ToProto(
           &(*job->mutable_job_parallel_view_conf()

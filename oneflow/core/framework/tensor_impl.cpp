@@ -191,8 +191,7 @@ size_t MirroredTensorMeta::CalcHashValue() const {
 bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
-         && this->nd_sbp() == other.nd_sbp()
-         && this->parallel_desc() == other.parallel_desc();
+         && this->nd_sbp() == other.nd_sbp() && this->parallel_desc() == other.parallel_desc();
 }
 
 size_t ConsistentTensorMeta::CalcHashValue() const {
@@ -219,13 +218,11 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
 
 namespace {
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
-                              const cfg::ParallelDistribution& nd_sbp,
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::ParallelDistribution& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {
-    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc,
-                            JUST(parallel_id.value()));
+    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id.value()));
   } else {
     return std::make_shared<Shape>(DimVector(logical_shape.NumAxes(), 0));
   }

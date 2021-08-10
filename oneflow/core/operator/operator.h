@@ -427,17 +427,14 @@ class ParallelDistribution;
 
 }
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
-                              const cfg::ParallelDistribution& nd_sbp,
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::ParallelDistribution& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const ParallelContext& parallel_ctx);
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
-                              const cfg::ParallelDistribution& nd_sbp,
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::ParallelDistribution& nd_sbp,
                               const ParallelDesc& parallel_desc, int64_t parallel_id);
 
-Maybe<Shape> GetLogicalShape(const Shape& physical_shape,
-                             const cfg::ParallelDistribution& nd_sbp,
+Maybe<Shape> GetLogicalShape(const Shape& physical_shape, const cfg::ParallelDistribution& nd_sbp,
                              const ParallelDesc& parallel_desc);
 
 }  // namespace oneflow

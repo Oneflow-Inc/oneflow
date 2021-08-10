@@ -30,8 +30,7 @@ Maybe<void> ParseParallelDistributionFromConf(const VariableOpConf& conf,
   nd_sbp->clear_sbp_parallel();
   FOR_RANGE(int64_t, i, 0, num_axes) {
     if (has_nd_sbp_conf) {
-      CHECK_OR_RETURN(ParseSbpParallelFromString(conf.nd_sbp(i),
-                                                 nd_sbp->add_sbp_parallel()));
+      CHECK_OR_RETURN(ParseSbpParallelFromString(conf.nd_sbp(i), nd_sbp->add_sbp_parallel()));
     } else {
       nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
     }
@@ -70,8 +69,8 @@ Maybe<void> VariableOp::InferOutBlobDescs(
   out_blob_desc->set_data_type(variable_conf.data_type());
   cfg::ParallelDistribution nd_sbp;
   JUST(ParseParallelDistributionFromConf(variable_conf, parallel_desc, &nd_sbp));
-  out_blob_desc->mut_shape() = *JUST(GetPhysicalShape(
-      Shape(variable_conf.shape()), nd_sbp, parallel_desc, *parallel_ctx));
+  out_blob_desc->mut_shape() =
+      *JUST(GetPhysicalShape(Shape(variable_conf.shape()), nd_sbp, parallel_desc, *parallel_ctx));
   return Maybe<void>::Ok();
 }
 
@@ -81,8 +80,7 @@ Maybe<void> VariableOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) co
   if (op_conf().variable_conf().nd_sbp_size() != 0) {
     CHECK_EQ_OR_RETURN(op_conf().variable_conf().nd_sbp_size(), 1);
     cfg::SbpParallel sbp_parallel;
-    CHECK_OR_RETURN(ParseSbpParallelFromString(op_conf().variable_conf().nd_sbp(0),
-                                               &sbp_parallel));
+    CHECK_OR_RETURN(ParseSbpParallelFromString(op_conf().variable_conf().nd_sbp(0), &sbp_parallel));
     if (sbp_parallel.has_split_parallel()) {
       sbp_sig_builder.Split(output_bns(), sbp_parallel.split_parallel().axis());
     } else {
@@ -113,18 +111,15 @@ Symbol<OperatorConf> VariableOp::GetOpConfWithoutOpNameAndLbn() const {
 
 Maybe<void> VariableOp::InferParallelDistributionSignature(
     cfg::ParallelDistributionSignature* nd_sbp_signature,
-    const cfg::ParallelDistributionSignature& nd_sbp_constraints,
-    const ParallelDesc& parallel_desc,
+    const cfg::ParallelDistributionSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const VariableOpConf& conf = this->op_conf().variable_conf();
-  cfg::ParallelDistribution& out_nd_sbp =
-      (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
+  cfg::ParallelDistribution& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
   JUST(ParseParallelDistributionFromConf(conf, parallel_desc, &out_nd_sbp));
   if (conf.has_tick()) {
-    cfg::ParallelDistribution& tick_nd_sbp =
-        (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["tick"];
+    cfg::ParallelDistribution& tick_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["tick"];
     for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
       tick_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
     }

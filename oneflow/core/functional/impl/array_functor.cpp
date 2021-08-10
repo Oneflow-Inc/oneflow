@@ -68,8 +68,7 @@ class ConsistentConstantFunctor {
       JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
     }
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
  private:
@@ -142,8 +141,7 @@ class ConsistentEmptyFunctor {
       JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
     }
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
  private:

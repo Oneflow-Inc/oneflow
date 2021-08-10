@@ -2348,10 +2348,7 @@ def gpt_data_loader(
             "_".join([str(s) for s in split_sizes]),
             split_index,
             "_".join(
-                [
-                    "S{}".format(p[2:-1]) if p.startswith("S") else p
-                    for p in nd_sbp
-                ]
+                ["S{}".format(p[2:-1]) if p.startswith("S") else p for p in nd_sbp]
             ),
         )
         iteration = flow.get_variable(

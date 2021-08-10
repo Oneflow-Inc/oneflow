@@ -187,8 +187,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("coin_flip")
         inputs_dist.emplace_back(
             ctx->ParallelDistribution4ArgNameAndIndex(arg_pair.first, arg_pair.second));
       }
-      const auto& dist_conf =
-          ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
+      const auto& dist_conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
       if (dist_conf.size() == 0) {
         FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
           output_dist->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);

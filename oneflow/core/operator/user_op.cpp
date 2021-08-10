@@ -228,8 +228,7 @@ class UserOpInferContext final : public user_op::InferContext {
 
   const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
-    const auto& bn2nd_sbp =
-        CHECK_JUST(op_->nd_sbp_signature())->bn_in_op2nd_sbp();
+    const auto& bn2nd_sbp = CHECK_JUST(op_->nd_sbp_signature())->bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
     CHECK(it != bn2nd_sbp.end());
@@ -430,8 +429,7 @@ class UserOpInferParallelDistributionFnContext
     for (const auto& it : user_op_conf.input()) {
       const std::string& arg_name = it.first;
       for (int32_t i = 0; i < it.second.s_size(); ++i) {
-        auto hint =
-            CHECK_JUST(nd_sbp_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, i)));
+        auto hint = CHECK_JUST(nd_sbp_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, i)));
         CHECK(arg2tensor_desc_
                   .emplace(std::make_pair(arg_name, i),
                            GenTensorDescFromBlobDesc(&hint->logical_blob_desc()))
@@ -455,14 +453,12 @@ class UserOpInferParallelDistributionFnContext
 
   cfg::ParallelDistribution* ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
                                                                   int32_t index) override {
-    return &(*nd_sbp_signature_
-                  ->mutable_bn_in_op2nd_sbp())[GenRepeatedBn(arg_name, index)];
+    return &(*nd_sbp_signature_->mutable_bn_in_op2nd_sbp())[GenRepeatedBn(arg_name, index)];
   }
 
   const cfg::ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
-    auto hint =
-        CHECK_JUST(nd_sbp_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, index)));
+    auto hint = CHECK_JUST(nd_sbp_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, index)));
     return hint->nd_sbp();
   }
 
@@ -757,22 +753,19 @@ bool IgnoreInferParallelDistributionFnWhenFlatHierarchy(const std::string& op_ty
 
 Maybe<void> UserOp::InferParallelDistributionSignature(
     cfg::ParallelDistributionSignature* nd_sbp_signature,
-    const cfg::ParallelDistributionSignature& nd_sbp_constraints,
-    const ParallelDesc& parallel_desc,
+    const cfg::ParallelDistributionSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) const {
   if (val_->nd_sbp_infer_fn
       && (parallel_desc.hierarchy()->NumAxes() > 1
           || !IgnoreInferParallelDistributionFnWhenFlatHierarchy(
               this->user_op_conf().op_type_name()))) {
-    UserOpInferParallelDistributionFnContext ctx(this, nd_sbp_signature,
-                                                 nd_sbp_constraints,
+    UserOpInferParallelDistributionFnContext ctx(this, nd_sbp_signature, nd_sbp_constraints,
                                                  ParallelDistributionInferHint4Ibn);
     JUST(val_->nd_sbp_infer_fn(&ctx));
   } else {
     JUST(Operator::InferParallelDistributionSignature(
-        nd_sbp_signature, nd_sbp_constraints, parallel_desc,
-        ParallelDistributionInferHint4Ibn));
+        nd_sbp_signature, nd_sbp_constraints, parallel_desc, ParallelDistributionInferHint4Ibn));
   }
   std::string tick_bn = GenRepeatedBn(user_op::kUserSourceOpTickInputArgName, 0);
   if (std::find(input_bns().begin(), input_bns().end(), tick_bn) != input_bns().end()) {

@@ -60,13 +60,12 @@ std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
     const cfg::ParallelDistribution& out_nd_sbp =
         ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
     const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-    CheckParallelDistribution(
-        hierarchy, axis, ctx->ParallelDistribution4ArgNameAndIndex("segment_ids", 0),
-        ctx->ParallelDistribution4ArgNameAndIndex("data", 0), out_nd_sbp);
+    CheckParallelDistribution(hierarchy, axis,
+                              ctx->ParallelDistribution4ArgNameAndIndex("segment_ids", 0),
+                              ctx->ParallelDistribution4ArgNameAndIndex("data", 0), out_nd_sbp);
     const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
-    TensorSliceView view =
-        GetTensorSliceView4ParallelId(hierarchy, out_nd_sbp,
-                                      out_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
+    TensorSliceView view = GetTensorSliceView4ParallelId(
+        hierarchy, out_nd_sbp, out_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
     return std::make_shared<UnsortedSegmentSumOpKernelState>(view.At(axis).begin(),
                                                              view.At(axis).end());
   } else {

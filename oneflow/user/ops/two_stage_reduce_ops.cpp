@@ -37,8 +37,7 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
     *output_shape = Shape::Ones(num_axes);
   } else {
     const ParallelDesc& parallel_desc = ctx->parallel_desc();
-    const cfg::ParallelDistribution& in_nd_sbp =
-        ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+    const cfg::ParallelDistribution& in_nd_sbp = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
     DimVector dim_vec = input_shape.dim_vec();
     if (parallel_desc.hierarchy()->NumAxes() == 1) {
       const auto& input_sbp = in_nd_sbp.sbp_parallel(0);

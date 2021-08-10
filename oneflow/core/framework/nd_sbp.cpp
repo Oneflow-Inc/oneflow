@@ -37,8 +37,7 @@ Maybe<Symbol<cfg::ParallelDistribution>> FindOrCreateNdSbp(
   return iter->second;
 }
 
-Maybe<std::vector<std::string>> FindOrCreateNdSbpString(
-    Symbol<cfg::ParallelDistribution> nd_sbp) {
+Maybe<std::vector<std::string>> FindOrCreateNdSbpString(Symbol<cfg::ParallelDistribution> nd_sbp) {
   static thread_local auto* nd_sbp2nd_sbp_str =
       new HashMap<Symbol<cfg::ParallelDistribution>, std::shared_ptr<std::vector<std::string>>>();
   auto iter = nd_sbp2nd_sbp_str->find(nd_sbp);
@@ -69,8 +68,7 @@ Maybe<void> GetDualSbpParallel(const cfg::SbpParallel& sbp_parallel,
 
 }  // namespace
 
-Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(
-    Symbol<cfg::ParallelDistribution> nd_sbp) {
+Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(Symbol<cfg::ParallelDistribution> nd_sbp) {
   static thread_local HashMap<Symbol<cfg::ParallelDistribution>, Symbol<cfg::ParallelDistribution>>
       map;
   auto iter = map.find(nd_sbp);
@@ -95,13 +93,11 @@ Maybe<std::vector<std::string>> GetNdSbpStrList(
   return FindOrCreateNdSbpString(JUST(GetNdSbp(sbp_list)));
 }
 
-Maybe<std::vector<std::string>> GetNdSbpStrList(
-    Symbol<cfg::ParallelDistribution> nd_sbp) {
+Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<cfg::ParallelDistribution> nd_sbp) {
   return FindOrCreateNdSbpString(nd_sbp);
 }
 
-Maybe<std::vector<std::string>> GetDualNdSbpStrList(
-    Symbol<cfg::ParallelDistribution> nd_sbp) {
+Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::ParallelDistribution> nd_sbp) {
   return GetNdSbpStrList(JUST(GetDualNdSbp(nd_sbp)));
 }
 

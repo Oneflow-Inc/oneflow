@@ -48,9 +48,10 @@ std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
   return views;
 }
 
-TensorSliceView GetTensorSliceView4ParallelRank(
-    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& nd_sbp,
-    const Shape& logical_shape, const std::vector<int64_t>& parallel_rank) {
+TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
+                                                const cfg::ParallelDistribution& nd_sbp,
+                                                const Shape& logical_shape,
+                                                const std::vector<int64_t>& parallel_rank) {
   std::vector<Range> ranges(logical_shape.NumAxes());
   FOR_RANGE(int64_t, i, 0, logical_shape.NumAxes()) {
     ranges[i].mut_begin() = 0;
@@ -88,24 +89,22 @@ TensorSliceView GetTensorSliceView4ParallelRank(
   return TensorSliceView(ranges);
 }
 
-TensorSliceView GetTensorSliceView4ParallelId(
-    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& nd_sbp,
-    const Shape& logical_shape, int64_t parallel_id) {
+TensorSliceView GetTensorSliceView4ParallelId(const Shape& parallel_hierarchy,
+                                              const cfg::ParallelDistribution& nd_sbp,
+                                              const Shape& logical_shape, int64_t parallel_id) {
   NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
       parallel_hierarchy.dim_vec().data(), parallel_hierarchy.NumAxes());
   std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
   hierarchy_index_helper.OffsetToNdIndex(parallel_id, parallel_rank.data());
-  return GetTensorSliceView4ParallelRank(parallel_hierarchy, nd_sbp, logical_shape,
-                                         parallel_rank);
+  return GetTensorSliceView4ParallelRank(parallel_hierarchy, nd_sbp, logical_shape, parallel_rank);
 }
 
-std::vector<TensorSliceView> GetTensorSliceView(
-    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& nd_sbp,
-    const Shape& logical_shape) {
+std::vector<TensorSliceView> GetTensorSliceView(const Shape& parallel_hierarchy,
+                                                const cfg::ParallelDistribution& nd_sbp,
+                                                const Shape& logical_shape) {
   std::vector<TensorSliceView> views;
   FOR_RANGE(int64_t, i, 0, parallel_hierarchy.elem_cnt()) {
-    views.emplace_back(
-        GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, i));
+    views.emplace_back(GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, i));
   }
   return views;
 }

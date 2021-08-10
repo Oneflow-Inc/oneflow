@@ -72,9 +72,9 @@ Maybe<Tensor> GetBoxingOutput(const std::shared_ptr<Tensor>& input,
       JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
           JUST(input->nd_sbp()), nd_sbp, JUST(input->parallel_desc()),
           JUST(input->parallel_desc())));
-  const auto& output = JUST(boxing_interpreter->Interpret(
-      input, JUST(input->nd_sbp()), nd_sbp,
-      JUST(input->parallel_desc()), JUST(input->parallel_desc())));
+  const auto& output = JUST(boxing_interpreter->Interpret(input, JUST(input->nd_sbp()), nd_sbp,
+                                                          JUST(input->parallel_desc()),
+                                                          JUST(input->parallel_desc())));
   JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
   JUST(ctx->Check());
   return output;

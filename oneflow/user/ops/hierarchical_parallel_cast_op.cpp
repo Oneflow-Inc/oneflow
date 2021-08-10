@@ -36,8 +36,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
           cfg::ParallelDistribution* out_distribution =
               ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
           const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-          const auto& conf =
-              ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
+          const auto& conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
           CHECK_EQ_OR_RETURN(conf.size(), parallel_hierarchy.NumAxes());
           for (const std::string& sbp_str : conf) {
             cfg::SbpParallel sbp_parallel;
@@ -97,10 +96,8 @@ REGISTER_USER_OP_GRAD("hierarchical_parallel_cast")
                 .InputBind("in", ctx->FwOp().output_grad("out", 0))
                 .Output("out")
                 .Attr<std::vector<std::string>>(
-                    "nd_sbp",
-                    ctx->FwOp().attr<std::vector<std::string>>("grad_nd_sbp"))
-                .Attr<std::vector<std::string>>("grad_nd_sbp",
-                                                std::vector<std::string>())
+                    "nd_sbp", ctx->FwOp().attr<std::vector<std::string>>("grad_nd_sbp"))
+                .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
                 .Build();
           });
           ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&]() -> const std::string& {

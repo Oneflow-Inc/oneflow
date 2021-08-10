@@ -49,8 +49,7 @@ struct FlatConsistentTensorMeta final {
     CHECK_EQ_OR_RETURN(static_cast<DataType>(this->dtype), consistent_tensor_meta->dtype());
     CHECK_EQ_OR_RETURN(this->is_dynamic, consistent_tensor_meta->is_dynamic());
     const auto& nd_sbp =
-        JUST(SyncedSymbolMap<cfg::ParallelDistribution>::Symbol4SyncedSymbolId(
-            this->nd_sbp));
+        JUST(SyncedSymbolMap<cfg::ParallelDistribution>::Symbol4SyncedSymbolId(this->nd_sbp));
     CHECK_OR_RETURN(nd_sbp == consistent_tensor_meta->nd_sbp());
     const auto& parallel_desc =
         JUST(SyncedSymbolMap<ParallelDesc>::Symbol4SyncedSymbolId(this->parallel_desc));

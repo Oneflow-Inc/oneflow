@@ -39,15 +39,11 @@ Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
                        *CHECK_JUST(UniqueStr("hierarchical_parallel_cast")))
                  .Input("in")
                  .Output("out")
-                 .Attr<std::vector<std::string>>("nd_sbp",
-                                                 *JUST(GetDualNdSbpStrList(nd_sbp)))
+                 .Attr<std::vector<std::string>>("nd_sbp", *JUST(GetDualNdSbpStrList(nd_sbp)))
                  .Attr<std::string>("grad_mode", "restore")
-                 .Attr<std::vector<std::string>>("grad_nd_sbp",
-                                                 std::vector<std::string>())
+                 .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
                  .Build());
-    iter = nd_sbp2hierarchical_parallel_cast_op_expr
-               .emplace(nd_sbp, op_expr)
-               .first;
+    iter = nd_sbp2hierarchical_parallel_cast_op_expr.emplace(nd_sbp, op_expr).first;
   }
   return iter->second;
 }
@@ -75,8 +71,7 @@ class HerarchicalParallelCast
 
   Maybe<void> Apply(const HerarchicalParallelCastOpExprInterpState* ctx,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override {
-    const auto& grad_op =
-        JUST(FindOrCreatHierarchicalParallelCastOpExpr(ctx->nd_sbp));
+    const auto& grad_op = JUST(FindOrCreatHierarchicalParallelCastOpExpr(ctx->nd_sbp));
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     in_grads->at(0) = out_grads.at(0);

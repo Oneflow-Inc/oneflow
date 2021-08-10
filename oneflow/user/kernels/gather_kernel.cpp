@@ -76,9 +76,8 @@ class GatherKernel final : public user_op::OpKernel {
                                 ctx->ParallelDistribution4ArgNameAndIndex("indices", 0),
                                 ctx->ParallelDistribution4ArgNameAndIndex("out", 0));
       const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("in", 0);
-      TensorSliceView view = GetTensorSliceView4ParallelId(hierarchy, in_nd_sbp,
-                                                           in_logical_desc->shape(),
-                                                           ctx->parallel_ctx().parallel_id());
+      TensorSliceView view = GetTensorSliceView4ParallelId(
+          hierarchy, in_nd_sbp, in_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
       return std::make_shared<GatherOpKernelState>(view.At(axis).begin(), view.At(axis).end());
     } else {
       return std::shared_ptr<OpKernelState>(nullptr);

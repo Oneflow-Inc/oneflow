@@ -57,11 +57,9 @@ std::string ParallelDistributionToString(const cfg::ParallelDistribution& nd_sbp
   const int64_t num_axes = nd_sbp.sbp_parallel_size();
   serialized_nd_sbp += "[";
   for (int64_t i = 0; i < num_axes - 1; ++i) {
-    serialized_nd_sbp +=
-        SbpParallelToString(nd_sbp.sbp_parallel(i)) + " ";
+    serialized_nd_sbp += SbpParallelToString(nd_sbp.sbp_parallel(i)) + " ";
   }
-  serialized_nd_sbp +=
-      SbpParallelToString(nd_sbp.sbp_parallel(num_axes - 1)) + "]";
+  serialized_nd_sbp += SbpParallelToString(nd_sbp.sbp_parallel(num_axes - 1)) + "]";
   return serialized_nd_sbp;
 }
 
@@ -152,8 +150,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
             });
 }
 
-bool ParallelDistributionAllSameSplitParallel(
-    const cfg::ParallelDistribution& nd_sbp) {
+bool ParallelDistributionAllSameSplitParallel(const cfg::ParallelDistribution& nd_sbp) {
   CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
   const cfg::SbpParallel& first_sbp = nd_sbp.sbp_parallel(0);
   if (!first_sbp.has_split_parallel()) { return false; }
@@ -351,18 +348,17 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   ParallelDesc dst_parallel_desc = dst_node->parallel_desc();
   cfg::ParallelDistribution src_nd_sbp;
   cfg::ParallelDistribution dst_nd_sbp;
-  InOutParallelDimReduce(
-      src_node->parallel_desc(), dst_node->parallel_desc(), src_node->ParallelDistribution4Lbi(lbi),
-      dst_node->ParallelDistribution4Lbi(lbi), &src_parallel_desc, &dst_parallel_desc,
-      &src_nd_sbp, &dst_nd_sbp);
+  InOutParallelDimReduce(src_node->parallel_desc(), dst_node->parallel_desc(),
+                         src_node->ParallelDistribution4Lbi(lbi),
+                         dst_node->ParallelDistribution4Lbi(lbi), &src_parallel_desc,
+                         &dst_parallel_desc, &src_nd_sbp, &dst_nd_sbp);
 
   const int64_t parallel_num = src_parallel_desc.parallel_num();
   CHECK_EQ(parallel_num, dst_parallel_desc.parallel_num());
   const std::shared_ptr<Shape> src_hierarchy = src_parallel_desc.hierarchy();
   const std::shared_ptr<Shape> dst_hierarchy = dst_parallel_desc.hierarchy();
 
-  if ((*src_hierarchy) == (*dst_hierarchy)
-      && src_nd_sbp == dst_nd_sbp) {
+  if ((*src_hierarchy) == (*dst_hierarchy) && src_nd_sbp == dst_nd_sbp) {
     // one to one
     return false;
   }
@@ -373,20 +369,16 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   CHECK_GT(logical_blob_desc.shape().NumAxes(), 0);
 
   if (src_hierarchy->NumAxes() == 1 && dst_hierarchy->NumAxes() == 1) {
-    return TryBuildNcclBy1DHierarchy(ret, src_nd_sbp.sbp_parallel(0),
-                                     dst_nd_sbp.sbp_parallel(0), lbn,
-                                     scope_symbol_id, logical_blob_desc, parallel_num);
+    return TryBuildNcclBy1DHierarchy(ret, src_nd_sbp.sbp_parallel(0), dst_nd_sbp.sbp_parallel(0),
+                                     lbn, scope_symbol_id, logical_blob_desc, parallel_num);
   } else if (src_hierarchy->NumAxes() == 2 && (*src_hierarchy == *dst_hierarchy)) {
     if (src_nd_sbp.sbp_parallel(0) == dst_nd_sbp.sbp_parallel(0)) {
-      return TryBuildNcclBy2DHierarchySameDim0(ret, src_nd_sbp,
-                                               dst_nd_sbp, src_hierarchy, lbn,
+      return TryBuildNcclBy2DHierarchySameDim0(ret, src_nd_sbp, dst_nd_sbp, src_hierarchy, lbn,
                                                scope_symbol_id, logical_blob_desc);
-    } else if (src_nd_sbp.sbp_parallel(1)
-               == dst_nd_sbp.sbp_parallel(1)) {
+    } else if (src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1)) {
       if (!(ParallelDistributionAllSameSplitParallel(src_nd_sbp)
             || ParallelDistributionAllSameSplitParallel(dst_nd_sbp))) {
-        return TryBuildNcclBy2DHierarchySameDim1(ret, src_nd_sbp,
-                                                 dst_nd_sbp, src_hierarchy, lbn,
+        return TryBuildNcclBy2DHierarchySameDim1(ret, src_nd_sbp, dst_nd_sbp, src_hierarchy, lbn,
                                                  scope_symbol_id, logical_blob_desc);
       }
     }

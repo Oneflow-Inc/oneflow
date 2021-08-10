@@ -53,12 +53,10 @@ class ModelSaveOp final : public Operator {
       broadcast_distribution.add_sbp_parallel()->mutable_broadcast_parallel();
     }
     for (const std::string& ibn : input_bns()) {
-      (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[ibn] =
-          broadcast_distribution;
+      (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[ibn] = broadcast_distribution;
     }
     for (const std::string& obn : output_bns()) {
-      (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[obn] =
-          broadcast_distribution;
+      (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[obn] = broadcast_distribution;
     }
     return Maybe<void>::Ok();
   }

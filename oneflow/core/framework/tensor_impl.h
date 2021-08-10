@@ -132,12 +132,9 @@ class ConsistentTensorImpl : public TensorImpl {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape_ptr(); }
   DataType dtype() const override { return tensor_meta_->dtype(); }
-  Symbol<cfg::ParallelDistribution> nd_sbp() const {
-    return tensor_meta_->nd_sbp();
-  }
+  Symbol<cfg::ParallelDistribution> nd_sbp() const { return tensor_meta_->nd_sbp(); }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
-  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint()
-      const {
+  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint() const {
     return consumer_nd_sbp_constraint_;
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
