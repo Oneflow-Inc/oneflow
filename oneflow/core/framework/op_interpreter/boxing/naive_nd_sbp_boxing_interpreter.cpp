@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -34,11 +35,11 @@ Maybe<one::OpExpr> MakeToConsistentOpExpr() {
 static constexpr auto* GetLocalToConsistentOpExpr = DECORATE(&MakeToConsistentOpExpr, ThreadLocal);
 
 Maybe<one::Tensor> ReinterpterConsistentTensor(
-    const std::shared_ptr<one::Tensor>& tensor, Symbol<ParallelDesc> parallel_desc,
-    Symbol<cfg::ParallelDistribution> parallel_distribution) {
+    const std::shared_ptr<one::Tensor>& tensor, const Shape& shape,
+    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution) {
   const auto& op = JUST(GetLocalToConsistentOpExpr());
   MutableAttrMap attrs;
-  JUST(attrs.SetAttr<Shape>("shape", *tensor->shape()));
+  JUST(attrs.SetAttr<Shape>("shape", shape));
   JUST(attrs.SetAttr<DataType>("dtype", tensor->dtype()));
   const auto& x = JUST(tensor->cur_rank_phy_tensor());
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(
@@ -72,13 +73,16 @@ Maybe<one::Tensor> NaiveNdSbpBoxingInterpreter::InterpretImpl(
       JUST(DecomposeIntoNaiveTransformations(tensor_meta, out_parallel_distribution));
   std::shared_ptr<one::Tensor> tensor = input;
   for (const auto& naive_transformation : *naive_transformations) {
-    tensor = JUST(ReinterpterConsistentTensor(tensor, naive_transformation.parallel_desc,
-                                              naive_transformation.src_nd_sbp));
-    tensor =
-        JUST(Apply1DBoxing(tensor, naive_transformation.src_nd_sbp, naive_transformation.dst_nd_sbp,
-                           naive_transformation.parallel_desc, naive_transformation.parallel_desc));
+    const auto& sub_tensor_meta = naive_transformation.consistent_tensor_meta;
+    tensor = JUST(ReinterpterConsistentTensor(tensor, sub_tensor_meta->shape(),
+                                              sub_tensor_meta->parallel_desc(),
+                                              sub_tensor_meta->parallel_distribution()));
+    tensor = JUST(Apply1DBoxing(tensor, sub_tensor_meta->parallel_distribution(),
+                                naive_transformation.dst_nd_sbp, sub_tensor_meta->parallel_desc(),
+                                sub_tensor_meta->parallel_desc()));
   }
-  return JUST(ReinterpterConsistentTensor(tensor, out_parallel_desc, out_parallel_distribution));
+  return JUST(ReinterpterConsistentTensor(tensor, *input->shape(), out_parallel_desc,
+                                          out_parallel_distribution));
 }
 
 }  // namespace oneflow

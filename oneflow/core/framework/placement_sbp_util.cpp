@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
@@ -95,8 +96,9 @@ Maybe<Symbol<std::vector<int>>> CalcAxis2IsBroadcast(
 static auto* GetAxis2IsBroadcast = DECORATE(&CalcAxis2IsBroadcast, ThreadLocal);
 
 Maybe<Symbol<ParallelDesc>> CalcSelectedSubParallelDesc(Symbol<ParallelDesc> parallel_desc,
-                                                        Symbol<std::vector<int>> axis2is_selected,
-                                                        int64_t parallel_id) {
+                                                        Symbol<std::vector<int>> axis2is_selected) {
+  const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+  int64_t parallel_id = JUST(opt_parallel_id->value());
   const auto& hierarchy_shape = *parallel_desc->hierarchy();
   const auto& broadcast_parallel_ids =
       JUST(GetSelectedParallelIds(hierarchy_shape, *axis2is_selected, parallel_id));
@@ -146,11 +148,8 @@ Maybe<std::vector<int64_t>> GetSelectedParallelIds(const Shape& hierarchy_shape,
 
 Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
     Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  Optional<int64_t> opt_parallel_id;
-  JUST(GetDevice4CurrentProcessCtx(parallel_desc, &opt_parallel_id));
-  int64_t parallel_id = JUST(opt_parallel_id.value());
   const auto& axis2is_selected = JUST(GetAxis2IsBroadcast(parallel_distribution));
-  return GetSelectedSubParallelDesc(parallel_desc, axis2is_selected, parallel_id);
+  return GetSelectedSubParallelDesc(parallel_desc, axis2is_selected);
 }
 
 namespace {
@@ -476,9 +475,47 @@ std::string GetCyclicBoxingDebugString(
   return ss.str();
 }
 
-Maybe<std::vector<NaiveBoxingTransformation>> DecomposeByParallelId(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp,
-    int64_t parallel_id) {
+Maybe<Shape> GetPhysicalShape(const Shape& shape, Symbol<cfg::ParallelDistribution> nd_sbp,
+                              Symbol<ParallelDesc> parallel_desc) {
+  const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+  return GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(parallel_id->value()));
+}
+
+Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
+    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
+    Symbol<cfg::ParallelDistribution> sub_nd_sbp) {
+  const auto& physical_shape = JUST(GetPhysicalShape(
+      tensor_meta->shape(), tensor_meta->parallel_distribution(), tensor_meta->parallel_desc()));
+  const auto& logical_shape =
+      JUST(GetLogicalShape(*physical_shape, *sub_nd_sbp, *sub_parallel_desc));
+  one::ConsistentTensorMeta sub_consistent_tensor_meta(logical_shape, tensor_meta->dtype(),
+                                                       sub_nd_sbp, sub_parallel_desc);
+  return SymbolOf(sub_consistent_tensor_meta);
+}
+
+static constexpr auto* GetSubConsistentTensorMeta =
+    DECORATE(&CalcSubConsistentTensorMeta, ThreadLocal);
+
+Maybe<Symbol<cfg::ParallelDistribution>> ReplaceNdSbpComponent(
+    Symbol<cfg::ParallelDistribution> nd_sbp, int64_t axis,
+    Symbol<cfg::ParallelDistribution> component) {
+  CHECK_GE_OR_RETURN(axis, 0);
+  CHECK_LT_OR_RETURN(axis, nd_sbp->sbp_parallel_size());
+  CHECK_EQ_OR_RETURN(component->sbp_parallel_size(), 1);
+  cfg::ParallelDistribution new_nd_sbp(*nd_sbp);
+  *new_nd_sbp.mutable_sbp_parallel(axis) = component->sbp_parallel(0);
+  return SymbolOf(new_nd_sbp);
+}
+
+Maybe<Symbol<one::ConsistentTensorMeta>> ReplaceNdSbp(Symbol<one::ConsistentTensorMeta> tensor_meta,
+                                                      Symbol<cfg::ParallelDistribution> nd_sbp) {
+  one::ConsistentTensorMeta new_tensor_meta(tensor_meta->shape_ptr(), tensor_meta->dtype(), nd_sbp,
+                                            tensor_meta->parallel_desc());
+  return SymbolOf(new_tensor_meta);
+}
+
+Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
+    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp) {
   std::tie(tensor_meta, dst_nd_sbp) = *JUST(GetDecomposableEquivalent(tensor_meta, dst_nd_sbp));
   const auto& parallel_desc = tensor_meta->parallel_desc();
   const auto& src_nd_sbp = tensor_meta->parallel_distribution();
@@ -504,27 +541,23 @@ Maybe<std::vector<NaiveBoxingTransformation>> DecomposeByParallelId(
     std::vector<int> axis2selected(src_nd_sbp->sbp_parallel_size());
     axis2selected[axis] = 1;
     const auto& sub_parallel_desc =
-        JUST(GetSelectedSubParallelDesc(parallel_desc, SymbolOf(axis2selected), parallel_id));
+        JUST(GetSelectedSubParallelDesc(parallel_desc, SymbolOf(axis2selected)));
+    const auto& sub_src_nd_sbp = JUST(MakeNdSbp(src_sbp));
+    const auto& sub_dst_nd_sbp = JUST(MakeNdSbp(dst_sbp));
+    const auto& sub_consistent_tensor_meta =
+        JUST(GetSubConsistentTensorMeta(tensor_meta, sub_parallel_desc, sub_src_nd_sbp));
+    const auto& new_src_nd_sbp =
+        JUST(ReplaceNdSbpComponent(tensor_meta->parallel_distribution(), axis, sub_dst_nd_sbp));
+    tensor_meta = JUST(ReplaceNdSbp(tensor_meta, new_src_nd_sbp));
     transformations->push_back(NaiveBoxingTransformation{
-        .parallel_desc = sub_parallel_desc,
-        .src_nd_sbp = JUST(MakeNdSbp(src_sbp)),
-        .dst_nd_sbp = JUST(MakeNdSbp(dst_sbp)),
+        .consistent_tensor_meta = sub_consistent_tensor_meta,
+        .dst_nd_sbp = sub_dst_nd_sbp,
     });
   }
   return transformations;
 }
 
 }  // namespace private_details
-
-static auto* DecomposeByParallelId = DECORATE(&private_details::DecomposeByParallelId, ThreadLocal);
-
-Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp) {
-  Optional<int64_t> opt_parallel_id;
-  JUST(GetDevice4CurrentProcessCtx(tensor_meta->parallel_desc(), &opt_parallel_id));
-  int64_t parallel_id = JUST(opt_parallel_id.value());
-  return DecomposeByParallelId(tensor_meta, dst_nd_sbp, parallel_id);
-}
 
 namespace {
 

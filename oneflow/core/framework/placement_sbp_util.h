@@ -41,8 +41,7 @@ class ConsistentTensorMeta;
 // 1) src_nd_sbp.sbp_parallel_size() == 1
 // 2) dst_nd_sbp.sbp_parallel_size() == 1
 struct NaiveBoxingTransformation {
-  Symbol<ParallelDesc> parallel_desc;
-  Symbol<cfg::ParallelDistribution> src_nd_sbp;
+  Symbol<one::ConsistentTensorMeta> consistent_tensor_meta;
   Symbol<cfg::ParallelDistribution> dst_nd_sbp;
 };
 
@@ -61,9 +60,8 @@ CalcDecomposableEquivalentShapeAndNdSbpPair(const Shape& shape, const Shape& hie
 Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
     Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution);
 
-Maybe<std::vector<NaiveBoxingTransformation>> DecomposeByParallelId(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp,
-    int64_t parallel_id);
+Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
+    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp);
 
 Maybe<bool> IsNdSbpBoxingAcyclic(Symbol<cfg::ParallelDistribution> src_nd_sbp,
                                  Symbol<cfg::ParallelDistribution> dst_nd_sbp);
@@ -71,13 +69,20 @@ Maybe<bool> IsNdSbpBoxingAcyclic(Symbol<cfg::ParallelDistribution> src_nd_sbp,
 Maybe<std::vector<int64_t>> GetNdSbpValidTransformationAxisSequence(
     Symbol<cfg::ParallelDistribution> src_nd_sbp, Symbol<cfg::ParallelDistribution> dst_nd_sbp);
 
+Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
+    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
+    Symbol<cfg::ParallelDistribution> sub_nd_sbp);
+
 }  // namespace private_details
+
+static constexpr auto* GetSubConsistentTensorMeta =
+    DECORATE(&private_details::CalcSubConsistentTensorMeta, ThreadLocal);
 
 static constexpr auto* GetBroadcastSubParallelDesc =
     DECORATE(&private_details::GetBroadcastSubParallelDesc, ThreadLocal);
 
-Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp);
+static constexpr auto* DecomposeIntoNaiveTransformations =
+    DECORATE(&private_details::DecomposeIntoNaiveTransformations, ThreadLocal);
 
 Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroup(
     Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc);

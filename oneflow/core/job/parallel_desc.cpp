@@ -183,6 +183,22 @@ Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_
   return device_iter->second;
 }
 
+namespace private_details {
+
+Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  int64_t parallel_id = -1;
+  if (parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id)) {
+    return Optional<int64_t>(parallel_id);
+  } else {
+    return Optional<int64_t>();
+  }
+}
+
+}  // namespace private_details
+
 bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,
                                     int64_t* parallel_id) const {
   const auto& machine_iter = machine_id2device_id2parallel_id_.find(machine_id);

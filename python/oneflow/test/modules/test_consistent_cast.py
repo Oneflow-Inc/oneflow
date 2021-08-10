@@ -69,6 +69,30 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
             np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32) * 2)
         )
 
+    def _test_local_to_consistent_ps0_2_s0s0(test_case):
+        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = x * int(os.getenv("RANK"))
+        placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+        sbp = (flow.sbp.partial_sum, flow.sbp.split(0))
+        y = x.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
+        sbp = (flow.sbp.split(0), flow.sbp.split(0))
+        y = y.to_consistent(sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
+        z = y.to_local()
+        if int(os.getenv("RANK")) < 2:
+            scale = 2
+        else:
+            scale = 4
+        test_case.assertTrue(
+            np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * scale)
+        )
 
 @flow.unittest.skip_unless_1n2d()
 class TestConsistentCastModule_1n2d(flow.unittest.TestCase):

@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
@@ -260,6 +261,7 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(FindOrCreatEagerNcclBroadcastOpExpr(broadcast_parallel_desc));
   if (JUST(broadcast_parallel_desc->MachineId4ParallelId(0)) == GlobalProcessCtx::Rank()) {
+    // inplace.
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
                                 one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
@@ -268,6 +270,27 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
   }
+}
+
+Maybe<Shape> CalcPhysicalShape(Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
+  const auto& opt_parallel_id =
+      JUST(GetParallelId4CurrentProcessCtx(consistent_tensor_meta->parallel_desc()));
+  int64_t parallel_id = JUST(opt_parallel_id->value());
+  return GetPhysicalShape(consistent_tensor_meta->shape(),
+                          *consistent_tensor_meta->parallel_distribution(),
+                          *consistent_tensor_meta->parallel_desc(), parallel_id);
+}
+
+static constexpr auto* GetPhysicalShape = DECORATE(&CalcPhysicalShape, ThreadLocal);
+
+Maybe<Tensor> TryReshapeTensor(const std::shared_ptr<Tensor>& tensor,
+                               Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
+  CHECK_OR_RETURN(tensor->is_local());
+  const auto& physical_shape = JUST(GetPhysicalShape(consistent_tensor_meta));
+  if (*physical_shape == *tensor->shape()) { return tensor; }
+  CHECK_EQ_OR_RETURN(physical_shape->elem_cnt(), tensor->shape()->elem_cnt());
+  // TODO(lixinqi) inplace reshape.
+  return tensor;
 }
 
 }  // namespace
@@ -306,8 +329,9 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
     JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
       if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
-      const auto& synced_tensor = JUST(
-          GetSyncedTensorIfBroadcast(input_mirrored_tensor, parallel_desc, parallel_distribution));
+      const auto& reshaped_tensor = JUST(TryReshapeTensor(input_mirrored_tensor, tensor_meta));
+      const auto& synced_tensor =
+          JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, parallel_distribution));
       CHECK_EQ_OR_RETURN(dtype, input_mirrored_tensor->dtype());
       consistent_tensor_impl->reset_cur_rank_phy_tensor(
           std::dynamic_pointer_cast<MirroredTensor>(synced_tensor));
