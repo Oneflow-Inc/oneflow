@@ -26,13 +26,11 @@ namespace oneflow {
 namespace one {
 
 class StatefulLocalOpKernel;
-class ConsistentTensorMeta;
+class ConsistentTensorInferResult;
 
 using EagerBlobObjectList = std::vector<std::shared_ptr<vm::EagerBlobObject>>;
 using EagerBlobObjectListPtr =
     std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
-using ConsistentTensorMetaListPtr =
-    std::shared_ptr<const std::vector<Symbol<ConsistentTensorMeta>>>;
 
 }  // namespace one
 
@@ -53,15 +51,13 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   LocalCallOpKernelPhyInstrOperand(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
-      const one::ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-      const one::ConsistentTensorMetaListPtr& output_consistent_tensor_metas,
+      const std::shared_ptr<const one::ConsistentTensorInferResult> &consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx_,
       const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
       : opkernel_(opkernel),
         inputs_(inputs),
         outputs_(outputs),
-        input_consistent_tensor_metas_(input_consistent_tensor_metas),
-        output_consistent_tensor_metas_(output_consistent_tensor_metas),
+        consistent_tensor_infer_result_(consistent_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx_),
         dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {}
 
@@ -98,19 +94,16 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
   void set_user_opkernel(const user_op::OpKernel* user_opkernel) { user_opkernel_ = user_opkernel; }
 
-  one::ConsistentTensorMetaListPtr input_consistent_tensor_metas() const {
-    return input_consistent_tensor_metas_;
-  }
-  one::ConsistentTensorMetaListPtr output_consistent_tensor_metas() const {
-    return output_consistent_tensor_metas_;
+  const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
+      const {
+    return consistent_tensor_infer_result_;
   }
 
  private:
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   one::EagerBlobObjectListPtr inputs_;
   one::EagerBlobObjectListPtr outputs_;
-  one::ConsistentTensorMetaListPtr input_consistent_tensor_metas_;
-  one::ConsistentTensorMetaListPtr output_consistent_tensor_metas_;
+  std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
   const user_op::OpKernel* user_opkernel_;
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;

@@ -41,13 +41,12 @@ class LocalUserKernelCreateContext;
 class LocalUserKernelInitContext;
 class LocalUserOpInferContext;
 
+class ConsistentTensorInferResult;
+
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 using EagerBlobObjectListPtr =
     std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
-
-using ConsistentTensorMetaListPtr =
-    std::shared_ptr<const std::vector<Symbol<ConsistentTensorMeta>>>;
 
 class EagerBlobObjectTensorView final : public user_op::Tensor {
  public:
@@ -158,23 +157,14 @@ class ZeroCopyBaseContext {
   const ConsistentTensorMetaTensorDescView* ConsistentTensorMetaView4ArgNameAndIndex(
       const std::string& arg_name, const int32_t index) const;
 
-  Optional<Symbol<ParallelDesc>> parallel_desc() const {
-    if (input_consistent_tensor_metas_ != nullptr && !input_consistent_tensor_metas_->empty()) {
-      return input_consistent_tensor_metas_->at(0)->parallel_desc();
-    } else if (output_consistent_tensor_metas_) {
-      CHECK(!output_consistent_tensor_metas_->empty());
-      return output_consistent_tensor_metas_->at(0)->parallel_desc();
-    } else {
-      return Optional<Symbol<ParallelDesc>>();
-    }
-  }
+  Optional<Symbol<ParallelDesc>> parallel_desc() const;
 
   const ArgVec& inputs() const { return input_arg_tuple_->indexed_arg_name_and_index(); }
   const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
 
-  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-              const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-              const ConsistentTensorMetaListPtr& output_consistent_tensor_metas);
+  void Update(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result);
 
  private:
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
@@ -186,8 +176,7 @@ class ZeroCopyBaseContext {
   std::unique_ptr<EagerBlobObjectTensorView> tmp_buffer_view_;
   EagerBlobObjectListPtr input_tensors_;
   EagerBlobObjectListPtr output_tensors_;
-  ConsistentTensorMetaListPtr input_consistent_tensor_metas_;
-  ConsistentTensorMetaListPtr output_consistent_tensor_metas_;
+  std::shared_ptr<const ConsistentTensorInferResult> consistent_tensor_infer_result_;
   std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
       input_consistent_tensor_meta_views_;
   std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
@@ -300,9 +289,9 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return 1; }
 
-  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-              const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-              const ConsistentTensorMetaListPtr& output_consistent_tensor_metas);
+  void Update(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result);
 
   const std::string& input(const std::string& arg_name, int32_t index) const override {
     return user_op_conf().input(arg_name, index);
@@ -377,10 +366,10 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   const ArgVec& inputs() const override { return base_ctx_.inputs(); };
   const ArgVec& outputs() const override { return base_ctx_.outputs(); };
 
-  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-              const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-              const ConsistentTensorMetaListPtr& output_consistent_tensor_metas,
-              DeviceCtx* device_ctx);
+  void Update(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      DeviceCtx* device_ctx);
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
@@ -442,18 +431,17 @@ class StatefulLocalOpKernel final {
   StatefulLocalOpKernel() = default;
   LocalUserKernelComputeContext* UpdateComputeContext(
       const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-      const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-      const ConsistentTensorMetaListPtr& output_consistent_tensor_metas, DeviceCtx* device_ctx);
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      DeviceCtx* device_ctx);
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  void TryInitOpKernelState(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
-                            const EagerBlobObjectListPtr& inputs,
-                            const EagerBlobObjectListPtr& outputs,
-                            const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-                            const ConsistentTensorMetaListPtr& output_consistent_tensor_metas,
-                            user_op::OpKernelState** state);
+  void TryInitOpKernelState(
+      const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      user_op::OpKernelState** state);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 
@@ -465,8 +453,7 @@ class StatefulLocalOpKernel final {
 
   Maybe<const user_op::OpKernel*> ChooseOpKernel(
       const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-      const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-      const ConsistentTensorMetaListPtr& output_consistent_tensor_metas);
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result);
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 

@@ -23,25 +23,10 @@ limitations under the License.
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 
 namespace oneflow {
 namespace one {
-
-template<class T>
-class InputAndOutputListScope {
- public:
-  InputAndOutputListScope(T* ctx, const EagerBlobObjectListPtr& inputs,
-                          const EagerBlobObjectListPtr& outputs,
-                          const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-                          const ConsistentTensorMetaListPtr& output_consistent_tensor_metas) {
-    ctx_ = ctx;
-    ctx_->Update(inputs, outputs, input_consistent_tensor_metas, output_consistent_tensor_metas);
-  }
-  ~InputAndOutputListScope() { ctx_->Update(nullptr, nullptr, nullptr, nullptr); }
-
- private:
-  T* ctx_;
-};
 
 int32_t TryGetTensorTupleIndex(const std::unordered_map<std::string, std::vector<int32_t>>&
                                    arg_name2bn_index2tensor_tuple_index,
@@ -67,7 +52,7 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& 
     input_consistent_tensor_meta_views_.push_back(
         std::make_unique<ConsistentTensorMetaTensorDescView>(
             [this, i]() -> Symbol<ConsistentTensorMeta> {
-              return CHECK_NOTNULL(input_consistent_tensor_metas_)->at(i);
+              return CHECK_NOTNULL(consistent_tensor_infer_result_)->input_tensor_metas().at(i);
             }));
   }
   for (int i = 0; i < output_arg_tuple->size(); i++) {
@@ -78,7 +63,7 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& 
     output_consistent_tensor_meta_views_.push_back(
         std::make_unique<ConsistentTensorMetaTensorDescView>(
             [this, i]() -> Symbol<ConsistentTensorMeta> {
-              return CHECK_NOTNULL(output_consistent_tensor_metas_)->at(i);
+              return CHECK_NOTNULL(consistent_tensor_infer_result_)->output_tensor_metas().at(i);
             }));
   }
   if (tmp_buffer != nullptr) {
@@ -88,12 +73,22 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& 
 
 void ZeroCopyBaseContext::Update(
     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-    const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-    const ConsistentTensorMetaListPtr& output_consistent_tensor_metas) {
+    const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result) {
   input_tensors_ = inputs;
   output_tensors_ = outputs;
-  input_consistent_tensor_metas_ = input_consistent_tensor_metas;
-  output_consistent_tensor_metas_ = output_consistent_tensor_metas;
+  consistent_tensor_infer_result_ = consistent_tensor_infer_result;
+}
+
+Optional<Symbol<ParallelDesc>> ZeroCopyBaseContext::parallel_desc() const {
+  if (!consistent_tensor_infer_result_) { return Optional<Symbol<ParallelDesc>>(); }
+  if (!consistent_tensor_infer_result_->input_tensor_metas().empty()) {
+    return consistent_tensor_infer_result_->input_tensor_metas().at(0)->parallel_desc();
+  } else if (!consistent_tensor_infer_result_->output_tensor_metas().empty()) {
+    return consistent_tensor_infer_result_->output_tensor_metas().at(0)->parallel_desc();
+  } else {
+    UNIMPLEMENTED();
+    return Optional<Symbol<ParallelDesc>>();
+  }
 }
 
 #define RETURN_IF_FOUND(inputs, outputs, post_action)                                             \
@@ -119,7 +114,8 @@ user_op::Tensor* ZeroCopyBaseContext::Tensor4ArgNameAndIndex(const std::string& 
 
 const ConsistentTensorMeta* ZeroCopyBaseContext::ConsistentTensorMeta4ArgNameAndIndex(
     const std::string& arg_name, const int32_t index) const {
-  RETURN_IF_FOUND(*input_consistent_tensor_metas_, *output_consistent_tensor_metas_,
+  RETURN_IF_FOUND(consistent_tensor_infer_result_->input_tensor_metas(),
+                  consistent_tensor_infer_result_->output_tensor_metas(),
                   .shared_from_symbol().get());
   return nullptr;
 }
@@ -160,8 +156,7 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const std::string& device_tag() const override { return base_ctx_.device_tag(); }
   const ParallelContext& parallel_ctx() const override {
-    return *GetParallelContext4CurrentProcessCtx(
-        CHECK_JUST(base_ctx_.parallel_desc().value()));
+    return *GetParallelContext4CurrentProcessCtx(CHECK_JUST(base_ctx_.parallel_desc().value()));
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -170,11 +165,10 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
-  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-              const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-              const ConsistentTensorMetaListPtr& output_consistent_tensor_metas) {
-    base_ctx_.Update(inputs, outputs, input_consistent_tensor_metas,
-                     output_consistent_tensor_metas);
+  void Update(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result) {
+    base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
@@ -215,15 +209,13 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
       const std::shared_ptr<const ArgTuple>& input_arg_tuple,
       const std::shared_ptr<const ArgTuple>& output_arg_tuple, const EagerBlobObjectListPtr& inputs,
       const EagerBlobObjectListPtr& outputs,
-      const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-      const ConsistentTensorMetaListPtr& output_consistent_tensor_metas,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const ComposedAttrMap* composed_attrs)
       : user_op_conf_(user_op_conf),
         device_ctx_(device_ctx),
         base_ctx_(device_tag, input_arg_tuple, output_arg_tuple),
         composed_attrs_(composed_attrs) {
-    base_ctx_.Update(inputs, outputs, input_consistent_tensor_metas,
-                     output_consistent_tensor_metas);
+    base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
   }
   ~LocalUserKernelInitContext() override = default;
 
@@ -297,10 +289,8 @@ user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
 
 void LocalUserOpInferContext::Update(
     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-    const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-    const ConsistentTensorMetaListPtr& output_consistent_tensor_metas) {
-  zero_copy_base_ctx_.Update(inputs, outputs, input_consistent_tensor_metas,
-                             output_consistent_tensor_metas);
+    const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result) {
+  zero_copy_base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
 }
 
 LocalUserKernelComputeContext::LocalUserKernelComputeContext(
@@ -315,10 +305,9 @@ LocalUserKernelComputeContext::LocalUserKernelComputeContext(
 
 void LocalUserKernelComputeContext::Update(
     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-    const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-    const ConsistentTensorMetaListPtr& output_consistent_tensor_metas, DeviceCtx* device_ctx) {
+    const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result, DeviceCtx* device_ctx) {
   device_ctx_ = device_ctx;
-  base_ctx_.Update(inputs, outputs, input_consistent_tensor_metas, output_consistent_tensor_metas);
+  base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
 }
 
 Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>& op_conf,
@@ -445,11 +434,9 @@ StatefulLocalOpKernel::~StatefulLocalOpKernel() = default;
 
 Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-    const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-    const ConsistentTensorMetaListPtr& output_consistent_tensor_metas) {
-  InputAndOutputListScope<LocalUserKernelRegContext> reg_ctx_scope(reg_ctx_.get(), inputs, outputs,
-                                                                   input_consistent_tensor_metas,
-                                                                   output_consistent_tensor_metas);
+    const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result) {
+  reg_ctx_->Update(inputs, outputs, consistent_tensor_infer_result);
+
   const auto& op_type_name = user_op_conf_->op_type_name();
   const auto* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
@@ -463,14 +450,14 @@ Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
 
   infer_tmp_size_fn_map_.emplace(kernel, &kernel_reg_val->infer_tmp_size_fn);
 
+  reg_ctx_->Update(nullptr, nullptr, nullptr);
   return kernel;
 }
 
 void StatefulLocalOpKernel::TryInitOpKernelState(
     const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, const EagerBlobObjectListPtr& inputs,
     const EagerBlobObjectListPtr& outputs,
-    const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-    const ConsistentTensorMetaListPtr& output_consistent_tensor_metas,
+    const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
     user_op::OpKernelState** state) {
   auto it = op_kernel_state_map_.find(op_kernel);
   if (it != op_kernel_state_map_.end()) {
@@ -480,8 +467,7 @@ void StatefulLocalOpKernel::TryInitOpKernelState(
 
   auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
       device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
-      inputs, outputs, input_consistent_tensor_metas, output_consistent_tensor_metas,
-      composed_attrs_for_scheduler_thread());
+      inputs, outputs, consistent_tensor_infer_result, composed_attrs_for_scheduler_thread());
   auto created_state = op_kernel->CreateOpKernelState(init_ctx.get());
   op_kernel_state_map_.emplace(op_kernel, created_state);
   *state = created_state.get();
@@ -506,10 +492,9 @@ user_op::DataTypeInferFn StatefulLocalOpKernel::DataTypeInferFn() const {
 
 LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(
     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-    const ConsistentTensorMetaListPtr& input_consistent_tensor_metas,
-    const ConsistentTensorMetaListPtr& output_consistent_tensor_metas, DeviceCtx* device_ctx) {
-  compute_ctx_->Update(inputs, outputs, input_consistent_tensor_metas,
-                       output_consistent_tensor_metas, device_ctx);
+    const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
+    DeviceCtx* device_ctx) {
+  compute_ctx_->Update(inputs, outputs, consistent_tensor_infer_result, device_ctx);
   return compute_ctx_.get();
 }
 
