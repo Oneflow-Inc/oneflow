@@ -45,6 +45,9 @@ struct PoolingInterpState : public OpExprInterpState {
 class PoolingNdGrad : public OpExprGradFunction<PoolingInterpState> {
  public:
   virtual ~PoolingNdGrad() = default;
+
+  using OpExprGradFunction<PoolingInterpState>::Init;
+
   Maybe<void> Init(const OpExpr& op, const std::string& mode);
   Maybe<void> Capture(PoolingInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
