@@ -939,7 +939,8 @@
   bind_python: True
 
 - name: "consistent_rand"
-  signature: "Tensor ConsistentRandFunctor(*, Shape shape, DataType dtype, Placement placement, SbpList sbp_tuple, Generator generator=None)"
+  signature: "Tensor ConsistentRandFunctor(*, Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None,
+              Generator generator=None)"
 
 - name: "randn"
   signature: "Tensor RandN(*, Shape shape, DataType dtype=None, Device device=None, 

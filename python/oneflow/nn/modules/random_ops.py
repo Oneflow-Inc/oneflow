@@ -57,6 +57,33 @@ def bernoulli(input, *, generator=None, out=None):
     """
     return flow.F.bernoulli(input, flow.float32, generator)
 
+def common_process(
+    size,
+    generator=None,
+    placement=None,
+    sbp=None):
+    assert size is not None, "shape must not be None!"
+    assert isinstance(
+        size, (int, tuple, list, flow.Size)
+    ), "shape should be int or tuple int!"
+    if isinstance(self.device, str):
+        device = flow.device(self.device)
+    size = _single(size)
+
+    if generator is None:
+        generator = flow.Generator()
+    if placement is not None:
+        assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+        if isinstance(sbp, flow.sbp.sbp):
+            sbp = (sbp,)
+        else:
+            for elem in sbp:
+                assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+        assert len(sbp) == len(placement.hierarchy)
+    else:
+        assert sbp is None, "sbp: %s" % sbp
+    return size, generator, placement, sbp
+
 class Rand(Module):
     def __init__(
         self,
@@ -70,48 +97,15 @@ class Rand(Module):
         requires_grad=False,
     ) -> None:
         super().__init__()
-        # TODO: make shape process as a util
-        assert size is not None, "shape must not be None!"
-        assert isinstance(
-            size, (int, tuple, list, flow.Size)
-        ), "shape should be int or tuple int!"
-        self.device = device
-        if isinstance(self.device, str):
-            self.device = flow.device(self.device)
         self.requires_grad = requires_grad
-        size = _single(size)
-        if dtype is None:
-            dtype = flow.float32
-        if dtype not in [flow.float, flow.double]:
-            raise NotImplementedError("Do not support such data type: {}".format(dtype))
-
-        if generator is None:
-            generator = flow.default_generator()
-        self.generator = generator
-        if placement is None:
-            if device is None:
-                self.device = flow.device("cpu")
-        else:
-            assert device is None
-        self.placement = placement
-        self.sbp = sbp
-        if placement is not None:
-            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
-            if isinstance(self.sbp, flow.sbp.sbp):
-                self.sbp = (self.sbp,)
-            else:
-                for elem in sbp:
-                    assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-            assert len(self.sbp) == len(placement.hierarchy)
-        else:
-            assert sbp is None, "sbp: %s" % sbp
-        self.size = size
+        self.device = device
+        self.size, self.generator, self.placement, self.sbp = common_process(size, generator, placement, sbp)
         self.dtype = dtype
 
     def forward(self):
         if self.placement is not None:
             res = flow.F.consistent_rand(
-                self.size, self.dtype, self.placement, self.sbp, self.generator
+                self.size, self.placement, self.sbp, self.dtype, self.generator
             )
         else:
             res = flow.F.rand(self.size, self.dtype, self.device, self.generator)
@@ -142,7 +136,7 @@ def rand_op(
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         layout (optional): The desired layout of returned Tensor.
         generator (flow.Generator, optional) – a pseudorandom number generator for sampling
-        device (torch.device, optional): The desired device of returned local tensor. If None, uses the
+        device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
         placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
           construct local tensor.
@@ -156,10 +150,8 @@ def rand_op(
 
         >>> import oneflow as flow
         >>> x = flow.rand(3,3)
-        >>> print(x)
-        tensor([[0.5187, 0.4725, 0.974 ],
-                [0.2193, 0.6767, 0.2337],
-                [0.1863, 0.5853, 0.4277]], dtype=oneflow.float32)
+        >>> x.shape
+        flow.Size([3, 3])
         >>> x.is_consistent
         False
         >>> placement = flow.placement("cpu", {0: [0]})
@@ -247,7 +239,7 @@ def randn_op(
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         layout (optional): The desired layout of returned Tensor.
         generator (flow.Generator, optional) – a pseudorandom number generator for sampling
-        device (torch.device, optional): The desired device of returned local tensor. If None, uses the
+        device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
         placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
           construct local tensor.

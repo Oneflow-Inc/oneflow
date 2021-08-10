@@ -74,12 +74,20 @@ class BernoulliFunctor {
 class RandFunctor {
  public:
   RandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Optional<DataType>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator) const {
+    DataType dtype_val = DataType::kFloat;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype.value());
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+      }
+    }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
 
     std::shared_ptr<one::Generator> gen;
     if (!generator) {
@@ -113,9 +121,17 @@ class ConsistentRandFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                            const Optional<one::Generator>& generator) const {
+    DataType dtype_val = DataType::kFloat;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype.value());
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+      }
+    }
+    
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
 
     std::shared_ptr<one::Generator> gen;
     if (!generator) {
@@ -128,29 +144,13 @@ class ConsistentRandFunctor {
 
     const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
 
-    const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
+    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
     if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
       JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
     }
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {},
-        OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
-  }
-
-  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
-      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
-                                 Symbol<cfg::ParallelDistribution>>
-        map;
-    auto iter = map.find(sbp_tuple);
-    if (iter == map.end()) {
-      cfg::ParallelDistribution parallel_distribution;
-      for (const auto& sbp_parallel : sbp_tuple) {
-        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
-      }
-      iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
-    }
-    return iter->second;
+        OpExprInterpContext(attrs, placement, parallel_distribution, normal_kernel_state));
   }
 
  private:
