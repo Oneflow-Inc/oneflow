@@ -20,37 +20,25 @@ import numpy as np
 from automated_test_util import *
 from test_util import GenArgList
 import oneflow as flow
-#import torch
 
-def _test_onehot(test_case, device, depth):
+def _test_onehot(test_case, device, num_classes):
     input1 = flow.Tensor(np.arange(1, 9).reshape((1, 2, 4)), device=flow.device(device) ,dtype=flow.int64)
-    output = flow.one_hot(input1, depth=depth)
+    output = flow.one_hot(input1, num_classes=num_classes)
     input2 = torch.arange(1, 9).reshape((1, 2, 4))
-    np_out = torch.nn.functional.one_hot(input2, depth)
+    np_out = torch.nn.functional.one_hot(input2, num_classes)
     test_case.assertTrue(np.array_equal(output.numpy(), np_out.numpy()))
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestOnehot(flow.unittest.TestCase):
-    """
-    def test_onehot(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_onehot,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["depth"] = [-1,10]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-    """
-    
+
     @autotest(auto_backward=False)
     def test_one_hot_with_random_data(test_case):
         device = random_device()
         hight = random(1, 6).to(int)
         input = random_pytorch_tensor(high = hight, dtype = int).to(device)
-        num_class = random(low = hight + 1, high = hight + 6).to(int).value()
-        y = torch.nn.functional.one_hot(input, num_class)
+        num_classes = random(low = hight + 1, high = hight + 6).to(int).value()
+        y = torch.nn.functional.one_hot(input, num_classes=num_classes)
         return y
     
 

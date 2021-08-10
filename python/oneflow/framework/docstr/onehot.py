@@ -13,25 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Union
-from typing import Optional
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-
-
-def one_hot(
-    input, 
-    num_classes=-1,
-):
-    """This operator generates a onehot Blob from input Blob.
+add_docstr(
+    oneflow.F.one_hot,
+    r"""
+    one_hot(input, num_classes=-1)
+    This operator generates a onehot Blob from input Blob.
 
     If input Blob's rank is `N`, the corresponding onehot Blob's rank is `N+1`.
 
     Args:
         input (Tensor): The input Tensor.
         num_classes (int): The length of onehot Blob.
-         
+ 
     Note:
 
         The data type of input blob should be `int32` or `int64`.
@@ -54,13 +50,5 @@ def one_hot(
                 [0, 1, 0, 0, 0],
                 [0, 0, 1, 0, 0]], dtype=oneflow.int64)
     
-    """
-    if num_classes == -1:
-        num_classes = (flow.max(input) + 1).numpy()
-    return flow.F.one_hot(input, num_classes)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)
