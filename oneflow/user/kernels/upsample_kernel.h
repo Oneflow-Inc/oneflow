@@ -138,7 +138,7 @@ OF_DEVICE_FUNC T cubic_convolution2(const T x, const T A) {
 
 template<typename T>
 OF_DEVICE_FUNC void get_cubic_upsample_coefficients(T coeffs[4], const T t) {
-  float A = -0.75;
+  T A = -0.75;
 
   T x1 = t;
   coeffs[0] = cubic_convolution2<T>(x1 + 1.0, A);
