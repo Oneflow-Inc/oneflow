@@ -16,7 +16,6 @@ limitations under the License.
 from collections import OrderedDict
 from functools import partial
 from typing import Dict
-import sys
 
 import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
@@ -30,7 +29,7 @@ from oneflow.nn.graph_block import Block, BlockType
 from oneflow.nn.graph_optimizer import OptimizerConfig, VariableConfig
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
-from oneflow.nn.util import add_indent
+from oneflow.nn.util import add_indent, sys_exc_error_msg
 
 
 class Graph(object):
@@ -133,8 +132,8 @@ class Graph(object):
             print(
                 "[ERROR]",
                 self._shallow_repr(),
-                " build forward graph got error type : ",
-                sys.exc_info()[0],
+                " build forward graph got error: ",
+                sys_exc_error_msg(),
                 ".",
             )
             raise
@@ -150,8 +149,8 @@ class Graph(object):
             print(
                 "[ERROR]",
                 self._shallow_repr(),
-                " compiling and initialing graph runtime got error type : ",
-                sys.exc_info()[0],
+                " compiling and initialing graph runtime got error : ",
+                sys_exc_error_msg(),
                 ".",
             )
             raise
@@ -249,16 +248,6 @@ class Graph(object):
 
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
-            if outputs is None:
-                outputs = tuple()
-            elif isinstance(outputs, (list, tuple)):
-                outputs = tuple(outputs)
-            elif isinstance(outputs, Tensor):
-                outputs = (outputs,)
-            elif isinstance(outputs, TensorTuple):
-                pass
-            else:
-                raise RuntimeError(f"invalid outputs with type {type(outputs)}")
 
             # Deal with outputs
             if not (type(outputs) is tuple or type(outputs) is list):
@@ -393,8 +382,8 @@ class Graph(object):
             print(
                 "[ERROR]",
                 self._shallow_repr(),
-                " run got error type : ",
-                sys.exc_info()[0],
+                " run got error : ",
+                sys_exc_error_msg(),
                 ".",
             )
             raise
