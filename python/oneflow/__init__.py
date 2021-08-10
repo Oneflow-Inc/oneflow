@@ -39,8 +39,6 @@ locals()["long"] = oneflow._oneflow_internal.int64
 locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
-from oneflow.core.job.job_conf_pb2 import JobConfigProto
-from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.version import __version__
 
 _DEPRECATED = set()
@@ -74,7 +72,6 @@ import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
-from oneflow.framework.session_util import Session
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
@@ -144,6 +141,7 @@ import oneflow.nn.modules.logical_or
 import oneflow.nn.modules.in_top_k
 import oneflow.nn.modules.masked_select
 import oneflow.nn.modules.math_ops
+import oneflow.nn.modules.nonzero
 import oneflow.nn.modules.norm
 import oneflow.nn.modules.permute
 import oneflow.nn.modules.round
@@ -152,56 +150,20 @@ import oneflow.nn.modules.sinh
 import oneflow.nn.modules.tan
 import oneflow.nn.modules.tensor_ops
 import oneflow.tmp
-from oneflow.advanced.distribute_ops import cast_to_current_logical_view
-from oneflow.deprecated.initializer_util import (
-    truncated_normal_initializer as truncated_normal,
-)
-from oneflow.experimental.namescope import deprecated_name_scope as name_scope
-from oneflow.framework.check_point_v2 import GetAllVariables as get_all_variables
 from oneflow.framework.check_point_v2 import Load as load
-from oneflow.framework.check_point_v2 import LoadVariables as load_variables
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
 from oneflow.framework.env_util import (
     api_enable_eager_execution as enable_eager_execution,
 )
-from oneflow.framework.env_util import api_get_current_machine_id as current_machine_id
-from oneflow.framework.env_util import api_get_current_resource as current_resource
-from oneflow.framework.function_desc import (
-    api_current_global_function_desc as current_global_function_desc,
-)
 from oneflow.framework.function_util import FunctionConfig
-from oneflow.framework.function_util import FunctionConfig as ExecutionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
-from oneflow.framework.function_util import api_oneflow_function as global_function
 from oneflow.framework.generator import create_generator as Generator
 from oneflow.framework.generator import default_generator, manual_seed
-from oneflow.framework.input_blob_def import DeprecatedFixedTensorDef as FixedTensorDef
-from oneflow.framework.input_blob_def import (
-    DeprecatedMirroredTensorDef as MirroredTensorDef,
-)
-from oneflow.framework.job_set_util import inter_job_reuse_mem_strategy
 from oneflow.framework.model import Model
-from oneflow.framework.ops import api_acc as acc
-from oneflow.framework.ops import (
-    api_hierarchical_parallel_cast as hierarchical_parallel_cast,
-)
-from oneflow.framework.ops import api_pack as pack
-from oneflow.framework.ops import api_parallel_cast as parallel_cast
-from oneflow.framework.ops import api_unpack as unpack
-from oneflow.framework.placement_util import (
-    deprecated_placement as device_prior_placement,
-)
-from oneflow.framework.placement_util import deprecated_placement as fixed_placement
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.session_util import (
-    TmpInitEagerGlobalSession as InitEagerGlobalSession,
-)
-from oneflow.framework.session_util import (
     api_clear_default_session as clear_default_session,
-)
-from oneflow.framework.session_util import (
-    api_eager_execution_enabled as eager_execution_enabled,
 )
 from oneflow.framework.session_util import (
     api_find_or_create_module as find_or_create_module,
@@ -247,6 +209,7 @@ from oneflow.nn.modules.constant import ones_like_op as ones_like
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_like_op as zeros_like
 from oneflow.nn.modules.constant import zeros_op as zeros
+from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow.nn.modules.diag import diag_op as diag
 from oneflow.nn.modules.eq import eq_op as eq
@@ -306,7 +269,9 @@ from oneflow.nn.modules.ne import ne_op as ne
 from oneflow.nn.modules.ne import ne_op as not_equal
 from oneflow.nn.modules.negative import negative_op as neg
 from oneflow.nn.modules.negative import negative_op as negative
+from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.random_ops import bernoulli
+from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min

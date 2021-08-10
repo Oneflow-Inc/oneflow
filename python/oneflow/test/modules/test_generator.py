@@ -25,14 +25,14 @@ class TestGenerator(flow.unittest.TestCase):
     def test_different_devices(test_case):
         auto_gen = flow.Generator(device="auto")
         cpu_gen = flow.Generator(device="cpu")
-        test_case.assertTrue(auto_gen.initial_seed(), cpu_gen.initial_seed())
+        test_case.assertTrue(auto_gen.initial_seed() == cpu_gen.initial_seed())
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.UnimplementedException
         ) as context:
             flow.Generator(device="invalid")
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             cuda_gen = flow.Generator(device="cuda")
-            test_case.assertTrue(auto_gen.initial_seed(), cuda_gen.initial_seed())
+            test_case.assertTrue(auto_gen.initial_seed() == cuda_gen.initial_seed())
 
     def test_generator_manual_seed(test_case):
         generator = flow.Generator()
@@ -64,10 +64,7 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         ) as context:
             flow.default_generator(device="invalid")
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.CheckFailedException
-        ) as context:
-            flow.default_generator(device="cpu:1000")
+        flow.default_generator(device="cpu:1000")
         test_gens = [cpu_gen]
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             with test_case.assertRaises(
