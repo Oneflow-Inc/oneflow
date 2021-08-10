@@ -113,9 +113,9 @@ def randperm(
             Default: ``oneflow.int32``.
         layout: layout is not supported yet.
         device: the desired device of returned tensor. Default: cpu.
-        placement:(flow.placement, optional): The desired device of returned consistent tensor. If None,
+        placement:(:class:`flow.placement`, optional): The desired device of returned consistent tensor. If None,
             will construct local tensor.
-        sbp: (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
+        sbp: (:class:`flow.sbp`, optional): The desired sbp of returned consistent tensor. It must be equal with the
             numbers of placement.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
         pin_memory(bool, optional):pin_memory is not supported yet.
