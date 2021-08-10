@@ -71,11 +71,11 @@ class MessagePool final {
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
     void RegisterMessagePool() {
-      std::uint64_t RegisterMemorySize  = sizeof(ActorMsg) * num_of_message_;
-      std::uint64_t ActorMsgSize = sizeof(ActorMsg);
+      uint32_t ActorMsgSize = sizeof(ActorMsg);
+      uint64_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
       char * addr = (char*)malloc(RegisterMemorySize);
       IBVerbsMemDesc *  mem_desc = new IBVerbsMemDesc(pd_,(void*) addr, RegisterMemorySize ); 
-       const ibv_mr* mr = mem_desc->mr();
+      const ibv_mr* mr = mem_desc->mr();
       for(uint32_t i =0; i < num_of_message_; i++){
         ibv_mr * split_mr =(ibv_mr*) (mr + ActorMsgSize * i);
         IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(split_mr,(void*)(addr + ActorMsgSize * i),ActorMsgSize);
