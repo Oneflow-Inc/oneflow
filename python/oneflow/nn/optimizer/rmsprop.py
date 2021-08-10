@@ -16,7 +16,6 @@ limitations under the License.
 import collections
 from typing import Callable, Dict, Iterator, List, Union
 
-import math
 import oneflow as flow
 from oneflow.nn.optimizer.optimizer import Optimizer, ParamGroup
 from oneflow.nn.parameter import Parameter
@@ -176,20 +175,12 @@ class RMSprop(Optimizer):
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
 
             lr = param_group["lr"]
-            scale = param_group["scale"]
             decay_rate = param_group["alpha"]
             centered = param_group["centered"]
             weight_decay = param_group["weight_decay"]
 
             epslion = param_group["eps"]
-            base_scale = train_conf.loss_scale_factor()
-            assert math.isclose(base_scale, 1, rel_tol=1e-4) or math.isclose(
-                scale, base_scale, rel_tol=1e-4
-            ), "nn.Graph only support one scale factor at the moment, base_scale {} vs scale {}".format(
-                base_scale, scale
-            )
 
-            train_conf.set_loss_scale_factor(scale)
             optimizer_conf.set_base_learning_rate(lr)
 
             optimizer_conf.mutable_rmsprop_conf().set_decay_rate(decay_rate)

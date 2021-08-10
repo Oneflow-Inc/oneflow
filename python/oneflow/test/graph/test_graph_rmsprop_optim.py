@@ -12,7 +12,6 @@ def compare_with_numpy_rmsprop(
     test_case,
     device,
     x_shape,
-    scale,
     learning_rate,
     momentum,
     train_iters,
@@ -50,7 +49,6 @@ def compare_with_numpy_rmsprop(
                 "weight_decay": weight_decay,
                 "momentum": momentum,
                 "centered": centered,
-                "scale": scale,
             }
         ]
     )
@@ -88,7 +86,7 @@ def compare_with_numpy_rmsprop(
             # ref to: https://github.com/Oneflow-Inc/oneflow/blob/master/python/oneflow/test/modules/test_optim_rmsprop.py#L78-L99
 
             # weight decay is equivalent to l2 penalty
-            grad = grad * scale + weight_decay * x
+            grad = grad + weight_decay * x
             r_ = alpha * r + (1 - alpha) * grad * grad
             if centered:
                 g_ = alpha * g + (1 - alpha) * grad
@@ -118,8 +116,6 @@ class TestRMSprop(flow.unittest.TestCase):
         args_dict = OrderedDict()
         args_dict["device"] = ["cpu", "cuda"]
         args_dict["x_shape"] = [(1,), (10,)]
-        # nn.Graph only support one scale factor at the moment
-        args_dict["scale"] = [1.0]
         args_dict["learning_rate"] = [1, 10]
         args_dict["momentum"] = [0.0]  # not supported momentum > 0
         args_dict["train_iters"] = [10]
