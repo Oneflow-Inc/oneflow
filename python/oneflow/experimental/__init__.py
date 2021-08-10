@@ -21,7 +21,6 @@ from oneflow.experimental.interface_op_read_and_write import (
 from oneflow.experimental.interface_op_read_and_write import (
     GetInterfaceBlobValue as get_interface_blob_value,
 )
-from oneflow.experimental.namescope import deprecated_name_scope as name_scope
 from oneflow.experimental.square_sum_op import square_sum
 from oneflow.experimental.ssp_variable_proxy_op import ssp_variable_proxy
 from oneflow.experimental.typing_check import (
@@ -29,5 +28,4 @@ from oneflow.experimental.typing_check import (
 )
 from oneflow.experimental.unique_op import unique_with_counts
 from oneflow.framework.c_api_util import GetJobSet as get_job_set
-from oneflow.ops.assign_op import api_one_to_one_assign as eager_assign_121
 from oneflow.ops.util.custom_op_module import CustomOpModule as custom_op_module

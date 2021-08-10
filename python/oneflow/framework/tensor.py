@@ -106,6 +106,10 @@ def _repr(self):
     return tensor_str_util._gen_tensor_str(self)
 
 
+def _meta_repr(self):
+    return tensor_str_util._gen_tensor_meta_str(self)
+
+
 def _gt(self, other):
     return self.gt(other)
 
@@ -229,10 +233,7 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
     )
-    if np_arr.shape == ():
-        assert tuple(eager_local_tensor.shape) == (1,)
-    else:
-        assert np_arr.shape == tuple(eager_local_tensor.shape)
+    assert np_arr.shape == tuple(eager_local_tensor.shape)
     copy_from_numpy(np_arr)
 
 
@@ -355,6 +356,7 @@ def RegisterMethods():
     Tensor._placement_scope = _placement_scope
     Tensor.copy_ = _copy
     Tensor.get_device = _get_device
+    Tensor._meta_repr = _meta_repr
 
 
 def register_tensor_op(op_name):

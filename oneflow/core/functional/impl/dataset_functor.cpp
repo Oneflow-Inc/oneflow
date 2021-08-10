@@ -30,12 +30,12 @@ namespace impl {
 class ImageFlipFuntor {
  public:
   ImageFlipFuntor() {
-    op_ = CHECK_JUST(
-        one::OpBuilder("image_flip").Input("in").Input("flip_code").Output("out").Build());
+    op_ = CHECK_JUST(one::OpBuilder("image_flip").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& flip_code) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, flip_code});
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& flip_code) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("flip_code", flip_code));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
