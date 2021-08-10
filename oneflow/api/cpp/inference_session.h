@@ -21,7 +21,10 @@ limitations under the License.
 
 namespace oneflow {
 
-Enum class ModelVersionPolicy { LATEST = 0 };
+struct ModelVersionPolicy { 
+  bool latest = true;
+  int version = 1;
+};
 
 class SessionOption {
  public:
@@ -46,7 +49,7 @@ class InferenceSession {
   void CloseCtx();
   void Compile(std::vector<OperatorConf> op_list);
   void Launch();
-  void LoadSavedModel(std::string saved_model_dir,
+  void LoadModel(std::string saved_model_dir,
                       int model_version,
                       std::string saved_model_meta_file_basename,
                       std::string graph_name = "",
@@ -63,22 +66,15 @@ class InferenceSession {
   std::vector<JobConfigProto> ListJobs();
   std::vector<std::string> ListInputs();
   std::vector<std::string> ListOutputs();
-  input_info(std::string input_name, std::string job_name = "");
-  output_info(std::string input_name, std::string job_name = "");
 
  private:
   enum class SessionStatus { OPEN = 1, RUNNING = 2, CLOSED = 3 };
-  
-  using ShapeInfo = std::vector<int>;
-  using DtypeInfo = std::vector<dtype>;
-  using OpBlobInfo = std::pair<ShapeInfo, DtypeInfo>;
 
   Maybe<void> InitEventLoop();
   bool CheckStatus(const std::vector<SessionStatus>& status);
   void MakeConfigProto();
 
-  JobConfProto GetJobConf(std::string job_name);
-  OpBlobInfo GetOpBlobInfo(std::string job_name, std::string op_name, std::string blob_name);
+  std::shared_ptr<cfg::JobConfProto> GetJobConf(std::string job_name);
   
   void RunJob();
   void RunPushJobs();
@@ -86,15 +82,11 @@ class InferenceSession {
   void MakePullJobCb();
   void RunLoadCheckpointJob();
 
-  int find_model_latest_version(std::string saved_model_dir);
-  bool need_check_device_tag(OperatorConf op_conf);
-  void signature_proto_to_cfg(JobSignatureDef signature_proto, mut_signature_cfg);
-
   SessionOption option_;
   bool is_mirrored_;
   std::string checkpoint_path_;
-  std::map<std::string, JobConfigProto> job_name2job_conf_;
-  inter_user_job_info_;
+  std::map<std::string, std::shared_ptr<cfg::JobConfigProto>> job_name2job_conf_;
+  InterUserJobInfo inter_user_job_info_;
   std::string cur_job_name_;
   std::map<std::string, OpBlobInfo> inferface_name2info_;
   std::map<std::string, std::future> output_name2future_;
