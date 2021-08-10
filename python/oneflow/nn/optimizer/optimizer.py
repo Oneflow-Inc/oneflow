@@ -18,6 +18,7 @@ import warnings
 from copy import deepcopy
 from typing import Any, Callable, Dict, Iterator, Union
 
+import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
 
@@ -29,11 +30,23 @@ class ParamGroup(object):
         default_options: Dict,
     ):
         if isinstance(parameters, collections.abc.Iterator):
+            assert hasattr(self, '_paramters') == False
             self._parameters = list(parameters)
             self._options = deepcopy(default_options)
         else:
-            assert "params" in parameters
-            self._parameters = list(parameters["params"])
+            if isinstance(parameters, dict):
+                assert "params" in parameters
+                assert hasattr(self, '_paramters')==False
+                self._parameters = list(parameters["params"])
+            elif isinstance(parameters, Parameter):
+                if hasattr(self, '_paramters'):
+                    new_parameters = flow.zeros_like(parameters)
+                    new_parameters.copy_(parameters)
+                    self._parameters.append(new_parameters)
+                else:
+                    new_parameters = flow.zeros_like(parameters)
+                    new_parameters.copy_(parameters)
+                    self._parameters = list(new_parameters)
             self._options = deepcopy(default_options)
             for key in self._options:
                 if key in parameters:

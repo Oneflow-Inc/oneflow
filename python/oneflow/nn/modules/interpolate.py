@@ -77,7 +77,7 @@ class Interpolate(Module):
         elif self.size is not None:
             assert self.scale_factor is None
             scale_factors = []
-            if isinstance(self.size, (list, tuple)):
+            if isinstance(self.size, (list, tuple, flow.Size)):
                 if len(self.size) != dim:
                     raise ValueError(
                         "size shape must match input shape. Input is {}D, size is {}".format(
