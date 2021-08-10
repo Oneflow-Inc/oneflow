@@ -49,7 +49,6 @@ class SGD(Optimizer):
         lr (float, optional): learning rate (default: 1e-3)
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
-        scale (float, optional): the scale factor of loss (default: 1.0)
 
     """
 
@@ -59,15 +58,12 @@ class SGD(Optimizer):
         lr: float = 0.001,
         momentum: float = 0.0,
         weight_decay: float = 0.0,
-        scale: float = 1.0,
     ):
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
-        assert scale >= 0.0, f"Invalid scale factor: {scale}"
         assert weight_decay >= 0.0, f"Invalid weight_decay: {weight_decay}"
         self._default_options["lr"] = lr
-        self._default_options["scale"] = scale
         self._default_options["momentum"] = momentum
         self._default_options["weight_decay"] = weight_decay
         if isinstance(parameters, collections.abc.Iterator):
@@ -135,7 +131,6 @@ class SGD(Optimizer):
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
             lr = param_group["lr"]
             beta = param_group["momentum"]
-            scale = param_group["scale"]
             l2 = param_group["weight_decay"]
             # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
             base_scale = train_conf.loss_scale_factor()
@@ -145,7 +140,6 @@ class SGD(Optimizer):
                 base_scale, scale
             )
 
-            train_conf.set_loss_scale_factor(scale)
             optimizer_conf.set_base_learning_rate(lr)
             if beta == 0:
                 optimizer_conf.mutable_naive_conf()

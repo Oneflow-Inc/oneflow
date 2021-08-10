@@ -21,13 +21,12 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 def compare_with_numpy_sgd(
     test_case,
     device,
     x_shape,
-    scale,
     learning_rate,
     train_iters,
     momentum,
@@ -60,7 +59,6 @@ def compare_with_numpy_sgd(
                 "lr": learning_rate,
                 "momentum": momentum,
                 "weight_decay": weight_decay,
-                "scale": scale,
             }
         ]
     )
@@ -92,7 +90,7 @@ def compare_with_numpy_sgd(
         vt = np.zeros_like(x)
 
         def np_train_one_iter(grad):
-            grad = grad * scale + weight_decay * x
+            grad = grad + weight_decay * x
             v = momentum * vt - learning_rate * grad
             param = x + v
             return (param, v)
@@ -113,7 +111,6 @@ class TestSGD(flow.unittest.TestCase):
             test_case,
             device="cuda",
             x_shape=(1,),
-            scale=1.0,
             learning_rate=1,
             momentum=0.9,
             train_iters=10,
@@ -126,7 +123,6 @@ class TestSGD(flow.unittest.TestCase):
             test_case,
             device="cuda",
             x_shape=(1,),
-            scale=1.0,
             learning_rate=0.01,
             momentum=0.0,
             train_iters=10,
