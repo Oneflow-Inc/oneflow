@@ -156,7 +156,9 @@ class Adam(Optimizer):
             epsilon = param_group["eps"]
             # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
             base_scale = train_conf.loss_scale_factor()
-            assert math.isclose(base_scale, 1, rel_tol=1e-4), "nn.Graph only support one scale factor at the moment, base_scale {} vs scale {}".format(
+            assert math.isclose(
+                base_scale, 1, rel_tol=1e-4
+            ), "nn.Graph only support one scale factor at the moment, base_scale {} vs scale {}".format(
                 base_scale, 1
             )
 

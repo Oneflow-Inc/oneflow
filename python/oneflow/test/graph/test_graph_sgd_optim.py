@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import os 
+import os
 from collections import OrderedDict
 
 import numpy as np
@@ -24,14 +24,7 @@ import oneflow.unittest
 
 
 def compare_with_numpy_sgd(
-    test_case,
-    device,
-    x_shape,
-    learning_rate,
-    train_iters,
-    momentum,
-    weight_decay,
-    eps,
+    test_case, device, x_shape, learning_rate, train_iters, momentum, weight_decay, eps,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -102,6 +95,7 @@ def compare_with_numpy_sgd(
     train_by_numpy()
     test_case.assertTrue(np.allclose(np_res_list, of_res_list, rtol=0.001, atol=0.001))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestCpuSGD(flow.unittest.TestCase):
     def test_sgd1(test_case):
@@ -128,6 +122,7 @@ class TestCpuSGD(flow.unittest.TestCase):
             weight_decay=1e-3,
             eps=1e-8,
         )
+
 
 if __name__ == "__main__":
     unittest.main()
