@@ -264,7 +264,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-      const std::shared_ptr<const one::ConsistentTensorInferResult> &consistent_tensor_infer_result,
+      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& ctx,
       const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
       const std::string& instr_type_name);

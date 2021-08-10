@@ -51,7 +51,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   LocalCallOpKernelPhyInstrOperand(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const one::ConsistentTensorInferResult> &consistent_tensor_infer_result,
+      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx_,
       const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
       : opkernel_(opkernel),

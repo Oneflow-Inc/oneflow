@@ -305,7 +305,8 @@ LocalUserKernelComputeContext::LocalUserKernelComputeContext(
 
 void LocalUserKernelComputeContext::Update(
     const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-    const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result, DeviceCtx* device_ctx) {
+    const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
+    DeviceCtx* device_ctx) {
   device_ctx_ = device_ctx;
   base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
 }
