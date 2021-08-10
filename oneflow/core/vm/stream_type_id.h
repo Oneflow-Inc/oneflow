@@ -29,7 +29,7 @@ class StreamTypeId final {
   using self_type = StreamTypeId;
   StreamTypeId() { __Init__(); }
   StreamTypeId(const StreamTypeId& rhs) { __Init__(rhs.stream_type_, rhs.interpret_type_); }
-  void __Init__() { std::memset(this, 0, sizeof(StreamTypeId)); }
+  void __Init__() { std::memset(reinterpret_cast<char*>(this), 0, sizeof(StreamTypeId)); }
   void __Init__(const StreamType* stream_type, InterpretType interpret_type) {
     __Init__();
     stream_type_ = stream_type;

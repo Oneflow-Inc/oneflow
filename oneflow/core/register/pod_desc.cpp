@@ -83,7 +83,7 @@ void TensorPodDesc::ToProto(TensorPodProto* proto) const {
 
 FieldPodDesc::FieldPodDesc(const FieldPodProto& field_pod) {
   field_id_ = field_pod.field_id();
-  pod_ = std::move(NewPodDesc(field_pod.pod()));
+  pod_ = NewPodDesc(field_pod.pod());
   alignment_ = field_pod.alignment();
 }
 
