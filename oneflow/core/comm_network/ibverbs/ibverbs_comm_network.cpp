@@ -72,7 +72,7 @@ IBVerbsCommNet::~IBVerbsCommNet() {
     if (qp) { delete qp; }
   }
   CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
-  //CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
+  CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
   CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
 }
 

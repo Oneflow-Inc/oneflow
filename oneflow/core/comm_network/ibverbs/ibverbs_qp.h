@@ -65,26 +65,33 @@ class MessagePool final {
   public:
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
     MessagePool() = delete; //todo:这里可能要修改
-    ~MessagePool() = delete;//todo:这里可能要修改
+    //析构函数
+    ~MessagePool() {
+      while(message_buf_.empty() == false) {
+        delete message_buf_.front();
+        message_buf_.pop();
+      }
+    }//todo:这里可能要修改
+
     MessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd),num_of_message_(number_of_message) {
       RegisterMessagePool();
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
     void RegisterMessagePool();
     ActorMsgMR *  GetMessage(){
-    if(isEmpty() == false)  {
-      return GetMessageFromBuf();
-    } else {
-      RegisterMessagePool();
-      return GetMessageFromBuf();
+      if(isEmpty() == false)  {
+        return GetMessageFromBuf();
+      } else {
+        RegisterMessagePool();
+        return GetMessageFromBuf();
+      }
     }
-  }
 
-  ActorMsgMR * GetMessageFromBuf() {
-      ActorMsgMR * msg_mr = std::move(message_buf_.front());
-      message_buf_.pop();
-      return msg_mr;
-  }
+    ActorMsgMR * GetMessageFromBuf() {
+        ActorMsgMR * msg_mr = std::move(message_buf_.front());
+        message_buf_.pop();
+        return msg_mr;
+    }
     /*ActorMsgMR * GetMessage(){
       if(message_buf_.empty() == false) {
           ActorMsgMR * msg_mr  =message_buf_.front();
