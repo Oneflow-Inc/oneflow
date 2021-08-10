@@ -5,7 +5,7 @@ import java.nio.ByteOrder;
 
 class OneFlow {
     static {
-        System.loadLibrary("oneflow");
+        System.loadLibrary("oneflow_java");
 
         // Default Initialization: beyond import oneflow as flow
         OneFlow.initDefaultSession();

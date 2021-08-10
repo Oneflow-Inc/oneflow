@@ -38,7 +38,7 @@ def copy_append_proto(project_source_dir, proto_files, of_proto_java):
     return new_proto_files
 
 
-def build_of_proto(protoc_exe, of_proto_java, new_proto_files):
+def compile_oneflow_proto(protoc_exe, of_proto_java, new_proto_files):
     # call protoc, compile .proto into .java
     of_proto_java_dst = os.path.join(of_proto_java, 'dst')
     of_proto_java_src = os.path.join(of_proto_java, 'src')
@@ -54,7 +54,7 @@ def build_of_proto(protoc_exe, of_proto_java, new_proto_files):
     os.system(command)
 
 
-def build_of_proto_jar(of_proto_java, protobuf_jar):
+def package_oneflow_proto(of_proto_java, protobuf_jar):
     target_dir = os.path.join(of_proto_java, 'dst', 'target')
     if not os.path.exists(target_dir):
         if target_dir:
@@ -84,8 +84,8 @@ def main():
     protobuf_jar = args.protobuf_jar
 
     new_proto_files = copy_append_proto(project_source_dir, proto_files, of_proto_java)
-    build_of_proto(protoc_exe, of_proto_java, new_proto_files)
-    build_of_proto_jar(of_proto_java, protobuf_jar)
+    compile_oneflow_proto(protoc_exe, of_proto_java, new_proto_files)
+    package_oneflow_proto(of_proto_java, protobuf_jar)
 
 
 if __name__ == "__main__":
