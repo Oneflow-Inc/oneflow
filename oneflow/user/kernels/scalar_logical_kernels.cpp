@@ -19,7 +19,8 @@ namespace oneflow {
 
 template<template<typename T> class BIN_OP, typename T>
 struct ScalarLogicalFunctor<DeviceType::kCPU, BIN_OP, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in, int8_t* out){
+  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in,
+                  int8_t* out) {
     DoScalarLogical<BIN_OP, T>(elem_cnt, scalar, in, out);
   }
 };
@@ -47,43 +48,43 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
 
     int64_t elem_cnt = out->shape().elem_cnt();
 
-    ScalarLogicalFunctor<device_type, BIN_OP, T>()(ctx->device_ctx(), elem_cnt, scalar_operand, in_ptr, out_ptr);
-
+    ScalarLogicalFunctor<device_type, BIN_OP, T>()(ctx->device_ctx(), elem_cnt, scalar_operand,
+                                                   in_ptr, out_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op, input_dtype)  \
-  REGISTER_USER_KERNEL(kernel_name)                                                              \
-      .SetCreateFn<ScalarLogicalKernel<device, binary_op, input_dtype>>()              \
-      .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == device)                                                    \
-          & (user_op::HobDataType("in", 0) == GetDataType<input_dtype>::value));                 \
+#define REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op, \
+                                                           input_dtype)                    \
+  REGISTER_USER_KERNEL(kernel_name)                                                        \
+      .SetCreateFn<ScalarLogicalKernel<device, binary_op, input_dtype>>()                  \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                 \
+                       & (user_op::HobDataType("in", 0) == GetDataType<input_dtype>::value));
 
-#define REGISTER_SCALAR_LOGICAL_KERNEL(device, dtype)                \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(            \
-      device, "scalar_logical_equal", BinaryFuncEQ, dtype);      \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(            \
-      device, "scalar_logical_not_equal", BinaryFuncNE, dtype);      \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(            \
-      device, "scalar_logical_greater", BinaryFuncGT, dtype);      \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(            \
-      device, "scalar_logical_greater_equal", BinaryFuncGE, dtype);      \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(            \
-      device, "scalar_logical_less", BinaryFuncLT, dtype);      \
-  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(            \
-      device, "scalar_logical_less_equal", BinaryFuncLE, dtype);      
+#define REGISTER_SCALAR_LOGICAL_KERNEL(device, dtype)                                              \
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_equal", BinaryFuncEQ, \
+                                                     dtype);                                       \
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_not_equal",           \
+                                                     BinaryFuncNE, dtype);                         \
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_greater",             \
+                                                     BinaryFuncGT, dtype);                         \
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_greater_equal",       \
+                                                     BinaryFuncGE, dtype);                         \
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_less", BinaryFuncLT,  \
+                                                     dtype);                                       \
+  REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_less_equal",          \
+                                                     BinaryFuncLE, dtype);
 
-#define REGISTER_SCALAR_LOGICAL_CPU_KERNELS() \
+#define REGISTER_SCALAR_LOGICAL_CPU_KERNELS()               \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, int32_t) \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, int64_t) \
-  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, float) \
-  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, double) \
+  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, float)   \
+  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kCPU, double)
 
-#define REGISTER_SCALAR_LOGICAL_GPU_KERNELS() \
+#define REGISTER_SCALAR_LOGICAL_GPU_KERNELS()               \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, int32_t) \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, int64_t) \
-  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, float) \
+  REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, float)   \
   REGISTER_SCALAR_LOGICAL_KERNEL(DeviceType::kGPU, double)
 
 REGISTER_SCALAR_LOGICAL_CPU_KERNELS();

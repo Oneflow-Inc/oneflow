@@ -17,30 +17,30 @@ limitations under the License.
 
 namespace oneflow {
 
-#define REGISTER_SCALAR_LOGICAL_OP(op_name)                                             \
-  REGISTER_NO_GRAD_USER_OP(op_name)                                                             \
-      .Input("in")                                                                      \
-      .Output("out")                                                                    \
-      .Attr<bool>("has_int_operand") \
-      .Attr<bool>("has_float_operand") \
-      .Attr<int64_t>("int_operand") \
-      .Attr<double>("float_operand")                                                    \
-      .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {             \
-        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);                         \
-        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                 \
-        return Maybe<void>::Ok();                                                       \
-      })                                                                                \
-      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {                        \
-        const user_op::TensorDesc& in_tensor =                                          \
-            ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);                       \
-        FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {                         \
-          ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();   \
-        }                                                                               \
-        return Maybe<void>::Ok();                                                       \
-      })                                                                                \
-      .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {               \
-        *ctx->OutputDType("out", 0) = DataType::kInt8;                                  \
-        return Maybe<void>::Ok();                                                       \
+#define REGISTER_SCALAR_LOGICAL_OP(op_name)                                           \
+  REGISTER_NO_GRAD_USER_OP(op_name)                                                   \
+      .Input("in")                                                                    \
+      .Output("out")                                                                  \
+      .Attr<bool>("has_int_operand")                                                  \
+      .Attr<bool>("has_float_operand")                                                \
+      .Attr<int64_t>("int_operand")                                                   \
+      .Attr<double>("float_operand")                                                  \
+      .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {           \
+        *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);                       \
+        *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);               \
+        return Maybe<void>::Ok();                                                     \
+      })                                                                              \
+      .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {                      \
+        const user_op::TensorDesc& in_tensor =                                        \
+            ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);                     \
+        FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {                       \
+          ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build(); \
+        }                                                                             \
+        return Maybe<void>::Ok();                                                     \
+      })                                                                              \
+      .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {             \
+        *ctx->OutputDType("out", 0) = DataType::kInt8;                                \
+        return Maybe<void>::Ok();                                                     \
       });
 
 REGISTER_SCALAR_LOGICAL_OP("scalar_logical_equal");
