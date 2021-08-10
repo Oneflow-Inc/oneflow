@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import sys
 
 
 def add_indent(in_s, num_spaces):
@@ -24,3 +25,22 @@ def add_indent(in_s, num_spaces):
     s = "\n".join(s)
     s = first + "\n" + s
     return s
+
+
+def sys_exc_error_msg():
+    msg = ""
+    exc_info = sys.exc_info()
+    if len(exc_info) > 0:
+        msg += str(exc_info[0])
+    if len(exc_info) > 1:
+        msg += " " + str(exc_info[1])
+    return msg
+
+
+def list_to_func_return(li):
+    if len(li) == 0:
+        return None
+    elif len(li) == 1:
+        return li[0]
+    else:
+        return tuple(li)
