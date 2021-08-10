@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/framework/op_interpreter/boxing/collective_boxing_interpreter.h"
@@ -64,9 +65,22 @@ Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
       {{*JUST(GetSplitSbpParallel(0)), *JUST(MakePartialSumSbpParallel())},  // S(0) -> P
        std::make_shared<NcclS2PBoxingInterpreter>()},
   };
-  return JUST(MapAt(sbp_pair2eager_boxing_interpreter,
-                    std::make_pair(in_parallel_distribution->sbp_parallel(0),
-                                   out_parallel_distribution->sbp_parallel(0))));
+  const auto& key = std::make_pair(in_parallel_distribution->sbp_parallel(0),
+                                   out_parallel_distribution->sbp_parallel(0));
+  CHECK_OR_RETURN(sbp_pair2eager_boxing_interpreter.find(key)
+                  != sbp_pair2eager_boxing_interpreter.end())
+      << "Eager boxing type \'" << ParallelDistributionToString(in_parallel_distribution) << " -> "
+      << ParallelDistributionToString(out_parallel_distribution) << "\'"
+      << "not support yet\n"
+      << "============ Supported eager boxing type============\n"
+      << "\'[S(0)] -> [B]\' on GPU\n"
+      << "\'[S(0)] -> [P]\' on GPU\n"
+      << "\'[P] -> [B]\' on GPU\n"
+      << "\'[P] -> [S(0)]\' on GPU\n"
+      << "\'[B] -> [S(0)]\' on GPU\n"
+      << "\'[B] -> [P]\' on GPU or CPU";
+
+  return JUST(MapAt(sbp_pair2eager_boxing_interpreter, key));
 }
 
 Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(
@@ -91,13 +105,40 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(
         return GetOneDimNcclCollectiveEagerBoxingInterpreter(in_parallel_distribution,
                                                              out_parallel_distribution);
       } else {
-        UNIMPLEMENTED_THEN_RETURN();
+        UNIMPLEMENTED_THEN_RETURN()
+            << "Eager boxing type \'" << ParallelDistributionToString(in_parallel_distribution)
+            << " -> " << ParallelDistributionToString(out_parallel_distribution) << "\'"
+            << "not support yet\n"
+            << "============ Supported eager boxing type============\n"
+            << "\'[S(0)] -> [B]\' on GPU\n"
+            << "\'[S(0)] -> [P]\' on GPU\n"
+            << "\'[P] -> [B]\' on GPU\n"
+            << "\'[P] -> [S(0)]\' on GPU\n"
+            << "\'[B] -> [S(0)]\' on GPU\n"
+            << "\'[B] -> [P]\' on GPU or CPU";
       }
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      UNIMPLEMENTED_THEN_RETURN() << "Eager boxing with different placement not support yet\n"
+                                  << "============ Supported eager boxing type============\n"
+                                  << "\'[S(0)] -> [B]\' on GPU\n"
+                                  << "\'[S(0)] -> [P]\' on GPU\n"
+                                  << "\'[P] -> [B]\' on GPU\n"
+                                  << "\'[P] -> [S(0)]\' on GPU\n"
+                                  << "\'[B] -> [S(0)]\' on GPU\n"
+                                  << "\'[B] -> [P]\' on GPU or CPU";
     }
   } else {
-    UNIMPLEMENTED_THEN_RETURN();
+    UNIMPLEMENTED_THEN_RETURN() << "N-dim eager boxing type \'"
+                                << ParallelDistributionToString(in_parallel_distribution) << " -> "
+                                << ParallelDistributionToString(out_parallel_distribution) << "\'"
+                                << "not support yet\n"
+                                << "============ Supported eager boxing type============\n"
+                                << "\'[S(0)] -> [B]\' on GPU\n"
+                                << "\'[S(0)] -> [P]\' on GPU\n"
+                                << "\'[P] -> [B]\' on GPU\n"
+                                << "\'[P] -> [S(0)]\' on GPU\n"
+                                << "\'[B] -> [S(0)]\' on GPU\n"
+                                << "\'[B] -> [P]\' on GPU or CPU";
   }
 }
 
