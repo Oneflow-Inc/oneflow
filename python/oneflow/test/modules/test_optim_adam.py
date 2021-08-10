@@ -29,7 +29,6 @@ def compare_with_numpy_adam(
     test_case,
     device,
     x_shape,
-    scale,
     learning_rate,
     train_iters,
     betas,
@@ -52,7 +51,6 @@ def compare_with_numpy_adam(
                     "betas": betas,
                     "eps": eps,
                     "weight_decay": weight_decay,
-                    "scale": scale,
                 }
             ],
             do_bias_correction=do_bias_correction,
@@ -79,7 +77,7 @@ def compare_with_numpy_adam(
         beta2 = betas[1]
 
         def train_one_iter(iter, grad):
-            grad = grad * scale + weight_decay * x
+            grad = grad + weight_decay * x
 
             if do_bias_correction:
                 lr = (
@@ -112,7 +110,6 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["scale"] = [1.0, 0.8]
         arg_dict["learning_rate"] = [1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
