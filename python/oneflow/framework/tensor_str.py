@@ -57,7 +57,7 @@ class _Formatter(object):
 
         if not self.floating_dtype:
             for value in tensor_view:
-                value_str = '{}'.format(value)
+                value_str = "{}".format(value)
                 self.max_width = max(self.max_width, len(value_str))
 
         else:
@@ -83,11 +83,13 @@ class _Formatter(object):
                 ):
                     self.sci_mode = True
                     for value in nonzero_finite_vals:
-                        value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
+                        value_str = (
+                            ("{{:.{}e}}").format(PRINT_OPTS.precision).format(value)
+                        )
                         self.max_width = max(self.max_width, len(value_str))
                 else:
-                     for value in nonzero_finite_vals:
-                        value_str = ('{:.0f}').format(value)
+                    for value in nonzero_finite_vals:
+                        value_str = ("{:.0f}").format(value)
                         self.max_width = max(self.max_width, len(value_str) + 1)
             else:
                 if (
@@ -97,11 +99,15 @@ class _Formatter(object):
                 ):
                     self.sci_mode = True
                     for value in nonzero_finite_vals:
-                        value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
+                        value_str = (
+                            ("{{:.{}e}}").format(PRINT_OPTS.precision).format(value)
+                        )
                         self.max_width = max(self.max_width, len(value_str))
                 else:
                     for value in nonzero_finite_vals:
-                        value_str = ('{{:.{}f}}').format(PRINT_OPTS.precision).format(value)
+                        value_str = (
+                            ("{{:.{}f}}").format(PRINT_OPTS.precision).format(value)
+                        )
                         self.max_width = max(self.max_width, len(value_str))
 
         if PRINT_OPTS.sci_mode is not None:

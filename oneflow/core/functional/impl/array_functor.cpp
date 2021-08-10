@@ -1095,6 +1095,7 @@ class TensorGetItemFunctor {
       for (int i = 0; i < ndims; ++i) {
         if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
       }
+      if (target_shape.NumAxes() == 0) { return false; }
       return true;
     }();
     std::shared_ptr<one::Tensor> result;
