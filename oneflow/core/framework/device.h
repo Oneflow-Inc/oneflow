@@ -43,6 +43,9 @@ class Device final {
   bool operator==(const Device& device) const {
     return type_ == device.type() && device_id_ == device.device_id();
   }
+  bool operator!=(const Device& device) const {
+    return !(type_ == device.type() && device_id_ == device.device_id());
+  }
   const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const;
   const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
 
