@@ -50,5 +50,6 @@ class TestEq(flow.unittest.TestCase):
         x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         return torch.eq(x, x)
 
+
 if __name__ == "__main__":
     unittest.main()
