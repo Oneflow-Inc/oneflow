@@ -300,7 +300,7 @@ def _gen_tensor_str_template(tensor, data_str):
     if tensor.grad_fn is not None:
         name = tensor.grad_fn.name()
         suffixes.append("grad_fn=<{}>".format(name))
-    elif inp.requires_grad:
+    elif tensor.requires_grad:
         suffixes.append("requires_grad=True")
     return _add_suffixes(prefix + data_str, suffixes, indent)
 
