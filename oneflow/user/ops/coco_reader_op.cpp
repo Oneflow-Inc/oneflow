@@ -93,8 +93,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("COCOReader")
     })
     .SetParallelDistributionInferFn(
         [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const auto& dist_conf =
-              ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
+          const auto& dist_conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
           const Shape& hierarchy = ctx->parallel_hierarchy();
 
           // the inputs may be produced by tick and others, whose sbp should be broadcast parallel
