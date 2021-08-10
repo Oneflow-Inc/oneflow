@@ -37,21 +37,9 @@ void Roll(DeviceCtx *ctx, std::vector<int32_t> move, oneflow::fixed_vector<long 
     int32_t shift = move[0] % len;
     int32_t cpyFirst = width*(len-shift);
     int32_t cpySec = width*shift;
-    memcpy(y, x + width*sizeof(T), cpyFirst*sizeof(T));
+    std::cout << "shift=" << shift << " width=" << width << " len="  << len << std::endl; 
+    memcpy(y, x + shift*width, cpyFirst*sizeof(T));
     memcpy(y+cpyFirst, x, cpySec*sizeof(T));
-
-}
-
-template <typename T>
-void RollGrad(DeviceCtx *ctx, std::vector<int32_t> move, oneflow::fixed_vector<long int, 20> dim, const T *x, T *y) {
-
-    int32_t len = dim[0];
-    int32_t width = dim[1];
-    int32_t shift = move[0] % len;
-    int32_t cpyFirst = width*shift;
-    int32_t cpySec = width*(len-shift);
-    memcpy(y, x + width*sizeof(T), cpyFirst*sizeof(T), cudaMemcpyDefault);    
-    memcpy(y+cpyFirst, x, cpySec*sizeof(T), cudaMemcpyDefault);
 
 }
 
@@ -77,51 +65,14 @@ private:
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, typename T>
-class RollGradKernel final : public user_op::OpKernel {
-public: 
-    RollGradKernel() = default;
-    ~RollGradKernel() override = default;
-
-private:
-    void Compute(user_op::KernelComputeContext* ctx) const override {
-        const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-        user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-        const user_op::TensorDesc* in_shape = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-        const oneflow::fixed_vector<long int, 20> in_dim_vec = in_shape->shape().dim_vec();
-        const std::vector<int32_t> move = ctx->Attr<std::vector<int32_t>>("shifts");
-        Roll<T>(ctx->device_ctx(),
-           move,
-           in_dim_vec,
-           in->dptr<T>(),
-           out->mut_dptr<T>());
-    }
-    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-
 #define REGISTER_ROLL_KERNEL(device, dtype)                                                             \
   REGISTER_USER_KERNEL("roll")                                                                                     \
       .SetCreateFn<RollKernel<device, dtype>>()                                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device))
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device) & \
+                        user_op::HobDataType("in", 0) == GetDataType<dtype>::value);
 
-REGISTER_ROLL_KERNEL(DeviceType::kCPU, float);
-REGISTER_ROLL_KERNEL(DeviceType::kCPU, double);
-
-#define REGISTER_ROLL_GRAD_KERNEL(device, dtype) 
-  REGISTER_USER_KERNEL("roll_grad")
-      .SetCreateFn<RollGradKernel<device, dtype>>()
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device))
-
-REGISTER_ROLL_GRAD_KERNEL(DeviceType::kCPU, float);
-REGISTER_ROLL_GRAD_KERNEL(DeviceType::kCPU, double);
-
-#ifdef WITH_CUDA
-REGISTER_ROLL_KERNEL(DeviceType::kGPU, float);
-REGITSER_ROLL_KERNEL(DeviceType::kGPU, double);
-REGISTER_ROLL_GRAD_KERNEL(DeviceType::kGPU, float);
-REGISTER_ROLL_GRAD_KERNEL(DeviceType::kGPU, double);
-#endif
+REGISTER_ROLL_KERNEL(DeviceType::kCPU, float)
+REGISTER_ROLL_KERNEL(DeviceType::kCPU, double)
 
 }
 }

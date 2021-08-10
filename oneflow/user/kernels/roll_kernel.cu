@@ -42,19 +42,6 @@ void Roll(DeviceCtx *ctx, std::vector<int32_t> move, oneflow::fixed_vector<long 
 
 }
 
-template <typename T>
-void RollGrad(DeviceCtx *ctx, std::vector<int32_t> move, oneflow::fixed_vector<long int, 20> dim, const T *x, T *y) {
-
-    int32_t len = dim[0];
-    int32_t width = dim[1];
-    int32_t shift = move[0] % len;
-    int32_t cpyFirst = width*shift;
-    int32_t cpySec = width*(len-shift);
-    cudaMemcpy(y, x + width*sizeof(T), cpyFirst*sizeof(T), cudaMemcpyDefault);    
-    cudaMemcpy(y+cpyFirst, x, cpySec*sizeof(T), cudaMemcpyDefault);
-
-}
-
 template<typename T>
 class GpuRollKernel final : public user_op::OpKernel {
 public: 
@@ -76,6 +63,7 @@ private:
     }
     bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
 #define REGISTER_GPU_ROLL_KERNEL(dtype)                                                             \
   REGISTER_USER_KERNEL("roll")                                                                                     \
       .SetCreateFn<GpuRollKernel<dtype>>()                                                         \
@@ -84,37 +72,6 @@ private:
 REGISTER_GPU_ROLL_KERNEL(float);
 REGISTER_GPU_ROLL_KERNEL(double);
 #undef REGISTER_GPU_ROLL_KERNEL
-
-template<typename T>
-class GpuRollGradKernel final : public user_op::OpKernel {
-public: 
-    GpuRollGradKernel() = default;
-    ~GpuRollGradKernel() override = default;
-
-private:
-    void Compute(user_op::KernelComputeContext* ctx) const override {
-        const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-        user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-        const user_op::TensorDesc* in_shape = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-        const oneflow::fixed_vector<long int, 20> in_dim_vec = in_shape->shape().dim_vec();
-        const std::vector<int32_t> move = ctx->Attr<std::vector<int32_t>>("shifts");
-        RollGrad<T>(ctx->device_ctx(),
-           move,
-           in_dim_vec,
-           in->dptr<T>(),
-           out->mut_dptr<T>());
-    }
-    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_GPU_ROLL_GRAD_KERNEL(dtype)                                                             \
-  REGISTER_USER_KERNEL("roll_grad")                                                                                     \
-      .SetCreateFn<GpuRollGradKernel<dtype>>()                                                         \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU))
-  
-REGISTER_GPU_ROLL_GRAD_KERNEL(float);
-REGISTER_GPU_ROLL_GRAD_KERNEL(double);
-#undef REGISTER_GPU_ROLL_GRAD_KERNEL
 
 }
 }

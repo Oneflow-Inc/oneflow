@@ -75,9 +75,37 @@ class ConsistentConstantFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BroadcastLikeFunctor {
+ public:
+  BroadcastLikeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_like").Input("x").Input("like").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::vector<int32_t>& broadcast_axes) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", broadcast_axes));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class RollFunctor : public UnaryFunctor {
-public:
+ public:
   RollFunctor() { op_ = CHECK_JUST(one::OpBuilder("roll").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, 
+                           const std::vector<int32_t>& shifts,
+                           const std::vector<int32_t>& dims) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("shifts", shifts));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dims", dims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs); 
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class ConstantFunctor {
@@ -1335,6 +1363,7 @@ class ReduceSumLikeFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
