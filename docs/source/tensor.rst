@@ -89,6 +89,7 @@ OneFlow Tensor Class
             negative, 
             nelement, 
             new_ones, 
+            nonzero,
             norm, 
             normal_, 
             numel, 
