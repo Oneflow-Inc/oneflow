@@ -403,67 +403,6 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LazyInterpreterApplyImplForParallelCastOpExpr(const UserOpExpr& op_expr,
-                                                          const TensorTuple& inputs,
-                                                          TensorTuple* outputs,
-                                                          const OpExprInterpContext& ctx) {
-  CHECK_OR_RETURN(op_expr.op_type_name() == "hierarchical_parallel_cast");
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
-  const auto& input_tensor = inputs[0];
-  CHECK_OR_RETURN(input_tensor->is_lazy());
-  CHECK_OR_RETURN(input_tensor->is_consistent());
-  const auto& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-  CHECK_OR_RETURN(!input_lbn.empty());
-
-  // gen op_conf
-  auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
-  // gen parallel_conf
-  auto parallel_conf = std::make_shared<cfg::ParallelConf>();
-  CHECK_OR_RETURN(ctx.parallel_desc.has_value());
-  parallel_conf->InitFromProto(
-      JUST(ctx.parallel_desc.value()).shared_from_symbol()->parallel_conf());
-  // make scope by parallel_conf
-  const auto& scope = JUST(NewScopeWithParallelConfAndCurScope(parallel_conf));
-  // update scope_symbol_id and device_tag for op_conf
-  op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf->set_device_tag(parallel_conf->device_tag());
-  // reset input lbn
-  ReplaceInputLbnInOpCustomizedConf(op_conf.get(), op_expr.indexed_ibns().at(0), input_lbn);
-
-  auto infer_ctx = JUST(GetCurInferCtx());
-  // make unique op name
-  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(*op_conf));
-  op_conf->set_name(new_op_name);
-  // since name was reset, output lbn should be updated
-  for (auto& pair : *(op_conf->mutable_user_conf()->mutable_output())) {
-    auto& list_s = pair.second;
-    for (int i = 0; i < list_s.s_size(); ++i) {
-      const std::string& old_lbn = list_s.s(i);
-      LogicalBlobId old_lbi = GenLogicalBlobId(old_lbn);
-      list_s.set_s(i, GenLogicalBlobName(new_op_name, old_lbi.blob_name()));
-    }
-  }
-  // add and infer op for job
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
-
-  // make output consistent tensor
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_OR_RETURN(!(*outputs)[0]);
-  int64_t op_parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
-  const auto& op_parallel_desc_sym =
-      JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(op_parallel_desc_sym_id));
-  const std::string& obn = op_expr.indexed_obns().at(0);
-  const auto& output_parallel_attr =
-      JUST(compatible_py::GetOpArgParallelAttribute(op_parallel_desc_sym, op_attr, obn));
-  const auto& output_blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
-  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(output_blob_attr, output_parallel_attr,
-                                                 /* is_lazy= */ true, /* is_local= */ false));
-  TensorNameScope::Global()->Record((*outputs)[0], GenLogicalBlobName(new_op_name, obn));
-  return Maybe<void>::Ok();
-}
-
 }  // namespace
 
 Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
@@ -477,10 +416,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     // NOTE(chengcheng): handle for copy UserOp which will NOT add op to job.
     return LazyInterpreterApplyImplForCopyUserOpExpr(op_expr, inputs, outputs, ctx);
   }
-  // if (op_expr.op_type_name() == "hierarchical_parallel_cast") {
-  //   // NOTE(zwx): handle for parallel_cast that was added in consistent cast
-  //   return LazyInterpreterApplyImplForParallelCastOpExpr(op_expr, inputs, outputs, ctx);
-  // }
 
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   // NOTE(chengcheng): Handle special UserOp such as:
