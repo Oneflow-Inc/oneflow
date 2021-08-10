@@ -105,10 +105,11 @@ class MyModule2(flow.nn.Module):
         self.activation = flow.nn.ReLU()
 
     def forward(self, x):
-        y = flow.F.matmul(self.weight, x, transpose_b=True)
-        if y.is_consistent:
-            y = y.to_consistent(grad_sbp=flow.sbp.broadcast)
-        return self.activation(y)
+        print(f"weight shape: {self.weight.shape}, placement: {self.weight.placement}, sbp: {self.weight.sbp}")
+        if self.weight.is_consistent:
+            y = self.weight.to_consistent(grad_sbp=flow.sbp.broadcast)
+        z = flow.F.matmul(y, x, transpose_b=True)
+        return self.activation(z)
 
 
 class MyGraph(flow.nn.Graph):
@@ -179,7 +180,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         c_y = local_y.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
 
         m = MyModule2(c_y)
-        optimizer = flow.optim.SGD(m.parameters(), lr=0.001)
+        optimizer = flow.optim.SGD(m.parameters(), lr=1.0)
         g = MyGraph(m, optimizer)
 
         g_z = g(c_x)
@@ -191,6 +192,32 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         c_z = g_z.transpose(0, 1).to_consistent(sbp=flow.sbp.broadcast)
         # print(f"c_z shape: {c_z.shape}, placement: {c_z.placement}, sbp: {c_z.sbp}")
         test_case.assertTrue(np.allclose(z.numpy().T, c_z.to_local().numpy()))
+
+        import time
+
+        time.sleep(5)
+
+        print(m.weight.to_local().numpy())
+
+        e_y = c_y.detach()
+        print(f"e_y shape: {e_y.shape}, placement: {e_y.placement}, sbp: {e_y.sbp}")
+        e_m = MyModule2(e_y)
+        e_z = e_m(c_x)
+        print(f"e_z shape: {e_z.shape}, placement: {e_z.placement}, sbp: {e_z.sbp}")
+        print(e_y.to_local().numpy())
+
+
+    # def test_multi_graph(test_case):
+    #     rank = flow.distributed.get_rank()
+    #     # pid = os.getpid()
+    #     # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_multi_graph")
+
+    #     local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+    #     local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+
+    #     placement = flow.placement("cuda", {0: [0, 1]})
+    #     c_x = local_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+    #     c_y = local_y.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
 
 
 if __name__ == "__main__":

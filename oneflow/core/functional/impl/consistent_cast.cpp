@@ -183,7 +183,7 @@ Maybe<Tensor> ConsistentToConsistent(
     const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels, bool identity_grad,
     const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) {
-  const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
+  const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   const auto& parallel_distribution_cast_op_expr =
       JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels, identity_grad, grad_sbp_parallels));
