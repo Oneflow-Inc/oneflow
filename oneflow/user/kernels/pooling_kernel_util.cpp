@@ -47,15 +47,13 @@ void GetWindowedOutputShape(int64_t input_size, int32_t filter_size, int32_t str
                             int32_t padding, bool ceil_mode, int32_t dilation_rate,
                             int64_t* output_ptr) {
   int64_t output_size = (input_size + 2 * padding - dilation_rate * (filter_size - 1) - 1 + stride
-                 + (ceil_mode ? stride - 1 : 0))
-                / stride;
-  
+                         + (ceil_mode ? stride - 1 : 0))
+                        / stride;
+
   if (ceil_mode) {
-        // ensure that the last pooling starts inside the image
-        // needed to avoid problems in ceil mode
-        if ((output_size - 1) * stride >= input_size + padding) {
-          --output_size;
-        }
+    // ensure that the last pooling starts inside the image
+    // needed to avoid problems in ceil mode
+    if ((output_size - 1) * stride >= input_size + padding) { --output_size; }
   }
   *output_ptr = output_size;
 }
