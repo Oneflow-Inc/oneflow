@@ -22,7 +22,7 @@ import oneflow as flow
 from test_util import GenArgList
 from automated_test_util import *
 
-#TODO: equal的底层实现没有和pytorch对齐
+# TODO: equal的底层实现没有和pytorch对齐
 @flow.unittest.skip_unless_1n1d()
 class TestEqual(flow.unittest.TestCase):
     @autotest()
