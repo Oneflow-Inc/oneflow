@@ -110,11 +110,11 @@
 
 - name: "pow"
   signature: "Tensor Pow(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "pow_scalar"
   signature: "Tensor ScalarPow(Tensor x, *, Scalar alpha)"
-  bind_python: True
+  bind_python: False
 
 - name: "reduce_sum"
   signature: "Tensor ReduceSum(Tensor x, *, Int32List axis, Bool keepdims=False)"
@@ -187,6 +187,10 @@
 - name: "hardtanh_grad"
   signature: "Tensor HardTanhGrad(Tensor y, Tensor dy, *, Double min_val, Double max_val)"
   bind_python: False
+
+- name: "tan"
+  signature: "Tensor Tan(Tensor x)"
+  bind_python: True
 
 - name: "tanh"
   signature: "Tensor Tanh(Tensor x)"
@@ -326,6 +330,27 @@
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
 
+- name: "fake_quantization"
+  signature:
+    "Tensor FakeQuantization(Tensor in, Tensor scale, Tensor zero_point, *, String quantization_formula, Int32 quantization_bit, String quantization_scheme)"
+  bind_python: True
+
+- name: "quantization"
+  signature:
+    "Tensor Quantization(Tensor in, Tensor scale, Tensor zero_point, *, String quantization_formula, Int32 quantization_bit, String quantization_scheme)"
+  bind_python: True
+
+- name: "min_max_observer"
+  signature:
+    "TensorTuple MinMaxObserver(Tensor in, *, String quantization_formula, Int32 quantization_bit, String quantization_scheme, Bool per_layer_quantization)"
+  bind_python: True
+
+- name: "moving_average_min_max_observer"
+  signature:
+    "TensorTuple MovingAverageMinMaxObserver(Tensor in, Tensor current_train_step, Tensor moving_max, Tensor moving_min,  *, Bool training, String quantization_formula,
+          Int64 stop_update_after_iters, Int32 quantization_bit, String quantization_scheme, Float momentum)"
+  bind_python: True
+
 - name: "conv3d"
   signature:
     "Tensor Conv3d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
@@ -375,6 +400,10 @@
 
 - name: "gather_nd"
   signature: "Tensor GatherNd(Tensor params, Tensor indices, *)"
+  bind_python: True
+
+- name: "scatternd"
+  signature: "Tensor ScatterNd(Tensor indices, Tensor updates, Shape shape)"
   bind_python: True
 
 - name: "scatterndlike"
@@ -671,6 +700,10 @@
   signature: "Tensor Erf(Tensor x)"
   bind_python: True
 
+- name: "erfc"
+  signature: "Tensor Erfc(Tensor x)"
+  bind_python: True
+
 - name: "expm1"
   signature: "Tensor Expm1(Tensor x)"
   bind_python: True
@@ -722,7 +755,7 @@
   
 - name: "clip_by_scalar"
   signature: "Tensor ClipByScalar(Tensor x, *, Scalar min, Scalar max)"
-  bind_python: True
+  bind_python: false
 
 - name: "clip_by_scalar_grad"
   signature: "Tensor ClipByScalarGrad(Tensor dy, Tensor x, *, Scalar min, Scalar max)"
@@ -730,7 +763,7 @@
 
 - name: "clip_by_scalar_min"
   signature: "Tensor ClipByScalarMin(Tensor x, *, Scalar min)"
-  bind_python: True
+  bind_python: false
 
 - name: "clip_by_scalar_min_grad"
   signature: "Tensor ClipByScalarMinGrad(Tensor dy, Tensor x, *, Scalar min)"
@@ -738,7 +771,7 @@
 
 - name: "clip_by_scalar_max"
   signature: "Tensor ClipByScalarMax(Tensor x, *, Scalar max)"
-  bind_python: True
+  bind_python: false
 
 - name: "clip_by_scalar_max_grad"
   signature: "Tensor ClipByScalarMaxGrad(Tensor dy, Tensor x, *, Scalar max)"
@@ -803,7 +836,7 @@
 
 - name: "dim_scatter"
   signature: "Tensor DimScatter(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
-  bind_python: True
+  bind_python: False
 
 - name: "dim_scatter_add"
   signature: "Tensor DimScatterAdd(Tensor input, Tensor index, Tensor src, *, Int32 dim)"
@@ -811,7 +844,7 @@
 
 - name: "dim_scatter_scalar"
   signature: "Tensor DimScatterUpdateScalar(Tensor input, Tensor index, *, Float src, Int32 dim)"
-  bind_python: True
+  bind_python: False
 
 - name: "dim_scatter_add_scalar"
   signature: "Tensor DimScatterAddScalar(Tensor input, Tensor index, *, Float src, Int32 dim)"
@@ -899,4 +932,14 @@
 
 - name: "reduce_sum_like"
   signature: "Tensor ReduceSumLike(Tensor in, Tensor like, *,Int32List axis)"
+  bind_python: True
+
+- name: "randn"
+  signature: "Tensor RandN(*, Shape shape, DataType dtype=None, Device device=None, 
+                           Generator generator=None)"
+  bind_python: True
+
+- name: "consistent_randn"
+  signature: "Tensor ConsistentRandN(*, Shape shape, Placement placement, 
+                                     SbpList sbp_tuple, DataType dtype=None, Generator generator=None)"
   bind_python: True

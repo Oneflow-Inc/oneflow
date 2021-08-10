@@ -15,18 +15,9 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
-class Sign(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.sign(x)
-
-
-def sign_op(x):
+def sign_op(input):
     """Computes the sign of Tensor.
 
     .. math::
@@ -52,11 +43,11 @@ def sign_op(x):
         array([-1., -1.,  1.], dtype=float32)
 
     """
-    return Sign()(x)
+    return flow.F.sign(input)
 
 
 @register_tensor_op("sign")
-def sign_op_tensor(x):
+def sign_op_tensor(input):
     """
 
     sign() -> Tensor
@@ -64,7 +55,7 @@ def sign_op_tensor(x):
     See :func:`oneflow.sign`
 
     """
-    return Sign()(x)
+    return flow.F.sign(input)
 
 
 if __name__ == "__main__":
