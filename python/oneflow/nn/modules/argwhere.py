@@ -52,9 +52,18 @@ def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
 
     """
 
+    if input.is_consistent:
+        raise ValueError(
+            "A consistent tensor can not be applied to argwhere, and use `tensor.to_local()` to convert it to local tensor first."
+        )
+
     (res, size) = flow.F.argwhere(input, dtype=dtype)
-    slice_tup_list = [[0, int(size.numpy()), 1]]
-    return flow.slice(res, slice_tup_list=slice_tup_list)
+    if input.is_lazy:
+        raise NotImplementedError
+        # return flow.F.sync_dynamic_resize(res, size, dim=0)
+    else:
+        slice_tup_list = [(0, size.numpy().item(), 1)]
+        return flow.slice(res, slice_tup_list=slice_tup_list)
 
 
 @register_tensor_op("argwhere")
