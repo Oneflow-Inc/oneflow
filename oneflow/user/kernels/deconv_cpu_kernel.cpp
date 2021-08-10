@@ -326,7 +326,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const {
+      user_op::KernelInitContext* ctx) const override {
     return CreateConvOpKernelState<T>(ctx, "out", "in", "weight");
   }
 
