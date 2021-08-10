@@ -170,7 +170,8 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dty
   if (flow_dtype == DataType::kDouble && !init_from_numpy && !desired_dtype) {
     desired_dtype = DType::Float(); 
   }
-  if (desired_dtype) { tensor = JUST(functional::Cast(tensor, desired_dtype)); }
+  if (desired_dtype) {
+    tensor = JUST(functional::Cast(tensor, desired_dtype)); }
   tensor->set_requires_grad(requires_grad);
   return tensor;
 }
