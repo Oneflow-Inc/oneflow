@@ -1,6 +1,6 @@
 import os
 import oneflow as flow
-
+import oneflow.utils.vision.transforms as transforms
 
 
 def load_data_cifar10(
@@ -35,6 +35,40 @@ def load_data_cifar10(
     return train_iter, test_iter
 
 
+def load_data_mnist(
+    batch_size, resize=None, root="./data/mnist", download=True, source_url=None
+):
+    """Download the MNIST dataset and then load into memory."""
+    root = os.path.expanduser(root)
+    transformer = []
+    if resize:
+        transformer += [transforms.Resize(resize)]
+    transformer += [transforms.ToTensor()]
+    transformer = transforms.Compose(transformer)
+
+    mnist_train = flow.utils.vision.datasets.MNIST(
+        root=root,
+        train=True,
+        transform=transformer,
+        download=download,
+        source_url=source_url,
+    )
+    mnist_test = flow.utils.vision.datasets.MNIST(
+        root=root,
+        train=False,
+        transform=transformer,
+        download=download,
+        source_url=source_url,
+    )
+    train_iter = flow.utils.data.DataLoader(
+        mnist_train, batch_size, shuffle=True
+    )
+    test_iter = flow.utils.data.DataLoader(
+        mnist_test, batch_size, shuffle=False
+    )
+    return train_iter, test_iter
+
+
 def get_fashion_mnist_dataset(
     resize=None,
     root="./data-test/fashion-mnist",
@@ -44,9 +78,9 @@ def get_fashion_mnist_dataset(
     root = os.path.expanduser(root)
     trans = []
     if resize:
-        trans.append(flow.utils.vision.transforms.Resize(resize))
-    trans.append(flow.utils.vision.transforms.ToTensor())
-    transform = flow.utils.vision.transforms.Compose(trans)
+        trans.append(transforms.Resize(resize))
+    trans.append(transforms.ToTensor())
+    transform = transforms.Compose(trans)
 
     mnist_train = flow.utils.vision.datasets.FashionMNIST(
         root=root,
@@ -78,9 +112,9 @@ def load_data_fashion_mnist(
     root = os.path.expanduser(root)
     trans = []
     if resize:
-        trans.append(flow.utils.vision.transforms.Resize(resize))
-    trans.append(flow.utils.vision.transforms.ToTensor())
-    transform = flow.utils.vision.transforms.Compose(trans)
+        trans.append(transforms.Resize(resize))
+    trans.append(transforms.ToTensor())
+    transform = transforms.Compose(trans)
 
     mnist_train = flow.utils.vision.datasets.FashionMNIST(
         root=root,

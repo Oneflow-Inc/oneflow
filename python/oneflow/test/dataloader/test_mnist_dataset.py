@@ -20,50 +20,16 @@ import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.utils.vision.transforms as transforms
+from data_utils import load_data_mnist
 
 
-def load_data_mnist(
-    batch_size, resize=None, root="./data/mnist", download=True, source_url=None
-):
-    """Download the MNIST dataset and then load into memory."""
-    root = os.path.expanduser(root)
-    transformer = []
-    if resize:
-        transformer += [transforms.Resize(resize)]
-    transformer += [transforms.ToTensor()]
-    transformer = transforms.Compose(transformer)
-
-    mnist_train = flow.utils.vision.datasets.MNIST(
-        root=root,
-        train=True,
-        transform=transformer,
-        download=download,
-        source_url=source_url,
-    )
-    mnist_test = flow.utils.vision.datasets.MNIST(
-        root=root,
-        train=False,
-        transform=transformer,
-        download=download,
-        source_url=source_url,
-    )
-    train_iter = flow.utils.data.DataLoader(
-        mnist_train, batch_size, shuffle=True
-    )
-    test_iter = flow.utils.data.DataLoader(
-        mnist_test, batch_size, shuffle=False
-    )
-    return train_iter, test_iter
-
-batch_size=128
 data_dir = os.path.join(
     os.getenv("ONEFLOW_TEST_CACHE_DIR", "./data-test"), "mnist-dataset"
 )
 train_iter, test_iter = load_data_mnist(
-    batch_size, download=True, root=data_dir,
+    batch_size=128, download=True, root=data_dir,
     source_url="https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/MNIST/"
 )
-
 
 def evaluate_accuracy(data_iter, net, device=None):
     n_correct, n_samples = 0.0, 0
@@ -80,14 +46,8 @@ def evaluate_accuracy(data_iter, net, device=None):
     return n_correct / n_samples
 
 
-input_size = 784
-hidden_size1 = 128
-hidden_size2 = 64
-num_classes = 10
-
-
 class Net(nn.Module):
-    def __init__(self, input_size, hidden_size1, hidden_size2, num_classes):
+    def __init__(self, input_size=784, hidden_size1=128, hidden_size2=64, num_classes=10):
         super(Net, self).__init__()
         self.l1 = nn.Linear(input_size, hidden_size1)
         self.relu1 = nn.ReLU()
@@ -109,8 +69,7 @@ def test_train_and_eval(test_case):
     else:
         device = flow.device("cuda")
 
-
-    model = Net(input_size, hidden_size1, hidden_size2, num_classes)
+    model = Net()
     model.to(device)
 
     loss = nn.CrossEntropyLoss().to(device)
