@@ -29,6 +29,8 @@ struct AdaptivePoolInterpState : public OpExprInterpState {
 
 class AdaptivePoolNdGrad : public OpExprGradFunction<AdaptivePoolInterpState> {
  public:
+  using OpExprGradFunction<AdaptivePoolInterpState>::Init;
+
   Maybe<void> Init(const OpExpr& op, std::string mode, const int& ndims);
   Maybe<void> Capture(AdaptivePoolInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
