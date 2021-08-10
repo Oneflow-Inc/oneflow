@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import os 
 from collections import OrderedDict
 
 import numpy as np
@@ -22,12 +23,10 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@flow.unittest.skip_unless_1n1d()
 def compare_with_numpy_adam(
     test_case,
     device,
     x_shape,
-    scale,
     learning_rate,
     train_iters,
     betas,
@@ -51,7 +50,7 @@ def compare_with_numpy_adam(
             return self.para0 * mask
 
     simp_module = CustomModule()
-    simp_module.to("cuda")
+    simp_module.to(device)
     simp_module.train()
 
     adam0 = flow.optim.Adam(
@@ -62,7 +61,6 @@ def compare_with_numpy_adam(
                 "betas": betas,
                 "eps": eps,
                 "weight_decay": weight_decay,
-                "scale": scale,
             }
         ],
         do_bias_correction=do_bias_correction,
@@ -100,7 +98,7 @@ def compare_with_numpy_adam(
         beta2 = betas[1]
 
         def np_train_one_iter(iter, grad):
-            grad = grad * scale + weight_decay * x
+            grad = grad + weight_decay * x
 
             if do_bias_correction:
                 lr = (
@@ -131,9 +129,8 @@ class TestAdam(flow.unittest.TestCase):
     def test_adam1(test_case):
         compare_with_numpy_adam(
             test_case,
-            device="cuda",
-            x_shape=(1,),
-            scale=1.0,
+            device="cpu",
+            x_shape=(10,),
             learning_rate=1,
             train_iters=10,
             betas=(0.99, 0.9),
@@ -142,15 +139,15 @@ class TestAdam(flow.unittest.TestCase):
             do_bias_correction=False,
         )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_adam2(test_case):
         compare_with_numpy_adam(
             test_case,
             device="cuda",
-            x_shape=(1,),
-            scale=0.8,
-            learning_rate=1,
+            x_shape=(10,),
+            learning_rate=1e-3,
             train_iters=10,
-            betas=(0.99, 0.9),
+            betas=(0.85, 0.9),
             weight_decay=0.0005,
             eps=1e-8,
             do_bias_correction=True,
