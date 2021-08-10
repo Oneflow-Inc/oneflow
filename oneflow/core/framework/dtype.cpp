@@ -105,10 +105,6 @@ bool DType::is_floating_point() const {
 
 const std::string& DType::name() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).name(); }
 
-Maybe<Symbol<DType>> DType::DType4DataType(DataType data_type) {
-  return DType::Get(data_type);
-}
-
 #define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)                                   \
   const Symbol<DType>& DType::data_type() {                                        \
     static const auto& dtype = SymbolOf(DType(OF_PP_CAT(DataType::k, data_type))); \

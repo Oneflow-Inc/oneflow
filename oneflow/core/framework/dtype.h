@@ -53,7 +53,6 @@ class DType final {
   Maybe<size_t> bytes() const;
 
   static Maybe<const Symbol<DType>&> Get(DataType);
-  static Symbol<DType> DType4DataType(DataType data_type);
 
 #define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) static const Symbol<DType>& data_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
