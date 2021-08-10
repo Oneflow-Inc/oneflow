@@ -68,12 +68,12 @@ def _test_with_generator(test_case, device, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
-    # def test_consistent_naive(test_case):
-    #     placement = flow.placement("cpu", {0: [0]})
-    #     sbp = (flow.sbp.broadcast,)
-    #     x = flow.randn(16, 16, placement=placement, sbp=sbp)
-    #     test_case.assertEqual(x.sbp, sbp)
-    #     test_case.assertEqual(x.placement, placement)
+    def test_consistent_naive(test_case):
+        placement = flow.placement("cpu", {0: [0]})
+        sbp = (flow.sbp.broadcast,)
+        x = flow.randn(16, 16, placement=placement, sbp=sbp)
+        test_case.assertEqual(x.sbp, sbp)
+        test_case.assertEqual(x.placement, placement)
 
     def test_cast(test_case):
         arg_dict = OrderedDict()
@@ -84,8 +84,7 @@ class TestConstantModule(flow.unittest.TestCase):
             _test_with_generator,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
-        # arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 0, 4)]
-        arg_dict["shape"] = [(2, 2)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 0, 4)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
