@@ -264,6 +264,8 @@ Maybe<Symbol<cfg::ParallelDistribution>> ShiftSplitAxis(
   return SymbolOf(new_nd_sbp);
 }
 
+}  // namespace
+
 Maybe<std::tuple<std::shared_ptr<const Shape>, Symbol<cfg::ParallelDistribution>,
                  Symbol<cfg::ParallelDistribution>>>
 CalcDecomposableEquivalentShapeAndNdSbpPair(const Shape& shape, const Shape& hierarchy,
@@ -288,6 +290,8 @@ CalcDecomposableEquivalentShapeAndNdSbpPair(const Shape& shape, const Shape& hie
       JUST(ShiftSplitAxis(dst_nd_sbp, shape_axis2dst_nd_sbp_indexes, old_axis2new_axis_offset));
   return std::make_tuple(new_shape, new_src_nd_sbp, new_dst_nd_sbp);
 }
+
+namespace {
 
 // nd_sbp is called decomposable if no particular axis is used to split tensor more than once.
 // e.g.

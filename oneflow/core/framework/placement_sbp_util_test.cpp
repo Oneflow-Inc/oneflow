@@ -123,10 +123,11 @@ TEST(GetSelectedParallelIds, 2d_nonbroadcast_broadcast) {
 namespace {
 
 void InitSbpParallel(cfg::SbpParallel* sbp_parallel, const std::string& sbp_tag) {
-  if (sbp_tag == "S0") {
-    sbp_parallel->mutable_split_parallel()->set_axis(0);
-  } else if (sbp_tag == "S1") {
-    sbp_parallel->mutable_split_parallel()->set_axis(1);
+  CHECK(sbp_tag.size() == 1 || sbp_tag.size() == 2);
+  if (sbp_tag[0] == 'S') {
+    CHECK_EQ(sbp_tag.size(), 2);
+    int64_t axis = sbp_tag[1] - '0';
+    sbp_parallel->mutable_split_parallel()->set_axis(axis);
   } else if (sbp_tag == "B") {
     sbp_parallel->mutable_broadcast_parallel();
   } else if (sbp_tag == "P") {
@@ -136,10 +137,12 @@ void InitSbpParallel(cfg::SbpParallel* sbp_parallel, const std::string& sbp_tag)
   }
 }
 
-Symbol<cfg::ParallelDistribution> Get2dSbp(const std::string& sbp0, const std::string& sbp1) {
+template<typename... Args>
+Symbol<cfg::ParallelDistribution> GetNdSbp(Args... sbps) {
   cfg::ParallelDistribution nd_sbp;
-  InitSbpParallel(nd_sbp.mutable_sbp_parallel()->Add(), sbp0);
-  InitSbpParallel(nd_sbp.mutable_sbp_parallel()->Add(), sbp1);
+  for (const auto& sbp : std::vector<std::string>{sbps...}) {
+    InitSbpParallel(nd_sbp.mutable_sbp_parallel()->Add(), sbp);
+  }
   return SymbolOf(nd_sbp);
 }
 
@@ -161,8 +164,8 @@ TEST(DecomposeByParallelId, decompose_axis0) {
   parallel_conf.mutable_hierarchy()->add_dim(2);
   parallel_conf.mutable_hierarchy()->add_dim(4);
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
-  const auto& src_nd_sbp = Get2dSbp("P", "B");
-  const auto& dst_nd_sbp = Get2dSbp("S0", "B");
+  const auto& src_nd_sbp = GetNdSbp("P", "B");
+  const auto& dst_nd_sbp = GetNdSbp("S0", "B");
   for (int i = 0; i < 8; ++i) {
     const auto& tensor_meta = MakeConsistentTensorMeta(parallel_desc, src_nd_sbp);
     const auto& transformations =
@@ -191,8 +194,8 @@ TEST(DecomposeByParallelId, decompose_axis1) {
   parallel_conf.mutable_hierarchy()->add_dim(2);
   parallel_conf.mutable_hierarchy()->add_dim(4);
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
-  const auto& src_nd_sbp = Get2dSbp("S0", "P");
-  const auto& dst_nd_sbp = Get2dSbp("S0", "S1");
+  const auto& src_nd_sbp = GetNdSbp("S0", "P");
+  const auto& dst_nd_sbp = GetNdSbp("S0", "S1");
   for (int i = 0; i < 8; ++i) {
     const auto& tensor_meta = MakeConsistentTensorMeta(parallel_desc, src_nd_sbp);
     const auto& transformations =
@@ -220,8 +223,8 @@ TEST(DecomposeByParallelId, decompose_two_axes) {
   parallel_conf.mutable_hierarchy()->add_dim(2);
   parallel_conf.mutable_hierarchy()->add_dim(4);
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
-  const auto& src_nd_sbp = Get2dSbp("S0", "P");
-  const auto& dst_nd_sbp = Get2dSbp("B", "S0");
+  const auto& src_nd_sbp = GetNdSbp("S0", "P");
+  const auto& dst_nd_sbp = GetNdSbp("B", "S0");
   for (int i = 0; i < 8; ++i) {
     const auto& tensor_meta = MakeConsistentTensorMeta(parallel_desc, src_nd_sbp);
     const auto& transformations =
@@ -253,6 +256,86 @@ TEST(DecomposeByParallelId, decompose_two_axes) {
       ASSERT_EQ(transformations->at(1).dst_nd_sbp->sbp_parallel(0).split_parallel().axis(), 0);
     }
   }
+}
+
+TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, naive) {
+  Shape shape(DimVector{4, 4});
+  Shape hierarchy(DimVector{4, 4});
+  const auto& src_nd_sbp = GetNdSbp("S0", "S1");
+  const auto& dst_nd_sbp = GetNdSbp("B", "P");
+  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
+      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_tuple.IsOk());
+  const auto& tuple = CHECK_JUST(maybe_tuple);
+  ASSERT_TRUE(*std::get<0>(*tuple) == shape);
+  ASSERT_TRUE(std::get<1>(*tuple) == src_nd_sbp);
+  ASSERT_TRUE(std::get<2>(*tuple) == dst_nd_sbp);
+}
+
+TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_src) {
+  Shape shape(DimVector{16, 4});
+  Shape hierarchy(DimVector{4, 4});
+  const auto& src_nd_sbp = GetNdSbp("S0", "S0");
+  const auto& dst_nd_sbp = GetNdSbp("B", "P");
+  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
+      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_tuple.IsOk());
+  const auto& tuple = CHECK_JUST(maybe_tuple);
+  ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 4}));
+  ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("S0", "S1"));
+  ASSERT_TRUE(std::get<2>(*tuple) == dst_nd_sbp);
+}
+
+TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_dst) {
+  Shape shape(DimVector{16, 4});
+  Shape hierarchy(DimVector{4, 4});
+  const auto& src_nd_sbp = GetNdSbp("P", "S0");
+  const auto& dst_nd_sbp = GetNdSbp("S0", "S0");
+  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
+      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_tuple.IsOk());
+  const auto& tuple = CHECK_JUST(maybe_tuple);
+  ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 4}));
+  ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("P", "S0"));
+  ASSERT_TRUE(std::get<2>(*tuple) == GetNdSbp("S0", "S1"));
+}
+
+TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_dst_3d) {
+  Shape shape(DimVector{128, 4});
+  Shape hierarchy(DimVector{4, 4, 4});
+  const auto& src_nd_sbp = GetNdSbp("P", "S0", "S1");
+  const auto& dst_nd_sbp = GetNdSbp("S0", "S0", "S0");
+  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
+      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_tuple.IsOk());
+  const auto& tuple = CHECK_JUST(maybe_tuple);
+  ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 8, 4}));
+  ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("P", "S0", "S3"));
+  ASSERT_TRUE(std::get<2>(*tuple) == GetNdSbp("S0", "S1", "S2"));
+}
+
+TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_src_3d) {
+  Shape shape(DimVector{128, 4});
+  Shape hierarchy(DimVector{4, 4, 4});
+  const auto& src_nd_sbp = GetNdSbp("S0", "S0", "S0");
+  const auto& dst_nd_sbp = GetNdSbp("P", "S0", "S1");
+  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
+      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_tuple.IsOk());
+  const auto& tuple = CHECK_JUST(maybe_tuple);
+  ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 8, 4}));
+  ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("S0", "S1", "S2"));
+  ASSERT_TRUE(std::get<2>(*tuple) == GetNdSbp("P", "S0", "S3"));
+}
+
+TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_failed) {
+  Shape shape(DimVector{32, 4});
+  Shape hierarchy(DimVector{4, 4, 4});
+  const auto& src_nd_sbp = GetNdSbp("S0", "S0", "S0");
+  const auto& dst_nd_sbp = GetNdSbp("P", "S0", "S1");
+  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
+      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
+  ASSERT_FALSE(maybe_tuple.IsOk());
 }
 
 }  // namespace test
