@@ -46,6 +46,7 @@ namespace one {
 class StatefulLocalOpKernel;
 class TensorTuple;
 class MirroredTensor;
+class ConsistentTensorInferResult;
 }  // namespace one
 
 class NNGraphIf;
@@ -258,6 +259,15 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                 const one::OpExprInterpContext& ctx,
                                 const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
                                 const std::string& instr_type_name);
+
+  Maybe<void> LocalCallOpKernel(
+      const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+      const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+      const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      const one::OpExprInterpContext& ctx,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+      const std::string& instr_type_name);
 
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,
