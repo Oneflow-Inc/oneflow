@@ -382,19 +382,20 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
   if (input_tensor->is_local()) {
-    (*outputs)[0] = JUST(MirroredTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
-                                                    JUST(Device::New(device_type, device_id)),
-                                                    /* is_lazy= */ true,
-                                                    /*requires_grad=*/false, /*is_leaf=*/true));
+    (*outputs)[0] =
+        JUST(MirroredTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
+                                        JUST(Device::New(device_type, device_id)),
+                                        /* is_lazy= */ true,
+                                        /*requires_grad=*/false, /*is_leaf=*/true));
   } else {
     ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
     parallel_conf.set_device_tag(GetDeviceTagByDeviceTypeStr(device_type));
     ParallelDesc parallel_desc(parallel_conf);
-    (*outputs)[0] = JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
-                                                      JUST(input_tensor->parallel_distribution()),
-                                                      SymbolOf(parallel_desc),
-                                                      /* is_lazy= */ true,
-                                                      /*requires_grad=*/false, /*is_leaf=*/true));
+    (*outputs)[0] = JUST(ConsistentTensor::MakeTensor(
+        input_tensor->shape(), input_tensor->dtype()->data_type(),
+        JUST(input_tensor->parallel_distribution()), SymbolOf(parallel_desc),
+        /* is_lazy= */ true,
+        /*requires_grad=*/false, /*is_leaf=*/true));
   }
   // NOTE(chengcheng): output tensor lbn is SAME with input tensor.
   TensorNameScope::Global()->Record(outputs->at(0), input_lbn);

@@ -32,8 +32,8 @@ namespace one {
 
 Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
-  return std::dynamic_pointer_cast<MirroredTensor>(
-      JUST(functional::Constant(*shape_, functional::Scalar(0), DType::DType4DataType(dtype_), device_)));
+  return std::dynamic_pointer_cast<MirroredTensor>(JUST(functional::Constant(
+      *shape_, functional::Scalar(0), DType::DType4DataType(dtype_), device_)));
 }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
