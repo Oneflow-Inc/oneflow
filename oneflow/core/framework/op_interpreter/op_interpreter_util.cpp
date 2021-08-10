@@ -78,7 +78,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
               << "Got tensors with inconsistent attributes!\n"
               << "op_type_name: " << op_expr.op_type_name() << "\n"
               << "first input tensor: consistent\n"
-              << "seciod input tensor: local";  // unroll loop for efficiency
+              << "second input tensor: local";  // unroll loop for efficiency
           CHECK_OR_RETURN(inputs.at(2)->is_consistent())
               << "Got tensors with inconsistent attributes!\n"
               << "op_type_name: " << op_expr.op_type_name() << "\n"
