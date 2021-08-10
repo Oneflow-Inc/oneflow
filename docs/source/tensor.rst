@@ -73,6 +73,7 @@ OneFlow Tensor Class
             log1p, 
             logical_and,
             logical_or,
+            logical_not,
             long, 
             lt, 
             masked_fill, 

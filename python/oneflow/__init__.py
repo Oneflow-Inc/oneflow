@@ -138,6 +138,7 @@ import oneflow.nn.modules.greater
 import oneflow.nn.modules.greater_equal
 import oneflow.nn.modules.logical_and
 import oneflow.nn.modules.logical_or
+import oneflow.nn.modules.logical_not
 import oneflow.nn.modules.in_top_k
 import oneflow.nn.modules.masked_select
 import oneflow.nn.modules.math_ops
@@ -225,6 +226,7 @@ from oneflow.nn.modules.greater import greater_op as gt
 from oneflow.nn.modules.greater_equal import greater_equal_op as ge
 from oneflow.nn.modules.logical_and import logical_and_op as logical_and
 from oneflow.nn.modules.logical_or import logical_or_op as logical_or
+from oneflow.nn.modules.logical_not import logical_not_op as logical_not
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.less import less_op as lt
 from oneflow.nn.modules.less_equal import less_equal_op as le

@@ -202,6 +202,19 @@ class ReshapeLikeFunctor : public BinaryFunctor {
   }
 };
 
+class LogicalNotFunctor {
+ public:
+  LogicalNotFunctor() { op_ = CHECK_JUST(one::OpBuilder("logical_not").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const DataType& dtype) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -226,6 +239,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
+  m.add_functor<impl::LogicalNotFunctor>("LogicalNot");
 };
 
 }  // namespace functional
