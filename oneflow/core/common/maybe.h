@@ -294,7 +294,7 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
   })(__FUNCTION__)                                                             \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
+#define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
 
 #define OF_RETURN_IF_ERROR(...)                                                              \
   for (MAYBE_CONST_AUTO_REF maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
