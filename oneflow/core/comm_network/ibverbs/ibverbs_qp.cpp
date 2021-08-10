@@ -32,9 +32,23 @@ namespace {
 
 constexpr uint32_t kDefaultQueueDepth = 1024;
 constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
-constexpr uint32_t kDefaultMessageSize = 512; // 512 byte
+//constexpr uint32_t kDefaultMessageSize = 512; // 512 byte
 
 }  // namespace
+
+void MessagePool::RegisterMessagePool() {
+        uint32_t ActorMsgSize = sizeof(ActorMsg);
+      uint64_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
+      char * addr = (char*)malloc(RegisterMemorySize);
+      IBVerbsMemDesc *  mem_desc = new IBVerbsMemDesc(pd_,(void*) addr, RegisterMemorySize ); 
+      const ibv_mr* mr = mem_desc->mr();
+      for(uint32_t i =0; i < num_of_message_; i++){
+        ibv_mr * split_mr =(ibv_mr*) (mr + ActorMsgSize * i);
+        IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(split_mr,(void*)(addr + ActorMsgSize * i),ActorMsgSize);
+        ActorMsgMR * msg_mr= new ActorMsgMR(mem_desc);
+        message_buf_.push(msg_mr);
+  }
+}
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq) {
@@ -148,8 +162,8 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 
 void IBVerbsQP::PostAllRecvRequest() {
   std::unique_lock<std::mutex> lck(recv_msg_buf_mtx_);
-    std::queue<ActorMsgMR *> messageBuf = recv_msg_buf_->getMessageBuf();
-    while(messageBuf.empty() == false) {
+  std::queue<ActorMsgMR *> messageBuf = recv_msg_buf_->getMessageBuf();
+  while(messageBuf.empty() == false) {
       ActorMsgMR * msg_mr = std::move(messageBuf.front());
       messageBuf.pop();
       PostRecvRequest(msg_mr);

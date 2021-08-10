@@ -36,13 +36,13 @@ class ActorMsgMR final {
 
   ActorMsg& msg()  {
     void * mem_ptr = mem_desc_->mem_ptr();
-    std::memcpy((char*)&msg_, mem_ptr, sizeof(msg_));
+    std::memcpy((char*)&msg_, (char*)mem_ptr, sizeof(msg_));
     return msg_;
   }
 
   void set_msg(const ActorMsg& val) {
     void * mem_ptr = mem_desc_->mem_ptr();
-    std::memcpy(mem_ptr, (char*)&val, sizeof(val));
+    std::memcpy((char*)mem_ptr, (char*)&val, sizeof(val));
   }
 
   const IBVerbsMemDesc& mem_desc() const { return *mem_desc_; }
@@ -70,21 +70,8 @@ class MessagePool final {
       RegisterMessagePool();
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
-    void RegisterMessagePool() {
-      uint32_t ActorMsgSize = sizeof(ActorMsg);
-      uint64_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
-      char * addr = (char*)malloc(RegisterMemorySize);
-      IBVerbsMemDesc *  mem_desc = new IBVerbsMemDesc(pd_,(void*) addr, RegisterMemorySize ); 
-      const ibv_mr* mr = mem_desc->mr();
-      for(uint32_t i =0; i < num_of_message_; i++){
-        ibv_mr * split_mr =(ibv_mr*) (mr + ActorMsgSize * i);
-        IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(split_mr,(void*)(addr + ActorMsgSize * i),ActorMsgSize);
-        ActorMsgMR * msg_mr= new ActorMsgMR(mem_desc);
-        message_buf_.push(msg_mr);
-    }
-  }
-
-  ActorMsgMR *  GetMessage(){
+    void RegisterMessagePool();
+    ActorMsgMR *  GetMessage(){
     if(isEmpty() == false)  {
       return GetMessageFromBuf();
     } else {
@@ -195,7 +182,7 @@ class IBVerbsQP final {
   ibv_qp* qp_;
  // std::vector<ActorMsgMR*> recv_msg_buf_;
 
-  std::mutex send_msg_buf_mtx_;
+  
   //std::queue<ActorMsgMR*> send_msg_buf_;
   std::mutex pending_send_wr_mutex_;
   uint32_t num_outstanding_send_wr_;
@@ -205,6 +192,7 @@ class IBVerbsQP final {
   MessagePool  *  recv_msg_buf_;
   std::mutex recv_msg_buf_mtx_;
   MessagePool  * send_msg_buf_;
+  std::mutex send_msg_buf_mtx_;
 };
 
 }  // namespace oneflow
