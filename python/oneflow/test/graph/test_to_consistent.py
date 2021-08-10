@@ -277,6 +277,33 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         test_case.assertTrue(np.allclose(z1.to_local().numpy(), z2.to_local().numpy()))
         test_case.assertTrue(np.allclose(z1.to_local().numpy(), z3.to_local().numpy()))
 
+    @unittest.skipIf(True, "")
+    def test_to_placement(test_case):
+        """ Since there's no way to construct asymmetric consistent tensor,
+            skip test of to_consistent for changing placement.
+        """
+        rank = flow.distributed.get_rank()
+        # pid = os.getpid()
+        # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_to_placement")
+
+        if rank == 0:
+            local_x = flow.Tensor(
+                x, dtype=flow.float32, device=flow.device(f"cuda:{rank}")
+            )
+        elif rank == 1:
+            local_x = flow.Tensor(tuple()).to("cuda")
+        else:
+            raise ValueError
+
+        print(
+            f"local_x shape: {local_x.shape}, dtype: {local_x.dtype}, device: {local_x.device}"
+        )
+        c_x = local_x.to_consistent(
+            placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
+        )
+        print(f"c_x shape: {c_x.shape}, placment: {c_x.placement}, sbp: {c_x.sbp}")
+
+    @unittest.skipIf(True, "")
     def test_2d_sbp(test_case):
         """ Should test 2D SBP case after 2D SBP tensor could be constructed
         """
