@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import unittest
 from collections import OrderedDict
 
@@ -22,15 +37,15 @@ def compare_with_numpy_rmsprop(
 ):
     random_grad_seq = []
     for _ in range(train_iters):
-        random_grad_seq.append(np.random.uniform(
-            size=x_shape).astype(np.float32))
+        random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
     init_value = np.random.uniform(size=x_shape).astype(np.float32)
 
     class CustomModel(flow.nn.Module):
         def __init__(self):
             super().__init__()
-            self.param0 = flow.nn.Parameter(flow.Tensor(
-                init_value, device=flow.device(device)))
+            self.param0 = flow.nn.Parameter(
+                flow.Tensor(init_value, device=flow.device(device))
+            )
 
         def forward(self, mask):
             return self.param0 * mask
@@ -69,7 +84,8 @@ def compare_with_numpy_rmsprop(
 
     for i in range(train_iters):
         mask_tensor = flow.Tensor(
-            random_grad_seq[i], requires_grad=False, device=flow.device(device))
+            random_grad_seq[i], requires_grad=False, device=flow.device(device)
+        )
         rmsprop_x = rmsprop_graph(mask_tensor)
 
         of_res_list.append(simp_module.param0.numpy())
@@ -90,8 +106,7 @@ def compare_with_numpy_rmsprop(
             r_ = alpha * r + (1 - alpha) * grad * grad
             if centered:
                 g_ = alpha * g + (1 - alpha) * grad
-                v_ = momentum * v + learning_rate / \
-                    np.sqrt(r_ - g_ * g_ + eps) * grad
+                v_ = momentum * v + learning_rate / np.sqrt(r_ - g_ * g_ + eps) * grad
             else:
                 g_ = g
                 v_ = momentum * v + learning_rate / np.sqrt(r_ + eps) * grad
@@ -105,9 +120,7 @@ def compare_with_numpy_rmsprop(
 
     train_by_numpy()
 
-    test_case.assertTrue(
-        np.allclose(of_res_list, np_res_list, rtol=1e-4, atol=1e-4)
-    )
+    test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-4, atol=1e-4))
 
 
 @flow.unittest.skip_unless_1n1d()
