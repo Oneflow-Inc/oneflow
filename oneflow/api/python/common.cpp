@@ -31,9 +31,6 @@ Maybe<void> ParsingDeviceTag(const std::string& device_tag, std::string* device_
     *device_name = device_tag.substr(0, pos);
     *device_index = std::stoi(index_str);
   }
-  if (*device_name == "cpu" && *device_index != -1) {
-    CHECK_EQ_OR_RETURN(*device_index, 0) << "CPU device index must be 0.";
-  }
   return Maybe<void>::Ok();
 }
 
