@@ -50,6 +50,18 @@ Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
   return SymbolOf(partial_sum_sbp);
 }
 
+std::string GetSupportedBoxingTypeInfo() {
+  static std::string supported_boxing_type_info =
+      "============ Supported eager boxing type============\n"
+      "\'[S(0)] -> [B]\' on GPU\n"
+      "\'[S(0)] -> [P]\' on GPU\n"
+      "\'[P] -> [B]\' on GPU\n"
+      "\'[P] -> [S(0)]\' on GPU\n"
+      "\'[B] -> [S(0)]\' on GPU\n"
+      "\'[B] -> [P]\' on GPU or CPU";
+  return supported_boxing_type_info;
+}
+
 Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
     Symbol<cfg::ParallelDistribution> in_parallel_distribution,
     Symbol<cfg::ParallelDistribution> out_parallel_distribution) {
@@ -71,14 +83,8 @@ Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
                   != sbp_pair2eager_boxing_interpreter.end())
       << "Eager boxing type \'" << ParallelDistributionToString(in_parallel_distribution) << " -> "
       << ParallelDistributionToString(out_parallel_distribution) << "\'"
-      << "not support yet\n"
-      << "============ Supported eager boxing type============\n"
-      << "\'[S(0)] -> [B]\' on GPU\n"
-      << "\'[S(0)] -> [P]\' on GPU\n"
-      << "\'[P] -> [B]\' on GPU\n"
-      << "\'[P] -> [S(0)]\' on GPU\n"
-      << "\'[B] -> [S(0)]\' on GPU\n"
-      << "\'[B] -> [P]\' on GPU or CPU";
+      << " not support yet\n"
+      << GetSupportedBoxingTypeInfo();
 
   return JUST(MapAt(sbp_pair2eager_boxing_interpreter, key));
 }
@@ -108,37 +114,19 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(
         UNIMPLEMENTED_THEN_RETURN()
             << "Eager boxing type \'" << ParallelDistributionToString(in_parallel_distribution)
             << " -> " << ParallelDistributionToString(out_parallel_distribution) << "\'"
-            << "not support yet\n"
-            << "============ Supported eager boxing type============\n"
-            << "\'[S(0)] -> [B]\' on GPU\n"
-            << "\'[S(0)] -> [P]\' on GPU\n"
-            << "\'[P] -> [B]\' on GPU\n"
-            << "\'[P] -> [S(0)]\' on GPU\n"
-            << "\'[B] -> [S(0)]\' on GPU\n"
-            << "\'[B] -> [P]\' on GPU or CPU";
+            << " not support yet\n"
+            << GetSupportedBoxingTypeInfo();
       }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Eager boxing with different placement not support yet\n"
-                                  << "============ Supported eager boxing type============\n"
-                                  << "\'[S(0)] -> [B]\' on GPU\n"
-                                  << "\'[S(0)] -> [P]\' on GPU\n"
-                                  << "\'[P] -> [B]\' on GPU\n"
-                                  << "\'[P] -> [S(0)]\' on GPU\n"
-                                  << "\'[B] -> [S(0)]\' on GPU\n"
-                                  << "\'[B] -> [P]\' on GPU or CPU";
+                                  << GetSupportedBoxingTypeInfo();
     }
   } else {
     UNIMPLEMENTED_THEN_RETURN() << "N-dim eager boxing type \'"
                                 << ParallelDistributionToString(in_parallel_distribution) << " -> "
                                 << ParallelDistributionToString(out_parallel_distribution) << "\'"
-                                << "not support yet\n"
-                                << "============ Supported eager boxing type============\n"
-                                << "\'[S(0)] -> [B]\' on GPU\n"
-                                << "\'[S(0)] -> [P]\' on GPU\n"
-                                << "\'[P] -> [B]\' on GPU\n"
-                                << "\'[P] -> [S(0)]\' on GPU\n"
-                                << "\'[B] -> [S(0)]\' on GPU\n"
-                                << "\'[B] -> [P]\' on GPU or CPU";
+                                << " not support yet\n"
+                                << GetSupportedBoxingTypeInfo();
   }
 }
 
