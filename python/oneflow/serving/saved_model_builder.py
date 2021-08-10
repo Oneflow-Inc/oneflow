@@ -61,7 +61,8 @@ class SavedNNGraphBuilder(object):
         self.proto.version = version
         return self
 
-    def AddGraph(self, graph_name: str, job):
+    def AddGraph(self, job):
+        graph_name = job.job_conf.job_name
         if graph_name in self.graph_builders_:
             raise ValueError("graph_name with name {} already exists".format(graph_name))
         graph_builder = GraphBuilder(graph_name, self)

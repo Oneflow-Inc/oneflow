@@ -96,7 +96,7 @@ class Graph(object):
         signature_builder = (
             saved_model_builder.ModelName(self.name)
             .Version(model_version)
-            .AddGraph(self._job_proto.job_conf.job_name, self._job_proto)
+            .AddGraph(self._job_proto)
             .AddSignature("regress")
         )
         for input_name in self._input_op_names:
