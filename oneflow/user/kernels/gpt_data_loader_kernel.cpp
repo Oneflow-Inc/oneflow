@@ -72,7 +72,7 @@ class GPTDataLoader final : public OpKernelState {
 
     // NOTE(zwx): If GPTDataLoader works by DDP, we use world size and rank
     //     as num_shards and shard_index, otherwise use parallel_hierarchy
-    //     and parallel_distribution to infer num_shards and shard_index.
+    //     and nd_sbp to infer num_shards and shard_index.
     if (IsMirroredParallelContext(ctx->parallel_ctx())) {
       num_shards_ = GlobalProcessCtx::WorldSize();
       shard_index_ = GlobalProcessCtx::Rank();

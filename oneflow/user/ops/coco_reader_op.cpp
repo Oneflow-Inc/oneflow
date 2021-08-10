@@ -35,7 +35,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("COCOReader")
     .Attr<bool>("group_by_ratio", true)
     .Attr<bool>("remove_images_without_annotations", true)
     .Attr<bool>("stride_partition", false)
-    .Attr<std::vector<std::string>>("parallel_distribution")
+    .Attr<std::vector<std::string>>("nd_sbp")
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
       CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("image_id", 0));
@@ -94,7 +94,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("COCOReader")
     .SetParallelDistributionInferFn(
         [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
           const auto& dist_conf =
-              ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
+              ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
           const Shape& hierarchy = ctx->parallel_hierarchy();
 
           // the inputs may be produced by tick and others, whose sbp should be broadcast parallel
