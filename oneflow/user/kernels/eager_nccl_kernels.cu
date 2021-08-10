@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
@@ -138,5 +139,70 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("eager_nccl_reduce")
     .SetCreateFn<EagerNcclReduceKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+
+class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
+ public:
+  EagerNcclReduceScatterKernel() = default;
+  ~EagerNcclReduceScatterKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EagerNcclOpKernelState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK(!(in->shape() == out->shape()));
+    CHECK_EQ(in->data_type(), out->data_type());
+    const auto& op_type = ctx->Attr<std::string>("op_type");
+    OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
+                                    GetNcclDataType(in->data_type()),
+                                    CHECK_JUST(MapAt(op_type2ncclRedOp_t, op_type)),
+                                    kernel_state->comm(), ctx->device_ctx()->cuda_stream()));
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  static HashMap<std::string, ncclRedOp_t> op_type2ncclRedOp_t;
+};
+
+HashMap<std::string, ncclRedOp_t> EagerNcclReduceScatterKernel::op_type2ncclRedOp_t = {
+    {"sum", ncclSum}, {"max", ncclMax}};
+
+REGISTER_USER_KERNEL("eager_nccl_reduce_scatter")
+    .SetCreateFn<EagerNcclReduceScatterKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+
+class EagerNcclAllGatherKernel final : public user_op::OpKernel {
+ public:
+  EagerNcclAllGatherKernel() = default;
+  ~EagerNcclAllGatherKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EagerNcclOpKernelState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK(!(in->shape() == out->shape()));
+    CHECK_EQ(in->data_type(), out->data_type());
+    OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+                                GetNcclDataType(in->data_type()), kernel_state->comm(),
+                                ctx->device_ctx()->cuda_stream()));
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("eager_nccl_all_gather")
+    .SetCreateFn<EagerNcclAllGatherKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 }  // namespace oneflow
