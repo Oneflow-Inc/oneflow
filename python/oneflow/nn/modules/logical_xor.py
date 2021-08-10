@@ -44,7 +44,7 @@ def logical_xor_op(input, other):
 
     """
     assert input.shape == other.shape, "shape of input and other should be same"
-    
+
     if other.dtype != input.dtype:
         other = flow.cast(other, input.dtype)
     return flow.F.broadcast_logical_xor(input, other)
