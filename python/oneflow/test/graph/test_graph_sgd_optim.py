@@ -16,16 +16,15 @@ limitations under the License.
 import unittest
 import os
 from collections import OrderedDict
-
 import numpy as np
-
+from test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
 
 def compare_with_numpy_sgd(
-    test_case, device, x_shape, learning_rate, train_iters, momentum, weight_decay, eps,
-):
+    test_case, device, x_shape, learning_rate, train_iters, momentum, weight_decay
+):  
     random_grad_seq = []
     for _ in range(train_iters):
         random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
@@ -53,7 +52,7 @@ def compare_with_numpy_sgd(
                 "momentum": momentum,
                 "weight_decay": weight_decay,
             }
-        ]
+        ], 
     )
 
     class CustomSGDGraph(flow.nn.Graph):
@@ -87,7 +86,6 @@ def compare_with_numpy_sgd(
             v = momentum * vt - learning_rate * grad
             param = x + v
             return (param, v)
-
         for i in range(train_iters):
             (x, vt) = np_train_one_iter(random_grad_seq[i])
             np_res_list.append(x)
@@ -98,31 +96,16 @@ def compare_with_numpy_sgd(
 
 @flow.unittest.skip_unless_1n1d()
 class TestCpuSGD(flow.unittest.TestCase):
-    def test_sgd1(test_case):
-        compare_with_numpy_sgd(
-            test_case,
-            device="cpu",
-            x_shape=(10,),
-            learning_rate=1,
-            momentum=0.9,
-            train_iters=10,
-            weight_decay=0.0,
-            eps=1e-8,
-        )
-
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_sgd2(test_case):
-        compare_with_numpy_sgd(
-            test_case,
-            device="cuda",
-            x_shape=(10,),
-            learning_rate=0.1,
-            momentum=0.85,
-            train_iters=10,
-            weight_decay=1e-3,
-            eps=1e-8,
-        )
-
+    def test_sgd(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["x_shape"] = [(10, )]
+        arg_dict["learning_rate"] = [1, 1e-3]
+        arg_dict["train_iters"] = [10]
+        arg_dict["momentum"] = [0.9, 0.8]
+        arg_dict["weight_decay"] = [0.001, 0.0]
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_sgd(test_case, *arg)
 
 if __name__ == "__main__":
     unittest.main()

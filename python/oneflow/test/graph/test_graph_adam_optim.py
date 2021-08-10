@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 import os
 from collections import OrderedDict
-
+from test_util import GenArgList
 import numpy as np
 
 import oneflow as flow
@@ -126,33 +126,18 @@ def compare_with_numpy_adam(
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdam(flow.unittest.TestCase):
-    def test_adam1(test_case):
-        compare_with_numpy_adam(
-            test_case,
-            device="cpu",
-            x_shape=(10,),
-            learning_rate=1,
-            train_iters=10,
-            betas=(0.99, 0.9),
-            weight_decay=0.0,
-            eps=1e-8,
-            do_bias_correction=False,
-        )
-
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_adam2(test_case):
-        compare_with_numpy_adam(
-            test_case,
-            device="cuda",
-            x_shape=(10,),
-            learning_rate=1e-3,
-            train_iters=10,
-            betas=(0.85, 0.9),
-            weight_decay=0.0005,
-            eps=1e-8,
-            do_bias_correction=True,
-        )
-
+    def test_adam(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["learning_rate"] = [1, 1e-3]
+        arg_dict["train_iters"] = [10]
+        arg_dict["betas"] = [(0.99, 0.9)]
+        arg_dict["weight_decay"] = [0.001, 0.0]
+        arg_dict["eps"] = [1e-8]
+        arg_dict["do_bias_correction"] = [True, False]
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_adam(test_case, *arg)
 
 if __name__ == "__main__":
     unittest.main()
