@@ -199,22 +199,38 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                                 const Optional<Shape>& shape, const std::shared_ptr<OpExpr>& op) {
   CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
-  const auto& device = JUST(x->device());
-  if (device->type() != "cpu") {
-    CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
-        << Error::Unimplemented() << "tensor must be on default device of the current rank.";
+  std::shared_ptr<one::Tensor> input = x;
+  // copy to right device first if input's device type is wrong
+  if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
+    LOG(INFO) << "The device_type of the input tensor is different from placement, now copy it to "
+              << Device::Type4DeviceTag(parallel_desc->device_tag());
+    input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
+                                  GlobalProcessCtx::LocalRank()));
   }
+  // copy to default device of the current rank if input's device type is right but not on default
+  // device
+  if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
+    LOG(INFO) << "The tensor isn't on default device of the current rank., now copy it to "
+              << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+    input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
+                                  GlobalProcessCtx::LocalRank()));
+  }
+  const auto& device = JUST(input->device());
+  CHECK_EQ_OR_RETURN(JUST(device->of_type()), parallel_desc->device_tag())
+      << Error::Unimplemented() << "tensor' device type must be same with placement.";
+  CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
+      << Error::Unimplemented() << "tensor must be on default device of the current rank.";
   Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
   std::shared_ptr<const Shape> shape_ptr;
   if (shape.has_value()) {
     shape_ptr = JUST(shape.value());
   } else {
-    shape_ptr = JUST(GetConsistentShape(*x->shape(), parallel_desc, parallel_distribution));
+    shape_ptr = JUST(GetConsistentShape(*input->shape(), parallel_desc, parallel_distribution));
   }
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape_ptr));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
+      *op, {input}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
   return output;
 }
 
