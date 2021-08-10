@@ -105,13 +105,8 @@ bool DType::is_floating_point() const {
 
 const std::string& DType::name() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).name(); }
 
-Symbol<DType> DType::DType4DataType(DataType data_type) {
-  static thread_local HashMap<int, const Symbol<DType>&> map;
-  auto iter = map.find(static_cast<int>(data_type));
-  if (iter == map.end()) {
-    iter = map.emplace(static_cast<int>(data_type), DType::Get(data_type).GetOrThrow()).first;
-  }
-  return iter->second;
+Maybe<Symbol<DType>> DType::DType4DataType(DataType data_type) {
+  return DType::Get(data_type);
 }
 
 #define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)                                   \
