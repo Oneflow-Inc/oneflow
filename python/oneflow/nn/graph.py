@@ -21,7 +21,7 @@ import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
-from oneflow.framework.tensor import Tensor
+from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
@@ -45,6 +45,9 @@ class Graph(object):
         self._variables_conf = OrderedDict()
         self._is_compiled = False
         self._job_proto = None
+        self._args_repr = []
+        self._outs_repr = []
+        self._debug = False
 
     @property
     def name(self):
@@ -57,6 +60,12 @@ class Graph(object):
     @property
     def _graph_proto(self):
         return self._job_proto
+
+    def debug(self, mode: bool = True) -> None:
+        self._debug = mode
+        for name, block in self._blocks.items():
+            assert block.type == BlockType.MODULE
+            block.debug(mode)
 
     def build(self, *args):
         raise NotImplementedError()
@@ -112,6 +121,8 @@ class Graph(object):
         assert not self._is_compiled, (
             "nn.Graph " + self._name + " has already been compiled."
         )
+        if self._debug:
+            print(self._shallow_repr() + " start graph construting.")
 
         self._generate_optimizer_and_variable_configs()
 
@@ -126,6 +137,10 @@ class Graph(object):
                 op_name = "_" + self.name + "-input_" + str(idx)
                 lazy_args.append(graph_build_util.build_graph_input_arg(op_name, arg))
                 lazy_arg_op_names.append(op_name)
+                in_str = "(INPUT:" + op_name + ":" + arg._meta_repr() + ")"
+                self._args_repr.append(in_str)
+                if self._debug:
+                    print(in_str)
 
             # Deal with parameter and buffer
             state_op_names = []
@@ -147,25 +162,33 @@ class Graph(object):
                         state_config,
                     )
                 )
-
             self._variables = convert_to_tensor_tuple(state_tensors)
 
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
+            if outputs is None:
+                outputs = tuple()
+            elif isinstance(outputs, (list, tuple)):
+                outputs = tuple(outputs)
+            elif isinstance(outputs, Tensor):
+                outputs = (outputs,)
+            elif isinstance(outputs, TensorTuple):
+                pass
+            else:
+                raise RuntimeError(f"invalid outputs with type {type(outputs)}")
 
-            # Deal with outputs
-            if not (type(outputs) is tuple or type(outputs) is list):
-                if outputs is None:
-                    outputs = ()
-                else:
-                    assert type(outputs) is Tensor
-                    outputs = (outputs,)
             eager_outputs = []
             eager_output_op_names = []
             for idx, out in enumerate(outputs):
                 op_name = "_" + self.name + "-output_" + str(idx)
                 eager_outputs.append(graph_build_util.build_graph_output(op_name, out))
                 eager_output_op_names.append(op_name)
+
+                out_str = "(OUTPUT:" + op_name + ":" + out._meta_repr() + ")"
+                self._outs_repr.append(out_str)
+                if self._debug:
+                    print(out_str)
+
             if len(eager_outputs) == 0:
                 eager_outputs = None
             elif len(eager_outputs) == 1:
@@ -189,6 +212,8 @@ class Graph(object):
         # Complie and init Runtime
         self._c_nn_graph.complie_and_init_runtime()
         self._is_compiled = True
+        if self._debug:
+            print(self._shallow_repr() + " end graph construting.")
         return eager_outputs
 
     def _launch(self, *args):
@@ -252,20 +277,32 @@ class Graph(object):
         )
 
     def __repr__(self):
-        lines = None
+        child_lines = []
+        if len(self._args_repr) > 0:
+            for in_str in self._args_repr:
+                input_str = add_indent(in_str, 2)
+                child_lines.append(input_str)
+
         if len(self._blocks) > 0:
-            child_lines = []
             for n, m in self._blocks.items():
                 mod_str = repr(m)
                 mod_str = add_indent(mod_str, 2)
                 child_lines.append(mod_str)
-            lines = child_lines
 
-        main_str = "(" + self._name + ":" + self.__class__.__name__ + ":GRAPH): ("
-        if lines is not None:
-            main_str += "\n  " + "\n  ".join(lines) + "\n"
+        if len(self._outs_repr) > 0:
+            for out_str in self._outs_repr:
+                output_str = add_indent(out_str, 2)
+                child_lines.append(output_str)
+
+        main_str = self._shallow_repr() + ": ("
+        if len(child_lines) > 0:
+            main_str += "\n  " + "\n  ".join(child_lines) + "\n"
         main_str += ")"
         return main_str
+
+    def _shallow_repr(self):
+        shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
+        return shallow_repr
 
 
 class GraphConfig(FunctionConfig):

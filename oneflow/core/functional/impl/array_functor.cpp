@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -26,7 +27,9 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
@@ -55,28 +58,18 @@ class ConsistentConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
-    const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
-    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> parallel_distribution(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          parallel_distribution.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("parallel_distribution", parallel_distribution));
     }
+    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
-  }
-
-  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
-      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
-                                 Symbol<cfg::ParallelDistribution>>
-        map;
-    auto iter = map.find(sbp_tuple);
-    if (iter == map.end()) {
-      cfg::ParallelDistribution parallel_distribution;
-      for (const auto& sbp_parallel : sbp_tuple) {
-        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
-      }
-      iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
-    }
-    return iter->second;
   }
 
  private:
@@ -98,17 +91,59 @@ class ConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
-    {
-      ParallelDistribution parallel_distribution;
-      parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-      JUST(attrs.SetAttr<std::string>("nd_sbp", PbMessage2TxtString(parallel_distribution)));
-    }
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
     }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class EmptyFunctor {
+ public:
+  EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+                           const Optional<Symbol<Device>>& device) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentEmptyFunctor {
+ public:
+  ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> parallel_distribution(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          parallel_distribution.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("parallel_distribution", parallel_distribution));
+    }
+    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
   }
 
  private:
@@ -485,6 +520,23 @@ class GatherNdFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& params,
                            const std::shared_ptr<one::Tensor>& indices) const {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {params, indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScatterNdFunctor {
+ public:
+  ScatterNdFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("scatter_nd").Input("indices").Input("updates").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& indices,
+                           const std::shared_ptr<one::Tensor>& updates, const Shape& shape) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates}, attrs);
   }
 
  private:
@@ -1281,6 +1333,8 @@ class ReduceSumLikeFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
+  m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
+  m.add_functor<impl::EmptyFunctor>("Empty");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
@@ -1294,6 +1348,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
+  m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");

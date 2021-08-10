@@ -31,6 +31,8 @@ void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
   kernel_conf_ = kernel_conf;
   shape_infer_helper_ =
       new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
+  blob_access_checker_disabled_ =
+      ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", false);
 }
 
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
@@ -45,12 +47,6 @@ void Kernel::Launch(const KernelCtx& ctx,
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
-}
-
-void Kernel::CheckSameDim0ValidNum(
-    const PbRpf<std::string>& bns,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  UNIMPLEMENTED();
 }
 
 void Kernel::SetOutputBlobProducerInferAccessChecker(
@@ -89,14 +85,17 @@ void Kernel::SetOutputBlobConsumerAccessChecker(
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  SetOutputBlobProducerInferAccessChecker(BnInOp2Blob);
+  if (!blob_access_checker_disabled_) { SetOutputBlobProducerInferAccessChecker(BnInOp2Blob); }
   ForwardHeader(ctx, BnInOp2Blob);
-  if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) { return; }
-  SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob);
+  if (kernel_conf_.need_do_shape() && IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
+      && IsStateless()) {
+    return;
+  }
+  if (!blob_access_checker_disabled_) { SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob); }
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
   ForwardDataContent(ctx, BnInOp2Blob);
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob));
-  SetOutputBlobConsumerAccessChecker(BnInOp2Blob);
+  if (!blob_access_checker_disabled_) { SetOutputBlobConsumerAccessChecker(BnInOp2Blob); }
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
