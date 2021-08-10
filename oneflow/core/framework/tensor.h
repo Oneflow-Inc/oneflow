@@ -124,7 +124,7 @@ class StaticZerosTensor final : public Tensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
   // DataType dtype() const { return dtype_; }
-  Symbol<DType> dtype() const { return DType::DType4DataType(dtype_); }
+  Symbol<DType> dtype() const { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const { OF_UNIMPLEMENTED(); }
@@ -358,7 +358,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  Symbol<DType> dtype() const override { return DType::DType4DataType(impl_->dtype()); }
+  Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     OF_UNIMPLEMENTED();
@@ -439,7 +439,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  Symbol<DType> dtype() const override { return DType::DType4DataType(impl_->dtype()); }
+  Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     return impl_->parallel_distribution();

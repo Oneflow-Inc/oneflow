@@ -164,7 +164,7 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dty
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape = Shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
-  std::shared_ptr<Tensor> tensor = JUST(functional::Empty(shape, JUST(DType::DType4DataType(flow_dtype)), device));
+  std::shared_ptr<Tensor> tensor = CHECK_JUST(functional::Empty(shape, CHECK_JUST(DType::Get(flow_dtype)), device));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(flow_dtype), tensor, np_arr_raii));
   if (flow_dtype == DataType::kDouble && !init_from_numpy && !desired_dtype) {
     desired_dtype = DType::Float(); 
@@ -369,7 +369,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
 }
 
 std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
-  return NewTensor(args, kwargs, JUST(DType::DType4DataType(DataType::kFloat)), true).GetPtrOrThrow();
+  return NewTensor(args, kwargs, CHECK_JUST(DType::Get(DataType::kFloat)), true).GetPtrOrThrow();
 }
 
 void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
@@ -391,7 +391,7 @@ using namespace pybind11::literals;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("tensor", [](py::args args, py::kwargs kwargs) -> std::shared_ptr<Tensor> {
-    return NewTensor(args, kwargs, DType::DType4DataType(DataType::kFloat), false).GetPtrOrThrow();
+    return NewTensor(args, kwargs, CHECK_JUST(DType::Get(DataType::kFloat)), false).GetPtrOrThrow();
   });
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init(&ApiNewTensor))
