@@ -200,7 +200,7 @@ Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_
 
 std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(
     Symbol<ParallelDesc> parallel_desc) {
-  return DECORATE(&RawGetParallelContext4CurrentProcessCtx, ThreadLocalCopiable)(parallel_desc);
+  return DECORATE(&RawGetParallelContext4CurrentProcessCtx, ThreadLocal)(parallel_desc);
 }
 
 bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,
