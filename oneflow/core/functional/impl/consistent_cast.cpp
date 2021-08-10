@@ -160,7 +160,19 @@ Maybe<Tensor> LazyConsistentToConsistent(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels, bool identity_grad,
     const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels,
     const std::shared_ptr<OpExpr>& op) {
-  UNIMPLEMENTED_THEN_RETURN();
+  CHECK_OR_RETURN(x->is_lazy());
+  CHECK_OR_RETURN(x->is_consistent());
+
+  Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
+  std::vector<std::string> grad_parallel_distribution = *JUST(GetNdSbpStrList(grad_sbp_parallels));
+
+  MutableAttrMap attrs;
+  JUST(attrs.SetAttr<bool>("identity_grad", identity_grad));
+  JUST(attrs.SetAttr<std::vector<std::string>>("grad_sbp", grad_parallel_distribution));
+
+  const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
+  return output;
 }
 
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,

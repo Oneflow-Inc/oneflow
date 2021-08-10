@@ -143,6 +143,7 @@ class MyGraph(flow.nn.Graph):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
+    # @unittest.skipIf(True, "")
     def test_fwd_P2B(test_case):
         """ compare eager fwd and lazy bwd
         """
@@ -159,6 +160,8 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
             transpose_b=True,
         )
         z = flow.F.relu(z)
+        # print(f"z shape: {z.shape}, device: {z.device}")
+        # print(z.numpy())
 
         placement = flow.placement("cuda", {0: [0, 1]})
         sbp = flow.sbp.split(1)
@@ -173,9 +176,10 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
         g_z = g(c_x)
         # print(f"g_z shape: {g_z.shape}, placement: {g_z.placement}, sbp: {g_z.sbp}")
-
+        # print(g_z.to_local().numpy())
         test_case.assertTrue(np.allclose(z.numpy(), g_z.to_local().numpy()))
 
+    # @unittest.skipIf(True, "")
     def test_bwd_P2B(test_case):
         """ compare eager bwd and lazy bwd
         """
@@ -220,6 +224,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
             np.allclose(c_y.to_local().numpy(), e_y.to_local().numpy())
         )
 
+    # @unittest.skipIf(True, "")
     def test_multi_graph(test_case):
         """ compare two lazy fwd
         """
@@ -271,6 +276,11 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
         test_case.assertTrue(np.allclose(z1.to_local().numpy(), z2.to_local().numpy()))
         test_case.assertTrue(np.allclose(z1.to_local().numpy(), z3.to_local().numpy()))
+
+    def test_2d_sbp(test_case):
+        """ Should test 2D SBP case after 2D SBP tensor could be constructed
+        """
+        pass
 
 
 if __name__ == "__main__":
