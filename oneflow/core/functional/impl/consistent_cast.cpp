@@ -121,77 +121,46 @@ Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc
   }
 }
 
-namespace {
-
-using sbp_sym_list_t = std::vector<Symbol<cfg::SbpParallel>>;
-using cache_key_t = std::tuple<sbp_sym_list_t, bool, sbp_sym_list_t>;
-
-struct CacheKeyHash {
-  size_t operator()(const cache_key_t& key) const noexcept {
-    size_t hash0 = std::hash<sbp_sym_list_t>{}(std::get<0>(key));
-    size_t hash1 = std::hash<bool>{}(std::get<1>(key));
-    size_t hash2 = std::hash<sbp_sym_list_t>{}(std::get<2>(key));
-    return hash0 ^ hash1 ^ hash2;
-  }
-};
-
-struct CacheKeyEqual {
-  bool operator()(const cache_key_t& lhs, const cache_key_t& rhs) const noexcept {
-    return std::get<0>(lhs) == std::get<0>(rhs) && std::get<1>(lhs) == std::get<1>(rhs)
-           && std::get<2>(lhs) == std::get<2>(rhs);
-  }
-};
-
-using ParalleCastOpExprCache =
-    std::unordered_map<cache_key_t, std::shared_ptr<one::UserOpExpr>, CacheKeyHash, CacheKeyEqual>;
-
-}  // namespace
-
 Maybe<one::UserOpExpr> FindOrCreatParallelDistributionOpExpr(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels, bool identity_grad,
-    const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) {
-  thread_local ParalleCastOpExprCache op_expr_cache;
-  auto key = std::make_tuple(sbp_parallels, identity_grad, grad_sbp_parallels);
-  auto iter = op_expr_cache.find(key);
-  if (iter == op_expr_cache.end()) {
-    std::string grad_mode;
-    std::vector<std::string> grad_parallel_distribution;
-    if (identity_grad) {
-      grad_mode = "identity";
-    } else if (grad_sbp_parallels.size() > 0) {
-      grad_mode = "manual";
-      grad_parallel_distribution = *JUST(GetNdSbpStrList(grad_sbp_parallels));
-    } else {
-      grad_mode = "restore";
-    }
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+  thread_local HashMap<std::vector<Symbol<cfg::SbpParallel>>, std::shared_ptr<one::UserOpExpr>>
+      sbp_list2hierarchical_parallel_cast_op_expr;
+  auto iter = sbp_list2hierarchical_parallel_cast_op_expr.find(sbp_parallels);
+  if (iter == sbp_list2hierarchical_parallel_cast_op_expr.end()) {
     const auto& op_expr =
         JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
                  .Input("in")
                  .Output("out")
                  .Attr<std::vector<std::string>>("parallel_distribution",
                                                  *JUST(GetNdSbpStrList(sbp_parallels)))
-                 .Attr<std::string>("grad_mode", grad_mode)
+                 .Attr<std::string>("grad_mode", "restore")
                  .Attr<std::vector<std::string>>("grad_parallel_distribution",
-                                                 grad_parallel_distribution)
+                                                 std::vector<std::string>())
                  .Build());
-    iter = op_expr_cache.emplace(key, op_expr).first;
+    iter = sbp_list2hierarchical_parallel_cast_op_expr.emplace(sbp_parallels, op_expr).first;
   }
   return iter->second;
 }
 
-Maybe<Tensor> ConsistentToConsistent(
-    const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels, bool identity_grad,
-    const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) {
+Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
+                                     Symbol<ParallelDesc> parallel_desc,
+                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
   const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
+  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
   const auto& parallel_distribution_cast_op_expr =
-      JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels, identity_grad, grad_sbp_parallels));
-  Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
-  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *parallel_distribution_cast_op_expr, {consistent_tensor},
-      OpExprInterpContext(AttrMap{}, parallel_desc, parallel_distribution)));
+      JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
+  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
+                                                             {consistent_tensor}));
   return ret;
+}
+
+Maybe<Tensor> LazyConsistentToConsistent(
+    const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels, bool identity_grad,
+    const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels,
+    const std::shared_ptr<OpExpr>& op) {
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
@@ -239,8 +208,10 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
 class ToConsistentFunctor {
  public:
   ToConsistentFunctor() {
-    op_ =
+    local_to_consistent_op_ =
         CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+    consistent_to_consistent_op_ = CHECK_JUST(
+        one::ConsistentToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_consistent"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -249,15 +220,21 @@ class ToConsistentFunctor {
                            const Optional<Shape>& shape, bool identity_grad,
                            const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) const {
     if (x->is_consistent()) {
-      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, identity_grad,
-                                         grad_sbp_parallels));
+      if (x->is_lazy()) {
+        return JUST(LazyConsistentToConsistent(x, parallel_desc, sbp_parallels, identity_grad,
+                                               grad_sbp_parallels, consistent_to_consistent_op_));
+      } else {
+        return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels));
+      }
     } else {
-      return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, shape, op_));
+      return JUST(
+          LocalToConsistent(x, parallel_desc, sbp_parallels, shape, local_to_consistent_op_));
     }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> local_to_consistent_op_;
+  std::shared_ptr<OpExpr> consistent_to_consistent_op_;
 };
 
 class ConsistentToLocalFunctor {
