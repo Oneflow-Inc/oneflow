@@ -37,6 +37,7 @@ class ActorMsgMR final {
   ActorMsg& msg()  {
     void * mem_ptr = mem_desc_->mem_ptr();
     std::memcpy((char*)&msg_, mem_ptr, sizeof(msg_));
+    return msg_;
   }
 
   void set_msg(const ActorMsg& val) {
