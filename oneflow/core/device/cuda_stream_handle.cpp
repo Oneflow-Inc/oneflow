@@ -106,7 +106,7 @@ void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   if (reuse_cuda_event_) {
     if (consumer_event_queue_.empty()) {
       std::unique_lock<std::mutex> lock(global_event_queue_mutex_);
-      consumer_event_queue_.swap(consumer_event_queue_);
+      consumer_event_queue_.swap(global_event_queue_);
     }
     if (consumer_event_queue_.empty()) {
       OF_CUDA_CHECK(cudaEventCreateWithFlags(&cuda_event, cuda_event_flags_));
