@@ -130,6 +130,8 @@ class MyGraph(flow.nn.Graph):
 @flow.unittest.skip_unless_1n2d()
 class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
     def test_fwd_P2B(test_case):
+        """ compare eager fwd and lazy bwd
+        """
         rank = flow.distributed.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_fwd_P2B")
@@ -161,6 +163,8 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         test_case.assertTrue(np.allclose(z.numpy(), g_z.to_local().numpy()))
 
     def test_bwd_P2B(test_case):
+        """ compare eager bwd and lazy bwd
+        """
         rank = flow.distributed.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_bwd_P2B")
@@ -193,19 +197,14 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         # print(f"c_z shape: {c_z.shape}, placement: {c_z.placement}, sbp: {c_z.sbp}")
         test_case.assertTrue(np.allclose(z.numpy().T, c_z.to_local().numpy()))
 
-        import time
-
-        time.sleep(5)
-
-        print(m.weight.to_local().numpy())
-
         e_y = c_y.detach()
-        print(f"e_y shape: {e_y.shape}, placement: {e_y.placement}, sbp: {e_y.sbp}")
+        # print(f"e_y shape: {e_y.shape}, placement: {e_y.placement}, sbp: {e_y.sbp}")
         e_m = MyModule2(e_y)
         e_z = e_m(c_x)
-        print(f"e_z shape: {e_z.shape}, placement: {e_z.placement}, sbp: {e_z.sbp}")
-        print(e_y.to_local().numpy())
+        # print(f"e_z shape: {e_z.shape}, placement: {e_z.placement}, sbp: {e_z.sbp}")
+        e_z.backward(flow.ones_like(e_z))
 
+        test_case.assertTrue(np.allclose(c_y.to_local().numpy(), e_y.to_local().numpy()))
 
     # def test_multi_graph(test_case):
     #     rank = flow.distributed.get_rank()
