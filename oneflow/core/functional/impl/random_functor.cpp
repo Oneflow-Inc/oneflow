@@ -31,11 +31,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/user/kernels/bernoulli_kernel.h"
-#include "oneflow/user/kernels/randperm_kernel.h"
-#include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/user/kernels/distributions/normal_kernel.h"
-
+#include "oneflow/user/kernels/randperm_kernel.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -71,35 +68,7 @@ class BernoulliFunctor {
   std::shared_ptr<OpExpr> bernoulli_op_;
 };
 
-
-class RandPermFunctor {
- public:
-  RandPermFunctor() { randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build()); }
-  Maybe<Tensor> operator()(const int32_t n, const Optional<Symbol<Device>>& device,
-                           const Optional<one::Generator>& generator) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("n", n));
-    std::shared_ptr<one::Generator> gen;
-
-    if (!generator) {
-      gen = JUST(one::DefaultAutoGenerator());
-    } else {
-      gen = JUST(generator.value());
-    }
-
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
-
-    const auto& randperm_kernel_state = std::make_shared<RandpermKernelState>(gen);
-    if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
-      return OpInterpUtil::Dispatch<Tensor>(
-          *randperm_op_, {}, OpExprInterpContext(attrs, device_symbol, randperm_kernel_state));
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {},
-                                            OpExprInterpContext(attrs, randperm_kernel_state));
-=======
-  class RandNFunctor {
+class RandNFunctor {
  public:
   RandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Optional<DataType>& dtype,
@@ -120,6 +89,15 @@ class RandPermFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
 
     std::shared_ptr<one::Generator> gen;
+
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
     const auto& normal_kernel_state = std::make_shared<NormalKernelState>(gen);
 
     if (device.has_value()) {
@@ -133,22 +111,6 @@ class RandPermFunctor {
   }
 
  private:
-
-  std::shared_ptr<OpExpr> randperm_op_;
-};
-
-class ConsistentRandPermFunctor {
- public:
-  ConsistentRandPermFunctor() {
-    randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const int32_t n, const Optional<Symbol<Device>>& device,
-                           const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
-                           const Optional<one::Generator>& generator) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("n", n));
-
   std::shared_ptr<OpExpr> op_;
 };
 
@@ -182,9 +144,6 @@ class ConsistentRandNFunctor {
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
-    const auto& uniform_kernel_state = std::make_shared<RandpermKernelState>(gen);
-
-    const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
     const auto& normal_kernel_state = std::make_shared<NormalKernelState>(gen);
 
     const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
@@ -192,32 +151,93 @@ class ConsistentRandNFunctor {
       JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
     }
     return OpInterpUtil::Dispatch<Tensor>(
-
-        *randperm_op_, {},
-        OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
-  }
-
-  Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
-      const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
-    static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
-                                 Symbol<cfg::ParallelDistribution>>
-        map;
-    auto iter = map.find(sbp_tuple);
-    if (iter == map.end()) {
-      cfg::ParallelDistribution parallel_distribution;
-      for (const auto& sbp_parallel : sbp_tuple) {
-        *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
-      }
-      iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
-    }
-    return iter->second;
-  }
-
- private:
-  std::shared_ptr<OpExpr> randperm_op_;
         *op_, {},
         OpExprInterpContext(attrs, placement, parallel_distribution, normal_kernel_state));
   }
+  class RandPermFunctor {
+   public:
+    RandPermFunctor() {
+      randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build());
+    }
+    Maybe<Tensor> operator()(const int32_t n, const Optional<Symbol<Device>>& device,
+                             const Optional<one::Generator>& generator) const {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("n", n));
+      std::shared_ptr<one::Generator> gen;
+      if (!generator) {
+        gen = JUST(one::DefaultAutoGenerator());
+      } else {
+        gen = JUST(generator.value());
+      }
+
+      JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+      const auto& randperm_kernel_state = std::make_shared<RandpermKernelState>(gen);
+      if (device.has_value()) {
+        Symbol<Device> device_symbol = JUST(device.value());
+        return OpInterpUtil::Dispatch<Tensor>(
+            *randperm_op_, {}, OpExprInterpContext(attrs, device_symbol, randperm_kernel_state));
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {},
+                                              OpExprInterpContext(attrs, randperm_kernel_state));
+      }
+    }
+
+   private:
+    std::shared_ptr<OpExpr> randperm_op_;
+  };
+
+  class ConsistentRandPermFunctor {
+   public:
+    ConsistentRandPermFunctor() {
+      randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build());
+    }
+    Maybe<Tensor> operator()(const int32_t n, const Optional<Symbol<Device>>& device,
+                             const Symbol<ParallelDesc>& placement,
+                             const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                             const Optional<one::Generator>& generator) const {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("n", n));
+
+      std::shared_ptr<one::Generator> gen;
+      if (!generator) {
+        gen = JUST(one::DefaultAutoGenerator());
+      } else {
+        gen = JUST(generator.value());
+      }
+
+      JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+      const auto& uniform_kernel_state = std::make_shared<RandpermKernelState>(gen);
+
+      const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
+      if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+        JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+      }
+      return OpInterpUtil::Dispatch<Tensor>(
+          *randperm_op_, {},
+          OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
+    }
+
+    Maybe<Symbol<cfg::ParallelDistribution>> MakeParallelDistribution(
+        const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+      static thread_local std::map<std::vector<Symbol<cfg::SbpParallel>>,
+                                   Symbol<cfg::ParallelDistribution>>
+          map;
+      auto iter = map.find(sbp_tuple);
+      if (iter == map.end()) {
+        cfg::ParallelDistribution parallel_distribution;
+        for (const auto& sbp_parallel : sbp_tuple) {
+          *parallel_distribution.mutable_sbp_parallel()->Add() = *sbp_parallel;
+        }
+        iter = map.emplace(sbp_tuple, SymbolOf(parallel_distribution)).first;
+      }
+      return iter->second;
+    }
+
+   private:
+    std::shared_ptr<OpExpr> randperm_op_;
+  };
 
  private:
   std::shared_ptr<OpExpr> op_;
@@ -232,7 +252,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
 
   m.add_functor<impl::RandNFunctor>("RandN");
   m.add_functor<impl::ConsistentRandNFunctor>("ConsistentRandN");
-
 };
 
 }  // namespace functional
