@@ -338,5 +338,67 @@ TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_failed) {
   ASSERT_FALSE(maybe_tuple.IsOk());
 }
 
+TEST(IsNdSbpBoxingAcyclic, yes) {
+  const auto& src_nd_sbp = GetNdSbp("S0", "S1", "S2");
+  const auto& dst_nd_sbp = GetNdSbp("S1", "S2", "S3");
+  const auto& maybe_acyclic = TRY(private_details::IsNdSbpBoxingAcyclic(src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_acyclic.IsOk());
+  ASSERT_TRUE(CHECK_JUST(maybe_acyclic));
+}
+
+TEST(IsNdSbpBoxingAcyclic, ring) {
+  const auto& src_nd_sbp = GetNdSbp("S0", "S1", "S2");
+  const auto& dst_nd_sbp = GetNdSbp("S1", "S2", "S0");
+  const auto& maybe_acyclic = TRY(private_details::IsNdSbpBoxingAcyclic(src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_acyclic.IsOk());
+  ASSERT_FALSE(CHECK_JUST(maybe_acyclic));
+}
+
+TEST(IsNdSbpBoxingAcyclic, partial_ring) {
+  const auto& src_nd_sbp = GetNdSbp("B", "S0", "S1", "S2", "S5");
+  const auto& dst_nd_sbp = GetNdSbp("P", "S1", "S2", "S0", "S4");
+  const auto& maybe_acyclic = TRY(private_details::IsNdSbpBoxingAcyclic(src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_acyclic.IsOk());
+  ASSERT_FALSE(CHECK_JUST(maybe_acyclic));
+}
+
+TEST(IsNdSbpBoxingAcyclic, dag) {
+  const auto& src_nd_sbp = GetNdSbp("S0", "S1", "S2");
+  const auto& dst_nd_sbp = GetNdSbp("S1", "S2", "S3");
+  const auto& maybe_acyclic = TRY(private_details::IsNdSbpBoxingAcyclic(src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_acyclic.IsOk());
+  ASSERT_TRUE(CHECK_JUST(maybe_acyclic));
+}
+
+TEST(GetNdSbpValidTransformationAxisSequence, naive) {
+  const auto& src_nd_sbp = GetNdSbp("S0", "S1", "S2");
+  const auto& dst_nd_sbp = GetNdSbp("S0", "B", "S2");
+  const auto& maybe_axis_seq =
+      TRY(private_details::GetNdSbpValidTransformationAxisSequence(src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_axis_seq.IsOk());
+  const auto& axis_seq = CHECK_JUST(maybe_axis_seq);
+  ASSERT_TRUE(*axis_seq == std::vector<int64_t>{1});
+}
+
+TEST(GetNdSbpValidTransformationAxisSequence, 2d) {
+  const auto& src_nd_sbp = GetNdSbp("B", "S0");
+  const auto& dst_nd_sbp = GetNdSbp("S0", "S1");
+  const auto& maybe_axis_seq =
+      TRY(private_details::GetNdSbpValidTransformationAxisSequence(src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_axis_seq.IsOk());
+  const auto& axis_seq = CHECK_JUST(maybe_axis_seq);
+  ASSERT_TRUE(*axis_seq == (std::vector<int64_t>{1, 0}));
+}
+
+TEST(GetNdSbpValidTransformationAxisSequence, 3d) {
+  const auto& src_nd_sbp = GetNdSbp("S0", "S1", "S2");
+  const auto& dst_nd_sbp = GetNdSbp("S1", "S2", "S3");
+  const auto& maybe_axis_seq =
+      TRY(private_details::GetNdSbpValidTransformationAxisSequence(src_nd_sbp, dst_nd_sbp));
+  ASSERT_TRUE(maybe_axis_seq.IsOk());
+  const auto& axis_seq = CHECK_JUST(maybe_axis_seq);
+  ASSERT_TRUE(*axis_seq == (std::vector<int64_t>{2, 1, 0}));
+}
+
 }  // namespace test
 }  // namespace oneflow

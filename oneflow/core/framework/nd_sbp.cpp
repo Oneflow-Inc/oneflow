@@ -105,4 +105,32 @@ Maybe<std::vector<std::string>> GetDualNdSbpStrList(
   return GetNdSbpStrList(JUST(GetDualNdSbp(parallel_distribution)));
 }
 
+Maybe<std::string> ToString(const cfg::SbpParallel& sbp_sym) {
+  std::string sbp_str = "oneflow.sbp.";
+  if (sbp_sym.has_broadcast_parallel()) {
+    sbp_str += "broadcast";
+  } else if (sbp_sym.has_partial_sum_parallel()) {
+    sbp_str += "partial_sum";
+  } else if (sbp_sym.has_split_parallel()) {
+    sbp_str += "split(axis=" + std::to_string(sbp_sym.split_parallel().axis()) + ")";
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+  return sbp_str;
+}
+
+Maybe<std::string> ToString(Symbol<cfg::SbpParallel> sbp_sym) { return ToString(*sbp_sym); }
+
+Maybe<std::string> ToString(Symbol<cfg::ParallelDistribution> parallel_distribution) {
+  std::string nd_sbp_str = "(";
+  int i = 0;
+  for (const auto& sbp_parallel : parallel_distribution->sbp_parallel()) {
+    if (i++ == 0) { nd_sbp_str += ", "; }
+    nd_sbp_str += *JUST(ToString(sbp_parallel));
+  }
+  if (parallel_distribution->sbp_parallel_size() == 1) { nd_sbp_str += ","; }
+  nd_sbp_str += ")";
+  return nd_sbp_str;
+}
+
 }  // namespace oneflow

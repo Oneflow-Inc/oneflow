@@ -36,6 +36,10 @@ Maybe<std::vector<std::string>> GetNdSbpStrList(
 
 Maybe<std::vector<std::string>> GetDualNdSbpStrList(
     Symbol<cfg::ParallelDistribution> parallel_distribution);
+
+Maybe<std::string> ToString(Symbol<cfg::SbpParallel> sbp_sym);
+Maybe<std::string> ToString(Symbol<cfg::ParallelDistribution> parallel_distribution);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_ND_SBP_H_

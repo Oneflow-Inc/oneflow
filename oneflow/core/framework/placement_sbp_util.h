@@ -65,6 +65,12 @@ Maybe<std::vector<NaiveBoxingTransformation>> DecomposeByParallelId(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp,
     int64_t parallel_id);
 
+Maybe<bool> IsNdSbpBoxingAcyclic(Symbol<cfg::ParallelDistribution> src_nd_sbp,
+                                 Symbol<cfg::ParallelDistribution> dst_nd_sbp);
+
+Maybe<std::vector<int64_t>> GetNdSbpValidTransformationAxisSequence(
+    Symbol<cfg::ParallelDistribution> src_nd_sbp, Symbol<cfg::ParallelDistribution> dst_nd_sbp);
+
 }  // namespace private_details
 
 static constexpr auto* GetBroadcastSubParallelDesc =

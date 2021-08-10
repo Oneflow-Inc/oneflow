@@ -16,6 +16,7 @@ limitations under the License.
 #include <tuple>
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -317,7 +318,163 @@ CalcDecomposableEquivalent(Symbol<one::ConsistentTensorMeta> tensor_meta,
 static constexpr auto* GetDecomposableEquivalent =
     DECORATE(&CalcDecomposableEquivalent, ThreadLocal);
 
+Maybe<void> InitDstNdSbpAxis2ExclusiveSrcNdSbpAxis(
+    HashMap<int64_t, int64_t>* dst_nd_sbp_axis2exclusive_src_nd_sbp_axis,
+    Symbol<cfg::ParallelDistribution> src_nd_sbp, Symbol<cfg::ParallelDistribution> dst_nd_sbp) {
+  HashMap<int64_t, int64_t> split_axis2src_nd_sbp_axis;
+  for (int i = 0; i < src_nd_sbp->sbp_parallel_size(); ++i) {
+    const auto& sbp_parallel = src_nd_sbp->sbp_parallel(i);
+    if (sbp_parallel.has_split_parallel()) {
+      split_axis2src_nd_sbp_axis[sbp_parallel.split_parallel().axis()] = i;
+    }
+  }
+  for (int i = 0; i < dst_nd_sbp->sbp_parallel_size(); ++i) {
+    const auto& sbp_parallel = dst_nd_sbp->sbp_parallel(i);
+    if (sbp_parallel.has_split_parallel()) {
+      int64_t axis = sbp_parallel.split_parallel().axis();
+      const auto& iter = split_axis2src_nd_sbp_axis.find(axis);
+      if (iter != split_axis2src_nd_sbp_axis.end() && iter->second != i) {
+        (*dst_nd_sbp_axis2exclusive_src_nd_sbp_axis)[i] = iter->second;
+      }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MakeExclusiveSrcNdSbpAxis4DstNdSbpAxis(
+    std::function<Maybe<Optional<int64_t>>(int64_t)>* ExclusiveSrcNdSbpAxis4DstNdSbpAxis,
+    Symbol<cfg::ParallelDistribution> src_nd_sbp, Symbol<cfg::ParallelDistribution> dst_nd_sbp) {
+  CHECK_EQ_OR_RETURN(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
+  HashMap<int64_t, int64_t> split_axis2src_nd_sbp_axis;
+  for (int i = 0; i < src_nd_sbp->sbp_parallel_size(); ++i) {
+    const auto& sbp_parallel = src_nd_sbp->sbp_parallel(i);
+    if (sbp_parallel.has_split_parallel()) {
+      int64_t split_axis = sbp_parallel.split_parallel().axis();
+      CHECK_OR_RETURN(split_axis2src_nd_sbp_axis.emplace(split_axis, i).second);
+    }
+  }
+  {
+    // check split_axis used only once.
+    HashMap<int64_t, int64_t> split_axis2dst_nd_sbp_axis;
+    for (int i = 0; i < dst_nd_sbp->sbp_parallel_size(); ++i) {
+      const auto& sbp_parallel = dst_nd_sbp->sbp_parallel(i);
+      if (sbp_parallel.has_split_parallel()) {
+        int64_t split_axis = sbp_parallel.split_parallel().axis();
+        CHECK_OR_RETURN(split_axis2dst_nd_sbp_axis.emplace(split_axis, i).second);
+      }
+    }
+  }
+  *ExclusiveSrcNdSbpAxis4DstNdSbpAxis = [split_axis2src_nd_sbp_axis, src_nd_sbp,
+                                         dst_nd_sbp](int64_t dst_axis) -> Maybe<Optional<int64_t>> {
+    CHECK_GE_OR_RETURN(dst_axis, 0);
+    CHECK_LT_OR_RETURN(dst_axis, dst_nd_sbp->sbp_parallel_size());
+    const auto& dst_sbp_parallel = dst_nd_sbp->sbp_parallel(dst_axis);
+    if (!dst_sbp_parallel.has_split_parallel()) { return Optional<int64_t>(); }
+    int64_t split_axis = dst_sbp_parallel.split_parallel().axis();
+    const auto& src_iter = split_axis2src_nd_sbp_axis.find(split_axis);
+    if (src_iter == split_axis2src_nd_sbp_axis.end()) { return Optional<int64_t>(); }
+    int64_t src_axis = src_iter->second;
+    CHECK_GE_OR_RETURN(src_axis, 0);
+    CHECK_LT_OR_RETURN(src_axis, dst_nd_sbp->sbp_parallel_size());
+    const auto& src_sbp_parallel = src_nd_sbp->sbp_parallel(src_axis);
+    CHECK_OR_RETURN(src_sbp_parallel.has_split_parallel());
+    CHECK_EQ_OR_RETURN(src_sbp_parallel.split_parallel().axis(), split_axis);
+    if (src_axis == dst_axis) { return Optional<int64_t>(); }
+    return Optional<int64_t>(src_axis);
+  };
+  return Maybe<void>::Ok();
+}
+
+Maybe<bool> IsNdSbpBoxingAcyclic(
+    int64_t num_axes,
+    const std::function<Maybe<Optional<int64_t>>(int64_t)>& ExclusiveSrcNdSbpAxis4DstNdSbpAxis) {
+  for (int start_axis = 0; start_axis < num_axes; ++start_axis) {
+    int64_t axis = start_axis;
+    HashSet<int64_t> visited_axes;
+    for (int i = 0; i < num_axes + 1; ++i) {
+      const auto& opt_axis = JUST(ExclusiveSrcNdSbpAxis4DstNdSbpAxis(axis));
+      if (!opt_axis->has_value()) { break; }
+      axis = JUST(opt_axis->value());
+      if (!visited_axes.insert(axis).second) { return false; }
+    }
+  }
+  return true;
+}
+
+Maybe<void> InitNdSbpValidTransformationAxisSequence(
+    std::vector<int64_t>* nd_sbp_axis_sequence, Symbol<cfg::ParallelDistribution> src_nd_sbp,
+    Symbol<cfg::ParallelDistribution> dst_nd_sbp,
+    const std::function<Maybe<Optional<int64_t>>(int64_t)>& ExclusiveSrcNdSbpAxis4DstNdSbpAxis) {
+  CHECK_EQ_OR_RETURN(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
+  int64_t num_axes = src_nd_sbp->sbp_parallel_size();
+  HashSet<int64_t> handled_axes;
+  const auto& HasNoExclusiveSrcNdSbpAxis = [&](int64_t axis) -> Maybe<bool> {
+    const auto& opt_src_axis = JUST(ExclusiveSrcNdSbpAxis4DstNdSbpAxis(axis));
+    if (!opt_src_axis->has_value()) { return true; }
+    return handled_axes.count(JUST(opt_src_axis->value())) > 0;
+  };
+  for (int i = 0; i < num_axes; ++i) {
+    for (int axis = 0; axis < num_axes; ++axis) {
+      if (handled_axes.count(axis) == 0 && JUST(HasNoExclusiveSrcNdSbpAxis(axis))) {
+        if (!(src_nd_sbp->sbp_parallel(axis) == dst_nd_sbp->sbp_parallel(axis))) {
+          nd_sbp_axis_sequence->push_back(axis);
+        }
+        handled_axes.insert(axis);
+      }
+    }
+  }
+  CHECK_EQ_OR_RETURN(handled_axes.size(), num_axes);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
+
+Maybe<bool> IsNdSbpBoxingAcyclic(Symbol<cfg::ParallelDistribution> src_nd_sbp,
+                                 Symbol<cfg::ParallelDistribution> dst_nd_sbp) {
+  std::function<Maybe<Optional<int64_t>>(int64_t)> ExclusiveSrcNdSbpAxis4DstNdSbpAxis;
+  JUST(MakeExclusiveSrcNdSbpAxis4DstNdSbpAxis(&ExclusiveSrcNdSbpAxis4DstNdSbpAxis, src_nd_sbp,
+                                              dst_nd_sbp));
+  return IsNdSbpBoxingAcyclic(src_nd_sbp->sbp_parallel_size(), ExclusiveSrcNdSbpAxis4DstNdSbpAxis);
+}
+
+Maybe<std::vector<int64_t>> GetNdSbpValidTransformationAxisSequence(
+    Symbol<cfg::ParallelDistribution> src_nd_sbp, Symbol<cfg::ParallelDistribution> dst_nd_sbp) {
+  HashMap<int64_t, int64_t> dst_nd_sbp_axis2exclusive_src_nd_sbp_axis;
+  std::function<Maybe<Optional<int64_t>>(int64_t)> ExclusiveSrcNdSbpAxis4DstNdSbpAxis;
+  JUST(MakeExclusiveSrcNdSbpAxis4DstNdSbpAxis(&ExclusiveSrcNdSbpAxis4DstNdSbpAxis, src_nd_sbp,
+                                              dst_nd_sbp));
+  bool is_acyclic = JUST(
+      IsNdSbpBoxingAcyclic(src_nd_sbp->sbp_parallel_size(), ExclusiveSrcNdSbpAxis4DstNdSbpAxis));
+  CHECK_OR_RETURN(is_acyclic) << Error::Unimplemented()
+                              << "cyclic split axis boxing are not supported";
+  std::vector<int64_t> nd_sbp_axis_sequence;
+  JUST(InitNdSbpValidTransformationAxisSequence(&nd_sbp_axis_sequence, src_nd_sbp, dst_nd_sbp,
+                                                ExclusiveSrcNdSbpAxis4DstNdSbpAxis));
+  return nd_sbp_axis_sequence;
+}
+
+std::string GetCyclicBoxingDebugString(
+    Symbol<cfg::ParallelDistribution> src_nd_sbp, Symbol<cfg::ParallelDistribution> dst_nd_sbp,
+    const std::function<Maybe<Optional<int64_t>>(int64_t)>& ExclusiveSrcNdSbpAxis4DstNdSbpAxis) {
+  CHECK_EQ(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
+  std::stringstream ss;
+  ss << "cyclic split axis boxing are not supported. "
+     << "src_nd_sbp: " << CHECK_JUST(ToString(src_nd_sbp))
+     << ", dst_nd_sbp: " << CHECK_JUST(ToString(dst_nd_sbp)) << ". "
+     << "dst_nd_sbp axis to exclusive src_nd_sbp axis: ";
+  ss << "[";
+  for (int i = 0; i < src_nd_sbp->sbp_parallel_size(); ++i) {
+    const auto& opt_axis = CHECK_JUST(ExclusiveSrcNdSbpAxis4DstNdSbpAxis(i));
+    if (i) { ss << ", "; }
+    if (opt_axis->has_value()) {
+      ss << CHECK_JUST(opt_axis->value());
+    } else {
+      ss << "None";
+    }
+  }
+  ss << "]";
+  return ss.str();
+}
 
 Maybe<std::vector<NaiveBoxingTransformation>> DecomposeByParallelId(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp,
@@ -326,13 +483,26 @@ Maybe<std::vector<NaiveBoxingTransformation>> DecomposeByParallelId(
   const auto& parallel_desc = tensor_meta->parallel_desc();
   const auto& src_nd_sbp = tensor_meta->parallel_distribution();
   CHECK_EQ_OR_RETURN(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
+  std::vector<int64_t> nd_sbp_axis_sequence;
+  {
+    std::function<Maybe<Optional<int64_t>>(int64_t)> ExclusiveSrcNdSbpAxis4DstNdSbpAxis;
+    JUST(MakeExclusiveSrcNdSbpAxis4DstNdSbpAxis(&ExclusiveSrcNdSbpAxis4DstNdSbpAxis, src_nd_sbp,
+                                                dst_nd_sbp));
+    bool is_acyclic = JUST(
+        IsNdSbpBoxingAcyclic(src_nd_sbp->sbp_parallel_size(), ExclusiveSrcNdSbpAxis4DstNdSbpAxis));
+    CHECK_OR_RETURN(is_acyclic) << Error::Unimplemented()
+                                << GetCyclicBoxingDebugString(src_nd_sbp, dst_nd_sbp,
+                                                              ExclusiveSrcNdSbpAxis4DstNdSbpAxis);
+    JUST(InitNdSbpValidTransformationAxisSequence(&nd_sbp_axis_sequence, src_nd_sbp, dst_nd_sbp,
+                                                  ExclusiveSrcNdSbpAxis4DstNdSbpAxis));
+  }
   const auto& transformations = std::make_shared<std::vector<NaiveBoxingTransformation>>();
-  for (int i = 0; i < src_nd_sbp->sbp_parallel_size(); ++i) {
-    const auto& src_sbp = src_nd_sbp->sbp_parallel(i);
-    const auto& dst_sbp = dst_nd_sbp->sbp_parallel(i);
+  for (int axis : nd_sbp_axis_sequence) {
+    const auto& src_sbp = src_nd_sbp->sbp_parallel(axis);
+    const auto& dst_sbp = dst_nd_sbp->sbp_parallel(axis);
     if (src_sbp == dst_sbp) { continue; }
     std::vector<int> axis2selected(src_nd_sbp->sbp_parallel_size());
-    axis2selected[i] = 1;
+    axis2selected[axis] = 1;
     const auto& sub_parallel_desc =
         JUST(GetSelectedSubParallelDesc(parallel_desc, SymbolOf(axis2selected), parallel_id));
     transformations->push_back(NaiveBoxingTransformation{
