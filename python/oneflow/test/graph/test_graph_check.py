@@ -21,7 +21,7 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow._oneflow_internal import Tensor, TensorTuple
+from oneflow.framework.tensor import Tensor, TensorTuple
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

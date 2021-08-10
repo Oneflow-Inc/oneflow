@@ -14,30 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/session_global_objects_scope.h"
-#include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
-#include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/job/job_instance.h"
-#include "oneflow/core/job/inter_user_job_info.pb.h"
-#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/collective_boxing_executor.h"
+#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 #include "oneflow/core/job/critical_section_desc.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_set_compile_ctx.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/job/runtime_job_descs.h"
-#include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/job/version.h"
+#include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/user/summary/events_writer.h"
-#include "oneflow/core/job/runtime_buffer_managers_scope.h"
-#include "oneflow/core/framework/load_library.h"
-#include "oneflow/core/job/version.h"
-#include "oneflow/core/device/node_device_descriptor_manager.h"
-#include "oneflow/core/job/collective_boxing_executor.h"
-#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_device_descriptor.h"
@@ -126,6 +127,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     // NOTE(chengcheng): Init Global Runtime objects.
     Global<RuntimeCtx>::New();
     Global<MemoryAllocator>::New();
+    Global<ChunkMgr>::New();
     Global<RegstMgr>::New();
     Global<ActorMsgBus>::New();
     Global<ThreadMgr>::New();
@@ -157,6 +159,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
     Global<ThreadMgr>::Delete();
     Global<ActorMsgBus>::Delete();
     Global<RegstMgr>::Delete();
+    Global<ChunkMgr>::Delete();
     Global<MemoryAllocator>::Delete();
     Global<RuntimeCtx>::Delete();
   }
