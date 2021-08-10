@@ -76,8 +76,6 @@ class RandNFunctor {
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      // dtype_val = JUST(dtype.value());
-      // dtype_val = dtype.value()->data_type();
       dtype_val = JUST(dtype.value())->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
@@ -126,8 +124,6 @@ class ConsistentRandNFunctor {
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      // dtype_val = JUST(dtype.value());
-      // dtype_val = dtype.value()->data_type();
       dtype_val = JUST(dtype.value())->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
