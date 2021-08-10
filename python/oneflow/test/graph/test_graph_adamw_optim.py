@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import os 
 from collections import OrderedDict
 
 import numpy as np
@@ -22,12 +23,10 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@flow.unittest.skip_unless_1n1d()
 def compare_with_numpy_adamw(
     test_case,
     device,
     x_shape,
-    scale,
     learning_rate,
     train_iters,
     betas,
@@ -50,7 +49,7 @@ def compare_with_numpy_adamw(
             return self.para0 * mask
 
     simp_module = CustomModule()
-    simp_module.to("cuda")
+    simp_module.to(device)
     simp_module.train()
 
     adamw0 = flow.optim.AdamW(
@@ -60,7 +59,6 @@ def compare_with_numpy_adamw(
                 "lr": learning_rate,
                 "betas": betas,
                 "weight_decay": weight_decay,
-                "scale": scale,
             }
         ]
     )
@@ -96,7 +94,6 @@ def compare_with_numpy_adamw(
         beta2 = betas[1]
 
         def np_train_one_iter(grad):
-            grad = grad * scale
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
             g = (
@@ -122,9 +119,8 @@ class TestAdamW(flow.unittest.TestCase):
     def test_adamw1(test_case):
         compare_with_numpy_adamw(
             test_case,
-            device="cuda",
+            device="cpu",
             x_shape=(10,),
-            scale=1.0,
             learning_rate=1,
             betas=(0.99, 0.9),
             train_iters=10,
@@ -132,14 +128,14 @@ class TestAdamW(flow.unittest.TestCase):
             eps=1e-8,
         )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_adamw2(test_case):
         compare_with_numpy_adamw(
             test_case,
             device="cuda",
             x_shape=(10,),
-            scale=1.0,
-            learning_rate=0.01,
-            betas=(0.99, 0.9),
+            learning_rate=0.001,
+            betas=(0.8, 0.9),
             train_iters=10,
             weight_decay=0.0005,
             eps=1e-8,
