@@ -22,63 +22,71 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow import tensor
+import oneflow
 
 
 def _test_tensor_str(test_case, device):
     # int dtype
-    tensor = flow.tensor([[1, 2, 3], [4, 5, -6]], device=flow.device(device))
-    tensor_str = str(tensor)
+    x = flow.tensor([[1, 2, 3], [4, 5, -6]], device=flow.device(device))
+    tensor_str = str(x)
     test_case.assertTrue("3" in tensor_str)
     test_case.assertTrue("5" in tensor_str)
     test_case.assertTrue("-6" in tensor_str)
-    test_case.assertTrue("2" in str(tensor[0][1]))
+    test_case.assertTrue("2" in str(x[0][1]))
+    test_case.assertTrue(np.allclose(eval(tensor_str).numpy(), x.numpy()))
 
     # empty
-    tensor = flow.tensor([], device=flow.device(device))
-    tensor_str = str(tensor)
+    x = flow.tensor([], device=flow.device(device))
+    tensor_str = str(x)
     test_case.assertTrue("[]" in tensor_str)
+    test_case.assertTrue(np.allclose(eval(tensor_str).numpy(), x.numpy()))
 
     # scientific representation int_mode(val == np.ceil(val))
-    tensor = flow.tensor(
+    x = flow.tensor(
         [[1, 2, 3], [4, 5, 600000]], device=flow.device(device), dtype=flow.float64
     )
-    tensor_str = str(tensor)
+    tensor_str = str(x)
     test_case.assertTrue("6.0000e+05" in tensor_str)
+    test_case.assertTrue(np.allclose(eval(tensor_str).numpy(), x.numpy()))
 
     # int_mode
-    tensor = flow.tensor(
+    x = flow.tensor(
         [[1.0, 2.0, 3.0], [4.0, 5, 60]], device=flow.device(device), dtype=flow.float64
     )
-    tensor_str = str(tensor)
+    tensor_str = str(x)
     test_case.assertTrue("4." in tensor_str)
     test_case.assertTrue("60." in tensor_str)
+    test_case.assertTrue(np.allclose(eval(tensor_str).numpy(), x.numpy()))
 
     # float dtype
-    tensor = flow.tensor(
+    x = flow.tensor(
         [[1.3, 2.4, 3.5], [-4.6, 5, 60]], device=flow.device(device), dtype=flow.float64
     )
-    tensor_str = str(tensor)
+    tensor_str = str(x)
     test_case.assertTrue("3.5000" in tensor_str)
     test_case.assertTrue("-4.6000" in tensor_str)
     test_case.assertTrue("60.0000" in tensor_str)
+    test_case.assertTrue(np.allclose(eval(tensor_str).numpy(), x.numpy()))
 
     # scientific representation float dtype
-    tensor = flow.tensor(
+    x = flow.tensor(
         [[1.3, 2.4, 3.5], [-4.6, 5, 60000000]],
         device=flow.device(device),
         dtype=flow.float64,
     )
-    tensor_str = str(tensor)
+    tensor_str = str(x)
     test_case.assertTrue("2.4000e+00" in tensor_str)
     test_case.assertTrue("3.5000e+00" in tensor_str)
     test_case.assertTrue("-4.6000e+00" in tensor_str)
     test_case.assertTrue("6.0000e+07" in tensor_str)
+    test_case.assertTrue(np.allclose(eval(tensor_str).numpy(), x.numpy()))
 
     # summarized data float dtype
-    tensor = flow.tensor(
+    x = flow.tensor(
         np.ones((100, 100, 100)), device=flow.device(device), dtype=flow.float64
     )
-    tensor_str = str(tensor)
+    tensor_str = str(x)
     test_case.assertTrue("1" in tensor_str)
     test_case.assertTrue("..." in tensor_str)
 
