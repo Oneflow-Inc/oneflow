@@ -51,16 +51,16 @@ struct unpack_call {
   }
 };
 
-#define INSTANCE_MAYBE_UNPACK_CALL(K, R, return_fn)                                               \
-  template<typename F>                                                                            \
-  struct unpack_call<F, K> {                                                                      \
-    static R apply(const F& f, const std::vector<PythonArg>& args) {                              \
-      constexpr size_t nargs = function_traits<F>::nargs;                                         \
-      CHECK_EQ_OR_THROW(nargs, args.size())                                                       \
-          << "Requires " << nargs << " arguments, but " << args.size() << " is given.";           \
-      return (return_fn)(unpack_call_dispatcher<F, K>::apply(f, args,                             \
-                                                             std::make_index_sequence<nargs>{})); \
-    }                                                                                             \
+#define INSTANCE_MAYBE_UNPACK_CALL(K, R, return_fn)                            \
+  template <typename F> struct unpack_call<F, K> {                             \
+    static R apply(const F &f, const std::vector<PythonArg> &args) {           \
+      constexpr size_t nargs = function_traits<F>::nargs;                      \
+      CHECK_EQ_OR_THROW(nargs, args.size())                                    \
+          << "Requires " << nargs << " arguments, but " << args.size()         \
+          << " is given.";                                                     \
+      return (return_fn)(unpack_call_dispatcher<F, K>::apply(                  \
+          f, args, std::make_index_sequence<nargs>{}));                        \
+    }                                                                          \
   };
 
 INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::Tensor>, std::shared_ptr<one::Tensor>,
