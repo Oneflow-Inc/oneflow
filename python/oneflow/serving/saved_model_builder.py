@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import shutil
 import typing
 
 from google.protobuf import text_format
@@ -28,6 +29,121 @@ import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.session_context as session_ctx
 
+
+class SavedNNGraphBuilder(object):
+    DEFAULT_CHECKPOINT_DIR = "variables"
+    DEFAULT_SAVED_MODEL_FILE_BASENAME = "saved_model"
+
+    def __init__(self, job_proto):
+        self.job = job_proto
+        self.saved_model_pb_filename_ = "{}.pb".format(
+            self.DEFAULT_SAVED_MODEL_FILE_BASENAME
+        )
+        self.saved_model_pbtxt_filename_ = "{}.prototxt".format(
+            self.DEFAULT_SAVED_MODEL_FILE_BASENAME
+        )
+        self.saved_model_proto_ = saved_model_pb.SavedModel()
+        self.saved_model_proto_.checkpoint_dir = self.DEFAULT_CHECKPOINT_DIR
+        self.graph_builders_ = {}
+        self.graph_jobs_ = {}
+
+    @property
+    def proto(self):
+        return self.saved_model_proto_
+
+    def ModelName(self, model_name: str):
+        assert isinstance(model_name, str)
+        self.proto.name = model_name
+        return self
+
+    def Version(self, version: int):
+        assert isinstance(version, int)
+        self.proto.version = version
+        return self
+
+    def AddGraph(self, graph_name: str, job):
+        if graph_name in self.graph_builders_:
+            raise ValueError("graph_name with name {} already exists".format(graph_name))
+        graph_builder = GraphBuilder(graph_name, self)
+        self.graph_builders_[graph_name] = graph_builder
+        if not self.proto.HasField("default_graph_name"):
+            self.proto.default_graph_name = graph_name
+        self.graph_jobs_[graph_name] = job
+        return graph_builder
+
+    def _check_input_output_name_conflict(self):
+        name_set = set()
+        lbn_set = set()
+
+        def check_name_conflict(name, interface_def):
+            if name in name_set:
+                raise ValueError("input conflict, {} already exist".format(name))
+            name_set.add(name)
+            lbn = Lbi2Lbn(interface_def.lbi)
+            if lbn in lbn_set:
+                raise ValueError(
+                    "input conflict, {} already bind to other input".format(lbn)
+                )
+            lbn_set.add(lbn)
+
+        for (_, graph_def) in self.proto.graphs.items():
+            for (_, signature_def) in graph_def.signatures.items():
+                for (input_name, input_def) in signature_def.inputs.items():
+                    check_name_conflict(input_name, input_def)
+                for (output_name, output_def) in signature_def.outputs.items():
+                    check_name_conflict(output_name, output_def)
+
+    def Save(self, saved_model_dir: str, overwrite: bool = True):
+        # check saved_model_dir
+        if not isinstance(saved_model_dir, str):
+            raise ValueError(
+                "param 'saved_model_dir' must be str, but got {}".format(saved_model_dir)
+            )
+        # check input/output name conflicts
+        self._check_input_output_name_conflict()
+        # build graph
+        assert len(self.proto.graphs.items()) == 1
+        for (_, graph_builder) in self.graph_builders_.items():
+            if not graph_builder.finished:
+                graph_builder.Finish()
+        for (graph_name, graph_def) in self.proto.graphs.items():
+            graph_def.op_list.extend(list(self.graph_jobs_[graph_name].net.op))
+        
+        if not os.path.exists(saved_model_dir):
+            os.makedirs(saved_model_dir)
+        # check version
+        if self.proto.version is None:
+            raise ValueError("model version is not set")
+        version_dir = os.path.join(saved_model_dir, str(self.proto.version))
+        # check if there exists model_version_path
+        if os.path.exists(version_dir) and os.path.isdir(version_dir):
+            if overwrite:
+                print(
+                    "WARNING: The model version path '{}' already exist, old version directory will be removed".format(
+                        version_dir
+                    )
+                )
+                shutil.rmtree(version_dir)
+            else:
+                raise ValueError(
+                    'Directory of model "{}" version "{}" already exist.'.format(
+                        saved_model_dir, self.proto.version
+                    )
+                )
+
+        os.makedirs(version_dir)
+        checkpoint_path = os.path.join(version_dir, self.proto.checkpoint_dir)
+        flow.checkpoint.save(checkpoint_path)
+        # save protobuffer file
+        saved_model_pb_path = os.path.join(version_dir, self.saved_model_pb_filename_)
+        with open(saved_model_pb_path, "wb") as writer:
+            writer.write(self.saved_model_proto_.SerializeToString())
+        # save protobuffer txt file
+        saved_model_pbtxt_path = os.path.join(
+            version_dir, self.saved_model_pbtxt_filename_
+        )
+        with open(saved_model_pbtxt_path, "wt") as writer:
+            writer.write(text_format.MessageToString(self.saved_model_proto_))
 
 class ModelBuilder(object):
     DEFAULT_CHECKPOINT_DIR = "variables"

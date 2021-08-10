@@ -30,7 +30,7 @@ from oneflow.nn.graph_optimizer import OptimizerConfig, VariableConfig
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.util import add_indent
-
+from oneflow.serving.saved_model_builder import SavedNNGraphBuilder
 
 class Graph(object):
     _child_init_cnt = dict()
@@ -47,6 +47,8 @@ class Graph(object):
         self._job_proto = None
         self._args_repr = []
         self._outs_repr = []
+        self._input_op_names = []
+        self._output_op_names = []
         self._debug = False
 
     @property
@@ -87,6 +89,25 @@ class Graph(object):
         self._optimizers_conf[name] = OptimizerConfig(
             name, optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
         )
+
+    def save(self, saved_model_path, model_version):
+        assert self._is_compiled, "save() must be called after compilation"
+        saved_model_builder = SavedNNGraphBuilder()
+        signature_builder = (
+            saved_model_builder.ModelName(self.name)
+            .Version(model_version)
+            .AddGraph(self._job_proto.job_conf.job_name, self._job_proto)
+            .AddSignature("regress")
+        )
+        for input_name in self._input_op_names:
+            signature_builder.Input(input_name, input_name + "/out")
+        for output_name in self._output_op_names:
+            signature_builder.Output(output_name, output_name + "/out")
+        saved_model_builder.Save(saved_model_path, True)
+
+
+    def load(self, saved_model_path, model_version):
+        raise NotImplementedError()
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -203,7 +224,11 @@ class Graph(object):
                 state_op_names, self._variables
             )
 
-            # Save job proto for debug
+            # Save input/output op names for model save
+            self._input_op_names = lazy_arg_op_names
+            self._output_op_names = eager_output_op_names
+
+            # Save job proto for debug & save model
             self._job_proto = c_api_util.GetCurrentJob()
 
         # Complie and init Runtime
