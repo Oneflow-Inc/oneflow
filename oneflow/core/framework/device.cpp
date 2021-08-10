@@ -122,7 +122,7 @@ std::string Device::ToRepr() const {
 std::string Device::ToString() const {
   std::stringstream ss;
   ss << type_;
-  if (type_ != "cpu") { ss << ":" << device_id_; }
+  ss << ":" << device_id_;
   return ss.str();
 }
 
