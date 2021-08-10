@@ -46,9 +46,9 @@ void MessagePool::RegisterMessagePool() {
       for(uint32_t i =0; i < num_of_message_; i++){
         ibv_mr * split_mr =(ibv_mr*) (mr + ActorMsgSize * i);
         std::cout<<"split_mr:"<<split_mr<<std::endl;
-        IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(split_mr,(void*)(addr + ActorMsgSize * i),ActorMsgSize);
+        IBVerbsMemDesc * new_mem_desc =new  IBVerbsMemDesc(split_mr,(void*)(addr + ActorMsgSize * i),ActorMsgSize);
         std::cout<<"addr:" << addr+ActorMsgSize * i<< std::endl;
-        ActorMsgMR * msg_mr= new ActorMsgMR(mem_desc);
+        ActorMsgMR * msg_mr= new ActorMsgMR(new_mem_desc);
         message_buf_.push(msg_mr);
   }
 }
