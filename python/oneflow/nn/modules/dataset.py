@@ -19,6 +19,7 @@ import traceback
 from typing import List, Optional, Sequence, Tuple, Union
 
 import oneflow as flow
+from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
@@ -59,8 +60,7 @@ class OfrecordReader(Module):
 
         self.placement = placement
         if placement is None:
-            if device is None:
-                self.device = flow.device("cpu")
+            self.device = device or flow.device("cpu")
         else:
             assert device is None
 
@@ -653,10 +653,39 @@ class COCOReader(Module):
         group_by_aspect_ratio: bool = True,
         remove_images_without_annotations: bool = True,
         stride_partition: bool = True,
+        device: Union[flow.device, str] = None,
+        placement: flow.placement = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     ):
         super().__init__()
         if random_seed is None:
             random_seed = random.randrange(sys.maxsize)
+
+        parallel_distribution = []
+        self.placement = placement
+        if placement is None:
+            self.device = device or flow.device("cpu")
+        else:
+            if device is not None:
+                raise ValueError(
+                    "when param sbp is specified, param device should not be specified"
+                )
+
+            if isinstance(sbp, (tuple, list)):
+                for sbp_item in sbp:
+                    if not isinstance(sbp_item, flow.sbp.sbp):
+                        raise ValueError(f"invalid sbp item: {sbp_item}")
+                    parallel_distribution.append(sbp_item._ToAttrStr())
+            elif isinstance(sbp, flow.sbp.sbp):
+                parallel_distribution.append(sbp._ToAttrStr())
+            else:
+                raise ValueError(f"invalid param sbp: {sbp}")
+
+            if len(parallel_distribution) != len(placement.hierarchy):
+                raise ValueError(
+                    "dimensions of sbp and dimensions of hierarchy of placement don't equal"
+                )
+
         self._op = (
             flow.builtin_op("COCOReader")
             .Output("image")
@@ -677,12 +706,24 @@ class COCOReader(Module):
                 "remove_images_without_annotations", remove_images_without_annotations
             )
             .Attr("stride_partition", stride_partition)
+            .Attr("parallel_distribution", parallel_distribution)
             .Build()
         )
+        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
 
     def forward(self):
-        res = self._op()
-        return res
+        if self.placement is None:
+            # local apply
+            outputs = self._op.apply(self.device, self.attrs)
+        else:
+            # consistent apply
+            outputs = self._op.apply(self.placement, self.attrs)
+
+        # COCOReader has multiple output, so it return a TensorTuple
+        # convert TensorTuple to tuple of Tensor
+        assert isinstance(outputs, TensorTuple)
+        ret = tuple(out for out in outputs)
+        return ret
 
 
 class ImageBatchAlign(Module):
@@ -764,6 +805,91 @@ class OFRecordBytesDecoder(Module):
 
     def forward(self, input):
         return self._op(input)[0]
+
+
+class GPTIndexedBinDataReader(Module):
+    def __init__(
+        self,
+        data_file_prefix: str,
+        seq_length: int,
+        num_samples: int,
+        batch_size: int,
+        dtype: flow.dtype = flow.int64,
+        shuffle: bool = True,
+        random_seed: Optional[int] = None,
+        split_sizes: Optional[Sequence[str]] = None,
+        split_index: Optional[int] = None,
+        device: Union[flow.device, str] = None,
+        placement: flow.placement = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
+    ):
+        super().__init__()
+
+        parallel_distribution = []
+        self.placement = placement
+        if placement is None:
+            self.device = device or flow.device("cpu")
+        else:
+            if device is not None:
+                raise ValueError(
+                    "when param sbp is specified, param device should not be specified"
+                )
+
+            if isinstance(sbp, (tuple, list)):
+                for sbp_item in sbp:
+                    if not isinstance(sbp_item, flow.sbp.sbp):
+                        raise ValueError(f"invalid sbp item: {sbp_item}")
+                    parallel_distribution.append(sbp_item._ToAttrStr())
+            elif isinstance(sbp, flow.sbp.sbp):
+                parallel_distribution.append(sbp._ToAttrStr())
+            else:
+                raise ValueError(f"invalid param sbp: {sbp}")
+
+            if len(parallel_distribution) != len(placement.hierarchy):
+                raise ValueError(
+                    "dimensions of sbp and dimensions of hierarchy of placement don't equal"
+                )
+
+        if random_seed is None:
+            random_seed = random.randrange(sys.maxsize)
+
+        if split_index is None:
+            split_index = 0
+
+        if split_sizes is None:
+            split_sizes = (1,)
+
+        if split_index >= len(split_sizes):
+            raise ValueError(
+                "split index {} is out of range, split_sizes {}".formart(
+                    split_index, split_sizes
+                )
+            )
+
+        op_builder = (
+            flow.builtin_op("megatron_gpt_mmap_data_loader")
+            .Output("out")
+            .Attr("data_file_prefix", data_file_prefix)
+            .Attr("seq_length", seq_length)
+            .Attr("label_length", 1)
+            .Attr("num_samples", num_samples)
+            .Attr("batch_size", batch_size)
+            .Attr("dtype", dtype)
+            .Attr("shuffle", shuffle)
+            .Attr("random_seed", random_seed)
+            .Attr("split_sizes", split_sizes)
+            .Attr("split_index", split_index)
+            .Attr("parallel_distribution", parallel_distribution)
+        )
+        self.op_ = op_builder.Build()
+        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
+
+    def forward(self):
+        if self.placement is None:
+            output = self.op_.apply(self.device, self.attrs)[0]
+        else:
+            output = self.op_.apply(self.placement, self.attrs)[0]
+        return output
 
 
 if __name__ == "__main__":
