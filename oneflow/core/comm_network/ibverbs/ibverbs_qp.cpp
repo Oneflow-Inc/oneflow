@@ -39,7 +39,7 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 void MessagePool::RegisterMessagePool() {
       size_t ActorMsgSize = sizeof(ActorMsg);
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
-      char * addr =(char*) malloc(RegisterMemorySize);
+      char * addr =(char*) malloc(RegisterMemorySize * sizeof(char*));
       IBVerbsMemDesc *  mem_desc = new IBVerbsMemDesc(pd_,(void*) addr, RegisterMemorySize ); 
       const ibv_mr* mr = mem_desc->mr();
       std::cout<<"mr:"<<mr<<std::endl;
