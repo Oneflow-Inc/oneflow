@@ -29,7 +29,7 @@ from oneflow.nn.graph_block import Block, BlockType
 from oneflow.nn.graph_optimizer import OptimizerConfig, VariableConfig
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
-from oneflow.nn.util import add_indent, sys_exc_error_msg
+from oneflow.nn.util import add_indent, sys_exc_error_msg, list_to_func_return
 
 
 class Graph(object):
@@ -118,16 +118,18 @@ class Graph(object):
             )
 
     def _compile(self, *args):
-        assert not self._is_compiled, (
-            "nn.Graph " + self._name + " has already been compiled."
-        )
-
         # Build forward graph
-        if self._debug:
-            print(self._shallow_repr() + " start building forward graph.")
-
         try:
+            if self._debug:
+                print(self._shallow_repr() + " start building forward graph.")
+            assert not self._is_compiled, (
+                "nn.Graph " + self._name + " has already been compiled."
+            )
+
             eager_outputs = self._build_forward_graph(*args)
+
+            if self._debug:
+                print(self._shallow_repr() + " end building forward graph.")
         except:
             print(
                 "[ERROR]"
@@ -136,14 +138,16 @@ class Graph(object):
                 + sys_exc_error_msg()
             )
             raise
-        if self._debug:
-            print(self._shallow_repr() + " end building forward graph.")
 
         # Complie and init Runtime
-        if self._debug:
-            print(self._shallow_repr() + " start compiling and init graph runtime.")
         try:
+            if self._debug:
+                print(self._shallow_repr() + " start compiling and init graph runtime.")
+
             self._c_nn_graph.complie_and_init_runtime()
+
+            if self._debug:
+                print(self._shallow_repr() + " end compiling and init graph rumtime.")
         except:
             print(
                 "[ERROR]"
@@ -152,10 +156,8 @@ class Graph(object):
                 sys_exc_error_msg(),
             )
             raise
-        self._is_compiled = True
-        if self._debug:
-            print(self._shallow_repr() + " end compiling and init graph rumtime.")
 
+        self._is_compiled = True
         return eager_outputs
 
     def _build_forward_graph(self, *args):
@@ -164,85 +166,15 @@ class Graph(object):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
         session.TryInit()
+
         with graph_build_util.graph_build_context(self.config.proto, session):
-            # Deal with input
-            lazy_args = []
-            lazy_arg_op_names = []
-            for idx, arg in enumerate(args):
-                if isinstance(arg, Tensor):
-                    op_name = "_" + self.name + "-input_" + str(idx)
-                    lazy_args.append(
-                        graph_build_util.build_graph_input_arg(op_name, arg)
-                    )
-                    lazy_arg_op_names.append(op_name)
-                    in_str = "(INPUT:" + op_name + ":" + arg._meta_repr() + ")"
-                    self._args_repr.append(in_str)
-                    if self._debug:
-                        print(in_str)
-                elif isinstance(arg, (TensorTuple, list)):
-                    if isinstance(arg, TensorTuple):
-                        seq_lazy_args = TensorTuple()
-                    else:
-                        seq_lazy_args = list()
-                    for i in range(len(arg)):
-                        op_name = "_" + self.name + "-input_" + str(idx) + "_" + str(i)
-                        if not isinstance(arg[i], Tensor):
-                            in_str = (
-                                "[ERROR](INPUT:"
-                                + op_name
-                                + ":"
-                                + str(type(arg[i]))
-                                + ")"
-                            )
-                            print(in_str)
-                            raise NotImplementedError(
-                                "nn.Graph.build()'s input argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
-                            )
-                        seq_lazy_args.append(
-                            graph_build_util.build_graph_input_arg(op_name, arg[i])
-                        )
-                        lazy_arg_op_names.append(op_name)
-                        in_str = "(INPUT:" + op_name + ":" + arg[i]._meta_repr() + ")"
-                        self._args_repr.append(in_str)
-                        if self._debug:
-                            print(in_str)
-                    lazy_args.append(seq_lazy_args)
-                elif arg is None:
-                    op_name = "_" + self.name + "-input_" + str(idx)
-                    lazy_args.append(None)
-                    in_str = "[WARNING](INPUT:" + op_name + ":" + str(type(arg)) + ")"
-                    self._args_repr.append(in_str)
-                    if self._debug:
-                        print(in_str)
-                else:
-                    op_name = "_" + self.name + "-input_" + str(idx)
-                    in_str = "[ERROR](INPUT:" + op_name + ":" + str(type(arg)) + ")"
-                    print(in_str)
-                    raise NotImplementedError(
-                        "nn.Graph.build()'s input argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
-                    )
+            # Deal with inputs
+            arg_op_names, lazy_args, self._args_repr = self._build_io(
+                "input", graph_build_util.build_graph_input_arg, *args
+            )
 
             # Deal with parameter and buffer
-            state_op_names = []
-            state_tensors = []
-            for state_block in self._state():
-                op_name = state_block.name_prefix + state_block.name
-                state_tensor = state_block.origin
-                state_op_names.append(op_name)
-                state_tensors.append(state_tensor)
-                if state_block.type == BlockType.PARAMETER:
-                    state_config = self._variables_conf[state_block.origin]
-                else:
-                    state_config = None
-                state_block.set_lazy_origin_builder(
-                    partial(
-                        graph_build_util.build_graph_state,
-                        op_name,
-                        state_tensor,
-                        state_config,
-                    )
-                )
-            self._variables = convert_to_tensor_tuple(state_tensors)
+            state_op_names, self._states_tensor_tuple = self._build_states()
 
             # Deal with module in self.build(*args)
             outputs = self.build(*lazy_args)
@@ -253,127 +185,34 @@ class Graph(object):
                     outputs = ()
                 else:
                     outputs = (outputs,)
-            eager_outputs = []
-            eager_tensor_outputs = []
-            eager_output_op_names = []
-            for idx, out in enumerate(outputs):
-                if isinstance(out, Tensor):
-                    op_name = "_" + self.name + "-output_" + str(idx)
-                    eager_out = graph_build_util.build_graph_output(op_name, out)
-                    eager_outputs.append(eager_out)
-                    eager_tensor_outputs.append(eager_out)
-                    eager_output_op_names.append(op_name)
-                    out_str = "(OUTPUT:" + op_name + ":" + out._meta_repr() + ")"
-                    self._outs_repr.append(out_str)
-                    if self._debug:
-                        print(out_str)
-                elif isinstance(out, (TensorTuple, list)):
-                    if isinstance(out, TensorTuple):
-                        seq_eager_outputs = TensorTuple()
-                    else:
-                        seq_eager_outputs = list()
-                    for i in range(len(out)):
-                        op_name = "_" + self.name + "-output_" + str(idx) + "_" + str(i)
-                        if not isinstance(out[i], Tensor):
-                            out_str = (
-                                "[ERROR](OUTPUT:"
-                                + op_name
-                                + ":"
-                                + str(type(out[i]))
-                                + ")"
-                            )
-                            raise NotImplementedError(
-                                "nn.Graph.build()'s output argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
-                            )
-                        eager_out = graph_build_util.build_graph_output(op_name, out[i])
-                        seq_eager_outputs.append(eager_out)
-                        eager_tensor_outputs.append(eager_out)
-                        eager_output_op_names.append(op_name)
-                        out_str = "(OUTPUT:" + op_name + ":" + out[i]._meta_repr() + ")"
-                        self._outs_repr.append(out_str)
-                        if self._debug:
-                            print(out_str)
-                    eager_outputs.append(seq_eager_outputs)
-                elif out is None:
-                    op_name = "_" + self.name + "-output_" + str(idx)
-                    eager_outputs.append(None)
-                    out_str = "[WARNING](OUTPUT:" + op_name + ":" + str(type(out)) + ")"
-                    self._outs_repr.append(out_str)
-                    if self._debug:
-                        print(out_str)
-                else:
-                    op_name = "_" + self.name + "-output_" + str(idx)
-                    out_str = "[ERROR](OUTPUT:" + op_name + ":" + str(type(out)) + ")"
-                    print(out_str)
-                    raise NotImplementedError(
-                        "nn.Graph.build()'s output argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
-                    )
-
-            if len(eager_outputs) == 0:
-                eager_outputs = None
-            elif len(eager_outputs) == 1:
-                eager_outputs = eager_outputs[0]
-            else:
-                eager_outputs = tuple(eager_outputs)
-
-            if len(eager_tensor_outputs) == 0:
-                eager_tensor_outputs = None
-            elif len(eager_tensor_outputs) == 1:
-                eager_tensor_outputs = eager_tensor_outputs[0]
-            else:
-                eager_tensor_outputs = tuple(eager_tensor_outputs)
-
-            self._outputs_dataholder = convert_to_tensor_tuple(eager_tensor_outputs)
-            self._eager_outputs = eager_outputs
+            output_op_names, self._eager_outputs, self._outs_repr = self._build_io(
+                "output", graph_build_util.build_graph_output, *outputs
+            )
+            self._outputs_tensor_tuple = convert_to_tensor_tuple(
+                self._flatten_io("output", *self._eager_outputs)
+            )
+            self._eager_outputs = list_to_func_return(self._eager_outputs)
 
             # Register input/output/variable to _c_nn_graph
-            self._c_nn_graph.register_input_op_names(lazy_arg_op_names)
-            self._c_nn_graph.register_output_op_names(eager_output_op_names)
+            self._c_nn_graph.register_input_op_names(arg_op_names)
+            self._c_nn_graph.register_output_op_names(output_op_names)
             self._c_nn_graph.register_variable_op_names_and_tensors(
-                state_op_names, self._variables
+                state_op_names, self._states_tensor_tuple
             )
 
             # Save job proto for debug
             self._job_proto = c_api_util.GetCurrentJob()
 
-        return eager_outputs
+        return self._eager_outputs
 
     def _run(self, *args):
         try:
-            eager_args = []
-            for idx, arg in enumerate(args):
-                if isinstance(arg, Tensor):
-                    eager_args.append(arg)
-                elif isinstance(arg, (TensorTuple, list)):
-                    for i in range(len(arg)):
-                        if not isinstance(arg[i], Tensor):
-                            op_name = (
-                                "_" + self.name + "-input_" + str(idx) + "_" + str(i)
-                            )
-                            in_str = (
-                                "[ERROR](INPUT:"
-                                + op_name
-                                + ":"
-                                + str(type(arg[i]))
-                                + ")"
-                            )
-                            print(in_str)
-                            raise NotImplementedError(
-                                "nn.Graph.build()'s input argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
-                            )
-                        eager_args.append(arg[i])
-                elif arg is not None:
-                    op_name = "_" + self.name + "-input_" + str(idx)
-                    in_str = "[ERROR](INPUT:" + op_name + ":" + str(type(arg)) + ")"
-                    print(in_str)
-                    raise NotImplementedError(
-                        "nn.Graph.build()'s input argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
-                    )
+            flattened_eager_args = self._flatten_io("input", *args)
             # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
-                convert_to_tensor_tuple(eager_args),
-                self._outputs_dataholder,
-                self._variables,
+                convert_to_tensor_tuple(flattened_eager_args),
+                self._outputs_tensor_tuple,
+                self._states_tensor_tuple,
                 self._c_nn_graph,
             )
         except:
@@ -391,6 +230,161 @@ class Graph(object):
             self._compile(*args)
 
         return self._run(*args)
+
+    def _build_io(self, io_type, build_func, *args):
+        assert io_type in ("input", "output")
+        io_type_upper = io_type.upper()
+        build_args = []
+        op_names = []
+        args_repr = []
+
+        def build_tensor_or_none(tensor, name, repr_str):
+            assert tensor is None or (isinstance(tensor, Tensor))
+            if isinstance(tensor, Tensor):
+                build_arg = build_func(name, tensor)
+                op_names.append(name)
+            else:
+                build_arg = None
+
+            args_repr.append(repr_str)
+            if self._debug:
+                print(repr_str)
+            return build_arg
+
+        for idx, arg in enumerate(args):
+            if isinstance(arg, Tensor) or arg is None:
+                if arg is None:
+                    name, repr_str = self._io_item_check_and_gen(
+                        arg, None, io_type, idx
+                    )
+                else:
+                    name, repr_str = self._io_item_check_and_gen(
+                        arg, Tensor, io_type, idx
+                    )
+                build_args.append(build_tensor_or_none(arg, name, repr_str))
+            elif isinstance(arg, (TensorTuple, list)):
+                if isinstance(arg, TensorTuple):
+                    seq_args = TensorTuple()
+                else:
+                    seq_args = list()
+                for i in range(len(arg)):
+                    name, repr_str = self._io_item_check_and_gen(
+                        arg[i], Tensor, io_type, idx, i
+                    )
+                    seq_args.append(build_tensor_or_none(arg[i], name, repr_str))
+                build_args.append(seq_args)
+            else:
+                self._io_item_check_and_gen(arg, Tensor, io_type, idx)
+
+        return op_names, build_args, args_repr
+
+    def _flatten_io(self, io_type, *args):
+        assert isinstance(args, tuple)
+        flattened_args = []
+        for idx, arg in enumerate(args):
+            if isinstance(arg, Tensor):
+                flattened_args.append(arg)
+            elif isinstance(arg, (TensorTuple, list)):
+                for i in range(len(arg)):
+                    self._io_item_check(arg[i], Tensor, io_type, idx, i)
+                    flattened_args.append(arg[i])
+            else:
+                self._io_item_check(arg, None, io_type, idx)
+        return flattened_args
+
+    def _io_item_check(self, item, expect_type, io_type, idx, second_idx=None):
+        if expect_type is None and item is None:
+            return
+        elif expect_type is not None and isinstance(item, expect_type):
+            return
+        else:
+            assert io_type in ("input", "output")
+            name = (
+                "_"
+                + self.name
+                + "-"
+                + io_type
+                + "_"
+                + str(idx)
+                + ("" if second_idx is None else "_" + str(second_idx))
+            )
+            repr_str = (
+                "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
+            )
+            print(repr_str)
+            raise NotImplementedError(
+                "nn.Graph.build()'s input/output only support types: Tensor/TensorTuple/list(Tensor)/None."
+            )
+
+    def _io_item_check_and_gen(self, item, expect_type, io_type, idx, second_idx=None):
+        assert io_type in ("input", "output")
+        name = (
+            "_"
+            + self.name
+            + "-"
+            + io_type
+            + "_"
+            + str(idx)
+            + ("" if second_idx is None else "_" + str(second_idx))
+        )
+        if expect_type is None and item is None:
+            repr_str = (
+                "[WARNING]("
+                + io_type.upper()
+                + ":"
+                + name
+                + ":"
+                + str(type(item))
+                + ")"
+            )
+            return name, repr_str
+        elif expect_type is not None and isinstance(item, expect_type):
+            if isinstance(item, Tensor):
+                repr_str = (
+                    "(" + io_type.upper() + ":" + name + ":" + item._meta_repr() + ")"
+                )
+            else:
+                repr_str = (
+                    "[WARNING]("
+                    + io_type.upper()
+                    + ":"
+                    + name
+                    + ":"
+                    + str(type(item))
+                    + ")"
+                )
+            return name, repr_str
+        else:
+            repr_str = (
+                "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
+            )
+            print(repr_str)
+            raise NotImplementedError(
+                "nn.Graph.build()'s input/output only support types: Tensor/TensorTuple/list(Tensor)/None."
+            )
+
+    def _build_states(self):
+        state_op_names = []
+        state_tensors = []
+        for state_block in self._state():
+            op_name = state_block.name_prefix + state_block.name
+            state_tensor = state_block.origin
+            state_op_names.append(op_name)
+            state_tensors.append(state_tensor)
+            if state_block.type == BlockType.PARAMETER:
+                state_config = self._variables_conf[state_block.origin]
+            else:
+                state_config = None
+            state_block.set_lazy_origin_builder(
+                partial(
+                    graph_build_util.build_graph_state,
+                    op_name,
+                    state_tensor,
+                    state_config,
+                )
+            )
+        state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+        return state_op_names, state_tensor_tuple
 
     def _add_block(self, name: str, module: Module = None) -> None:
         r"""Adds a module to the current graph as a block.

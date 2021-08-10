@@ -35,3 +35,12 @@ def sys_exc_error_msg():
     if len(exc_info) > 1:
         msg += " " + str(exc_info[1])
     return msg
+
+
+def list_to_func_return(li):
+    if len(li) == 0:
+        return None
+    elif len(li) == 1:
+        return li[0]
+    else:
+        return tuple(li)
