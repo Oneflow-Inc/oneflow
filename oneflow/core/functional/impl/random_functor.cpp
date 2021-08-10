@@ -81,7 +81,7 @@ class RandFunctor {
     if (dtype.has_value()) {
       dtype_val = JUST(dtype.value());
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in rand";
       }
     }
 
@@ -127,7 +127,7 @@ class ConsistentRandFunctor {
     if (dtype.has_value()) {
       dtype_val = JUST(dtype.value());
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in rand";
       }
     }
 

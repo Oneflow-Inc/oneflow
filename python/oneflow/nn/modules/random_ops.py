@@ -58,7 +58,9 @@ def bernoulli(input, *, generator=None, out=None):
     return flow.F.bernoulli(input, flow.float32, generator)
 
 
-def common_process(size, device=None, generator=None, placement=None, sbp=None):
+def _rand_op_common_process(
+    size, device=None, generator=None, placement=None, sbp=None
+):
     assert size is not None, "shape must not be None!"
     assert isinstance(
         size, (int, tuple, list, flow.Size)
@@ -66,7 +68,6 @@ def common_process(size, device=None, generator=None, placement=None, sbp=None):
     if isinstance(device, str):
         device = flow.device(device)
     size = _single(size)
-    print(placement, sbp)
     processed_sbp = sbp
     if generator is None:
         generator = flow.Generator()
@@ -103,7 +104,7 @@ class Rand(Module):
             self.generator,
             self.placement,
             self.sbp,
-        ) = common_process(size, device, generator, placement, sbp)
+        ) = _rand_op_common_process(size, device, generator, placement, sbp)
         self.dtype = dtype
 
     def forward(self):
@@ -185,32 +186,14 @@ class RandN(Module):
         requires_grad=False,
     ) -> None:
         super().__init__()
-        assert size is not None, "shape must not be None!"
-        assert isinstance(
-            size, (int, tuple, list, flow.Size)
-        ), "shape should be int or tuple int!"
-        self.device = device
-        if isinstance(self.device, str):
-            self.device = flow.device(self.device)
         self.requires_grad = requires_grad
-        size = _single(size)
-
-        if generator is None:
-            generator = flow.Generator()
-        self.generator = generator
-        self.placement = placement
-        self.sbp = sbp
-        if placement is not None:
-            assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
-            if isinstance(self.sbp, flow.sbp.sbp):
-                self.sbp = (self.sbp,)
-            else:
-                for elem in sbp:
-                    assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-            assert len(self.sbp) == len(placement.hierarchy)
-        else:
-            assert sbp is None, "sbp: %s" % sbp
-        self.size = size
+        (
+            self.size,
+            self.device,
+            self.generator,
+            self.placement,
+            self.sbp,
+        ) = _rand_op_common_process(size, device, generator, placement, sbp)
         self.dtype = dtype
 
     def forward(self):

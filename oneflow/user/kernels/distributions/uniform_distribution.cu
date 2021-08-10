@@ -16,8 +16,6 @@ limitations under the License.
 #include "oneflow/user/kernels/distributions/uniform_distribution.h"
 #include "oneflow/core/common/data_type.h"
 
-// TODO(bowenc): support int uniform and uniform with range
-
 namespace oneflow {
 
 namespace {
@@ -25,20 +23,34 @@ namespace {
 template<typename T>
 __device__ T GenUniform(curandState* state, const T low, const T high);
 
-template<>
-__device__ int8_t GenUniform<int8_t>(curandState* state, const int8_t low, const int8_t high) {
-  return curand_uniform(state) * (high - low) + low;
-}
+// template<typename T>
+// __device__ T GenUniform(curandState* state, const T low, const T high) {
+//   return curand_uniform(state) * (high - low) + low;
+// }
 
-template<>
-__device__ int32_t GenUniform<int32_t>(curandState* state, const int32_t low, const int32_t high) {
-  return curand_uniform(state) * (high - low) + low;
-}
+#define INITIATE_GENUNIFORM(T, typeproto)                                      \
+  template<>                                                                   \
+  __device__ T GenUniform<T>(curandState * state, const T low, const T high) { \
+    return curand_uniform(state) * (high - low) + low;                         \
+  }
 
-template<>
-__device__ int64_t GenUniform<int64_t>(curandState* state, const int64_t low, const int64_t high) {
-  return curand_uniform(state) * (high - low) + low;
-}
+OF_PP_FOR_EACH_TUPLE(INITIATE_GENUNIFORM, INT_DATA_TYPE_SEQ)
+
+// __device__ int8_t GenUniform<int8_t>(curandState* state, const int8_t low, const int8_t high) {
+//   return curand_uniform(state) * (high - low) + low;
+// }
+
+// template<>
+// __device__ int32_t GenUniform<int32_t>(curandState* state, const int32_t low, const int32_t high)
+// {
+//   return curand_uniform(state) * (high - low) + low;
+// }
+
+// template<>
+// __device__ int64_t GenUniform<int64_t>(curandState* state, const int64_t low, const int64_t high)
+// {
+//   return curand_uniform(state) * (high - low) + low;
+// }a
 
 template<>
 __device__ float GenUniform<float>(curandState* state, const float low, const float high) {

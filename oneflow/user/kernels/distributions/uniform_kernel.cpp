@@ -32,7 +32,7 @@ REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, double)
 REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, int64_t)
-#endif
+#endif  // WITH_CUDA
 }  // namespace
 
 }  // namespace oneflow
