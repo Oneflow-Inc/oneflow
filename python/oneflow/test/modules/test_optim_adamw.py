@@ -36,13 +36,7 @@ def compare_with_numpy_adamw(
     def train_by_oneflow():
         x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
         adam = flow.optim.AdamW(
-            [
-                {
-                    "params": [x],
-                    "lr": learning_rate,
-                    "weight_decay": weight_decay,
-                }
-            ]
+            [{"params": [x], "lr": learning_rate, "weight_decay": weight_decay,}]
         )
 
         def train_one_iter(grad):
