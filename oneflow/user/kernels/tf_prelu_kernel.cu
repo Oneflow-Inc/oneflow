@@ -157,7 +157,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_GPU_PRELU_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("prelu")                                                       \
+  REGISTER_USER_KERNEL("tf_prelu")                                                    \
       .SetCreateFn<GpuPReluKernel<dtype>>()                                           \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
@@ -224,7 +224,7 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_GPU_PRELU_GRAD_KERNEL(dtype)                                          \
-  REGISTER_USER_KERNEL("prelu_grad")                                                   \
+  REGISTER_USER_KERNEL("tf_prelu_grad")                                                \
       .SetCreateFn<GpuPReluGradKernel<dtype>>()                                        \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
