@@ -57,32 +57,31 @@ def bernoulli(input, *, generator=None, out=None):
     """
     return flow.F.bernoulli(input, flow.float32, generator)
 
-def common_process(
-    size,
-    generator=None,
-    placement=None,
-    sbp=None):
+
+def common_process(size, device=None, generator=None, placement=None, sbp=None):
     assert size is not None, "shape must not be None!"
     assert isinstance(
         size, (int, tuple, list, flow.Size)
     ), "shape should be int or tuple int!"
-    if isinstance(self.device, str):
-        device = flow.device(self.device)
+    if isinstance(device, str):
+        device = flow.device(device)
     size = _single(size)
-
+    print(placement, sbp)
+    processed_sbp = sbp
     if generator is None:
         generator = flow.Generator()
     if placement is not None:
         assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
-        if isinstance(sbp, flow.sbp.sbp):
-            sbp = (sbp,)
+        if isinstance(processed_sbp, flow.sbp.sbp):
+            processed_sbp = (processed_sbp,)
         else:
             for elem in sbp:
                 assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-        assert len(sbp) == len(placement.hierarchy)
+        assert len(processed_sbp) == len(placement.hierarchy)
     else:
         assert sbp is None, "sbp: %s" % sbp
-    return size, generator, placement, sbp
+    return size, device, generator, placement, processed_sbp
+
 
 class Rand(Module):
     def __init__(
@@ -98,8 +97,13 @@ class Rand(Module):
     ) -> None:
         super().__init__()
         self.requires_grad = requires_grad
-        self.device = device
-        self.size, self.generator, self.placement, self.sbp = common_process(size, generator, placement, sbp)
+        (
+            self.size,
+            self.device,
+            self.generator,
+            self.placement,
+            self.sbp,
+        ) = common_process(size, device, generator, placement, sbp)
         self.dtype = dtype
 
     def forward(self):
@@ -163,7 +167,10 @@ def rand_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
+    if generator is None:
+        generator = flow.default_generator()
     return Rand(size, generator, dtype, layout, device, placement, sbp, requires_grad)()
+
 
 class RandN(Module):
     def __init__(

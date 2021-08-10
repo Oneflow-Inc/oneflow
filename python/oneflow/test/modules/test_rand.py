@@ -28,19 +28,21 @@ from automated_test_util import *
 def _test_rand(test_case, device, shape):
     y1 = flow.rand(*shape, device=flow.device(device))
     y2 = flow.rand(*shape, device=flow.device(device))
-    test_case.assertTrue(not np.array_equal(y1, y2))
+
+    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
 
 
 def _test_different_dtype(test_case, device, shape):
     y1 = flow.rand(*shape, dtype=flow.float32, device=flow.device(device))
     y2 = flow.rand(*shape, dtype=flow.float64, device=flow.device(device))
-    test_case.assertTrue(not np.array_equal(y1, y2))
+    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
 
-    with test_case.assertRaises(Exception) as context:
-        y3 = flow.rand(*shape, dtype=flow.int32, device=flow.device(device))
-    test_case.assertTrue("Do not support such data type" in str(context.exception))
+    with test_case.assertRaises(
+        oneflow._oneflow_internal.exception.UnimplementedException
+    ):
+        flow.rand(*shape, dtype=flow.int32, device=flow.device(device))
 
 
 def _test_backward(test_case, device, shape):
@@ -61,7 +63,7 @@ def _test_with_generator(test_case, device, shape):
     y2 = flow.rand(
         *shape, dtype=flow.float32, device=flow.device(device), generator=gen
     )
-    test_case.assertTrue(np.array_equal(y1_np, y2.numpy()))
+    test_case.assertTrue(np.allclose(y1_np, y2.numpy(), 1e-04, 1e-04))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -82,7 +84,7 @@ class TestConstantModule(flow.unittest.TestCase):
             _test_with_generator,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 0, 4)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 4)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

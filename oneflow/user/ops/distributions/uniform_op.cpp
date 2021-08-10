@@ -25,6 +25,8 @@ Maybe<void> InferUniformParallelDistribution(user_op::InferParallelDistributionF
 REGISTER_NO_GRAD_USER_OP("uniform")
     .Output("out")
     .SetOutputBufferNum(1)
+    .Attr<double>("low", 0)
+    .Attr<double>("high", 1)
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
     .Attr<std::string>("nd_sbp")

@@ -13,9 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#ifndef ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_DISTRIBUTION_H_
-#define ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_DISTRIBUTION_H_
+#ifndef ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_DISTRIBUTION_H_
+#define ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_DISTRIBUTION_H_
 
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/framework/random_generator.h"
@@ -27,40 +26,47 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class NormalDistribution;
+class UniformDistribution;
 
 template<typename T>
-class NormalDistribution<DeviceType::kCPU, T> final {
+class UniformDistribution<DeviceType::kCPU, T> final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NormalDistribution);
-  NormalDistribution(T mean, T std) : mean_(mean), std_(std) {}
-  ~NormalDistribution() = default;
+  OF_DISALLOW_COPY_AND_MOVE(UniformDistribution);
+  UniformDistribution(T low, T high) : low_(low), high_(high) {}
+  ~UniformDistribution() = default;
 
+  template<typename Integer = T,
+           typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
+  void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+                  const std::shared_ptr<one::Generator>& generator) const;
+
+  template<typename Floating = T,
+           typename std::enable_if<std::is_floating_point<Floating>::value, int>::type = 0>
   void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
-  const T mean_;
-  const T std_;
+  const T low_;
+  const T high_;
 };
 
 #ifdef WITH_CUDA
 template<typename T>
-class NormalDistribution<DeviceType::kGPU, T> final {
+class UniformDistribution<DeviceType::kGPU, T> final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NormalDistribution);
-  NormalDistribution(T mean, T std) : mean_(mean), std_(std) {}
-  ~NormalDistribution() = default;
+  OF_DISALLOW_COPY_AND_MOVE(UniformDistribution);
+  UniformDistribution(T low, T high) : low_(low), high_(high) {}
+  ~UniformDistribution() = default;
 
   void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
-  const T mean_;
-  const T std_;
+  const T low_;
+  const T high_;
 };
 #endif  // WITH_CUDA
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_DISTRIBUTION_H_
+#endif  // ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_DISTRIBUTION_H_

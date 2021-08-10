@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_UNIFORM_KERNEL_H_
-#define ONEFLOW_USER_KERNELS_UNIFORM_KERNEL_H_
+#ifndef ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_KERNEL_H_
+#define ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_KERNEL_H_
 
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/uniform_generator.h"
+#include "oneflow/user/kernels/distributions/uniform_distribution.h"
 
 namespace oneflow {
 
@@ -50,15 +50,16 @@ class UniformKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const double low = ctx->Attr<double>("low");
+    const double high = ctx->Attr<double>("high");
     int64_t elem_cnt = out->shape().elem_cnt();
-    // TODO: support other datatype
     T* out_dptr = out->mut_dptr<T>();
     auto* uniform_state = dynamic_cast<UniformKernelState*>(state);
     CHECK_NOTNULL(uniform_state);
     const auto& generator = uniform_state->generator();
     CHECK_NOTNULL(generator);
-    auto uniform_gen = std::make_shared<UniformGenerator<device_type>>(generator);
-    uniform_gen->Generate(ctx->device_ctx(), elem_cnt, out_dptr);
+    UniformDistribution<device_type, T> distribution(static_cast<T>(low), static_cast<T>(high));
+    distribution(ctx->device_ctx(), elem_cnt, out_dptr, generator);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -66,4 +67,4 @@ class UniformKernel final : public user_op::OpKernel {
 }  // namespace
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_UNIFORM_KERNEL_H_
+#endif  // ONEFLOW_USER_KERNELS_DISTRIBUTIONS_UNIFORM_KERNEL_H_

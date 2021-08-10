@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/uniform_kernel.h"
+#include "oneflow/user/kernels/distributions/uniform_kernel.h"
 
 namespace oneflow {
 
@@ -25,9 +25,13 @@ namespace {
 
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, double)
+REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, int32_t)
+REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, int64_t)
 #ifdef WITH_CUDA
 REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, double)
+REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, int32_t)
+REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, int64_t)
 #endif
 }  // namespace
 

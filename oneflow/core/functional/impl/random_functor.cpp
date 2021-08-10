@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/user/kernels/bernoulli_kernel.h"
 #include "oneflow/user/kernels/distributions/normal_kernel.h"
-#include "oneflow/user/kernels/uniform_kernel.h"
+#include "oneflow/user/kernels/distributions/uniform_kernel.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 
@@ -70,7 +70,7 @@ class BernoulliFunctor {
  private:
   std::shared_ptr<OpExpr> bernoulli_op_;
 };
-  
+
 class RandFunctor {
  public:
   RandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
@@ -86,6 +86,8 @@ class RandFunctor {
     }
 
     MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("low", 0));
+    JUST(attrs.SetAttr<double>("high", 1));
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
 
@@ -117,9 +119,9 @@ class RandFunctor {
 class ConsistentRandFunctor {
  public:
   ConsistentRandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
-                           const Symbol<ParallelDesc>& placement,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const Optional<DataType>& dtype,
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
@@ -128,8 +130,10 @@ class ConsistentRandFunctor {
         OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
       }
     }
-    
+
     MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("low", 0));
+    JUST(attrs.SetAttr<double>("high", 1));
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
 
@@ -150,7 +154,7 @@ class ConsistentRandFunctor {
     }
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {},
-        OpExprInterpContext(attrs, placement, parallel_distribution, normal_kernel_state));
+        OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
   }
 
  private:
@@ -253,12 +257,10 @@ class ConsistentRandNFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BernoulliFunctor>("Bernoulli");
   m.add_functor<impl::RandFunctor>("Rand");
-  m.add_functor<impl::ConsistentRandFunctor>("ConsistentRandFunctor");
+  m.add_functor<impl::ConsistentRandFunctor>("ConsistentRand");
   m.add_functor<impl::RandNFunctor>("RandN");
   m.add_functor<impl::ConsistentRandNFunctor>("ConsistentRandN");
 };
-  
-
 
 }  // namespace functional
 }  // namespace one
