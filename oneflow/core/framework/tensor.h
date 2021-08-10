@@ -123,7 +123,8 @@ class StaticZerosTensor final : public Tensor {
   }
   // Getters
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
-  DataType dtype() const { return dtype_; }
+  // DataType dtype() const { return dtype_; }
+  Symbol<DType> dtype() const { return DType::DType4DataType(dtype_); }
   Maybe<TransportToken> transport_token() const { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const { OF_UNIMPLEMENTED(); }

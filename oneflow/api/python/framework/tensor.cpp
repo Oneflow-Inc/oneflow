@@ -164,7 +164,7 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dty
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
   const Shape shape = Shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
-  std::shared_ptr<Tensor> tensor = JUST(functional::Empty(shape, flow_dtype, device));
+  std::shared_ptr<Tensor> tensor = JUST(functional::Empty(shape, DType::DType4DataType(flow_dtype), device));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(flow_dtype), tensor, np_arr_raii));
   if (flow_dtype == DataType::kDouble && !init_from_numpy && !desired_dtype) {
     desired_dtype = DType::DType4DataType(DataType::kFloat);
@@ -260,7 +260,7 @@ py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
 // 6. ConsistentTensor  -> ConsistentTensor
 // 7. ndarray           -> LocalTensor
 // 8. ndarray           -> ConsistentTensor  // TODO
-Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const Symbol<DType> desired_dtype,
+Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_dtype,
                         bool treat_single_int_as_size) {
   Symbol<Device> device;
   Symbol<ParallelDesc> placement;
@@ -351,7 +351,9 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const Symbol<DType> de
     }
   }
   const Shape shape = Shape(dim_vector);
-  CHECK_NOTNULL_OR_RETURN(desired_dtype);
+  if(!desired_dtype){
+    return Error::ValueError("Desired dtype is null");
+  }
   std::shared_ptr<Tensor> tensor;
   if (placement) {
     // Shape -> ConsistentTensor

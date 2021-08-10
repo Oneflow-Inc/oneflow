@@ -43,7 +43,7 @@ class EagerBoxingInterpreter {
                                Symbol<cfg::ParallelDistribution> out_parallel_distribution,
                                Symbol<ParallelDesc> in_parallel_desc,
                                Symbol<ParallelDesc> out_parallel_desc) {
-    JUST(CheckEagerBoxingDataType(input->dtype()));
+    JUST(CheckEagerBoxingDataType(input->dtype()->data_type()));
     return InterpretImpl(input, in_parallel_distribution, out_parallel_distribution,
                          in_parallel_desc, out_parallel_desc);
   }

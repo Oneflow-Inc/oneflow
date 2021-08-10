@@ -106,11 +106,11 @@ class ConstantFunctor {
 class EmptyFunctor {
  public:
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
@@ -126,12 +126,12 @@ class EmptyFunctor {
 class ConsistentEmptyFunctor {
  public:
   ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (LazyMode::is_enabled()) {
       std::vector<std::string> parallel_distribution(sbp_tuple.size());
       {

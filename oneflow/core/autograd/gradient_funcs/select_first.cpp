@@ -44,7 +44,7 @@ class SelectFirst : public OpExprGradFunction<SelectFirstExprInterpState> {
     for (int i = 1; i < ctx->inputs.size(); i++) {
       const auto& tensor = ctx->inputs.at(i);
       in_grads->at(i) = JUST(
-          StaticZerosTensor::MakeTensor(tensor->shape(), tensor->dtype(), JUST(tensor->device())));
+          StaticZerosTensor::MakeTensor(tensor->shape(), tensor->dtype()->data_type(), JUST(tensor->device())));
     }
     return Maybe<void>::Ok();
   }
