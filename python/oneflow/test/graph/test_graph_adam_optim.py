@@ -139,5 +139,6 @@ class TestAdam(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
 
+
 if __name__ == "__main__":
     unittest.main()
