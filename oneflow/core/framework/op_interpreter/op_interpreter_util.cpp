@@ -72,7 +72,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
               << "Got tensors with inconsistent attributes!\n"
               << "op_type_name: " << op_expr.op_type_name() << "\n"
               << "first input tensor: consistent\n"
-              << "secind input tensor: local";  // unroll loop for efficiency
+              << "second input tensor: local";  // unroll loop for efficiency
         } else if (inputs.size() == 3) {
           CHECK_OR_RETURN(inputs.at(1)->is_consistent())
               << "Got tensors with inconsistent attributes!\n"
@@ -103,13 +103,13 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
               << "Got tensors with inconsistent attributes!\n"
               << "op_type_name: " << op_expr.op_type_name() << "\n"
               << "first input tensor: local\n"
-              << "secind input tensor: consistent";  // unroll loop for efficiency
+              << "second input tensor: consistent";  // unroll loop for efficiency
         } else if (inputs.size() == 3) {
           CHECK_OR_RETURN(inputs.at(1)->is_local())
               << "Got tensors with inconsistent attributes!\n"
               << "op_type_name: " << op_expr.op_type_name() << "\n"
               << "first input tensor: local\n"
-              << "secind input tensor: consistent";  // unroll loop for efficiency
+              << "second input tensor: consistent";  // unroll loop for efficiency
           CHECK_OR_RETURN(inputs.at(2)->is_local())
               << "Got tensors with inconsistent attributes!\n"
               << "op_type_name: " << op_expr.op_type_name() << "\n"
