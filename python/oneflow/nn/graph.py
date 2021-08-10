@@ -130,11 +130,10 @@ class Graph(object):
             eager_outputs = self._build_forward_graph(*args)
         except:
             print(
-                "[ERROR]",
-                self._shallow_repr(),
-                " build forward graph got error: ",
-                sys_exc_error_msg(),
-                ".",
+                "[ERROR]"
+                + self._shallow_repr()
+                + " build forward graph got error: "
+                + sys_exc_error_msg()
             )
             raise
         if self._debug:
@@ -147,11 +146,10 @@ class Graph(object):
             self._c_nn_graph.complie_and_init_runtime()
         except:
             print(
-                "[ERROR]",
-                self._shallow_repr(),
-                " compiling and initialing graph runtime got error : ",
+                "[ERROR]"
+                + self._shallow_repr()
+                + " compiling and initialing graph runtime got error : ",
                 sys_exc_error_msg(),
-                ".",
             )
             raise
         self._is_compiled = True
@@ -198,7 +196,7 @@ class Graph(object):
                             )
                             print(in_str)
                             raise NotImplementedError(
-                                "nn.Graph.build()'s input argument has not support types other then Tensor/TensorTuple/list(Tensor)/None yet."
+                                "nn.Graph.build()'s input argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
                             )
                         seq_lazy_args.append(
                             graph_build_util.build_graph_input_arg(op_name, arg[i])
@@ -221,7 +219,7 @@ class Graph(object):
                     in_str = "[ERROR](INPUT:" + op_name + ":" + str(type(arg)) + ")"
                     print(in_str)
                     raise NotImplementedError(
-                        "nn.Graph.build()'s input argument has not support types other then Tensor/TensorTuple/list(Tensor)/None yet."
+                        "nn.Graph.build()'s input argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
                     )
 
             # Deal with parameter and buffer
@@ -285,7 +283,7 @@ class Graph(object):
                                 + ")"
                             )
                             raise NotImplementedError(
-                                "nn.Graph.build()'s output argument has not support types other then Tensor/TensorTuple/list(Tensor)/None yet."
+                                "nn.Graph.build()'s output argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
                             )
                         eager_out = graph_build_util.build_graph_output(op_name, out[i])
                         seq_eager_outputs.append(eager_out)
@@ -308,7 +306,7 @@ class Graph(object):
                     out_str = "[ERROR](OUTPUT:" + op_name + ":" + str(type(out)) + ")"
                     print(out_str)
                     raise NotImplementedError(
-                        "nn.Graph.build()'s output argument has not support types other then Tensor/TensorTuple/list(Tensor)/None yet."
+                        "nn.Graph.build()'s output argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
                     )
 
             if len(eager_outputs) == 0:
@@ -361,7 +359,7 @@ class Graph(object):
                             )
                             print(in_str)
                             raise NotImplementedError(
-                                "nn.Graph.build()'s input argument has not support types other then Tensor/TensorTuple/list(Tensor)/None yet."
+                                "nn.Graph.build()'s input argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
                             )
                         eager_args.append(arg[i])
                 elif arg is not None:
@@ -369,7 +367,7 @@ class Graph(object):
                     in_str = "[ERROR](INPUT:" + op_name + ":" + str(type(arg)) + ")"
                     print(in_str)
                     raise NotImplementedError(
-                        "nn.Graph.build()'s input argument has not support types other then Tensor/TensorTuple/list(Tensor)/None yet."
+                        "nn.Graph.build()'s input argument has not support types other than Tensor/TensorTuple/list(Tensor)/None yet."
                     )
             # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
@@ -380,11 +378,10 @@ class Graph(object):
             )
         except:
             print(
-                "[ERROR]",
-                self._shallow_repr(),
-                " run got error : ",
-                sys_exc_error_msg(),
-                ".",
+                "[ERROR]"
+                + self._shallow_repr()
+                + " run got error : "
+                + sys_exc_error_msg()
             )
             raise
         return self._eager_outputs
