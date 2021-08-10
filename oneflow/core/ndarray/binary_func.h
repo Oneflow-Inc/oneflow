@@ -44,7 +44,7 @@ namespace oneflow {
 template<template<typename> class BinaryFunc, typename T>
 struct BinaryFuncTrait final {
   typedef typename std::remove_const<decltype(BinaryFunc<T>::Invoke(
-      *(const T*)nullptr, *(const T*)nullptr))>::type return_type;
+      std::declval<const T>(), std::declval<const T>()))>::type return_type;
 };
 
 #define SPECIALIZE_CONST_TYPE_BINARY_FUNC(func_struct)                                        \
