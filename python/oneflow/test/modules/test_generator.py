@@ -64,10 +64,7 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         ) as context:
             flow.default_generator(device="invalid")
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.CheckFailedException
-        ) as context:
-            flow.default_generator(device="cpu:1000")
+        flow.default_generator(device="cpu:1000")
         test_gens = [cpu_gen]
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             with test_case.assertRaises(
