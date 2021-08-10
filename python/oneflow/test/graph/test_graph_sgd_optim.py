@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import os 
 from collections import OrderedDict
 
 import numpy as np
@@ -21,8 +22,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@flow.unittest.skip_unless_1n1d()
+
 def compare_with_numpy_sgd(
     test_case,
     device,
@@ -49,7 +49,7 @@ def compare_with_numpy_sgd(
             return self.para0 * mask
 
     simp_module = CustomModule()
-    simp_module.to("cuda")
+    simp_module.to(device)
     simp_module.train()
 
     sgd0 = flow.optim.SGD(
@@ -100,17 +100,15 @@ def compare_with_numpy_sgd(
             np_res_list.append(x)
 
     train_by_numpy()
-
     test_case.assertTrue(np.allclose(np_res_list, of_res_list, rtol=0.001, atol=0.001))
 
-
 @flow.unittest.skip_unless_1n1d()
-class TestSGD(flow.unittest.TestCase):
+class TestCpuSGD(flow.unittest.TestCase):
     def test_sgd1(test_case):
         compare_with_numpy_sgd(
             test_case,
-            device="cuda",
-            x_shape=(1,),
+            device="cpu",
+            x_shape=(10,),
             learning_rate=1,
             momentum=0.9,
             train_iters=10,
@@ -118,18 +116,18 @@ class TestSGD(flow.unittest.TestCase):
             eps=1e-8,
         )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_sgd2(test_case):
         compare_with_numpy_sgd(
             test_case,
             device="cuda",
-            x_shape=(1,),
-            learning_rate=0.01,
-            momentum=0.0,
+            x_shape=(10,),
+            learning_rate=0.1,
+            momentum=0.85,
             train_iters=10,
-            weight_decay=0.0005,
+            weight_decay=1e-3,
             eps=1e-8,
         )
-
 
 if __name__ == "__main__":
     unittest.main()
