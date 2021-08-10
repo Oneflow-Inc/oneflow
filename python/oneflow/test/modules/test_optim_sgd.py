@@ -26,13 +26,7 @@ from oneflow.nn.parameter import Parameter
 
 
 def compare_with_numpy_sgd(
-    test_case,
-    device,
-    x_shape,
-    momentum,
-    weight_decay,
-    learning_rate,
-    train_iters,
+    test_case, device, x_shape, momentum, weight_decay, learning_rate, train_iters,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
