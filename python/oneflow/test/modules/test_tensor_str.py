@@ -31,6 +31,7 @@ def _test_tensor_str(test_case, device):
     test_case.assertTrue("3" in tensor_str)
     test_case.assertTrue("5" in tensor_str)
     test_case.assertTrue("-6" in tensor_str)
+    test_case.assertTrue("2" in str(tensor[0][1]))
 
     # empty
     tensor = flow.tensor([], device=flow.device(device))
