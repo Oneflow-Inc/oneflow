@@ -169,8 +169,8 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dty
   if (flow_dtype == DataType::kDouble && !init_from_numpy && !desired_dtype) {
     desired_dtype = DType::DType4DataType(DataType::kFloat);
   }
-  if (desired_dtype != nullptr) {
-    tensor = JUST(functional::Cast(tensor, desired_dtype->data_type()));
+  if (desired_dtype) {
+    tensor = JUST(functional::Cast(tensor, desired_dtype));
   }
   tensor->set_requires_grad(requires_grad);
   return tensor;
@@ -260,7 +260,7 @@ py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
 // 6. ConsistentTensor  -> ConsistentTensor
 // 7. ndarray           -> LocalTensor
 // 8. ndarray           -> ConsistentTensor  // TODO
-Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype,
+Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const Symbol<DType> desired_dtype,
                         bool treat_single_int_as_size) {
   Symbol<Device> device;
   Symbol<ParallelDesc> placement;
@@ -326,8 +326,8 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
           }
         }
       }
-      if (desired_dtype != nullptr && desired_dtype->data_type() != tensor->dtype()) {
-        tensor = JUST(functional::Cast(tensor, desired_dtype->data_type()));
+      if (desired_dtype && desired_dtype != tensor->dtype()) {
+        tensor = JUST(functional::Cast(tensor, desired_dtype));
       }
       return tensor;
     } else {
@@ -356,11 +356,11 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
   if (placement) {
     // Shape -> ConsistentTensor
     tensor =
-        JUST(functional::ConsistentEmpty(shape, desired_dtype->data_type(), placement, sbp_tuple));
+        JUST(functional::ConsistentEmpty(shape, desired_dtype, placement, sbp_tuple));
   } else {
     // Shape -> LocalTensor
     if (!device) { device = JUST(Device::New("cpu")); }
-    tensor = JUST(functional::Empty(shape, desired_dtype->data_type(), device));
+    tensor = JUST(functional::Empty(shape, desired_dtype, device));
   }
   tensor->set_requires_grad(requires_grad);
   return tensor;
