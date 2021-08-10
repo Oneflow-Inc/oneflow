@@ -25,6 +25,7 @@ from typing import Union
 
 
 Tensor = flow._oneflow_internal.Tensor
+TensorTuple = flow._oneflow_internal.TensorTuple
 
 
 def _tensor_numpy(eager_local_tensor):
