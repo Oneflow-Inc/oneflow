@@ -34,6 +34,7 @@ def compare_with_numpy_adam(
     betas,
     weight_decay,
     eps,
+    do_bias_correction,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -51,7 +52,8 @@ def compare_with_numpy_adam(
                     "eps": eps,
                     "weight_decay": weight_decay,
                 }
-            ]
+            ],
+            do_bias_correction=do_bias_correction,
         )
 
         def train_one_iter(grad):
@@ -74,21 +76,31 @@ def compare_with_numpy_adam(
         beta1 = betas[0]
         beta2 = betas[1]
 
-        def train_one_iter(grad):
+        def train_one_iter(iter, grad):
             grad = grad + weight_decay * x
+
+            if do_bias_correction:
+                lr = (
+                    learning_rate
+                    * np.sqrt(1 - beta2 ** (iter + 1))
+                    / (1 - beta1 ** (iter + 1))
+                )
+            else:
+                lr = learning_rate
+
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
-            param = x - learning_rate * (v / (np.sqrt(s) + eps))
+            param = x - lr * (v / (np.sqrt(s) + eps))
             return (param, v, s)
 
         for i in range(train_iters):
-            (x, vt, st) = train_one_iter(random_grad_seq[i])
+            (x, vt, st) = train_one_iter(i, random_grad_seq[i])
         return x
 
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
     test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=0.001, atol=0.001)
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
     )
 
 
@@ -98,11 +110,13 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["learning_rate"] = [1]
+        arg_dict["learning_rate"] = [1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
         arg_dict["weight_decay"] = [0.0, 0.1]
         arg_dict["eps"] = [1e-08, 1e-07]
+        arg_dict["do_bias_correction"] = [True, False]
+
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
 
