@@ -30,7 +30,7 @@ class RuntimeBlobShapeInferHelper final {
                               const JobDesc* job_desc);
   ~RuntimeBlobShapeInferHelper() = default;
 
-  void InferShape(std::function<Blob*(const std::string&)> BnInOp2Blob);
+  void InferShape(const std::function<Blob*(const std::string&)>& BnInOp2Blob);
 
  private:
   void UpdateInputBlobDescs7OpInferCacheKey(std::function<Blob*(const std::string&)> BnInOp2Blob);
