@@ -21,14 +21,6 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-class MatMul(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, a, b):
-        return flow.F.matmul(a, b)
-
-
 @register_tensor_op("matmul")
 def matmul_op(input, other):
     """This operator applies matrix multiplication to two Tensor.
