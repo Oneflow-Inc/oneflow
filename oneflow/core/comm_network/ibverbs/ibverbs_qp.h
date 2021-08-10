@@ -73,12 +73,12 @@ class MessagePool final {
     void RegisterMessagePool() {
       std::uint64_t RegisterMemorySize  = sizeof(ActorMsg) * num_of_message_;
       std::uint64_t ActorMsgSize = sizeof(ActorMsg);
-      void * addr = malloc(RegisterMemorySize);
-      IBVerbsMemDesc *  mem_desc = new IBVerbsMemDesc(pd_, addr, RegisterMemorySize ); 
+      char * addr = (char*)malloc(RegisterMemorySize);
+      IBVerbsMemDesc *  mem_desc = new IBVerbsMemDesc(pd_,(void*) addr, RegisterMemorySize ); 
        const ibv_mr* mr = mem_desc->mr();
       for(uint32_t i =0; i < num_of_message_; i++){
         ibv_mr * split_mr =(ibv_mr*) (mr + ActorMsgSize * i);
-        IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(split_mr,addr + ActorMsgSize * i,ActorMsgSize);
+        IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(split_mr,(void*)(addr + ActorMsgSize * i),ActorMsgSize);
         ActorMsgMR * msg_mr= new ActorMsgMR(mem_desc);
         message_buf_.push(msg_mr);
     }
