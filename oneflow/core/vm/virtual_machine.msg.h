@@ -32,7 +32,7 @@ namespace oneflow {
 
 namespace vm {
 
-class VmDesc;
+struct VmDesc;
 // clang-format off
 OBJECT_MSG_BEGIN(VirtualMachine);
   // methods
