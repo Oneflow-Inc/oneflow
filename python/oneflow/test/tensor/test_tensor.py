@@ -905,6 +905,14 @@ class TestTensor(flow.unittest.TestCase):
         y = x.arctanh()
         return y
 
+    @autotest(n=5, auto_backward=False)
+    def test_tensor_nonzero_with_random_data(test_case):
+        device = random_device()
+        ndim = random(2, 6).to(int)
+        x = random_pytorch_tensor(ndim=ndim).to(device)
+        y = x.nonzero()
+        return y
+
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
