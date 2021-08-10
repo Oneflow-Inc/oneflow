@@ -49,5 +49,23 @@ class TestCrossEntropyLossModule(flow.unittest.TestCase):
         return y
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestL1LossModule(flow.unittest.TestCase):
+    @autotest()
+    def test_l1_loss_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+
+        x = random_pytorch_tensor(len(shape), *shape).to(device)
+        target = random_pytorch_tensor(len(shape), *shape).to(device)
+
+        m = torch.nn.L1Loss(reduction=oneof("none", "sum", "mean", nothing()))
+        m.train(random())
+        m.to(device)
+
+        y = m(x, target)
+        return y
+
+
 if __name__ == "__main__":
     unittest.main()
