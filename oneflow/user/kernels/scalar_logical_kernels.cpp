@@ -47,11 +47,10 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
     int8_t* out_ptr = out->mut_dptr<int8_t>();
 
     int64_t elem_cnt = out->shape().elem_cnt();
-    if (elem_cnt != 0){
+    if (elem_cnt != 0) {
       ScalarLogicalFunctor<device_type, BIN_OP, T>()(ctx->device_ctx(), elem_cnt, scalar_operand,
                                                      in_ptr, out_ptr);
-    }
-    else{
+    } else {
       // For 0-d Tensor
       return;
     }
