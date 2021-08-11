@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 void ForeignInputKernel::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const auto& buffer_name = op_conf().foreign_input_conf().ofblob_buffer_name();
   std::shared_ptr<JobInstance> foreign_job_instance;
   BufferStatus buffer_status = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get()
