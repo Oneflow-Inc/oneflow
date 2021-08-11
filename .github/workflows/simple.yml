@@ -51,11 +51,11 @@ jobs:
             -DBUILD_TESTING=ON
           cmake --build . -j$(nproc) --target of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
       - name: Run Maybe-related checks by clang-tidy
+        # use clang as compiler for correct compiler flags
         run: |
           cd build
           rm CMakeCache.txt
           cmake .. -C ../cmake/caches/international/cpu.cmake \
-            # use clang as compiler for correct compiler flags
             -DCMAKE_C_COMPILER=clang-12 \
             -DCMAKE_CXX_COMPILER=clang++-12 \
             -DCMAKE_BUILD_TYPE=Release \
