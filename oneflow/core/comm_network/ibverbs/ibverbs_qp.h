@@ -38,12 +38,14 @@ class ActorMsgMR final {
   ~ActorMsgMR() {
    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0);
   }
-  
+
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
   uint32_t size() {return size_ ;}
   uint32_t lkey() { return mr_->lkey ; }
   ActorMsg  msg()  { return *msg_;}
-  void set_msg(const ActorMsg& val);
+  void set_msg(const ActorMsg& val) {
+    *msg_ = val ;
+  }
 
  private:
     size_t size_;
