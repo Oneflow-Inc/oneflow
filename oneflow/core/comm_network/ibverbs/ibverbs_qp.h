@@ -38,7 +38,7 @@ class ActorMsgMR final {
   ~ActorMsgMR() {
    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0);
   }
-  void * addr() { return reinterpret_cast<void *>(msg_); }
+  char * addr() { return reinterpret_cast<char *>(msg_); }
   uint32_t size() {return size_ ;}
   uint32_t lkey() { return mr_->lkey ; }
   ActorMsg& msg()  { return *msg_;}
