@@ -237,6 +237,8 @@ if(BUILD_CUDA)
   add_dependencies(of_cudaobj of_protoobj of_cfgobj prepare_oneflow_third_party)
   target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
   set(ONEFLOW_CUDA_LIBS of_cudaobj)
+
+  target_compile_options(of_cudaobj PRIVATE -Werror=return-type)
 endif()
 
 # cc obj lib
@@ -254,6 +256,33 @@ if (BUILD_SHARED_LIBS)
   target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)
 endif()
 
+target_compile_options(of_ccobj PRIVATE -Werror=return-type)
+
+if (TREAT_WARNINGS_AS_ERRORS)
+  target_compile_options(of_ccobj PRIVATE -Werror)
+
+  # TODO: remove it while fixing all deprecated call
+  target_compile_options(of_ccobj PRIVATE -Wno-error=deprecated-declarations)
+
+  # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-const-variable)
+  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-variable)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(of_ccobj PRIVATE -Wno-error=unused-private-field)
+    target_compile_options(of_ccobj PRIVATE -Wno-error=unused-local-typedef)
+    target_compile_options(of_ccobj PRIVATE -Wno-error=unused-lambda-capture)
+    target_compile_options(of_ccobj PRIVATE -Wno-error=instantiation-after-specialization)
+  endif()
+
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
+    target_compile_options(of_ccobj PRIVATE -Wno-error=mismatched-tags)
+
+    # TODO: remove it while `oneflow/user/kernels/upsample_kernel.h:141:9: error: implicit conversion from 'double' to 'int' changes value from -0.75 to 0 [-Wliteral-conversion]` is fixed
+    target_compile_options(of_ccobj PRIVATE -Wno-error=literal-conversion)
+  endif()
+endif()
+
 # py ext lib
 add_library(of_pyext_obj ${of_pyext_obj_cc})
 target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
@@ -262,6 +291,7 @@ if(BUILD_SHARED_LIBS AND APPLE)
   target_link_libraries(of_pyext_obj ${Python3_LIBRARIES})
 endif()
 add_dependencies(of_pyext_obj of_ccobj)
+target_compile_options(of_pyext_obj PRIVATE -Werror=return-type)
 
 if(APPLE)
   set(of_libs -Wl,-force_load ${ONEFLOW_CUDA_LIBS} of_ccobj of_protoobj of_cfgobj)

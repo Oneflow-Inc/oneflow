@@ -48,7 +48,7 @@ class SliceBoxingCopyKernel final : public SliceBoxingKernel<device_type, T> {
   ~SliceBoxingCopyKernel() override = default;
 
  private:
-  virtual const SliceBoxingConf& GetCustomizedBoxingConf() const;
+  virtual const SliceBoxingConf& GetCustomizedBoxingConf() const override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 };
@@ -61,7 +61,7 @@ class SliceBoxingAddKernel final : public SliceBoxingKernel<device_type, T> {
   ~SliceBoxingAddKernel() override = default;
 
  private:
-  virtual const SliceBoxingConf& GetCustomizedBoxingConf() const;
+  virtual const SliceBoxingConf& GetCustomizedBoxingConf() const override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 };
