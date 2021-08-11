@@ -50,25 +50,25 @@ class ActorMsgMR final {
     ActorMsg * msg_;
 };
 
-char * ActorMsgMR::addr() {
-  return reinterpret_cast<char *>(msg_); }
-}
+// char * ActorMsgMR::addr() {
+//   return reinterpret_cast<char *>(msg_); }
+// }
 
-void oneflow::ActorMsgMR::set_msg(const ActorMsg& val) {
-    *msg_ = val;
-}
+// void ActorMsgMR::set_msg(const ActorMsg& val) {
+//     *msg_ = val;
+// }
 
-uint32_t oneflow::ActorMsgMR::size() {
-    return size_;
-}
+// uint32_t ActorMsgMR::size() {
+//     return size_;
+// }
 
-uint32_t oneflow::ActorMsgMR::lkey(){
-  return mr_->lkey;
-}
+// uint32_t ActorMsgMR::lkey(){
+//   return mr_->lkey;
+// }
 
-oneflow::ActorMsg   oneflow::ActorMsgMR::msg(){
-  return *msg_;
-}
+// ActorMsg   ActorMsgMR::msg(){
+//   return *msg_;
+// }
 
 class IBVerbsQP;
 
@@ -148,6 +148,7 @@ class MessagePool final {
     std::mutex message_buf_mutex_;
     std::deque<ActorMsgMR*> message_buf_;
 };
+
 struct IBVerbsCommNetRMADesc;
 
 class IBVerbsQP final {
@@ -181,10 +182,7 @@ class IBVerbsQP final {
   ibv_pd* pd_;
   uint8_t port_num_;
   ibv_qp* qp_;
- // std::vector<ActorMsgMR*> recv_msg_buf_;
 
-  
-  //std::queue<ActorMsgMR*> send_msg_buf_;
   std::mutex pending_send_wr_mutex_;
   uint32_t num_outstanding_send_wr_;
   uint32_t max_outstanding_send_wr_;

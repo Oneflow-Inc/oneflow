@@ -52,6 +52,22 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 //   }*/
 // }
 
+void ActorMsgMR::set_msg(const ActorMsg& val) {
+    *msg_ = val;
+}
+
+uint32_t ActorMsgMR::size() {
+    return size_;
+}
+
+uint32_t ActorMsgMR::lkey(){
+  return mr_->lkey;
+}
+
+ActorMsg   ActorMsgMR::msg(){
+  return *msg_;
+}
+
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq) {
   // ctx_, pd_
