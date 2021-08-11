@@ -40,17 +40,13 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx {
         cuda_allocator_(
             new ThreadSafeAllocator(std::unique_ptr<Allocator>(new CudaAllocator(device_id)))) {}
 
-  const cudaStream_t& cuda_stream() const override { return *(cuda_handler_->cuda_stream()); }
-  const cublasHandle_t& cublas_pmh_handle() const override {
-    return *(cuda_handler_->cublas_pmh_handle());
+  cudaStream_t cuda_stream() const override { return cuda_handler_->cuda_stream(); }
+  cublasHandle_t cublas_pmh_handle() const override { return cuda_handler_->cublas_pmh_handle(); }
+  cublasHandle_t cublas_tensor_op_math_handle() const override {
+    return cuda_handler_->cublas_tensor_op_math_handle();
   }
-  const cublasHandle_t& cublas_tensor_op_math_handle() const override {
-    return *(cuda_handler_->cublas_tensor_op_math_handle());
-  }
-  const cublasHandle_t& cublas_pmd_handle() const override {
-    return *(cuda_handler_->cublas_pmd_handle());
-  }
-  const cudnnHandle_t& cudnn_handle() const override { return *(cuda_handler_->cudnn_handle()); }
+  cublasHandle_t cublas_pmd_handle() const override { return cuda_handler_->cublas_pmd_handle(); }
+  cudnnHandle_t cudnn_handle() const override { return cuda_handler_->cudnn_handle(); }
 
   void SyncDevice() override { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
 

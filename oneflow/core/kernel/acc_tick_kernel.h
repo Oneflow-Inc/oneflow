@@ -28,8 +28,9 @@ class AccTickKernel final : public KernelIf<device_type> {
   ~AccTickKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {}
 };
 
 }  // namespace oneflow
