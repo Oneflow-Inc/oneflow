@@ -57,12 +57,16 @@ function(target_treat_warnings_as_errors target)
     )
 
     target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
-    
+
     # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
     target_try_compile_options(${target} -Wno-error=mismatched-tags)
 
     # disable for pointer operations of intrusive linked lists
     target_try_compile_options(${target} -Wno-error=array-bounds)
+
+    # avoid check of memcpy for non-trivial types in opencv headers
+    target_try_compile_options(${target} -Wno-error=class-memaccess)
+
   endif()
 endfunction()
 
