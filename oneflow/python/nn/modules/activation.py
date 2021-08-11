@@ -582,12 +582,12 @@ def softmax_op(tensor, dim=None):
 
 @oneflow_export("nn.LogSoftmax")
 class LogSoftmax(Module):
-    r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
+    r"""Applies the LogSoftmax function to an n-dimensional
     input Tensor.
     The LogSoftmax formulation can be simplified as:
 
     .. math::
-        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right)
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right) = x_i - \log({ \sum_j \exp(x_j)})
 
     Args:
         dim (int): A dimension along which LogSoftmax will be computed.

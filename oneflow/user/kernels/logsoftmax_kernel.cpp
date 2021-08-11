@@ -106,15 +106,15 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_SOFTMAX_GRAD_KERNEL(device, dtype)                                    \
+#define REGISTER_LOGSOFTMAX_GRAD_KERNEL(device, dtype)                                    \
   REGISTER_USER_KERNEL("logsoftmax_grad")                                                 \
       .SetCreateFn<LogSoftmaxGradKernel<device, dtype>>()                                 \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(GenBwInferTmpSizeFn<device, dtype>());
 
-REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)
-REGISTER_SOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)
+REGISTER_LOGSOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)
+REGISTER_LOGSOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)
 
 }  // namespace
 

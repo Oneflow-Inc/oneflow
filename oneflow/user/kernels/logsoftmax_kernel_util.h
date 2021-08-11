@@ -20,12 +20,34 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+size_t GetProbTmpSize(int64_t n, int64_t w) {
+  return GetCudaAlignedSize(n * w * sizeof(T));
+}
+
+template<typename T>
+size_t GetDiffTmpSize(int64_t n, int64_t w) {
+  return GetCudaAlignedSize(n * w * sizeof(T));
+}
+
+template<typename T>
+size_t GetReduceTempStorageSize(int64_t n, int64_t w) {
+  return GetCudaAlignedSize(n * w * sizeof(T));
+}
+
+}  // namespace
+
 template<DeviceType device_type, typename T>
 struct LogSoftmaxKernelUtil {
   static size_t GetComputeProbTempStorageSizeInBytes(int64_t n, int64_t w);
+
   static size_t GetComputeDiffTempStorageSizeInBytes(int64_t n, int64_t w);
+
   static void ComputeOut(DeviceCtx* ctx, int64_t n, int64_t w, const T* in, T* prob,
                           void* temp_storage, size_t temp_storage_bytes);
+                          
   static void ComputeDiff(DeviceCtx* ctx, int64_t n, int64_t w, const T* dy, const T* out, T* dx,
                           void* temp_storage, size_t temp_storage_bytes);
 };

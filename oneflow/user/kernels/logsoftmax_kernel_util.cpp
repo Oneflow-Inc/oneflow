@@ -21,35 +21,16 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-size_t GetProbTmpSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * w * sizeof(T));
-}
-
-template<typename T>
-size_t GetDiffTmpSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * w * sizeof(T));
-}
-
-template<typename T>
-size_t GetReduceTempStorageSize(int64_t n, int64_t w) {
-  return GetCudaAlignedSize(n * w * sizeof(T));
-}
-
-}  // namespace
-
 template<typename T>
 struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
-  static size_t GetComputeProbTempStorageSizeInBytes(int64_t n, int64_t w) {
-    return GetProbTmpSize<T>(n, w) + GetReduceTempStorageSize<T>(n, w);
+  static size_t GetComputeProbTempStorageSizeInBytes(int64_t n, int64_t w){
+     return GetProbTmpSize<T>(n, w) + GetReduceTempStorageSize<T>(n, w);
   }
 
-  static size_t GetComputeDiffTempStorageSizeInBytes(int64_t n, int64_t w) {
+  static size_t GetComputeDiffTempStorageSizeInBytes(int64_t n, int64_t w){
     return GetDiffTmpSize<T>(n, w) + GetReduceTempStorageSize<T>(n, w);
   }
-   
+
   static void ComputeOut(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* out,
                           void* temp_storage, const size_t temp_storage_bytes) {
     auto Val = NdarrayUtil<DeviceType::kCPU, T>::GetValNdarrayBuilder();
