@@ -131,8 +131,8 @@ class ConsistentTensorMetaTensorDescView final : public user_op::TensorDesc {
 
   void set_is_dynamic(bool val) override { UNIMPLEMENTED(); }
 
-  Symbol<cfg::ParallelDistribution> parallel_distribution() {
-    return consistent_tensor_meta_()->parallel_distribution();
+  Symbol<cfg::ParallelDistribution> nd_sbp() {
+    return consistent_tensor_meta_()->nd_sbp();
   }
 
  private:
