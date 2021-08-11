@@ -551,8 +551,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   std::shared_ptr<Tensor> input_proxy;
   if (!JUST(GetParallelDescOfTensor(input_tensor))
            ->EqualsIgnoringHierarchy(*parallel_desc_sym.shared_from_symbol())) {
-    // NOTE(zwx): The parallel_desc of input tendsor is not equal to that of op,
-    // create a proxy input with the parallel_desc that is the same as op has
+    // NOTE(zwx): The input tensor's parallel_desc is not equal to that of op's,
+    // create a proxy input with the parallel_desc that is the same as op's
     input_proxy = JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype(),
                                                     JUST(input_tensor->parallel_distribution()),
                                                     parallel_desc_sym,
