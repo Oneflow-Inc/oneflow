@@ -79,7 +79,7 @@ class ReentrantLockKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+                          const std::function<Blob*(const std::string&)>&) const override;
 };
 
 }  // namespace oneflow

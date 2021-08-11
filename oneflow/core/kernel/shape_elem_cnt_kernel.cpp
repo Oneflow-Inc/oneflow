@@ -19,7 +19,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 void ShapeElemCntKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const T elem_cnt = GetShapePartialElemCnt(BnInOp2Blob("x")->shape());
   KernelUtil<device_type, T>::Set(ctx.device_ctx, elem_cnt, BnInOp2Blob("y")->mut_dptr<T>());
 }
