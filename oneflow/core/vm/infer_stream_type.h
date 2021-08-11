@@ -30,9 +30,9 @@ class Resource;
 
 namespace vm {
 
-class Stream;
-class Instruction;
-class InstructionStatusBuffer;
+struct Stream;
+struct Instruction;
+struct InstructionStatusBuffer;
 
 struct InferStreamTypeUtil final {
   static void InitInstructionStatus(const Stream& stream, InstructionStatusBuffer* status_buffer);
