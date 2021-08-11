@@ -39,16 +39,6 @@ def _test_tensor_logical_not(test_case, shape, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogicalNotModule(flow.unittest.TestCase):
-    def test_logical_not(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_logical_not,
-            _test_tensor_logical_not,
-        ]
-        arg_dict["shape"] = [(2, 3), (2, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
 
     @autotest(n=10, auto_backward=False)
     def test_logical_not_with_random_data(test_case):

@@ -15,7 +15,7 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-class LogicalNot(Module):
+class LogicalNot():
     def __init__(self) -> None:
         super().__init__()
 
@@ -39,7 +39,7 @@ def logical_not_op(input):
         >>> input = flow.Tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
         >>> out = flow.logical_not(input)
         >>> out
-        tensor([1, 0, 0], dtype=oneflow.int8)
+        tensor([0,1,0], dtype=oneflow.int8)
     """
     return LogicalNot()(input)
 
