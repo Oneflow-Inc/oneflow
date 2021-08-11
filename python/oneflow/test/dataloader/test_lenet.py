@@ -137,4 +137,3 @@ class TestLenet(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

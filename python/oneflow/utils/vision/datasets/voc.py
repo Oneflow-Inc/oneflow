@@ -18,6 +18,7 @@ import warnings
 import collections
 
 from xml.etree.ElementTree import Element as ET_Element
+
 try:
     from defusedxml.ElementTree import parse as ET_parse
 except ImportError:
