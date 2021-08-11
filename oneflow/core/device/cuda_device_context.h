@@ -43,7 +43,7 @@ class CudaDeviceCtx : public DeviceCtx {
   void SyncDevice() override { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
 
   void AddCallBack(std::function<void()> callback) const override {
-    cuda_handler_->AddCallBack(callback);
+    cuda_handler_->AddCallBack(std::move(callback));
   }
 
  protected:
