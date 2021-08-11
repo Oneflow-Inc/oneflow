@@ -93,7 +93,6 @@ class TestConsistentToConsistent(flow.unittest.TestCase):
         else:
             test_case.assertTrue(x.placement == placement2)
 
-
     @flow.unittest.skip_unless_1n4d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_asymmetric_consistent_to_consistent_1ton(test_case):
@@ -126,49 +125,25 @@ class TestConsistentToConsistent(flow.unittest.TestCase):
         if flow.distributed.get_rank() == 0:
             test_case.assertTrue(
                 np.array_equal(
-                    x.to_local().numpy(),
-                    np.array(
-                        [
-                            [4, 6, 5, 20],
-                        ],
-                        dtype=np.float32,
-                    ),
+                    x.to_local().numpy(), np.array([[4, 6, 5, 20]], dtype=np.float32),
                 )
             )
         elif flow.distributed.get_rank() == 1:
             test_case.assertTrue(
                 np.array_equal(
-                    x.to_local().numpy(),
-                    np.array(
-                        [
-                            [6, 8, 9, 0],
-                        ],
-                        dtype=np.float32,
-                    ),
+                    x.to_local().numpy(), np.array([[6, 8, 9, 0]], dtype=np.float32),
                 )
             )
         elif flow.distributed.get_rank() == 2:
             test_case.assertTrue(
                 np.array_equal(
-                    x.to_local().numpy(),
-                    np.array(
-                        [
-                            [3, 7, 5, 0],
-                        ],
-                        dtype=np.float32,
-                    ),
+                    x.to_local().numpy(), np.array([[3, 7, 5, 0]], dtype=np.float32),
                 )
             )
         elif flow.distributed.get_rank() == 3:
             test_case.assertTrue(
                 np.array_equal(
-                    x.to_local().numpy(),
-                    np.array(
-                        [
-                            [6, 8, 9, 0],
-                        ],
-                        dtype=np.float32,
-                    ),
+                    x.to_local().numpy(), np.array([[6, 8, 9, 0]], dtype=np.float32),
                 )
             )
 
