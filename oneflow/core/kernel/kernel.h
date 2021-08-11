@@ -111,20 +111,16 @@ class Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardShape(const KernelCtx& ctx,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  void NaiveForwardShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   // TODO(niuchong) : rename ForwardDataContent to ForwardBody
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual bool IsStateless() const { return false; }
-  virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
-  virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
-  void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
-                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
  private:
   const JobDesc* job_desc_;
   RuntimeBlobShapeInferHelper* shape_infer_helper_;
   KernelConf kernel_conf_;
+  bool blob_access_checker_disabled_;
 };
 
 template<DeviceType device_type>

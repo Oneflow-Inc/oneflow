@@ -34,7 +34,7 @@ SplitSbpSignatureListBuilder&& SplitSbpSignatureListBuilder::SetNumAxes(int64_t 
 }
 
 void SplitSbpSignatureListBuilder::Build(cfg::SbpSignatureList* list) const {
-  CHECK_GT(num_axes_, 0);
+  CHECK_GE(num_axes_, 0);
   cfg::SbpSignature sbp_sig_template(sbp_signature_template_);
   FOR_RANGE(int32_t, axis, 0, num_axes_) {
     for (auto& pair : *sbp_sig_template.mutable_bn_in_op2sbp_parallel()) {

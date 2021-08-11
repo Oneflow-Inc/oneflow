@@ -33,6 +33,7 @@ using remove_cvref_t = oneflow::detail::remove_cvref_t<T>;
 
 struct FunctionBody {
   virtual operator void*() = 0;
+  virtual ~FunctionBody() = default;
 };
 
 template<typename T>

@@ -20,14 +20,10 @@ limitations under the License.
 namespace oneflow {
 
 void SourceTickComputeActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  piece_id_ = 0;
   OF_SET_MSG_HANDLER(&SourceTickComputeActor::HandlerWaitToStart);
 }
 
-void SourceTickComputeActor::Act() {
-  Regst* regst = GetNaiveCurWriteable("out");
-  regst->set_piece_id(piece_id_++);
-}
+void SourceTickComputeActor::Act() {}
 
 bool SourceTickComputeActor::IsCustomizedReadReady() const {
   // NOTE(chengcheng): SourceTickActor CANNOT be used and need delete in the future
