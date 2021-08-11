@@ -75,6 +75,7 @@ class SGD(Optimizer):
         elif isinstance(parameters, collections.abc.Iterable):
             if isinstance(parameters[0], dict):
                 for param in parameters:
+                    assert isinstance(param, dict)
                     self.param_groups.append(ParamGroup(param, self._default_options))
             else:
                 self.param_groups.append(ParamGroup(parameters, self._default_options))
