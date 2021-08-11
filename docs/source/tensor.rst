@@ -74,6 +74,7 @@ OneFlow Tensor Class
             logical_and,
             logical_or,
             logical_xor,
+            logical_not
 >>>>>>> master
             long, 
             lt, 
