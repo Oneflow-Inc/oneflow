@@ -186,7 +186,6 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   const auto& tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   std::vector<Shape> shapes;
-  // std::vector<const DType*> dtypes;
   std::vector<Symbol<DType>> dtypes;
   std::atomic<bool> synced(false);
 
