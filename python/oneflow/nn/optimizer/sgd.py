@@ -126,6 +126,7 @@ class SGD(Optimizer):
             lr = param_group["lr"]
             beta = param_group["momentum"]
             l2 = param_group["weight_decay"]
+            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
 
             optimizer_conf.set_base_learning_rate(lr)
             if beta == 0:
