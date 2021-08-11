@@ -129,10 +129,4 @@ class TestCifarDataset(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # 1 epoch training log
-    # epoch: 1  step:  2000  loss: 2.107
-    # epoch: 1  step:  4000  loss: 1.838
-    # epoch: 1  step:  6000  loss: 1.644
-    # epoch: 1  step:  8000  loss: 1.535
-    # epoch: 1  step: 10000  loss: 1.528
-    # epoch: 1  step: 12000  loss: 1.476
+

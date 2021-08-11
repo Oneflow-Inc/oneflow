@@ -19,8 +19,8 @@ import unittest
 
 import oneflow as flow
 import oneflow.nn as nn
-from data_utils import load_data_fashion_mnist
 import oneflow.unittest
+from data_utils import load_data_fashion_mnist
 
 
 # reference: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter05_CNN/5.5_lenet
@@ -137,8 +137,4 @@ class TestLenet(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # 1 epoch training log
-    # epoch 1, loss 1.1473, train acc 0.569, test acc 0.742, time 162.4 sec
-    # epoch 2, loss 0.5736, train acc 0.784, test acc 0.796, time 158.1 sec
-    # epoch 3, loss 0.4761, train acc 0.826, test acc 0.821, time 154.0 sec
-    # epoch 4, loss 0.4215, train acc 0.848, test acc 0.855, time 160.3 sec
+

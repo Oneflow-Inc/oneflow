@@ -20,8 +20,8 @@ import oneflow as flow
 import oneflow.nn as nn
 import oneflow.optim as optim
 import oneflow.utils.vision.transforms as transforms
-from data_utils import load_data_cifar10
 import oneflow.unittest
+from data_utils import load_data_cifar10
 
 
 class Net(nn.Module):
@@ -120,11 +120,4 @@ class TestCifarDataset(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # 1 epoch training log
-    # epoch: 1  step:  2000  loss: 2.160
-    # epoch: 1  step:  4000  loss: 1.929
-    # epoch: 1  step:  6000  loss: 1.778
-    # epoch: 1  step:  8000  loss: 1.678
-    # epoch: 1  step: 10000  loss: 1.679
-    # epoch: 1  step: 12000  loss: 1.636
-    # final loss :  1.635899437919259
+

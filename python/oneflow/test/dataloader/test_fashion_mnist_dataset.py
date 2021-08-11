@@ -139,6 +139,4 @@ class TestFashionMnistDataset(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # 1 epoch training log
-    # epoch 1, loss 0.0034, train acc 0.718, test acc 0.771, cost >>>>>>> 158.32699990272522(s)
-    # epoch 2, loss 0.0022, train acc 0.807, test acc 0.726, cost >>>>>>> 159.64465260505676(s)
+

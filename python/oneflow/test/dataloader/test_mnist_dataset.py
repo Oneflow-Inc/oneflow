@@ -117,8 +117,4 @@ class TestMnistDataset(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # epoch 1, train loss 0.0054, train acc 0.796, test acc 0.911
-    # epoch 2, train loss 0.0022, train acc 0.919, test acc 0.933
-    # epoch 3, train loss 0.0016, train acc 0.939, test acc 0.949
-    # epoch 4, train loss 0.0013, train acc 0.952, test acc 0.956
-    # epoch 5, train loss 0.0011, train acc 0.961, test acc 0.959
+
