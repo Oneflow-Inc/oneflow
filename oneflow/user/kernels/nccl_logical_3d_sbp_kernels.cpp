@@ -33,7 +33,9 @@ class NcclLogical3DChangeDim2KernelCommState final : public user_op::OpKernelSta
         has_independent_stream_(ctx->op_conf().has_stream_index_hint()),
         stream_index_(ctx->op_conf().stream_index_hint()),
         parallel_desc_(ctx->parallel_desc()),
-        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {}
+        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
+    CHECK_JUST(GetIdMap(parallel_desc_, &parallel_id2map_id_, &map_id2parallel_id_));
+  }
   ~NcclLogical3DChangeDim2KernelCommState() = default;
 
   ncclComm_t comm() {
@@ -55,11 +57,12 @@ class NcclLogical3DChangeDim2KernelCommState final : public user_op::OpKernelSta
     const int64_t num_groups = hierarchy.At(0) * hierarchy.At(1);
     const int64_t group_size = hierarchy.At(2);
     CHECK_EQ(num_groups * group_size, parallel_desc_.parallel_num());
-    const int64_t this_group_begin_parallel_id = this_parallel_id_ / group_size * group_size;
-    CHECK_EQ(this_group_begin_parallel_id % group_size, 0);
-    CHECK_LE(this_group_begin_parallel_id + group_size, parallel_desc_.parallel_num());
+    const int64_t this_group_begin_data_id =
+        parallel_id2map_id_.at(this_parallel_id_) / group_size * group_size;
+    CHECK_EQ(this_group_begin_data_id % group_size, 0);
+    CHECK_LE(this_group_begin_data_id + group_size, parallel_desc_.parallel_num());
     for (int64_t id_in_group = 0; id_in_group < group_size; ++id_in_group) {
-      const int64_t parallel_id = this_group_begin_parallel_id + id_in_group;
+      const int64_t parallel_id = map_id2parallel_id_.at(this_group_begin_data_id + id_in_group);
       const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
       const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
@@ -81,6 +84,8 @@ class NcclLogical3DChangeDim2KernelCommState final : public user_op::OpKernelSta
   int64_t this_parallel_id_;
   int64_t num_ranks_;
   ncclComm_t comm_;
+  HashMap<int64_t, int64_t> map_id2parallel_id_;
+  HashMap<int64_t, int64_t> parallel_id2map_id_;
 };
 
 class NcclLogical3DChangeDim1KernelCommState final : public user_op::OpKernelState {

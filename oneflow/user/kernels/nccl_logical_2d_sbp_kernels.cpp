@@ -49,6 +49,7 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
                            out_distribution, &src_parallel_desc, &dst_parallel_desc,
                            &src_parallel_distribution, &dst_parallel_distribution);
     parallel_desc_ = src_parallel_desc;
+    CHECK_JUST(GetIdMap(parallel_desc_, &parallel_id2map_id_, &map_id2parallel_id_));
   }
   ~NcclLogical2DSameDim0KernelCommState() = default;
 
@@ -71,11 +72,12 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
     const int64_t num_groups = hierarchy.At(0);
     const int64_t group_size = hierarchy.At(1);
     CHECK_EQ(num_groups * group_size, parallel_desc_.parallel_num());
-    const int64_t this_group_begin_parallel_id = this_parallel_id_ / group_size * group_size;
-    CHECK_EQ(this_group_begin_parallel_id % group_size, 0);
-    CHECK_LE(this_group_begin_parallel_id + group_size, parallel_desc_.parallel_num());
+    const int64_t this_group_begin_data_id =
+        parallel_id2map_id_.at(this_parallel_id_) / group_size * group_size;
+    CHECK_EQ(this_group_begin_data_id % group_size, 0);
+    CHECK_LE(this_group_begin_data_id + group_size, parallel_desc_.parallel_num());
     for (int64_t id_in_group = 0; id_in_group < group_size; ++id_in_group) {
-      const int64_t parallel_id = this_group_begin_parallel_id + id_in_group;
+      const int64_t parallel_id = map_id2parallel_id_.at(this_group_begin_data_id + id_in_group);
       const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
       const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
@@ -97,6 +99,8 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
   int64_t this_parallel_id_;
   int64_t num_ranks_;
   ncclComm_t comm_;
+  HashMap<int64_t, int64_t> map_id2parallel_id_;
+  HashMap<int64_t, int64_t> parallel_id2map_id_;
 };
 
 class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
