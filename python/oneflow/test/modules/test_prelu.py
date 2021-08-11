@@ -73,7 +73,7 @@ def _test_prelu_grad(test_case, shape, device):
         prelu.to(flow.device("cuda"))
     of_out = prelu(input).sum()
     of_out.backward()
-    print(input.grad.numpy())
+    # print(input.grad.numpy())
     # np_grad = _prelu_grad(np_input, np_alpha)
     # test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
 

@@ -22,11 +22,11 @@ REGISTER_USER_OP("prelu")
     .Input("alpha")
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      Shape* y_shape = ctx->OutputShape("y", 0);
       const Shape& alpha_shape = ctx->InputShape("alpha", 0);
       CHECK_EQ_OR_RETURN(alpha_shape.NumAxes(), 1);
-      *y_desc->mut_shape() = x_desc.shape();
+      *y_shape = x_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
@@ -42,17 +42,16 @@ REGISTER_USER_OP("prelu_grad")
     .Output("dx")
     .Output("alpha_diff")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-      user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-      const user_op::TensorDesc& alpha_desc = ctx->InputTensorDesc("alpha", 0);
-      CHECK_EQ_OR_RETURN(alpha_desc.shape().NumAxes(), 1);
-      CHECK_OR_RETURN((alpha_desc.shape().At(0) == x_desc.shape().At(1))
-                      || (alpha_desc.shape().At(0) == 1));
-      CHECK_EQ_OR_RETURN(dy_desc.shape(), x_desc.shape());
-      CHECK_EQ_OR_RETURN(dy_desc.data_type(), x_desc.data_type());
-      *dx_desc->mut_shape() = x_desc.shape();
-      *ctx->OutputShape("alpha_diff", 0) = alpha_desc.shape();
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
+      Shape* alpha_diff_shape = ctx->OutputShape("alpha_diff", 0);
+      const Shape& alpha_shape = ctx->InputShape("alpha", 0);
+      CHECK_EQ_OR_RETURN(alpha_shape.NumAxes(), 1);
+      CHECK_OR_RETURN((alpha_shape.At(0) == x_shape.At(1)) || (alpha_shape.At(0) == 1));
+      CHECK_EQ_OR_RETURN(dy_shape, x_shape);
+      *dx_shape = x_shape;
+      *alpha_diff_shape = alpha_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
