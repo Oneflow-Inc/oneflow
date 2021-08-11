@@ -30,8 +30,9 @@ class CallbackNotifyKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow

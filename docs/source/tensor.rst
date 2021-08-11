@@ -70,10 +70,11 @@ OneFlow Tensor Class
             kaiming_uniform_, 
             le, 
             log, 
-            log1p, 
+            log1p,
             logical_and,
             logical_or,
-            logical_not,
+            logical_xor,
+>>>>>>> master
             long, 
             lt, 
             masked_fill, 
