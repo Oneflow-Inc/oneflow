@@ -18,6 +18,8 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
@@ -153,6 +155,36 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   user_op::DeviceInferFn device_infer_fn_;
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
   std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
+};
+
+class ConsistentToConsistentOpExpr : public OpExpr {
+ public:
+  virtual ~ConsistentToConsistentOpExpr() = default;
+
+  static Maybe<ConsistentToConsistentOpExpr> New(
+      const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution);
+  Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const {
+    return parallel_distribution_;
+  }
+  Maybe<Symbol<cfg::ParallelDistribution>> grad_parallel_distribution() const {
+    return grad_parallel_distribution_.value();
+  }
+  const std::string& op_name() const { return op_name_; }
+  const std::string& op_type_name() const override;
+  int input_size() const override { return 1; }
+  int output_size() const override { return 1; }
+
+  Maybe<bool> IsGradDisabled() const override { return false; }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
+
+ protected:
+  ConsistentToConsistentOpExpr(const std::string& op_name,
+                               Symbol<cfg::ParallelDistribution> parallel_distribution);
+
+  std::string op_name_;
+  Symbol<cfg::ParallelDistribution> parallel_distribution_;
+  Optional<Symbol<cfg::ParallelDistribution>> grad_parallel_distribution_;
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
 class CastConsistentOpExpr : public OpExpr {

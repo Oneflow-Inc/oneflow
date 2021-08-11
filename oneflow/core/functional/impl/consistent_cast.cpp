@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 
 namespace oneflow {
 namespace one {
@@ -121,23 +122,16 @@ Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc
   }
 }
 
-Maybe<one::UserOpExpr> FindOrCreatParallelDistributionOpExpr(
+Maybe<one::ConsistentToConsistentOpExpr> FindOrCreatConsistentToConsistentOpExpr(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
-  thread_local HashMap<std::vector<Symbol<cfg::SbpParallel>>, std::shared_ptr<one::UserOpExpr>>
-      sbp_list2hierarchical_parallel_cast_op_expr;
-  auto iter = sbp_list2hierarchical_parallel_cast_op_expr.find(sbp_parallels);
-  if (iter == sbp_list2hierarchical_parallel_cast_op_expr.end()) {
-    const auto& op_expr =
-        JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
-                 .Input("in")
-                 .Output("out")
-                 .Attr<std::vector<std::string>>("parallel_distribution",
-                                                 *JUST(GetNdSbpStrList(sbp_parallels)))
-                 .Attr<std::string>("grad_mode", "restore")
-                 .Attr<std::vector<std::string>>("grad_parallel_distribution",
-                                                 std::vector<std::string>())
-                 .Build());
-    iter = sbp_list2hierarchical_parallel_cast_op_expr.emplace(sbp_parallels, op_expr).first;
+  thread_local HashMap<std::vector<Symbol<cfg::SbpParallel>>,
+                       std::shared_ptr<one::ConsistentToConsistentOpExpr>>
+      sbp_list2consistent_to_consistent_op_expr;
+  auto iter = sbp_list2consistent_to_consistent_op_expr.find(sbp_parallels);
+  if (iter == sbp_list2consistent_to_consistent_op_expr.end()) {
+    const auto& op_expr = JUST(one::ConsistentToConsistentOpExpr::New(
+        *JUST(UniqueStr("consistent_to_consistent")), JUST(GetNdSbp(sbp_parallels))));
+    iter = sbp_list2consistent_to_consistent_op_expr.emplace(sbp_parallels, op_expr).first;
   }
   return iter->second;
 }
@@ -148,10 +142,12 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& parallel_distribution_cast_op_expr =
-      JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
-  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
-                                                             {consistent_tensor}));
+  const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*x));
+  const auto& op_expr = JUST(FindOrCreatConsistentToConsistentOpExpr(sbp_parallels));
+  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op_expr, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc)));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+  JUST(ctx->Check());
   return ret;
 }
 

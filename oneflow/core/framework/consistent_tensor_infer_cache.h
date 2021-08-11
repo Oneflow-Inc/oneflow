@@ -95,8 +95,11 @@ class ConsistentTensorMetaInferArgs final {
       const UserOpExpr& user_op_expr, const std::vector<BlobDesc>& blob_descs,
       std::vector<ParallelDistributionInferHint>* hints) const;
 
+  Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
+
   static Maybe<ConsistentTensorMetaInferArgs> New(const AttrMap& attrs,
-                                                  const TensorTuple& input_tensors);
+                                                  const TensorTuple& input_tensors,
+                                                  Symbol<ParallelDesc> parallel_desc);
 
  private:
   ConsistentTensorMetaInferArgs() = default;
@@ -104,6 +107,7 @@ class ConsistentTensorMetaInferArgs final {
 
   AttrMap attrs_;
   std::vector<InputConsistentTensorMeta> input_consistent_tensor_metas_;
+  Symbol<ParallelDesc> parallel_desc_;
 };
 
 class SrcOpConsistentTensorMetaInferArgs final {

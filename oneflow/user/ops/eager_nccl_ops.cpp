@@ -78,6 +78,25 @@ REGISTER_USER_OP("eager_nccl_broadcast")
           .Build();
       return Maybe<void>::Ok();
     })
+    .SetParallelDistributionInferFn(
+        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
+          const cfg::ParallelDistribution& in_dis_hint =
+              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+          cfg::ParallelDistribution* in_distribution =
+              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+          cfg::ParallelDistribution* out_distribution =
+              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+          CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
+          in_distribution->clear_sbp_parallel();
+          out_distribution->clear_sbp_parallel();
+          const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+          CHECK_GE_OR_RETURN(parallel_hierarchy.NumAxes(), 1);
+          in_distribution->CopyFrom(in_dis_hint);
+          for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+            out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+          }
+          return Maybe<void>::Ok();
+        })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
