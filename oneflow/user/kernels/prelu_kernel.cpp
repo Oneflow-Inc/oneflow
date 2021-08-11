@@ -81,17 +81,8 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
       const T x_i = x_ptr[i];
       const T dy_i = dy_ptr[i];
       const T alpha_i = alpha_ptr[(i / inner_size) % alpha_size];
-      T dx_i = 0;
-      T alpha_diff_i = 0;
-      if (x_i > 0) {
-        dx_i = dy_i;
-        alpha_diff_i = 0;
-      } else {
-        dx_i = dy_i * alpha_i;
-        alpha_diff_i = dy_i * x_i;
-      }
-      dx_ptr[i] = dx_i;
-      alpha_diff_ptr[(i / inner_size) % alpha_size] += alpha_diff_i;
+      dx_ptr[i] = x_i > 0 ? dy_i : dy_i * alpha_i;
+      alpha_diff_ptr[(i / inner_size) % alpha_size] += x_i > 0 ? 0 : dy_i * x_i;
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

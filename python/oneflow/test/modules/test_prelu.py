@@ -38,7 +38,7 @@ class TestPReLU(flow.unittest.TestCase):
         m.to(device)
         y = m(x)
         return y
-    
+
     @autotest()
     def test_prelu_2dim_module_with_random_data(test_case):
         device = random_device()
@@ -50,7 +50,6 @@ class TestPReLU(flow.unittest.TestCase):
         m.to(device)
         y = m(x)
         return y
-
 
 
 if __name__ == "__main__":

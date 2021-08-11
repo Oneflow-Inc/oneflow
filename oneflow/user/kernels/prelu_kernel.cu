@@ -38,17 +38,8 @@ __global__ void PReluBackwardGpu(const int32_t elem_cnt, const int32_t alpha_siz
     const T x_i = x[i];
     const T dy_i = dy[i];
     const T alpha_i = alpha[(i / inner_size) % alpha_size];
-    T dx_i = 0;
-    T alpha_diff_i = 0;
-    if (x_i > 0) {
-      dx_i = dy_i;
-      alpha_diff_i = 0;
-    } else {
-      dx_i = dy_i * alpha_i;
-      alpha_diff_i = dy_i * x_i;
-    }
-    dx[i] = dx_i;
-    alpha_diff[(i / inner_size) % alpha_size] += alpha_diff_i;
+    dx[i] = x_i > 0 ? dy_i : dy_i * alpha_i;
+    alpha_diff[(i / inner_size) % alpha_size] += x_i > 0 ? 0 : dy_i * x_i;
   }
 }
 
@@ -78,10 +69,9 @@ class GpuPReluKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_GPU_PRELU_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("prelu")                                                       \
-      .SetCreateFn<GpuPReluKernel<dtype>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+  REGISTER_USER_KERNEL("prelu").SetCreateFn<GpuPReluKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == "gpu")                                              \
+      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_PRELU_KERNEL(float)
 REGISTER_GPU_PRELU_KERNEL(double)

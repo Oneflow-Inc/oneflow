@@ -29,7 +29,25 @@ REGISTER_USER_OP("prelu")
       *y_shape = x_shape;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& alpha_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), 1)
+          .Split(user_op::OpArg("alpha", 0), 0)
+          .Split(user_op::OpArg("y", 0), 1)
+          .Build();
+      FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+        if (i == 0) continue;
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("x", 0), i)
+            .Broadcast(user_op::OpArg("alpha", 0))
+            .Split(user_op::OpArg("y", 0), i)
+            .Build();
+      }
+      return Maybe<void>::Ok();
+    })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
@@ -54,7 +72,35 @@ REGISTER_USER_OP("prelu_grad")
       *alpha_diff_shape = alpha_shape;
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& alpha_tensor =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex("alpha", 0);
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Split(user_op::OpArg("x", 0), 0)
+          .Broadcast(user_op::OpArg("alpha", 0))
+          .Split(user_op::OpArg("dx", 0), 0)
+          .PartialSum(user_op::OpArg("alpha_diff", 0))
+          .Build();
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("dy", 0))
+          .Broadcast(user_op::OpArg("x", 0))
+          .Broadcast(user_op::OpArg("alpha", 0))
+          .PartialSum(user_op::OpArg("dx", 0))
+          .PartialSum(user_op::OpArg("alpha_diff", 0))
+          .Build();
+      FOR_RANGE(int64_t, i, 1, x_tensor.shape().NumAxes()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("dy", 0), i)
+            .Split(user_op::OpArg("x", 0), i)
+            .Split(user_op::OpArg("alpha", 0), 0)
+            .Split(user_op::OpArg("dx", 0), i)
+            .Split(user_op::OpArg("alpha_diff", 0), 0)
+            .Build();
+      }
+      return Maybe<void>::Ok();
+    })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
       *ctx->OutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
