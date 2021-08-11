@@ -13,20 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import os
+import warnings
 import collections
-from .vision import VisionDataset
-from xml.etree.ElementTree import Element as ET_Element
 
+from xml.etree.ElementTree import Element as ET_Element
 try:
     from defusedxml.ElementTree import parse as ET_parse
 except ImportError:
     from xml.etree.ElementTree import parse as ET_parse
 from PIL import Image
 from typing import Any, Callable, Dict, Optional, Tuple, List
+
 from .utils import download_and_extract_archive, verify_str_arg
-import warnings
+from .vision import VisionDataset
 
 
 DATASET_YEAR_DICT = {
