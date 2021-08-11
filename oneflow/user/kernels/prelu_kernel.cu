@@ -81,11 +81,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("prelu")                                                       \
       .SetCreateFn<GpuPReluKernel<dtype>>()                                           \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        const Shape& in_shape = ctx->InputShape("x", 0);                              \
-        return GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));               \
-      });
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_PRELU_KERNEL(float)
 REGISTER_GPU_PRELU_KERNEL(double)
