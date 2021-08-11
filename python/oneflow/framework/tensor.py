@@ -115,33 +115,34 @@ def _meta_repr(self):
 
 
 def is_nonzero(input):
-    """
+    r"""
     is_nonzero(input) -> (bool)
 
     Returns True if the :attr:`input` is a single element tensor which is not equal to zero
-    after type conversions.
-    i.e. not equal to ``flow.tensor([0.])`` or ``flow.tensor([0])``.
+    after type conversions. i.e. not equal to ``flow.tensor([0.])`` or ``flow.tensor([0])``.
+
     Throws a ``RuntimeError`` if ``input.shape.numel() != 1``
 
-    Args:
-        {input}
+    For Example:
 
-    Examples::
+    .. code-block:: python
 
-        >>> flow.is_nonzero(flow.tensor([0.]))
-        False
-        >>> flow.is_nonzero(flow.tensor([1.5]))
-        True
-        >>> flow.is_nonzero(flow.tensor([3]))
-        True
-        >>> flow.is_nonzero(flow.tensor([1, 3, 5]))
-        Traceback (most recent call last):
-        ...
-        RuntimeError: bool value of Tensor with more than one value is ambiguous
-        >>> flow.is_nonzero(flow.tensor([]))
-        Traceback (most recent call last):
-        ...
-        RuntimeError: bool value of Tensor with no values is ambiguous
+        >>> import oneflow as flow
+        >>> flow.is_nonzero(flow.tensor([0.]))
+        False
+        >>> flow.is_nonzero(flow.tensor([1.5]))
+        True
+        >>> flow.is_nonzero(flow.tensor([3]))
+        True
+        >>> flow.is_nonzero(flow.tensor([1, 3, 5]))
+        Traceback (most recent call last):
+        ...
+        RuntimeError: bool value of Tensor with more than one value is ambiguous
+        >>> flow.is_nonzero(flow.tensor([]))
+        Traceback (most recent call last):
+        ...
+        RuntimeError: bool value of Tensor with no values is ambiguous
+
     """
     shape = input.shape
     if shape.numel() == 0:
