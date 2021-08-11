@@ -373,6 +373,7 @@ if __name__ == "__main__":
         "--use_system_proxy", default=False, action="store_true", required=False
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc4", default=False, action="store_true", required=False)
     parser.add_argument("--gcc7", default=False, action="store_true", required=False)
     parser.add_argument("--gcc9", default=False, action="store_true", required=False)
     parser.add_argument(
@@ -465,18 +466,19 @@ if __name__ == "__main__":
             if args.xla:
                 bash_args = "-l"
             bash_wrap = ""
-            if args.xla or args.gcc7:
-                bash_wrap = """
-source scl_source enable devtoolset-7
-gcc --version
-"""
-            elif args.gcc9:
-                bash_wrap = """
+            if args.gcc4:
+                bash_wrap = "gcc --version"
+            else:
+                if args.gcc9:
+                    bash_wrap = """
 source scl_source enable devtoolset-9
 gcc --version
 """
-            else:
-                bash_wrap = "gcc --version"
+                else:
+                    bash_wrap = """
+source scl_source enable devtoolset-7
+gcc --version
+"""
 
             global cache_dir
             if args.cache_dir:
