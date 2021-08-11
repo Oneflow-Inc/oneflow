@@ -162,9 +162,9 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(not x.is_cuda)
 
     def test_tensor_to_bool(test_case):
-        x = flow.tensor([0.])
+        x = flow.tensor([0.0])
         test_case.assertFalse(bool(x))
-        x = flow.tensor([0.]).to("cuda")
+        x = flow.tensor([0.0]).to("cuda")
         test_case.assertFalse(bool(x))
         x = flow.tensor([1.5])
         test_case.assertTrue(bool(x))
