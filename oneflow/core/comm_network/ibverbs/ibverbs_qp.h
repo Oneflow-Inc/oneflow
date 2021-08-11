@@ -79,18 +79,19 @@ class MessagePool final {
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
     void RegisterMessagePool(){
-      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      
       size_t ActorMsgSize = sizeof(ActorMsg);
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
       char * addr =(char*) malloc(RegisterMemorySize );
       ibv_mr * mr = ibv::wrapper.ibv_reg_mr_wrap(
-          pd_, addr, RegisterMemorySize,
+          pd_, (void*)addr, RegisterMemorySize,
           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
       CHECK(mr);
+      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       for(size_t i = 0;  i < num_of_message_ ; i++){
           char * split_addr =addr + ActorMsgSize * i ;
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
-          message_buf_.push_front(msg_mr);
+          message_buf_.push_back(msg_mr);
       }
     }
     
