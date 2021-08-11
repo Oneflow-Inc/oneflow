@@ -1,4 +1,5 @@
 include(python)
+include(CheckCXXCompilerFlag)
 
 function(oneflow_add_executable)
   if (BUILD_CUDA)
@@ -16,29 +17,52 @@ function(oneflow_add_library)
   endif()
 endfunction()
 
+function(target_try_compile_option target flag)
+  message(STATUS "Try to add ${flag} to target ${target}")
+  # We cannot check for -Wno-foo as this won't throw a warning so we must check for the -Wfoo option directly
+  # http://stackoverflow.com/questions/38785168/cc1plus-unrecognized-command-line-option-warning-on-any-other-warning
+  string(REGEX REPLACE "^-Wno-" "-W" checkedFlag ${flag})
+  string(REGEX REPLACE "[-=]" "_" varName CXX_FLAG${checkedFlag})
+  # Avoid double checks. A compiler will not magically support a flag it did not before
+  if(NOT ${varName}_CHECKED)
+    check_cxx_compiler_flag(${checkedFlag} ${varName}_SUPPORTED)
+    set(${varName}_CHECKED YES CACHE INTERNAL "")
+  endif()
+  if (${varName}_SUPPORTED)
+    message(STATUS "Add ${flag} to target ${target}")
+    target_compile_options(${target} PRIVATE ${flag})
+  endif ()
+endfunction()
+
+function(target_try_compile_options target)
+  foreach(flag ${ARGN})
+    target_try_compile_option(${target} ${flag})
+  endforeach()
+endfunction()
+
 function(target_treat_warnings_as_errors target)
   if (TREAT_WARNINGS_AS_ERRORS)
     target_compile_options(${target} PRIVATE -Werror)
 
     # TODO: remove it while fixing all deprecated call
-    target_compile_options(${target} PRIVATE -Wno-error=deprecated-declarations)
+    target_try_compile_options(${target} -Wno-error=deprecated-declarations)
 
     # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
-    target_compile_options(${target} PRIVATE -Wno-error=unused-const-variable)
-    target_compile_options(${target} PRIVATE -Wno-error=unused-variable)
-    target_compile_options(${target} PRIVATE -Wno-error=unused-local-typedefs)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-      target_compile_options(${target} PRIVATE -Wno-error=unused-private-field)
-      target_compile_options(${target} PRIVATE -Wno-error=unused-lambda-capture)
+    target_try_compile_options(${target} 
+      -Wno-error=unused-const-variable 
+      -Wno-error=unused-variable
+      -Wno-error=unused-local-typedefs
+      -Wno-error=unused-private-field
+      -Wno-error=unused-lambda-capture
+    )
 
-      target_compile_options(${target} PRIVATE -Wno-error=instantiation-after-specialization)
-
-      # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
-      target_compile_options(${target} PRIVATE -Wno-error=mismatched-tags)
-    endif()
+    target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
+    
+    # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
+    target_try_compile_options(${target} -Wno-error=mismatched-tags)
 
     # disable for pointer operations of intrusive linked lists
-    target_compile_options(${target} PRIVATE -Wno-error=array-bounds)
+    target_try_compile_options(${target} -Wno-error=array-bounds)
   endif()
 endfunction()
 
