@@ -72,9 +72,12 @@ class SGD(Optimizer):
         self._default_options["weight_decay"] = weight_decay
         if isinstance(parameters, collections.abc.Iterator):
             self.param_groups.append(ParamGroup(parameters, self._default_options))
-        else:
-            for param in parameters:
-                self.param_groups.append(ParamGroup(param, self._default_options))
+        elif isinstance(parameters, collections.abc.Iterable):
+            if isinstance(parameters[0], dict):
+                for param in parameters:
+                    self.param_groups.append(ParamGroup(param, self._default_options))
+            else:
+                self.param_groups.append(ParamGroup(parameters, self._default_options))
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
