@@ -97,10 +97,12 @@ def _getitem(self, key):
 
 def _setitem(self, key, value):
     if self.is_consistent:
-        value = flow.F.consistent_constant([1], value, self.dtype, placement=self.placement, sbp=flow.sbp.broadcast)
+        value = flow.F.consistent_constant(
+            [1], value, self.dtype, placement=self.placement, sbp=flow.sbp.broadcast
+        )
     else:
         value = flow.F.constant([1], value, self.dtype, device=self.device)
-    
+
     flow.F.tensor_setitem(self, key, value)
     return self
 
