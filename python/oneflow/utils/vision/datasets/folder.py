@@ -45,6 +45,7 @@ def is_image_file(filename: str) -> bool:
 
 def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:
     """Finds the class folders in a dataset.
+
     See :class:`DatasetFolder` for details.
     """
     classes = sorted(entry.name for entry in os.scandir(directory) if entry.is_dir())
@@ -62,6 +63,7 @@ def make_dataset(
     is_valid_file: Optional[Callable[[str], bool]] = None,
 ) -> List[Tuple[str, int]]:
     """Generates a list of samples of a form (path_to_sample, class).
+
     See :class:`DatasetFolder` for details.
     Note: The class_to_idx parameter is here optional and will use the logic of the ``find_classes`` function
     by default.
@@ -119,9 +121,10 @@ def make_dataset(
 
 
 class DatasetFolder(VisionDataset):
-    """A generic data loader.
+    r"""A generic data loader.
     This default directory structure can be customized by overriding the
     :meth:`find_classes` method.
+
     Args:
         root (string): Root directory path.
         loader (callable): A function to load a sample given its path.
@@ -135,6 +138,7 @@ class DatasetFolder(VisionDataset):
         is_valid_file (callable, optional): A function that takes path of a file
             and check if the file is a valid file (used to check of corrupt files)
             both extensions and is_valid_file should not be passed.
+
      Attributes:
         classes (list): List of the class names sorted alphabetically.
         class_to_idx (dict): Dict with items (class_name, class_index).
@@ -174,6 +178,7 @@ class DatasetFolder(VisionDataset):
     ) -> List[Tuple[str, int]]:
         """Generates a list of samples of a form (path_to_sample, class).
         This can be overridden to e.g. read files from a compressed zip file instead of from the disk.
+
         Args:
             directory (str): root dataset directory, corresponding to ``self.root``.
             class_to_idx (Dict[str, int]): Dictionary mapping class name to class index.
@@ -183,10 +188,12 @@ class DatasetFolder(VisionDataset):
                 and checks if the file is a valid file
                 (used to check of corrupt files) both extensions and
                 is_valid_file should not be passed. Defaults to None.
+
         Raises:
             ValueError: In case ``class_to_idx`` is empty.
             ValueError: In case ``extensions`` and ``is_valid_file`` are None or both are not None.
             FileNotFoundError: In case no valid file was found for any class.
+
         Returns:
             List[Tuple[str, int]]: samples of a form (path_to_sample, class)
         """
@@ -200,7 +207,10 @@ class DatasetFolder(VisionDataset):
         )
 
     def find_classes(self, directory: str) -> Tuple[List[str], Dict[str, int]]:
-        """Find the class folders in a dataset structured as follows::
+        """Find the class folders in a dataset structured as follows:
+
+        .. code-block:: shell
+
             directory/
             ├── class_x
             │   ├── xxx.ext
@@ -212,12 +222,16 @@ class DatasetFolder(VisionDataset):
                 ├── nsdf3.ext
                 └── ...
                 └── asd932_.ext
+
         This method can be overridden to only consider
         a subset of classes, or to adapt to a different dataset directory structure.
+
         Args:
             directory(str): Root directory path, corresponding to ``self.root``
+
         Raises:
             FileNotFoundError: If ``dir`` has no class folders.
+
         Returns:
             (Tuple[List[str], Dict[str, int]]): List of all classes and dictionary mapping each class to an index.
         """
@@ -284,15 +298,20 @@ def default_loader(path: str) -> Any:
 
 
 class ImageFolder(DatasetFolder):
-    """A generic data loader where the images are arranged in this way by default: ::
+    r"""A generic data loader where the images are arranged in this way by default:
+
+    .. code-block:: shell 
+
         root/dog/xxx.png
         root/dog/xxy.png
         root/dog/[...]/xxz.png
         root/cat/123.png
         root/cat/nsdf3.png
         root/cat/[...]/asd932_.png
+
     This class inherits from :class:`~vision.datasets.DatasetFolder` so
     the same methods can be overridden to customize the dataset.
+
     Args:
         root (string): Root directory path.
         transform (callable, optional): A function/transform that  takes in an PIL image

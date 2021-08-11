@@ -34,7 +34,8 @@ META_FILE = "meta.bin"
 
 
 class ImageNet(ImageFolder):
-    """`ImageNet <http://image-net.org/>`_ 2012 Classification Dataset.
+    r""" `ImageNet <http://image-net.org/>`_ 2012 Classification Dataset.
+
     Args:
         root (string): Root directory of the ImageNet Dataset.
         split (string, optional): The dataset split, supports ``train``, or ``val``.
@@ -43,6 +44,7 @@ class ImageNet(ImageFolder):
         target_transform (callable, optional): A function/transform that takes in the
             target and transforms it.
         loader (callable, optional): A function to load an image given its path.
+
      Attributes:
         classes (list): List of the class name tuples.
         class_to_idx (dict): Dict with items (class_name, class_index).

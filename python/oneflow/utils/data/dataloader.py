@@ -120,11 +120,11 @@ class DataLoader(Generic[T_co]):
     Data loader. Combines a dataset and a sampler, and provides an iterable over
     the given dataset.
 
-    The :class:`~flow.utils.data.DataLoader` supports both map-style and
+    The :class:`~oneflow.utils.data.DataLoader` supports both map-style and
     iterable-style datasets with single- or multi-process loading, customizing
     loading order and optional automatic batching (collation) and memory pinning.
 
-    See :py:mod:`flow.utils.data` documentation page for more details.
+    See :py:mod:`oneflow.utils.data` documentation page for more details.
 
     Args:
         dataset (Dataset): dataset from which to load the data.
@@ -163,9 +163,7 @@ class DataLoader(Generic[T_co]):
 
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
-                 cannot be an unpicklable object, e.g., a lambda function. See
-                 :ref:`multiprocessing-best-practices` on more details related
-                 to multiprocessing in OneFlow.
+                 cannot be an unpicklable object, e.g., a lambda function.
 
     .. warning:: ``len(dataloader)`` heuristic is based on the length of the sampler used.
                  When :attr:`dataset` is an :class:`~flow.utils.data.IterableDataset`,
@@ -181,22 +179,7 @@ class DataLoader(Generic[T_co]):
                  dropped when :attr:`drop_last` is set. Unfortunately, OneFlow can not detect such
                  cases in general.
 
-                 See `Dataset Types`_ for more details on these two types of datasets and how
-                 :class:`~flow.utils.data.IterableDataset` interacts with
-                 `Multi-process data loading`_.
-
-    .. warning:: See :ref:`reproducibility`, and :ref:`dataloader-workers-random-seed`, and
-                 :ref:`data-loading-randomness` notes for random seed related questions.
     """
-    dataset: Dataset[T_co]
-    batch_size: Optional[int]
-    num_workers: int
-    drop_last: bool
-    timeout: float
-    sampler: Sampler
-    prefetch_factor: int
-    _iterator: Optional["_BaseDataLoaderIter"]
-    __initialized = False
 
     def __init__(
         self,
