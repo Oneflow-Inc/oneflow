@@ -36,7 +36,7 @@ bool IsLetterNumberOrUnderline(char c) {
 std::string StripBrackets(std::string str) {
   if (str.size() == 0) { return ""; }
   if (str.at(0) != '(') { return str; }
-  // "()" come from OF_PP_STRINGIZE((__VA_ARGS__))
+  // "()" come from OF_PP_STRINGIZE((__VA_ARGS__)), so size() >= 2
   str = str.substr(1, str.size() - 2);
   return str;
 }
@@ -49,7 +49,8 @@ Maybe<std::string> ShortenErrorMsg(std::string str) {
   str = StripSpace(str);
   if (str.size() < num_displayed_char) { return str; }
 
-  // Find first index where the number of characters from the start to the index is less than 50, last index is the same
+  // Find first index where the number of characters from the start to the index is less than 50,
+  // last index is the same
   int first_index = -1;
   int last_index = -1;
   int pre_index = 0;
@@ -62,17 +63,20 @@ Maybe<std::string> ShortenErrorMsg(std::string str) {
     }
   }
   // A string of more than 150 characters
-  if (first_index == -1 && last_index == -1) {
-    return str;
-  }
+  if (first_index == -1 && last_index == -1) { return str; }
   CHECK_OR_RETURN(first_index <= str.size());
   CHECK_OR_RETURN(last_index <= str.size());
   std::stringstream ss;
   // The number of characters before the first word exceeds 50
-  if (first_index == -1) { ss << " ... " << str.substr(last_index); }
+  if (first_index == -1) {
+    ss << " ... " << str.substr(last_index);
+  }
   // The number of characters after the last word exceeds 50
-  else if (last_index == -1) { ss << str.substr(0, first_index) << " ... "; }
-  else { ss << str.substr(0, first_index) << " ... " << str.substr(last_index); }
+  else if (last_index == -1) {
+    ss << str.substr(0, first_index) << " ... ";
+  } else {
+    ss << str.substr(0, first_index) << " ... " << str.substr(last_index);
+  }
   return ss.str();
 }
 
@@ -96,9 +100,8 @@ std::string FormatFunction(const std::string& function) {
 
 Maybe<std::string> FormatErrorMsg(std::string error_msg, bool is_last_stack_frame) {
   error_msg = StripBrackets(error_msg);
-  if (!is_last_stack_frame) { 
-    error_msg = *JUST(ShortenErrorMsg(error_msg)); 
-  }
+  if (!is_last_stack_frame) { error_msg = *JUST(ShortenErrorMsg(error_msg)); }
+  // error_msg of last stack frame come from "<<" 
   if (is_last_stack_frame) { error_msg = StripSpace(error_msg); }
   std::stringstream ss;
   ss << "\n    " << error_msg;
@@ -121,7 +124,7 @@ Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error)
     ss << FormatFile(*stack_frame->mutable_file()) << FormatLine(*stack_frame->mutable_line())
        << FormatFunction(*stack_frame->mutable_function())
        << *JUST(FormatErrorMsg(*stack_frame->mutable_error_msg(),
-                         stack_frame == error->mutable_stack_frame()->rend() - 1));
+                               stack_frame == error->mutable_stack_frame()->rend() - 1));
   }
   ss << "\n" << FormatErrorSummaryAndMsg(error);
   return ss.str();
