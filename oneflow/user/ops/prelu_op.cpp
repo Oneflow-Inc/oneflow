@@ -90,6 +90,13 @@ REGISTER_USER_OP("prelu_grad")
           .PartialSum(user_op::OpArg("dx", 0))
           .PartialSum(user_op::OpArg("alpha_diff", 0))
           .Build();
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), 0)
+          .Split(user_op::OpArg("x", 0), 1)
+          .Split(user_op::OpArg("alpha", 0), 0)
+          .Split(user_op::OpArg("dx", 0), 1)
+          .Split(user_op::OpArg("alpha_diff", 0), 0)
+          .Build();
       FOR_RANGE(int64_t, i, 1, x_tensor.shape().NumAxes()) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("dy", 0), i)
