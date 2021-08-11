@@ -391,7 +391,8 @@ if __name__ == "__main__":
     extra_oneflow_cmake_args = " ".join(
         [" ".join(l) for l in args.extra_oneflow_cmake_args]
     )
-
+    if (not args.gcc4) and (not args.gcc7) and (not args.gcc9):
+        args.gcc7 = True
     cuda_versions = []
     if args.use_aliyun_mirror:
         extra_oneflow_cmake_args += " -DTHIRD_PARTY_MIRROR=aliyun"
@@ -468,17 +469,18 @@ if __name__ == "__main__":
             bash_wrap = ""
             if args.gcc4:
                 bash_wrap = "gcc --version"
-            else:
-                if args.gcc9:
-                    bash_wrap = """
-source scl_source enable devtoolset-9
-gcc --version
-"""
-                else:
-                    bash_wrap = """
+            elif args.gcc7:
+                bash_wrap = """
 source scl_source enable devtoolset-7
 gcc --version
 """
+            elif args.gcc9:
+                bash_wrap = """
+source scl_source enable devtoolset-9
+gcc --version
+"""
+            else:
+                raise ValueError("either one in gcc4, gcc7, gcc9 must be enabled")
 
             global cache_dir
             if args.cache_dir:
@@ -488,6 +490,8 @@ gcc --version
                 sub_dir = cuda_version
                 if args.xla:
                     sub_dir += "-xla"
+                if args.gcc4:
+                    sub_dir += "-gcc4"
                 if args.gcc7:
                     sub_dir += "-gcc7"
                 if args.gcc9:
