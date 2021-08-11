@@ -38,10 +38,11 @@ class ActorMsgMR final {
   ~ActorMsgMR() {
    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0);
   }
-  char * addr() ;
-  uint32_t size(); //{return size_ ;}
-  uint32_t lkey() ;//{ return mr_->lkey ; }
-  ActorMsg  msg()  ;//{ return *msg_;}
+  
+  char * addr() { return reinterpret_cast<char *>(msg_) ; }
+  uint32_t size() {return size_ ;}
+  uint32_t lkey() { return mr_->lkey ; }
+  ActorMsg  msg()  { return *msg_;}
   void set_msg(const ActorMsg& val);
 
  private:
@@ -49,26 +50,6 @@ class ActorMsgMR final {
     ibv_mr  *  mr_;
     ActorMsg * msg_;
 };
-
-// char * ActorMsgMR::addr() {
-//   return reinterpret_cast<char *>(msg_); }
-// }
-
-// void ActorMsgMR::set_msg(const ActorMsg& val) {
-//     *msg_ = val;
-// }
-
-// uint32_t ActorMsgMR::size() {
-//     return size_;
-// }
-
-// uint32_t ActorMsgMR::lkey(){
-//   return mr_->lkey;
-// }
-
-// ActorMsg   ActorMsgMR::msg(){
-//   return *msg_;
-// }
 
 class IBVerbsQP;
 
