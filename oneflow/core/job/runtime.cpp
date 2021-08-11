@@ -17,19 +17,17 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/user/summary/events_writer.h"
-#include "oneflow/core/job/collective_boxing_executor.h"
-#include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 
 namespace oneflow {
 
@@ -60,7 +58,14 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 }  // namespace
 
 Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
-  NewAllGlobal(plan, variable_op_name2eager_blob);
+  {
+    // NOTE(chengcheng): All runtime Global objects AddPlan
+    Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
+    Global<ThreadMgr>::Get()->AddPlan(plan);
+    Global<RuntimeJobDescs>::Get()->AddPlan(plan);
+    collective_boxing_executor_plan_token_ =
+        Global<boxing::collective::CollectiveBoxingExecutor>::Get()->AddPlan(plan);
+  }
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
@@ -99,35 +104,8 @@ Runtime::~Runtime() {
     Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
   }
   OF_SESSION_BARRIER();
-  DeleteAllGlobal();
-}
-
-void Runtime::NewAllGlobal(const Plan& plan,
-                           const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
-  Global<RuntimeCtx>::New();
-  Global<boxing::collective::CollectiveBoxingExecutor>::New(plan);
-  Global<MemoryAllocator>::New();
-  Global<RegstMgr>::New();
-  Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
-  Global<ActorMsgBus>::New();
-  Global<ThreadMgr>::New();
-  Global<ThreadMgr>::Get()->AddPlan(plan);
-  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::New();
-  Global<RuntimeJobDescs>::New(plan.job_confs().job_id2job_conf());
-  Global<summary::EventsWriter>::New();
-}
-
-void Runtime::DeleteAllGlobal() {
-  Global<RuntimeJobDescs>::Delete();
-  Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
-  Global<ThreadMgr>::Delete();
-  Global<ActorMsgBus>::Delete();
-  Global<RegstMgr>::Delete();
-  Global<MemoryAllocator>::Delete();
-  Global<boxing::collective::CollectiveBoxingExecutor>::Delete();
-  Global<ActEventLogger>::Delete();
-  Global<RuntimeCtx>::Delete();
-  Global<summary::EventsWriter>::Delete();
+  Global<boxing::collective::CollectiveBoxingExecutor>::Get()->DeletePlan(
+      collective_boxing_executor_plan_token_);
 }
 
 }  // namespace oneflow

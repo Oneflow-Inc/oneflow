@@ -156,8 +156,8 @@ void TaskNode::ForEachProducedDataRegst(
 
 void TaskNode::Build() { BuildExecGphAndRegst(); }
 
-void TaskNode::EraseZeroSizeProducedBlob() {
-  for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
+void TaskNode::EraseUninitializedShapeProducedBlob() {
+  for (auto& pair : produced_regsts_) { pair.second->EraseUninitializedShapeBlob(); }
 }
 
 void TaskNode::EraseZeroSizeConsumedRegst() {

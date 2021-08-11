@@ -53,12 +53,10 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
 Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
 Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
 Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)) { UpdateElemCnt(); }
-
 Shape::Shape(const ShapeProto& shape_proto) {
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
   UpdateElemCnt();
 }
-
 Shape::Shape(const cfg::ShapeProto& shape_proto) {
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
   UpdateElemCnt();
@@ -66,6 +64,12 @@ Shape::Shape(const cfg::ShapeProto& shape_proto) {
 
 Shape& Shape::operator=(const Shape& shape) {
   dim_vec_ = shape.dim_vec_;
+  UpdateElemCnt();
+  return *this;
+}
+
+Shape& Shape::assign(const DimVector& dim_vec) {
+  dim_vec_ = dim_vec;
   UpdateElemCnt();
   return *this;
 }
@@ -123,9 +127,9 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
 int64_t Shape::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxes()); }
 
 void Shape::UpdateElemCnt() {
-  elem_cnt_ = 1;
-  for (int64_t s : dim_vec_) { elem_cnt_ *= s; }
-  if (dim_vec_.size() == 0) { elem_cnt_ = 0; }
+  int64_t elem_cnt = 1;
+  for (int64_t s : dim_vec_) { elem_cnt *= s; }
+  elem_cnt_ = elem_cnt;
 }
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
@@ -152,7 +156,6 @@ Shape Shape::RemoveOnes(const AxisVector& axis_vec) const {
       CHECK_EQ(this->dim_vec().at(i), 1);
     }
   }
-  if (dim_vec.empty()) { dim_vec.push_back(1); }
   return Shape(dim_vec);
 }
 

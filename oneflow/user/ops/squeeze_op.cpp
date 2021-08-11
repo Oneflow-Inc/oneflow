@@ -50,11 +50,7 @@ Maybe<void> SqueezeTensorDescInferFn(user_op::InferContext* ctx) {
   DimVector dim_vec = in_shape.dim_vec();
   JUST(CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &dim_vec));
   dim_vec.erase(std::remove(dim_vec.begin(), dim_vec.end(), -1), dim_vec.end());
-  if (dim_vec.empty()) {
-    *out_shape = Shape({1});
-  } else {
-    *out_shape = Shape(dim_vec);
-  }
+  *out_shape = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 

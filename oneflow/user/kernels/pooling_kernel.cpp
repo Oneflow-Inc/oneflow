@@ -37,7 +37,7 @@ std::shared_ptr<PoolingOpKernelState> DoCreateOpKernelState(user_op::KernelCompu
   PoolingParams3D params_3d = PoolingParams3D(dim, x_shape, data_format, padding, kernel_size,
                                               stride, dilation, return_indices, ceil_mode);
   std::shared_ptr<PoolingOpKernelState> state(new PoolingOpKernelState(params_3d));
-  return std::move(state);
+  return state;
 }
 
 template<typename T>
