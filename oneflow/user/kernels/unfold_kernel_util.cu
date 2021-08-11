@@ -1,0 +1,53 @@
+#ifdef WITH_CUDA
+
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/cuda/elementwise.cuh"
+#include "oneflow/core/kernel/util/cuda_kernel_util.h"
+#include "oneflow/user/kernels/unfold_kernel_util.h"
+
+namespace oneflow {
+
+namespace user_op {
+
+namespace {
+
+constexpr int kBlockSize = cuda::elementwise::kBlockSize;
+
+int GetNumBlocks(int64_t elem_cnt) {
+  int num_blocks = 0;
+  OF_CUDA_CHECK(cuda::elementwise::GetNumBlocks(elem_cnt, &num_blocks));
+  return num_blocks;
+}
+
+template<typename T, typename INDEX_T, int NDIM, int SDIM>
+__global__ void CudaUnfoldForward(UnfoldParams<INDEX_T, NDIM, SDIM> params, const T* in, T* out) {
+  CUDA_1D_KERNEL_LOOP_T(INDEX_T, out_offset, params.out_elem_cnt) {
+    using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
+    INDEX_T in_index[ParamType::kInputNDim] = {0};
+    INDEX_T out_index[ParamType::kOutputNDim] = {0};
+    params.out_index_helper.OffsetToNdIndex(out_offset, out_index);
+    if (!UnfoldIndexTransform<INDEX_T, NDIM, SDIM>(params, out_index, in_index)) {
+      INDEX_T in_offset = params.in_index_helper.NdIndexToOffset(in_index);
+      out[out_offset] = in[in_offset];
+    } else {
+      out[out_offset] = static_cast<T>(kUnfoldPaddingValue);
+    }
+  }
+}
+
+}  // namespace
+
+template<typename T, typename INDEX_T, int NDIM, int SDIM>
+struct UnfoldKernelUtil<DeviceType::kGPU, T, INDEX_T, NDIM, SDIM> {
+  using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
+  static void Forward(DeviceCtx* ctx, const void* params, const T* input_ptr, T* output_ptr) {
+    const auto* unfold_params = static_cast<const ParamType*>(params);
+    CudaUnfoldForward<T, INDEX_T, NDIM, SDIM>
+        <<<GetNumBlocks(unfold_params->out_elem_cnt), kBlockSize, 0, ctx->cuda_stream()>>>(
+            *unfold_params, input_ptr, output_ptr);
+  }
+};
+INSTANTIATE_UNFOLD_KERNEL_UTIL_FOR_DEVICE(DeviceType::kGPU)
+}  // namespace user_op
+}  // namespace oneflow
+#endif  // WITH_CUDA
