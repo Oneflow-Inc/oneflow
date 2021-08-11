@@ -79,8 +79,9 @@ class MessagePool final {
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
     void RegisterMessagePool(){
-      
-      size_t ActorMsgSize = sizeof(ActorMsg);
+      ActorMsg msg;
+      size_t ActorMsgSize = sizeof(msg);
+      std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
       char * addr =(char*) malloc(RegisterMemorySize );
       ibv_mr * mr = ibv::wrapper.ibv_reg_mr_wrap(
