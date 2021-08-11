@@ -265,7 +265,7 @@ def _gen_tensor_str_template(inp, is_meta):
     elif inp.device.type != "cpu":
         raise RunTimeError("unknow device type")
     if inp.is_lazy:
-        suffixes.append("is_lazy ='True'")
+        suffixes.append("is_lazy='True'")
     
     # Inp is empty, meta or normal
     if inp.numel() == 0:
