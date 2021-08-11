@@ -49,6 +49,7 @@ class SGD(Optimizer):
         lr (float, optional): learning rate (default: 1e-3)
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
+
     """
 
     def __init__(
@@ -127,6 +128,7 @@ class SGD(Optimizer):
             lr = param_group["lr"]
             beta = param_group["momentum"]
             l2 = param_group["weight_decay"]
+            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
 
             optimizer_conf.set_base_learning_rate(lr)
             if beta == 0:
@@ -136,6 +138,5 @@ class SGD(Optimizer):
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
-                if not param.requires_grad:
-                    continue
-                optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)

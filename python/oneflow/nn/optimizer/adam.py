@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
+import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
 import oneflow as flow
@@ -51,6 +52,7 @@ class Adam(Optimizer):
         eps (float, optional): term added to the denominator to improve
             numerical stability (default: 1e-8)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
+        do_bias_correction (bool, optional): Whether do bias correction (default: False)
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
@@ -67,6 +69,7 @@ class Adam(Optimizer):
         eps: float = 1e-08,
         weight_decay: float = 0,
         amsgrad: bool = False,
+        do_bias_correction: bool = False,
     ):
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
@@ -79,6 +82,7 @@ class Adam(Optimizer):
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert amsgrad is False, "Not support AMSGrad now!"
+        self.do_bias_correction = do_bias_correction
         self._default_options["lr"] = lr
         self._default_options["eps"] = eps
         self._default_options["betas"] = betas
@@ -125,6 +129,12 @@ class Adam(Optimizer):
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
                 }
+                if self.do_bias_correction:
+                    kwargs["learning_rate_val"] = (
+                        param_group["lr"]
+                        * math.sqrt(1 - kwargs["beta2"] ** (self._state["step"] + 1))
+                        / (1 - kwargs["beta1"] ** (self._state["step"] + 1))
+                    )
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
@@ -133,3 +143,29 @@ class Adam(Optimizer):
                     self._op(param, param.grad, m_tensor, v_tensor, **kwargs)
             self._state["step"] = self._state["step"] + 1
             return loss
+
+    def generate_conf_for_graph(self, train_conf, vars_conf):
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+
+            lr = param_group["lr"]
+            l2 = param_group["weight_decay"]
+            beta1 = param_group["betas"][0]
+            beta2 = param_group["betas"][1]
+
+            epsilon = param_group["eps"]
+            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
+
+            optimizer_conf.set_base_learning_rate(lr)
+
+            optimizer_conf.mutable_adam_conf().set_beta1(beta1)
+            optimizer_conf.mutable_adam_conf().set_beta2(beta2)
+            optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
+            optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+                self.do_bias_correction
+            )  # TODO(zzk): Check this option
+
+            for param in param_group.parameters:
+                vars_conf[param].l2 = l2
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
