@@ -186,7 +186,7 @@ from oneflow.nn.modules.activation import silu_op as silu
 from oneflow.nn.modules.activation import selu_op as selu
 from oneflow.nn.modules.activation import softsign_op as softsign
 from oneflow.nn.modules.activation import mish_op as mish
-
+from oneflow.F import roll
 
 from oneflow.nn.modules.adaptive_pool import (
     adaptive_avg_pool1d,
@@ -329,3 +329,4 @@ from oneflow.nn.modules.scatter import *
 from . import autograd, distributed, linalg, optim, saved_model
 import oneflow.utils.data
 import oneflow.utils.vision
+

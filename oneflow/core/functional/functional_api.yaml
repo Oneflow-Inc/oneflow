@@ -121,7 +121,7 @@
   bind_python: True
 
 - name: "roll"
-  signature: "Tensor Roll(Tensor x)"
+  signature: "Tensor Roll(Tensor x, *, Int32List shifts, Int32List dims)"
   bind_python: True
 
 - name: "reduce_mean"

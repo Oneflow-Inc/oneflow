@@ -34,13 +34,20 @@ void Roll(DeviceCtx *ctx, std::vector<int32_t> move, oneflow::fixed_vector<long 
 
     int32_t len = dim[0];
     int32_t width = dim[1];
-    int32_t shift = move[0] % len;
-    int32_t cpyFirst = width*(len-shift);
-    int32_t cpySec = width*shift;
-    std::cout << "shift=" << shift << " width=" << width << " len="  << len << std::endl; 
-    memcpy(y, x + shift*width, cpyFirst*sizeof(T));
-    memcpy(y+cpyFirst, x, cpySec*sizeof(T));
+    int32_t shift = move[0]%len;
+    bool isPositive = (shift>=0)?1:0;
+    int32_t cpyFirst, cpySec;
+    cpyFirst = width*(len-shift);
+    cpySec = width*shift;      
+    if(isPositive) {
+        memcpy(y, x+cpySec, cpyFirst*sizeof(T));
+        memcpy(y+cpyFirst, x, cpySec*sizeof(T));     
+    } else {
+        memcpy(y, x+cpyFirst, cpySec*sizeof(T));
+        memcpy(y+cpySec, x, cpyFirst*sizeof(T));
+    }
 
+    // std::cout << "shift=" << shift << " width=" << width << " len="  << len << std::endl; 
 }
 
 template<DeviceType device_type, typename T>
