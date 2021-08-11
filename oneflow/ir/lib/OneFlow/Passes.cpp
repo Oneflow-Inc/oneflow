@@ -155,8 +155,7 @@ namespace mlir {
 
 namespace oneflow {
 
-LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
-  mlir::PassManager pm(context);
+void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createLowerOneFlowToTosaPass());                       // lower-oneflow-to-tosa
   pm.addPass(createCSEPass());                                      // cse
   pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());    // tosa-to-linalg-on-tensors
@@ -166,11 +165,18 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   pm.addPass(createTensorConstantBufferizePass());                  // tensor-constant-bufferize
   pm.addPass(createFuncBufferizePass());                            // func-bufferize
   pm.addPass(createBufferResultsToOutParamsPass());                 // buffer-results-to-out-params
-  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());       // convert-linalg-to-loops
-  pm.addNestedPass<FuncOp>(createLowerToCFGPass());                 // convert-scf-to-std
-  pm.addPass(createConvertLinalgToLLVMPass());                      // convert-linalg-to-llvm
-  pm.addPass(createMemRefToLLVMPass());                             // convert-memref-to-llvm
-  pm.addPass(createLowerToLLVMPass());                              // convert-std-to-llvm
+  pm.addPass(createCanonicalizerPass());
+  pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());
+}
+
+LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
+  mlir::PassManager pm(context);
+  AddLowerToLinalgMemRefPasses(pm);
+  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
+  pm.addNestedPass<FuncOp>(createLowerToCFGPass());            // convert-scf-to-std
+  pm.addPass(createConvertLinalgToLLVMPass());                 // convert-linalg-to-llvm
+  pm.addPass(createMemRefToLLVMPass());                        // convert-memref-to-llvm
+  pm.addPass(createLowerToLLVMPass());                         // convert-std-to-llvm
   return pm.run(module);
 }
 
