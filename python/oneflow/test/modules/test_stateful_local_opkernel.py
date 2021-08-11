@@ -17,16 +17,15 @@ limitations under the License.
 import os
 import unittest
 
-import oneflow.compatible.single_client.unittest
-from oneflow.compatible import single_client as flow
+import oneflow as flow
+import oneflow.unittest
+
+import numpy as np
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestStatefulLocalKernel(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n1d()
     def test_dynamic_attrs(test_case):
         x = (
             flow.builtin_op("constant")
@@ -43,6 +42,7 @@ class TestStatefulLocalKernel(flow.unittest.TestCase):
         y = op(x, axis=2)[0]
         test_case.assertEqual(y.shape, flow.Size((2, 3, 1)))
 
+    @flow.unittest.skip_unless_1n1d()
     def test_stateful_local_kernel(test_case):
         op1 = (
             flow.builtin_op("constant")
@@ -65,6 +65,25 @@ class TestStatefulLocalKernel(flow.unittest.TestCase):
         )
         x = op1()[0]
         x = op2(x, x)[0]
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_stateful_local_kernel_in_consistent_mode(test_case):
+        rank = int(os.getenv("RANK"))
+
+        x = flow.tensor(np.array([1, 2]) * (rank + 1)).to("cuda")
+        x = x.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.split(0))
+
+        y = flow.tensor([3, 4, 5]).to("cuda")
+        y = y.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+
+        # logical slice assign op needs sbp and logical shape from stateful local opkernel
+        x[:3] = y
+
+        x = x.to_consistent(sbp=flow.sbp.broadcast)
+
+        test_case.assertTrue(
+            np.array_equal(x.to_local().numpy(), np.array([3, 4, 5, 4]))
+        )
 
 
 if __name__ == "__main__":
