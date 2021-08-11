@@ -222,6 +222,7 @@ def randn_op(
     Returns a tensor filled with random numbers from a normal distribution with mean 0 and variance 1 (also called the standard normal distribution).
     
     The shape of the tensor is defined by the variable argument ``size``.
+
     Args:
         size (int... or flow.Size): Defining the shape of the output tensor.
           Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
