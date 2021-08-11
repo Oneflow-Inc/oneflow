@@ -250,10 +250,13 @@ def get_summarized_data(self):
         return flow.stack([get_summarized_data(x) for x in self])
 
 
-def _gen_tensor_str(inp):
+def _gen_tensor_str_template(inp, is_meta):
+    is_meta = is_meta or inp.is_lazy
     prefix = "tensor("
     indent = len(prefix)
     suffixes = []
+
+    # Inp is local or consistent
     if inp.is_consistent:
         suffixes.append(f"placement={str(inp.placement)}")
         suffixes.append(f"sbp={str(inp.sbp)}")
@@ -263,14 +266,19 @@ def _gen_tensor_str(inp):
         raise RunTimeError("unknow device type")
     if inp.is_lazy:
         suffixes.append("is_lazy ='True'")
-
+    
+    # Inp is empty, meta or normal
     if inp.numel() == 0:
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
         if inp.dim() != 1:
             suffixes.append("size=" + str(tuple(inp.shape)))
         tensor_str = "[]"
+    elif is_meta:
+        tensor_str = "..."
+        suffixes.append("size=" + str(tuple(inp.shape)))
     else:
         tensor_str = _tensor_str(inp, indent)
+
     suffixes.append("dtype=" + str(inp.dtype))
     if inp.grad_fn is not None:
         name = inp.grad_fn.name()
@@ -280,31 +288,10 @@ def _gen_tensor_str(inp):
 
     return _add_suffixes(prefix + tensor_str, suffixes, indent)
 
-
-def _gen_tensor_str_template(tensor, data_str):
-    prefix = "tensor("
-    indent = len(prefix)
-    suffixes = []
-    if tensor.is_local:
-        if tensor.device.type != "cpu" or (
-            tensor.device.type == "cuda" and tensor.device.index != 0
-        ):
-            suffixes.append("device='" + str(tensor.device) + "'")
-    else:
-        suffixes.append("placement=" + repr(tensor.placement).strip())
-        suffixes.append("sbp=" + repr(tensor.sbp).strip())
-    if tensor.is_lazy:
-        suffixes.append("is_lazy ='True'")
-
-    suffixes.append("dtype=" + str(tensor.dtype))
-    if tensor.grad_fn is not None:
-        name = tensor.grad_fn.name()
-        suffixes.append("grad_fn=<{}>".format(name))
-    elif tensor.requires_grad:
-        suffixes.append("requires_grad=True")
-    return _add_suffixes(prefix + data_str, suffixes, indent)
-
+def _gen_tensor_str(tensor):
+    return _gen_tensor_str_template(tensor, False)
 
 def _gen_tensor_meta_str(tensor):
-    data_str = repr(tensor.shape)
-    return _gen_tensor_str_template(tensor, data_str)
+    # meta
+    return _gen_tensor_str_template(tensor, True)
+

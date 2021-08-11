@@ -1129,7 +1129,7 @@ class Softsign(Module):
         >>> softsign = flow.nn.Softsign()
         >>> out = softsign(input)
         >>> out
-        tensor([0.5   , 0.6667, 0.75  ], dtype=oneflow.float32)
+        tensor([0.5000, 0.6667, 0.7500], dtype=oneflow.float32)
     """
 
     def __init__(self, inplace: bool = False):
