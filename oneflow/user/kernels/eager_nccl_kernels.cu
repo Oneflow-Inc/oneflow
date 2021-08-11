@@ -98,8 +98,6 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape(), out->shape());
-    CHECK_EQ(in->data_type(), out->data_type());
     int64_t root = ctx->Attr<int64_t>("root");
     if (GlobalProcessCtx::Rank() == root) {
       CHECK_EQ(in->shape(), out->shape());
