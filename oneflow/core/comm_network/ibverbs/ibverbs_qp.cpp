@@ -206,7 +206,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
     sge.lkey = local_mem.mr()->lkey;
     wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
     // std::cout<<"In PostReadRequest,the lkey:"<<sge.lkey << std::endl;
-    // std::cout<<"In PostReadRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
+    std::cout<<"In PostReadRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
     wr.next = nullptr;
     wr.sg_list = &sge;
     wr.num_sge = 1;
@@ -233,7 +233,7 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   sge.lkey = msg_mr->lkey();
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   // std::cout<<"In PostSendRequest,the lkey:"<<sge.lkey << std::endl;
-  // std::cout<<"In PostSendRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
+  std::cout<<"In PostSendRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
   wr.next = nullptr;
   wr.sg_list = &sge;
   wr.num_sge = 1;
@@ -312,7 +312,7 @@ void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
   // sge.lkey = msg_mr->mem_desc().mr()->lkey;
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   // std::cout<<"In PostRecvRequest,the lkey:"<<sge.lkey << std::endl;
-  // std::cout<<"In PostRecvRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
+  std::cout<<"In PostRecvRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
   wr.next = nullptr;
   wr.sg_list = &sge;
   wr.num_sge = 1;
