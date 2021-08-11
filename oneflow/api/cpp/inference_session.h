@@ -26,11 +26,10 @@ struct ModelVersionPolicy {
   int version = 1;
 };
 
-class SessionOption {
- public:
-  SessionOption() : device_tag("gpu"), device_num(1), is_mirrored_view(false) {}
+struct SessionOption {
+  SessionOption() : device_tag("gpu"), device_num(1), 
+                    is_mirrored_view(false), is_async(false) {}
 
- private:
   std::string device_tag;
   int device_num;
   bool is_mirrored_view;
@@ -43,44 +42,44 @@ class InferenceSession {
   InferenceSession(InferenceSession&&) = delete;
   ~InferenceSession();
 
-  Maybe<void> Init();
-  void Close();
-  void OpenCtx(std::string job_name, JobSignatureDef signature, int batch_size);
-  void CloseCtx();
-  void Compile(std::vector<OperatorConf> op_list);
   void Launch();
+  void Close();
   void LoadModel(std::string saved_model_dir,
                       int model_version,
                       std::string saved_model_meta_file_basename,
                       std::string graph_name = "",
                       std::string signature_name = "");
-  void Run(std::string job_name);
-  void AsyncRun(std::string job_name);
+  std::map<std::string, Tensor> Run(std::string job_name, std::map<std::string, Tensor> args);
+
+ private:
+  enum class SessionStatus { OPEN = 1, RUNNING = 2, CLOSED = 3 };
+
+  Maybe<void> Init();
+  void OpenCtx(std::string job_name, JobSignatureDef signature, int batch_size);
+  void CloseCtx();
+  void Compile(std::vector<OperatorConf> op_list);
+
+  std::shared_ptr<cfg::JobConfProto> GetJobConf(std::string job_name);
+  
+  void RunJob();
+  Maybe<void> RunPushJobs(std::map<std::string, Tensor> args);
+  void RunPullJobs();
+  Maybe<void> RunLoadCheckpointJob();
+
   void WaitForAllJobsFinished();
 
   void SetCheckpointPath(std::string checkpoint_path);
   void SetJobSignature(std::string job_name, JobSignatureDef)
   void SetJobBatchSize(std::string job_name, int batch_size);
 
+  Maybe<void> CheckStatus(const std::vector<SessionStatus>& status);
+  Maybe<void> CheckStatus(SessionStatus status);
+  Maybe<void> MakeConfigProto();
+
   void PrintJobSet();
   std::vector<JobConfigProto> ListJobs();
   std::vector<std::string> ListInputs();
   std::vector<std::string> ListOutputs();
-
- private:
-  enum class SessionStatus { OPEN = 1, RUNNING = 2, CLOSED = 3 };
-
-  Maybe<void> InitEventLoop();
-  bool CheckStatus(const std::vector<SessionStatus>& status);
-  void MakeConfigProto();
-
-  std::shared_ptr<cfg::JobConfProto> GetJobConf(std::string job_name);
-  
-  void RunJob();
-  void RunPushJobs();
-  void RunPullJobs();
-  void MakePullJobCb();
-  void RunLoadCheckpointJob();
 
   SessionOption option_;
   bool is_mirrored_;
@@ -88,9 +87,7 @@ class InferenceSession {
   std::map<std::string, std::shared_ptr<cfg::JobConfigProto>> job_name2job_conf_;
   InterUserJobInfo inter_user_job_info_;
   std::string cur_job_name_;
-  std::map<std::string, OpBlobInfo> inferface_name2info_;
-  std::map<std::string, std::future> output_name2future_;
-  std::vector<std::future> job_futures_;
+  std::vector<std::shared_ptr<std::promise<void>>> job_promises_;
   SessionStatus status_;
  
   ConfigProto config_proto_;

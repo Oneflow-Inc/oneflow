@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <map>
+
 #include "oneflow/core/persistence/posix/posix_file_system.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/job_desc.h"
@@ -21,9 +23,9 @@ limitations under the License.
 #include "oneflow/api/python/env/env_api.h"
 #include "oneflow/api/python/session/session_api.h"
 #include "oneflow/api/python/job_build/job_build_and_infer_api.h"
-#include "oneflow/api/cpp/job_instance.h"
 #include "oneflow/api/cpp/env/env_util.h"
 #include "oneflow/api/cpp/session/session_util.h"
+#include "oneflow/api/cpp/job_instance.h"
 #include "oneflow/api/cpp/inference_session.h"
 
 namespace oneflow {
@@ -39,23 +41,6 @@ inline int FindModelLatestVersion(std::string saved_model_dir) {
     return std::max(std::begin(versions), std::end(versions));
 }
 
-void SignatureProtoToCfg(const JobSignatureDef& signature_proto, 
-                         cfg::JobSignatureDef& mut_signature_cfg) {}
-  for (input_name, input_def) in signature_proto.inputs.items():
-      input_def_cfg = job_conf_proto_cfg.JobInputDef()
-      input_def_cfg.mutable_lbi().set_op_name(input_def.lbi.op_name)
-      input_def_cfg.mutable_lbi().set_blob_name(input_def.lbi.blob_name)
-      _inferface_blob_conf_proto_to_cfg(
-          input_def.blob_conf, input_def_cfg.mutable_blob_conf()
-      )
-      mut_signature_cfg.mutable_inputs()[input_name].CopyFrom(input_def_cfg)
-  for (output_name, output_def) in signature_proto.outputs.items():
-      output_def_cfg = job_conf_proto_cfg.JobOutputDef()
-      output_def_cfg.mutable_lbi().set_op_name(output_def.lbi.op_name)
-      output_def_cfg.mutable_lbi().set_blob_name(output_def.lbi.blob_name)
-        mut_signature_cfg.mutable_outputs()[output_name].CopyFrom(output_def_cfg)
-}
-
 bool NeedCheckDeviceTag(OpConf& op_conf) {
   if (op_conf.has_return_conf()) {
     return false;
@@ -66,7 +51,6 @@ bool NeedCheckDeviceTag(OpConf& op_conf) {
 InferenceSession::InferenceSession(const SessionOption& option)
   : option_(option), is_mirrored_(option.is_mirrored_view)
     checkpoint_path_(""), cur_job_name_("") {
-  InitEventLoop();
   Init();
 }
 
@@ -95,7 +79,7 @@ Maybe<void> InferenceSession::Init() {
 
   // session init
   if(!IsSessionInited()) {
-    this->MakeConfigProto();
+    JUST(this->MakeConfigProto());
     TryCompleteConfigProto(this->config_proto_);
     InitLazyGlobalSession(this->config_proto_);
   }
@@ -108,8 +92,7 @@ Maybe<void> InferenceSession::Init() {
 }
 
 void InferenceSession::Close() {
-  this->event_loop_.run_until_complete(this->wait_for_all_jobs_finished())
-  this->event_loop_.close()
+  WaitForAllJobsFinished();
 
   if(this->status_ == SessionStatus::RUNNING) {
     StopLazyGlobalSession();
@@ -122,7 +105,7 @@ void InferenceSession::Close() {
 }
 
 void InferenceSession::OpenCtx(std::string job_name, JobSignatureDef signature, int batch_size = 0) {
-  this->CheckStatus(SessionStatus::OPEN);
+  JUST(this->CheckStatus(SessionStatus::OPEN));
   JobBuildAndInferCtx_Open(job_name);
 
   if (!signature.empty()) {
@@ -158,18 +141,18 @@ void InferenceSession::OpenCtx(std::string job_name, JobSignatureDef signature, 
   std::shared_ptr<Scope> scope = MakeInitialScope(job_conf, device_tag, 
                                     device_ids, nullptr, this->is_mirrored_);
 
-  ThreadLocalScopeStackPush(scope).GetOrThrow();
+  JUST(ThreadLocalScopeStackPush(scope));
   this->cur_job_name_ = job_name;
 }
 
 void InferenceSession::CloseCtx() {
   this->cur_job_name_.clear();
-  ThreadLocalScopeStackPop().GetOrThrow();
+  JUST(ThreadLocalScopeStackPop());
   JobBuildAndInferCtx_Close();
 }
 
 void InferenceSession::Compile(std::vector<OperatorConf>& op_list) {
-  this->CheckStatus(SessionStatus::OPEN);
+  JUST(this->CheckStatus(SessionStatus::OPEN));
 
   std::shared_ptr<Scope> scope = GetCurrentScope().GetPtrOrThrow();
   for (auto& op_conf : op_list) {
@@ -187,11 +170,10 @@ void InferenceSession::Compile(std::vector<OperatorConf>& op_list) {
 }
 
 void InferenceSession::Launch() {
-  this->CheckStatus(SessionStatus::OPEN);
+  JUST(this->CheckStatus(SessionStatus::OPEN));
   StartLazyGlobalSession();
-  std::string inter_user_job_info_str = GetSerializedInterUserJobInfo();
-  this->inter_user_job_info_.ParseFromString(inter_user_job_info_str);
-  this->RunLoadCheckpointJob();
+  this->inter_user_job_info_.ParseFromString(GetSerializedInterUserJobInfo());
+  JUST(this->RunLoadCheckpointJob());
   this->status_ = SessionStatus::RUNNING;
 }
 
@@ -233,7 +215,7 @@ Maybe<void> InferenceSession::LoadModel(std::string saved_model_dir,
   }
 
   // set checkpoint
-  this->SetCheckpointPath(JoinPath(saved_model_path, saved_model_proto.checkpoint_dir));
+  this->SetCheckpointPath(JoinPath(saved_model_path, saved_model_proto.checkpoint_dir()));
 
   // get signature
   JobSignatureDef signature;
@@ -257,107 +239,54 @@ Maybe<void> InferenceSession::LoadModel(std::string saved_model_dir,
 
   // compile job
   this->OpenCtx(graph_name, signature);
-  this->Compile(graph_def.op_list);
+  this->Compile(graph_def.op_list());
   this->CloseCtx();
 
   return Maybe<void>::Ok();
 }
 
-void InferenceSession::Run(std::string job_name) {
-  this->CheckStatus(SessionStatus::RUNNING);
-  return this->event_loop_.run_until_complete(this->AsyncRun(job_name, **kwargs));
-}
-
-void InferenceSession::AsyncRun(std::string job_name) {
-  this->CheckStatus(SessionStatus::RUNNING);
-  this->RunPushJobs(**kwargs);
+std::map<std::string, Tensor> 
+InferenceSession::Run(std::string job_name,
+                      std::map<std::string, Tensor> args) {
+  JUST(this->CheckStatus(SessionStatus::RUNNING));
+  JUST(this->RunPushJobs(args));
   auto job_inst = MakeUserJobInstance(job_name);
   this->RunJob(job_inst);
-  std::vector<std::future> output_futures;
-  auto future_map = this->RunPullJobs(job_name);
-  for(auto& pair : future_map) {
-    output_futures.push_back(pair.second);
-  }
-  return await asyncio.gather(*output_futures);
+  return this->RunPullJobs(job_name);
 }
 
 void InferenceSession::WaitForAllJobsFinished() {
-  await asyncio.gather(*this->job_futures_);
-  this->job_futures_.clear();
+  for(auto promise : this->job_promises_) {
+    promise->get_future().wait();
+  }
+  this->job_promises_.clear();
 }
 
 void InferenceSession::SetCheckpointPath(std::string checkpoint_path) {
-  this->CheckStatus(SessionStatus::OPEN);
+  JUST(this->CheckStatus(SessionStatus::OPEN));
   this->checkpoint_path_ = checkpoint_path;
 }
 
 void InferenceSession::SetJobSignature(std::string job_name, JobSignatureDef signature) {
-  std::shared_ptr<cfg::JobConfigProto> job_conf = this->GetJobConf(job_name);
-  SignatureProtoToCfg(signature, *job_conf->mutable_signature());
+  std::shared_ptr<JobConfigProto> job_conf = this->GetJobConf(job_name);
+  job_conf->set_signature(signature);
 }
 
 void InferenceSession::SetJobBatchSize(std::string job_name, int batch_size) {
-  std::vector<SessionStatus> status = { SessionStatus::OPEN };
-  this->CheckStatus(status);
-  std::shared_ptr<cfg::JobConfigProto> job_conf = this->GetJobConf(job_name);
+  JUST(this->CheckStatus(SessionStatus::OPEN));
+  std::shared_ptr<JobConfigProto> job_conf = this->GetJobConf(job_name);
   for (auto& pair : job_conf->mutable_signature()->mutable_inputs()) {
-    ShapeProto* mut_shape = pair.second.mutable_blob_conf()->mutable_shape();
-    mut_shape->set_dim(batch_size);
+    pair.second.mutable_blob_conf()->mutable_shape()->mutable_dim()->at(0) = batch_size;
   }
 }
 
-void InferenceSession::PrintJobSet() {
-  this->CheckStatus(SessionStatus::OPEN, SessionStatus::RUNNING);
-  const JobSet& job_set = JUST(GetJobSet());
-  for (const auto& job : job_set.job()) {
-      LOG(INFO) << "job_name:", job.job_conf().job_name();
-      for (const auto& op_conf : job.net().op()) {
-          LOG(INFO) << "\top_name:" << op_conf.name();
-      }
-  }
-}
-
-std::vector<std::string> InferenceSession::ListJobs() {
-  this->CheckStatus(SessionStatus::RUNNING);
-  std::vector<std::string> job_names;
-  for(auto& pair : this->job_name2job_conf_) {
-    job_names.push_back(pair.first);
-  }
-  return job_names;
-}
-
-std::vector<std::string> InferenceSession::ListInputs() {
-  this->CheckStatus(SessionStatus::RUNNING);
-  std::vector<std::string> input_names;
-  for (auto& pair : this->inter_user_job_info_.input_or_var_op_name2push_job_name) {
-    input_names.push_back(pair.first);
-  }
-  return input_names;
-}
-
-std::vector<std::string> InferenceSession::ListOutputs() {
-  this->CheckStatus(SessionStatus::RUNNING);
-  std::vector<std::string> output_names;
-  for (auto& pair : this->inter_user_job_info_.output_or_var_op_name2pull_job_name) {
-    output_names.push_back(pair.first);
-  }
-  return output_names;
-}
-
-Maybe<void> InferenceSession::InitEventLoop() {
-  this->event_loop_ = asyncio.get_event_loop()
-  if this->event_loop_.is_closed():
-      asyncio.set_event_loop(asyncio.new_event_loop())
-      this->event_loop_ = asyncio.get_event_loop()
-}
-
-void InferenceSession::CheckStatus(SessionStatus status) {
+Maybe<void> InferenceSession::CheckStatus(SessionStatus status) {
   bool check_success = (status == this->status_);
   CHECK_OR_RETURN(check_success) 
     << Error::ValueError("The calling to " + caller_func_name + " is not allowed in current status");
 }
 
-void InferenceSession::CheckStatus(const std::vector<SessionStatus>& status) {
+Maybe<void> InferenceSession::CheckStatus(const std::vector<SessionStatus>& status) {
   bool check_success = false;
   for(auto stat : status) {
     if(stat == this->status_) {
@@ -369,7 +298,7 @@ void InferenceSession::CheckStatus(const std::vector<SessionStatus>& status) {
     << Error::ValueError("The calling to " + caller_func_name + " is not allowed in current status");
 }
 
-void InferenceSession::MakeConfigProto() {
+Maybe<void> InferenceSession::MakeConfigProto() {
   this->config_proto_ = GetDefaultConfigProto();
 
   if(this->option_.device_tag == "gpu") {
@@ -383,15 +312,15 @@ void InferenceSession::MakeConfigProto() {
   }
 
   this->config_proto_.mut_resource()->set_enable_legacy_model_io(true);
+  return Maybe<void>::Ok();
 }
 
-std::shared_ptr<cfg::JobConfigProto>& InferenceSession::GetJobConf(std::string job_name) {
-  if (std::find(std::begin(this->job_name2job_conf_), 
-                std::end(this->job_name2job_conf_), 
-                job_name) != std::end(this->job_name2job_conf_) {
+std::shared_ptr<JobConfigProto>& InferenceSession::GetJobConf(std::string job_name) {
+  if (std::find(std::begin(this->job_name2job_conf_), std::end(this->job_name2job_conf_), 
+          job_name) != std::end(this->job_name2job_conf_) {
     return this->job_name2job_conf_[job_name];
   } else {
-    std::shared_ptr<cfg::JobConfigProto> job_conf = std::make_shared<cfg::JobConfigProto>();
+    std::shared_ptr<JobConfigProto> job_conf = std::make_shared<JobConfigProto>();
     job_conf->set_job_name(job_name);
     job_conf->mutable_predict_conf();
     this->job_name2job_conf_[job_name] = job_conf;
@@ -399,78 +328,101 @@ std::shared_ptr<cfg::JobConfigProto>& InferenceSession::GetJobConf(std::string j
   }
 }
 
-void InferenceSession::RunJob(std::shared_ptr<JobInstance> job_inst) {
-  std::promise<void> job_promise;
-  auto job_finish_cb = [job_promise](){ job_promise.set_value(); };
+void InferenceSession::RunJob(std::shared_ptr<CPPJobInstance> job_inst) {
+  std::shared_ptr<std::promise<void>> job_promise = std::make_shared_ptr<std::promise<void>>();
+  auto job_finish_cb = [&job_promise](){ job_promise->set_value(); };
   job_inst->AddPostFinishCallback(job_finish_cb);
   LaunchJob(job_inst);
-  this->job_futures_.append(job_promise.get_future());
+  this->job_promises_.append(job_promise);
 }
 
-void InferenceSession::RunPushJobs() {
-  for (auto& pair : this->inter_user_job_info_.input_or_var_op_name2push_job_name) {
-      std::string input_name = pair.first;
-      std::string push_job_name = pair.second;
-      if input_name not in kwargs:
-          raise ValueError('input "{}" is absent'.format(input_name))
+Maybe<void> InferenceSession::RunPushJobs(std::map<std::string, Tensor> args) {
+  for (auto& pair : this->inter_user_job_info_.input_or_var_op_name2push_job_name()) {
+    std::string input_name = pair.first;
+    std::string push_job_name = pair.second;
+    if(!args.count(input_name)) {
+      CHECK_OR_RETURN(false) 
+        << Error::ValueError("input \"" + input_name + "\" is absent");
+    }
 
-      input_numpy = kwargs[input_name]
-      if not isinstance(input_numpy, np.ndarray):
-          raise ValueError('input "{}" requires numpy.ndarray'.format(input_name))
+    Tensor input_tensor = args[input_name];
 
-      push_fn = input_blob_util._MakePushNdarrayCallback(input_numpy)
-      auto push_job_inst = MakePushJobInstance(push_job_name, input_name, push_fn);
-      this->RunJob(push_job_inst);
+    auto push_fn = [&input_tensor](OfBlob*){
+      // TODO
+    };
+    auto push_job_inst = MakePushJobInstance(push_job_name, input_name, push_fn);
+    this->RunJob(push_job_inst);
   }
+  return Maybe<void>::Ok();
 }
 
-std::map<std::string, std::future> InferenceSession::RunPullJobs() {
-  std::map<std::string, std::future> output_futures;
-  for (auto& pair : this->inter_user_job_info_.output_or_var_op_name2pull_job_name) {
+std::map<std::string, Tensor> InferenceSession::RunPullJobs() {
+  std::map<std::string, Tensor>> output_tensors;
+  for (auto& pair : this->inter_user_job_info_.output_or_var_op_name2pull_job_name()) {
       std::string output_name = pair.first;
       std::string pull_job_name = pair.second;
-      std::promise<void> pull_job_promise;
-      auto pull_fn = this->MakePullJobCb(output_name, user_job_name, pull_job_promise);
-      auto pull_job_inst = this->MakePullJobInstance(pull_job_name, output_name, pull_fn);
+      std::promise<Tensor> pull_job_promise;
+      auto pull_fn = [&pull_job_promise](OfBlob*) {
+        // TODO
+      };
+      auto pull_job_inst = MakePullJobInstance(pull_job_name, output_name, pull_fn);
       this->RunJob(pull_job_inst);
-      output_futures[output_name] = pull_job_promise.get_future();
+      output_tensors[output_name] = pull_job_promise.get_future().get();
   }
-  return output_futures;
+  return output_tensors;
 }
 
-std::function<void(OfBlob*)> InferenceSession::MakePullJobCb(std::string output_name,
-    std::string user_job_name, std::promise<void> pull_job_promise) {
-  std::string output_lbn = JobBuildAndInferCtx_GetOpBlobLbn(user_job_name, output_name, "out");
-
-  // std::string split_axis_str = JobBuildAndInferCtx_GetSplitAxisFromProducerView(user_job_name, output_lbn);
-  // cfg::OptInt64 split_axis;
-  // CHECK_OR_RETURN(TxtString2PbMessage(split_axis_str, &split_axis)) << "OptInt64 parse failed";
-  // if (split_axis.has_value()) {
-  //   int64_t split_axis_val = split_axis.value();
-  // }
-
-  auto pull_fn = [](OfBlob* ofblob) {
-      ndarray = ofblob.CopyToNdarray();
-      this->event_loop_.call_soon_threadsafe(future.set_result, ndarray)
-  };
-
-  return pull_fn;
-}
-
-void InferenceSession::RunLoadCheckpointJob() {
+Maybe<void> InferenceSession::RunLoadCheckpointJob() {
   CHECK_OR_RETURN(!this->checkpoint_path_.empty()) 
     << Error::ValueError(std::string("checkpoint path not set")); 
 
   auto copy_model_load_path = [](OfBlob* ofblob) {
-      ofblob.CopyFromNdarray(
-          np.frombuffer(this->checkpoint_path_.encode("ascii"), dtype=np.int8)
-      )
+    // TODO
   };
 
-  auto load_checkpoint_job_inst = MakeUserInstance(
-    this->inter_user_job_info_.global_model_load_job_name);
+  auto load_checkpoint_job_inst = MakeUserJobInstance(
+      this->inter_user_job_info_.global_model_load_job_name());
   load_checkpoint_job_inst->SetPushCb(copy_model_load_path);
   this->RunJob(load_checkpoint_job_inst);
+  return Maybe<void>::Ok();
+}
+
+void InferenceSession::PrintJobSet() {
+  JUST(this->CheckStatus({SessionStatus::OPEN, SessionStatus::RUNNING}));
+  const JobSet& job_set = JUST(GetJobSet());
+  for (const auto& job : job_set.job()) {
+      LOG(INFO) << "job_name:", job.job_conf().job_name();
+      for (const auto& op_conf : job.net().op()) {
+          LOG(INFO) << "\top_name:" << op_conf.name();
+      }
+  }
+}
+
+std::vector<std::string> InferenceSession::ListJobs() {
+  JUST(this->CheckStatus(SessionStatus::RUNNING));
+  std::vector<std::string> job_names;
+  for(auto& pair : this->job_name2job_conf_) {
+    job_names.push_back(pair.first);
+  }
+  return job_names;
+}
+
+std::vector<std::string> InferenceSession::ListInputs() {
+  JUST(this->CheckStatus(SessionStatus::RUNNING));
+  std::vector<std::string> input_names;
+  for (auto& pair : this->inter_user_job_info_.input_or_var_op_name2push_job_name()) {
+    input_names.push_back(pair.first);
+  }
+  return input_names;
+}
+
+std::vector<std::string> InferenceSession::ListOutputs() {
+  JUST(this->CheckStatus(SessionStatus::RUNNING));
+  std::vector<std::string> output_names;
+  for (auto& pair : this->inter_user_job_info_.output_or_var_op_name2pull_job_name()) {
+    output_names.push_back(pair.first);
+  }
+  return output_names;
 }
 
 }  // namespace oneflow

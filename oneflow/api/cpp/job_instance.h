@@ -18,27 +18,27 @@ limitations under the License.
 
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/api/python/job_build/job_build_and_infer_api.h"
-#include "oneflow/core/job/foreign_job_instance.h"
+#include "oneflow/core/job/job_instance.h"
 
 namespace oneflow {
 
-class JobInstance : public ForeignJobInstance {
+class CPPJobInstance : public JobInstance {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(JobInstance);
-  explicit JobInstance(std::string job_name,
-                       std::string sole_input_op_name_in_user_job = "",
-                       std::string sole_output_op_name_in_user_job = "",
-                       push_cb = []{},
-                       pull_cb = []{},
-                       finish_cb = []{});
-  ~JobInstance();
+  OF_DISALLOW_COPY_AND_MOVE(CPPJobInstance);
+  explicit CPPJobInstance(std::string job_name,
+                          std::string sole_input_op_name_in_user_job,
+                          std::string sole_output_op_name_in_user_job,
+                          std::function<void(OfBlob*)> push_cb,
+                          std::function<void(OfBlob*)> pull_cb,
+                          std::function<void()> finish_cb);
+  ~CPPJobInstance();
 
   std::string job_name() override const;
   std::string sole_input_op_name_in_user_job() override const;
   std::string sole_output_op_name_in_user_job() override const;
   void PushBlob(uint64_t ofblob_ptr) override const;
   void PullBlob(uint64_t ofblob_ptr) override const;
-  void Finish() const;
+  void Finish() override const;
   void AddPostFinishCallback();
 
  private:
@@ -49,33 +49,33 @@ class JobInstance : public ForeignJobInstance {
   std::function<void(OfBlob*)> push_cb_;
   std::function<void(OfBlob*)> pull_cb_;
   std::function<void()> finish_cb_;
-  std::vector<std::function<void(JobInstance*)>> post_finish_cbs_;
+  std::vector<std::function<void(CPPJobInstance*)>> post_finish_cbs_;
 };
 
-std::shared_ptr<JobInstance> MakeUserJobInstance(
+std::shared_ptr<CPPJobInstance> MakeUserJobInstance(
   std::string job_name, 
-  std::function<void()> finish_cb
+  std::function<void()> finish_cb = std::function<void()>()
 );
 
-std::shared_ptr<JobInstance> MakePullJobInstance(
+std::shared_ptr<CPPJobInstance> MakePullJobInstance(
   std::string job_name, 
   std::string op_name,
   std::function<void(OfBlob*)> pull_cb,
-  std::function<void()> finish_cb
+  std::function<void()> finish_cb = std::function<void()>()
 );
 
-std::shared_ptr<JobInstance> MakePushJobInstance(
+std::shared_ptr<CPPJobInstance> MakePushJobInstance(
   std::string job_name, 
   std::string op_name,
   std::function<void(OfBlob*)> push_cb,
-  std::function<void()> finish_cb
+  std::function<void()> finish_cb = std::function<void()>()
 );
 
-std::shared_ptr<JobInstance> MakeArgPassJobInstance(
+std::shared_ptr<CPPJobInstance> MakeArgPassJobInstance(
   std::string job_name,
-  std::string src_op_name;
-  std::string dst_op_name;
-  std::function<void()> finish_cb
+  std::string src_op_name,
+  std::string dst_op_name,
+  std::function<void()> finish_cb = std::function<void()>()
 );
 
 }  // namespace oneflow

@@ -18,74 +18,84 @@ limitations under the License.
 
 namespace oneflow {
 
-explicit JobInstance::JobInstance(std::string job_name,
-    std::string sole_input_op_name_in_user_job = "",
-    std::string sole_output_op_name_in_user_job = "",
-    push_cb = []{},
-    pull_cb = []{},
-    finish_cb = []{}) {
-  
+explicit CPPJobInstance::CPPJobInstance(std::string job_name,
+                                        std::string sole_input_op_name_in_user_job,
+                                        std::string sole_output_op_name_in_user_job,
+                                        std::function<void(OfBlob*)> push_cb,
+                                        std::function<void(OfBlob*)> pull_cb,
+                                        std::function<void()> finish_cb) 
+    : job_name_(job_name), 
+      sole_input_op_name_in_user_job_(sole_input_op_name_in_user_job),
+      sole_output_op_name_in_user_job_(sole_output_op_name_in_user_job),
+      push_cb_(push_cb),
+      pull_cb_(pull_cb),
+      finish_cb_(finish_cb) {}
+
+~CPPJobInstance::CPPJobInstance(){}
+
+std::string CPPJobInstance::job_name() override const { return this->job_name_; }
+
+std::string CPPJobInstance::sole_input_op_name_in_user_job() override const {
+  return this->sole_input_op_name_in_user_job_;
 }
 
-~JobInstance::JobInstance(){}
-
-std::string JobInstance::job_name() override const { return this->job_name_; }
-
-std::string JobInstance::sole_input_op_name_in_user_job() override const {
-    return this->sole_input_op_name_in_user_job_;
+std::string CPPJobInstance::sole_output_op_name_in_user_job() override const {
+  return this->sole_output_op_name_in_user_job_;
 }
 
-std::string JobInstance::sole_output_op_name_in_user_job() override const {
-    return this->sole_output_op_name_in_user_job_;
+void CPPJobInstance::PushBlob(uint64_t ofblob_ptr) override const {
+  this->push_cb_(reinterpret_cast<OfBlob*>(of_blob_ptr));
 }
 
-void JobInstance::PushBlob(uint64_t ofblob_ptr) override const {
-    this->push_cb_(reinterpret_cast<OfBlob*>(of_blob_ptr));
+void CPPJobInstance::PullBlob(uint64_t ofblob_ptr) override const {
+  this->pull_cb_(reinterpret_cast<OfBlob*>(of_blob_ptr));
 }
 
-void JobInstance::PullBlob(uint64_t ofblob_ptr) override const {
-    this->pull_cb_(reinterpret_cast<OfBlob*>(of_blob_ptr));
+void CPPJobInstance::Finish() override const {
+  this->finish_cb_();
+
+  for (auto& post_finish_cb : this->post_finish_cbs_)
+      post_finish_cb(this);
 }
 
-void JobInstance::Finish() const {
-    this->finish_cb_();
-
-    for (auto& post_finish_cb : this->post_finish_cbs_)
-        post_finish_cb(this);
+void CPPJobInstance::AddPostFinishCallback(std::function<void(JobInstance*)> cb) {
+  this->post_finish_cbs_.push_back(cb);
 }
 
-void JobInstance::AddPostFinishCallback(std::function<void(JobInstance*)> cb) {
-    this->post_finish_cbs_.push_back(cb);
-}
-
-std::shared_ptr<JobInstance> MakeUserJobInstance(
+std::shared_ptr<CPPJobInstance> MakeUserJobInstance(
   std::string job_name, 
   std::function<void()> finish_cb) {
-  return std::make_shared<JobInstance>()
+  return std::make_shared<CPPJobInstance>(job_name, "", "",
+    std::function<void(OfBlob*)>(), std::function<void(OfBlob*)>(),
+    finish_cb);
 }
 
-std::shared_ptr<JobInstance> MakePullJobInstance(
+std::shared_ptr<CPPJobInstance> MakePullJobInstance(
   std::string job_name, 
   std::string op_name,
   std::function<void(OfBlob*)> pull_cb,
-  std::function<void()> finish_cb {
-
+  std::function<void()> finish_cb) {
+  return std::make_shared<CPPJobInstance>(
+      job_name, op_name, "", std::function<void(OfBlob*)>(), pull_cb, finish_cb);
 }
 
-std::shared_ptr<JobInstance> MakePushJobInstance(
+std::shared_ptr<CPPJobInstance> MakePushJobInstance(
   std::string job_name, 
   std::string op_name,
   std::function<void(OfBlob*)> push_cb,
-  std::function<void()> finish_cb {
-
+  std::function<void()> finish_cb) {
+  return std::make_shared<CPPJobInstance>(
+      job_name, "", op_name, push_cb, std::function<void(OfBlob*)>(), finish_cb);
 }
 
-std::shared_ptr<JobInstance> MakeArgPassJobInstance(
+std::shared_ptr<CPPJobInstance> MakeArgPassJobInstance(
   std::string job_name,
   std::string src_op_name;
   std::string dst_op_name;
-  std::function<void()> finish_cb {
-
+  std::function<void()> finish_cb) {
+  return std::make_shared<CPPJobInstance>(job_name, src_op_name, dst_op_name,
+    std::function<void(OfBlob*)>(), std::function<void(OfBlob*)>(),
+    finish_cb);
 }
 
 }  // namespace oneflow
