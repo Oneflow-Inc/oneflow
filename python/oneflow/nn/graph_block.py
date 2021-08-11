@@ -154,6 +154,8 @@ class Block(object):
                 + meta_repr_str
                 + ")"
             )
+            if not isinstance(arg, Tensor):
+                in_str = "[WARNING]" + in_str
             self._args_repr.append(in_str)
             if self._debug:
                 print(in_str)
@@ -167,16 +169,11 @@ class Block(object):
 
         result = self._origin.__class__.__call__(self, *args)
 
-        if result is None:
-            outputs = tuple()
-        elif isinstance(result, (tuple, list)):
-            outputs = result
-        elif isinstance(result, Tensor):
+        outputs = ()
+        if not (type(result) is tuple or type(result) is list):
             outputs = (result,)
-        elif isinstance(result, TensorTuple):
-            outputs = result
         else:
-            raise ValueError(f"Unsupported result type {type(result)}")
+            outputs = result
 
         for idx, out in enumerate(outputs):
             out_repr = out._meta_repr() if isinstance(out, Tensor) else str(type(out))
