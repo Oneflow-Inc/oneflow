@@ -29,9 +29,9 @@ namespace oneflow {
 
 namespace vm {
 
-class Instruction;
-class MirroredObject;
-class RwMutexedObject;
+struct Instruction;
+struct MirroredObject;
+struct RwMutexedObject;
 
 enum OperandAccessType {
   kConstOperandAccess = 0,
@@ -60,7 +60,7 @@ OBJECT_MSG_BEGIN(RwMutexedObjectAccess);
   
 OBJECT_MSG_END(RwMutexedObjectAccess);
 
-class LogicalObject;
+struct LogicalObject;
 OBJECT_MSG_BEGIN(RwMutexedObject);
   // methods
 
@@ -69,16 +69,18 @@ OBJECT_MSG_BEGIN(RwMutexedObject);
   }
   OF_PUBLIC template<typename T> Maybe<const T&> Get() const {
     const T* obj = dynamic_cast<const T*>(&object());
+    const auto &origin_obj = *object_ptr();
     CHECK_NOTNULL_OR_RETURN(obj)
       << "cast to " << typeid(T).name() << "failed. "
-      << "type: " << (object_ptr() ? typeid(*object_ptr()).name() : "nullptr");
+      << "type: " << (object_ptr() ? typeid(origin_obj).name() : "nullptr");
     return *obj;
   }
   OF_PUBLIC template<typename T> Maybe<T*> Mut() {
     T* obj = dynamic_cast<T*>(object_ptr().get());
+    const auto &origin_obj = *object_ptr();
     CHECK_NOTNULL_OR_RETURN(obj)
       << "cast to " << typeid(T).name() << "failed. "
-      << "type: " << (object_ptr() ? typeid(*object_ptr()).name() : "nullptr");
+      << "type: " << (object_ptr() ? typeid(origin_obj).name() : "nullptr");
     return obj;
   }
   OF_PUBLIC template<typename T, typename... Args> T* Init(Args&&... args) {
@@ -114,7 +116,7 @@ OBJECT_MSG_BEGIN(MirroredObject);
   OBJECT_MSG_DEFINE_MAP_KEY(int64_t, global_device_id);
 OBJECT_MSG_END(MirroredObject);
 
-class VirtualMachine;
+struct VirtualMachine;
 OBJECT_MSG_BEGIN(LogicalObject);
   // methods
   OF_PUBLIC void __Init__(const ObjectId& logical_object_id) {

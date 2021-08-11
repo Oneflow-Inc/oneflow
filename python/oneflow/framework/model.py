@@ -31,7 +31,7 @@ import numpy as np
 import oneflow._oneflow_internal
 import oneflow.framework.dtype as dtype_util
 import oneflow.framework.typing as oneflow_typing
-from oneflow.framework.check_point_v2 import GetCheckpoint, LoadVariables, SaveVarDict
+from oneflow.framework.check_point_v2 import GetCheckpoint, SaveVarDict
 from oneflow.framework.function_util import FunctionConfig as ExecutionConfig
 from oneflow.framework.function_util import api_oneflow_function
 from oneflow.framework.local_blob import LocalBlob

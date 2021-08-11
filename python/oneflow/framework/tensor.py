@@ -25,9 +25,13 @@ from typing import Union
 
 
 Tensor = flow._oneflow_internal.Tensor
+TensorTuple = flow._oneflow_internal.TensorTuple
 
 
 def _tensor_numpy(eager_local_tensor):
+    assert (
+        not eager_local_tensor.is_lazy
+    ), "tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor."
     if eager_local_tensor.dtype == flow.tensor_buffer:
         shapes, dtypes = eager_local_tensor._tensor_buffer_shapes_and_dtypes
         tensors = flow.tensor_buffer_to_list_of_tensors(
@@ -104,6 +108,10 @@ def _str(self):
 
 def _repr(self):
     return tensor_str_util._gen_tensor_str(self)
+
+
+def _meta_repr(self):
+    return tensor_str_util._gen_tensor_meta_str(self)
 
 
 def _gt(self, other):
@@ -229,16 +237,15 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
     )
-    if np_arr.shape == ():
-        assert tuple(eager_local_tensor.shape) == (1,)
-    else:
-        assert np_arr.shape == tuple(eager_local_tensor.shape)
+    assert np_arr.shape == tuple(eager_local_tensor.shape)
     copy_from_numpy(np_arr)
 
 
 def _init_eager_local_tensor_by_initializer_conf(
-    eager_local_tensor, initializer_conf, random_seed=0
+    eager_local_tensor, initializer_conf, random_seed=None
 ):
+    if random_seed is None:
+        random_seed = flow.default_generator().seed()
     shape = tuple(eager_local_tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
     # initializer is None if and only if the initializer_conf is empty_initializer
@@ -353,6 +360,7 @@ def RegisterMethods():
     Tensor._placement_scope = _placement_scope
     Tensor.copy_ = _copy
     Tensor.get_device = _get_device
+    Tensor._meta_repr = _meta_repr
 
 
 def register_tensor_op(op_name):

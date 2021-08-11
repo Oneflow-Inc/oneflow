@@ -29,7 +29,7 @@ class Storage;
 template<typename T>
 class Storage<T, typename std::enable_if<IsScalarType<T>::value>::type> {
  public:
-  Storage() = default;
+  Storage() : value_() {}
 
   template<typename... Args,
            typename std::enable_if<std::is_constructible<T, Args...>::value, int>::type = 0>

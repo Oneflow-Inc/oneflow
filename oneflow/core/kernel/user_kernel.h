@@ -37,16 +37,17 @@ class UserKernel final : public Kernel {
   void InitUserKernel(DeviceCtx* device_ctx);
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx);
   const std::shared_ptr<user_op::OpKernelState>& GetOpKernelState() const;
-  void ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
+  void ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                          user_op::OpKernelState* opkernel_state) const;
 
  private:
   void VirtualKernelInit(DeviceCtx* device_ctx) override;
 
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
   void ForwardShape(const KernelCtx& ctx,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
 
   bool IsStateless() const override;
 
