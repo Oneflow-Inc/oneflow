@@ -32,11 +32,11 @@ class ObjectMsgAllocator;
 
 namespace vm {
 
-class Stream;
-class InstructionStatusBuffer;
-class Instruction;
-class VirtualMachine;
-class InstructionMsg;
+struct Stream;
+struct InstructionStatusBuffer;
+struct Instruction;
+struct VirtualMachine;
+struct InstructionMsg;
 class InstructionType;
 
 class StreamType {

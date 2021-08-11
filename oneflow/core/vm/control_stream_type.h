@@ -22,8 +22,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class VirtualMachine;
-class InstructionMsg;
+struct VirtualMachine;
+struct InstructionMsg;
 
 class ControlStreamType final : public StreamType {
  public:
