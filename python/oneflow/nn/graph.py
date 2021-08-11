@@ -48,6 +48,7 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
+        self._session = None
 
     @property
     def name(self):
@@ -163,11 +164,12 @@ class Graph(object):
     def _build_forward_graph(self, *args):
         self._generate_optimizer_and_variable_configs()
 
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-        session.TryInit()
+        self._session = session_ctx.GetDefaultSession()
+        assert type(self._session) is MultiClientSession
+        self._session.TryInit()
+        print("e_s_g try to create graph ", self._name)
 
-        with graph_build_util.graph_build_context(self.config.proto, session):
+        with graph_build_util.graph_build_context(self.config.proto, self._session):
             # Deal with inputs
             arg_op_names, lazy_args, self._args_repr = self._build_io(
                 "input", graph_build_util.build_graph_input_arg, *args
@@ -458,6 +460,10 @@ class Graph(object):
     def _shallow_repr(self):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
+    
+    def __del__(self):
+        print("e_s_g try to del graph ", self._name)
+
 
 
 class GraphConfig(FunctionConfig):

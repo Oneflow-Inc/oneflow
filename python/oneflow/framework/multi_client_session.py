@@ -29,7 +29,9 @@ class MultiClientSession(object):
         INITED = 2
         CLOSED = 3
 
-    def __init__(self, sess_id):
+    def __init__(self, sess_id, env_holder):
+        print("e_s_g py session init")
+        self._env_holder = env_holder
         self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
         oneflow._oneflow_internal.CreateMultiClientSessionContext()
         self.config_proto_ = self._make_config_proto()
@@ -39,21 +41,23 @@ class MultiClientSession(object):
         self._update_scope_attr_name2defaultVal()
         self.status_ = self.Status.CREATED
 
-    def __del__(self):
-        self.TryClose()
-
     def TryInit(self):
         self._check_status(self.Status.CREATED, self.Status.INITED)
         if self.status_ == self.Status.CREATED:
             config_proto_str = text_format.MessageToString(self.config_proto)
             oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
             self.status_ = self.Status.INITED
-
-    def TryClose(self):
+    
+    def _try_close(self):
         if self.status_ != self.Status.CLOSED:
             oneflow._oneflow_internal.TryDestroyMultiClientSessionContext()
             oneflow._oneflow_internal.ClearSessionById(self.id)
         self.status_ = self.Status.CLOSED
+
+    def __del__(self):
+        print("e_s_g py session close")
+        self._try_close()
+
 
     @property
     def status(self):

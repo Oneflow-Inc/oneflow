@@ -73,17 +73,14 @@ import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
 
-if not env_util.HasAllMultiClientEnvVars():
-    env_util.SetDefaultMultiClientEnvVars()
-oneflow._oneflow_internal.SetIsMultiClient(True)
-env_util.api_env_init()
+env_util.GetEnvHolder()
+
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
-    MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+    MultiClientSession(oneflow._oneflow_internal.NewSessionId(), env_util.GetEnvHolder())
 )
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
-del env_util
 from oneflow.framework import python_callback, register_python_callback
 
 oneflow._oneflow_internal.RegisterGlobalForeignCallback(
@@ -97,24 +94,12 @@ oneflow._oneflow_internal.RegisterGlobalWatcher(watcher._global_watcher)
 del watcher
 
 
-def _SyncOnMasterFn():
-    import oneflow
+def _ExitOneFlow():
+    session_ctx.TryCloseDefaultSession()
+    env_util.DelEnvHolder()
 
-    def Sync():
-        if not oneflow._oneflow_internal.IsEnvInited():
-            return
-        if oneflow.framework.distribute.is_multi_client():
-            oneflow._oneflow_internal.eager.multi_client.Sync()
-        elif oneflow.framework.distribute.get_rank() == 0:
-            oneflow._oneflow_internal.eager.single_client.Sync()
+atexit.register(_ExitOneFlow)
 
-    return Sync
-
-
-atexit.register(oneflow._oneflow_internal.SetShuttingDown)
-atexit.register(oneflow._oneflow_internal.DestroyEnv)
-atexit.register(oneflow.framework.session_context.TryCloseDefaultSession)
-atexit.register(_SyncOnMasterFn)
 del atexit
 del oneflow
 import oneflow.framework.docstr as docstr

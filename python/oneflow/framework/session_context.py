@@ -43,8 +43,7 @@ def TryCloseDefaultSession():
     default_sess_id = oneflow._oneflow_internal.GetDefaultSessionId()
     assert default_sess_id in _sess_id2sess
     if default_sess_id in _sess_id2sess:
-        _sess_id2sess[default_sess_id].TryClose()
-    del _sess_id2sess[default_sess_id]
+        del _sess_id2sess[default_sess_id]
 
 
 def try_init_default_session(func):

@@ -34,6 +34,7 @@ NNGraph::~NNGraph() {
   VLOG(2) << "Try to delete c nn graph name " << name_ << "." << std::endl;
   CloseRuntimeBuffers();
   runtime_.reset();
+  VLOG(2) << "Finish delete c nn graph name " << name_ << "." << std::endl;
 }
 
 const std::vector<std::string>& NNGraph::inputs_op_names() const { return input_op_names_; }

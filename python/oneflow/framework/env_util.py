@@ -369,12 +369,53 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     if os.getenv("GLOG_log_dir"):
         cpp_logging_conf.log_dir = os.getenv("GLOG_log_dir")
     if os.getenv("GLOG_logtostderr"):
-        cpp_logging_conf.logtostderr = os.getenv("GLOG_logtostderr")
+        cpp_logging_conf.logtostderr = int(os.getenv("GLOG_logtostderr"))
     if os.getenv("GLOG_logbuflevel"):
         cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
 
 
+def _SyncOnMasterFn():
+    import oneflow
+
+    def Sync():
+        if not oneflow._oneflow_internal.IsEnvInited():
+            return
+        if oneflow.framework.distribute.is_multi_client():
+            oneflow._oneflow_internal.eager.multi_client.Sync()
+        elif oneflow.framework.distribute.get_rank() == 0:
+            oneflow._oneflow_internal.eager.single_client.Sync()
+
+    return Sync
+
+class EnvHolder(object):
+    def __init__(self):
+        if not HasAllMultiClientEnvVars():
+            SetDefaultMultiClientEnvVars()
+        oneflow._oneflow_internal.SetIsMultiClient(True)
+        api_env_init()
+        print("e_s_g evn init")
+
+    def __del__(self):
+        _SyncOnMasterFn()
+        oneflow._oneflow_internal.DestroyEnv()
+        oneflow._oneflow_internal.SetShuttingDown()
+        print("e_s_g env close")
+
+def GetEnvHolder():
+    global _env_holder
+    if _env_holder is not None:
+        return _env_holder
+    else:
+        _env_holder = EnvHolder()
+        return _env_holder
+
+def DelEnvHolder():
+    global _env_holder
+    del _env_holder
+
+
+_env_holder = None
 device_tag2default_parallel_conf = {}
 default_env_proto = _DefaultEnvProto()
 config_master_addr = ctrl_bootstrap_pb.Address()

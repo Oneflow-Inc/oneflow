@@ -121,9 +121,8 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
 
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
-    VLOG(2) << "Try to delete multi client session." << std::endl;
+    VLOG(2) << "Try to delete multi client session context." << std::endl;
     JUST(vm::MultiClientSync());
-    VLOG(2) << "Start to delete multi client session." << std::endl;
     {
       // NOTE(chengcheng): delete runtime global objects
       Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();
@@ -148,6 +147,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                           GlobalProcessCtx::NumOfProcessPerNode());
   }
+  VLOG(2) << "Finish delete multi client session context." << std::endl;
   return Maybe<void>::Ok();
 }
 
