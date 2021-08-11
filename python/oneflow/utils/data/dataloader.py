@@ -120,11 +120,11 @@ class DataLoader(Generic[T_co]):
     Data loader. Combines a dataset and a sampler, and provides an iterable over
     the given dataset.
 
-    The :class:`~oneflow.utils.data.DataLoader` supports both map-style and
+    The :class:`~flow.utils.data.DataLoader` supports both map-style and
     iterable-style datasets with single- or multi-process loading, customizing
     loading order and optional automatic batching (collation) and memory pinning.
 
-    See :py:mod:`oneflow.utils.data` documentation page for more details.
+    See :py:mod:`flow.utils.data` documentation page for more details.
 
     Args:
         dataset (Dataset): dataset from which to load the data.
@@ -180,6 +180,15 @@ class DataLoader(Generic[T_co]):
                  cases in general.
 
     """
+    dataset: Dataset[T_co]
+    batch_size: Optional[int]
+    num_workers: int
+    drop_last: bool
+    timeout: float
+    sampler: Sampler
+    prefetch_factor: int
+    _iterator: Optional["_BaseDataLoaderIter"]
+    __initialized = False
 
     def __init__(
         self,

@@ -74,6 +74,7 @@ class SequentialSampler(Sampler[int]):
     Args:
         data_source (Dataset): dataset to sample from
     """
+    data_source: Sized
 
     def __init__(self, data_source):
         self.data_source = data_source
@@ -96,6 +97,8 @@ class RandomSampler(Sampler[int]):
             is supposed to be specified only when `replacement` is ``True``.
         generator (Generator): Generator used in sampling.
     """
+    data_source: Sized
+    replacement: bool
 
     def __init__(
         self,
@@ -182,6 +185,7 @@ class SubsetRandomSampler(Sampler[int]):
         indices (sequence): a sequence of indices
         generator (Generator): Generator used in sampling.
     """
+    indices: Sequence[int]
 
     def __init__(self, indices: Sequence[int], generator=None) -> None:
         self.indices = indices
