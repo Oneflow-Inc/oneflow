@@ -19,7 +19,7 @@ namespace oneflow {
 
 template<typename T>
 void TotalLossInstanceNumKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const auto& input_bns = this->op_attribute().input_bns();
   T first_val = BnInOp2Blob(input_bns.Get(0))->template dptr<T>()[0];
   for (const std::string& ibn : input_bns) {
