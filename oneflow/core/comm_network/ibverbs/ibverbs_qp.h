@@ -32,12 +32,11 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_mr * mr, char * addr, uint32_t size):size_(size){
-    mr_.reset(mr);
+  ActorMsgMR(ibv_mr * mr, char * addr, uint32_t size):size_(size), mr_(mr){
     msg_ = reinterpret_cast<ActorMsg*>(addr);
   }
   ~ActorMsgMR() {
-   CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_.get()), 0);
+   CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0);
   }
   void * addr() { return reinterpret_cast<void *>(msg_); }
   uint32_t size() {return size_ ;}
@@ -47,9 +46,9 @@ class ActorMsgMR final {
   void set_msg(const ActorMsg& val) {  *msg_ = val;}
 
  private:
- std::unique_ptr<ibv_mr> mr_;
- ActorMsg * msg_;
- uint32_t size_;
+    size_t size_;
+    ibv_mr  *  mr_;
+    ActorMsg * msg_;
 };
 
 class IBVerbsQP;
@@ -78,12 +77,14 @@ class MessagePool final {
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
     void RegisterMessagePool(){
+      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       size_t ActorMsgSize = sizeof(ActorMsg);
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
       char * addr =(char*) malloc(RegisterMemorySize );
       ibv_mr * mr = ibv::wrapper.ibv_reg_mr_wrap(
           pd_, addr, RegisterMemorySize,
           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+      CHECK(mr);
       for(size_t i = 0;  i < num_of_message_ ; i++){
           char * split_addr =addr + ActorMsgSize * i ;
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
@@ -112,9 +113,8 @@ class MessagePool final {
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       message_buf_.push_back(msg_mr);
     }
-    
+
     std::deque<ActorMsgMR*> GetMessageBuf() {
-      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       return message_buf_;
     }
 
@@ -171,10 +171,6 @@ class IBVerbsQP final {
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
   
-  // MessagePool  *  recv_msg_buf_;
-  // std::mutex recv_msg_buf_mtx_;
-  // MessagePool  * send_msg_buf_;
-  // std::mutex send_msg_buf_mtx_;
   std::unique_ptr<MessagePool> recv_msg_buf_;
   std::unique_ptr<MessagePool> send_msg_buf_;
 };
