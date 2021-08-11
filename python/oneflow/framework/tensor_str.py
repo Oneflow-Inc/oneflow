@@ -273,7 +273,7 @@ def _gen_tensor_str(inp):
         tensor_str = _tensor_str(inp, indent)
     suffixes.append("dtype=" + str(inp.dtype))
     if inp.grad_fn is not None:
-        name = tensor.grad_fn.name()
+        name = inp.grad_fn.name()
         suffixes.append("grad_fn=<{}>".format(name))
     elif inp.requires_grad:
         suffixes.append("requires_grad=True")
