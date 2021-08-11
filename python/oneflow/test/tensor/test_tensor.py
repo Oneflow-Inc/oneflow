@@ -161,6 +161,19 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(*shape, device=flow.device("cpu"))
         test_case.assertTrue(not x.is_cuda)
 
+    def test_tensor_to_bool(test_case):
+        x = flow.tensor([0.])
+        test_case.assertFalse(bool(x))
+        x = flow.tensor([0.]).to("cuda")
+        test_case.assertFalse(bool(x))
+        x = flow.tensor([1.5])
+        test_case.assertTrue(bool(x))
+        x = flow.tensor([3])
+        test_case.assertTrue(bool(x))
+        with test_case.assertRaises(RuntimeError):
+            bool(flow.tensor([1, 3, 5]))
+            bool(flow.tensor([]))
+
     def test_tensor_autograd_related_methods(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(*shape)
