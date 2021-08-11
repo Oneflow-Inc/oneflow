@@ -22,7 +22,6 @@ import numpy as np
 
 
 def np_allclose_with_shape(a, b, *args, **kwargs):
-    print(f'a shape: {a.shape}, b shape: {b.shape}')
     if a.shape != b.shape:
         return False
     return np.allclose(a, b, *args, **kwargs)
