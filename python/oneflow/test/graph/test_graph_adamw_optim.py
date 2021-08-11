@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import os 
+import os
 from collections import OrderedDict
 from test_util import GenArgList
 import numpy as np
@@ -24,14 +24,7 @@ import oneflow.unittest
 
 
 def compare_with_numpy_adamw(
-    test_case,
-    device,
-    x_shape,
-    learning_rate,
-    train_iters,
-    betas,
-    weight_decay,
-    eps,
+    test_case, device, x_shape, learning_rate, train_iters, betas, weight_decay, eps,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
