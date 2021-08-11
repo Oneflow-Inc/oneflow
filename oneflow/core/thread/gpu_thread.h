@@ -33,6 +33,7 @@ class GpuThread final : public Thread {
  private:
   Channel<CudaCBEvent> cb_event_chan_;
   std::thread cb_event_poller_;
+  ThreadCtx ctx_;
 };
 
 #endif
