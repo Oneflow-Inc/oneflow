@@ -27,8 +27,12 @@ class MyModuleWithEagerTensorForward(flow.nn.Module):
         self.linear = flow.nn.Linear(3, 8, False)
 
     def forward(self, x):
-        y = self.linear(x)
-        z = y > 0.5
+        y0 = self.linear(x)
+        y1 = y0 > 0.5
+        eager_t = flow.tensor([0.5], dtype=y0.dtype, device=y0.device)
+        assert eager_t.is_eager
+        y2 = y0 > eager_t
+        z = flow.eq(y1, y2)
         return z
 
 
