@@ -388,6 +388,7 @@ def _SyncOnMasterFn():
 
     return Sync
 
+
 class EnvHolder(object):
     def __init__(self):
         if not HasAllMultiClientEnvVars():
@@ -402,6 +403,7 @@ class EnvHolder(object):
         oneflow._oneflow_internal.SetShuttingDown()
         print("e_s_g env close")
 
+
 def GetEnvHolder():
     global _env_holder
     if _env_holder is not None:
@@ -409,6 +411,7 @@ def GetEnvHolder():
     else:
         _env_holder = EnvHolder()
         return _env_holder
+
 
 def DelEnvHolder():
     global _env_holder
