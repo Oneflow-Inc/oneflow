@@ -59,11 +59,20 @@ struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg,
                       std::shared_ptr<user_op::OpKernelState> state_arg)
       : attrs(attrs_arg), device(device_arg), state(state_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg)
+      : attrs(attrs_arg), parallel_desc(parallel_desc_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
                       Symbol<cfg::ParallelDistribution> parallel_distribution_arg)
       : attrs(attrs_arg),
         parallel_desc(parallel_desc_arg),
         parallel_distribution(parallel_distribution_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
+                      Symbol<cfg::ParallelDistribution> parallel_distribution_arg,
+                      std::shared_ptr<user_op::OpKernelState> state_arg)
+      : attrs(attrs_arg),
+        parallel_desc(parallel_desc_arg),
+        parallel_distribution(parallel_distribution_arg),
+        state(state_arg) {}
 
   AttrMap attrs;
   Optional<Symbol<Device>> device;                                    // for local op
@@ -92,9 +101,12 @@ class OpExprInterpreter {
 
 #define FOR_EACH_BUILTIN_OPS(_macro) \
   _macro(UserOp);                    \
+  _macro(SelectFirstOp);             \
   _macro(VariableOp);                \
   _macro(CastToMirroredOp);          \
   _macro(CastFromMirroredOp);        \
+  _macro(CastToConsistentOp);        \
+  _macro(CastFromConsistentOp);      \
   _macro(DistributeSplitOp);         \
   _macro(DistributeCloneOp);         \
   _macro(DistributeConcatOp);        \

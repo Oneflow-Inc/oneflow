@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.cfg.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
@@ -43,6 +44,20 @@ bool GlobalDeviceIdsContaining(const MachineId2DeviceIdList& bigger,
     }
   }
   return true;
+}
+
+std::shared_ptr<ParallelContext> RawGetParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  int64_t parallel_id_val = -1;
+  bool in_parallel_desc = parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id_val);
+  CHECK(in_parallel_desc);
+  std::shared_ptr<ParallelContext> parallel_ctx = std::make_shared<ParallelContext>();
+  parallel_ctx->set_parallel_id(parallel_id_val);
+  parallel_ctx->set_parallel_num(parallel_desc->parallel_num());
+  return parallel_ctx;
 }
 
 }  // namespace
@@ -149,34 +164,43 @@ Maybe<int64_t> ParallelDesc::ParallelId4MachineDeviceId(int64_t machine_id,
   return device_iter->second;
 }
 
-Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(int64_t* parallel_id) const {
+Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(
+    Optional<int64_t>* parallel_id) const {
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  if (TryGetParallelId(machine_id, device_id, parallel_id)) {
-    return Device::ThreadLocalGetOrNew(device_tag(), device_id);
+  const auto& device = JUST(Device::ThreadLocalGetOrNew(device_tag(), device_id));
+  int64_t parallel_id_val = -1;
+  if (TryGetParallelId(machine_id, device_id, &parallel_id_val)) {
+    *parallel_id = parallel_id_val;
   } else {
-    return Symbol<Device>();
+    *parallel_id = Optional<int64_t>();
   }
+  return device;
 }
 
 Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
-                                                  int64_t* parallel_id) {
-  static thread_local HashMap<Symbol<ParallelDesc>, int64_t> parallel_desc2parallel_id;
+                                                  Optional<int64_t>* parallel_id) {
+  static thread_local HashMap<Symbol<ParallelDesc>, Optional<int64_t>> parallel_desc2parallel_id;
   static thread_local HashMap<Symbol<ParallelDesc>, Symbol<Device>> parallel_desc2device;
   auto parallel_id_iter = parallel_desc2parallel_id.find(parallel_desc);
   auto device_iter = parallel_desc2device.find(parallel_desc);
   if (device_iter == parallel_desc2device.end()) {
     CHECK_OR_RETURN(parallel_id_iter == parallel_desc2parallel_id.end());
-    int64_t id_val = 0;
-    const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&id_val));
+    Optional<int64_t> id_val;
+    const auto& device_symbol = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&id_val));
     parallel_id_iter = parallel_desc2parallel_id.emplace(parallel_desc, id_val).first;
-    device_iter = parallel_desc2device.emplace(parallel_desc, device).first;
+    device_iter = parallel_desc2device.emplace(parallel_desc, device_symbol).first;
   } else {
     CHECK_OR_RETURN(parallel_id_iter != parallel_desc2parallel_id.end());
   }
   *parallel_id = parallel_id_iter->second;
   return device_iter->second;
+}
+
+std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc) {
+  return DECORATE(&RawGetParallelContext4CurrentProcessCtx, ThreadLocal)(parallel_desc);
 }
 
 bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,
@@ -353,6 +377,14 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
     parallel_conf.add_device_name(std::string("@") + std::to_string(i) + ":0");
   }
   return parallel_conf;
+}
+
+bool IsMirroredParallelContext(const ParallelContext& parallel_ctx) {
+  if (CHECK_JUST(GlobalMultiClientEnv())) {
+    return parallel_ctx.parallel_id() == 0 && parallel_ctx.parallel_num() == 1
+           && GlobalProcessCtx::WorldSize() > 1;
+  }
+  return false;
 }
 
 }  // namespace oneflow

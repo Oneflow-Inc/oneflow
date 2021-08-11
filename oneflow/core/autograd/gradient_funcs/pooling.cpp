@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -44,6 +45,9 @@ struct PoolingInterpState : public OpExprInterpState {
 class PoolingNdGrad : public OpExprGradFunction<PoolingInterpState> {
  public:
   virtual ~PoolingNdGrad() = default;
+
+  using OpExprGradFunction<PoolingInterpState>::Init;
+
   Maybe<void> Init(const OpExpr& op, const std::string& mode);
   Maybe<void> Capture(PoolingInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;

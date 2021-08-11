@@ -444,8 +444,8 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> Infer(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
-    operand->set_user_opkernel(
-        JUST(operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs())));
+    operand->set_user_opkernel(JUST(operand->mut_opkernel()->ChooseOpKernel(
+        operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result())));
     JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
     JUST(InitOutputBlobs(operand));
     JUST(InferTempStorageBlobDesc(operand));
@@ -524,11 +524,12 @@ struct LocalCallOpKernelUtil final {
     CHECK_OR_RETURN(temp_blob_desc->data_type() == DataType::kChar);
     one::LocalUserOpInferContext* op_infer_ctx =
         operand->opkernel().op_infer_ctx_for_scheduler_thread();
-    op_infer_ctx->Update(operand->inputs(), operand->outputs());
+    op_infer_ctx->Update(operand->inputs(), operand->outputs(),
+                         operand->consistent_tensor_infer_result());
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
     temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
     temp_blob_desc->set_is_dynamic(true);
-    op_infer_ctx->Update(nullptr, nullptr);
+    op_infer_ctx->Update(nullptr, nullptr, nullptr);
     return Maybe<void>::Ok();
   }
 
@@ -541,10 +542,11 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> WithComputeContext(LocalCallOpKernelPhyInstrOperand* operand,
                                                DeviceCtx* device_ctx, const CallbackT& Callback) {
     auto* opkernel = operand->mut_opkernel();
-    JUST(Callback(
-        opkernel->UpdateComputeContext(operand->inputs(), operand->outputs(), device_ctx)));
+    JUST(Callback(opkernel->UpdateComputeContext(operand->inputs(), operand->outputs(),
+                                                 operand->consistent_tensor_infer_result(),
+                                                 device_ctx)));
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
-    opkernel->UpdateComputeContext(nullptr, nullptr, nullptr);
+    opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
     return Maybe<void>::Ok();
   }
 
@@ -555,7 +557,8 @@ struct LocalCallOpKernelUtil final {
       return;
     }
     operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
-                                                  operand->inputs(), operand->outputs(), state);
+                                                  operand->inputs(), operand->outputs(),
+                                                  operand->consistent_tensor_infer_result(), state);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,

@@ -30,6 +30,12 @@ namespace oneflow {
 
 namespace one {
 
+Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
+  CHECK_OR_RETURN(is_local());
+  return std::dynamic_pointer_cast<MirroredTensor>(
+      JUST(functional::Constant(*shape_, functional::Scalar(0), dtype_, device_)));
+}
+
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
     bool is_lazy, bool requires_grad, bool is_leaf) {
@@ -42,11 +48,7 @@ namespace one {
   } else {
     const auto& impl =
         std::make_shared<EagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
-    const auto& tensor = std::make_shared<MirroredTensor>(impl);
-    const auto& outputs = std::make_shared<TensorTuple>();
-    outputs->push_back(tensor);
-    JUST(RunEmptyOp(outputs.get()));
-    return tensor;
+    return std::make_shared<MirroredTensor>(impl);
   }
 }
 
@@ -62,12 +64,6 @@ namespace one {
 }
 
 bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
-
-int64_t MirroredTensor::ndim() const { return shape()->NumAxes(); }
-
-int64_t MirroredTensor::dim(int64_t index) const { return shape()->At(index); }
-
-int64_t MirroredTensor::nelement() const { return shape()->elem_cnt(); }
 
 std::shared_ptr<Tensor> MirroredTensor::data() const {
   std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
@@ -106,12 +102,6 @@ Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
 bool ConsistentTensor::is_cuda() const {
   return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kGPU;
 }
-
-int64_t ConsistentTensor::dim(int64_t index) const { return shape()->At(index); }
-
-int64_t ConsistentTensor::nelement() const { return shape()->elem_cnt(); }
-
-int64_t ConsistentTensor::ndim() const { return shape()->NumAxes(); }
 
 std::shared_ptr<Tensor> ConsistentTensor::data() const {
   std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);

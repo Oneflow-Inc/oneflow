@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/control/host_list_bootstrap_server.h"
-#include "oneflow/core/actor/act_event_logger.h"
-#include "oneflow/core/job/profiler.h"
 #include "grpc/grpc_posix.h"
 
 namespace oneflow {

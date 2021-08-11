@@ -34,6 +34,22 @@ namespace impl {
 class AddFunctor : public InplaceableBinaryFunctor {
  public:
   AddFunctor() { op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build()); }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y, bool inplace) const {
+    {
+      const auto& x_static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x);
+      const auto& y_static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(y);
+      if (x_static_zeros_tensor != nullptr || y_static_zeros_tensor != nullptr) {
+        CHECK_OR_RETURN(JUST(x->device()) == JUST(y->device()));
+        CHECK_OR_RETURN(*x->shape() == *y->shape());
+        CHECK_OR_RETURN(x->dtype() == y->dtype());
+        if (y_static_zeros_tensor) { return x; }
+        return y;
+      }
+    }
+    return InplaceableBinaryFunctor::operator()(x, y, inplace);
+  }
 };
 
 class MultiplyFunctor : public BinaryFunctor {
@@ -115,6 +131,30 @@ class BroadcastGreaterEqualFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastLogicalAndFunctor : public BinaryFunctor {
+ public:
+  BroadcastLogicalAndFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_logical_and").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastLogicalOrFunctor : public BinaryFunctor {
+ public:
+  BroadcastLogicalOrFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_logical_or").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastLogicalXorFunctor : public BinaryFunctor {
+ public:
+  BroadcastLogicalXorFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_logical_xor").Input("x").Input("y").Output("z").Build());
+  }
+};
+
 class BroadcastLessFunctor : public BinaryFunctor {
  public:
   BroadcastLessFunctor() {
@@ -162,36 +202,6 @@ class ScalarDivByTensorFunctor : public BinaryFunctor {
   }
 };
 
-class BroadcastMinimumFunctor : public BinaryFunctor {
- public:
-  BroadcastMinimumFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_minimum").Input("x").Input("y").Output("z").Build());
-  }
-};
-
-class BroadcastMaximumFunctor : public BinaryFunctor {
- public:
-  BroadcastMaximumFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_maximum").Input("x").Input("y").Output("z").Build());
-  }
-};
-
-class ElementwiseMinimumFunctor : public BinaryFunctor {
- public:
-  ElementwiseMinimumFunctor() {
-    op_ =
-        CHECK_JUST(one::OpBuilder("elementwise_minimum").Input("x").Input("y").Output("z").Build());
-  }
-};
-
-class ElementwiseMaximumFunctor : public BinaryFunctor {
- public:
-  ElementwiseMaximumFunctor() {
-    op_ =
-        CHECK_JUST(one::OpBuilder("elementwise_maximum").Input("x").Input("y").Output("z").Build());
-  }
-};
-
 class ReshapeLikeFunctor : public BinaryFunctor {
  public:
   ReshapeLikeFunctor() {
@@ -210,20 +220,19 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastSubFunctor>("BroadcastSub");
   m.add_functor<impl::BroadcastMulFunctor>("BroadcastMul");
   m.add_functor<impl::BroadcastDivFunctor>("BroadcastDiv");
-  m.add_functor<impl::BroadcastMinimumFunctor>("BroadcastMin");
-  m.add_functor<impl::BroadcastMaximumFunctor>("BroadcastMax");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
   m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
   m.add_functor<impl::BroadcastGreaterEqualFunctor>("BroadcastGreaterEqual");
+  m.add_functor<impl::BroadcastLogicalAndFunctor>("BroadcastLogicalAnd");
+  m.add_functor<impl::BroadcastLogicalOrFunctor>("BroadcastLogicalOr");
+  m.add_functor<impl::BroadcastLogicalXorFunctor>("BroadcastLogicalXor");
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
   m.add_functor<impl::BroadcastLessEqualFunctor>("BroadcastLessEqual");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");
   m.add_functor<impl::ScalarSubByTensorFunctor>("ScalarSubByTensor");
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
-  m.add_functor<impl::ElementwiseMinimumFunctor>("ElementwiseMin");
-  m.add_functor<impl::ElementwiseMaximumFunctor>("ElementwiseMax");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
 };

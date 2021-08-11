@@ -249,8 +249,7 @@ UserOpConfWrapper& BackwardOpConfContext::GetOp(const std::string& op_name) {
     CHECK(fn_it != op_builder_fns_.end()) << " op_name " << op_name << " has no builder function.";
     CHECK(fn_it->second != nullptr) << " op_name " << op_name << " builder function is null.";
     UserOpConfWrapperBuilder builder(op_name);
-    auto ret =
-        op_builder_results_.emplace(std::make_pair(op_name, std::move(fn_it->second(builder))));
+    auto ret = op_builder_results_.emplace(std::make_pair(op_name, fn_it->second(builder)));
     CHECK(ret.second == true) << " op_name " << op_name << " build result insert failed.";
 
     // add new op conf
@@ -295,14 +294,14 @@ Maybe<void> CheckArgDefIsValidInUserOpConf(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, OperatorConf* op_conf) {
-  UserOpConf* user_conf = op_conf->mutable_user_conf();
+Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, UserOpConf* user_conf,
+                                             const std::string& error_msg_prefix) {
   auto* attr_name2attr = user_conf->mutable_attr();
   HashSet<std::string> op_def_attr_names;
   for (const auto& attr : op_def.attr()) {
     if (attr_name2attr->find(attr.name()) == attr_name2attr->end()) {
       CHECK_OR_RETURN(attr.has_default_val())
-          << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
+          << error_msg_prefix << " op_type_name: " << user_conf->op_type_name()
           << " must set attr val for attr_name: " << attr.name();
       (*attr_name2attr)[attr.name()] = attr.default_val();
     }
@@ -310,18 +309,32 @@ Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, OperatorCo
   }
   for (const auto& pair : user_conf->attr()) {
     CHECK_OR_RETURN(op_def_attr_names.find(pair.first) != op_def_attr_names.end())
-        << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
+        << error_msg_prefix << " op_type_name: " << user_conf->op_type_name()
         << " has not attr_name: " << pair.first << " in OpDef";
   }
   for (const auto& attr : op_def.attr()) {
     CHECK_OR_RETURN(static_cast<int32_t>(attr.type())
                     == static_cast<int32_t>(attr_name2attr->at(attr.name()).value_case()))
-        << " op_name: " << op_conf->name() << " op_type_name: " << user_conf->op_type_name()
+        << error_msg_prefix << " op_type_name: " << user_conf->op_type_name()
         << " attr_name: " << attr.name()
         << " has different attr type in OpDef and OpConf, it should be with type: "
         << AttrType_Name(attr.type());
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<void> AddAttrDefaultValueAndCheckValid(UserOpConf* user_conf) {
+  const user_op::OpRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_conf->op_type_name());
+  CHECK_OR_RETURN(val) << " Cannot find op_type_name: " << user_conf->op_type_name();
+  const UserOpDef& op_def = val->op_def;
+  return AddAttrDefaultValueAndCheckValid(op_def, user_conf, "");
+}
+
+Maybe<void> AddAttrDefaultValueAndCheckValid(const UserOpDef& op_def, OperatorConf* op_conf) {
+  UserOpConf* user_conf = op_conf->mutable_user_conf();
+  std::string error_msg_prefix = " op_name: " + op_conf->name();
+  return AddAttrDefaultValueAndCheckValid(op_def, user_conf, error_msg_prefix);
 }
 
 Maybe<void> AddUserOpConfOutputDefaultArg(const UserOpDef& op_def, OperatorConf* op_conf) {
