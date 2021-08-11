@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 import os 
 from collections import OrderedDict
-
+from test_util import GenArgList
 import numpy as np
 
 import oneflow as flow
@@ -116,30 +116,21 @@ def compare_with_numpy_adamw(
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdamW(flow.unittest.TestCase):
-    def test_adamw1(test_case):
-        compare_with_numpy_adamw(
-            test_case,
-            device="cpu",
-            x_shape=(10,),
-            learning_rate=1,
-            betas=(0.99, 0.9),
-            train_iters=10,
-            weight_decay=0.0000,
-            eps=1e-8,
-        )
+    def test_adamw(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["learning_rate"] = [1, 1e-3]
+        arg_dict["train_iters"] = [10]
+        arg_dict["betas"] = [(0.99, 0.9)]
+        arg_dict["weight_decay"] = [1e-3, 0.0]
+        arg_dict["eps"] = [1e-8]
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_adamw(test_case, *arg)
 
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_adamw2(test_case):
-        compare_with_numpy_adamw(
-            test_case,
-            device="cuda",
-            x_shape=(10,),
-            learning_rate=0.001,
-            betas=(0.8, 0.9),
-            train_iters=10,
-            weight_decay=0.0005,
-            eps=1e-8,
-        )
+
+if __name__ == "__main__":
+    unittest.main()
 
 
 if __name__ == "__main__":

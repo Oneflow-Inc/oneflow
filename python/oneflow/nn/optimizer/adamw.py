@@ -148,11 +148,6 @@ class AdamW(Optimizer):
             epsilon = param_group["eps"]
 
             # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
-            base_scale = train_conf.loss_scale_factor()
-            assert math.isclose(base_scale, 1, rel_tol=1e-4), "nn.Graph only support one scale factor at the moment, base_scale {} vs scale {}".format(
-                base_scale, 1
-            )
-
             optimizer_conf.set_base_learning_rate(lr)
 
             optimizer_conf.mutable_adam_conf().set_beta1(beta1)
@@ -166,7 +161,5 @@ class AdamW(Optimizer):
                 weight_decay
             )
             for param in param_group.parameters:
-                vars_conf[param].weight_decay = weight_decay
-                if not param.requires_grad:
-                    continue
-                optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
