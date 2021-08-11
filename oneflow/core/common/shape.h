@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
@@ -32,7 +33,7 @@ class ShapeProto;
 class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
-  Shape() : elem_cnt_(0) {}
+  Shape() = default;
   explicit Shape(const DimVector& dim_vec);
   explicit Shape(DimVector&& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
@@ -40,6 +41,7 @@ class Shape final {
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
+  Shape& assign(const DimVector& dim_vec);
   Shape& CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view);
   Shape& LeftOnesExtendedAssign(const ShapeView& shape_view);
 
@@ -54,11 +56,15 @@ class Shape final {
   void SerializeWithTextFormat(StreamT& out_stream) const;
 
   // Getters and Setters
+  bool is_initialized() const { return elem_cnt_.has_value(); }
   const DimVector& dim_vec() const { return dim_vec_; }
-  int64_t elem_cnt() const { return elem_cnt_; }
+  int64_t elem_cnt() const { return CHECK_JUST(elem_cnt_.value()); }
   int64_t At(int64_t index) const { return dim_vec_.at(index); }
   void Set(int64_t index, int64_t val);
-  int64_t NumAxes() const { return dim_vec_.size(); }
+  int64_t NumAxes() const {
+    CHECK(is_initialized());
+    return dim_vec_.size();
+  }
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
   int64_t Count(int64_t begin_axis) const;
 
@@ -75,7 +81,7 @@ class Shape final {
   void UpdateElemCnt();
 
   DimVector dim_vec_;
-  int64_t elem_cnt_;
+  Optional<int64_t> elem_cnt_;
 };
 
 int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);

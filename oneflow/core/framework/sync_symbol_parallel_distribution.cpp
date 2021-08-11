@@ -94,18 +94,19 @@ FLAT_MSG_DEFINE_OPTIONAL(size_t, size);
 FLAT_MSG_DEFINE_REPEATED(FlatSbpParallel, sbp_parallel, SHAPE_MAX_AXIS_SIZE);
 FLAT_MSG_END(FlatParallelDistribution);
 
-class SendFlatParallelDistributionAsyncRpcCtx : public AsyncRpcCtx {
+class FlatParallelDistributionAsyncTransportCtx : public AsyncTransportCtx {
  public:
-  SendFlatParallelDistributionAsyncRpcCtx(const RpcToken& rpc_token, uint64_t symbol_id,
-                                          Symbol<cfg::ParallelDistribution> parallel_distribution)
-      : AsyncRpcCtx(rpc_token),
+  FlatParallelDistributionAsyncTransportCtx(const TransportToken& transport_token,
+                                            uint64_t symbol_id,
+                                            Symbol<cfg::ParallelDistribution> parallel_distribution)
+      : AsyncTransportCtx(transport_token),
         symbol_id_(symbol_id),
         parallel_distribution_(parallel_distribution) {}
 
-  ~SendFlatParallelDistributionAsyncRpcCtx() override {}
+  ~FlatParallelDistributionAsyncTransportCtx() override {}
 
-  Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                        std::function<void()>* Callback) override {
+  Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                           std::function<void()>* Callback) override {
     const auto& flat_parallel_distribution = std::make_shared<FlatParallelDistribution>();
     JUST(flat_parallel_distribution->Init(symbol_id_, parallel_distribution_));
     *buffer = flat_parallel_distribution.get();
@@ -114,23 +115,8 @@ class SendFlatParallelDistributionAsyncRpcCtx : public AsyncRpcCtx {
     return Maybe<void>::Ok();
   }
 
- private:
-  uint64_t symbol_id_;
-  Symbol<cfg::ParallelDistribution> parallel_distribution_;
-};
-
-class RecvFlatParallelDistributionAsyncRpcCtx : public AsyncRpcCtx {
- public:
-  RecvFlatParallelDistributionAsyncRpcCtx(const RpcToken& rpc_token, uint64_t symbol_id,
-                                          Symbol<cfg::ParallelDistribution> parallel_distribution)
-      : AsyncRpcCtx(rpc_token),
-        symbol_id_(symbol_id),
-        parallel_distribution_(parallel_distribution) {}
-
-  ~RecvFlatParallelDistributionAsyncRpcCtx() override {}
-
-  Maybe<void> MakeDataBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                        std::function<void()>* Callback) override {
+  Maybe<void> PrepareRecvBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                           std::function<void()>* Callback) override {
     const auto& flat_parallel_distribution = std::make_shared<FlatParallelDistribution>();
     *buffer = flat_parallel_distribution.get();
     *size = sizeof(FlatParallelDistribution);
@@ -158,15 +144,13 @@ namespace {}
 Maybe<void> SyncSymbolParallelDistribution(uint64_t symbol_id,
                                            Symbol<cfg::ParallelDistribution> symbol) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  const auto& rpc_token =
-      JUST(RpcToken::AcquireCtrlRpcToken(kRankGroupRpcCmdSyncSymbolParallelDistribution));
-  SendFlatParallelDistributionAsyncRpcCtx send_ctx(rpc_token, symbol_id, symbol);
-  RecvFlatParallelDistributionAsyncRpcCtx recv_ctx(rpc_token, symbol_id, symbol);
-  JUST(RpcUtil::SendToNextRankInRing(rank_group, rpc_token, &send_ctx));
-  JUST(RpcUtil::ReceiveFromPrevRankInRing(rank_group, rpc_token, &recv_ctx));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(send_ctx, RpcUtil::TimeoutSeconds()));
-  JUST(RpcUtil::WaitUntilDoneOrTimeout(recv_ctx, RpcUtil::TimeoutSeconds()));
-  JUST(recv_ctx.Check());
+  const auto& transport_token = JUST(
+      TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncSymbolParallelDistribution));
+  FlatParallelDistributionAsyncTransportCtx ctx(transport_token, symbol_id, symbol);
+  JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+  JUST(ctx.Check());
   return Maybe<void>::Ok();
 }
 

@@ -271,8 +271,10 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
     MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
     if (!maybe.IsOk()) {                                                       \
       auto* stack_frame = maybe.error()->add_stack_frame();                    \
-      stack_frame->set_location(MAYBE_FAILED_LOC);                             \
+      stack_frame->set_file(__FILE__);                                         \
+      stack_frame->set_line(__LINE__);                                         \
       stack_frame->set_function(__FUNCTION__);                                 \
+      stack_frame->set_error_msg(OF_PP_STRINGIZE((__VA_ARGS__)));              \
       return maybe.error();                                                    \
     }                                                                          \
     maybe;                                                                     \
@@ -282,20 +284,22 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
     MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
     if (!maybe.IsOk()) {                                                       \
       auto* stack_frame = maybe.error()->add_stack_frame();                    \
-      stack_frame->set_location(MAYBE_FAILED_LOC);                             \
+      stack_frame->set_file(__FILE__);                                         \
+      stack_frame->set_line(__LINE__);                                         \
       stack_frame->set_function(func_name);                                    \
+      stack_frame->set_error_msg(OF_PP_STRINGIZE((__VA_ARGS__)));              \
       LOG(FATAL) << maybe.GetSerializedError();                                \
     }                                                                          \
     return maybe;                                                              \
   })(__FUNCTION__)                                                             \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
+#define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
 
 #define OF_RETURN_IF_ERROR(...)                                                              \
   for (MAYBE_CONST_AUTO_REF maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
        !maybe_##__LINE__.IsOk();)                                                            \
-  return Error(maybe_##__LINE__.error()).AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
+  return Error(maybe_##__LINE__.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
 #else
 #error statement expression is no supported, please implement try-catch version of JUST
@@ -303,17 +307,17 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 
 }  // namespace oneflow
 
-#define OF_TODO() return Error::Todo().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
+#define OF_TODO() return Error::Todo().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 #define OF_UNIMPLEMENTED() \
-  return Error::Unimplemented().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
+  return Error::Unimplemented().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
-#define OF_COMPLIE_OPTION_EEEOR()                                                  \
-  return Error::CompileOptionWrong().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__) \
+#define OF_COMPLIE_OPTION_EEEOR()                                                    \
+  return Error::CompileOptionWrong().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << " Compile option wrong: "
 
-#define CHECK_OR_RETURN(expr)                                                    \
-  if (!(expr))                                                                   \
-  return Error::CheckFailedError().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__) \
+#define CHECK_OR_RETURN(expr)                                                      \
+  if (!(expr))                                                                     \
+  return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << " Check failed: " << OF_PP_STRINGIZE(expr) << " "
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs) \

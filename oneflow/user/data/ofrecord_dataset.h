@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace data {
@@ -49,8 +50,19 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
           JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
     }
 
-    parallel_id_ = ctx->parallel_ctx().parallel_id();
-    parallel_num_ = ctx->parallel_ctx().parallel_num();
+    // NOTE(zwx): dataset infer the part of the files needed to be read by
+    //     1) ddp, when parallel_id == 0 and parallel_num == 1 and world_size > 1,
+    //        according to rank and world size.
+    //     2) consistent, when parallel_num > 1 or
+    //                         parallel_id == 0 and parallel_num == 1 and world_size == 1,
+    //        according to parallel_ctx.parallel_id and parallel_ctx.parallel_num.
+    if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+      parallel_id_ = GlobalProcessCtx::Rank();
+      parallel_num_ = GlobalProcessCtx::WorldSize();
+    } else {
+      parallel_id_ = ctx->parallel_ctx().parallel_id();
+      parallel_num_ = ctx->parallel_ctx().parallel_num();
+    }
     CHECK_LE(parallel_num_, data_part_num_);
     BalancedSplitter bs(data_part_num_, parallel_num_);
     range_ = bs.At(parallel_id_);

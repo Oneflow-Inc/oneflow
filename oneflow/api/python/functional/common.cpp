@@ -25,6 +25,22 @@ bool PyTensorCheck(PyObject* object) {
   return detail::isinstance<std::shared_ptr<one::Tensor>>(obj);
 }
 
+Maybe<Tensor> PyUnpackTensor(PyObject* object) {
+  auto obj = py::reinterpret_borrow<py::object>(object);
+  return *JUST(detail::cast<std::shared_ptr<one::Tensor>>(obj));
+}
+
+bool PyScalarCheck(PyObject* object) { return PyLong_Check(object) || PyFloat_Check(object); }
+
+Maybe<Scalar> PyUnpackScalar(PyObject* object) {
+  if (PyLong_Check(object)) {
+    return std::make_shared<Scalar>(static_cast<int64_t>(PyLong_AsLongLong(object)));
+  } else if (PyFloat_Check(object)) {
+    return std::make_shared<Scalar>(PyFloat_AsDouble(object));
+  }
+  UNIMPLEMENTED_THEN_RETURN() << "The object is not a scalar.";
+}
+
 const char* PyStringAsString(PyObject* object) {
   return PyBytes_AsString(PyUnicode_AsEncodedString(object, "utf-8", "~E~"));
 }

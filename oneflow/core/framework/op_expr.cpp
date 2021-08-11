@@ -59,6 +59,16 @@ const std::string& BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
   return op_proto_.op_type_name();
 }
 
+const std::string& CastToConsistentOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "cast_to_consistent";
+  return kOpTypeName;
+}
+
+const std::string& CastFromConsistentOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "cast_from_consistent";
+  return kOpTypeName;
+}
+
 #define DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(_T, _bool) \
   template<>                                                    \
   Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {   \
@@ -358,6 +368,7 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
 /* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, UserOpConf&& op_proto,
                                                const std::vector<std::string>& indexed_ibns,
                                                const std::vector<std::string>& indexed_obns) {
+  JUST(AddAttrDefaultValueAndCheckValid(&op_proto));
   AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
   std::shared_ptr<UserOpExpr> op_expr(
       new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
@@ -382,6 +393,23 @@ Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
   CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
   UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
   return TRY(device_infer_fn_(&device_infer_ctx));
+}
+
+CastConsistentOpExpr::CastConsistentOpExpr(const std::string& op_name) : op_name_(op_name) {}
+
+CastToConsistentOpExpr::CastToConsistentOpExpr(const std::string& op_name)
+    : CastConsistentOpExpr(op_name) {}
+
+/* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(const std::string& op_name) {
+  return std::shared_ptr<CastToConsistentOpExpr>(new CastToConsistentOpExpr(op_name));
+}
+
+CastFromConsistentOpExpr::CastFromConsistentOpExpr(const std::string& op_name)
+    : CastConsistentOpExpr(op_name) {}
+
+/* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
+    const std::string& op_name) {
+  return std::shared_ptr<CastFromConsistentOpExpr>(new CastFromConsistentOpExpr(op_name));
 }
 
 template<>
@@ -469,6 +497,24 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromMirroredOpConf>::GetOrCreateO
   UNIMPLEMENTED_THEN_RETURN();
 }
 
+Maybe<OpExprGradClosure> CastToConsistentOpExpr::GetOrCreateOpGradClosure() const {
+  if (!op_grad_func_.get()) {
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_to_consistent"));
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    JUST(op_grad_func_->Init(*this));
+  }
+  return std::make_shared<OpExprGradClosure>(op_grad_func_);
+}
+
+Maybe<OpExprGradClosure> CastFromConsistentOpExpr::GetOrCreateOpGradClosure() const {
+  if (!op_grad_func_.get()) {
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_from_consistent"));
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    JUST(op_grad_func_->Init(*this));
+  }
+  return std::make_shared<OpExprGradClosure>(op_grad_func_);
+}
+
 template<>
 Maybe<void> BuiltinOpExprImpl<DistributeSplitOpConf>::BuildOpConf(OperatorConf* op_conf,
                                                                   const AttrMap& attrs) const {
@@ -526,6 +572,15 @@ Maybe<void> BuiltinOpExprImpl<DistributeAddOpConf>::BuildOpConf(OperatorConf* op
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeAddOpConf>::GetOrCreateOpGradClosure() const {
   UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<OpExprGradClosure> SelectFirstOpExpr::GetOrCreateOpGradClosure() const {
+  if (!op_grad_func_.get()) {
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("select_first"));
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    JUST(op_grad_func_->Init(*this));
+  }
+  return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
 }  // namespace one
