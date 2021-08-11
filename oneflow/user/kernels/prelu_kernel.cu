@@ -48,7 +48,7 @@ __global__ void PReluBackwardGpu(const int32_t elem_cnt, const int32_t alpha_siz
       alpha_diff_i = dy_i * x_i;
     }
     dx[i] = dx_i;
-    alpha_diff[i] = alpha_diff_i;
+    alpha_diff[(i / inner_size) % alpha_size] += alpha_diff_i;
   }
 }
 
@@ -91,10 +91,10 @@ REGISTER_GPU_PRELU_KERNEL(float)
 REGISTER_GPU_PRELU_KERNEL(double)
 
 template<typename T>
-class CpuPReluGradKernel final : public user_op::OpKernel {
+class GpuPReluGradKernel final : public user_op::OpKernel {
  public:
-  CpuPReluGradKernel() = default;
-  ~CpuPReluGradKernel() = default;
+  GpuPReluGradKernel() = default;
+  ~GpuPReluGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -120,7 +120,7 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_PRELU_GRAD_KERNEL(dtype)             \
   REGISTER_USER_KERNEL("prelu_grad")                      \
-      .SetCreateFn<CpuPReluGradKernel<dtype>>()           \
+      .SetCreateFn<GpuPReluGradKernel<dtype>>()           \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 

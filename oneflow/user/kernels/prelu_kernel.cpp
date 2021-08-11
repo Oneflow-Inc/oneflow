@@ -91,7 +91,7 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
         alpha_diff_i = dy_i * x_i;
       }
       dx_ptr[i] = dx_i;
-      alpha_diff_ptr[i] = alpha_diff_i;
+      alpha_diff_ptr[(i / inner_size) % alpha_size] += alpha_diff_i;
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

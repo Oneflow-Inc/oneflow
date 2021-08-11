@@ -302,15 +302,11 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
     const auto& dy = out_grads.at(0);
     const auto& x = ctx->SavedTensors().at(0);
     const auto& alpha = ctx->SavedTensors().at(1);
-    printf("debug here!\n");
     in_grads->resize(2);
     if (ctx->input_requires_grad || ctx->alpha_requires_grad) {
       const auto& grads = JUST(functional::PReluGrad(dy, x, alpha));
-      printf("debug end!\n");
       if (ctx->input_requires_grad) { in_grads->at(0) = grads->at(0); }
-      std::cout << "x" << std::endl;
       if (ctx->alpha_requires_grad) { in_grads->at(1) = grads->at(1); }
-      std::cout << "alpha" << std::endl;
     }
     return Maybe<void>::Ok();
   }
