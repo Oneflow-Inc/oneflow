@@ -17,108 +17,83 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SHARED_OR_SCALAR_H_
 
 #include <cstring>
+#include <memory>
+#include <type_traits>
+
 #include <glog/logging.h>
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
-template<typename StructT, typename ScalarT>
-class SharedOrScalar final {
- public:
-  SharedOrScalar(ScalarT scalar_value) : shared_ptr_() { SetScalar(scalar_value); }
-  SharedOrScalar(const SharedOrScalar& rhs) { *this = rhs; }
-  SharedOrScalar(const std::shared_ptr<StructT>& shared_ptr) : shared_ptr_(shared_ptr) {
-    CHECK(!IsScalar());
-  }
-  ~SharedOrScalar();
-
-  SharedOrScalar& operator=(const SharedOrScalar& rhs);
-
-  bool IsScalar() const;
-  ScalarT scalar_value() const;
-  std::shared_ptr<StructT> shared_ptr() const;
-
-  ScalarT operator*() const { return scalar_value(); }
-
- private:
-  struct ScalarStruct final {
-    uint64_t _ : 62, is_scalar_value : 2;
-    ScalarT scalar_value;
-  };
-  static_assert(sizeof(StructT*) == 8, "only 64-bit pointer supported");
-  static_assert(sizeof(ScalarT) <= 8, "only scalar data type supported");
-  static_assert(sizeof(std::shared_ptr<StructT>) >= sizeof(ScalarStruct),
-                "unsupported shared_ptr implemenet");
-
-  void SetScalar(ScalarT scalar_value);
-  const ScalarStruct* CastToScalarStruct() const;
-  ScalarStruct* MutCastToScalarStruct();
-
-  std::shared_ptr<StructT> shared_ptr_;
+template<typename T, typename... Ts>
+struct AlignedCharArrayUnion {
+  using AlignedUnion = typename std::aligned_union<1, T, Ts...>::type;
+  alignas(alignof(AlignedUnion)) char buffer[sizeof(AlignedUnion)];
 };
 
 template<typename StructT, typename ScalarT>
-SharedOrScalar<StructT, ScalarT>& SharedOrScalar<StructT, ScalarT>::operator=(
-    const SharedOrScalar<StructT, ScalarT>& rhs) {
-  if (rhs.IsScalar()) {
-#if defined(__GNUC__) && __GNUC__ >= 8
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-#endif
-    std::memcpy(this, &rhs, sizeof(*this));
-  } else {
-    shared_ptr_ = rhs.shared_ptr_;
+class SharedOrScalar final {
+ public:
+  SharedOrScalar(const ScalarT& scalar_value) : scalar_value_(scalar_value), is_scalar_(true) {}
+
+  SharedOrScalar(const std::shared_ptr<StructT>& shared_ptr) : is_scalar_(false) {
+    new (getSharedStorage()) Shared(shared_ptr);
   }
-  return *this;
-}
 
-template<typename StructT, typename ScalarT>
-const typename SharedOrScalar<StructT, ScalarT>::ScalarStruct*
-SharedOrScalar<StructT, ScalarT>::CastToScalarStruct() const {
-  const ScalarStruct* __attribute__((__may_alias__)) ptr =
-      reinterpret_cast<const ScalarStruct*>(&shared_ptr_);
-  return ptr;
-}
-
-template<typename StructT, typename ScalarT>
-typename SharedOrScalar<StructT, ScalarT>::ScalarStruct*
-SharedOrScalar<StructT, ScalarT>::MutCastToScalarStruct() {
-  ScalarStruct* __attribute__((__may_alias__)) ptr = reinterpret_cast<ScalarStruct*>(&shared_ptr_);
-  return ptr;
-}
-
-template<typename StructT, typename ScalarT>
-void SharedOrScalar<StructT, ScalarT>::SetScalar(ScalarT scalar_value) {
-  ScalarStruct* const ptr = MutCastToScalarStruct();
-  ptr->is_scalar_value = 1;
-  ptr->scalar_value = scalar_value;
-}
-
-template<typename StructT, typename ScalarT>
-std::shared_ptr<StructT> SharedOrScalar<StructT, ScalarT>::shared_ptr() const {
-  CHECK(!IsScalar());
-  return shared_ptr_;
-}
-
-template<typename StructT, typename ScalarT>
-ScalarT SharedOrScalar<StructT, ScalarT>::scalar_value() const {
-  const ScalarStruct* const ptr = CastToScalarStruct();
-  CHECK(ptr->is_scalar_value);
-  return ptr->scalar_value;
-}
-
-template<typename StructT, typename ScalarT>
-bool SharedOrScalar<StructT, ScalarT>::IsScalar() const {
-  const ScalarStruct* const ptr = CastToScalarStruct();
-  return ptr->is_scalar_value;
-}
-
-template<typename StructT, typename ScalarT>
-SharedOrScalar<StructT, ScalarT>::~SharedOrScalar() {
-  if (IsScalar()) {
-    std::shared_ptr<StructT> empty_ptr;
-    std::memcpy(&shared_ptr_, &empty_ptr, sizeof(empty_ptr));
+  SharedOrScalar(const SharedOrScalar& rhs) : is_scalar_(rhs.is_scalar_) {
+    if (rhs.is_scalar_) {
+      scalar_value_ = rhs.scalar_value_;
+    } else {
+      new (getSharedStorage()) Shared(*(rhs.getSharedStorage()));
+    }
   }
-}
+
+  ~SharedOrScalar() {
+    if (is_scalar_) {
+      scalar_value_.~ScalarT();
+    } else {
+      (*getSharedStorage()).~Shared();
+    }
+  }
+
+  bool IsScalar() const { return is_scalar_; }
+  const ScalarT& scalar_value() const {
+    CHECK(is_scalar_);
+    return scalar_value_;
+  }
+
+  const std::shared_ptr<StructT>& shared_ptr() const {
+    CHECK(!is_scalar_);
+    return getSharedStorage()->data;
+  }
+
+  const ScalarT& operator*() const { return scalar_value(); }
+
+ private:
+  struct Shared {
+    Shared() = default;
+    Shared(const std::shared_ptr<StructT>& v) : data(v) {}
+    Shared(std::shared_ptr<StructT>&& v) : data(std::move(v)) {}
+    virtual ~Shared() = default;
+
+    std::shared_ptr<StructT> data;
+  };
+
+  Shared* getSharedStorage() { return reinterpret_cast<Shared*>(&shared_value_); }
+
+  const Shared* getSharedStorage() const { return reinterpret_cast<const Shared*>(&shared_value_); }
+
+  union {
+    ScalarT scalar_value_;
+    AlignedCharArrayUnion<Shared> shared_value_;
+  };
+  bool is_scalar_;
+
+  static_assert(sizeof(StructT*) == 8, "only 64-bit pointer supported");
+  static_assert(sizeof(ScalarT) <= 8, "only scalar data type supported");
+  static_assert(sizeof(std::shared_ptr<StructT>) >= sizeof(ScalarT),
+                "unsupported shared_ptr implemenet");
+};
 
 }  // namespace oneflow
 
