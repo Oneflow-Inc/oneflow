@@ -168,10 +168,9 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dty
       JUST(functional::Empty(shape, CHECK_JUST(DType::Get(flow_dtype)), device));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(flow_dtype), tensor, np_arr_raii));
   if (flow_dtype == DataType::kDouble && !init_from_numpy && !desired_dtype) {
-    desired_dtype = DType::Float(); 
+    desired_dtype = DType::Float();
   }
-  if (desired_dtype) {
-    tensor = JUST(functional::Cast(tensor, desired_dtype)); }
+  if (desired_dtype) { tensor = JUST(functional::Cast(tensor, desired_dtype)); }
   tensor->set_requires_grad(requires_grad);
   return tensor;
 }
