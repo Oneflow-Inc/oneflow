@@ -659,6 +659,7 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
     if (cuda_device_ctx && cuda_graph_support
         && cuda_graph_support->IsCudaGraphSupported(&init_ctx)) {
       cuda_graph_ctx_.reset(new CudaGraphContext(cuda_device_ctx->cuda_stream()));
+      LOG(INFO) << "CUDA Graphs Kernel : " << op_conf().name();
     }
   }
 #endif  // WITH_USER_KERNEL_CUDA_GRAPH
