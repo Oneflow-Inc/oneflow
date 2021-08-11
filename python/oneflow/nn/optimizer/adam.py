@@ -152,7 +152,7 @@ class Adam(Optimizer):
             l2 = param_group["weight_decay"]
             beta1 = param_group["betas"][0]
             beta2 = param_group["betas"][1]
-            
+
             epsilon = param_group["eps"]
             # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
 
