@@ -95,7 +95,7 @@ void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   }
   OF_CUDA_CHECK(cudaEventCreateWithFlags(&(cb_event.event), flags));
   OF_CUDA_CHECK(cudaEventRecord(cb_event.event, *cuda_stream()));
-  cb_event_chan_->Send(cb_event);
+  cb_event_chan_->Send(std::move(cb_event));
 }
 
 CudaStreamHandle::~CudaStreamHandle() {
