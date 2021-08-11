@@ -74,6 +74,9 @@ add_docstr(
     Args:
         height_scale (float):
             multiplier for spatial size. Has to match input size if it is a tuple.
+        
+        width_scale (float):
+            multiplier for spatial size. Has to match input size if it is a tuple.
 
         align_corners (bool): if ``True``, the corner pixels of the input
             and output tensors are aligned, and thus preserving the values at
