@@ -28,16 +28,27 @@ class ParamGroup(object):
         parameters: Union[Iterator[Parameter], Dict[str, Any]],
         default_options: Dict,
     ):
-        if isinstance(parameters, collections.abc.Iterator):
-            self._parameters = list(parameters)
-            self._options = deepcopy(default_options)
-        else:
-            assert "params" in parameters
-            self._parameters = list(parameters["params"])
-            self._options = deepcopy(default_options)
-            for key in self._options:
-                if key in parameters:
-                    self._options[key] = parameters[key]
+        # if isinstance(parameters, collections.abc.Iterator):
+        #     self.param_groups.append(ParamGroup(parameters, self._default_options))
+        # elif isinstance(parameters, collections.abc.Iterable):
+        #     if not isinstance(parameters[0], dict):
+        #         parameters = [{'params': parameters}]
+        #     for param in parameters:
+        #         assert isinstance(param, dict)
+        #         self.param_groups.append(ParamGroup(param, self._default_options))
+        # else:
+        #     raise TypeError('optimizer can only optimize iterable')
+
+        if not isinstance(parameters, dict):
+            parameters = {'params': parameters}
+        self._parameters = list(parameters["params"])
+        assert self._parameters[0].is_leaf==True
+        print("optim param", self._parameters)
+        self._options = deepcopy(default_options)
+        for key in self._options:
+            if key in parameters:
+                self._options[key] = parameters[key]
+
 
     def __getitem__(self, key):
         return self._options[key]
