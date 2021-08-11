@@ -33,7 +33,7 @@ class Device final {
   Device(const Device&) = default;
   Device(Device&&) = default;
   ~Device() = default;
-  Device& operator=(const Device&) = default;
+  Device& operator=(const Device&) = delete;
   const std::string& type() const { return type_; }
   Maybe<const std::string&> of_type() const;
   int64_t device_id() const { return device_id_; }
@@ -42,6 +42,9 @@ class Device final {
   size_t hash_value() const { return hash_value_; }
   bool operator==(const Device& device) const {
     return type_ == device.type() && device_id_ == device.device_id();
+  }
+  bool operator!=(const Device& device) const {
+    return !(type_ == device.type() && device_id_ == device.device_id());
   }
   const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const;
   const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
