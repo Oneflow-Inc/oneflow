@@ -17,8 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_QP_H_
 
 #include <cstdint>
+#include <memory>
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/platform/include/ibv.h"
+
+#include <infiniband/verbs.h>
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
@@ -28,28 +32,24 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_pd* pd) { mem_desc_.reset(new IBVerbsMemDesc(pd, &msg_, sizeof(msg_))); }
-  ActorMsgMR(IBVerbsMemDesc * mem_desc){
-    mem_desc_.reset(mem_desc);
+  ActorMsgMR(ibv_mr * mr, char * addr, uint32_t size):size_(size){
+    mr_.reset(mr);
+    msg_ = reinterpret_cast<ActorMsg*>(addr);
   }
-  ~ActorMsgMR() { mem_desc_.reset(); }
-
-  ActorMsg& msg()  {
-    void * mem_ptr = mem_desc_->mem_ptr();
-    std::memcpy((char*)&msg_, (char*)mem_ptr, sizeof(msg_));
-    return msg_;
+  ~ActorMsgMR() {
+   CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_.get()), 0);
   }
+  void * addr() { return reinterpret_cast<void *>(msg_); }
+  uint32_t size() {return size_ ;}
+  uint32_t lkey() { return mr_->lkey ; }
+  ActorMsg& msg()  { return *msg_;}
 
-  void set_msg(const ActorMsg& val) {
-    void * mem_ptr = mem_desc_->mem_ptr();
-    std::memcpy((char*)mem_ptr, (char*)&val, sizeof(val));
-  }
-
-  const IBVerbsMemDesc& mem_desc() const { return *mem_desc_; }
+  void set_msg(const ActorMsg& val) {  *msg_ = val;}
 
  private:
-  ActorMsg msg_;
-  std::unique_ptr<IBVerbsMemDesc> mem_desc_;
+ std::unique_ptr<ibv_mr> mr_;
+ ActorMsg * msg_;
+ uint32_t size_;
 };
 
 class IBVerbsQP;
@@ -69,7 +69,7 @@ class MessagePool final {
     ~MessagePool() {
       while(message_buf_.empty() == false) {
         delete message_buf_.front();
-        message_buf_.pop();
+        message_buf_.pop_front();
       }
     }//todo:这里可能要修改
 
@@ -77,7 +77,20 @@ class MessagePool final {
       RegisterMessagePool();
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
-    void RegisterMessagePool();
+    void RegisterMessagePool(){
+      size_t ActorMsgSize = sizeof(ActorMsg);
+      size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
+      char * addr =(char*) malloc(RegisterMemorySize );
+      ibv_mr * mr = ibv::wrapper.ibv_reg_mr_wrap(
+          pd_, addr, RegisterMemorySize,
+          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+      for(size_t i = 0;  i < num_of_message_ ; i++){
+          char * split_addr =addr + ActorMsgSize * i ;
+          ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
+          message_buf_.push_front(msg_mr);
+      }
+    }
+    
     ActorMsgMR *  GetMessage(){
       if(isEmpty() == false)  {
         return GetMessageFromBuf();
@@ -88,71 +101,33 @@ class MessagePool final {
     }
 
     ActorMsgMR * GetMessageFromBuf() {
-        ActorMsgMR * msg_mr = std::move(message_buf_.front());
-        message_buf_.pop();
-        return msg_mr;
+      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      std::deque<ActorMsgMR*> buf = GetMessageBuf();
+      ActorMsgMR * msg_mr = buf.front();
+      buf.pop_front();
+      return msg_mr;
     }
-    /*ActorMsgMR * GetMessage(){
-      if(message_buf_.empty() == false) {
-          ActorMsgMR * msg_mr  =message_buf_.front();
-          message_buf_.pop();
-          return msg_mr;
-      } else {
-        //register a big memory 
-        addr_ = malloc( size_ * num_of_message_);//申请内存空间
-        mem_desc_ = new IBVerbsMemDesc(pd_,addr_, size_ * num_of_message_);//给这一块内存空间注册内
-        //切割内存
-        const ibv_mr* mr = mem_desc_->mr();
-         for(int i = 0; i < num_of_message_; i++){
-           ibv_mr * mr1 =(ibv_mr*) (mr + size_ * i);
-           void* addr =(void*) ((char*)addr_ + size_* i);
-           IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(mr1,addr,size_);
-            ActorMsgMR * actorMr = new ActorMsgMR(mem_desc);
-            message_buf_.push(actorMr);
-         }
-          ActorMsgMR * msg_mr  =message_buf_.front();
-          message_buf_.pop();
-          return msg_mr;
-      }
-      
-    }
-    void PutMessage(const ActorMsg & msg){
-     // message_buf_.push()
-      if(message_buf_.empty() == false) {
-        ActorMsgMR * msg_mr  =message_buf_.front();
-        msg_mr->set_msg(msg);
-      } else {
-        //register a big memory 
-        addr_ = malloc( size_ * num_of_message_);//申请内存空间
-        mem_desc_ = new IBVerbsMemDesc(pd_,addr_, size_ * num_of_message_);//给这一块内存空间注册内存
-        //切割内存
-        const ibv_mr* mr = mem_desc_->mr();
-         for(int i = 0; i < num_of_message_; i++){
-           ibv_mr * mr1 =(ibv_mr*) (mr + size_ * i);
-           void* addr =(void*) ((char*)addr_ + size_* i);
-           IBVerbsMemDesc * mem_desc =new  IBVerbsMemDesc(mr1,addr,size_);
-           ActorMsgMR * actorMr = new ActorMsgMR(mem_desc);
-           message_buf_.push(actorMr);
-         }
-        ActorMsgMR * msg_mr  =message_buf_.front();
-        msg_mr->set_msg(msg);
-      }
-    }*/
+
     void PutMessage(ActorMsgMR * msg_mr) {
-      message_buf_.push(msg_mr);
+      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      message_buf_.push_back(msg_mr);
     }
-    std::queue<ActorMsgMR*> getMessageBuf() {
+    
+    std::deque<ActorMsgMR*> GetMessageBuf() {
+      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       return message_buf_;
     }
 
     bool isEmpty() {
+      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       return message_buf_.empty();
     }
 
   private:
     ibv_pd* pd_;
-    uint32_t num_of_message_;
-    std::queue<ActorMsgMR*> message_buf_;
+    size_t  num_of_message_;
+    std::mutex message_buf_mutex_;
+    std::deque<ActorMsgMR*> message_buf_;
 };
 struct IBVerbsCommNetRMADesc;
 
@@ -196,10 +171,12 @@ class IBVerbsQP final {
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
   
-  MessagePool  *  recv_msg_buf_;
-  std::mutex recv_msg_buf_mtx_;
-  MessagePool  * send_msg_buf_;
-  std::mutex send_msg_buf_mtx_;
+  // MessagePool  *  recv_msg_buf_;
+  // std::mutex recv_msg_buf_mtx_;
+  // MessagePool  * send_msg_buf_;
+  // std::mutex send_msg_buf_mtx_;
+  std::unique_ptr<MessagePool> recv_msg_buf_;
+  std::unique_ptr<MessagePool> send_msg_buf_;
 };
 
 }  // namespace oneflow

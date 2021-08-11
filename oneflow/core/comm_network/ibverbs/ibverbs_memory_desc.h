@@ -31,7 +31,6 @@ class IBVerbsMemDesc final {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsMemDesc);
   IBVerbsMemDesc() = delete;
   IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size);
-  IBVerbsMemDesc(ibv_mr* mr, void * mem_ptr, size_t byte_size);
   ~IBVerbsMemDesc();
 
   void* mem_ptr() const { return mem_ptr_; }

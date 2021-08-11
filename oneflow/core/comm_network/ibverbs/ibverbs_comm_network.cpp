@@ -201,7 +201,7 @@ void IBVerbsCommNet::PollCQ() {
       std::cout<<"In PollCQ,the wc.wr_id:"<< wc.wr_id << std::endl;
       WorkRequestId* wr_id = reinterpret_cast<WorkRequestId*>(wc.wr_id);
       ActorMsgMR * msg_mr = wr_id->msg_mr;
-      uint32_t		lkey = msg_mr->mem_desc().mr()->lkey;
+      uint32_t		lkey = msg_mr->lkey();
       std::cout<<"lkey:"<<lkey << std::endl;
       CHECK_EQ(wc.status, IBV_WC_SUCCESS) << wc.opcode << "wc.wr_id" << wc.wr_id;
       IBVerbsQP* qp = wr_id->qp;

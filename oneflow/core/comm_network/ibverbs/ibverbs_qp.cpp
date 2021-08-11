@@ -36,22 +36,21 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 
 }  // namespace
 
-void MessagePool::RegisterMessagePool() {
-      size_t ActorMsgSize = sizeof(ActorMsg);
-      size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
-      char * addr =(char*) malloc(RegisterMemorySize * sizeof(char));
-      IBVerbsMemDesc *  mem_desc = new IBVerbsMemDesc(pd_,(void*) addr, RegisterMemorySize ); 
-      const ibv_mr* mr = mem_desc->mr();
-      std::cout<<"mr:"<<mr<<std::endl;
-      for(uint32_t i =0; i < num_of_message_; i++){
-        ibv_mr * split_mr =(ibv_mr*) (mr + ActorMsgSize * i);
-        std::cout<<"split_mr:"<<split_mr<<std::endl;
-        IBVerbsMemDesc * new_mem_desc =new  IBVerbsMemDesc(split_mr,(void*)(addr + ActorMsgSize * i * sizeof(char)),ActorMsgSize);
-        std::cout<<"addr:" << addr+ActorMsgSize * i<< std::endl;
-        ActorMsgMR * msg_mr= new ActorMsgMR(new_mem_desc);
-        message_buf_.push(msg_mr);
-  }
-}
+// void MessagePool::RegisterMessagePool() {
+//       size_t ActorMsgSize = sizeof(ActorMsg);
+//       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
+//       char * addr =(char*) malloc(RegisterMemorySize * );
+      
+//       /*std::cout<<"mr:"<<mr<<std::endl;
+//       for(uint32_t i =0; i < num_of_message_; i++){
+//         ibv_mr * split_mr =(ibv_mr*) (mr + ActorMsgSize * i);
+//         std::cout<<"split_mr:"<<split_mr<<std::endl;
+//         IBVerbsMemDesc * new_mem_desc =new  IBVerbsMemDesc(split_mr,(void*)(addr + ActorMsgSize * i * sizeof(char)),ActorMsgSize);
+//         std::cout<<"addr:" << addr+ActorMsgSize * i<< std::endl;
+//         ActorMsgMR * msg_mr= new ActorMsgMR(new_mem_desc);
+//         message_buf_.push(msg_mr);
+//   }*/
+// }
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq) {
@@ -86,8 +85,10 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   //CHECK(send_msg_buf_.isempty());
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
-  recv_msg_buf_ = new MessagePool(pd_,queue_depth);
-  send_msg_buf_ = new MessagePool(pd_, queue_depth);
+  recv_msg_buf_.reset(new MessagePool(pd_, queue_depth));
+  send_msg_buf_.reset(new MessagePool(pd_,queue_depth));
+  //recv_msg_buf_ = new MessagePool(pd_,queue_depth);
+ // send_msg_buf_ = new MessagePool(pd_, queue_depth);
 }
 
 IBVerbsQP::~IBVerbsQP() {
@@ -164,11 +165,10 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-  std::unique_lock<std::mutex> lck(recv_msg_buf_mtx_);
-  std::queue<ActorMsgMR *> messageBuf = recv_msg_buf_->getMessageBuf();
+  std::deque<ActorMsgMR *> messageBuf = recv_msg_buf_->GetMessageBuf();
   while(messageBuf.empty() == false) {
-      ActorMsgMR * msg_mr = std::move(messageBuf.front());
-      messageBuf.pop();
+      ActorMsgMR * msg_mr = messageBuf.front();
+      messageBuf.pop_front();
       PostRecvRequest(msg_mr);
     } 
 }
@@ -204,16 +204,17 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 }
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
-  std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
   ActorMsgMR * msg_mr = send_msg_buf_->GetMessage();
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
   ibv_send_wr wr{};
   ibv_sge sge{};
-  sge.addr = reinterpret_cast<uint64_t>(msg_mr->mem_desc().mem_ptr());
-  sge.length = msg_mr->mem_desc().mem_size();
-  sge.lkey = msg_mr->mem_desc().mr()->lkey;
+  sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
+  //sge.length = msg_mr->mem_desc().mem_size();
+ // sge.lkey = msg_mr->mem_desc().mr()->lkey;
+  sge.length = msg_mr->size();
+  sge.lkey = msg_mr->lkey();
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   std::cout<<"In PostSendRequest,the lkey:"<<sge.lkey << std::endl;
   std::cout<<"In PostSendRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
@@ -251,7 +252,6 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
   {
-    std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
     send_msg_buf_->PutMessage(wr_id->msg_mr);
   }
   DeleteWorkRequestId(wr_id);
@@ -263,7 +263,6 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   CHECK(ibv_comm_net != nullptr);
   ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
-  std::unique_lock<std::mutex> lck(recv_msg_buf_mtx_);
   recv_msg_buf_->PutMessage(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
 }
@@ -287,9 +286,14 @@ void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
   wr_id->msg_mr = msg_mr;
   ibv_recv_wr wr{};
   ibv_sge sge{};
-  sge.addr = reinterpret_cast<uint64_t>(msg_mr->mem_desc().mem_ptr());
-  sge.length = msg_mr->mem_desc().mem_size();
-  sge.lkey = msg_mr->mem_desc().mr()->lkey;
+  sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
+  //sge.length = msg_mr->mem_desc().mem_size();
+ // sge.lkey = msg_mr->mem_desc().mr()->lkey;
+  sge.length = msg_mr->size();
+  sge.lkey = msg_mr->lkey();
+  // sge.addr = reinterpret_cast<uint64_t>(msg_mr->mem_desc().mem_ptr());
+  // sge.length = msg_mr->mem_desc().mem_size();
+  // sge.lkey = msg_mr->mem_desc().mr()->lkey;
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   std::cout<<"In PostRecvRequest,the lkey:"<<sge.lkey << std::endl;
   std::cout<<"In PostRecvRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
