@@ -267,7 +267,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
   // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
   //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
   //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
-  auto lazy_mode_disabled_grad = std::make_unique<LazyMode::Gard>(/* is_enabled */ false);
+  auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
   Symbol<Device> device;
   Symbol<ParallelDesc> placement;
   std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;
