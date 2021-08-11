@@ -47,9 +47,6 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         flow.Size([1, 3])
 
     """
-    if dim == None:
-        return input
-
     if isinstance(dim, int):
         dim = [dim]
     elif dim is None:

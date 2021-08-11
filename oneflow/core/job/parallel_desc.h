@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/cached_caller.h"
 
 namespace oneflow {
 
@@ -141,11 +142,16 @@ Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_
 namespace private_details {
 
 Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc);
+Maybe<const ParallelContext> CalcParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc);
 
-}
+}  // namespace private_details
 
 static constexpr auto* GetParallelId4CurrentProcessCtx =
     DECORATE(&private_details::CalcParallelId4CurrentProcessCtx, ThreadLocal);
+
+static constexpr auto* GetParallelContext4CurrentProcessCtx =
+    DECORATE(&private_details::CalcParallelContext4CurrentProcessCtx, ThreadLocal);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
@@ -160,6 +166,8 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
 
 ParallelConf GenParallelConfOfCpuZeroOnMaster();
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
+
+bool IsMirroredParallelContext(const ParallelContext& parallel_ctx);
 
 }  // namespace oneflow
 
