@@ -58,8 +58,7 @@ oneflow
             logical_and,
             logical_or,
             logical_xor,
-            logical_not
->>>>>>> master
+            logical_not,
             load, 
             log, 
             log1p, 
