@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class ObjMsgChunk;
+struct ObjMsgChunk;
 
 struct ObjMsgMemBlock final {
  public:
@@ -41,7 +41,7 @@ struct ObjMsgMemBlock final {
   char mem_ptr_[0];
 };
 
-class ObjMsgSizedMemPool;
+struct ObjMsgSizedMemPool;
 
 // clang-format off
 OBJECT_MSG_BEGIN(ObjMsgChunk);

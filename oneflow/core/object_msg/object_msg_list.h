@@ -219,7 +219,7 @@ class TrivialObjectMsgList<kDisableSelfLoopLink, ValueLinkField> {
     if (list_head_.empty()) { return nullptr; }
     return list_head_.Last();
   }
-  constexpr value_type* End() { return nullptr; }
+  constexpr value_type* End() const { return nullptr; }
 
   void MoveToDstBack(value_type* ptr, TrivialObjectMsgList* dst) {
     list_head_.MoveToDstBack(ptr, &dst->list_head_);
@@ -326,7 +326,7 @@ class TrivialObjectMsgList<kEnableSelfLoopLink, ValueLinkField> {
     if (list_head_.empty()) { return nullptr; }
     return list_head_.Last();
   }
-  constexpr value_type* End() { return nullptr; }
+  constexpr value_type* End() const { return nullptr; }
 
   void MoveToDstBack(value_type* ptr, TrivialObjectMsgList* dst) {
     list_head_.MoveToDstBack(ptr, &dst->list_head_);
