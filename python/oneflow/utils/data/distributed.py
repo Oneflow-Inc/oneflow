@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import numpy as np
 import math
+import numpy as np
 from typing import TypeVar, Optional, Iterator
 
 import oneflow as flow
-from . import Sampler, Dataset
 import oneflow.distributed as dist
+from oneflow.utils.data import Sampler, Dataset
 
 
-T_co = TypeVar('T_co', covariant=True)
+T_co = TypeVar("T_co", covariant=True)
 
 
 class DistributedSampler(Sampler[T_co]):
@@ -61,20 +61,27 @@ class DistributedSampler(Sampler[T_co]):
         is necessary to make shuffling work properly across multiple epochs. Otherwise,
         the same ordering will be always used.
 
-    Example::
+    For example:
+
+    .. code-block:: python
 
         >>> sampler = DistributedSampler(dataset) if is_distributed else None
-        >>> loader = DataLoader(dataset, shuffle=(sampler is None),
-        ...                     sampler=sampler)
+        >>> loader = DataLoader(dataset, shuffle=(sampler is None), sampler=sampler)
         >>> for epoch in range(start_epoch, n_epochs):
         ...     if is_distributed:
         ...         sampler.set_epoch(epoch)
         ...     train(loader)
     """
 
-    def __init__(self, dataset: Dataset, num_replicas: Optional[int] = None,
-                 rank: Optional[int] = None, shuffle: bool = True,
-                 seed: int = 0, drop_last: bool = False) -> None:
+    def __init__(
+        self,
+        dataset: Dataset,
+        num_replicas: Optional[int] = None,
+        rank: Optional[int] = None,
+        shuffle: bool = True,
+        seed: int = 0,
+        drop_last: bool = False,
+    ) -> None:
         if not dist.is_multi_client():
             raise RuntimeError("Requires multi-client env to be available")
 
@@ -85,7 +92,8 @@ class DistributedSampler(Sampler[T_co]):
         if rank >= num_replicas or rank < 0:
             raise ValueError(
                 "Invalid rank {}, rank should be in the interval"
-                " [0, {}]".format(rank, num_replicas - 1))
+                " [0, {}]".format(rank, num_replicas - 1)
+            )
         self.dataset = dataset
         self.num_replicas = num_replicas
         self.rank = rank
@@ -93,16 +101,17 @@ class DistributedSampler(Sampler[T_co]):
         self.drop_last = drop_last
         # If the dataset length is evenly divisible by # of replicas, then there
         # is no need to drop any data, since the dataset will be split equally.
-        if self.drop_last and len(self.dataset) % self.num_replicas != 0:  # type: ignore[arg-type]
+        if self.drop_last and len(self.dataset) % self.num_replicas != 0:
             # Split to nearest available length that is evenly divisible.
             # This is to ensure each rank receives the same amount of data when
             # using this Sampler.
             self.num_samples = math.ceil(
                 # `type:ignore` is required because Dataset cannot provide a default __len__
-                (len(self.dataset) - self.num_replicas) / self.num_replicas  # type: ignore[arg-type]
+                (len(self.dataset) - self.num_replicas)
+                / self.num_replicas
             )
         else:
-            self.num_samples = math.ceil(len(self.dataset) / self.num_replicas)  # type: ignore[arg-type]
+            self.num_samples = math.ceil(len(self.dataset) / self.num_replicas)
         self.total_size = self.num_samples * self.num_replicas
         self.shuffle = shuffle
         self.seed = seed
@@ -113,11 +122,11 @@ class DistributedSampler(Sampler[T_co]):
             # TODO:replace with flow.randperm
             g = flow.Generator()
             g.manual_seed(self.seed + self.epoch)
-            # indices = flow.randperm(len(self.dataset), generator=g).tolist()  # type: ignore[arg-type]
+            # indices = flow.randperm(len(self.dataset), generator=g).tolist()
             indices = np.random.permutation(len(self.dataset)).tolist()
 
         else:
-            indices = list(range(len(self.dataset)))  # type: ignore[arg-type]
+            indices = list(range(len(self.dataset)))
 
         if not self.drop_last:
             # add extra samples to make it evenly divisible
@@ -125,14 +134,16 @@ class DistributedSampler(Sampler[T_co]):
             if padding_size <= len(indices):
                 indices += indices[:padding_size]
             else:
-                indices += (indices * math.ceil(padding_size / len(indices)))[:padding_size]
+                indices += (indices * math.ceil(padding_size / len(indices)))[
+                    :padding_size
+                ]
         else:
             # remove tail of data to make it evenly divisible.
-            indices = indices[:self.total_size]
+            indices = indices[: self.total_size]
         assert len(indices) == self.total_size
 
         # subsample
-        indices = indices[self.rank:self.total_size:self.num_replicas]
+        indices = indices[self.rank : self.total_size : self.num_replicas]
         assert len(indices) == self.num_samples
 
         return iter(indices)
@@ -141,10 +152,10 @@ class DistributedSampler(Sampler[T_co]):
         return self.num_samples
 
     def set_epoch(self, epoch: int) -> None:
-        r"""
-        Sets the epoch for this sampler. When :attr:`shuffle=True`, this ensures all replicas
-        use a different random ordering for each epoch. Otherwise, the next iteration of this
-        sampler will yield the same ordering.
+        """Sets the epoch for this sampler. 
+        When :attr:`shuffle=True`, this ensures all replicas use a different random 
+        ordering for each epoch. Otherwise, the next iteration of this sampler 
+        will yield the same ordering.
 
         Args:
             epoch (int): Epoch number.
