@@ -25,7 +25,7 @@ template<typename X, typename Y>
 class EitherPtr final {
  public:
   static_assert(!std::is_same<X, Y>::value, "X should not be Y");
-  EitherPtr() : type_(UnionType<Void>::value) {}
+  EitherPtr() : type_(UnionType<X>::value) {}
   EitherPtr(const std::shared_ptr<X>& ptr) : union_(ptr), type_(UnionType<X>::value) {}
   EitherPtr(const std::shared_ptr<Y>& ptr) { Set(ptr); }
 
@@ -70,9 +70,7 @@ class EitherPtr final {
   }
 
   void Reset() {
-    if (type_ == UnionType<Void>::value) {
-      MutCast<Void>()->reset();
-    } else if (type_ == UnionType<X>::value) {
+    if (type_ == UnionType<X>::value) {
       union_.reset();
     } else if (type_ == UnionType<Y>::value) {
       MutCast<Y>()->reset();
@@ -82,20 +80,15 @@ class EitherPtr final {
   }
 
  private:
-  struct Void {};
   template<typename T, typename Enable = void>
   struct UnionType;
   template<typename T>
-  struct UnionType<T, typename std::enable_if<std::is_same<Void, T>::value>::type> {
-    static const int8_t value = 0;
-  };
-  template<typename T>
   struct UnionType<T, typename std::enable_if<std::is_same<X, T>::value>::type> {
-    static const int8_t value = 1;
+    static constexpr int8_t value = 0;
   };
   template<typename T>
   struct UnionType<T, typename std::enable_if<std::is_same<Y, T>::value>::type> {
-    static const int8_t value = 2;
+    static constexpr int8_t value = 1;
   };
   void CopyFrom(const EitherPtr<X, Y>& either_ptr) {
     if (either_ptr.template Has<X>()) {

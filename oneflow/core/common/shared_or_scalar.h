@@ -16,35 +16,31 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_SHARED_OR_SCALAR_H_
 #define ONEFLOW_CORE_COMMON_SHARED_OR_SCALAR_H_
 
-#include <cstring>
 #include <memory>
 #include <type_traits>
 
 #include <glog/logging.h>
+#include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
-template<typename T, typename... Ts>
-struct AlignedCharArrayUnion {
-  using AlignedUnion = typename std::aligned_union<1, T, Ts...>::type;
-  alignas(alignof(AlignedUnion)) char buffer[sizeof(AlignedUnion)];
-};
-
 template<typename StructT, typename ScalarT>
 class SharedOrScalar final {
  public:
+  static_assert(IsScalarType<ScalarT>::value, "ScalarT should be scalar type.");
+
   SharedOrScalar(const ScalarT& scalar_value) : scalar_value_(scalar_value), is_scalar_(true) {}
 
   SharedOrScalar(const std::shared_ptr<StructT>& shared_ptr) : is_scalar_(false) {
-    new (getSharedStorage()) Shared(shared_ptr);
+    new (MutableSharedStorage()) Shared(shared_ptr);
   }
 
   SharedOrScalar(const SharedOrScalar& rhs) : is_scalar_(rhs.is_scalar_) {
     if (rhs.is_scalar_) {
       scalar_value_ = rhs.scalar_value_;
     } else {
-      new (getSharedStorage()) Shared(*(rhs.getSharedStorage()));
+      new (MutableSharedStorage()) Shared(*(rhs.GetSharedStorage()));
     }
   }
 
@@ -52,7 +48,7 @@ class SharedOrScalar final {
     if (is_scalar_) {
       scalar_value_.~ScalarT();
     } else {
-      (*getSharedStorage()).~Shared();
+      (*MutableSharedStorage()).~Shared();
     }
   }
 
@@ -64,7 +60,7 @@ class SharedOrScalar final {
 
   const std::shared_ptr<StructT>& shared_ptr() const {
     CHECK(!is_scalar_);
-    return getSharedStorage()->data;
+    return GetSharedStorage()->data;
   }
 
   const ScalarT& operator*() const { return scalar_value(); }
@@ -79,20 +75,18 @@ class SharedOrScalar final {
     std::shared_ptr<StructT> data;
   };
 
-  Shared* getSharedStorage() { return reinterpret_cast<Shared*>(&shared_value_); }
+  Shared* MutableSharedStorage() { return reinterpret_cast<Shared*>(&shared_value_); }
 
-  const Shared* getSharedStorage() const { return reinterpret_cast<const Shared*>(&shared_value_); }
+  const Shared* GetSharedStorage() const { return reinterpret_cast<const Shared*>(&shared_value_); }
+
+  template<typename T, typename... Ts>
+  using AlignedUnion = typename std::aligned_union<1, T, Ts...>::type;
 
   union {
     ScalarT scalar_value_;
-    AlignedCharArrayUnion<Shared> shared_value_;
+    AlignedUnion<Shared> shared_value_;
   };
   bool is_scalar_;
-
-  static_assert(sizeof(StructT*) == 8, "only 64-bit pointer supported");
-  static_assert(sizeof(ScalarT) <= 8, "only scalar data type supported");
-  static_assert(sizeof(std::shared_ptr<StructT>) >= sizeof(ScalarT),
-                "unsupported shared_ptr implemenet");
 };
 
 }  // namespace oneflow
