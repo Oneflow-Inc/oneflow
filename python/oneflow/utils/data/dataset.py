@@ -135,6 +135,7 @@ class IterableDataset(Dataset[T_co]):
         [3, 4, 5, 6]
 
     """
+
     def __iter__(self) -> Iterator[T_co]:
         raise NotImplementedError
 
@@ -192,6 +193,7 @@ class TensorDataset(Dataset[Tuple[Tensor, ...]]):
     Args:
         *tensors (Tensor): tensors that have the same size of the first dimension.
     """
+
     def __init__(self, *tensors: Tensor) -> None:
         assert all(
             tensors[0].size(0) == tensor.size(0) for tensor in tensors
@@ -213,6 +215,7 @@ class ConcatDataset(Dataset[T_co]):
     Args:
         datasets (sequence): List of datasets to be concatenated
     """
+
     @staticmethod
     def cumsum(sequence):
         r, s = [], 0
@@ -293,6 +296,7 @@ class Subset(Dataset[T_co]):
         dataset (Dataset): The whole Dataset
         indices (sequence): Indices in the whole set selected for subset
     """
+
     def __init__(self, dataset: Dataset[T_co], indices: Sequence[int]) -> None:
         self.dataset = dataset
         self.indices = indices

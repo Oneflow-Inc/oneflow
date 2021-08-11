@@ -277,6 +277,7 @@ class Scale(Resize):
     r"""
     Note: This transform is deprecated in favor of Resize.
     """
+
     def __init__(self, *args, **kwargs):
         warnings.warn(
             "The use of the transforms.Scale transform is deprecated, "
