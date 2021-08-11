@@ -592,7 +592,7 @@ const std::shared_ptr<user_op::OpKernelState>& UserKernel::GetOpKernelState() co
   return opkernel_state_;
 }
 
-void UserKernel::ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
+void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                    user_op::OpKernelState* opkernel_state) const {
   ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
   kernel_->Compute(ctx_.get(), opkernel_state);
@@ -604,13 +604,13 @@ void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {
   opkernel_state_ = CreateOpKernelState(device_ctx);
 }
 
-void UserKernel::ForwardDataContent(const KernelCtx& ctx,
-                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void UserKernel::ForwardDataContent(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
 }
 
 void UserKernel::ForwardShape(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
   infer_cache_->UpdateCacheKey(infer_ctx_.get());
   if (!infer_cache_->IsCacheHit()) {

@@ -237,11 +237,12 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     }
   }
   void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     const ModelInitV2OpConf& conf = this->op_conf().model_init_v2_conf();
 
     FOR_RANGE(int64_t, i, 0, conf.variable_op_name_size()) {
@@ -302,11 +303,12 @@ class ModelLoadV2Kernel final : public KernelIf<device_type> {
     }
   }
   void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     const ModelLoadV2OpConf& conf = this->op_conf().model_load_v2_conf();
     const Blob* path = BnInOp2Blob("path");
     const std::string snapshot_path = SyncReadStringFromBlob<device_type>(ctx.device_ctx, path);
@@ -385,11 +387,12 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
   }
 
   void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     const ModelSaveV2OpConf& conf = this->op_conf().model_save_v2_conf();
     const Blob* path_blob = BnInOp2Blob("path");
     const std::string snapshot_path =
