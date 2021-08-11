@@ -165,8 +165,8 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createTensorConstantBufferizePass());                  // tensor-constant-bufferize
   pm.addPass(createFuncBufferizePass());                            // func-bufferize
   pm.addPass(createBufferResultsToOutParamsPass());                 // buffer-results-to-out-params
-  pm.addPass(createCanonicalizerPass());
-  pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());
+  pm.addPass(createCanonicalizerPass());                            // canonicalize
+  pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());        // finalizing-bufferize
 }
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
