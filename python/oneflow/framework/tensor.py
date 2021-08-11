@@ -97,7 +97,9 @@ def _getitem(self, key):
 
 def _setitem(self, key, value):
     if isinstance(value, (int, float)):
-        value = flow.F.constant([1], value, self.dtype)
+        value = flow.F.constant([1], value, self.dtype, device=self.device)
+    if value.device != self.device:
+        value = value.to(self.device)
     flow.F.tensor_setitem(self, key, value)
     return self
 
