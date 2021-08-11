@@ -55,6 +55,9 @@ jobs:
           cd build
           rm CMakeCache.txt
           cmake .. -C ../cmake/caches/international/cpu.cmake \
+            # use clang as compiler for correct compiler flags
+            -DCMAKE_C_COMPILER=clang-12 \
+            -DCMAKE_CXX_COMPILER=clang++-12 \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
