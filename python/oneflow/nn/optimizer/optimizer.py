@@ -17,6 +17,7 @@ import collections
 import warnings
 from copy import deepcopy
 from typing import Any, Callable, Dict, Iterator, Union
+
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
 
@@ -37,7 +38,6 @@ class ParamGroup(object):
             for key in self._options:
                 if key in parameters:
                     self._options[key] = parameters[key]
-
 
     def __getitem__(self, key):
         return self._options[key]
