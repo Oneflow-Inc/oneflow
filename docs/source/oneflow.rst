@@ -55,6 +55,7 @@ oneflow
             in_top_k, 
             logical_and,
             logical_or,
+            logical_xor,
             load, 
             log, 
             log1p, 
