@@ -22,7 +22,7 @@ namespace oneflow {
 
 template<typename T>
 void CallbackNotifyKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   std::string buffer_name;
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
