@@ -34,9 +34,8 @@ class CpuPReluKernel final : public user_op::OpKernel {
     T* y_ptr = y->mut_dptr<T>();
     const int32_t elem_cnt = x->shape().elem_cnt();
     const int32_t alpha_size = alpha->shape().elem_cnt();
-    int outer_size = x->shape().At(0);
-    for (int i = 2; i < x->shape().NumAxes(); i++) outer_size *= x->shape().At(i);
-    const int32_t inner_size = elem_cnt / outer_size / alpha_size;
+    int batch = x->shape().At(0);
+    const int32_t inner_size = elem_cnt / batch / alpha_size;
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       y_ptr[i] = x_ptr[i] > 0 ? x_ptr[i] : x_ptr[i] * alpha_ptr[(i / inner_size) % alpha_size];
     }
@@ -45,9 +44,10 @@ class CpuPReluKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_CPU_PRELU_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("prelu").SetCreateFn<CpuPReluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "cpu")                                              \
-      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+  REGISTER_USER_KERNEL("prelu")                                                       \
+      .SetCreateFn<CpuPReluKernel<dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                             \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_PRELU_KERNEL(float)
 REGISTER_CPU_PRELU_KERNEL(double)
@@ -73,9 +73,8 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
 
     const int32_t elem_cnt = x->shape().elem_cnt();
     const int32_t alpha_size = alpha->shape().elem_cnt();
-    int outer_size = x->shape().At(0);
-    for (int i = 2; i < x->shape().NumAxes(); i++) outer_size *= x->shape().At(i);
-    const int32_t inner_size = elem_cnt / outer_size / alpha_size;
+    int batch = x->shape().At(0);
+    const int32_t inner_size = elem_cnt / batch / alpha_size;
 
     for (int i = 0; i < elem_cnt; i++) {
       const T x_i = x_ptr[i];

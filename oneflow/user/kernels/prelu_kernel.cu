@@ -67,9 +67,8 @@ class GpuPReluKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = x->shape().elem_cnt();
     const int32_t alpha_size = alpha->shape().elem_cnt();
-    int outer_size = x->shape().At(0);
-    for (int i = 2; i < x->shape().NumAxes(); i++) outer_size *= x->shape().At(i);
-    const int32_t inner_size = elem_cnt / outer_size / alpha_size;
+    int batch = x->shape().At(0);
+    const int32_t inner_size = elem_cnt / batch / alpha_size;
     PReluForwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                          ctx->device_ctx()->cuda_stream()>>>(
         elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), y->mut_dptr<T>());
@@ -78,18 +77,23 @@ class GpuPReluKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_GPU_PRELU_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("prelu").SetCreateFn<GpuPReluKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "gpu")                                              \
-      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+  REGISTER_USER_KERNEL("prelu")                                                       \
+      .SetCreateFn<GpuPReluKernel<dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                             \
+                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
+        const Shape& in_shape = ctx->InputShape("x", 0);                              \
+        return GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));               \
+      });
 
 REGISTER_GPU_PRELU_KERNEL(float)
 REGISTER_GPU_PRELU_KERNEL(double)
 
 template<typename T>
-class GpuPReluGradKernel final : public user_op::OpKernel {
+class CpuPReluGradKernel final : public user_op::OpKernel {
  public:
-  GpuPReluGradKernel() = default;
-  ~GpuPReluGradKernel() = default;
+  CpuPReluGradKernel() = default;
+  ~CpuPReluGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -101,9 +105,8 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
 
     const int32_t elem_cnt = x->shape().elem_cnt();
     const int32_t alpha_size = alpha->shape().elem_cnt();
-    int outer_size = x->shape().At(0);
-    for (int i = 2; i < x->shape().NumAxes(); i++) outer_size *= x->shape().At(i);
-    const int32_t inner_size = elem_cnt / outer_size / alpha_size;
+    int batch = x->shape().At(0);
+    const int32_t inner_size = elem_cnt / batch / alpha_size;
 
     PReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx->device_ctx()->cuda_stream()>>>(
@@ -115,8 +118,8 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_GPU_PRELU_GRAD_KERNEL(dtype)             \
   REGISTER_USER_KERNEL("prelu_grad")                      \
-      .SetCreateFn<GpuPReluGradKernel<dtype>>()           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
+      .SetCreateFn<CpuPReluGradKernel<dtype>>()           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu") \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_PRELU_GRAD_KERNEL(float)
