@@ -100,6 +100,8 @@ def _setitem(self, key, value):
         value = flow.F.constant([1], value, self.dtype, device=self.device)
     if value.device != self.device:
         value = value.to(self.device)
+        if self.is_consistent:
+            value = value.to_consistent(placement=self.placement, sbp=flow.sbp.broadcast)
     flow.F.tensor_setitem(self, key, value)
     return self
 
