@@ -161,8 +161,7 @@ Maybe<Tensor> LazyConsistentToConsistent(
     const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels,
     const std::shared_ptr<OpExpr>& op) {
   CHECK_OR_RETURN(x->is_lazy());
-  CHECK_OR_RETURN(x->is_consistent())
-      << "local_tensor.to_consistent() is not supported within nn.Graph for now";
+  CHECK_OR_RETURN(x->is_consistent());
 
   Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
   std::vector<std::string> grad_parallel_distribution = *JUST(GetNdSbpStrList(grad_sbp_parallels));
@@ -181,7 +180,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                                 const Optional<Shape>& shape, const std::shared_ptr<OpExpr>& op) {
   CHECK_OR_RETURN(!x->is_lazy())
-      << "consistent_tensor.to_local() is not supported within nn.Graph for now";
+      << "local_tensor.to_consistent() is not supported within nn.Graph for now";
   CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
@@ -256,10 +255,12 @@ class ConsistentToLocalFunctor {
  public:
   ConsistentToLocalFunctor() {
     op_ = CHECK_JUST(
-        one::CastFromConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+        one::CastFromConsistentOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_local"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    CHECK_OR_RETURN(!x->is_lazy())
+        << "consistent_tensor.to_local() is not supported within nn.Graph for now";
     CHECK_OR_RETURN(x->is_consistent()) << "consistent tensors supported only";
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
   }
