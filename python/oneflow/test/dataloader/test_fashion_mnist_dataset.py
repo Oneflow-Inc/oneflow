@@ -89,11 +89,7 @@ def test(test_case):
     )
     source_url = "https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/Fashion-MNIST/"
     train_iter, test_iter = load_data_fashion_mnist(
-        batch_size, 
-        resize=None,
-        root=data_dir, 
-        download=True, 
-        source_url=source_url
+        batch_size, resize=None, root=data_dir, download=True, source_url=source_url
     )
     loss = nn.CrossEntropyLoss()
     loss.to(device)

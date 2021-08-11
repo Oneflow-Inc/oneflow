@@ -83,12 +83,12 @@ def test(test_case):
     )
 
     train_iter, test_iter = load_data_cifar10(
-        batch_size=batch_size, 
+        batch_size=batch_size,
         data_dir=data_dir,
         download=True,
         transform=transform,
         source_url="https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/cifar/cifar-10-python.tar.gz",
-        num_workers=0
+        num_workers=0,
     )
 
     final_loss = 0

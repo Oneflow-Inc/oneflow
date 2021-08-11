@@ -56,5 +56,5 @@ __all__ = [
     "functional_datapipe",
     "guaranteed_datapipes_determinism",
     "non_deterministic",
-    "DistributedSampler"
+    "DistributedSampler",
 ]

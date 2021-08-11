@@ -59,8 +59,8 @@ def test(test_case):
     transform = flow.utils.vision.transforms.Compose(
         [
             transforms.Pad(10),
-            transforms.RandomHorizontalFlip(p = 0.5),
-            transforms.RandomVerticalFlip(p = 0.5),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomVerticalFlip(p=0.5),
             transforms.CenterCrop(32),
             transforms.Resize([32, 32]),
             transforms.ToTensor(),
@@ -75,12 +75,12 @@ def test(test_case):
     )
 
     train_iter, test_iter = load_data_cifar10(
-        batch_size=batch_size, 
+        batch_size=batch_size,
         data_dir=data_dir,
         download=True,
         transform=transform,
         source_url="https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/cifar/cifar-10-python.tar.gz",
-        num_workers=0
+        num_workers=0,
     )
 
     final_loss = 0
@@ -121,10 +121,10 @@ class TestCifarDataset(flow.unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
     # 1 epoch training log
-    # epoch: 1  step:  2000  loss: 2.160 
-    # epoch: 1  step:  4000  loss: 1.929 
-    # epoch: 1  step:  6000  loss: 1.778 
-    # epoch: 1  step:  8000  loss: 1.678 
-    # epoch: 1  step: 10000  loss: 1.679 
-    # epoch: 1  step: 12000  loss: 1.636 
+    # epoch: 1  step:  2000  loss: 2.160
+    # epoch: 1  step:  4000  loss: 1.929
+    # epoch: 1  step:  6000  loss: 1.778
+    # epoch: 1  step:  8000  loss: 1.678
+    # epoch: 1  step: 10000  loss: 1.679
+    # epoch: 1  step: 12000  loss: 1.636
     # final loss :  1.635899437919259

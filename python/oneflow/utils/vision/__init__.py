@@ -16,7 +16,8 @@ limitations under the License.
 from oneflow.utils.vision import datasets
 from oneflow.utils.vision import transforms
 
-_image_backend = 'PIL'
+_image_backend = "PIL"
+
 
 def set_image_backend(backend):
     """
@@ -27,9 +28,10 @@ def set_image_backend(backend):
             generally faster than PIL, but does not support as many operations.
     """
     global _image_backend
-    if backend not in ['PIL', 'accimage']:
-        raise ValueError("Invalid backend '{}'. Options are 'PIL' and 'accimage'"
-                         .format(backend))
+    if backend not in ["PIL", "accimage"]:
+        raise ValueError(
+            "Invalid backend '{}'. Options are 'PIL' and 'accimage'".format(backend)
+        )
     _image_backend = backend
 
 

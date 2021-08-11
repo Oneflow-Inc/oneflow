@@ -27,9 +27,12 @@ data_dir = os.path.join(
     os.getenv("ONEFLOW_TEST_CACHE_DIR", "./data-test"), "mnist-dataset"
 )
 train_iter, test_iter = load_data_mnist(
-    batch_size=128, download=True, root=data_dir,
-    source_url="https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/MNIST/"
+    batch_size=128,
+    download=True,
+    root=data_dir,
+    source_url="https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/mnist/MNIST/",
 )
+
 
 def evaluate_accuracy(data_iter, net, device=None):
     n_correct, n_samples = 0.0, 0
@@ -37,7 +40,7 @@ def evaluate_accuracy(data_iter, net, device=None):
     net.eval()
     with flow.no_grad():
         for images, labels in data_iter:
-            images = images.reshape((-1, 28*28))
+            images = images.reshape((-1, 28 * 28))
             images = images.to(device=device)
             labels = labels.to(device=device)
             n_correct += (net(images).argmax(dim=1).numpy() == labels.numpy()).sum()
@@ -47,13 +50,16 @@ def evaluate_accuracy(data_iter, net, device=None):
 
 
 class Net(nn.Module):
-    def __init__(self, input_size=784, hidden_size1=128, hidden_size2=64, num_classes=10):
+    def __init__(
+        self, input_size=784, hidden_size1=128, hidden_size2=64, num_classes=10
+    ):
         super(Net, self).__init__()
         self.l1 = nn.Linear(input_size, hidden_size1)
         self.relu1 = nn.ReLU()
         self.l2 = nn.Linear(hidden_size1, hidden_size2)
         self.relu2 = nn.ReLU()
         self.l3 = nn.Linear(hidden_size2, num_classes)
+
     def forward(self, x):
         out = self.l1(x)
         out = self.relu1(out)
@@ -79,7 +85,7 @@ def test_train_and_eval(test_case):
     for epoch in range(num_epochs):
         train_loss, n_correct, n_samples = 0.0, 0.0, 0
         for images, labels in train_iter:
-            images = images.reshape((-1, 28*28))
+            images = images.reshape((-1, 28 * 28))
             images = images.to(device=device)
             labels = labels.to(device=device)
             features = model(images)
@@ -93,11 +99,13 @@ def test_train_and_eval(test_case):
             n_samples += images.shape[0]
             if n_samples > 2000:
                 break
-        
+
         test_acc = evaluate_accuracy(test_iter, model, device)
         train_acc = n_correct / n_samples
-        print("epoch %d, train loss %.4f, train acc %.3f, test acc %.3f" % 
-            ( epoch + 1, train_loss / n_samples, train_acc, test_acc))
+        print(
+            "epoch %d, train loss %.4f, train acc %.3f, test acc %.3f"
+            % (epoch + 1, train_loss / n_samples, train_acc, test_acc)
+        )
         # test_case.assertLess(0.8, test_acc)
 
 

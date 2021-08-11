@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import oneflow as flow
 import oneflow.utils.vision.transforms as transforms
@@ -60,20 +75,13 @@ def load_data_mnist(
         download=download,
         source_url=source_url,
     )
-    train_iter = flow.utils.data.DataLoader(
-        mnist_train, batch_size, shuffle=True
-    )
-    test_iter = flow.utils.data.DataLoader(
-        mnist_test, batch_size, shuffle=False
-    )
+    train_iter = flow.utils.data.DataLoader(mnist_train, batch_size, shuffle=True)
+    test_iter = flow.utils.data.DataLoader(mnist_test, batch_size, shuffle=False)
     return train_iter, test_iter
 
 
 def get_fashion_mnist_dataset(
-    resize=None,
-    root="./data-test/fashion-mnist",
-    download=True,
-    source_url=None,
+    resize=None, root="./data-test/fashion-mnist", download=True, source_url=None,
 ):
     root = os.path.expanduser(root)
     trans = []

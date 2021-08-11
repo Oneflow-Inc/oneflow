@@ -21,9 +21,9 @@ from .voc import VOCDetection, VOCSegmentation
 from .folder import DatasetFolder, ImageFolder
 
 __all__ = [
-    "MNIST", 
-    "FashionMNIST", 
-    "CIFAR10", 
+    "MNIST",
+    "FashionMNIST",
+    "CIFAR10",
     "CIFAR100",
     "CocoCaptions",
     "CocoDetection",
@@ -31,5 +31,5 @@ __all__ = [
     "VOCDetection",
     "VOCSegmentation",
     "DatasetFolder",
-    "ImageFolder"
+    "ImageFolder",
 ]

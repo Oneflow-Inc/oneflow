@@ -170,7 +170,7 @@ def pil_to_tensor(pic):
         Tensor: Converted image.
     """
     if not F_pil._is_pil_image(pic):
-        raise TypeError('pic should be PIL Image. Got {}'.format(type(pic)))
+        raise TypeError("pic should be PIL Image. Got {}".format(type(pic)))
 
     if accimage is not None and isinstance(pic, accimage.Image):
         # accimage format is always uint8 internally, so always return uint8 here
@@ -186,7 +186,9 @@ def pil_to_tensor(pic):
     return img
 
 
-def convert_image_dtype(image: flow.Tensor, dtype: flow.dtype = flow.float) -> flow.Tensor:
+def convert_image_dtype(
+    image: flow.Tensor, dtype: flow.dtype = flow.float
+) -> flow.Tensor:
     """Convert a tensor image to the given ``dtype`` and scale the values accordingly
     This function does not support PIL Image.
 
@@ -209,7 +211,7 @@ def convert_image_dtype(image: flow.Tensor, dtype: flow.dtype = flow.float) -> f
             of the integer ``dtype``.
     """
     if not isinstance(image, flow.Tensor):
-        raise TypeError('Input img should be Tensor Image')
+        raise TypeError("Input img should be Tensor Image")
 
     return F_t.convert_image_dtype(image, dtype)
 
@@ -313,12 +315,16 @@ def resize(
 
 
 def scale(*args, **kwargs):
-    warnings.warn("The use of the transforms.Scale transform is deprecated, " +
-                  "please use transforms.Resize instead.")
+    warnings.warn(
+        "The use of the transforms.Scale transform is deprecated, "
+        + "please use transforms.Resize instead."
+    )
     return resize(*args, **kwargs)
 
 
-def pad(img: Tensor, padding: List[int], fill: int = 0, padding_mode: str = "constant") -> Tensor:
+def pad(
+    img: Tensor, padding: List[int], fill: int = 0, padding_mode: str = "constant"
+) -> Tensor:
     r"""Pad the given image on all sides with the given "pad" value.
     If the image is oneflow Tensor, it is expected
     to have [..., H, W] shape, where ... means at most 2 leading dimensions for mode reflect and symmetric,
@@ -358,7 +364,7 @@ def pad(img: Tensor, padding: List[int], fill: int = 0, padding_mode: str = "con
     """
     if not isinstance(img, flow.Tensor):
         return F_pil.pad(img, padding=padding, fill=fill, padding_mode=padding_mode)
-    
+
     return F_t.pad(img, padding=padding, fill=fill, padding_mode=padding_mode)
 
 
@@ -419,14 +425,19 @@ def center_crop(img: Tensor, output_size: List[int]) -> Tensor:
         if crop_width == image_width and crop_height == image_height:
             return img
 
-    crop_top = int(round((image_height - crop_height) / 2.))
-    crop_left = int(round((image_width - crop_width) / 2.))
+    crop_top = int(round((image_height - crop_height) / 2.0))
+    crop_left = int(round((image_width - crop_width) / 2.0))
     return crop(img, crop_top, crop_left, crop_height, crop_width)
 
 
 def resized_crop(
-        img: Tensor, top: int, left: int, height: int, width: int, size: List[int],
-        interpolation: InterpolationMode = InterpolationMode.BILINEAR
+    img: Tensor,
+    top: int,
+    left: int,
+    height: int,
+    width: int,
+    size: List[int],
+    interpolation: InterpolationMode = InterpolationMode.BILINEAR,
 ) -> Tensor:
     """Crop the given image and resize it to desired size.
     If the image is oneflow Tensor, it is expected
@@ -491,7 +502,9 @@ def vflip(img: Tensor) -> Tensor:
     return F_t.vflip(img)
 
 
-def five_crop(img: Tensor, size: List[int]) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
+def five_crop(
+    img: Tensor, size: List[int]
+) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
     """Crop the given image into four corners and the central crop.
     If the image is oneflow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions
@@ -527,7 +540,13 @@ def five_crop(img: Tensor, size: List[int]) -> Tuple[Tensor, Tensor, Tensor, Ten
     tl = crop(img, 0, 0, crop_height, crop_width)
     tr = crop(img, 0, image_width - crop_width, crop_height, crop_width)
     bl = crop(img, image_height - crop_height, 0, crop_height, crop_width)
-    br = crop(img, image_height - crop_height, image_width - crop_width, crop_height, crop_width)
+    br = crop(
+        img,
+        image_height - crop_height,
+        image_width - crop_width,
+        crop_height,
+        crop_width,
+    )
 
     center = center_crop(img, [crop_height, crop_width])
 
@@ -576,9 +595,12 @@ def ten_crop(img: Tensor, size: List[int], vertical_flip: bool = False) -> List[
     return first_five + second_five
 
 
-
 def _get_inverse_affine_matrix(
-        center: List[float], angle: float, translate: List[float], scale: float, shear: List[float]
+    center: List[float],
+    angle: float,
+    translate: List[float],
+    scale: float,
+    shear: List[float],
 ) -> List[float]:
     # Helper method to compute inverse matrix for affine transformation
 
@@ -628,9 +650,13 @@ def _get_inverse_affine_matrix(
 
 
 def rotate(
-        img: Tensor, angle: float, interpolation: InterpolationMode = InterpolationMode.NEAREST,
-        expand: bool = False, center: Optional[List[int]] = None,
-        fill: Optional[List[float]] = None, resample: Optional[int] = None
+    img: Tensor,
+    angle: float,
+    interpolation: InterpolationMode = InterpolationMode.NEAREST,
+    expand: bool = False,
+    center: Optional[List[int]] = None,
+    fill: Optional[List[float]] = None,
+    resample: Optional[int] = None,
 ) -> Tensor:
     """Rotate the image by angle.
     If the image is oneflow Tensor, it is expected
@@ -684,8 +710,14 @@ def rotate(
 
     if not isinstance(img, flow.Tensor):
         pil_interpolation = pil_modes_mapping[interpolation]
-        return F_pil.rotate(img, angle=angle, interpolation=pil_interpolation, expand=expand, center=center, fill=fill)
-    
+        return F_pil.rotate(
+            img,
+            angle=angle,
+            interpolation=pil_interpolation,
+            expand=expand,
+            center=center,
+            fill=fill,
+        )
 
     center_f = [0.0, 0.0]
     if center is not None:
@@ -697,8 +729,6 @@ def rotate(
     # we need to set -angle.
     matrix = _get_inverse_affine_matrix(center_f, -angle, [0.0, 0.0], 1.0, [0.0, 0.0])
     raise NotImplementedError("Tensor rotate is not implemented yet!")
-    return F_t.rotate(img, matrix=matrix, interpolation=interpolation.value, expand=expand, fill=fill)
-
-
-
-
+    return F_t.rotate(
+        img, matrix=matrix, interpolation=interpolation.value, expand=expand, fill=fill
+    )

@@ -13,19 +13,39 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .transforms import Compose, ToTensor, PILToTensor, ConvertImageDtype, \
-ToPILImage, Normalize, Resize, Scale, CenterCrop, Pad, Lambda, \
-RandomTransforms, RandomApply, RandomOrder, RandomChoice, RandomCrop, \
-RandomHorizontalFlip, RandomVerticalFlip, RandomResizedCrop, RandomSizedCrop, \
-FiveCrop, TenCrop, InterpolationMode
+from .transforms import (
+    Compose,
+    ToTensor,
+    PILToTensor,
+    ConvertImageDtype,
+    ToPILImage,
+    Normalize,
+    Resize,
+    Scale,
+    CenterCrop,
+    Pad,
+    Lambda,
+    RandomTransforms,
+    RandomApply,
+    RandomOrder,
+    RandomChoice,
+    RandomCrop,
+    RandomHorizontalFlip,
+    RandomVerticalFlip,
+    RandomResizedCrop,
+    RandomSizedCrop,
+    FiveCrop,
+    TenCrop,
+    InterpolationMode,
+)
 
 __all__ = [
-    "Compose", 
-    "ToTensor", 
+    "Compose",
+    "ToTensor",
     "PILToTensor",
     "ConvertImageDtype",
     "ToPILImage",
-    "Normalize", 
+    "Normalize",
     "Resize",
     "Scale",
     "CenterCrop",
@@ -42,5 +62,5 @@ __all__ = [
     "RandomSizedCrop",
     "FiveCrop",
     "TenCrop",
-    "InterpolationMode"
+    "InterpolationMode",
 ]

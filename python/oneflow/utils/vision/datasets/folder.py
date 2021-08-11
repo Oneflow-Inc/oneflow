@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import os.path
 
@@ -56,12 +71,16 @@ def make_dataset(
     if class_to_idx is None:
         _, class_to_idx = find_classes(directory)
     elif not class_to_idx:
-        raise ValueError("'class_to_index' must have at least one entry to collect any samples.")
+        raise ValueError(
+            "'class_to_index' must have at least one entry to collect any samples."
+        )
 
     both_none = extensions is None and is_valid_file is None
     both_something = extensions is not None and is_valid_file is not None
     if both_none or both_something:
-        raise ValueError("Both extensions and is_valid_file cannot be None or not None at the same time")
+        raise ValueError(
+            "Both extensions and is_valid_file cannot be None or not None at the same time"
+        )
 
     if extensions is not None:
 
@@ -89,7 +108,9 @@ def make_dataset(
 
     empty_classes = set(class_to_idx.keys()) - available_classes
     if empty_classes:
-        msg = f"Found no valid file for the classes {', '.join(sorted(empty_classes))}. "
+        msg = (
+            f"Found no valid file for the classes {', '.join(sorted(empty_classes))}. "
+        )
         if extensions is not None:
             msg += f"Supported extensions are: {', '.join(extensions)}"
         raise FileNotFoundError(msg)
@@ -122,16 +143,17 @@ class DatasetFolder(VisionDataset):
     """
 
     def __init__(
-            self,
-            root: str,
-            loader: Callable[[str], Any],
-            extensions: Optional[Tuple[str, ...]] = None,
-            transform: Optional[Callable] = None,
-            target_transform: Optional[Callable] = None,
-            is_valid_file: Optional[Callable[[str], bool]] = None,
+        self,
+        root: str,
+        loader: Callable[[str], Any],
+        extensions: Optional[Tuple[str, ...]] = None,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        is_valid_file: Optional[Callable[[str], bool]] = None,
     ) -> None:
-        super(DatasetFolder, self).__init__(root, transform=transform,
-                                            target_transform=target_transform)
+        super(DatasetFolder, self).__init__(
+            root, transform=transform, target_transform=target_transform
+        )
         classes, class_to_idx = self.find_classes(self.root)
         samples = self.make_dataset(self.root, class_to_idx, extensions, is_valid_file)
 
@@ -172,10 +194,10 @@ class DatasetFolder(VisionDataset):
             # prevent potential bug since make_dataset() would use the class_to_idx logic of the
             # find_classes() function, instead of using that of the find_classes() method, which
             # is potentially overridden and thus could have a different logic.
-            raise ValueError(
-                "The class_to_idx parameter cannot be None."
-            )
-        return make_dataset(directory, class_to_idx, extensions=extensions, is_valid_file=is_valid_file)
+            raise ValueError("The class_to_idx parameter cannot be None.")
+        return make_dataset(
+            directory, class_to_idx, extensions=extensions, is_valid_file=is_valid_file
+        )
 
     def find_classes(self, directory: str) -> Tuple[List[str], Dict[str, int]]:
         """Find the class folders in a dataset structured as follows::
@@ -221,19 +243,30 @@ class DatasetFolder(VisionDataset):
         return len(self.samples)
 
 
-IMG_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', '.webp')
+IMG_EXTENSIONS = (
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".ppm",
+    ".bmp",
+    ".pgm",
+    ".tif",
+    ".tiff",
+    ".webp",
+)
 
 
 def pil_loader(path: str) -> Image.Image:
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         img = Image.open(f)
-        return img.convert('RGB')
+        return img.convert("RGB")
 
 
 # TODO: specify the return type
 def accimage_loader(path: str) -> Any:
     import accimage
+
     try:
         return accimage.Image(path)
     except IOError:
@@ -243,7 +276,8 @@ def accimage_loader(path: str) -> Any:
 
 def default_loader(path: str) -> Any:
     from oneflow.utils.vision import get_image_backend
-    if get_image_backend() == 'accimage':
+
+    if get_image_backend() == "accimage":
         return accimage_loader(path)
     else:
         return pil_loader(path)
@@ -275,15 +309,19 @@ class ImageFolder(DatasetFolder):
     """
 
     def __init__(
-            self,
-            root: str,
-            transform: Optional[Callable] = None,
-            target_transform: Optional[Callable] = None,
-            loader: Callable[[str], Any] = default_loader,
-            is_valid_file: Optional[Callable[[str], bool]] = None,
+        self,
+        root: str,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        loader: Callable[[str], Any] = default_loader,
+        is_valid_file: Optional[Callable[[str], bool]] = None,
     ):
-        super(ImageFolder, self).__init__(root, loader, IMG_EXTENSIONS if is_valid_file is None else None,
-                                          transform=transform,
-                                          target_transform=target_transform,
-                                          is_valid_file=is_valid_file)
+        super(ImageFolder, self).__init__(
+            root,
+            loader,
+            IMG_EXTENSIONS if is_valid_file is None else None,
+            transform=transform,
+            target_transform=target_transform,
+            is_valid_file=is_valid_file,
+        )
         self.imgs = self.samples

@@ -41,19 +41,19 @@ def _get_image_size(img: Any) -> List[int]:
 
 def _get_image_num_channels(img: Any) -> int:
     if _is_pil_image(img):
-        return 1 if img.mode == 'L' else 3
+        return 1 if img.mode == "L" else 3
 
 
 def hflip(img):
     if not _is_pil_image(img):
-        raise TypeError('img should be PIL Image. Got {}'.format(type(img)))
+        raise TypeError("img should be PIL Image. Got {}".format(type(img)))
 
     return img.transpose(Image.FLIP_LEFT_RIGHT)
 
 
 def vflip(img):
     if not _is_pil_image(img):
-        raise TypeError('img should be PIL Image. Got {}'.format(type(img)))
+        raise TypeError("img should be PIL Image. Got {}".format(type(img)))
 
     return img.transpose(Image.FLIP_TOP_BOTTOM)
 
@@ -73,15 +73,19 @@ def pad(img, padding, fill=0, padding_mode="constant"):
         padding = tuple(padding)
 
     if isinstance(padding, tuple) and len(padding) not in [1, 2, 4]:
-        raise ValueError("Padding must be an int or a 1, 2, or 4 element tuple, not a " +
-                         "{} element tuple".format(len(padding)))
+        raise ValueError(
+            "Padding must be an int or a 1, 2, or 4 element tuple, not a "
+            + "{} element tuple".format(len(padding))
+        )
 
     if isinstance(padding, tuple) and len(padding) == 1:
         # Compatibility with `functional_tensor.pad`
         padding = padding[0]
 
     if padding_mode not in ["constant", "edge", "reflect", "symmetric"]:
-        raise ValueError("Padding mode should be either constant, edge, reflect or symmetric")
+        raise ValueError(
+            "Padding mode should be either constant, edge, reflect or symmetric"
+        )
 
     if padding_mode == "constant":
         opts = _parse_fill(fill, img, name="fill")
@@ -109,14 +113,18 @@ def pad(img, padding, fill=0, padding_mode="constant"):
 
         if cropping.any():
             crop_left, crop_top, crop_right, crop_bottom = cropping
-            img = img.crop((crop_left, crop_top, img.width - crop_right, img.height - crop_bottom))
+            img = img.crop(
+                (crop_left, crop_top, img.width - crop_right, img.height - crop_bottom)
+            )
 
         pad_left, pad_top, pad_right, pad_bottom = np.maximum(p, 0)
 
-        if img.mode == 'P':
+        if img.mode == "P":
             palette = img.getpalette()
             img = np.asarray(img)
-            img = np.pad(img, ((pad_top, pad_bottom), (pad_left, pad_right)), padding_mode)
+            img = np.pad(
+                img, ((pad_top, pad_bottom), (pad_left, pad_right)), padding_mode
+            )
             img = Image.fromarray(img)
             img.putpalette(palette)
             return img
@@ -124,17 +132,23 @@ def pad(img, padding, fill=0, padding_mode="constant"):
         img = np.asarray(img)
         # RGB image
         if len(img.shape) == 3:
-            img = np.pad(img, ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)), padding_mode)
+            img = np.pad(
+                img,
+                ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)),
+                padding_mode,
+            )
         # Grayscale image
         if len(img.shape) == 2:
-            img = np.pad(img, ((pad_top, pad_bottom), (pad_left, pad_right)), padding_mode)
+            img = np.pad(
+                img, ((pad_top, pad_bottom), (pad_left, pad_right)), padding_mode
+            )
 
         return Image.fromarray(img)
 
 
 def crop(img: Image.Image, top: int, left: int, height: int, width: int) -> Image.Image:
     if not _is_pil_image(img):
-        raise TypeError('img should be PIL Image. Got {}'.format(type(img)))
+        raise TypeError("img should be PIL Image. Got {}".format(type(img)))
 
     return img.crop((left, top, left + width, top + height))
 
@@ -174,8 +188,10 @@ def _parse_fill(fill, img, name="fillcolor"):
         fill = tuple([fill] * num_bands)
     if isinstance(fill, (list, tuple)):
         if len(fill) != num_bands:
-            msg = ("The number of elements in 'fill' does not match the number of "
-                   "bands of the image ({} != {})")
+            msg = (
+                "The number of elements in 'fill' does not match the number of "
+                "bands of the image ({} != {})"
+            )
             raise ValueError(msg.format(len(fill), num_bands))
 
         fill = tuple(fill)

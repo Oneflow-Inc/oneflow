@@ -95,7 +95,9 @@ def _cast_squeeze_out(
     return img
 
 
-def convert_image_dtype(image: flow.Tensor, dtype: flow.dtype = flow.float) -> flow.Tensor:
+def convert_image_dtype(
+    image: flow.Tensor, dtype: flow.dtype = flow.float
+) -> flow.Tensor:
     if image.dtype == dtype:
         return image
 
@@ -133,7 +135,7 @@ def convert_image_dtype(image: flow.Tensor, dtype: flow.dtype = flow.float) -> f
         # int to int
         if input_max > output_max:
             factor = int((input_max + 1) // (output_max + 1))
-            image = flow.div(image, factor, rounding_mode='floor')
+            image = flow.div(image, factor, rounding_mode="floor")
             return image.to(dtype)
         else:
             factor = int((output_max + 1) // (input_max + 1))
@@ -161,8 +163,15 @@ def crop(img: Tensor, top: int, left: int, height: int, width: int) -> Tensor:
     bottom = top + height
 
     if left < 0 or top < 0 or right > w or bottom > h:
-        padding_ltrb = [max(-left, 0), max(-top, 0), max(right - w, 0), max(bottom - h, 0)]
-        return pad(img[..., max(top, 0):bottom, max(left, 0):right], padding_ltrb, fill=0)
+        padding_ltrb = [
+            max(-left, 0),
+            max(-top, 0),
+            max(right - w, 0),
+            max(bottom - h, 0),
+        ]
+        return pad(
+            img[..., max(top, 0) : bottom, max(left, 0) : right], padding_ltrb, fill=0
+        )
     return img[..., top:bottom, left:right]
 
 
@@ -172,7 +181,11 @@ def _pad_symmetric(img: Tensor, padding: List[int]) -> Tensor:
     # crop if needed
     if padding[0] < 0 or padding[1] < 0 or padding[2] < 0 or padding[3] < 0:
         crop_left, crop_right, crop_top, crop_bottom = [-min(x, 0) for x in padding]
-        img = img[..., crop_top:img.shape[-2] - crop_bottom, crop_left:img.shape[-1] - crop_right]
+        img = img[
+            ...,
+            crop_top : img.shape[-2] - crop_bottom,
+            crop_left : img.shape[-1] - crop_right,
+        ]
         padding = [max(x, 0) for x in padding]
 
     in_sizes = img.size()
@@ -196,7 +209,9 @@ def _pad_symmetric(img: Tensor, padding: List[int]) -> Tensor:
         raise RuntimeError("Symmetric padding of N-D tensors are not supported yet")
 
 
-def pad(img: Tensor, padding: List[int], fill: int = 0, padding_mode: str = "constant") -> Tensor:
+def pad(
+    img: Tensor, padding: List[int], fill: int = 0, padding_mode: str = "constant"
+) -> Tensor:
     _assert_image_tensor(img)
 
     if not isinstance(padding, (int, tuple, list)):
@@ -210,11 +225,15 @@ def pad(img: Tensor, padding: List[int], fill: int = 0, padding_mode: str = "con
         padding = list(padding)
 
     if isinstance(padding, list) and len(padding) not in [1, 2, 4]:
-        raise ValueError("Padding must be an int or a 1, 2, or 4 element tuple, not a " +
-                         "{} element tuple".format(len(padding)))
+        raise ValueError(
+            "Padding must be an int or a 1, 2, or 4 element tuple, not a "
+            + "{} element tuple".format(len(padding))
+        )
 
     if padding_mode not in ["constant", "edge", "reflect", "symmetric"]:
-        raise ValueError("Padding mode should be either constant, edge, reflect or symmetric")
+        raise ValueError(
+            "Padding mode should be either constant, edge, reflect or symmetric"
+        )
 
     if isinstance(padding, int):
         pad_left = pad_right = pad_top = pad_bottom = padding
@@ -321,12 +340,12 @@ def resize(img: Tensor, size: List[int], interpolation: str = "bilinear") -> Ten
 
 
 def _assert_grid_transform_inputs(
-        img: Tensor,
-        matrix: Optional[List[float]],
-        interpolation: str,
-        fill: Optional[List[float]],
-        supported_interpolation_modes: List[str],
-        coeffs: Optional[List[float]] = None,
+    img: Tensor,
+    matrix: Optional[List[float]],
+    interpolation: str,
+    fill: Optional[List[float]],
+    supported_interpolation_modes: List[str],
+    coeffs: Optional[List[float]] = None,
 ):
 
     if not (isinstance(img, flow.Tensor)):
@@ -348,10 +367,18 @@ def _assert_grid_transform_inputs(
 
     # Check fill
     num_channels = _get_image_num_channels(img)
-    if isinstance(fill, (tuple, list)) and (len(fill) > 1 and len(fill) != num_channels):
-        msg = ("The number of elements in 'fill' cannot broadcast to match the number of "
-               "channels of the image ({} != {})")
+    if isinstance(fill, (tuple, list)) and (
+        len(fill) > 1 and len(fill) != num_channels
+    ):
+        msg = (
+            "The number of elements in 'fill' cannot broadcast to match the number of "
+            "channels of the image ({} != {})"
+        )
         raise ValueError(msg.format(len(fill), num_channels))
 
     if interpolation not in supported_interpolation_modes:
-        raise ValueError("Interpolation mode '{}' is unsupported with Tensor input".format(interpolation))
+        raise ValueError(
+            "Interpolation mode '{}' is unsupported with Tensor input".format(
+                interpolation
+            )
+        )
