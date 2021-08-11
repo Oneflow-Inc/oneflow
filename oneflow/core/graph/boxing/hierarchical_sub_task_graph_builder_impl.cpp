@@ -347,7 +347,7 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
           sorted_out_tasks->at(out_map_id2parallel_id.at(parallel_id)) = out_tasks.at(j);
           if (!ctrl_tasks.empty()) {
             for (TaskNode* ctrl_node : ctrl_tasks.at(j)) {
-              sorted_ctrl_tasks->at(parallel_id).push_back(ctrl_node);
+              sorted_ctrl_tasks->at(out_map_id2parallel_id.at(parallel_id)).push_back(ctrl_node);
             }
           }
         }
@@ -674,6 +674,9 @@ class Same3DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
         sorted_ctrl_tasks->resize(out_parallel_desc.parallel_num());
         sorted_out_tasks->resize(out_parallel_desc.parallel_num());
 
+        HashMap<int64_t, int64_t> map_id2parallel_id;
+        CHECK_JUST(GetIdMap(in_parallel_desc, nullptr, &map_id2parallel_id));
+
         FOR_RANGE(int64_t, i, 0, num_groups) {
           std::vector<TaskNode*> in_tasks;
           std::vector<TaskNode*> out_tasks;
@@ -685,11 +688,17 @@ class Same3DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
             const int64_t parallel_id = i * group_size + j;
             in_tasks.push_back(sorted_in_tasks.at(parallel_id));
             in_parallel_conf.add_device_name(
-                std::to_string(JUST(in_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
-                + std::to_string(JUST(in_parallel_desc.DeviceId4ParallelId(parallel_id))));
+                std::to_string(
+                    JUST(in_parallel_desc.MachineId4ParallelId(map_id2parallel_id.at(parallel_id))))
+                + ":"
+                + std::to_string(JUST(
+                    in_parallel_desc.DeviceId4ParallelId(map_id2parallel_id.at(parallel_id)))));
             out_parallel_conf.add_device_name(
-                std::to_string(JUST(out_parallel_desc.MachineId4ParallelId(parallel_id))) + ":"
-                + std::to_string(JUST(out_parallel_desc.DeviceId4ParallelId(parallel_id))));
+                std::to_string(JUST(
+                    out_parallel_desc.MachineId4ParallelId(map_id2parallel_id.at(parallel_id))))
+                + ":"
+                + std::to_string(JUST(
+                    out_parallel_desc.DeviceId4ParallelId(map_id2parallel_id.at(parallel_id)))));
           }
           DimVector dim_vec = logical_blob_desc.shape().dim_vec();
           if (in_parallel_distribution.sbp_parallel(0).has_split_parallel()) {
