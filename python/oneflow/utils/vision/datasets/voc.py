@@ -150,7 +150,8 @@ class _VOCBase(VisionDataset):
 
 
 class VOCSegmentation(_VOCBase):
-    """`Pascal VOC <http://host.robots.ox.ac.uk/pascal/VOC/>`_ Segmentation Dataset.
+    r""" `Pascal VOC <http://host.robots.ox.ac.uk/pascal/VOC/>`_ Segmentation Dataset.
+
     Args:
         root (string): Root directory of the VOC Dataset.
         year (string, optional): The dataset year, supports years ``"2007"`` to ``"2012"``.
@@ -166,7 +167,6 @@ class VOCSegmentation(_VOCBase):
         transforms (callable, optional): A function/transform that takes input sample and its target as entry
             and returns a transformed version.
     """
-
     _SPLITS_DIR = "Segmentation"
     _TARGET_DIR = "SegmentationClass"
     _TARGET_FILE_EXT = ".png"
@@ -192,7 +192,8 @@ class VOCSegmentation(_VOCBase):
 
 
 class VOCDetection(_VOCBase):
-    """`Pascal VOC <http://host.robots.ox.ac.uk/pascal/VOC/>`_ Detection Dataset.
+    r""" `Pascal VOC <http://host.robots.ox.ac.uk/pascal/VOC/>`_ Detection Dataset.
+
     Args:
         root (string): Root directory of the VOC Dataset.
         year (string, optional): The dataset year, supports years ``"2007"`` to ``"2012"``.
@@ -209,7 +210,6 @@ class VOCDetection(_VOCBase):
         transforms (callable, optional): A function/transform that takes input sample and its target as entry
             and returns a transformed version.
     """
-
     _SPLITS_DIR = "Main"
     _TARGET_DIR = "Annotations"
     _TARGET_FILE_EXT = ".xml"

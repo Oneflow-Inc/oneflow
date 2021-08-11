@@ -67,15 +67,18 @@ class Compose:
 
 
 class ToTensor:
-    """Convert a ``PIL Image`` or ``numpy.ndarray`` to tensor.
+    r"""Convert a ``PIL Image`` or ``numpy.ndarray`` to tensor.
+
     Converts a PIL Image or numpy.ndarray (H x W x C) in the range
     [0, 255] to a flow.FloatTensor of shape (C x H x W) in the range [0.0, 1.0]
     if the PIL Image belongs to one of the modes (L, LA, P, I, F, RGB, YCbCr, RGBA, CMYK, 1)
     or if the numpy.ndarray has dtype = np.uint8
     In the other cases, tensors are returned without scaling.
+
     .. note::
+
         Because the input image is scaled to [0.0, 1.0], this transformation should not be used when
-        transforming target image masks. See the `references`_ for implementing the transforms for image masks.
+        transforming target image masks.
     """
 
     def __call__(self, pic):
@@ -179,14 +182,16 @@ class ToPILImage:
 
 
 class Normalize(Module):
-    """Normalize a tensor image with mean and standard deviation.
+    r"""Normalize a tensor image with mean and standard deviation.
     This transform does not support PIL Image.
     Given mean: ``(mean[1],...,mean[n])`` and std: ``(std[1],..,std[n])`` for ``n``
     channels, this transform will normalize each channel of the input
     ``flow.*Tensor`` i.e.,
     ``output[channel] = (input[channel] - mean[channel]) / std[channel]``
+
     .. note::
         This transform acts out of place, i.e., it does not mutate the input tensor.
+
     Args:
         mean (sequence): Sequence of means for each channel.
         std (sequence): Sequence of standard deviations for each channel.
@@ -215,7 +220,7 @@ class Normalize(Module):
 
 
 class Resize(Module):
-    """Resize the input image to the given size.
+    r"""Resize the input image to the given size.
     If the image is oneflow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions
 
@@ -269,10 +274,9 @@ class Resize(Module):
 
 
 class Scale(Resize):
-    """
+    r"""
     Note: This transform is deprecated in favor of Resize.
     """
-
     def __init__(self, *args, **kwargs):
         warnings.warn(
             "The use of the transforms.Scale transform is deprecated, "
@@ -282,7 +286,7 @@ class Scale(Resize):
 
 
 class CenterCrop(Module):
-    """Crops the given image at the center.
+    r"""Crops the given image at the center.
     If the image is oneflow Tensor, it is expected
     to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions.
     If image size is smaller than output size along any edge, image is padded with 0 and then center cropped.
@@ -314,7 +318,7 @@ class CenterCrop(Module):
 
 
 class Pad(Module):
-    """Pad the given image on all sides with the given "pad" value.
+    r"""Pad the given image on all sides with the given "pad" value.
     If the image is oneflow Tensor, it is expected
     to have [..., H, W] shape, where ... means at most 2 leading dimensions for mode reflect and symmetric,
     at most 3 leading dimensions for mode edge,
@@ -391,7 +395,7 @@ class Pad(Module):
 
 
 class Lambda:
-    """Apply a user-defined lambda as a transform.
+    r"""Apply a user-defined lambda as a transform.
 
     Args:
         lambd (function): Lambda/function to be used for transform.
@@ -427,7 +431,7 @@ def _setup_size(size, error_msg):
 
 
 class RandomTransforms:
-    """Base class for a list of transformations with randomness
+    r"""Base class for a list of transformations with randomness
 
     Args:
         transforms (sequence): list of transformations

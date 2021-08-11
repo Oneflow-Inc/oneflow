@@ -22,7 +22,8 @@ from .vision import VisionDataset
 
 
 class CocoDetection(VisionDataset):
-    """`MS Coco Detection <https://cocodataset.org/#detection-2016>`_ Dataset.
+    r"""`MS Coco Detection <https://cocodataset.org/#detection-2016>`_ Dataset.
+
     Args:
         root (string): Root directory where images are downloaded to.
         annFile (string): Path to json annotation file.
@@ -70,7 +71,8 @@ class CocoDetection(VisionDataset):
 
 
 class CocoCaptions(CocoDetection):
-    """`MS Coco Captions <https://cocodataset.org/#captions-2015>`_ Dataset.
+    r"""`MS Coco Captions <https://cocodataset.org/#captions-2015>`_ Dataset.
+
     Args:
         root (string): Root directory where images are downloaded to.
         annFile (string): Path to json annotation file.
@@ -80,8 +82,11 @@ class CocoCaptions(CocoDetection):
             target and transforms it.
         transforms (callable, optional): A function/transform that takes input sample and its target as entry
             and returns a transformed version.
+
     Example:
+
         .. code:: python
+
             import oneflow.utils.vision.datasets as dset
             import oneflow.utils.vision.transforms as transforms
             cap = dset.CocoCaptions(root = 'dir where images are',
@@ -91,7 +96,9 @@ class CocoCaptions(CocoDetection):
             img, target = cap[3] # load 4th sample
             print("Image Size: ", img.size())
             print(target)
+
         Output: ::
+
             Number of samples: 82783
             Image Size: (3L, 427L, 640L)
             [u'A plane emitting smoke stream flying over a mountain.',

@@ -33,7 +33,7 @@ from . import functional_tensor as F_t
 
 
 class InterpolationMode(Enum):
-    """Interpolation modes
+    r"""Interpolation modes
     """
 
     NEAREST = "nearest"
