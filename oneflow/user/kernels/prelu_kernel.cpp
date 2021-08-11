@@ -45,14 +45,9 @@ class CpuPReluKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_CPU_PRELU_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("prelu")                                                       \
-      .SetCreateFn<CpuPReluKernel<dtype>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                             \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        const Shape& in_shape = ctx->InputShape("x", 0);                              \
-        return GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));               \
-      });
+  REGISTER_USER_KERNEL("prelu").SetCreateFn<CpuPReluKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == "cpu")                                              \
+      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_PRELU_KERNEL(float)
 REGISTER_CPU_PRELU_KERNEL(double)
