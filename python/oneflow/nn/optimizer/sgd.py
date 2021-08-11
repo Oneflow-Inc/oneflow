@@ -39,7 +39,7 @@ class SGD(Optimizer):
 
         .. math::
 
-            & V_t = \\beta * V_{t-1} - learning\\_rate * (g_t * scale + param_{old} * weight\\_decay)
+            & V_t = \\beta * V_{t-1} - learning\\_rate * (g_t + param_{old} * weight\\_decay)
 
             & param_{new} = param_{old} + V_t
 

@@ -29,7 +29,6 @@ def compare_with_numpy_rmsprop(
     test_case,
     device,
     x_shape,
-    scale,
     learning_rate,
     momentum,
     train_iters,
@@ -57,7 +56,6 @@ def compare_with_numpy_rmsprop(
                     "weight_decay": weight_decay,
                     "momentum": momentum,
                     "centered": centered,
-                    "scale": scale,
                 }
             ]
         )
@@ -83,7 +81,7 @@ def compare_with_numpy_rmsprop(
 
         def train_one_iter(grad):
 
-            grad = grad * scale + weight_decay * x
+            grad = grad + weight_decay * x
             r_ = alpha * r + (1 - alpha) * grad * grad
             if centered:
                 g_ = alpha * g + (1 - alpha) * grad
@@ -113,7 +111,6 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["scale"] = [1.0, 0.9]
         arg_dict["learning_rate"] = [1]
         arg_dict["momentum"] = [0.0]
         arg_dict["train_iters"] = [10]
