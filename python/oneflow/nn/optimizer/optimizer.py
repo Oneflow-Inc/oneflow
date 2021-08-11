@@ -29,32 +29,18 @@ class ParamGroup(object):
         parameters: Union[Iterator[Parameter], Dict[str, Any]],
         default_options: Dict,
     ):
-        # if isinstance(parameters, collections.abc.Iterable):
-        #     assert hasattr(self, '_paramters') == False
-        #     self._parameters = list(parameters)
-        #     self._options = deepcopy(default_options)
-        # else:
-        #     assert "params" in parameters
-        #     self._parameters = list(parameters["params"])
-        #     self._options = deepcopy(default_options)
-        #     for key in self._options:
-        #         if key in parameters:
-        #             self._options[key] = parameters[key]
         if isinstance(parameters, collections.abc.Iterator):
-            assert hasattr(self, "_paramters") == False
+            assert hasattr(self, '_paramters') == False
             self._parameters = list(parameters)
             self._options = deepcopy(default_options)
-        elif isinstance(parameters, dict):
+        else:
             assert "params" in parameters
             self._parameters = list(parameters["params"])
             self._options = deepcopy(default_options)
             for key in self._options:
                 if key in parameters:
                     self._options[key] = parameters[key]
-        elif isinstance(parameters, list):
-            assert hasattr(self, "_paramters") == False
-            self._parameters = parameters
-            self._options = deepcopy(default_options)
+
 
     def __getitem__(self, key):
         return self._options[key]
