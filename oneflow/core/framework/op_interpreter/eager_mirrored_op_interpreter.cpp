@@ -310,15 +310,12 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     const auto& transport_token = JUST(TransportToken::NewMetaTransportToken());
     JUST(consistent_tensor_impl->set_transport_token(transport_token));
     consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
-    const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*consistent_tensor));
     if (parallel_id.has_value()) {
       const auto& synced_tensor = JUST(
           GetSyncedTensorIfBroadcast(input_mirrored_tensor, parallel_desc, parallel_distribution));
       consistent_tensor_impl->reset_cur_rank_phy_tensor(
           std::dynamic_pointer_cast<MirroredTensor>(synced_tensor));
     }
-    JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
-    JUST(ctx->Check());
   }
   outputs->at(0) = consistent_tensor;
   return Maybe<void>::Ok();

@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 
 namespace oneflow {
 namespace one {

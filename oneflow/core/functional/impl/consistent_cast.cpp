@@ -142,12 +142,9 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*x));
   const auto& op_expr = JUST(FindOrCreatConsistentToConsistentOpExpr(sbp_parallels));
   const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op_expr, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc)));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
-  JUST(ctx->Check());
   return ret;
 }
 
