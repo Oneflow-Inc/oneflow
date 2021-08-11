@@ -31,7 +31,7 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
     return GetDiffTmpSize<T>(n, w) + GetReduceTempStorageSize<T>(n, w);
   }
 
-  static void ComputeOut(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* out,
+  static void ComputeOut(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* prob,T* out,
                           void* temp_storage, const size_t temp_storage_bytes) {
     auto Val = NdarrayUtil<DeviceType::kCPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
@@ -44,19 +44,20 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
         Var({static_cast<int64_t>(reduce_temp_storage_bytes / sizeof(T))}, reduce_storage);     
     T* tmp = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)                
                                   + reduce_temp_storage_bytes); 
-    T* tmp1 = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)             
-                                  + reduce_temp_storage_bytes); 
     // max | tmp[i] = Max_j(in[i][j])
     NdarrayUtil<DeviceType::kCPU, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, in),
-                                                reduce_storage_var);
+                                                reduce_storage_var);   
     // sub | out[i][j] = in[i][j] - tmp[i]
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastSub(ctx, Var({n, w}, out), Val({n, w}, in),
                                                    Val({n, 1}, tmp));
-    //exp | tmp1[i][j] = exp(out[i][j])
-    NdarrayUtil<DeviceType::kCPU, T>::BroadcastExp(ctx, Var({n, w}, tmp1), Val({n, w}, out));
-    // sum | tmp[i] = Sum_j(tmp1[i][j])
-    NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, tmp1),
+    // exp | prob[i][j] = exp(out[i][j])
+    NdarrayUtil<DeviceType::kCPU, T>::BroadcastExp(ctx, Var({n, w}, prob), Val({n, w}, out)); 
+    // sum | tmp[i] = Sum_j(prob[i][j])
+    NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
                                                 reduce_storage_var);
+    // div |  prob[i][j] = out[i][j]/tmp[i]
+    NdarrayUtil<DeviceType::kCPU, T>::BroadcastDiv(ctx, Var({n, w}, out), Val({n, w}, in),
+                                                   Val({n, 1}, tmp));
     // tmp | tmp[i] = log(tmp[i])
     FOR_RANGE(int64_t, i, 0, n){
        tmp[i] = SafeLog(tmp[i]);

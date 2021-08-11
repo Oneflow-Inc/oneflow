@@ -37,15 +37,9 @@ class LogSoftmaxKernel final : public user_op::OpKernel {
     const int64_t num_instances = in->shape().Count(0, in->shape().NumAxes() - 1);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
-
-    using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
-    cuda::softmax::DirectLoad<T, ComputeType> load(in->dptr<T>(), num_classes);
-    cuda::softmax::DirectStore<ComputeType, T> store(prob->mut_dptr<T>(), num_classes);
-    cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        ctx->device_ctx()->cuda_stream(), load, store, num_instances, num_classes);
     
     LogSoftmaxKernelUtil<device_type, T>::ComputeOut(ctx->device_ctx(), num_instances, num_classes,
-                                                   in->dptr<T>(), out->mut_dptr<T>(),
+                                                   in->dptr<T>(), prob->mut_dptr<T>(),out->mut_dptr<T>(),
                                                    tmp_buffer->mut_dptr(), temp_storage_bytes);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

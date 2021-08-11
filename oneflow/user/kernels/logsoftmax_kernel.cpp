@@ -37,12 +37,9 @@ class LogSoftmaxKernel final : public user_op::OpKernel {
     const int64_t num_instances = in->shape().Count(0, in->shape().NumAxes() - 1);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
-    SoftmaxKernelUtil<device_type, T>::ComputeProb(
-        ctx->device_ctx(), num_instances, num_classes, in->dptr<T>(), prob->mut_dptr<T>(),
-        tmp_buffer->mut_dptr(), temp_storage_bytes);
     
     LogSoftmaxKernelUtil<device_type, T>::ComputeOut(ctx->device_ctx(), num_instances, num_classes,
-                                                   in->dptr<T>(), out->mut_dptr<T>(),
+                                                   in->dptr<T>(),prob->mut_dptr<T>(), out->mut_dptr<T>(),
                                                    tmp_buffer->mut_dptr(), temp_storage_bytes);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -45,7 +45,7 @@ struct LogSoftmaxKernelUtil {
 
   static size_t GetComputeDiffTempStorageSizeInBytes(int64_t n, int64_t w);
 
-  static void ComputeOut(DeviceCtx* ctx, int64_t n, int64_t w, const T* in, T* prob,
+  static void ComputeOut(DeviceCtx* ctx, int64_t n, int64_t w, const T* in, T* prob, T* out,
                           void* temp_storage, size_t temp_storage_bytes);
                           
   static void ComputeDiff(DeviceCtx* ctx, int64_t n, int64_t w, const T* dy, const T* out, T* dx,
