@@ -21,13 +21,6 @@ from automated_test_util import *
 from test_util import GenArgList
 import oneflow as flow
 
-def _test_onehot(test_case, device, num_classes):
-    input1 = flow.Tensor(np.arange(1, 9).reshape((1, 2, 4)), device=flow.device(device) ,dtype=flow.int64)
-    output = flow.one_hot(input1, num_classes=num_classes)
-    input2 = torch.arange(1, 9).reshape((1, 2, 4))
-    np_out = torch.nn.functional.one_hot(input2, num_classes)
-    test_case.assertTrue(np.array_equal(output.numpy(), np_out.numpy()))
-
 
 @flow.unittest.skip_unless_1n1d()
 class TestOnehot(flow.unittest.TestCase):

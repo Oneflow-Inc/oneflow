@@ -20,13 +20,13 @@ add_docstr(
     oneflow.F.one_hot,
     r"""
     one_hot(input, num_classes=-1)
-    This operator generates a onehot Blob from input Blob.
+    This operator generates a onehot Tensor from input Tensor.
 
-    If input Blob's rank is `N`, the corresponding onehot Blob's rank is `N+1`.
+    If input Tensor's rank is `N`, the corresponding onehot Tensor's rank is `N+1`.
 
     Args:
         input (Tensor): The input Tensor.
-        num_classes (int): The length of onehot Blob.
+        num_classes (int): The length of onehot Tensor.
  
     Note:
 
@@ -43,7 +43,7 @@ add_docstr(
         >>> import numpy as np
 
         >>> input=flow.Tensor(np.array([0, 3, 1, 2]).astype(np.int32), dtype=flow.int64)
-        >>> out = flow.one_hot(input, num_classes=5)
+        >>> out = flow.F.one_hot(input, num_classes=5)
         >>> out
         tensor([[1, 0, 0, 0, 0],
                 [0, 0, 0, 1, 0],
