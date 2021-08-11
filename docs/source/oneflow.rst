@@ -72,6 +72,7 @@ oneflow
             mul, 
             neg, 
             negative, 
+            nonzero,
             empty,
             ones, 
             ones_like, 
