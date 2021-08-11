@@ -23,7 +23,7 @@ namespace oneflow {
 namespace vm {
 
 class StreamType;
-class StreamDesc;
+struct StreamDesc;
 
 // Rt is short for Runtime
 // clang-format off
