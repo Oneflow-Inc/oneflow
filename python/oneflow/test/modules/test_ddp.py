@@ -52,7 +52,9 @@ class TestDDP(flow.unittest.TestCase):
         y = m(x)
         y.sum().backward()
 
-        test_case.assertTrue(np_allclose_with_shape(m.w.grad.numpy(), np.array([1.5, 1.5])))
+        test_case.assertTrue(
+            np_allclose_with_shape(m.w.grad.numpy(), np.array([1.5, 1.5]))
+        )
 
     def test_ddp_with_unused_param(test_case):
         class Model(flow.nn.Module):
