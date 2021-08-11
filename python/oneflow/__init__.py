@@ -171,6 +171,8 @@ from oneflow.framework.session_util import (
 )
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import tensor as tensor
+from oneflow.framework.tensor import is_nonzero
+
 from oneflow.nn.modules.abs import abs_op as abs
 from oneflow.nn.modules.acos import acos_op as acos
 from oneflow.nn.modules.acosh import acosh_op as acosh

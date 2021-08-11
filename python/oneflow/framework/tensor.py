@@ -114,6 +114,44 @@ def _meta_repr(self):
     return tensor_str_util._gen_tensor_meta_str(self)
 
 
+def is_nonzero(input):
+    """
+    is_nonzero(input) -> (bool)
+
+    Returns True if the :attr:`input` is a single element tensor which is not equal to zero
+    after type conversions.
+    i.e. not equal to ``flow.tensor([0.])`` or ``flow.tensor([0])``.
+    Throws a ``RuntimeError`` if ``input.shape.numel() != 1``
+
+    Args:
+        {input}
+
+    Examples::
+
+        >>> flow.is_nonzero(flow.tensor([0.]))
+        False
+        >>> flow.is_nonzero(flow.tensor([1.5]))
+        True
+        >>> flow.is_nonzero(flow.tensor([3]))
+        True
+        >>> flow.is_nonzero(flow.tensor([1, 3, 5]))
+        Traceback (most recent call last):
+        ...
+        RuntimeError: bool value of Tensor with more than one value is ambiguous
+        >>> flow.is_nonzero(flow.tensor([]))
+        Traceback (most recent call last):
+        ...
+        RuntimeError: bool value of Tensor with no values is ambiguous
+    """
+    shape = input.shape
+    if shape.numel() == 0:
+        raise RuntimeError("bool value of Tensor with no values is ambiguous")
+    if shape.numel() > 1:
+        raise RuntimeError("bool value of Tensor with more than one value is ambiguous")
+    value = input.tolist()[0]
+    return bool(value)
+
+
 def _gt(self, other):
     return self.gt(other)
 
@@ -335,6 +373,7 @@ def RegisterMethods():
     Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
+    Tensor.__bool__ = is_nonzero
     Tensor.__gt__ = _gt
     Tensor.__lt__ = _lt
     Tensor.__ge__ = _ge
