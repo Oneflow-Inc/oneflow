@@ -131,8 +131,10 @@ class SGD(Optimizer):
             return loss
 
     def generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            new_opt_confs.append(optimizer_conf)
             lr = param_group["lr"]
             beta = param_group["momentum"]
             scale = param_group["scale"]
@@ -157,3 +159,4 @@ class SGD(Optimizer):
                 if not param.requires_grad:
                     continue
                 optimizer_conf.add_variable_op_names(vars_conf[param].name)
+        return new_opt_confs

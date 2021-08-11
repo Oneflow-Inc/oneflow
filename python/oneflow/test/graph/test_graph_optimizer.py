@@ -26,7 +26,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestGraphOptimizer(flow.unittest.TestCase):
-    def test_optimizer(test_case):
+    def _test_optimizer(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -52,12 +52,13 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 }
             ]
         )
+        cosine_lr = flow.optim.lr_scheduler.CosineAnnealingLR(sgd0, steps=100, alpha=0.1)
 
         class CustomGraph0(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.m = m
-                self.add_optimizer("sgd0", sgd0)
+                self.add_optimizer("opt0", sgd0, cosine_lr)
 
             def build(self, x):
                 out = self.m(x)
@@ -65,6 +66,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 return out
 
         g = CustomGraph0()
+
         x = flow.Tensor(4, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         z = g._compile(x)
@@ -121,13 +123,15 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 },
             ]
         )
+        cosine_lr0 = flow.optim.lr_scheduler.CosineAnnealingLR(sgd0, steps=10, alpha=0.01)
+        cosine_lr1 = flow.optim.lr_scheduler.CosineAnnealingLR(sgd1, steps=100, alpha=0.1)
 
         class CustomGraph0(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.m = m
-                self.add_optimizer("sgd0", sgd0)
-                self.add_optimizer("sgd1", sgd1)
+                self.add_optimizer("sgd0", sgd0, cosine_lr0)
+                self.add_optimizer("sgd1", sgd1, cosine_lr1)
 
             def build(self, x, y):
                 out0, out1 = self.m(x, y)

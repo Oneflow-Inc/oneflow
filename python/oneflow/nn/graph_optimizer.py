@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 
 
 class OptimizerConfig(object):
@@ -21,19 +22,20 @@ class OptimizerConfig(object):
         self,
         name: str,
         optimizer: Optimizer = None,
-        lr_scheduler=None,
-        # TODO(): support grad clipping and weight_decay
+        lr_scheduler: LrScheduler = None,
+        # TODO(): support grad clipping
         # grad_clipping_conf=None,
-        # weight_decay_conf=None,
     ):
-        self.name = name
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
-        self.grad_clipping_conf = grad_clipping_conf
-        self.weight_decay_conf = weight_decay_conf
+        self._name = name
+        self._optimizer = optimizer
+        self._lr_scheduler = lr_scheduler
+        #self.grad_clipping_conf = grad_clipping_conf
 
     def generate_optimizer_and_variable_configs(self, train_conf, vars_conf):
-        self.optimizer.generate_conf_for_graph(train_conf, vars_conf)
+        if self._optimizer is not None:
+            opt_confs = self._optimizer.generate_conf_for_graph(train_conf, vars_conf)
+        if self._lr_scheduler is not None:
+            self._lr_scheduler.generate_conf_for_graph(opt_confs)
 
 
 class VariableConfig(object):

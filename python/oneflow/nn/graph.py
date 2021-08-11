@@ -29,6 +29,7 @@ from oneflow.nn.graph_block import Block, BlockType
 from oneflow.nn.graph_optimizer import OptimizerConfig, VariableConfig
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.util import add_indent
 
 
@@ -74,9 +75,9 @@ class Graph(object):
         self,
         name: str,
         optimizer: Optimizer = None,
-        lr_scheduler=None,
-        grad_clipping_conf=None,
-        weight_decay_conf=None,
+        lr_scheduler: LrScheduler = None,
+        # TODO(): grad cliping
+        # grad_clipping_conf=None,
     ):
         assert name is not None, "name cannot be None"
         assert type(name) is str, "name must be an instance of str"
@@ -85,7 +86,7 @@ class Graph(object):
             optimizer, Optimizer
         ), "optimizer must be an instance of Optimizer"
         self._optimizers_conf[name] = OptimizerConfig(
-            name, optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
+            name, optimizer, lr_scheduler,
         )
 
     def _generate_name(self):
