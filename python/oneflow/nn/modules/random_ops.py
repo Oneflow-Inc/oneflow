@@ -238,7 +238,9 @@ def randn_op(
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
     
     For example:
+
     .. code-block:: python
+
         >>> import oneflow as flow
         >>> x = flow.randn(3,3)
         >>> x.shape
@@ -250,6 +252,7 @@ def randn_op(
         >>> x = flow.randn(3,3,placement=placement,sbp=sbp)
         >>> x.is_consistent
         True
+
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
