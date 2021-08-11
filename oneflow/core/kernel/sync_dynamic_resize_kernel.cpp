@@ -54,8 +54,9 @@ class SyncDynamicResizeGPUKernel final : public KernelIf<DeviceType::kGPU> {
  private:
   bool IsKernelLaunchSynchronized() const override { return false; }
 
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     const SyncDynamicResizeOpConf& conf = this->op_conf().sync_dynamic_resize_conf();
     CHECK_EQ(conf.axis(), 0);
     std::shared_ptr<CudaHostMem> cuda_host_mem_ptr;
@@ -122,8 +123,9 @@ class SyncDynamicResizeCPUKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   bool IsKernelLaunchSynchronized() const override { return false; }
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     const SyncDynamicResizeOpConf& conf = this->op_conf().sync_dynamic_resize_conf();
     CHECK_EQ(conf.axis(), 0);
     const Blob* in = BnInOp2Blob("in");
