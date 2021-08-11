@@ -113,13 +113,38 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
         test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
 
-    @unittest.skipIf(True, "consistent_tensor doesn't work right now")
     def test_creating_consistent_tensor(test_case):
+        placement = flow.placement("cuda", {0: 0})
+        sbp = flow.sbp.broadcast
         shape = (2, 3)
-        x = flow.Tensor(*shape, placement=flow.placement("gpu", ["0:0"], None))
-        x.set_placement(flow.placement("cpu", ["0:0"], None))
-        x.set_is_consistent(True)
-        test_case.assertTrue(not x.is_cuda)
+
+        # Shape -> ConsistentTensor
+        x = flow.Tensor(*shape, placement=placement, sbp=sbp)
+        test_case.assertTrue(x.is_consistent)
+
+        # LocalTensor -> ConsistentTensor
+        x = flow.Tensor(*shape, device="cpu")
+        test_case.assertTrue(x.is_local)
+        y = flow.Tensor(x, placement=placement, sbp=sbp)
+        test_case.assertTrue(y.is_consistent)
+
+        # ConsistentTensor -> ConsistentTensor
+        z = flow.Tensor(y, placement=placement, sbp=sbp)
+        test_case.assertTrue(z.is_consistent)
+
+        # TODO: ndarray -> ConsistentTensor
+
+    def test_construct_local_from_consistent_tensor(test_case):
+        placement = flow.placement("cuda", {0: 0})
+        sbp = flow.sbp.broadcast
+        shape = (2, 3)
+        x = flow.Tensor(*shape, placement=placement, sbp=sbp)
+        test_case.assertTrue(x.is_consistent)
+        # ConsistentTensor -> LocalTensor
+        y = flow.Tensor(x)
+        test_case.assertTrue(y.is_local)
+        y = flow.Tensor(x, device="cuda")
+        test_case.assertTrue(y.is_local)
 
     def test_tensor_with_single_int(test_case):
         x = flow.Tensor(5)
@@ -903,6 +928,14 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(low=-0.5, high=0.5).to(device)
         y = x.arctanh()
+        return y
+
+    @autotest(n=5, auto_backward=False)
+    def test_tensor_nonzero_with_random_data(test_case):
+        device = random_device()
+        ndim = random(2, 6).to(int)
+        x = random_pytorch_tensor(ndim=ndim).to(device)
+        y = x.nonzero()
         return y
 
     @unittest.skipIf(

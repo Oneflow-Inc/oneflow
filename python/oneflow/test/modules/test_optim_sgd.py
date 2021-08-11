@@ -25,14 +25,7 @@ from oneflow.nn.parameter import Parameter
 
 
 def compare_with_numpy_sgd(
-    test_case,
-    device,
-    x_shape,
-    scale,
-    momentum,
-    weight_decay,
-    learning_rate,
-    train_iters,
+    test_case, device, x_shape, momentum, weight_decay, learning_rate, train_iters,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -47,7 +40,6 @@ def compare_with_numpy_sgd(
                     "params": [x],
                     "lr": learning_rate,
                     "momentum": momentum,
-                    "scale": scale,
                     "weight_decay": weight_decay,
                 }
             ]
@@ -71,7 +63,7 @@ def compare_with_numpy_sgd(
         vt = np.zeros_like(x)
 
         def train_one_iter(grad):
-            grad = grad * scale + weight_decay * x
+            grad = grad + weight_decay * x
             v = momentum * vt - learning_rate * grad
             param = x + v
             return (param, v)
@@ -112,7 +104,6 @@ def compare_with_numpy_sgd_clip_norm(
     test_case,
     device,
     x_shape,
-    scale,
     momentum,
     weight_decay,
     learning_rate,
@@ -133,7 +124,6 @@ def compare_with_numpy_sgd_clip_norm(
                     "params": [x],
                     "lr": learning_rate,
                     "momentum": momentum,
-                    "scale": scale,
                     "weight_decay": weight_decay,
                     "clip_grad_max_norm": clip_grad_max_norm,
                     "clip_grad_norm_type": clip_grad_norm_type,
@@ -163,7 +153,7 @@ def compare_with_numpy_sgd_clip_norm(
             total_norm, grad = _clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
-            grad = grad * scale + weight_decay * x
+            grad = grad + weight_decay * x
             v = momentum * vt - learning_rate * grad
             param = x + v
             return (param, v)
@@ -188,7 +178,6 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["scale"] = [1.0, 0.9]
         arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1, 0.1]
@@ -200,7 +189,6 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["scale"] = [1.0, 0.9]
         arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1, 0.1]

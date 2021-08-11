@@ -101,7 +101,7 @@ async def create_remote_workspace_dir(
                 f"ssh {remote_host} mkdir -p {workspace_dir}/{path}"
             )
             await spawn_shell_and_check(
-                f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --exclude='__pycache__' {path} {remote_host}:{workspace_dir}/{path}"
+                f"rsync -azPq --omit-dir-times --no-perms --no-group --copy-links --exclude='__pycache__' {path} {remote_host}:{workspace_dir}/{path}"
             )
     print("create_remote_workspace_dir done")
 
@@ -123,7 +123,7 @@ async def launch_remote_container(
     if oneflow_wheel_path:
         pythonpath_args = ""
     elif oneflow_python_path:
-        pythonpath_args = f"--env PYTHONPATH={workspace_dir}/oneflow_python"
+        pythonpath_args = f"--env PYTHONPATH={workspace_dir}/python"
     else:
         raise ValueError("must have oneflow_wheel_path or oneflow_python_path")
     docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} {pythonpath_args} {img_tag} sleep {survival_time}
@@ -180,7 +180,7 @@ def wait_for_env_proto_and_launch_workers(
             f.write(env_proto_txt.encode())
             f.flush()
             subprocess.check_call(
-                f"rsync -azP --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
+                f"rsync -azPq --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
                 shell=True,
             )
             run_docker_cmd = f"ssh {remote_host} docker exec {container_name}"
@@ -342,7 +342,7 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
     await asyncio.gather(
         *[
             spawn_shell_and_check(
-                f"ssh {remote_host} 'mkdir -p {workspace_dir}/oneflow_python/oneflow/libs'",
+                f"ssh {remote_host} 'mkdir -p {workspace_dir}/python/oneflow/libs'",
             )
             for remote_host in remote_hosts
         ]
@@ -351,7 +351,7 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
     async def copy_file(path=None, remote_host=None):
         relpath = os.path.relpath(path, tmp_dir.name)
         await spawn_shell_and_check(
-            f"scp {path} {remote_host}:{workspace_dir}/oneflow_python/oneflow/{relpath}",
+            f"scp {path} {remote_host}:{workspace_dir}/python/oneflow/{relpath}",
         )
 
     files = [
@@ -525,7 +525,7 @@ if __name__ == "__main__":
             asyncio.gather(
                 *[
                     spawn_shell_and_check(
-                        f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='oneflow/include' --include='*/' --exclude='*' {args.oneflow_python_path} {remote_host}:{workspace_dir}"
+                        f"rsync -azPq --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='oneflow/include' --include='*/' --exclude='*' {args.oneflow_python_path} {remote_host}:{workspace_dir}"
                     )
                     for remote_host in remote_hosts
                 ]
@@ -544,7 +544,7 @@ if __name__ == "__main__":
             asyncio.gather(
                 *[
                     spawn_shell_and_check(
-                        f"rsync -azP --omit-dir-times --no-perms --no-group {oneflow_wheel_path} {remote_host}:{workspace_dir}"
+                        f"rsync -azPq --omit-dir-times --no-perms --no-group {oneflow_wheel_path} {remote_host}:{workspace_dir}"
                     )
                     for remote_host in remote_hosts
                 ]
@@ -605,7 +605,7 @@ if __name__ == "__main__":
             asyncio.gather(
                 *[
                     spawn_shell(
-                        f"rsync -azP --omit-dir-times --no-perms --no-group --exclude='*.whl' --exclude='oneflow_python' {extra_exclude_args} {remote_host}:{workspace_dir}/ {args.oneflow_test_tmp_dir}/{remote_host}"
+                        f"rsync -azPq --omit-dir-times --no-perms --no-group --exclude='*.whl' --exclude='python' {extra_exclude_args} {remote_host}:{workspace_dir}/ {args.oneflow_test_tmp_dir}/{remote_host}"
                     )
                     for remote_host in remote_hosts
                 ]
