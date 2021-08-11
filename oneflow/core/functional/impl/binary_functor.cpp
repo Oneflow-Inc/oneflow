@@ -202,12 +202,17 @@ class ReshapeLikeFunctor : public BinaryFunctor {
   }
 };
 
-class LogicalNotFunctor : public BinaryFunctor{
+class LogicalNotFunctor{
  public:
-  LogicalNotFunctor() { 
-    op_ = 
-        CHECK_JUST(one::OpBuilder("logical_not").Input("in").Output("out").Build()); 
+  LogicalNotFunctor() { op_ = CHECK_JUST(one::OpBuilder("logical_not").Input("in").Output("out").Build()); 
   }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+  }
+
+  protected:
+    std::shared_ptr<OpExpr> op_;
+
 };
 
 }  // namespace impl
