@@ -15,10 +15,6 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -29,7 +25,7 @@ class TestRelu(flow.unittest.TestCase):
     @autotest()
     def test_flow_relu_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
         y = torch.relu(x)
         return y
 
