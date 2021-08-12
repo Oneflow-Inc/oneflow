@@ -65,32 +65,31 @@ class UnfoldKernel final : public OpKernel {
     if (input_desc->is_dynamic()) { return std::shared_ptr<OpKernelState>(nullptr); }
     const auto& data_format = ctx->Attr<std::string>("data_format");
     const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-    const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+    const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding");
     const auto& stride = ctx->Attr<std::vector<int32_t>>("strides");
     const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     int spatial_ndim = input_desc->shape().NumAxes() - 2;
-    int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format"));
+    // int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format"));
     DataType index_dtype = input_desc->shape().elem_cnt() < std::numeric_limits<int32_t>::max()
                                ? DataType::kInt32
                                : DataType::kInt64;
     return SwitchCreateUnfoldOpKernelState(SwitchCase(index_dtype, spatial_ndim, spatial_dim),
                                            ShapeView(input_desc->shape()), kernel_size,
-                                           padding_before, padding_after, stride, dilation);
+                                           padding, stride, dilation);
   }
 
- private:
-  int GetSpatialDim(const std::string& data_format) const {
-    int spatial_dim = 0;
-    if (data_format == "channels_first") {
-      spatial_dim = 2;
-    } else if (data_format == "channels_last") {
-      spatial_dim = 1;
-    } else {
-      UNIMPLEMENTED();
-    }
-    return spatial_dim;
-  }
+//  private:
+  // int GetSpatialDim(const std::string& data_format) const {
+  //   int spatial_dim = 0;
+  //   if (data_format == "channels_first") {
+  //     spatial_dim = 2;
+  //   } else if (data_format == "channels_last") {
+  //     spatial_dim = 1;
+  //   } else {
+  //     UNIMPLEMENTED();
+  //   }
+  //   return spatial_dim;
+  // }
 
 #define SWITCH_ENTRY(func_name, itype, ndim, sdim) \
   UnfoldKernelUtil<device_type, T, itype, ndim, sdim>::func_name
@@ -104,7 +103,7 @@ class UnfoldKernel final : public OpKernel {
     const Tensor* input = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* output = ctx->Tensor4ArgNameAndIndex("y", 0);
     int spatial_ndim = input->shape().NumAxes() - 2;
-    int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format"));
+    int spatial_dim = 2 // channels first
     DataType index_dtype = input->shape().elem_cnt() < std::numeric_limits<int32_t>::max()
                                ? DataType::kInt32
                                : DataType::kInt64;
@@ -117,7 +116,6 @@ class UnfoldKernel final : public OpKernel {
       const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
       state_ptr = SwitchCreateUnfoldOpKernelState(switch_case, input->shape(), kernel_size,
                                                   padding, stride, dilation);
-
       // TODO ！！！
       state = state_ptr.get();
     }
@@ -149,14 +147,19 @@ class UnfoldGradKernel final : public user_op::OpKernel {
 
 }  // namespace
 
+// #define REGISTER_UNFOLD_KERNEL(device, dtype)                                                \
+//   REGISTER_USER_KERNEL("unfold").SetCreateFn<UnfoldKernel<device, dtype>>().SetIsMatchedHob( \
+//       (user_op::HobDeviceTag() == device)                                                    \
+//       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));                        \
+//   REGISTER_USER_KERNEL("unfold_grad")                                                        \
+//       .SetCreateFn<UnfoldGradKernel<device, dtype>>()                                        \
+//       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
+//                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
 #define REGISTER_UNFOLD_KERNEL(device, dtype)                                                \
   REGISTER_USER_KERNEL("unfold").SetCreateFn<UnfoldKernel<device, dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceTag() == device)                                                    \
-      & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));                        \
-  REGISTER_USER_KERNEL("unfold_grad")                                                        \
-      .SetCreateFn<UnfoldGradKernel<device, dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+      & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));                        
 
 REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, double)
