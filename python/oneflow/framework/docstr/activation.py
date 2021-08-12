@@ -34,7 +34,7 @@ add_docstr(
         >>> import oneflow as flow
 
         >>> x = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
-        >>> alpha = flow.nn.Parameter(flow.Tensor(1, 1, 1).fill_(0.25))
+        >>> alpha = flow.nn.Parameter(flow.Tensor(1).fill_(0.25))
         >>> print(flow.F.prelu(x, alpha).numpy())
         [[[[ 1.  -0.5]
            [ 3.   4. ]]]]

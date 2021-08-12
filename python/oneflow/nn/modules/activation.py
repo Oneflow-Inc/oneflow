@@ -89,7 +89,7 @@ class PReLU(Module):
     def __init__(self, num_parameters: int = 1, init: float = 0.25) -> None:
         super().__init__()
         self.num_parameters = num_parameters
-        self.weight = flow.nn.Parameter(flow.Tensor(num_parameters, 1, 1).fill_(init))
+        self.weight = flow.nn.Parameter(flow.Tensor(num_parameters).fill_(init))
 
     def forward(self, x):
         assert (
