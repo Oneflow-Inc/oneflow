@@ -102,11 +102,7 @@ class RMSprop(Optimizer):
         self._default_options["eps"] = eps
         self._default_options["weight_decay"] = weight_decay
         self._default_options["centered"] = centered
-        if isinstance(parameters, collections.abc.Iterator):
-            self.param_groups.append(ParamGroup(parameters, self._default_options))
-        else:
-            for param in parameters:
-                self.param_groups.append(ParamGroup(param, self._default_options))
+        self._parse_input_parameters(parameters)
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
