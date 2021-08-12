@@ -32,9 +32,9 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_mr * mr, char * addr, size_t  size):size_(size){
-    mr_.reset(mr);
+  ActorMsgMR(std::shared_ptr<ibv_mr> mr, char * addr, size_t  size):size_(size){
     msg_ = reinterpret_cast<ActorMsg*>(addr);
+    mr_ = mr;
   }
   ~ActorMsgMR() {
    //CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0);
@@ -50,8 +50,7 @@ class ActorMsgMR final {
 
  private:
     size_t size_;
-    //ibv_mr  *  mr_;
-    std::unique_ptr<ibv_mr> mr_;
+    std::shared_ptr<ibv_mr> mr_;
     ActorMsg * msg_;
 };
 
@@ -86,9 +85,9 @@ class MessagePool final {
       std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
       char * addr =(char*) malloc(RegisterMemorySize );
-      ibv_mr * mr = ibv::wrapper.ibv_reg_mr_wrap(
+      std::shared_ptr<ibv_mr> mr =std::make_shared<ibv_mr>( ibv::wrapper.ibv_reg_mr_wrap(
           pd_, (void*)addr, RegisterMemorySize,
-          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ));
       CHECK(mr);
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       for(size_t i = 0;  i < num_of_message_ ; i++){
