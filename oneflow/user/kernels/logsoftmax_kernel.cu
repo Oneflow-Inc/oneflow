@@ -37,10 +37,10 @@ class LogSoftmaxKernel final : public user_op::OpKernel {
     const int64_t num_instances = in->shape().Count(0, in->shape().NumAxes() - 1);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
-    
-    LogSoftmaxKernelUtil<device_type, T>::ComputeOut(ctx->device_ctx(), num_instances, num_classes,
-                                                   in->dptr<T>(), prob->mut_dptr<T>(),out->mut_dptr<T>(),
-                                                   tmp_buffer->mut_dptr(), temp_storage_bytes);
+
+    LogSoftmaxKernelUtil<device_type, T>::ComputeOut(
+        ctx->device_ctx(), num_instances, num_classes, in->dptr<T>(), prob->mut_dptr<T>(),
+        out->mut_dptr<T>(), tmp_buffer->mut_dptr(), temp_storage_bytes);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -52,21 +52,21 @@ user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
     const int64_t num_classes = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t num_instances = in_shape.Count(0, in_shape.NumAxes() - 1);
     return LogSoftmaxKernelUtil<device_type, T>::GetComputeProbTempStorageSizeInBytes(num_instances,
-                                                                                   num_classes);
+                                                                                      num_classes);
   };
 }
 
-#define REGISTER_LOGSOFTMAX_KERNEL(device, dtype)                                          \
-  REGISTER_USER_KERNEL("logsoftmax")                                                       \
-      .SetCreateFn<LogSoftmaxKernel<device, dtype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                              \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+#define REGISTER_LOGSOFTMAX_KERNEL(device, dtype)                                        \
+  REGISTER_USER_KERNEL("logsoftmax")                                                     \
+      .SetCreateFn<LogSoftmaxKernel<device, dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)   \
                        & (user_op::HobDataType("prob", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(GenFwInferTmpSizeFn<device, dtype>());
 
 REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kGPU, half)
 REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kGPU, float)
-REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kGPU, double) 
+REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kGPU, double)
 
 template<DeviceType device_type, typename T>
 class LogSoftmaxGradKernel final : public user_op::OpKernel {
@@ -86,9 +86,9 @@ class LogSoftmaxGradKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
 
-    LogSoftmaxKernelUtil<device_type, T>::ComputeDiff(ctx->device_ctx(), num_instances, num_classes,
-                                                   dy->dptr<T>(), prob->dptr<T>(), dx->mut_dptr<T>(),
-                                                   tmp_buffer->mut_dptr(), temp_storage_bytes);
+    LogSoftmaxKernelUtil<device_type, T>::ComputeDiff(
+        ctx->device_ctx(), num_instances, num_classes, dy->dptr<T>(), prob->dptr<T>(),
+        dx->mut_dptr<T>(), tmp_buffer->mut_dptr(), temp_storage_bytes);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -100,13 +100,13 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
     const int64_t num_classes = dy_shape.At(dy_shape.NumAxes() - 1);
     const int64_t num_instances = dy_shape.Count(0, dy_shape.NumAxes() - 1);
     return LogSoftmaxKernelUtil<device_type, T>::GetComputeDiffTempStorageSizeInBytes(num_instances,
-                                                                                   num_classes);
+                                                                                      num_classes);
   };
 }
 
-#define REGISTER_LOGSOFTMAX_GRAD_KERNEL(device, dtype)                                    \
-  REGISTER_USER_KERNEL("logsoftmax_grad")                                                 \
-      .SetCreateFn<LogSoftmaxGradKernel<device, dtype>>()                                 \
+#define REGISTER_LOGSOFTMAX_GRAD_KERNEL(device, dtype)                                 \
+  REGISTER_USER_KERNEL("logsoftmax_grad")                                              \
+      .SetCreateFn<LogSoftmaxGradKernel<device, dtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                             \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(GenBwInferTmpSizeFn<device, dtype>());

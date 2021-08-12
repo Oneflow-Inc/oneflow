@@ -50,7 +50,7 @@ Maybe<void> LogSoftmax::Init(const OpExpr& op) {
 }
 
 Maybe<void> LogSoftmax::Capture(LogSoftmaxInterpState* ctx, const TensorTuple& inputs,
-                             const TensorTuple& outputs, const AttrMap& attrs) const {
+                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -62,7 +62,7 @@ Maybe<void> LogSoftmax::Capture(LogSoftmaxInterpState* ctx, const TensorTuple& i
 }
 
 Maybe<void> LogSoftmax::Apply(const LogSoftmaxInterpState* ctx, const TensorTuple& out_grads,
-                           TensorTuple* in_grads) const {
+                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) return Maybe<void>::Ok();
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);
   const auto& dy = out_grads.at(0);
