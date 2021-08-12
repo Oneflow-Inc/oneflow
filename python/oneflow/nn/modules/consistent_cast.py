@@ -84,14 +84,9 @@ def to_consistent_op(
     sbp = _check_sbp(sbp)
 
     if input.is_consistent:
-        # consistent tensor to another consistent with different sbp
+        # convert consistent tensor to another consistent tensor with different placement or sbp
         if placement is None:
             placement = input.placement
-        else:
-            if placement != input.placement:
-                raise ValueError(
-                    f"Pass wrong parameter placement {placement} that is not matching the input placement {input.placement}"
-                )
 
         if sbp is None:
             sbp = input.sbp
