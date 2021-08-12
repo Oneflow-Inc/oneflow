@@ -320,7 +320,10 @@ class _MinimizerBase:
         return split_module, submodule_name
 
     def _run_and_compare(
-        self, split_module: oneflow.fx.GraphModule, submod_name: str, output_names: Names
+        self,
+        split_module: oneflow.fx.GraphModule,
+        submod_name: str,
+        output_names: Names,
     ):
         """
         Run the submodule in `split_module` that has name `submod_name`

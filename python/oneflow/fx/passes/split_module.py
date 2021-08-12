@@ -131,7 +131,9 @@ def split_module(
 
             # swap out old graph nodes in kw/args with references to new nodes in this submodule
             environment = partition.environment
-            gathered_args = oneflow.fx.graph.map_arg(node.args, lambda n: environment[n])
+            gathered_args = oneflow.fx.graph.map_arg(
+                node.args, lambda n: environment[n]
+            )
             gathered_kwargs = oneflow.fx.graph.map_arg(
                 node.kwargs, lambda n: environment[n]
             )

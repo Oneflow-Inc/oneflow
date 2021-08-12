@@ -33,6 +33,7 @@ from typing import (
 )
 from itertools import chain
 import oneflow
+
 # import oneflow._C._fx  # type: ignore[import]
 import oneflow.utils._pytree as pytree
 
@@ -77,14 +78,15 @@ class ProxyableClassMeta(type):
             s = x.add(TensorPair(y, y))
             return s.mul(x)
 
-        x = TensorPair(oneflow.randn(5, 3), oneflow.randn(5, 3))
-        y = oneflow.randn(5, 3)
+        x = TensorPair(oneflow.Tensor(5, 3), oneflow.Tensor(5, 3))
+        y = oneflow.Tensor(5, 3)
         ref_out = use_tensor_pair_ctor(x, y)
 
         traced = oneflow.fx.symbolic_trace(use_tensor_pair_ctor)
         print(traced.code)
+
         '''
-        def forward(self, x : __main___TensorPair, y : oneflow.Tensor):
+        def forward(self, x : __main___TensorPair, y : oneflow._oneflow_internal.Tensor):
             tensor_pair = __main___TensorPair(y, y);  y = None
             add = x.add(tensor_pair);  tensor_pair = None
             mul = add.mul(x);  add = x = None
@@ -168,7 +170,7 @@ def _patch_function(fn: FunctionType, nargs: int) -> FunctionType:
 
     # we need to insert placeholder nodes for *args and **kwargs
     # we can't call this function normally, otherwise it would try to unpack them
-    # instead, let's make python think that args and kwargs are normal variables
+    # instead, let's make Python think that args and kwargs are normal variables
 
 
 class _CPatchManager(object):
@@ -178,6 +180,7 @@ class _CPatchManager(object):
 
     def __init__(self, tracer):
         self.tracer = tracer
+        # TODO(BBuf) 
         # patched_fns = [oneflow.randn, oneflow.rand, oneflow.randint]
         patched_fns = [oneflow.Tensor]
 
@@ -382,7 +385,7 @@ class Tracer(TracerBase):
 
         Leaf modules are the atomic units that appear in
         the IR, referenced by ``call_module`` calls. By default,
-        Modules in the PyTorch standard library namespace (oneflow.nn)
+        Modules in the OneFlow standard library namespace (oneflow.nn)
         are leaf modules. All other modules are traced through and
         their constituent ops are recorded, unless specified otherwise
         via this parameter.
@@ -411,6 +414,7 @@ class Tracer(TracerBase):
             mod (str): The ``Module`` to retrieve the qualified name for.
         """
         # Prefer the O(1) algorithm
+        
         if self.submodule_paths:
             path = self.submodule_paths.get(mod)
             if path is None:
@@ -665,7 +669,10 @@ class Tracer(TracerBase):
                     deduplicate=False,
                 )
                 patcher.patch_method(
-                    oneflow.nn.Module, "__call__", module_call_wrapper, deduplicate=False
+                    oneflow.nn.Module,
+                    "__call__",
+                    module_call_wrapper,
+                    deduplicate=False,
                 )
                 _patch_wrapped_functions(patcher)
                 _autowrap_check(patcher, fn_globals, self._autowrap_function_ids)
@@ -994,6 +1001,8 @@ def symbolic_trace(
     tracer = Tracer(enable_cpatching=enable_cpatching)
     graph = tracer.trace(root, concrete_args)
     name = (
-        root.__class__.__name__ if isinstance(root, oneflow.nn.Module) else root.__name__
+        root.__class__.__name__
+        if isinstance(root, oneflow.nn.Module)
+        else root.__name__
     )
     return GraphModule(tracer.root, graph, name)
