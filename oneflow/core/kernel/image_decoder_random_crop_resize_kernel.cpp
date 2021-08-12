@@ -416,7 +416,8 @@ void GpuDecodeHandle::WarmupOnce(int warmup_size, unsigned char* workspace, size
   Decode(data.data(), data.size(), workspace, workspace_size, &decoded_width, &decoded_height);
   Synchronize();
   if (use_hardware_acceleration_ == true) {
-    //Note(guoran): hardware acceleration jpeg decoder support baseline decoding only, use progressive to warmup jpeg decoder.
+    // Note(guoran): hardware acceleration jpeg decoder support baseline decoding only, use
+    // progressive to warmup jpeg decoder.
     cv::imencode(".jpg", image, data, {cv::IMWRITE_JPEG_PROGRESSIVE, 1});
     Decode(data.data(), data.size(), workspace, workspace_size, &decoded_width, &decoded_height);
     Synchronize();
