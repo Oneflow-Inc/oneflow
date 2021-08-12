@@ -18,7 +18,6 @@ function(oneflow_add_library)
 endfunction()
 
 function(target_try_compile_option target flag)
-  message(STATUS "Try to add ${flag} to target ${target}")
   # We cannot check for -Wno-foo as this won't throw a warning so we must check for the -Wfoo option directly
   # http://stackoverflow.com/questions/38785168/cc1plus-unrecognized-command-line-option-warning-on-any-other-warning
   string(REGEX REPLACE "^-Wno-" "-W" checkedFlag ${flag})
@@ -28,7 +27,6 @@ function(target_try_compile_option target flag)
     check_cxx_compiler_flag(${checkedFlag} ${varName}_SUPPORTED)
   endif()
   if (${varName}_SUPPORTED)
-    message(STATUS "Add ${flag} to target ${target}")
     target_compile_options(${target} PRIVATE ${flag})
   endif ()
 endfunction()
