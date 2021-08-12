@@ -171,25 +171,19 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
 
 def api_hierarchical_parallel_cast(
     input: oneflow._oneflow_internal.BlobDesc,
-    parallel_distribution: Sequence[str],
+    nd_sbp: Sequence[str],
     grad_mode: Optional[str] = None,
-    grad_parallel_distribution: Sequence[str] = None,
+    grad_nd_sbp: Sequence[str] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([hierarchical_parallel_cast])
     return func(
-        input,
-        parallel_distribution=parallel_distribution,
-        grad_mode=grad_mode,
-        grad_parallel_distribution=grad_parallel_distribution,
-        name=name,
+        input, nd_sbp=nd_sbp, grad_mode=grad_mode, grad_nd_sbp=grad_nd_sbp, name=name,
     )
 
 
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def hierarchical_parallel_cast(
-    input, parallel_distribution, grad_mode, grad_parallel_distribution, name
-):
+def hierarchical_parallel_cast(input, nd_sbp, grad_mode, grad_nd_sbp, name):
     if name is None:
         name = id_util.UniqueStr("HierarchicalParallelCast_")
 
@@ -210,15 +204,11 @@ def hierarchical_parallel_cast(
         .Op("hierarchical_parallel_cast")
         .Input("in", [input])
         .Output("out")
-        .Attr(
-            "parallel_distribution", list(map(distribute_to_str, parallel_distribution))
-        )
+        .Attr("nd_sbp", list(map(distribute_to_str, nd_sbp)))
         .Attr("grad_mode", grad_mode or "restore")
         .Attr(
-            "grad_parallel_distribution",
-            list(map(distribute_to_str, grad_parallel_distribution))
-            if grad_parallel_distribution
-            else [],
+            "grad_nd_sbp",
+            list(map(distribute_to_str, grad_nd_sbp)) if grad_nd_sbp else [],
         )
         .Build()
     )
