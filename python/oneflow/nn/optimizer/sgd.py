@@ -63,9 +63,7 @@ class SGD(Optimizer):
     ):
         def _parse_input_parameter(input_params):
             if isinstance(input_params, collections.abc.Iterator):
-                self.param_groups.append(
-                    ParamGroup(input_params, self._default_options)
-                )
+                self.param_groups.append(ParamGroup(input_params, self._default_options))
             elif isinstance(input_params, collections.abc.Iterable):
                 if not isinstance(input_params[0], dict):
                     input_params = [{"params": input_params}]
@@ -74,9 +72,7 @@ class SGD(Optimizer):
                     self.param_groups.append(ParamGroup(param, self._default_options))
             else:
                 raise TypeError(
-                    f"params argument given to the optimizer should be an iterable of Tensors or dicts, but got {type(input_params)}"
-                )
-
+                    f"params argument given to the optimizer should be an iterable of Tensors or dicts, but got {type(input_params)}")
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
