@@ -106,7 +106,7 @@ def _setitem(self, key, value):
             value = flow.F.constant([1], value, self.dtype, device=self.device)
         else:
             value = value.to(device=self.device)
-    
+
     flow.F.tensor_setitem(self, key, value)
     return self
 
