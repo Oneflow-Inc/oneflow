@@ -427,6 +427,8 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
     parallel_conf.set_device_tag("cpu");
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":0");
   }
+
+  // add wait_and_send_ids op conf
   OperatorConf wait_and_send_ids_op_conf;
   {
     wait_and_send_ids_op_conf.set_name(std::string("System-Src-WaitAndSendIds_") + NewUniqueId());
@@ -438,14 +440,33 @@ Maybe<void> MultiClientAddWaitAndSendIds(JobBuilder* job_builder, int64_t machin
     // wait_and_send_ids_conf->id_list() is unused in multi-client mode.
   }
   JUST(job_builder->AddOp(parallel_conf, wait_and_send_ids_op_conf));
-  OperatorConf source_tick_op = JUST(job_builder->OpConf4OpName(src_op_name));
-  {
-    CHECK_OR_RETURN(source_tick_op.has_source_tick_conf());
-    auto* source_tick_op_conf = source_tick_op.mutable_source_tick_conf();
-    CHECK_OR_RETURN(!source_tick_op_conf->has_wait_in());
-    source_tick_op_conf->set_wait_in(GenLogicalBlobName(wait_and_send_ids_op_conf.name(), "out"));
-  }
-  JUST(job_builder->MutOpOnlyOnce(source_tick_op));
+
+  // connect wait_and_send_ids to tick op which was connected to the src tick op
+  OperatorConf tick_op_conf;
+  bool find_src_tick_consumer_tick = false;
+  JUST(job_builder->ForEachOperator([&](const Operator& op) -> Maybe<void> {
+    // skip if the op is not a tick op
+    if (!op.op_conf().has_tick_conf()) { return Maybe<void>::Ok(); }
+    for (const auto& ibn : op.input_bns()) {
+      const auto& input_lbi = op.BnInOp2Lbi(ibn);
+      if (input_lbi.op_name() == src_op_name) {
+        CHECK_OR_RETURN(!find_src_tick_consumer_tick);
+        tick_op_conf.CopyFrom(op.op_conf());
+        find_src_tick_consumer_tick = true;
+      }
+    }
+    return Maybe<void>::Ok();
+  }));
+  CHECK_OR_RETURN(find_src_tick_consumer_tick);
+  CHECK_OR_RETURN(tick_op_conf.has_tick_conf());
+  CHECK_EQ_OR_RETURN(tick_op_conf.tick_conf().tick_size(), 1);
+  tick_op_conf.mutable_tick_conf()->clear_tick();
+  tick_op_conf.mutable_tick_conf()->add_tick(
+      GenLogicalBlobName(wait_and_send_ids_op_conf.name(), "out"));
+  JUST(job_builder->MutOpOnlyOnce(tick_op_conf));
+
+  // erase the src tick op
+  job_builder->DelOps({src_op_name});
   return Maybe<void>::Ok();
 }
 

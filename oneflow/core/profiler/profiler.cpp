@@ -27,27 +27,6 @@ namespace oneflow {
 
 namespace profiler {
 
-namespace {
-
-bool CaseInsensitiveStringEquals(const std::string& lhs, const std::string& rhs) {
-  return lhs.size() == rhs.size()
-         && std::equal(lhs.begin(), lhs.end(), rhs.begin(),
-                       [](char a, char b) { return std::tolower(a) == std::tolower(b); });
-}
-
-bool StringToBool(const std::string& str) {
-  return CaseInsensitiveStringEquals(str, "1") || CaseInsensitiveStringEquals(str, "true")
-         || CaseInsensitiveStringEquals(str, "yes") || CaseInsensitiveStringEquals(str, "on")
-         || CaseInsensitiveStringEquals(str, "y");
-}
-
-}  // namespace
-
-void ParseBoolFlagFromEnv(const std::string& env_var, bool* flag) {
-  const char* env_p = std::getenv(env_var.c_str());
-  *flag = (env_p != nullptr && StringToBool(env_p));
-}
-
 void NameThisHostThread(const std::string& name) {
 #ifdef OF_ENABLE_PROFILER
   nvtxNameOsThreadA(syscall(SYS_gettid), name.c_str());

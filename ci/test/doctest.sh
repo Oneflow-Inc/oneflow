@@ -11,7 +11,7 @@ python3 -c 'import oneflow; f=open("oneflow_path.txt", "w"); f.write(oneflow.__p
 gpu_num=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 python3 $src_dir/ci/test/parallel_run.py \
     --gpu_num=${gpu_num} \
-    --dir=$(cat oneflow_path.txt)/python \
+    --dir=$(cat oneflow_path.txt) \
     --timeout=1 \
     --verbose \
     --chunk=1 \

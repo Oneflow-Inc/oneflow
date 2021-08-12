@@ -84,7 +84,8 @@ BlobDesc* RuntimeBlobShapeInferHelper::BlobDesc4BnInOp(const std::string& bn_in_
   return it->second.get();
 }
 
-void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::string&)> BnInOp2Blob) {
+void RuntimeBlobShapeInferHelper::InferShape(
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
   UpdateInputBlobDescs7OpInferCacheKey(BnInOp2Blob);
   auto Infer = [&](const OpInferCacheKey& key) -> std::shared_ptr<const OpInferCacheValue> {
     auto CachedBlobDesc4BnInOp = WithResultCached([&](const std::string& bn_in_op) -> BlobDesc* {

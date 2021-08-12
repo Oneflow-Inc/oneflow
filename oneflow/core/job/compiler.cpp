@@ -108,7 +108,6 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
-  PlanUtil::GenMemBlockAndChunk4Plan(plan);
   Global<OpGraph>::Delete();
 }
 

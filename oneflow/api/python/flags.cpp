@@ -42,6 +42,14 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
 #endif  // WITH_XLA
   });
 
+  m.def("with_rdma", []() {
+#ifdef WITH_RDMA
+    return true;
+#else
+    return false;
+#endif  // WITH_RDMA
+  });
+
   m.def("has_rpc_backend_grpc", []() {
 #ifdef RPC_BACKEND_GRPC
     return true;

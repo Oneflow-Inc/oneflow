@@ -37,8 +37,6 @@ class SourceTickComputeActor final : public CompActor {
   bool IsCustomizedReadAlwaysUnReadyFromNow() const override { return !IsCustomizedReadReady(); }
 
   int HandlerWaitToStart(const ActorMsg&);
-
-  int32_t piece_id_;
 };
 
 }  // namespace oneflow

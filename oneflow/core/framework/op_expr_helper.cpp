@@ -609,16 +609,6 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
       .Attr<int64_t>("depth", depth)
       .Build();
 }
-Maybe<one::UserOpExpr> PReLUGradOp() { return PReLUGradOp(UniqueOpName("prelu_grad")); }
-Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
-  return one::OpBuilder("prelu_grad", name)
-      .Input("x")
-      .Input("dy")
-      .Input("alpha")
-      .Output("dx")
-      .Output("alpha_diff")
-      .Build();
-}
 
 Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
                                       const bool& align_corners, const std::string& data_format,
@@ -647,8 +637,8 @@ Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim) {
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name) {
   return one::OpBuilder("dim_scatter_add_like", name)
       .Input("like")
-      .Input("input")
       .Input("index")
+      .Input("src")
       .Output("output")
       .Attr<int32_t>("dim", dim)
       .Build();
@@ -796,25 +786,6 @@ Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name
       .Input("mask")
       .Output("dx")
       .Attr<float>("scale", scale)
-      .Build();
-}
-
-Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step) {
-  return SliceGradOp(start, stop, step, UniqueOpName("slice_grad"));
-}
-
-Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step, const std::string& name) {
-  return one::OpBuilder("slice_grad", name)
-      .Input("dy")
-      .Input("like")
-      .Attr<std::vector<int64_t>>("start", start)
-      .Attr<std::vector<int64_t>>("stop", stop)
-      .Attr<std::vector<int64_t>>("step", step)
-      .Output("dx")
       .Build();
 }
 

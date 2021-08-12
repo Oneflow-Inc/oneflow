@@ -13,13 +13,14 @@ import uuid
 def gen_cmds(cmd=None, dir=None, doctest=False):
     if doctest:
         paths = glob.glob(os.path.join(dir, "**/*.py"), recursive=True)
-        print(paths)
+        paths = [p for p in paths if "compatible" not in p and "single_client" not in p]
         with_doctest = []
         for p in paths:
             with open(p) as f:
                 content = f.read()
-                if "doctest" in content and "__" not in p:
+                if "import doctest" in content:
                     with_doctest.append("{} {} -v".format(cmd, p))
+        print(with_doctest)
         return with_doctest
     else:
         paths = glob.glob(os.path.join(dir, "test_*.py"), recursive=False)

@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -25,6 +26,13 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 namespace one {
@@ -32,10 +40,14 @@ namespace functional {
 
 namespace impl {
 
-class ConstantFunctor {
+class ConsistentConstantFunctor {
  public:
-  ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype) const {
+  ConsistentConstantFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -46,7 +58,90 @@ class ConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+    }
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConstantFunctor {
+ public:
+  ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+                           const Optional<Symbol<Device>>& device) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    if (IsIntegralDataType(dtype)) {
+      JUST(attrs.SetAttr<bool>("is_floating_value", false));
+      JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+    } else {
+      JUST(attrs.SetAttr<bool>("is_floating_value", true));
+      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+    }
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class EmptyFunctor {
+ public:
+  EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+                           const Optional<Symbol<Device>>& device) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentEmptyFunctor {
+ public:
+  ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+    }
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
  private:
@@ -164,6 +259,26 @@ class ConcatFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
+class StackFunctor {
+ public:
+  StackFunctor() = default;
+  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
+    CHECK_GE_OR_RETURN(inputs.size(), 1) << "Needs one input at least.";
+    int64_t ndims = inputs.at(0)->shape()->NumAxes();
+    for (int i = 1; i < inputs.size(); ++i) {
+      CHECK_EQ_OR_RETURN(inputs.at(i)->shape()->NumAxes(), ndims)
+          << "The input dimensions are not equal.";
+    }
+    CHECK_OR_RETURN(dim >= 0 && dim <= ndims)
+        << "The stack dim has to be between 0 and the input dimensions of " << ndims;
+    TensorTuple expand_inputs(inputs.size());
+    for (int i = 0; i < inputs.size(); ++i) {
+      expand_inputs[i] = JUST(ExpandDims(inputs.at(i), dim));
+    }
+    return Concat(expand_inputs, dim, inputs.size());
+  }
+};
+
 class ExpandFunctor {
  public:
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
@@ -262,6 +377,138 @@ class DimGatherFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DimScatterFunctor {
+ public:
+  DimScatterFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_update")
+                         .Input("input")
+                         .Input("index")
+                         .Input("src")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class DimScatterAddFunctor {
+ public:
+  DimScatterAddFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_add")
+                         .Input("input")
+                         .Input("index")
+                         .Input("src")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class DimScatterMulFunctor {
+ public:
+  DimScatterMulFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_mul")
+                         .Input("input")
+                         .Input("index")
+                         .Input("src")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& index,
+                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class DimScatterUpdateScalarFunctor {
+ public:
+  DimScatterUpdateScalarFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_update_scalar")
+                         .Input("input")
+                         .Input("index")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& index, const float& src,
+                           const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    JUST(attrs.SetAttr<float>("src_scalar", src));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class DimScatterAddScalarFunctor {
+ public:
+  DimScatterAddScalarFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_add_scalar")
+                         .Input("input")
+                         .Input("index")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& index, const float& src,
+                           const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    JUST(attrs.SetAttr<float>("src_scalar", src));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class DimScatterMulScalarFunctor {
+ public:
+  DimScatterMulScalarFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("dim_scatter_mul_scalar")
+                         .Input("input")
+                         .Input("index")
+                         .Output("output")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& index, const float& src,
+                           const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    JUST(attrs.SetAttr<float>("src_scalar", src));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GatherNdFunctor {
  public:
   GatherNdFunctor() {
@@ -271,6 +518,23 @@ class GatherNdFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& params,
                            const std::shared_ptr<one::Tensor>& indices) const {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {params, indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScatterNdFunctor {
+ public:
+  ScatterNdFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("scatter_nd").Input("indices").Input("updates").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& indices,
+                           const std::shared_ptr<one::Tensor>& updates, const Shape& shape) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates}, attrs);
   }
 
  private:
@@ -352,9 +616,35 @@ class SliceBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SliceGradBaseFunctor {
+ public:
+  SliceGradBaseFunctor() = default;
+  virtual ~SliceGradBaseFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
+                           const std::vector<int64_t>& step) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SliceFunctor : public SliceBaseFunctor {
  public:
   SliceFunctor() { op_ = CHECK_JUST(one::OpBuilder("slice").Input("x").Output("y").Build()); }
+};
+
+class SliceGradFunctor : public SliceGradBaseFunctor {
+ public:
+  SliceGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Input("like").Output("dx").Build());
+  }
 };
 
 class LogicalSliceFunctor : public SliceBaseFunctor {
@@ -837,14 +1127,12 @@ class TensorGetItemFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
     int64_t ndims = x->shape()->NumAxes();
     std::vector<detail::Slice> slice_indices;
-    std::vector<std::shared_ptr<one::Tensor>> tensor_indices;
+    TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
 
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
-    CHECK_GT_OR_RETURN(target_shape.Count(0), 0)
-        << "Target shape is zero shape which was not supported yet.";
 
     std::vector<int64_t> start(ndims), end(ndims), step(ndims);
     for (int i = 0; i < ndims; ++i) {
@@ -861,15 +1149,16 @@ class TensorGetItemFunctor {
     }();
     std::shared_ptr<one::Tensor> result;
     if (is_identity) {
-      result = JUST(functional::Copy(x, JUST(x->device())->type(), JUST(x->device())->device_id()));
+      result = JUST(Copy(x, JUST(x->device())->type(), JUST(x->device())->device_id()));
     } else {
-      result = JUST(functional::Slice(x, start, end, step));
+      result = JUST(Slice(x, start, end, step));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape.NumAxes() != 0 && shape != *(result->shape())) {
-      result = JUST(functional::Reshape(result, shape));
+      result = JUST(Reshape(result, shape));
     }
+    if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
     return result;
   }
 };
@@ -881,7 +1170,7 @@ class TensorSetItemFunctor {
                          const std::shared_ptr<one::Tensor>& value) const {
     int64_t ndims = x->shape()->NumAxes();
     std::vector<detail::Slice> slice_indices;
-    std::vector<std::shared_ptr<one::Tensor>> tensor_indices;
+    TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
 
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
@@ -906,9 +1195,9 @@ class TensorSetItemFunctor {
       if (value_shape->NumAxes() > target_shape.NumAxes()) {
         int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
         const auto& shape = JUST(value_shape->Slice(start_axis, value_shape->NumAxes()));
-        value_tensor = JUST(functional::Reshape(value, *shape));
+        value_tensor = JUST(Reshape(value, *shape));
       }
-      value_tensor = JUST(functional::Expand(value_tensor, target_shape));
+      value_tensor = JUST(Expand(value_tensor, target_shape));
     }
 
     std::vector<int64_t> start(ndims), end(ndims), step(ndims);
@@ -922,17 +1211,128 @@ class TensorSetItemFunctor {
     }
     Shape slice_shape(slice_dims);
     if (slice_shape != *(value_tensor->shape())) {
-      value_tensor = JUST(functional::Reshape(value_tensor, slice_shape));
+      value_tensor = JUST(Reshape(value_tensor, slice_shape));
     }
     JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
     return Maybe<void>::Ok();
   }
 };
 
+class CastLikeFunctor {
+ public:
+  CastLikeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("cast_like").Input("in").Input("dtype_like").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ElementwiseMinimumGradFunctor {
+ public:
+  ElementwiseMinimumGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("elementwise_minimum_backward")
+                         .Input("dz")
+                         .Input("x")
+                         .Input("y")
+                         .Output("dx")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ElementwiseMaximumGradFunctor {
+ public:
+  ElementwiseMaximumGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("elementwise_maximum_backward")
+                         .Input("dz")
+                         .Input("x")
+                         .Input("y")
+                         .Output("dx")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BroadcastDivGradFunctor {
+ public:
+  BroadcastDivGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_div_grad")
+                         .Input("dz")
+                         .Input("z")
+                         .Input("y")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
+                           const std::shared_ptr<one::Tensor>& z,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, z, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class IdentityFunctor {
+ public:
+  IdentityFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("identity").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ReduceSumLikeFunctor {
+ public:
+  ReduceSumLikeFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("reduce_sum_like").Input("x").Input("like").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::vector<int32_t>& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
+  m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
+  m.add_functor<impl::EmptyFunctor>("Empty");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
@@ -940,14 +1340,17 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
+  m.add_functor<impl::StackFunctor>("Stack");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
+  m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");
+  m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
@@ -975,7 +1378,19 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DiagFunctor>("Diag");
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
+  m.add_functor<impl::DimScatterFunctor>("DimScatter");
+  m.add_functor<impl::DimScatterAddFunctor>("DimScatterAdd");
+  m.add_functor<impl::DimScatterMulFunctor>("DimScatterMul");
+  m.add_functor<impl::DimScatterUpdateScalarFunctor>("DimScatterUpdateScalar");
+  m.add_functor<impl::DimScatterAddScalarFunctor>("DimScatterAddScalar");
+  m.add_functor<impl::DimScatterMulScalarFunctor>("DimScatterMulScalar");
   m.add_functor<impl::TensorSetItemFunctor>("TensorSetItem");
+  m.add_functor<impl::CastLikeFunctor>("CastLike");
+  m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
+  m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
+  m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
+  m.add_functor<impl::IdentityFunctor>("Identity");
+  m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
 };
 
 }  // namespace functional
