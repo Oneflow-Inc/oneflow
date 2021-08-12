@@ -13,51 +13,97 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, Union
-
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
-class To(Module):
-    def __init__(self, copy):
-        super().__init__()
-        self.copy = copy
+def _tensor_to(input, device=None, dtype=None, copy=False):
+    ret = input
 
-    def forward(self, x, device, dtype):
-        result = x
-        if device is not None:
-            if x.device != device or self.copy:
-                result = flow.F.copy(x, device_type=device.type, device_id=device.index)
-        if dtype is not None:
-            if x.dtype != dtype or self.copy:
-                result = flow.F.cast(result, dtype=dtype)
-        return result
+    if device is None:
+        assert input.is_local, "input tensor must be local when param device is None"
+        device = input.device
+
+    if dtype is None:
+        dtype = input.dtype
+
+    assert isinstance(device, flow.device), f"Invalid device param: {device}"
+
+    if (device != input.device) or copy:
+        ret = flow.F.copy(ret, device_type=device.type, device_id=device.index)
+
+    if (dtype != input.dtype) or copy:
+        ret = flow.F.cast(ret, dtype=dtype)
+
+    return ret
 
 
-def ConsistentTo(input, device):
-    assert device in (
-        "cuda",
-        "cpu",
-    ), 'consistent tensor only support to("cuda") or to("cpu")'
+def _consistent_tensor_to(input, device):
+    assert input.is_consistent
+    assert isinstance(device, str)
+
+    # the same device as input
     if device == input.placement.device_type:
         return input
+
     out_placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
         input.placement, device
     )
     sbp = input.sbp
-    input_local_tensor = input.to_local()
-    device = flow.device(device)
-    output_local_tensor = To(False)(input_local_tensor, device, None)
-    return output_local_tensor.to_consistent(out_placement, sbp)
+    return input.to_consistent(out_placement, sbp)
+
+
+def _safe_get(list, index, default):
+    if index < len(list) and index >= -len(list):
+        return list[index]
+    else:
+        return default
+
+
+def _parse_args(*args, **kwargs):
+    device = None
+    dtype = None
+    copy = False
+
+    # parse params from args
+    if len(args) > 0:
+        first_arg = args[0]
+        if isinstance(first_arg, flow.Tensor):
+            # args format is (another_tensor, copy=False)
+            device = first_arg.device
+            dtype = first_arg.dtype
+            copy = _safe_get(args, 1, False)
+        elif isinstance(first_arg, flow.dtype):
+            # args format is (dtype, copy=False)
+            device = None
+            dtype = first_arg
+            copy = _safe_get(args, 1, False)
+        elif isinstance(first_arg, flow.device):
+            # args format is (flow.device, dtype=None, copy=False)
+            device = first_arg
+            dtype = _safe_get(args, 1, None)
+            copy = _safe_get(args, 2, False)
+        elif isinstance(first_arg, str):
+            # args format is (device_str, dtype=None, copy=False)
+            device = first_arg
+            dtype = _safe_get(args, 1, None)
+            copy = _safe_get(args, 2, False)
+        else:
+            raise TypeError(f"to() received invalid args {args}")
+
+    # parse params from kwargs
+    device = kwargs.get("device", device)
+    dtype = kwargs.get("dtype", dtype)
+    copy = kwargs.get("copy", copy)
+
+    return device, dtype, copy
 
 
 @register_tensor_op("to")
 def to_op(input, *args, **kwargs):
-    """Performs Tensor dtype and/or device conversion. 
+    """Performs Tensor dtype and/or device conversion.
         A flow.dtype and flow.device are inferred from the arguments of `input.to(*args, **kwargs)`.
-    
+
     .. note::
         If the ``input`` Tensor already
         has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
@@ -70,14 +116,14 @@ def to_op(input, *args, **kwargs):
 
     Returns:
         oneflow.Tensor: A Tensor.
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
         >>> input = flow.Tensor(arr)
         >>> output = input.to(dtype=flow.float32)
@@ -85,42 +131,36 @@ def to_op(input, *args, **kwargs):
         True
 
     """
-    copy = kwargs.get("copy", False)
-    device = kwargs.get("device", None)
-    dtype = kwargs.get("dtype", None)
-    if input.is_consistent:
-        input.check_meta_consistency()
-        if len(args) > 0:
-            assert args[0] in (
-                "cuda",
-                "cpu",
-            ), 'consistent tensor only support to("cuda") or to("cpu")'
-            return ConsistentTo(input, args[0])
-        if device in ("cuda", "cpu"):
-            return ConsistentTo(input, device)
-        raise TypeError("to() received an invalid combination of arguments")
+    device, dtype, copy = _parse_args(*args, **kwargs)
 
-    if len(args) > 0:
-        if isinstance(args[0], flow.Tensor):
-            if len(args) == 2:
-                copy = args[1]
-            return To(copy)(input, args[0].device, args[0].dtype)
-        elif isinstance(args[0], flow.dtype):
-            if len(args) == 2:
-                copy = args[1]
-            return To(copy)(input, None, args[0])
-        else:
-            device = flow.device(args[0]) if isinstance(args[0], str) else args[0]
-            if len(args) > 1:
-                dtype = args[1]
-                assert isinstance(dtype, flow.dtype)
-            if len(args) > 2:
-                copy = args[2]
-            assert isinstance(device, flow.device)
-            return To(copy)(input, device, dtype)
-    if isinstance(device, flow.device) or isinstance(dtype, flow.dtype):
-        return To(copy)(input, device, dtype)
-    raise TypeError("to() received an invalid combination of arguments")
+    if not isinstance(dtype, flow.dtype) and dtype is not None:
+        raise TypeError("Invalid dtype param received: {dtype}")
+
+    if not isinstance(copy, bool):
+        raise TypeError("Invalid copy param received: {copy}")
+
+    if input.is_consistent:
+        if device not in ("cuda", "cpu"):
+            raise TypeError(
+                "A consistent tensor can only call to() with device_str_without_id, "
+                'e.g. to("cuda") or to("cpu"), '
+                f"but device param {device} has been received."
+            )
+
+        if dtype is not None:
+            raise TypeError(
+                "Can not call to() for a consistent tensor with dtype param"
+            )
+
+        if not input.is_lazy:
+            input.check_meta_consistency()
+
+        return _consistent_tensor_to(input, device)
+    else:
+        if isinstance(device, str):
+            device = flow.device(device)
+
+        return _tensor_to(input, device, dtype, copy)
 
 
 if __name__ == "__main__":

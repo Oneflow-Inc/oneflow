@@ -141,6 +141,15 @@ class MyModule3(flow.nn.Module):
         return self.activation(z)
 
 
+class ConsistentToModule(flow.nn.Module):
+    def __init__(self, device="cuda"):
+        super().__init__()
+        self.device = device
+
+    def forward(self, x):
+        return x.to(self.device)
+
+
 class MyGraph(flow.nn.Graph):
     def __init__(self, module, optimizer=None):
         super().__init__()
@@ -291,6 +300,19 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
         test_case.assertTrue(np.allclose(z1.to_local().numpy(), z2.to_local().numpy()))
         test_case.assertTrue(np.allclose(z1.to_local().numpy(), z3.to_local().numpy()))
+
+    # @unittest.skipIf(True, "")
+    def test_consistent_to(test_case):
+        local_x = flow.Tensor(x, device="cpu")
+        placement = flow.placement("cpu", {0: [0, 1]})
+        c_x = local_x.to_consistent(placement, sbp=flow.sbp.split(0))
+
+        consistent_to = ConsistentToModule("cuda")
+        g_consistent_to = MyGraph(consistent_to)
+
+        e = consistent_to(c_x)
+        g = g_consistent_to(c_x)
+        test_case.assertTrue(np.allclose(e.to_local().numpy(), g.to_local().numpy()))
 
     @unittest.skipIf(True, "")
     def test_to_placement(test_case):
