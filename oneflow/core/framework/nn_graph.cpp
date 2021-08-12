@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
@@ -34,6 +35,7 @@ NNGraph::~NNGraph() {
   VLOG(2) << "Try to delete c nn graph name " << name_ << "." << std::endl;
   CloseRuntimeBuffers();
   runtime_.reset();
+  Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
 }
 
 const std::vector<std::string>& NNGraph::inputs_op_names() const { return input_op_names_; }
@@ -62,7 +64,7 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     CHECK_OR_RETURN(var->is_eager());
     Blob* var_blob = nullptr;
     if (var->is_consistent()) {
-      // TODO(chengcheng): handle for consistent variable which has NO phy tensor in cur rank.
+      // NOTE(chengcheng): var_blob maybe nullptr when consistent tensor has no cur_rank_phy_tensor.
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(var->cur_rank_phy_tensor());
       var_blob = JUST(local_var->eager_blob_object())->mut_blob();
     } else {
@@ -76,7 +78,29 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
+  const auto& free_eager_tensors =
+      Global<MultiClientSessionContext>::Get()->GetFreeEagerTensorNamePairByGraphName(name_);
+  for (const auto& pair : free_eager_tensors) {
+    const std::string& var_name = pair.first;
+    const std::shared_ptr<one::Tensor>& var = pair.second;
+    CHECK_OR_RETURN(var->is_eager());
+    Blob* var_blob = nullptr;
+    if (var->is_consistent()) {
+      const std::shared_ptr<one::MirroredTensor> local_var = JUST(var->cur_rank_phy_tensor());
+      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+    } else {
+      var_blob = JUST(var->eager_blob_object())->mut_blob();
+    }
+    CHECK_OR_RETURN(!var_name.empty());
+    CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
+    CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> NNGraph::CompileAndInitRuntime() {
+  JUST(RegisterFreeEagerTensorsToVariableOpNames());
   CHECK_OR_RETURN(!runtime_inited_);
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
   job_ = job_ctx->job();
@@ -178,7 +202,11 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
                            const std::shared_ptr<NNGraph>& nn_graph) {
   CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size());
   CHECK_EQ_OR_RETURN(outputs.size(), nn_graph->outputs_op_names().size());
-  CHECK_EQ_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
+  // NOTE(chengcheng):
+  //   parameters not used in RunLazyJobInstrucntion;
+  //   the args: parameters is all variable tensor hold by nn.Graph
+  //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
+  CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
   std::vector<std::shared_ptr<vm::EagerBlobObject>> input_blobs;
   std::vector<std::shared_ptr<vm::EagerBlobObject>> output_blobs;
   std::vector<std::shared_ptr<vm::EagerBlobObject>> var_blobs;

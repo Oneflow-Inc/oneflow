@@ -90,21 +90,18 @@ class RMSprop(Optimizer):
         weight_decay: float = 0,
         momentum: float = 0.0,
         centered: bool = False,
-        scale: float = 1.0,
     ):
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert alpha >= 0.0, f"Invalid alpha value: {alpha}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
-        assert scale > 0.0, f"Invalid scale factor: {scale}"
         assert momentum == 0.0, "Not support momentum greater than zeros now!"
         self._default_options["lr"] = lr
         self._default_options["alpha"] = alpha
         self._default_options["eps"] = eps
         self._default_options["weight_decay"] = weight_decay
         self._default_options["centered"] = centered
-        self._default_options["scale"] = scale
         if isinstance(parameters, collections.abc.Iterator):
             self.param_groups.append(ParamGroup(parameters, self._default_options))
         else:
@@ -153,7 +150,6 @@ class RMSprop(Optimizer):
             for param_group in self.param_groups:
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
-                    "scale": param_group["scale"],
                     "epsilon": param_group["eps"],
                     "decay_rate": param_group["alpha"],
                     "l2": param_group["weight_decay"],
@@ -171,3 +167,26 @@ class RMSprop(Optimizer):
                         self._rmsprop(param, param.grad, ms_tensor, **kwargs)
             self._state["step"] = self._state["step"] + 1
             return loss
+
+    def generate_conf_for_graph(self, train_conf, vars_conf):
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+
+            lr = param_group["lr"]
+            decay_rate = param_group["alpha"]
+            centered = param_group["centered"]
+            weight_decay = param_group["weight_decay"]
+
+            epslion = param_group["eps"]
+
+            optimizer_conf.set_base_learning_rate(lr)
+
+            optimizer_conf.mutable_rmsprop_conf().set_decay_rate(decay_rate)
+            optimizer_conf.mutable_rmsprop_conf().set_centered(centered)
+            optimizer_conf.mutable_rmsprop_conf().set_epsilon(epslion)
+
+            # Set l2 penalty as weight decay
+            for param in param_group.parameters:
+                vars_conf[param].l2 = weight_decay
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)

@@ -40,9 +40,9 @@ struct InterfaceOpUtil final {
   static Maybe<void> InitBlobConf(InterfaceBlobConf* blob_conf,
                                   const ParallelBlobConf& parallel_blob_conf);
 
-  static Maybe<void> ParseParallelDistributionFromBlobConf(
-      const InterfaceBlobConf& blob_conf, const ParallelDesc& parallel_desc,
-      cfg::ParallelDistribution* parallel_distribution);
+  static Maybe<void> ParseParallelDistributionFromBlobConf(const InterfaceBlobConf& blob_conf,
+                                                           const ParallelDesc& parallel_desc,
+                                                           cfg::ParallelDistribution* nd_sbp);
 };
 
 }  // namespace oneflow

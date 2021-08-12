@@ -63,8 +63,7 @@ std::string GetSupportedBoxingTypeInfo() {
 }
 
 Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
-    Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-    Symbol<cfg::ParallelDistribution> out_parallel_distribution) {
+    Symbol<cfg::ParallelDistribution> in_nd_sbp, Symbol<cfg::ParallelDistribution> out_nd_sbp) {
   static SbpPair2EagerBoxingInterpreter sbp_pair2eager_boxing_interpreter = {
       {{*JUST(GetSplitSbpParallel(0)), *JUST(MakeBroadcastSbpParallel())},  // S(0) -> B
        std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>()},
@@ -77,43 +76,39 @@ Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
       {{*JUST(GetSplitSbpParallel(0)), *JUST(MakePartialSumSbpParallel())},  // S(0) -> P
        std::make_shared<NcclS2PBoxingInterpreter>()},
   };
-  const auto& key = std::make_pair(in_parallel_distribution->sbp_parallel(0),
-                                   out_parallel_distribution->sbp_parallel(0));
+  const auto& key = std::make_pair(in_nd_sbp->sbp_parallel(0), out_nd_sbp->sbp_parallel(0));
   CHECK_OR_RETURN(sbp_pair2eager_boxing_interpreter.find(key)
                   != sbp_pair2eager_boxing_interpreter.end())
-      << "Eager boxing type \'" << ParallelDistributionToString(in_parallel_distribution) << " -> "
-      << ParallelDistributionToString(out_parallel_distribution) << "\'"
+      << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
+      << ParallelDistributionToString(out_nd_sbp) << "\'"
       << " not support yet\n"
       << GetSupportedBoxingTypeInfo();
 
   return JUST(MapAt(sbp_pair2eager_boxing_interpreter, key));
 }
 
-Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(
-    Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-    Symbol<cfg::ParallelDistribution> out_parallel_distribution,
-    Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) {
-  if (in_parallel_distribution == out_parallel_distribution
-      && in_parallel_desc == out_parallel_desc) {
+Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribution> in_nd_sbp,
+                                                   Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                                                   Symbol<ParallelDesc> in_parallel_desc,
+                                                   Symbol<ParallelDesc> out_parallel_desc) {
+  if (in_nd_sbp == out_nd_sbp && in_parallel_desc == out_parallel_desc) {
     static std::shared_ptr<EagerBoxingInterpreter> identity_boxing_interpreter =
         std::make_shared<IdentityBoxingInterpreter>();
     return identity_boxing_interpreter;
   }
-  if (in_parallel_distribution->sbp_parallel_size() == 1
-      && out_parallel_distribution->sbp_parallel_size() == 1) {
+  if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1) {
     if (in_parallel_desc == out_parallel_desc) {
-      if (EagerBoxingInterpreterUtil::IsBoxingB2P(in_parallel_distribution->sbp_parallel(0),
-                                                  out_parallel_distribution->sbp_parallel(0))) {
+      if (EagerBoxingInterpreterUtil::IsBoxingB2P(in_nd_sbp->sbp_parallel(0),
+                                                  out_nd_sbp->sbp_parallel(0))) {
         std::shared_ptr<EagerBoxingInterpreter> naive_bp_boxing_interpreter =
             std::make_shared<NaiveB2PBoxingInterpreter>();
         return naive_bp_boxing_interpreter;
       } else if (in_parallel_desc->device_type() == DeviceType::kGPU) {
-        return GetOneDimNcclCollectiveEagerBoxingInterpreter(in_parallel_distribution,
-                                                             out_parallel_distribution);
+        return GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp);
       } else {
         UNIMPLEMENTED_THEN_RETURN()
-            << "Eager boxing type \'" << ParallelDistributionToString(in_parallel_distribution)
-            << " -> " << ParallelDistributionToString(out_parallel_distribution) << "\'"
+            << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
+            << ParallelDistributionToString(out_nd_sbp) << "\'"
             << " not support yet\n"
             << GetSupportedBoxingTypeInfo();
       }
@@ -123,8 +118,8 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(
     }
   } else {
     UNIMPLEMENTED_THEN_RETURN() << "N-dim eager boxing type \'"
-                                << ParallelDistributionToString(in_parallel_distribution) << " -> "
-                                << ParallelDistributionToString(out_parallel_distribution) << "\'"
+                                << ParallelDistributionToString(in_nd_sbp) << " -> "
+                                << ParallelDistributionToString(out_nd_sbp) << "\'"
                                 << " not support yet\n"
                                 << GetSupportedBoxingTypeInfo();
   }
@@ -135,11 +130,9 @@ auto* CachedGetBoxingInterpreter = DECORATE(&GetBoxingInterpreter, ThreadLocal);
 }  // namespace
 
 Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInterpreter(
-    Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-    Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+    Symbol<cfg::ParallelDistribution> in_nd_sbp, Symbol<cfg::ParallelDistribution> out_nd_sbp,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
-  return CachedGetBoxingInterpreter(in_parallel_distribution, out_parallel_distribution,
-                                    in_parallel_desc, out_parallel_desc);
+  return CachedGetBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc);
 }
 
 COMMAND(Global<EagerBoxingInterpreterManager>::SetAllocated(new EagerBoxingInterpreterManager()));
