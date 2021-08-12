@@ -61,6 +61,18 @@ class SGD(Optimizer):
         weight_decay: float = 0.0,
         scale: float = 1.0,
     ):
+        def _parse_input_parameter(input_params):
+            if isinstance(input_params, collections.abc.Iterator):
+                self.param_groups.append(ParamGroup(input_params, self._default_options))
+            elif isinstance(input_params, collections.abc.Iterable):
+                if not isinstance(input_params[0], dict):
+                    input_params = [{"params": input_params}]
+                for param in input_params:
+                    assert isinstance(param, dict)
+                    self.param_groups.append(ParamGroup(param, self._default_options))
+            else:
+                raise TypeError(
+                    f"params argument given to the optimizer should be an iterable of Tensors or dicts, but got {type(input_params)}")
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
@@ -70,16 +82,8 @@ class SGD(Optimizer):
         self._default_options["scale"] = scale
         self._default_options["momentum"] = momentum
         self._default_options["weight_decay"] = weight_decay
-        if isinstance(parameters, collections.abc.Iterator):
-            self.param_groups.append(ParamGroup(parameters, self._default_options))
-        elif isinstance(parameters, collections.abc.Iterable):
-            if not isinstance(parameters[0], dict):
-                parameters = [{"params": parameters}]
-            for param in parameters:
-                assert isinstance(param, dict)
-                self.param_groups.append(ParamGroup(param, self._default_options))
-        else:
-            raise TypeError("optimizer can only optimize iterable")
+        _parse_input_parameter(parameters)
+
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
