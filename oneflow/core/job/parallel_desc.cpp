@@ -387,4 +387,13 @@ bool IsMirroredParallelContext(const ParallelContext& parallel_ctx) {
   return false;
 }
 
+namespace private_details {
+ 
+Maybe<Symbol<ParallelDesc>> RawReplaceDeviceTag(Symbol<ParallelDesc> parallel_desc, DeviceType device_type) {
+  ParallelConf parallel_conf(parallel_desc->parallel_conf()); 
+  parallel_conf->set_device_tag(JUST(DeviceTag4DeviceType(device_type)));
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
+}
 }  // namespace oneflow

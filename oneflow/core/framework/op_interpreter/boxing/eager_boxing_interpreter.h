@@ -55,6 +55,23 @@ class EagerBoxingInterpreter {
                                            Symbol<ParallelDesc> out_parallel_desc) const = 0;
 };
 
+struct EagerBoxingCall {
+
+  static Maybe<EagerBoxingCall> New(Symbol<cfg::ParallelDistribution> in_nd_sbp,
+                                    Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                                    Symbol<ParallelDesc> in_parallel_desc,
+                                    Symbol<ParallelDesc> out_parallel_desc);
+
+  Maybe<one::Tensor> Apply(const std::shared_ptr<one::Tensor>& input) const;
+
+  const std::shared_ptr<const EagerBoxingInterpreter> boxing_interpreter;
+  const Symbol<cfg::ParallelDistribution> in_nd_sbp;
+  const Symbol<cfg::ParallelDistribution> out_nd_sbp;
+  const Symbol<ParallelDesc> in_parallel_desc;
+  const Symbol<ParallelDesc> out_parallel_desc;
+};
+
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_EAGER_BOXING_INTERPRETER_H_

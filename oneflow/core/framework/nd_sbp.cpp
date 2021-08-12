@@ -101,4 +101,15 @@ Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::ParallelDistribu
   return GetNdSbpStrList(JUST(GetDualNdSbp(nd_sbp)));
 }
 
+namespace private_details {
+
+Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::ParallelDistribution> nd_sbp)  {
+  const auto& vec = std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>();
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    vec->push_back(SymbolOf(sbp_parallel));
+  }
+  return vec;
+}
+
+}
 }  // namespace oneflow

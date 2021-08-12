@@ -17,12 +17,14 @@ limitations under the License.
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/framework/op_interpreter/boxing/cuda_copy_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/framework/op_interpreter/boxing/collective_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/identity_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_b2p_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_s2p_boxing_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/boxing/cuda_based_cpu_mpi_boxing_interpreter.h"
 
 namespace oneflow {
 
@@ -67,33 +69,58 @@ Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
                     std::make_pair(in_nd_sbp->sbp_parallel(0), out_nd_sbp->sbp_parallel(0))));
 }
 
+Maybe<Optional<EagerBoxingInterpreter>> GetCudaBasedCpuMpiBoxingInterpreter(Symbol<cfg::ParallelDistribution> in_nd_sbp,
+                                                   Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                                                   Symbol<ParallelDesc> in_parallel_desc,
+                                                   Symbol<ParallelDesc> out_parallel_desc) {
+  CHECK_OR_RETURN(in_nd_sbp != out_nd_sbp);
+  const auto& gpu_in_parallel_desc = JUST(ReplaceDeviceTag(in_parallel_desc, DeviceType::kGPU));
+  const auto& gpu_out_parallel_desc = JUST(ReplaceDeviceTag(out_parallel_desc, DeviceType::kGPU));
+  const auto& gpu_boxing_interpreter =
+      TRY(GetOneDimNcclCollectiveEagerBoxingInterpreter(
+              in_nd_sbp, out_nd_sbp, gpu_in_parallel_desc, gpu_out_parallel_desc));
+  if (gpu_boxing_interpreter.IsOk()) {
+    return Optional<EagerBoxingInterpreter>(
+        std::shared_ptr<EagerBoxingInterpreter>(new CudaBasedCpuMpiBoxingInterpreter()));
+  } else {
+    return Optional<EagerBoxingInterpreter>();
+  }
+}
+
 Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribution> in_nd_sbp,
                                                    Symbol<cfg::ParallelDistribution> out_nd_sbp,
                                                    Symbol<ParallelDesc> in_parallel_desc,
                                                    Symbol<ParallelDesc> out_parallel_desc) {
   if (in_nd_sbp == out_nd_sbp && in_parallel_desc == out_parallel_desc) {
-    static std::shared_ptr<EagerBoxingInterpreter> identity_boxing_interpreter =
-        std::make_shared<IdentityBoxingInterpreter>();
-    return identity_boxing_interpreter;
-  }
-  if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1) {
+    return std::shared_ptr<EagerBoxingInterpreter>(new IdentityBoxingInterpreter());
+  } else if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1) {
     if (in_parallel_desc == out_parallel_desc) {
       if (EagerBoxingInterpreterUtil::IsBoxingB2P(in_nd_sbp->sbp_parallel(0),
                                                   out_nd_sbp->sbp_parallel(0))) {
-        std::shared_ptr<EagerBoxingInterpreter> naive_bp_boxing_interpreter =
-            std::make_shared<NaiveB2PBoxingInterpreter>();
-        return naive_bp_boxing_interpreter;
+        return std::shared_ptr<EagerBoxingInterpreter>(new NaiveB2PBoxingInterpreter());
       } else if (in_parallel_desc->device_type() == DeviceType::kGPU) {
         return GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp);
-      } else {
-        UNIMPLEMENTED_THEN_RETURN();
+      } else if (in_parallel_desc->device_type() == DeviceType::kCPU) {
+        const auto& opt_interpreter =
+          JUST(GetCudaBasedCpuMpiBoxingInterpreter(
+                in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+        if (opt_interpreter->has_value()) { return opt_interpreter->value(); }
       }
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
+    } else if (IgnoringDeviceTypeEqual(in_parallel_desc, out_parallel_desc)) {
+      if ((in_parallel_desc->device_type() == DeviceType::kGPU
+              && out_parallel_desc->device_type() == DeviceType::kCPU)
+          || (in_parallel_desc->device_type() == DeviceType::kCPU
+              && out_parallel_desc->device_type() == DeviceType::kGPU)) {
+        if (in_nd_sbp == out_nd_sbp) {
+          return std::shared_ptr<EagerBoxingInterpreter>(new CudaCopyBoxingInterpreter());
+        } else {
+          const auto& opt_interpreter = JUST(GetCudaBasedCpuMpiBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+          if (opt_interpreter->has_value()) { return opt_interpreter->value(); }
+        }
+      }
     }
-  } else {
-    UNIMPLEMENTED_THEN_RETURN();
   }
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
 auto* CachedGetBoxingInterpreter = DECORATE(&GetBoxingInterpreter, ThreadLocal);
