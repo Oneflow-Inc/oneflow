@@ -583,8 +583,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
 
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
   const auto& parallel_desc_sym = JUST(ctx.parallel_desc.value());
-  CHECK_OR_RETURN(ctx.parallel_distribution.has_value());
-  const auto& parallel_distribution_sym = JUST(ctx.parallel_distribution.value());
+  CHECK_OR_RETURN(ctx.nd_sbp.has_value());
+  const auto& sbp_sym = JUST(ctx.nd_sbp.value());
 
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
@@ -596,7 +596,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
     // NOTE(zwx): The input tensor's parallel_desc is not equal to that of op's,
     // create a proxy input with the parallel_desc that is the same as op's
     input_proxy = JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype(),
-                                                    JUST(input_tensor->parallel_distribution()),
+                                                    JUST(input_tensor->nd_sbp()),
                                                     parallel_desc_sym,
                                                     /* is_lazy= */ true,
                                                     /*requires_grad=*/false, /*is_leaf=*/true));
@@ -614,7 +614,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   } else {
     grad_mode = "restore";
   }
-  auto sbp_list_ptr = JUST(GetNdSbpStrList(parallel_distribution_sym));
+  auto sbp_list_ptr = JUST(GetNdSbpStrList(sbp_sym));
   std::shared_ptr<UserOpExpr> parallel_cast_op_expr = JUST(
       OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
           .Input("in")
