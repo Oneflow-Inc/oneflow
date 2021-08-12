@@ -57,7 +57,7 @@ def _test_user_op_graph(test_case, is_cuda):
     test_case.assertTrue(isinstance(session, MultiClientSession))
     session.TryInit()
 
-    with oneflow._oneflow_internal.lazy_mode.gard(True):
+    with oneflow._oneflow_internal.lazy_mode.guard(True):
 
         oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
             "cc_test_user_op_expr_job_with_cuda" + str(is_cuda)
