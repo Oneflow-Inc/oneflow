@@ -34,21 +34,22 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly(
           "bytes", [](const Symbol<DType>& dtype) { return dtype->bytes().GetOrThrow(); });
 
-  m.attr("char") = DType::Char();
-  m.attr("float16") = DType::Float16();
-  m.attr("float") = DType::Float();
+  m.attr("char") = &CHECK_JUST(DType::Get(DataType::kChar));
+  m.attr("float16") = &CHECK_JUST(DType::Get(DataType::kFloat16));
+  m.attr("float") = &CHECK_JUST(DType::Get(DataType::kFloat));
 
   m.attr("float32") = &CHECK_JUST(DType::Get(DataType::kFloat));
   m.attr("double") = &CHECK_JUST(DType::Get(DataType::kDouble));
   m.attr("float64") = &CHECK_JUST(DType::Get(DataType::kDouble));
 
-  m.attr("int8") = DType::Int8();
-  m.attr("int32") = DType::Int32();
-  m.attr("int64") = DType::Int64();
+  m.attr("int8") = &CHECK_JUST(DType::Get(DataType::kInt8));
+  m.attr("int32") = &CHECK_JUST(DType::Get(DataType::kInt32));
+  m.attr("int64") = &CHECK_JUST(DType::Get(DataType::kInt64));
 
-  m.attr("uint8") = DType::UInt8();
-  m.attr("record") = DType::OFRecord();
-  m.attr("tensor_buffer") = DType::TensorBuffer();
+  m.attr("uint8") = &CHECK_JUST(DType::Get(DataType::kUInt8));
+  m.attr("record") = &CHECK_JUST(DType::Get(DataType::kOFRecord));
+  m.attr("tensor_buffer") = &CHECK_JUST(DType::Get(DataType::kTensorBuffer));
+
 }
 
 }  // namespace oneflow
