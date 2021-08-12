@@ -150,6 +150,20 @@ class ConsistentToModule(flow.nn.Module):
         return x.to(self.device)
 
 
+class FreeTensorModule(flow.nn.Module):
+    def __init__(self, shape, placement, sbp):
+        super().__init__()
+        self.shape = shape
+        self.placement = placement
+        self.sbp = sbp
+
+    def forward(self, x):
+        y = flow.ones(
+            self.shape, dtype=flow.float32, placement=self.placement, sbp=self.sbp
+        )
+        return flow.F.matmul(x, y, transpose_b=True)
+
+
 class MyGraph(flow.nn.Graph):
     def __init__(self, module, optimizer=None):
         super().__init__()
@@ -313,6 +327,27 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         e = consistent_to(c_x)
         g = g_consistent_to(c_x)
         test_case.assertTrue(np.allclose(e.to_local().numpy(), g.to_local().numpy()))
+
+    # @unittest.skipIf(True, "")
+    def test_free_tensor_to_consistent(test_case):
+        local_x = flow.Tensor(x, device="cpu")
+        placement = flow.placement("cuda", {0: [0, 1]})
+        c_x = local_x.to_consistent(placement, flow.sbp.split(0))
+
+        m = FreeTensorModule((3, 10), placement, flow.sbp.broadcast)
+        g = MyGraph(m)
+
+        eager_out = m(c_x)
+        test_case.assertTrue(eager_out.is_consistent)
+        test_case.assertTrue(eager_out.sbp[0] == flow.sbp.split(0))
+
+        graph_out = g(c_x)
+        test_case.assertTrue(eager_out.is_consistent)
+        test_case.assertTrue(eager_out.sbp[0] == flow.sbp.split(0))
+
+        test_case.assertTrue(
+            np.allclose(eager_out.to_local().numpy(), graph_out.to_local().numpy())
+        )
 
     @unittest.skipIf(True, "")
     def test_to_placement(test_case):
