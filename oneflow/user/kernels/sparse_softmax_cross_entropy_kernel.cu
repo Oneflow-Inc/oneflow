@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.cuh"
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/cuda/softmax.cuh"
+#include "oneflow/core/cuda/log_softmax.cuh"
 
 namespace oneflow {
 namespace user_op {
@@ -31,7 +31,7 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* 
   cuda::softmax::DirectStore<ComputeType, T> store(prob, col);
   cuda::softmax::DirectStore<ComputeType, T> sub_result_store(sub_result, col);
   cuda::softmax::DirectStore<ComputeType, T> sum_result_store(sum_result, row);
-  cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+  cuda::softmax::DispatchLogSoftmax<decltype(load), decltype(store), ComputeType>(
       ctx->cuda_stream(), load, store, row, col, sub_result_store, sum_result_store);
 }
 
@@ -44,7 +44,7 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const flo
                                                            col);
   cuda::softmax::DirectStore<float, half> sum_result_store(reinterpret_cast<half*>(sum_result),
                                                            row);
-  cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), float>(
+  cuda::softmax::DispatchLogSoftmax<decltype(load), decltype(store), float>(
       ctx->cuda_stream(), load, store, row, col, sub_result_store, sum_result_store);
 }
 }  // namespace
