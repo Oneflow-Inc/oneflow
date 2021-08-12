@@ -47,8 +47,14 @@ struct GlobalProcessCtxScope {
     ctx->mutable_ctrl_addr()->Add();
     ctx->set_rank(0);
     ctx->set_node_size(1);
+    Global<RankInfoInCluster>::New()->mutable_num_process_distribution()->add_num_process(1);
+    (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[0] = 0;
+    (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[0] = 0;
   }
-  ~GlobalProcessCtxScope() { Global<ProcessCtx>::Delete(); }
+  ~GlobalProcessCtxScope() {
+    Global<RankInfoInCluster>::Delete();
+    Global<ProcessCtx>::Delete();
+  }
 };
 
 TEST(SequentialInstruction, front_seq_compute) {

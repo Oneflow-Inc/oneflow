@@ -68,8 +68,6 @@ struct ReceiveRequest {
 HashMap<uint64_t, SendRequest> token2send_request;
 HashMap<uint64_t, ReceiveRequest> token2recv_request;
 
-}  // namespace
-
 #ifdef __linux__
 class TestSendBlobInstructionType : public SendBlobInstructionType {
  public:
@@ -252,6 +250,8 @@ class SendRecvUtil {
   std::string send_instr_name_;
   std::string recv_instr_name_;
 };
+
+}  // namespace
 
 #ifdef __linux__
 TEST(SendReceiveInstructionType, naive) {

@@ -43,8 +43,17 @@ struct GlobaProcessCtxScope final {
     for (int i = 0; i < world_size; ++i) { ctx->mutable_ctrl_addr()->Add(); }
     ctx->set_rank(0);
     ctx->set_node_size(node_size);
+    Global<RankInfoInCluster>::New();
+    for (size_t i = 0; i < world_size; ++i) {
+      Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(1);
+      (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[i] = i;
+      (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[i] = i;
+    }
   }
-  ~GlobaProcessCtxScope() { Global<ProcessCtx>::Delete(); }
+  ~GlobaProcessCtxScope() { 
+    Global<RankInfoInCluster>::Delete();
+    Global<ProcessCtx>::Delete();
+  }
 };
 
 TEST(ControlStreamType, new_object) {
