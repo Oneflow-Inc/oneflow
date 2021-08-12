@@ -294,7 +294,7 @@ class ELU(Module):
 
         >>> out = elu(input)
         >>> out
-        tensor([-0.3935,  0.    ,  0.5   ], dtype=oneflow.float32)
+        tensor([-0.3935,  0.0000,  0.5000], dtype=oneflow.float32)
 
     """
 
