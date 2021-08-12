@@ -1,0 +1,39 @@
+import os
+import unittest
+import numpy as np
+
+import oneflow as flow
+import oneflow.unittest
+
+device = flow.device("cuda")
+linear = flow.nn.Linear(3, 8, False)
+linear = linear.to(device)
+input_arr = np.random.randn(8, 3).astype(np.float32)
+np_weight = np.ones((3, 8)).astype(np.float32)
+np_weight.fill(2.3)
+x = flow.tensor(input_arr, device=device)
+flow.nn.init.constant_(linear.weight, 2.3)
+of_eager_out = linear(x)
+np_out = np.matmul(input_arr, np_weight)
+assert(np.allclose(of_eager_out.numpy(), np_out, 1e-05, 1e-05))
+
+class LinearGraph(flow.nn.Graph):
+    def __init__(self):
+        super().__init__()
+        self.my_linear = linear
+
+    def build(self, x):
+        return self.my_linear(x)
+
+linear_g = LinearGraph()
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n1d()
+class TestLinearGraphDestruct(oneflow.unittest.TestCase):
+    def test_linear_graph_destruct(test_case):
+        of_lazy_out = linear_g(x)
+        assert(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
+
+
+if __name__ == "__main__":
+    unittest.main()

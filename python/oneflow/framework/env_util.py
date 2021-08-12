@@ -376,8 +376,6 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
 
 
 def _SyncOnMasterFn():
-    import oneflow
-
     def Sync():
         if not oneflow._oneflow_internal.IsEnvInited():
             return
