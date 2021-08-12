@@ -35,13 +35,6 @@ class UniformDistribution<DeviceType::kCPU, T> final {
   UniformDistribution(T low, T high) : low_(low), high_(high) {}
   ~UniformDistribution() = default;
 
-  template<typename Integer = T,
-           typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
-  void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
-                  const std::shared_ptr<one::Generator>& generator) const;
-
-  template<typename Floating = T,
-           typename std::enable_if<std::is_floating_point<Floating>::value, int>::type = 0>
   void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 

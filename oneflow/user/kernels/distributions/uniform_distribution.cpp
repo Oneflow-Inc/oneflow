@@ -18,28 +18,38 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T>
-template<typename Integer = T,
-         typename std::enable_if<std::is_integral<Integer>::value, int>::type = 0>
-void UniformDistribution<DeviceType::kCPU, T>::operator()(
-    DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
-    const std::shared_ptr<one::Generator>& generator) const {
-  CHECK_GE(elem_cnt, 0);
-  auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
-  std::uniform_int_distribution<T> random_distribution(low_, high_);
-  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(gen->engine()); }
-}
+template<typename T, typename E = void>
+class CPUUniformDistributionImpl;
+
+class CPUUniformDistributionImpl<T, typename std::enable_if<std::is_integral<T>::value>::type> {
+ public:
+  CPUUniformDistributionImpl(T low, T high) : random_distribution_(low, high) {}
+
+  T operator()(std::mt19937& engine) { return random_distribution_(engine); }
+
+ private:
+  std::uniform_int_distribution<T> random_distribution_;
+};
+
+class CPUUniformDistributionImpl<T,
+                                 typename std::enable_if<std::is_floating_point<T>::value>::type> {
+ public:
+  CPUUniformDistributionImpl(T low, T high) : random_distribution_(low, high) {}
+
+  T operator()(std::mt19937& engine) { return random_distribution_(engine); }
+
+ private:
+  std::uniform_real_distribution<T> random_distribution_;
+};
 
 template<typename T>
-template<typename Floating = T,
-         typename std::enable_if<std::is_floating_point<Floating>::value, int>::type = 0>
 void UniformDistribution<DeviceType::kCPU, T>::operator()(
     DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
   auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
-  std::uniform_real_distribution<T> random_distribution(low_, high_);
-  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(gen->engine()); }
+  CPUUniformDistributionImpl<T> impl(low_, high_);
+  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = impl(gen->engine()); }
 }
 
 #define INITIATE_CPU_UNIFORM_DISTRIBUTION(T, typeproto)               \
