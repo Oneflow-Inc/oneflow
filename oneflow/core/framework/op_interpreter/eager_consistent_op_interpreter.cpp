@@ -116,8 +116,6 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
   return ss.str();
 }
 
-namespace {
-
 Maybe<Tensor> GetBoxingOutput(const std::shared_ptr<Tensor>& input,
                               Symbol<cfg::ParallelDistribution> parallel_distribution) {
   // Eager boxing
@@ -131,7 +129,40 @@ Maybe<Tensor> GetBoxingOutput(const std::shared_ptr<Tensor>& input,
   return output;
 }
 
-}  // namespace
+Maybe<void> RunInstructionLocalCallOpKernel(
+    const UserOpExpr& user_op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+    const OpExprInterpContext& ctx,
+    const std::shared_ptr<const one::ConsistentTensorInferResult>& result, Symbol<Device> device,
+    Symbol<ParallelDesc> parallel_desc, bool allow_boxing) {
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
+  CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
+      << Error::Unimplemented() << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
+  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(inputs.size());
+  for (int i = 0; i < inputs.size(); ++i) {
+    std::shared_ptr<Tensor> input = inputs.at(i);
+    const auto& infered_input_meta = result->input_tensor_metas().at(i);
+    if (allow_boxing
+        && infered_input_meta->parallel_distribution() != JUST(input->parallel_distribution())) {
+      input = JUST(GetBoxingOutput(input, infered_input_meta->parallel_distribution()));
+    }
+    const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
+    input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
+  }
+  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(outputs->size());
+  for (int i = 0; i < outputs->size(); ++i) {
+    const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
+    output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
+  }
+  const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
+                                      result, ctx, parallel_desc.shared_from_symbol(),
+                                      instr_type_name);
+  }));
+  return Maybe<void>::Ok();
+}
 
 }  // namespace
 
@@ -162,32 +193,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
   if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
   // Run instruction LocalCallOpKernel
-  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
-  CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
-      << Error::Unimplemented() << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
-  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(inputs.size());
-  for (int i = 0; i < inputs.size(); ++i) {
-    std::shared_ptr<Tensor> input = inputs.at(i);
-    const auto& infered_input_meta = result->input_tensor_metas().at(i);
-    if (infered_input_meta->parallel_distribution() != JUST(input->parallel_distribution())) {
-      input = JUST(GetBoxingOutput(input, infered_input_meta->parallel_distribution()));
-    }
-    const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
-    input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
-  }
-  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(outputs->size());
-  for (int i = 0; i < outputs->size(); ++i) {
-    const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
-    output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
-  }
-  const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      result, ctx, parallel_desc.shared_from_symbol(),
-                                      instr_type_name);
-  }));
+  JUST(RunInstructionLocalCallOpKernel(user_op_expr, inputs, outputs, ctx, result, device,
+                                       parallel_desc, true));
   return Maybe<void>::Ok();
 }
 
@@ -244,30 +251,9 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const ConsistentToConsistentOp
     // Do nothing if the `output_parallel_desc` doesn't cover current ProcessCtx.
     if (parallel_id.has_value()) {
       // Run instruction LocalCallOpKernel
-      const auto& kernel = JUST(broadcast_op_expr->MutKernel4Device(*device));
-      CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
-          << Error::Unimplemented()
-          << GetDynamicOpConsistentFailedDebugString(*broadcast_op_expr, *kernel);
-      std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
-          std::make_shared<EagerBlobObjectList>(broadcasted_inputs->size());
-      for (int i = 0; i < broadcasted_inputs->size(); ++i) {
-        std::shared_ptr<Tensor> input = broadcasted_inputs->at(i);
-        const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
-        input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
-      }
-      std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
-          std::make_shared<EagerBlobObjectList>(broadcasted_outputs.size());
-      for (int i = 0; i < broadcasted_outputs.size(); ++i) {
-        const auto& local_tensor = JUST(broadcasted_outputs.at(i)->cur_rank_phy_tensor());
-        output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
-      }
-      const auto& instr_type_name =
-          JUST(GetLocalCallInstructionName(output_parallel_desc->device_tag()));
-      JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-        return builder->LocalCallOpKernel(
-            kernel, input_eager_blob_objects, output_eager_blob_objects, result, ctx,
-            output_parallel_desc.shared_from_symbol(), instr_type_name);
-      }));
+      JUST(RunInstructionLocalCallOpKernel(*broadcast_op_expr, *broadcasted_inputs,
+                                           &broadcasted_outputs, ctx, result, device,
+                                           output_parallel_desc, false));
     }
     outputs->at(0) = JUST(
         OpInterpUtil::Dispatch<Tensor>(*parallel_distribution_cast_op_expr, broadcasted_outputs));
