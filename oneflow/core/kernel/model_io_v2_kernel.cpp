@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
@@ -38,10 +38,9 @@ struct InitializeWithConfUtil final {
 
 cfg::ParallelDistribution GetParallelDistribution(const KernelConf& kernel_conf,
                                                   const std::string& bn_in_op) {
-  const auto& parallel_distribution_map =
-      kernel_conf.op_attribute().parallel_distribution_signature().bn_in_op2parallel_distribution();
-  const auto& it = parallel_distribution_map.find(bn_in_op);
-  CHECK(it != parallel_distribution_map.end());
+  const auto& nd_sbp_map = kernel_conf.op_attribute().nd_sbp_signature().bn_in_op2nd_sbp();
+  const auto& it = nd_sbp_map.find(bn_in_op);
+  CHECK(it != nd_sbp_map.end());
   return cfg::ParallelDistribution(it->second);
 }
 
@@ -218,10 +217,10 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
       int64_t seed_num = 1;
       int64_t seed_offset = 0;
       const auto& original_variable_conf = model_init_v2_conf.original_variable_conf(i);
-      const cfg::ParallelDistribution& parallel_distribution =
+      const cfg::ParallelDistribution& nd_sbp =
           GetParallelDistribution(this->kernel_conf(), GenRepeatedBn("ref", i));
       FOR_RANGE(int64_t, j, 0, hierarchy->NumAxes()) {
-        cfg::SbpParallel sbp_parallel = parallel_distribution.sbp_parallel(j);
+        cfg::SbpParallel sbp_parallel = nd_sbp.sbp_parallel(j);
         CHECK(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
         if (sbp_parallel.has_split_parallel()) {
           seed_num *= hierarchy->At(j);
@@ -234,7 +233,7 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
       seeds_.push_back(seeds.at(seed_offset));
       const Shape logical_blob_shape(original_variable_conf.shape());
       tensor_slice_views_.push_back(GetTensorSliceView4ParallelId(
-          *hierarchy, parallel_distribution, logical_blob_shape, parallel_ctx.parallel_id()));
+          *hierarchy, nd_sbp, logical_blob_shape, parallel_ctx.parallel_id()));
     }
   }
   void Forward(const KernelCtx& ctx,
@@ -295,11 +294,11 @@ class ModelLoadV2Kernel final : public KernelIf<device_type> {
     CHECK_EQ(model_load_v2_conf.original_variable_conf_size(), num_var);
     tensor_slice_views_.reserve(num_var);
     FOR_RANGE(int64_t, i, 0, num_var) {
-      const cfg::ParallelDistribution& parallel_distribution =
+      const cfg::ParallelDistribution& nd_sbp =
           GetParallelDistribution(this->kernel_conf(), GenRepeatedBn("ref", i));
       const Shape logical_blob_shape(model_load_v2_conf.original_variable_conf(i).shape());
       tensor_slice_views_.push_back(
-          GetTensorSliceView4ParallelId(*hierarchy, parallel_distribution, logical_blob_shape,
+          GetTensorSliceView4ParallelId(*hierarchy, nd_sbp, logical_blob_shape,
                                         this->kernel_conf().parallel_ctx().parallel_id()));
     }
   }
@@ -343,9 +342,9 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
             this->kernel_conf().op_attribute().parallel_conf_signature().op_parallel_conf())
             .hierarchy();
     const auto NeedDoSave = [&](const std::vector<int64_t>& parallel_rank,
-                                const cfg::ParallelDistribution& parallel_distribution) -> bool {
+                                const cfg::ParallelDistribution& nd_sbp) -> bool {
       FOR_RANGE(int64_t, j, 0, hierarchy->NumAxes()) {
-        const cfg::SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(j);
+        const cfg::SbpParallel& sbp_parallel = nd_sbp.sbp_parallel(j);
         if (sbp_parallel.has_broadcast_parallel() && parallel_rank.at(j) != 0) { return false; }
       }
       return true;
@@ -363,7 +362,7 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
     part_ids_.reserve(num_var);
     FOR_RANGE(int64_t, i, 0, num_var) {
       counters_.emplace_back(new int64_t(0));
-      const cfg::ParallelDistribution& parallel_distribution =
+      const cfg::ParallelDistribution& nd_sbp =
           GetParallelDistribution(this->kernel_conf(), GenRepeatedBn("in", i));
       const Shape logical_blob_shape(model_save_v2_conf.original_variable_conf(i).shape());
       bool variable_need_do_save;
@@ -371,14 +370,14 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
       std::vector<TensorSliceView> variable_part_id2slice_views;
       FOR_RANGE(int64_t, j, 0, hierarchy->elem_cnt()) {
         hierarchy_index_helper.OffsetToNdIndex(j, parallel_rank.data());
-        bool cur_id_need_do_save = NeedDoSave(parallel_rank, parallel_distribution);
+        bool cur_id_need_do_save = NeedDoSave(parallel_rank, nd_sbp);
         if (j == this->kernel_conf().parallel_ctx().parallel_id()) {
           variable_need_do_save = cur_id_need_do_save;
           variable_part_id = variable_part_id2slice_views.size();
         }
         if (cur_id_need_do_save) {
           variable_part_id2slice_views.push_back(GetTensorSliceView4ParallelRank(
-              *hierarchy, parallel_distribution, logical_blob_shape, parallel_rank));
+              *hierarchy, nd_sbp, logical_blob_shape, parallel_rank));
         }
       }
       need_do_saves_.push_back(variable_need_do_save);
