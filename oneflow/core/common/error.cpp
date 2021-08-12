@@ -280,13 +280,15 @@ Error Error::InputDeviceNotMatchError() {
 }
 
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
-  FormatErrorStr(error);
+  const auto& maybe_error = TRY(FormatErrorStr(error));
+  const auto& error_str = maybe_error.GetDataAndErrorProto(error->DebugString());
+
   *MutThreadLocalError() = error;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
   switch (error->error_type_case()) {
 #define MAKE_ENTRY(cls)                                      \
   case cfg::ErrorProto::OF_PP_CAT(k, OF_PP_CAT(cls, Error)): \
-    throw OF_PP_CAT(cls, Exception)(GetErrorStr());
+    throw OF_PP_CAT(cls, Exception)(error_str.first);
 
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, EXCEPTION_SEQ)
 
