@@ -33,6 +33,7 @@ from typing import (
 )
 from itertools import chain
 import oneflow
+
 # import oneflow._C._fx  # type: ignore[import]
 import oneflow.utils._pytree as pytree
 
@@ -665,7 +666,10 @@ class Tracer(TracerBase):
                     deduplicate=False,
                 )
                 patcher.patch_method(
-                    oneflow.nn.Module, "__call__", module_call_wrapper, deduplicate=False
+                    oneflow.nn.Module,
+                    "__call__",
+                    module_call_wrapper,
+                    deduplicate=False,
                 )
                 _patch_wrapped_functions(patcher)
                 _autowrap_check(patcher, fn_globals, self._autowrap_function_ids)
@@ -994,6 +998,8 @@ def symbolic_trace(
     tracer = Tracer(enable_cpatching=enable_cpatching)
     graph = tracer.trace(root, concrete_args)
     name = (
-        root.__class__.__name__ if isinstance(root, oneflow.nn.Module) else root.__name__
+        root.__class__.__name__
+        if isinstance(root, oneflow.nn.Module)
+        else root.__name__
     )
     return GraphModule(tracer.root, graph, name)

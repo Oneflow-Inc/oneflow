@@ -15,11 +15,13 @@ limitations under the License.
 """
 import oneflow
 import oneflow.nn as nn
+
 # from oneflow.nn.modules.module import _addindent
 # from torch.package import PackageImporter, PackageExporter
 import linecache
 from typing import Type, Dict, List, Any, Union, Optional, Set
 from .graph import Graph, _is_from_torch, _custom_builtins, PythonCode
+
 # from torch.package import Importer, sys_importer
 import copy
 import itertools
@@ -132,7 +134,9 @@ def _forward_from_src(src: str, globals: Dict[str, Any]):
 
 # copy an attribute value with qualified name 'target' from 'from_module' to 'to_module'
 # This installs empty Modules where none exist yet if they are subpaths of target
-def _copy_attr(from_module: oneflow.nn.Module, to_module: oneflow.nn.Module, target: str):
+def _copy_attr(
+    from_module: oneflow.nn.Module, to_module: oneflow.nn.Module, target: str
+):
     *prefix, field = target.split(".")
     for item in prefix:
         f = getattr(from_module, item)
@@ -318,7 +322,9 @@ class {module_name}(oneflow.nn.Module):
         super().__init__()
 """
 
-        def _gen_model_repr(module_name: str, module: oneflow.nn.Module) -> Optional[str]:
+        def _gen_model_repr(
+            module_name: str, module: oneflow.nn.Module
+        ) -> Optional[str]:
             safe_reprs = [
                 nn.Linear,
                 nn.Conv1d,

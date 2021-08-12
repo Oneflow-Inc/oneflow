@@ -29,7 +29,9 @@ Names = List[str]
 CALLABLE_NODE_OPS = {"call_module", "call_function", "call_method"}
 
 
-def get_node_target(submodules: Dict[str, oneflow.nn.Module], node: oneflow.fx.Node) -> str:
+def get_node_target(
+    submodules: Dict[str, oneflow.nn.Module], node: oneflow.fx.Node
+) -> str:
     """
     Given a `node` returns its target typename.
 

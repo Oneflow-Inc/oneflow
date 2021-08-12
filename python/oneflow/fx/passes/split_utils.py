@@ -59,7 +59,9 @@ class HolderModule(nn.Module):
             self.add_module(k, v)
 
 
-def split_by_tags(gm: oneflow.fx.GraphModule, tags: List[str]) -> oneflow.fx.GraphModule:
+def split_by_tags(
+    gm: oneflow.fx.GraphModule, tags: List[str]
+) -> oneflow.fx.GraphModule:
     """
     Splits a GraphModule using tags on its graph nodes. We honor the order of
     tags. For example, we have tags = ["a", "b", "c"], the function will create

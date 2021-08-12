@@ -137,7 +137,9 @@ class FxGraphDrawer:
 
         return _get_qualified_name(target)
 
-    def _get_node_label(self, module: oneflow.fx.GraphModule, node: oneflow.fx.Node) -> str:
+    def _get_node_label(
+        self, module: oneflow.fx.GraphModule, node: oneflow.fx.Node
+    ) -> str:
         label = "{" + f"{node.name}|op_code={node.op}"
 
         if node.op == "call_module":
