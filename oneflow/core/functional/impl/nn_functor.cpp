@@ -599,6 +599,24 @@ class Avgpool3DFunctor : public AvgPoolingNDFunctor {
   }
 };
 
+class L2NormalizeFunctor {
+ public:
+  L2NormalizeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("l2_normalize").Input("x").Output("y").Output("square_x_sum").Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
+                                const float& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -626,6 +644,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Avgpool1DFunctor>("Avgpool1D");
   m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
   m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
+  m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
 };
 
 }  // namespace functional
