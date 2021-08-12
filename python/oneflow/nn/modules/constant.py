@@ -195,14 +195,6 @@ def zeros_op(
     return Zeros(size, dtype, device, placement, sbp, requires_grad)()
 
 
-class ZerosLike(Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, other):
-        return flow.F.zeros_like(other)
-
-
 def zeros_like_op(other):
     """
     Returns a tensor filled with the scalar value 0, with the same size as input.
@@ -223,15 +215,7 @@ def zeros_like_op(other):
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
     """
-    return ZerosLike()(other)
-
-
-class OnesLike(Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, other):
-        return flow.F.ones_like(other)
+    return flow.F.zeros_like(other)
 
 
 def ones_like_op(other):
@@ -254,7 +238,7 @@ def ones_like_op(other):
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 
     """
-    return OnesLike()(other)
+    return flow.F.ones_like(other)
 
 
 class NewOnes(Module):

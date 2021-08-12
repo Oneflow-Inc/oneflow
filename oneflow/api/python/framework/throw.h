@@ -23,7 +23,7 @@ namespace oneflow {
 class Throw final {
  public:
   Throw(const Error& error) : error_(error) {}
-  ~Throw() { ThrowError(error_.error_proto()); }
+  ~Throw() noexcept(false) { ThrowError(error_.error_proto()); }
 
   Error& error() { return error_; }
 

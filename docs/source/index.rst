@@ -14,6 +14,7 @@ OneFlow API Reference
     oneflow
     tensor
     nn
+    functional
     module
     F
     linalg

@@ -38,7 +38,8 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("broadcast_less", LT)          \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_less_equal", LE)    \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_and", AND)  \
-  OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_or", OR)
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_or", OR)    \
+  OF_PP_MAKE_TUPLE_SEQ("broadcast_logical_xor", XOR)
 
 }  // namespace oneflow
 

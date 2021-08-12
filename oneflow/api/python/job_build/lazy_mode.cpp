@@ -23,11 +23,11 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("lazy_mode", m) {
-  py::class_<LazyMode::Gard, std::shared_ptr<LazyMode::Gard>>(m, "gard")
+  py::class_<LazyMode::Guard, std::shared_ptr<LazyMode::Guard>>(m, "guard")
       .def(py::init(
-          [](const bool is_enabled) { return std::make_shared<LazyMode::Gard>(is_enabled); }))
-      .def("__enter__", [](const LazyMode::Gard& gard_obj) {})
-      .def("__exit__", [](const LazyMode::Gard& gard_obj, const py::object& type,
+          [](const bool is_enabled) { return std::make_shared<LazyMode::Guard>(is_enabled); }))
+      .def("__enter__", [](const LazyMode::Guard& guard_obj) {})
+      .def("__exit__", [](const LazyMode::Guard& guard_obj, const py::object& type,
                           const py::object& value, const py::object& traceback) {});
 
   m.def("is_enabled", []() { return LazyMode::is_enabled(); });
