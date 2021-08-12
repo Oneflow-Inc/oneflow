@@ -101,7 +101,7 @@ std::string FormatFunction(const std::string& function) {
 Maybe<std::string> FormatErrorMsg(std::string error_msg, bool is_last_stack_frame) {
   error_msg = StripBrackets(error_msg);
   if (!is_last_stack_frame) { error_msg = *JUST(ShortenErrorMsg(error_msg)); }
-  // error_msg of last stack frame come from "<<" 
+  // error_msg of last stack frame come from "<<"
   if (is_last_stack_frame) { error_msg = StripSpace(error_msg); }
   std::stringstream ss;
   ss << "\n    " << error_msg;
