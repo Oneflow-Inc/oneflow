@@ -55,7 +55,6 @@ struct GlobalProcessCtxScope {
     Global<RankInfoInCluster>::Delete();
     Global<ProcessCtx>::Delete();
   }
-  ~GlobalProcessCtxScope() { Global<ProcessCtx>::Delete(); }
 };
 
 TEST(SequentialInstruction, front_seq_compute) {

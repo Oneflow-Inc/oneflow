@@ -101,7 +101,6 @@ TEST(NopStreamType, cached_allocator_no_argument) {
 void TestNopStreamTypeOneArgument(
     std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc&)> NewVirtualMachine) {
   InitRankInfoInCluster();
-  TestResourceDescScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NewVirtualMachine(vm_desc.Get());
