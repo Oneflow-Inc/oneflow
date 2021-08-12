@@ -23,7 +23,7 @@ namespace oneflow {
 
 template<typename T>
 void WaitAndSendIdsKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CHECK(ctx.other);
   auto* status = static_cast<WaitAndSendIdsStatus*>(ctx.other);
   const auto& conf = this->op_conf().wait_and_send_ids_conf();
