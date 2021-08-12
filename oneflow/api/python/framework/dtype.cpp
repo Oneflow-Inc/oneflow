@@ -38,9 +38,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("float16") = DType::Float16();
   m.attr("float") = DType::Float();
 
-  m.attr("float32") = DType::Float();
-  m.attr("double") = DType::Double();
-  m.attr("float64") = DType::Double();
+  m.attr("float32") = &CHECK_JUST(DType::Get(DataType::kFloat));
+  m.attr("double") = &CHECK_JUST(DType::Get(DataType::kDouble));
+  m.attr("float64") = &CHECK_JUST(DType::Get(DataType::kDouble));
 
   m.attr("int8") = DType::Int8();
   m.attr("int32") = DType::Int32();

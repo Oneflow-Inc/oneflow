@@ -48,7 +48,7 @@ namespace one {
 
 namespace {
 
-const Symbol<DType> GetTensorDType(const Tensor& tensor) { return tensor.dtype(); }
+const Symbol<DType>* GetTensorDType(const Tensor& tensor) { return &CHECK_JUST(DType::Get(tensor.dtype()->data_type())); }
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
   const auto& tensor = JUST(t->AsMirroredTensor());

@@ -176,7 +176,7 @@ Maybe<Symbol<Device>> PythonArg::ObjectAs<Symbol<Device>>() const {
 
 template<>
 Maybe<Symbol<DType>> PythonArg::ObjectAs<Symbol<DType>>() const {
-  return **JUST(detail::cast<std::shared_ptr<Symbol<DType>>>(Borrow()));
+  return *JUST(detail::cast<Symbol<DType>*>(Borrow()));
 }
 
 template<>
