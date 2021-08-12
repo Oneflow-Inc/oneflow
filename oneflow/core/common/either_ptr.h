@@ -31,10 +31,10 @@ class EitherPtr final {
 
   EitherPtr() : type_(UnionType<X>::value), x_ptr(nullptr) {}
   EitherPtr(const XPtr& ptr) : type_(UnionType<X>::value), x_ptr(ptr) {}
-  EitherPtr(const YPtr& ptr) : type_(UnionType<Y>::value), y_ptr(ptr) {}
+  EitherPtr(const YPtr& ptr) : type_(UnionType<Y>::value) { new (&x_ptr) YPtr(ptr); }
 
   EitherPtr(XPtr&& ptr) : type_(UnionType<X>::value), x_ptr(std::move(ptr)) {}
-  EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value), y_ptr(std::move(ptr)) {}
+  EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value) { new (&x_ptr) YPtr(std::move(ptr)); }
 
   EitherPtr(const EitherPtr& either_ptr) : type_(either_ptr.type_), x_ptr(either_ptr.x_ptr) {}
   EitherPtr(EitherPtr&& either_ptr) : type_(either_ptr.type_), x_ptr(std::move(either_ptr.x_ptr)) {}
@@ -63,6 +63,11 @@ class EitherPtr final {
     return Get(tag<T>{});
   }
 
+  template<typename T>
+  std::shared_ptr<T>& Get() {
+    return const_cast<std::shared_ptr<T>&>(Get(tag<T>{}));
+  }
+
  private:
   template<typename T, typename Enable = void>
   struct UnionType;
@@ -85,14 +90,15 @@ class EitherPtr final {
 
   const YPtr& Get(tag<Y>) const {
     CHECK(Has<Y>());
-    return y_ptr;
+    return y_ptr();
   }
 
+  const YPtr& y_ptr() const { return reinterpret_cast<const YPtr&>(x_ptr); }
+
+  YPtr& y_ptr() { return reinterpret_cast<YPtr&>(x_ptr); }
+
   int8_t type_;
-  union {
-    std::shared_ptr<X> x_ptr;
-    std::shared_ptr<Y> y_ptr;
-  };
+  std::shared_ptr<X> x_ptr;
 };
 
 }  // namespace oneflow

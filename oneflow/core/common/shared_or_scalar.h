@@ -31,20 +31,23 @@ class SharedOrScalar final {
   static_assert(IsScalarType<ScalarT>::value, "ScalarT should be scalar type.");
 
   using Shared = std::shared_ptr<StructT>;
+  using SharedMem = char[sizeof(Shared)];
 
   SharedOrScalar(const ScalarT& scalar_value) : is_scalar_(true), scalar_value_(scalar_value) {}
 
-  SharedOrScalar(const std::shared_ptr<StructT>& shared_ptr)
-      : is_scalar_(false), shared_value_(shared_ptr) {}
+  SharedOrScalar(const std::shared_ptr<StructT>& shared_ptr) : is_scalar_(false) {
+    new (&shared_mem_) Shared(shared_ptr);
+  }
 
-  SharedOrScalar(std::shared_ptr<StructT>&& shared_ptr)
-      : is_scalar_(false), shared_value_(std::move(shared_ptr)) {}
+  SharedOrScalar(std::shared_ptr<StructT>&& shared_ptr) : is_scalar_(false) {
+    new (&shared_mem_) Shared(std::move(shared_ptr));
+  }
 
   SharedOrScalar(const SharedOrScalar& rhs) : is_scalar_(rhs.is_scalar_) {
     if (rhs.is_scalar_) {
       scalar_value_ = rhs.scalar_value_;
     } else {
-      new (&shared_value_) Shared(rhs.shared_value_);
+      new (&shared_mem_) Shared(rhs.GetShared());
     }
   }
 
@@ -52,7 +55,7 @@ class SharedOrScalar final {
     if (rhs.is_scalar_) {
       scalar_value_ = rhs.scalar_value_;
     } else {
-      new (&shared_value_) Shared(std::move(rhs.shared_value_));
+      new (&shared_mem_) Shared(std::move(rhs.GetShared()));
     }
   }
 
@@ -61,9 +64,9 @@ class SharedOrScalar final {
       scalar_value_ = rhs.scalar_value_;
     } else {
       if (is_scalar_) {
-        new (&shared_value_) Shared(rhs.shared_value_);
+        new (&shared_mem_) Shared(rhs.GetShared());
       } else {
-        shared_value_ = rhs.shared_value_;
+        GetShared() = rhs.GetShared();
       }
     }
     is_scalar_ = rhs.is_scalar_;
@@ -75,9 +78,9 @@ class SharedOrScalar final {
       scalar_value_ = rhs.scalar_value_;
     } else {
       if (is_scalar_) {
-        new (&shared_value_) Shared(std::move(rhs.shared_value_));
+        new (&shared_mem_) Shared(std::move(rhs.GetShared()));
       } else {
-        shared_value_ = std::move(rhs.shared_value_);
+        GetShared() = std::move(rhs.GetShared());
       }
     }
     is_scalar_ = rhs.is_scalar_;
@@ -88,7 +91,7 @@ class SharedOrScalar final {
     if (is_scalar_) {
       scalar_value_.~ScalarT();
     } else {
-      shared_value_.~Shared();
+      GetShared().~Shared();
     }
   }
 
@@ -100,7 +103,7 @@ class SharedOrScalar final {
 
   const std::shared_ptr<StructT>& shared_ptr() const {
     CHECK(!is_scalar_);
-    return shared_value_;
+    return GetShared();
   }
 
   const ScalarT& operator*() const { return scalar_value(); }
@@ -109,8 +112,15 @@ class SharedOrScalar final {
   bool is_scalar_;
   union {
     ScalarT scalar_value_;
-    Shared shared_value_;
+
+    //  to avoid error(a non-POD class definition is not allowed inside of a statement expression)
+    //  in nvcc while using with JUST macro (this type is used in Maybe)
+    SharedMem shared_mem_;
   };
+
+  const Shared& GetShared() const { return reinterpret_cast<const Shared&>(shared_mem_); }
+
+  Shared& GetShared() { return reinterpret_cast<Shared&>(shared_mem_); }
 };
 
 }  // namespace oneflow
