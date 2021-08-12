@@ -131,7 +131,10 @@ class _BatchNorm(_NormBase):
                 nd_params_shape[axis] = params_shape[0]
                 mean = mean.reshape(shape=nd_params_shape)
                 variance = variance.reshape(shape=nd_params_shape)
-                if self.weight is not None and params_shape[0] == self.weight.nelement():
+                if (
+                    self.weight is not None
+                    and params_shape[0] == self.weight.nelement()
+                ):
                     weight = self.weight.reshape(shape=nd_params_shape)
                 if self.bias is not None and params_shape[0] == self.bias.nelement():
                     bias = self.bias.reshape(shape=nd_params_shape)
