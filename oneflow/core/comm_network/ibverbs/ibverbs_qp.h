@@ -85,14 +85,15 @@ class MessagePool final {
       std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
       char * addr =(char*) malloc(RegisterMemorySize );
-      std::shared_ptr<ibv_mr> mr =std::make_shared<ibv_mr>( ibv::wrapper.ibv_reg_mr_wrap(
+      ibv_mr * mr =  ibv::wrapper.ibv_reg_mr_wrap(
           pd_, (void*)addr, RegisterMemorySize,
-          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ));
+          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
       CHECK(mr);
+      std::shared_ptr<ibv_mr> shared_mr(mr);
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       for(size_t i = 0;  i < num_of_message_ ; i++){
           char * split_addr =addr + ActorMsgSize * i ;
-          ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
+          ActorMsgMR * msg_mr = new ActorMsgMR(shared_mr,split_addr, ActorMsgSize);
           message_buf_.push_back(msg_mr);
       }
     }
