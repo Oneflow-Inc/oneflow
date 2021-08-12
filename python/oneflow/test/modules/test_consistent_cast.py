@@ -44,6 +44,45 @@ class TestConsistentCast(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n4d()
+    def test_cpu_p2b_size_16(test_case):
+        tensor = flow.ones((16,), dtype=flow.float32)
+        placement = flow.placement("cpu", {0: range(4)})
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.partial_sum)
+        consistent_tensor = consistent_tensor.to_consistent(placement, flow.sbp.broadcast)
+        test_case.assertTrue(
+            np.array_equal(
+                consistent_tensor.to_local().numpy(),
+                np.ones((16,), dtype=np.float32) * 4,
+            )
+        )
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_cpu_p2b_size_3(test_case):
+        tensor = flow.ones((3,), dtype=flow.float32)
+        placement = flow.placement("cpu", {0: range(4)})
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.partial_sum)
+        consistent_tensor = consistent_tensor.to_consistent(placement, flow.sbp.broadcast)
+        test_case.assertTrue(
+            np.array_equal(
+                consistent_tensor.to_local().numpy(),
+                np.ones((3,), dtype=np.float32) * 4,
+            )
+        )
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_cpu_p2b_size_1(test_case):
+        tensor = flow.ones((1,), dtype=flow.float32)
+        placement = flow.placement("cpu", {0: range(4)})
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.partial_sum)
+        consistent_tensor = consistent_tensor.to_consistent(placement, flow.sbp.broadcast)
+        test_case.assertTrue(
+            np.array_equal(
+                consistent_tensor.to_local().numpy(),
+                np.ones((1,), dtype=np.float32) * 4,
+            )
+        )
+
+    @flow.unittest.skip_unless_1n4d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_consistent_with_wrong_device(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
