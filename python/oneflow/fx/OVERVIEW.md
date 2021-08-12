@@ -39,57 +39,61 @@ By using `nn.Module` as the interface between passes, FX transforms are interope
 
 ## Technical Details ##
 
-The following sections will walk us through the components that transform from original `torch.nn.Module` to FX IR and finally to generated Python code and a GraphModule instance:
+The following sections will walk us through the components that transform from original `oneflow.nn.Module` to FX IR and finally to generated Python code and a GraphModule instance:
 
-FX’s front-end makes use of the dynamic nature of Python to intercept call-sites for various entities (PyTorch operators, Module invocations, and Tensor method invocations). This functionality is exposed through an API called `torch.fx.symbolic_trace`.  We can see how this works by way of an example:
+FX’s front-end makes use of the dynamic nature of Python to intercept call-sites for various entities (OneFlow operators, Module invocations, and Tensor method invocations). This functionality is exposed through an API called `oneflow.fx.symbolic_trace`.  We can see how this works by way of an example:
 
 ```python
-import torch
+import oneflow
+import oneflow.fx
+import numpy as np
 
-class MyModule(torch.nn.Module):
+class MyModule(oneflow.nn.Module):
   def __init__(self):
     super().__init__()
-    self.param = torch.nn.Parameter(
-        torch.rand(3, 4))
-    self.linear = torch.nn.Linear(4, 5)
+    self.param = oneflow.nn.Parameter(
+        oneflow.Tensor(3, 4))
+    self.linear = oneflow.nn.Linear(4, 5)
 
   def forward(self, x):
     return self.linear(x + self.param).clamp(min=0.0, max=1.0)
 
-from torch.fx import symbolic_trace
+from oneflow.fx import symbolic_trace
 module = MyModule()
-symbolic_traced : torch.fx.GraphModule = symbolic_trace(module)
+symbolic_traced : oneflow.fx.GraphModule = symbolic_trace(module)
 
-input = torch.rand(3, 4)
-torch.testing.assert_allclose(symbolic_traced(input), module(input))
+input = oneflow.Tensor(3, 4)
+print(symbolic_traced.graph)
+print(symbolic_traced.code)
+assert(np.allclose(module(input).numpy(), symbolic_traced(input).numpy()))
 ```
 
 Here, we set up a simple Module that exercises different language features: fetching a parameter, applying an arithmetic operator, applying a submodule (linear), and applying a Tensor method. `symbolic_trace` returns an instance of GraphModule, which is in itself a subclass of `nn.Module`. We can see that the `symbolic_traced` instance runs and returns the same result as the original module instance module.
 
 # Internal Structure
 
-## [Graph](https://pytorch.org/docs/master/fx.html#torch.fx.Graph) ##
+## [Graph](https://OneFlow.org/docs/master/fx.html#oneflow.fx.Graph) ##
 TODO
 
-## [GraphModule](https://pytorch.org/docs/master/fx.html#torch.fx.GraphModule) ##
+## [GraphModule](https://OneFlow.org/docs/master/fx.html#oneflow.fx.GraphModule) ##
 TODO
 
 # Symbolic Tracing
 
-## [Tracer](https://pytorch.org/docs/master/fx.html#torch.fx.Tracer) ##
+## [Tracer](https://OneFlow.org/docs/master/fx.html#oneflow.fx.Tracer) ##
 
-`Tracer` is the class that implements the symbolic tracing functionality of `torch.fx.symbolic_trace`. A call to `symbolic_trace(m)` is equivalent to `Tracer().trace(m)`. Tracer can be subclassed to override various behaviors of the tracing process. The different behaviors that can be overridden are described in the docstrings of the methods on the class.
+`Tracer` is the class that implements the symbolic tracing functionality of `oneflow.fx.symbolic_trace`. A call to `symbolic_trace(m)` is equivalent to `Tracer().trace(m)`. Tracer can be subclassed to override various behaviors of the tracing process. The different behaviors that can be overridden are described in the docstrings of the methods on the class.
 
 In the default implementation of `Tracer().trace`, the tracer first creates Proxy objects for all arguments in the `forward` function. (This happens in the call to `create_args_for_root`.) Next, the `forward` function is called with the new Proxy arguments. As the Proxies flow through the program, they record all the operations (`torch` function calls, method calls, and operators) that they touch into the growing FX Graph as Nodes.
 
 ## Proxy ##
 
-Proxy objects are Node wrappers used by the Tracer to record operations seen during symbolic tracing. The mechanism through which Proxy objects record computation is [`__torch_function__`](https://pytorch.org/docs/stable/notes/extending.html#extending-torch). If any custom Python type defines a method named `__torch_function__`, PyTorch will invoke that `__torch_function__` implementation when an instance of that custom type is passed to a function in the `torch` namespace. In FX, when operations on Proxy are dispatched to the `__torch_function__` handler, the `__torch_function__` handler records the operation in the Graph as a Node. The Node that was recorded in the Graph is then itself wrapped in a Proxy, facilitating further application of ops on that value.
+Proxy objects are Node wrappers used by the Tracer to record operations seen during symbolic tracing. The mechanism through which Proxy objects record computation is [`__torch_function__`](https://OneFlow.org/docs/stable/notes/extending.html#extending-torch). If any custom Python type defines a method named `__torch_function__`, OneFlow will invoke that `__torch_function__` implementation when an instance of that custom type is passed to a function in the `torch` namespace. In FX, when operations on Proxy are dispatched to the `__torch_function__` handler, the `__torch_function__` handler records the operation in the Graph as a Node. The Node that was recorded in the Graph is then itself wrapped in a Proxy, facilitating further application of ops on that value.
 
 Consider the following example:
 
 ```python
-  class M(torch.nn.Module):
+  class M(oneflow.nn.Module):
       def forward(self, x):
           return torch.relu(x)
 

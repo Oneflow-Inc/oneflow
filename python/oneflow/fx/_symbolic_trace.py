@@ -180,7 +180,7 @@ class _CPatchManager(object):
 
     def __init__(self, tracer):
         self.tracer = tracer
-        # TODO(BBuf) 
+        # TODO(BBuf)
         # patched_fns = [oneflow.randn, oneflow.rand, oneflow.randint]
         patched_fns = [oneflow.Tensor]
 
@@ -414,7 +414,7 @@ class Tracer(TracerBase):
             mod (str): The ``Module`` to retrieve the qualified name for.
         """
         # Prefer the O(1) algorithm
-        
+
         if self.submodule_paths:
             path = self.submodule_paths.get(mod)
             if path is None:
@@ -730,7 +730,7 @@ def _create_wrapped_func(orig_fn):
     @functools.wraps(orig_fn)
     def wrapped(*args, **kwargs):
         """
-        Given an closed-over ``orig_function`` to invoke, search the args and kwargs for
+        Given an closed-over ``origin_function`` to invoke, search the args and kwargs for
         a Proxy object. If there is one, emit a ``call_function`` node to preserve the
         call to this leaf function directly. Otherwise, just return the results of
         this function call, as this function is not being traced.
