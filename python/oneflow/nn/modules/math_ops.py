@@ -539,18 +539,18 @@ def fmod_op(input, other):
 
     """
 
-    if not isinstance(input, (flow.Tensor, flow._oneflow_internal.Tensor)):
-        raise ValueError("Expected type of input is Tensor")
-    if isinstance(other, (int, float)):
-        input = flow.F.cast(input, flow.float32)
-        other = flow.tensor([other], dtype=flow.float32, device=input.device)
-    elif isinstance(other, (flow.Tensor, flow._oneflow_internal.Tensor)):
-        if input.dtype != other.dtype:
-            input = flow.F.cast(input, flow.float32)
-            other = flow.F.cast(other, flow.float32)
-    else:
-        raise ValueError("Expected type of other is Tensor or Scalar")
-    return flow.F.fmod(input, other)
+    # if not isinstance(input, (flow.Tensor, flow._oneflow_internal.Tensor)):
+    #     raise ValueError("Expected type of input is Tensor")
+    # if isinstance(other, (int, float)):
+    #     input = flow.F.cast(input, flow.float32)
+    #     other = flow.tensor([other], dtype=flow.float32, device=input.device)
+    # elif isinstance(other, (flow.Tensor, flow._oneflow_internal.Tensor)):
+    #     if input.dtype != other.dtype:
+    #         input = flow.F.cast(input, flow.float32)
+    #         other = flow.F.cast(other, flow.float32)
+    # else:
+    #     raise ValueError("Expected type of other is Tensor or Scalar")
+    return flow.F.mufmod(input, other)
 
 
 @register_tensor_op("fmod")

@@ -154,7 +154,7 @@
 
 - name: "fmod"
   signature: "Tensor BroadcastFMod(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: Fasle
 
 - name: "log"
   signature: "Tensor Log(Tensor x)"
@@ -933,3 +933,7 @@
 - name: "reduce_sum_like"
   signature: "Tensor ReduceSumLike(Tensor in, Tensor like, *,Int32List axis)"
   bind_python: True
+
+- name: "scalar_fmod"
+  signature: "Tensor ScalarFMod(Tensor in, Scalar scalar)"
+  bind_python: False
