@@ -15,16 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Tan(Module):
-    def __init__(self):
-        super().__init__()
-        self._op = flow.builtin_op("tan").Input("x").Output("y").Build()
-
-    def forward(self, x):
-        return self._op(x)[0]
 
 
 def tan_op(input):
@@ -49,7 +39,7 @@ def tan_op(input):
         tensor([-1.,  0.,  1.], dtype=oneflow.float32)
 
     """
-    return Tan()(input)
+    return flow.F.tan(input)
 
 
 @register_tensor_op("tan")
@@ -59,7 +49,7 @@ def tan_op_tensor(input):
     See :func:`oneflow.tan`
 
     """
-    return Tan()(input)
+    return flow.F.tan(input)
 
 
 if __name__ == "__main__":

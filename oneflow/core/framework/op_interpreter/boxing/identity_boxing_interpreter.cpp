@@ -18,11 +18,10 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<one::Tensor> IdentityBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input,
-    Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-    Symbol<cfg::ParallelDistribution> out_parallel_distribution,
-    Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
-  CHECK_EQ_OR_RETURN(in_parallel_distribution, out_parallel_distribution);
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
+    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    Symbol<ParallelDesc> out_parallel_desc) const {
+  CHECK_EQ_OR_RETURN(in_nd_sbp, out_nd_sbp);
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   return input;
 }

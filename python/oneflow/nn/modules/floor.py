@@ -13,24 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import collections
-from typing import Optional, Sequence, Union
-
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _check_axis
 
 
-class Floor(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.floor(x)
-
-
-def floor_op(x):
+def floor_op(input):
     """
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
 
@@ -62,7 +49,7 @@ def floor_op(x):
                [-1.,  2.]], dtype=float32)
 
     """
-    return Floor()(x)
+    return flow.F.floor(input)
 
 
 @register_tensor_op("floor")
@@ -70,7 +57,7 @@ def floor_op_tensor(input):
     """
     See :func:`oneflow.floor`
     """
-    return Floor()(input)
+    return flow.F.floor(input)
 
 
 if __name__ == "__main__":
