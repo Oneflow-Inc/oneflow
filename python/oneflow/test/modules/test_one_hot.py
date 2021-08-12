@@ -33,15 +33,14 @@ class TestOnehot(flow.unittest.TestCase):
         num_classes = random(low=hight + 1, high=hight + 6).to(int).value()
         y = torch.nn.functional.one_hot(input, num_classes=num_classes)
         return y
- 
+
     @autotest(auto_backward=False)
     def test_one_hot_num_classes_with_random_data(test_case):
         device = random_device()
         hight = random(1, 6).to(int)
-        input = random_pytorch_tensor(high = hight, dtype = int).to(device)
+        input = random_pytorch_tensor(high=hight, dtype=int).to(device)
         y = torch.nn.functional.one_hot(input, num_classes=-1)
         return y
-
 
 
 if __name__ == "__main__":
