@@ -24,16 +24,15 @@ import oneflow as flow
 
 @flow.unittest.skip_unless_1n1d()
 class TestOnehot(flow.unittest.TestCase):
-
     @autotest(auto_backward=False)
     def test_one_hot_with_random_data(test_case):
         device = random_device()
         hight = random(1, 6).to(int)
-        input = random_pytorch_tensor(high = hight, dtype = int).to(device)
-        num_classes = random(low = hight + 1, high = hight + 6).to(int).value()
+        input = random_pytorch_tensor(high=hight, dtype=int).to(device)
+        num_classes = random(low=hight + 1, high=hight + 6).to(int).value()
         y = torch.nn.functional.one_hot(input, num_classes=num_classes)
         return y
-    
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -604,7 +604,8 @@ class OneHotFunctor {
   OneHotFunctor() {
     one_hot_op_ = CHECK_JUST(one::OpBuilder("one_hot").Input("indices").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& num_classes) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const int64_t& num_classes) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("depth", num_classes));
     JUST(attrs.SetAttr<DataType>("dtype", kInt64));
@@ -647,7 +648,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
   m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
   m.add_functor<impl::OneHotFunctor>("OneHot");
-  
 };
 
 }  // namespace functional
