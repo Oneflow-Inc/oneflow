@@ -39,7 +39,7 @@ struct GlobaProcessCtxScope final {
       (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[i] = i;
     }
   }
-  ~GlobaProcessCtxScope() { 
+  ~GlobaProcessCtxScope() {
     Global<RankInfoInCluster>::Delete();
     Global<ProcessCtx>::Delete();
   }
