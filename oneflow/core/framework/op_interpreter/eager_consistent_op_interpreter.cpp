@@ -208,10 +208,11 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const ConsistentToConsistentOp
                                                   const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
+  CHECK_OR_RETURN(ctx.parallel_distribution.has_value());
   const auto& output_parallel_desc = JUST(ctx.parallel_desc.value());
   const auto& input_parallel_desc = JUST(inputs.at(0)->parallel_desc());
   const auto& parallel_distribution_cast_op_expr =
-      JUST(FindOrCreatHierarchicalParallelCastOpExpr(JUST(op_expr.parallel_distribution())));
+      JUST(FindOrCreatHierarchicalParallelCastOpExpr(JUST(ctx.parallel_distribution.value())));
   if (output_parallel_desc == input_parallel_desc) {
     outputs->at(0) =
         JUST(OpInterpUtil::Dispatch<Tensor>(*parallel_distribution_cast_op_expr, inputs));

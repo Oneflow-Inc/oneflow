@@ -122,29 +122,16 @@ Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc
   }
 }
 
-Maybe<one::ConsistentToConsistentOpExpr> FindOrCreatConsistentToConsistentOpExpr(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
-  thread_local HashMap<std::vector<Symbol<cfg::SbpParallel>>,
-                       std::shared_ptr<one::ConsistentToConsistentOpExpr>>
-      sbp_list2consistent_to_consistent_op_expr;
-  auto iter = sbp_list2consistent_to_consistent_op_expr.find(sbp_parallels);
-  if (iter == sbp_list2consistent_to_consistent_op_expr.end()) {
-    const auto& op_expr = JUST(one::ConsistentToConsistentOpExpr::New(
-        *JUST(UniqueStr("consistent_to_consistent")), JUST(GetNdSbp(sbp_parallels))));
-    iter = sbp_list2consistent_to_consistent_op_expr.emplace(sbp_parallels, op_expr).first;
-  }
-  return iter->second;
-}
-
 Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      Symbol<ParallelDesc> parallel_desc,
-                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                                     const std::shared_ptr<OpExpr>& op) {
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& op_expr = JUST(FindOrCreatConsistentToConsistentOpExpr(sbp_parallels));
   const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op_expr, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc)));
+      *op, {consistent_tensor},
+      OpExprInterpContext(AttrMap{}, parallel_desc, JUST(GetNdSbp(sbp_parallels)))));
   return ret;
 }
 
@@ -193,8 +180,10 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
 class ToConsistentFunctor {
  public:
   ToConsistentFunctor() {
-    op_ =
+    local_to_consistent_op_ =
         CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+    consistent_to_consistent_op_ = CHECK_JUST(
+        one::ConsistentToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_consistent"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -202,14 +191,17 @@ class ToConsistentFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const Optional<Shape>& shape) const {
     if (x->is_consistent()) {
-      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels));
+      return JUST(
+          ConsistentToConsistent(x, parallel_desc, sbp_parallels, consistent_to_consistent_op_));
     } else {
-      return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, shape, op_));
+      return JUST(
+          LocalToConsistent(x, parallel_desc, sbp_parallels, shape, local_to_consistent_op_));
     }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> local_to_consistent_op_;
+  std::shared_ptr<OpExpr> consistent_to_consistent_op_;
 };
 
 class ConsistentToLocalFunctor {

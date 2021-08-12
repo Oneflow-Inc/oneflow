@@ -23,26 +23,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-namespace {
-
-Maybe<one::ConsistentToConsistentOpExpr> FindOrCreatConsistentToConsistentOpExpr(
-    Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  thread_local HashMap<Symbol<cfg::ParallelDistribution>,
-                       std::shared_ptr<one::ConsistentToConsistentOpExpr>>
-      parallel_distribution2consistent_to_consistent_op_expr;
-  auto iter = parallel_distribution2consistent_to_consistent_op_expr.find(parallel_distribution);
-  if (iter == parallel_distribution2consistent_to_consistent_op_expr.end()) {
-    const auto& op_expr = JUST(one::ConsistentToConsistentOpExpr::New(
-        *JUST(UniqueStr("consistent_to_consistent")), parallel_distribution));
-    iter = parallel_distribution2consistent_to_consistent_op_expr
-               .emplace(parallel_distribution, op_expr)
-               .first;
-  }
-  return iter->second;
-}
-
-}  // namespace
-
 struct ConsistentToConsistentOpExprInterpState : public OpExprInterpState {
   Symbol<cfg::ParallelDistribution> parallel_distribution;
   Symbol<ParallelDesc> parallel_desc;
@@ -53,6 +33,8 @@ class ConsistentToConsistent : public OpExprGradFunction<ConsistentToConsistentO
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const ConsistentToConsistentOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    const std::string& op_name = fw_op_expr->op_name();
+    grad_op_ = JUST(one::ConsistentToConsistentOpExpr::New(GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
@@ -67,13 +49,16 @@ class ConsistentToConsistent : public OpExprGradFunction<ConsistentToConsistentO
 
   Maybe<void> Apply(const ConsistentToConsistentOpExprInterpState* ctx,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override {
-    const auto& grad_op = JUST(FindOrCreatConsistentToConsistentOpExpr(ctx->parallel_distribution));
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *grad_op, out_grads, OpExprInterpContext(AttrMap{}, ctx->parallel_desc)));
+        *grad_op_, out_grads,
+        OpExprInterpContext(AttrMap{}, ctx->parallel_desc, ctx->parallel_distribution)));
     return Maybe<void>::Ok();
   }
+
+ private:
+  std::shared_ptr<OpExpr> grad_op_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("consistent_to_consistent", ConsistentToConsistent);

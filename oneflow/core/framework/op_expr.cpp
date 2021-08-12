@@ -401,13 +401,21 @@ Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
 }
 
 ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(
-    const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution)
-    : op_name_(op_name), parallel_distribution_(parallel_distribution) {}
+    const std::string& op_name, Symbol<cfg::ParallelDistribution> grad_parallel_distribution)
+    : op_name_(op_name), grad_parallel_distribution_(grad_parallel_distribution) {}
 
 /* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
-    const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution) {
+    const std::string& op_name, Symbol<cfg::ParallelDistribution> grad_parallel_distribution) {
   return std::shared_ptr<ConsistentToConsistentOpExpr>(
-      new ConsistentToConsistentOpExpr(op_name, parallel_distribution));
+      new ConsistentToConsistentOpExpr(op_name, grad_parallel_distribution));
+}
+
+ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(const std::string& op_name)
+    : op_name_(op_name) {}
+
+/* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
+    const std::string& op_name) {
+  return std::shared_ptr<ConsistentToConsistentOpExpr>(new ConsistentToConsistentOpExpr(op_name));
 }
 
 CastConsistentOpExpr::CastConsistentOpExpr(const std::string& op_name) : op_name_(op_name) {}
