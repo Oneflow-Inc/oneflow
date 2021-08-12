@@ -60,6 +60,7 @@ def one_hot(
     else:
         if num_classes == -1:
             num_classes = (flow.max(input) + 1).numpy()
+            print("num_classes=",num_classes)
     return flow.F.one_hot(input, num_classes)
 
 
