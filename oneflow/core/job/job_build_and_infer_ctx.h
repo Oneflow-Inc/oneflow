@@ -114,10 +114,10 @@ class JobBuildAndInferCtx {
   Maybe<OperatorConf> DecodeLbiHintAndReturnNewOpConf(
       const Operator& op, cfg::SbpSignature* sbp_sig_conf,
       HashMap<std::string, bool>* ibn2disable_boxing) const;
-  void AddOpAndUpdateJobParallelViewConf(
-      const OperatorConf& operator_conf, const ParallelDesc& parallel_desc,
-      const cfg::ParallelDistributionSignature& parallel_distribution_signature,
-      bool is_mirrored_parallel_view) const;
+  void AddOpAndUpdateJobParallelViewConf(const OperatorConf& operator_conf,
+                                         const ParallelDesc& parallel_desc,
+                                         const cfg::ParallelDistributionSignature& nd_sbp_signature,
+                                         bool is_mirrored_parallel_view) const;
   Maybe<void> InferMirroredSignature(Operator*, bool is_mirrored_parallel_view_conf,
                                      const ParallelDesc&);
   Maybe<void> InferOpOutParallelDistribution(Operator*, const cfg::ParallelDistributionSignature&,
@@ -142,7 +142,7 @@ class JobBuildAndInferCtx {
   Job* job_;
   int64_t job_id_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
-  HashMap<LogicalBlobId, cfg::ParallelDistribution> lbi2parallel_distribution_from_producer_view_;
+  HashMap<LogicalBlobId, cfg::ParallelDistribution> lbi2nd_sbp_from_producer_view_;
   HashMap<LogicalBlobId, ParallelDesc> lbi2parallel_desc_from_producer_view_;
   HashMap<LogicalBlobId, bool> lbi2disable_boxing_;
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;

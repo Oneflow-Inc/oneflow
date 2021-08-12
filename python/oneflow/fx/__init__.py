@@ -23,32 +23,33 @@ demonstration of these components in action:
 
 ::
 
-    import torch
+    import oneflow
     # Simple module for demonstration
-    class MyModule(torch.nn.Module):
+    class MyModule(oneflow.nn.Module):
         def __init__(self):
             super().__init__()
-            self.param = torch.nn.Parameter(torch.rand(3, 4))
-            self.linear = torch.nn.Linear(4, 5)
+            self.param = oneflow.nn.Parameter(oneflow.Tensor(3, 4))
+            self.linear = oneflow.nn.Linear(4, 5)
 
         def forward(self, x):
             return self.linear(x + self.param).clamp(min=0.0, max=1.0)
 
     module = MyModule()
 
-    from torch.fx import symbolic_trace
+    from oneflow.fx import symbolic_trace
     # Symbolic tracing frontend - captures the semantics of the module
-    symbolic_traced : torch.fx.GraphModule = symbolic_trace(module)
+    symbolic_traced : oneflow.fx.GraphModule = symbolic_trace(module)
 
     # High-level intermediate representation (IR) - Graph representation
     print(symbolic_traced.graph)
     """
-    graph(x):
-        %param : [#users=1] = self.param
-        %add_1 : [#users=1] = call_function[target=<built-in function add>](args = (%x, %param), kwargs = {})
-        %linear_1 : [#users=1] = call_module[target=linear](args = (%add_1,), kwargs = {})
-        %clamp_1 : [#users=1] = call_method[target=clamp](args = (%linear_1,), kwargs = {min: 0.0, max: 1.0})
-        return clamp_1
+    graph():
+        %x : [#users=1] = placeholder[target=x]
+        %param : [#users=1] = get_attr[target=param]
+        %add : [#users=1] = call_function[target=operator.add](args = (%x, %param), kwargs = {})
+        %linear : [#users=1] = call_module[target=linear](args = (%add,), kwargs = {})
+        %clamp : [#users=1] = call_method[target=clamp](args = (%linear,), kwargs = {min: 0.0, max: 1.0})
+        return clamp
     """
 
     # Code generation - valid Python code
@@ -56,10 +57,10 @@ demonstration of these components in action:
     """
     def forward(self, x):
         param = self.param
-        add_1 = x + param;  x = param = None
-        linear_1 = self.linear(add_1);  add_1 = None
-        clamp_1 = linear_1.clamp(min = 0.0, max = 1.0);  linear_1 = None
-        return clamp_1
+        add = x + param;  x = param = None
+        linear = self.linear(add);  add = None
+        clamp = linear.clamp(min = 0.0, max = 1.0);  linear = None
+        return clamp
     """
 
 The **symbolic tracer** performs "symbolic execution" of the Python
@@ -71,7 +72,7 @@ documentation.
 The **intermediate representation** is the container for the operations
 that were recorded during symbolic tracing. It consists of a list of
 Nodes that represent function inputs, callsites (to functions, methods,
-or :class:`torch.nn.Module` instances), and return values. More information
+or :class:`oneflow.nn.Module` instances), and return values. More information
 about the IR can be found in the documentation for :class:`Graph`. The
 IR is the format on which transformations are applied.
 
@@ -79,7 +80,7 @@ IR is the format on which transformations are applied.
 Module-to-Module) transformation toolkit. For each Graph IR, we can
 create valid Python code matching the Graph's semantics. This
 functionality is wrapped up in :class:`GraphModule`, which is a
-:class:`torch.nn.Module` instance that holds a :class:`Graph` as well as a
+:class:`oneflow.nn.Module` instance that holds a :class:`Graph` as well as a
 ``forward`` method generated from the Graph.
 
 Taken together, this pipeline of components (symbolic tracing ->
