@@ -1307,9 +1307,9 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
     const OperatorConf& op_conf) {
   // NOTE(chengcheng): arg op_conf has a default global op_name because it is created by
   //  static functional op expr, so we need reset a unique op name for each functional op.
-  //  This op_conf can NOT be a input/output/varible op which has set correct name in nn.Graph.
-  CHECK_OR_RETURN(
-      !(op_conf.has_input_conf() || op_conf.has_variable_conf() || op_conf.has_output_conf()));
+  //  This op_conf can NOT be a input/output/variable op which has set correct name in nn.Graph.
+  //  But free eager tensor is treated as a special variable which needs to create name here.
+  CHECK_OR_RETURN(!(op_conf.has_input_conf() || op_conf.has_output_conf()));
 
   const auto& scope = JUST(GetCurrentScope());
 
@@ -1320,6 +1320,9 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
   std::string op_type_name;
   if (op_conf.has_user_conf()) {
     op_type_name = op_conf.user_conf().op_type_name();
+  } else if (op_conf.has_variable_conf()) {
+    // NOTE(chengcheng): To support Free Eager Tensor caught by nn.Graph
+    op_type_name = "FreeEagerTensor";
   } else {
     op_type_name = "SystemOp";
   }

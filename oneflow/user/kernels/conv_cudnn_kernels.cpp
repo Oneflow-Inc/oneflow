@@ -162,7 +162,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
           GetBiasCudnnTensorDesc<NDims>(data_format, filters, GetDataType<T>::value));
     }
 
-    return std::move(state);
+    return state;
   }
 
  private:
