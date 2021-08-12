@@ -32,11 +32,11 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_mr * mr, char * addr, uint32_t size):size_(size), mr_(mr){
+  ActorMsgMR(ibv_mr * mr, char * addr, size_t  size):size_(size), mr_(mr){
     msg_ = reinterpret_cast<ActorMsg*>(addr);
   }
   ~ActorMsgMR() {
-   CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0);
+   //CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0);
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
@@ -92,7 +92,7 @@ class MessagePool final {
       for(size_t i = 0;  i < num_of_message_ ; i++){
           char * split_addr =addr + ActorMsgSize * i ;
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
-          message_buf_.push_front(msg_mr);
+          message_buf_.push_back(msg_mr);
       }
     }
     
@@ -115,7 +115,7 @@ class MessagePool final {
 
     void PutMessage(ActorMsgMR * msg_mr) {
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      message_buf_.push_front(msg_mr);
+      message_buf_.push_back(msg_mr);
     }
 
     std::deque<ActorMsgMR*> GetMessageBuf() {
