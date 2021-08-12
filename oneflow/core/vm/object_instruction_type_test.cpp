@@ -36,16 +36,19 @@ namespace test {
 
 namespace {
 
-void InitRankInfoInCluster() {
-  Global<RankInfoInCluster>::New()->mutable_num_process_distribution()->add_num_process(1);
-  (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[0] = 0;
-  (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[0] = 0;
-}
-
-void DestroyRankInfoInCluster() { Global<RankInfoInCluster>::Delete(); }
+struct GlobaProcessCtxScope final {
+  GlobaProcessCtxScope(int64_t node_size, int64_t world_size) {
+    Global<ProcessCtx>::New();
+    auto* ctx = Global<ProcessCtx>::Get();
+    for (int i = 0; i < world_size; ++i) { ctx->mutable_ctrl_addr()->Add(); }
+    ctx->set_rank(0);
+    ctx->set_node_size(node_size);
+  }
+  ~GlobaProcessCtxScope() { Global<ProcessCtx>::Delete(); }
+};
 
 TEST(ControlStreamType, new_object) {
-  InitRankInfoInCluster();
+  GlobaProcessCtxScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   CachedObjectMsgAllocator allocator(20, 100);
@@ -58,11 +61,10 @@ TEST(ControlStreamType, new_object) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyRankInfoInCluster();
 }
 
 TEST(ControlStreamType, delete_object) {
-  InitRankInfoInCluster();
+  GlobaProcessCtxScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   CachedObjectMsgAllocator allocator(20, 100);
@@ -76,7 +78,6 @@ TEST(ControlStreamType, delete_object) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyRankInfoInCluster();
 }
 
 }  // namespace

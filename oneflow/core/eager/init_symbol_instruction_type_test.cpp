@@ -39,18 +39,6 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-namespace {
-
-void InitRankInfoInCluster() {
-  Global<RankInfoInCluster>::New()->mutable_num_process_distribution()->add_num_process(1);
-  (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[0] = 0;
-  (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[0] = 0;
-}
-
-void DestroyRankInfoInCluster() { Global<RankInfoInCluster>::Delete(); }
-
-}  // namespace
-
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
 template<typename T, typename SerializedT>
@@ -76,25 +64,21 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
 }
 
 TEST(InitSymbolInstructionType, job_desc) {
-  InitRankInfoInCluster();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
 #endif
   TestInitSymbolInstructionType<JobDesc, JobConfigProto>("InitJobDescSymbol");
-  DestroyRankInfoInCluster();
 }
 
 TEST(InitSymbolInstructionType, operator_conf) {
-  InitRankInfoInCluster();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
 #endif
   TestInitSymbolInstructionType<OperatorConfSymbol, OperatorConf>("InitOperatorConfSymbol");
-  DestroyRankInfoInCluster();
 }
 
 }  // namespace test

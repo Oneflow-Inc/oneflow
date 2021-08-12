@@ -56,7 +56,6 @@ TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu
 
 TestResourceDescScope::~TestResourceDescScope() {
   Global<ResourceDesc, ForSession>::Delete();
-  Global<RankInfoInCluster>::Delete();
   Global<EnvDesc>::Delete();
   Global<ProcessCtx>::Delete();
 }

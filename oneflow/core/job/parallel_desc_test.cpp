@@ -25,34 +25,31 @@ namespace test {
 
 namespace {
 
-void InitRankInfoInCluster(int64_t machine_num) {
-  Global<RankInfoInCluster>::New();
-  for (size_t i = 0; i < machine_num; ++i) {
-    Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(1);
-    (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[i] = i;
-    (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[i] = i;
+struct GlobaProcessCtxScope final {
+  GlobaProcessCtxScope(int64_t node_size, int64_t world_size) {
+    Global<ProcessCtx>::New();
+    auto* ctx = Global<ProcessCtx>::Get();
+    for (int i = 0; i < world_size; ++i) { ctx->mutable_ctrl_addr()->Add(); }
+    ctx->set_rank(0);
+    ctx->set_node_size(node_size);
   }
-}
-
-void DestroyRankInfoInCluster() { Global<RankInfoInCluster>::Delete(); }
+  ~GlobaProcessCtxScope() { Global<ProcessCtx>::Delete(); }
+};
 
 }  // namespace
 
 TEST(ParallelDesc, continuous_1n4d) {
-  InitRankInfoInCluster(1);
+  GlobaProcessCtxScope scope(1, 4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
-  DestroyRankInfoInCluster();
 }
 
 TEST(ParallelDesc, continuous_1n4d_multi_process) {
-  InitRankInfoInCluster(1);
-  Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->clear_num_process();
-  Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(4);
+  GlobaProcessCtxScope scope(1, 4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
@@ -64,13 +61,10 @@ TEST(ParallelDesc, continuous_1n4d_multi_process) {
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 1), 1);
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 2), 1);
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 3), 1);
-  DestroyRankInfoInCluster();
 }
 
 TEST(ParallelDesc, continuous_1n4d_multi_process_with_rank) {
-  InitRankInfoInCluster(1);
-  Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->clear_num_process();
-  Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(4);
+  GlobaProcessCtxScope scope(1, 4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("@0:0-3");
@@ -80,11 +74,10 @@ TEST(ParallelDesc, continuous_1n4d_multi_process_with_rank) {
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
   ASSERT_EQ(machine_ids.size(), 1);
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 0), 1);
-  DestroyRankInfoInCluster();
 }
 
 TEST(ParallelDesc, discrete_1n4d) {
-  InitRankInfoInCluster(1);
+  GlobaProcessCtxScope scope(1, 4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
@@ -92,11 +85,10 @@ TEST(ParallelDesc, discrete_1n4d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
-  DestroyRankInfoInCluster();
 }
 
 TEST(ParallelDesc, continuous_2n8d) {
-  InitRankInfoInCluster(2);
+  GlobaProcessCtxScope scope(2, 8);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
@@ -104,11 +96,10 @@ TEST(ParallelDesc, continuous_2n8d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 8);
-  DestroyRankInfoInCluster();
 }
 
 TEST(ParallelDesc, discrete_2n8d) {
-  InitRankInfoInCluster(2);
+  GlobaProcessCtxScope scope(2, 8);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
@@ -118,7 +109,6 @@ TEST(ParallelDesc, discrete_2n8d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 8);
-  DestroyRankInfoInCluster();
 }
 
 }  // namespace test

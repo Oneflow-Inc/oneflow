@@ -48,19 +48,17 @@ Resource GetResource() {
 
 void New() {
   Global<EnvDesc>::New(GetEnvProto());
-  Global<RankInfoInCluster>::New();
-  for (size_t i = 0; i < machine_num; ++i) {
-    Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(1);
-    (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[i] = i;
-    (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[i] = i;
-  }
+  Global<ProcessCtx>::New();
+  Global<ProcessCtx>::Get()->mutable_ctrl_addr()->Add();
+  Global<ProcessCtx>::Get()->set_rank(0);
+  Global<ProcessCtx>::Get()->set_node_size(1);
   Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::WorldSize());
   Global<IDMgr>::New();
 }
 
 void Delete() {
   Global<IDMgr>::Delete();
-  Global<RankInfoInCluster>::Delete();
+  Global<ProcessCtx>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<EnvDesc>::Delete();
 }

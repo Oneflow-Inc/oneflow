@@ -40,18 +40,6 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-namespace {
-
-void InitRankInfoInCluster() {
-  Global<RankInfoInCluster>::New()->mutable_num_process_distribution()->add_num_process(1);
-  (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[0] = 0;
-  (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[0] = 0;
-}
-
-void DestroyRankInfoInCluster() { Global<RankInfoInCluster>::Delete(); }
-
-}  // namespace
-
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
 int64_t NewJobDescSymbol(InstructionMsgList* list,
@@ -119,7 +107,6 @@ int64_t InitOpKernelObject(InstructionMsgList* list,
 }
 
 TEST(OpkernelInstructionType, new_opkernel) {
-  InitRankInfoInCluster();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -143,11 +130,9 @@ TEST(OpkernelInstructionType, new_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyRankInfoInCluster();
 }
 
 TEST(OpkernelInstructionType, delete_opkernel) {
-  InitRankInfoInCluster();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -174,11 +159,9 @@ TEST(OpkernelInstructionType, delete_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyRankInfoInCluster();
 }
 
 TEST(OpkernelInstructionType, call_opkernel) {
-  InitRankInfoInCluster();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -221,12 +204,10 @@ TEST(OpkernelInstructionType, call_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyRankInfoInCluster();
 }
 
 #ifdef WITH_CUDA
 TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
-  InitRankInfoInCluster();
   vm::TestResourceDescScope resource_scope(1, 1);
   InstructionMsgList list;
   int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
@@ -301,12 +282,10 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyRankInfoInCluster();
 }
 #endif
 
 TEST(OpkernelInstructionType, stateless_call_opkernel) {
-  InitRankInfoInCluster();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -352,12 +331,10 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyRankInfoInCluster();
 }
 
 #ifdef WITH_CUDA
 TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
-  InitRankInfoInCluster();
   vm::TestResourceDescScope resource_scope(1, 1);
   InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
@@ -431,7 +408,6 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyRankInfoInCluster();
 }
 #endif
 
