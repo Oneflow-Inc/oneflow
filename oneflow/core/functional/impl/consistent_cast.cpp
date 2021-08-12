@@ -245,6 +245,19 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
     input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                   GlobalProcessCtx::LocalRank()));
   }
+  // copy to default device of the current rank if input's device type is right but not on default
+  // device
+  if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
+    LOG(INFO) << "The tensor isn't on default device of the current rank., now copy it to "
+              << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+    input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
+                                  GlobalProcessCtx::LocalRank()));
+  }
+  const auto& device = JUST(input->device());
+  CHECK_EQ_OR_RETURN(JUST(device->of_type()), parallel_desc->device_tag())
+      << Error::Unimplemented() << "tensor' device type must be same with placement.";
+  CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
+      << Error::Unimplemented() << "tensor must be on default device of the current rank.";
   Symbol<cfg::ParallelDistribution> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype();
