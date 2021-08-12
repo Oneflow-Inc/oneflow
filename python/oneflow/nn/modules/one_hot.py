@@ -17,8 +17,7 @@ import oneflow as flow
 
 
 def one_hot(
-    input, 
-    num_classes=-1,
+    input, num_classes=-1,
 ):
     """This operator generates a onehot Tensor from input Tensor.
 
