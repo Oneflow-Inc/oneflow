@@ -39,8 +39,8 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq,
-                     std::shared_ptr<MessagePool> recv_msg_buf,
-                     std::shared_ptr<MessagePool> send_msg_buf) {
+                     MessagePool * recv_msg_buf,
+                     MessagePool * send_msg_buf) {
   // ctx_, pd_
   ctx_ = ctx;
   pd_ = pd;

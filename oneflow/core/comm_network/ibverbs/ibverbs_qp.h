@@ -32,7 +32,7 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(std::shared_ptr<ibv_mr> mr, char * addr, size_t  size):size_(size){
+  ActorMsgMR(ibv_mr *  mr, char * addr, size_t  size):size_(size){
     msg_ = reinterpret_cast<ActorMsg*>(addr);
     mr_ = mr;
   }
@@ -50,7 +50,7 @@ class ActorMsgMR final {
 
  private:
     size_t size_;
-    std::shared_ptr<ibv_mr> mr_;
+    ibv_mr * mr_;
     ActorMsg * msg_;
 };
 
@@ -89,11 +89,10 @@ class MessagePool final {
           pd_, (void*)addr, RegisterMemorySize,
           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
       CHECK(mr);
-      std::shared_ptr<ibv_mr> shared_mr(mr);
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       for(size_t i = 0;  i < num_of_message_ ; i++){
           char * split_addr =addr + ActorMsgSize * i ;
-          ActorMsgMR * msg_mr = new ActorMsgMR(shared_mr,split_addr, ActorMsgSize);
+          ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
           message_buf_.push_back(msg_mr);
       }
     }
@@ -177,8 +176,8 @@ class IBVerbsQP final {
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
   
-  std::shared_ptr<MessagePool>  recv_msg_buf_;
-  std::shared_ptr<MessagePool> send_msg_buf_;
+  MessagePool *  recv_msg_buf_;
+  MessagePool * send_msg_buf_;
  };
 
 }  // namespace oneflow
