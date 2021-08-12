@@ -21,8 +21,8 @@ from math import sqrt
 
 
 class RNN(Module):
-    """
-    TODO(xie zipeng): Add flow.nn.utils.rnn.PackedSequence.
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.RNN.html#torch.nn.RNN
 
     Applies a multi-layer Elman RNN with \tanhtanh or \text{ReLU}ReLU non-linearity to an input sequence.
 
@@ -105,15 +105,26 @@ class RNN(Module):
 
     # .. code-block:: python
 
-    #     >>> import numpy as np
-    #     >>> import oneflow as flow
-    #     >>> rnn = flow.nn.RNN(10, 20, 2)
-    #     >>> input = flow.Tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
-    #     >>> h0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
-    #     >>> output, hn = rnn(input, h0)
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> rnn = flow.nn.RNN(10, 20, 2)
+        >>> input = flow.Tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
+        >>> h0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
+        >>> output, hn = rnn(input, h0)
 
     """
-    def __init__(self, input_size, hidden_size, num_layers=1, nonlinearity='tanh', bias=True, batch_first=False, dropout=0, bidirectional=False):
+
+    def __init__(
+        self, 
+        input_size: int, 
+        hidden_size: int, 
+        num_layers: int = 1, 
+        nonlinearity: str = 'tanh', 
+        bias: bool = True, 
+        batch_first: bool = False, 
+        dropout: float = 0, 
+        bidirectional: bool = False):
+
         super().__init__()
 
         self.input_size = input_size
@@ -172,18 +183,18 @@ class RNN(Module):
     def permute_tensor(self, input):
         return input.permute(1,0,2)
 
-    def forward(self, x, hidden=None):
+    def forward(self, input, hx=None):
         if self.batch_first == False:
-            x = self.permute_tensor(x)
+            input = self.permute_tensor(input)
             
         D = 2 if self.bidirectional else 1
         num_layers = self.num_layers
-        batch_size, seq_len, _ = x.size()
+        batch_size, seq_len, _ = input.size()
 
-        if hidden is None:
-            h_t = flow.zeros((D * num_layers, batch_size, self.hidden_size), dtype=x.dtype, device=x.device)
+        if hx is None:
+            h_t = flow.zeros((D * num_layers, batch_size, self.hidden_size), dtype=input.dtype, device=input.device)
         else:
-            h_t = hidden
+            h_t = hx
 
         if self.bidirectional:
             h_t_f = flow.cat([h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l%2==0],dim=0)
@@ -204,9 +215,9 @@ class RNN(Module):
             
             for t in range(seq_len):
                 if layer == 0:      
-                    x_t_f = x[:, t, :]   
+                    x_t_f = input[:, t, :]   
                     if self.bidirectional:
-                        x_t_b = x[:, seq_len-1-t, :]  
+                        x_t_b = input[:, seq_len-1-t, :]  
                 else:
                     x_t_f = hidden_seq[:, t, :] 
                     if self.bidirectional:
@@ -231,7 +242,6 @@ class RNN(Module):
 
                     hidden_seq_b.insert(0, hid_t_b.unsqueeze(1))
                 
-
             hidden_seq_f = flow.cat(hidden_seq_f, dim=1)    
             if self.bidirectional:
                 hidden_seq_b = flow.cat(hidden_seq_b, dim=1)    
@@ -261,8 +271,119 @@ class RNN(Module):
         return hidden_seq, h_t
 
 
-class GRU(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=1, bias=True, batch_first=False, dropout=0, bidirectional=False):
+class GRU(Module):
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#GRU
+
+    Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
+
+    For each element in the input sequence, each layer computes the following
+    function:
+
+    .. math::
+        \begin{array}{ll}
+            r_t = \sigma(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
+            z_t = \sigma(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
+            n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
+            h_t = (1 - z_t) * n_t + z_t * h_{(t-1)}
+        \end{array}
+    
+    where :math:`h_t` is the hidden state at time `t`, :math:`x_t` is the input
+    at time `t`, :math:`h_{(t-1)}` is the hidden state of the layer
+    at time `t-1` or the initial hidden state at time `0`, and :math:`r_t`,
+    :math:`z_t`, :math:`n_t` are the reset, update, and new gates, respectively.
+    :math:`\sigma` is the sigmoid function, and :math:`*` is the Hadamard product.
+
+    In a multilayer GRU, the input :math:`x^{(l)}_t` of the :math:`l` -th layer
+    (:math:`l >= 2`) is the hidden state :math:`h^{(l-1)}_t` of the previous layer multiplied by
+    dropout :math:`\delta^{(l-1)}_t` where each :math:`\delta^{(l-1)}_t` is a Bernoulli random
+    variable which is :math:`0` with probability :attr:`dropout`.
+
+    Args:
+        input_size: The number of expected features in the input `x`
+        hidden_size: The number of features in the hidden state `h`
+        num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
+            would mean stacking two GRUs together to form a `stacked GRU`,
+            with the second GRU taking in outputs of the first GRU and
+            computing the final results. Default: 1
+        bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
+            Default: ``True``
+        batch_first: If ``True``, then the input and output tensors are provided
+            as `(batch, seq, feature)` instead of `(seq, batch, feature)`.
+            Note that this does not apply to hidden or cell states. See the
+            Inputs/Outputs sections below for details.  Default: ``False``
+        dropout: If non-zero, introduces a `Dropout` layer on the outputs of each
+            GRU layer except the last layer, with dropout probability equal to
+            :attr:`dropout`. Default: 0
+        bidirectional: If ``True``, becomes a bidirectional GRU. Default: ``False``
+
+    Inputs: input, h_0
+        * **input**: tensor of shape :math:`(L, N, H_{in})` when ``batch_first=False`` or
+          :math:`(N, L, H_{in})` when ``batch_first=True`` containing the features of
+          the input sequence. 
+        * **h_0**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the initial hidden
+          state for each element in the batch. Defaults to zeros if not provided.
+
+        where:
+
+        .. math::
+            \begin{aligned}
+                N ={} & \text{batch size} \\
+                L ={} & \text{sequence length} \\
+                D ={} & 2 \text{ if bidirectional=True otherwise } 1 \\
+                H_{in} ={} & \text{input\_size} \\
+                H_{out} ={} & \text{hidden\_size}
+            \end{aligned}
+
+    Outputs: output, h_n
+        * **output**: tensor of shape :math:`(L, N, D * H_{out})` when ``batch_first=False`` or
+          :math:`(N, L, D * H_{out})` when ``batch_first=True`` containing the output features
+          `(h_t)` from the last layer of the GRU, for each `t`. If a
+        * **h_n**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the final hidden state
+          for each element in the batch.
+
+    Attributes:
+        weight_ih_l[k] : the learnable input-hidden weights of the :math:`\text{k}^{th}` layer
+            (W_ir|W_iz|W_in), of shape `(3*hidden_size, input_size)` for `k = 0`.
+            Otherwise, the shape is `(3*hidden_size, num_directions * hidden_size)`
+        weight_hh_l[k] : the learnable hidden-hidden weights of the :math:`\text{k}^{th}` layer
+            (W_hr|W_hz|W_hn), of shape `(3*hidden_size, hidden_size)`
+        bias_ih_l[k] : the learnable input-hidden bias of the :math:`\text{k}^{th}` layer
+            (b_ir|b_iz|b_in), of shape `(3*hidden_size)`
+        bias_hh_l[k] : the learnable hidden-hidden bias of the :math:`\text{k}^{th}` layer
+            (b_hr|b_hz|b_hn), of shape `(3*hidden_size)`
+
+    .. note::
+        All the weights and biases are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`
+        where :math:`k = \frac{1}{\text{hidden\_size}}`
+
+    .. note::
+        For bidirectional GRUs, forward and backward are directions 0 and 1 respectively.
+        Example of splitting the output layers when ``batch_first=False``:
+        ``output.view(seq_len, batch, num_directions, hidden_size)``.
+
+    # For example:
+
+    # .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> rnn = flow.nn.GRU(10, 20, 2)
+        >>> input = flow.Tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
+        >>> h0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
+        >>> output, hn = rnn(input, h0)
+    
+    """
+
+    def __init__(
+        self, 
+        input_size: int, 
+        hidden_size: int, 
+        num_layers: int = 1, 
+        bias:bool = True, 
+        batch_first:bool = False, 
+        dropout:float = 0, 
+        bidirectional:bool = False):
         super().__init__()
 
         self.input_size = input_size
@@ -418,7 +539,143 @@ class GRU(nn.Module):
 
 
 class LSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=1, bias=True, batch_first=False, dropout=0, bidirectional=False, proj_size=0):
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#LSTM
+
+    Applies a multi-layer long short-term memory (LSTM) RNN to an input sequence.
+
+    For each element in the input sequence, each layer computes the following
+    function:
+
+    .. math::
+        \begin{array}{ll} \\
+            i_t = \sigma(W_{ii} x_t + b_{ii} + W_{hi} h_{t-1} + b_{hi}) \\
+            f_t = \sigma(W_{if} x_t + b_{if} + W_{hf} h_{t-1} + b_{hf}) \\
+            g_t = \tanh(W_{ig} x_t + b_{ig} + W_{hg} h_{t-1} + b_{hg}) \\
+            o_t = \sigma(W_{io} x_t + b_{io} + W_{ho} h_{t-1} + b_{ho}) \\
+            c_t = f_t \odot c_{t-1} + i_t \odot g_t \\
+            h_t = o_t \odot \tanh(c_t) \\
+        \end{array}
+
+    where :math:`h_t` is the hidden state at time `t`, :math:`c_t` is the cell
+    state at time `t`, :math:`x_t` is the input at time `t`, :math:`h_{t-1}`
+    is the hidden state of the layer at time `t-1` or the initial hidden
+    state at time `0`, and :math:`i_t`, :math:`f_t`, :math:`g_t`,
+    :math:`o_t` are the input, forget, cell, and output gates, respectively.
+    :math:`\sigma` is the sigmoid function, and :math:`\odot` is the Hadamard product.
+
+    In a multilayer LSTM, the input :math:`x^{(l)}_t` of the :math:`l` -th layer
+    (:math:`l >= 2`) is the hidden state :math:`h^{(l-1)}_t` of the previous layer multiplied by
+    dropout :math:`\delta^{(l-1)}_t` where each :math:`\delta^{(l-1)}_t` is a Bernoulli random
+    variable which is :math:`0` with probability :attr:`dropout`.
+
+    If ``proj_size > 0`` is specified, LSTM with projections will be used. This changes
+    the LSTM cell in the following way. First, the dimension of :math:`h_t` will be changed from
+    ``hidden_size`` to ``proj_size`` (dimensions of :math:`W_{hi}` will be changed accordingly).
+    Second, the output hidden state of each layer will be multiplied by a learnable projection
+    matrix: :math:`h_t = W_{hr}h_t`. Note that as a consequence of this, the output
+    of LSTM network will be of different shape as well. See Inputs/Outputs sections below for exact
+    dimensions of all variables. You can find more details in https://arxiv.org/abs/1402.1128.
+
+    Args:
+        input_size: The number of expected features in the input `x`
+        hidden_size: The number of features in the hidden state `h`
+        num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
+            would mean stacking two LSTMs together to form a `stacked LSTM`,
+            with the second LSTM taking in outputs of the first LSTM and
+            computing the final results. Default: 1
+        bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
+            Default: ``True``
+        batch_first: If ``True``, then the input and output tensors are provided
+            as `(batch, seq, feature)` instead of `(seq, batch, feature)`.
+            Note that this does not apply to hidden or cell states. See the
+            Inputs/Outputs sections below for details.  Default: ``False``
+        dropout: If non-zero, introduces a `Dropout` layer on the outputs of each
+            LSTM layer except the last layer, with dropout probability equal to
+            :attr:`dropout`. Default: 0
+        bidirectional: If ``True``, becomes a bidirectional LSTM. Default: ``False``
+        proj_size: If ``> 0``, will use LSTM with projections of corresponding size. Default: 0
+
+    Inputs: input, (h_0, c_0)
+        * **input**: tensor of shape :math:`(L, N, H_{in})` when ``batch_first=False`` or
+          :math:`(N, L, H_{in})` when ``batch_first=True`` containing the features of
+          the input sequence.
+        * **h_0**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the
+          initial hidden state for each element in the batch.
+          Defaults to zeros if (h_0, c_0) is not provided.
+        * **c_0**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{cell})` containing the
+          initial cell state for each element in the batch.
+          Defaults to zeros if (h_0, c_0) is not provided.
+
+        where:
+
+        .. math::
+            \begin{aligned}
+                N ={} & \text{batch size} \\
+                L ={} & \text{sequence length} \\
+                D ={} & 2 \text{ if bidirectional=True otherwise } 1 \\
+                H_{in} ={} & \text{input\_size} \\
+                H_{cell} ={} & \text{hidden\_size} \\
+                H_{out} ={} & \text{proj\_size if } \text{proj\_size}>0 \text{ otherwise hidden\_size} \\
+            \end{aligned}
+
+    Outputs: output, (h_n, c_n)
+        * **output**: tensor of shape :math:`(L, N, D * H_{out})` when ``batch_first=False`` or
+          :math:`(N, L, D * H_{out})` when ``batch_first=True`` containing the output features
+          `(h_t)` from the last layer of the LSTM, for each `t`.
+        * **h_n**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the
+          final hidden state for each element in the batch.
+        * **c_n**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{cell})` containing the
+          final cell state for each element in the batch.
+
+    Attributes:
+        weight_ih_l[k] : the learnable input-hidden weights of the :math:`\text{k}^{th}` layer
+            `(W_ii|W_if|W_ig|W_io)`, of shape `(4*hidden_size, input_size)` for `k = 0`.
+            Otherwise, the shape is `(4*hidden_size, num_directions * hidden_size)`
+        weight_hh_l[k] : the learnable hidden-hidden weights of the :math:`\text{k}^{th}` layer
+            `(W_hi|W_hf|W_hg|W_ho)`, of shape `(4*hidden_size, hidden_size)`. If ``proj_size > 0``
+            was specified, the shape will be `(4*hidden_size, proj_size)`.
+        bias_ih_l[k] : the learnable input-hidden bias of the :math:`\text{k}^{th}` layer
+            `(b_ii|b_if|b_ig|b_io)`, of shape `(4*hidden_size)`
+        bias_hh_l[k] : the learnable hidden-hidden bias of the :math:`\text{k}^{th}` layer
+            `(b_hi|b_hf|b_hg|b_ho)`, of shape `(4*hidden_size)`
+        weight_hr_l[k] : the learnable projection weights of the :math:`\text{k}^{th}` layer
+            of shape `(proj_size, hidden_size)`. Only present when ``proj_size > 0`` was
+            specified.
+
+    .. note::
+        All the weights and biases are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`
+        where :math:`k = \frac{1}{\text{hidden\_size}}`
+
+    .. note::
+        For bidirectional LSTMs, forward and backward are directions 0 and 1 respectively.
+        Example of splitting the output layers when ``batch_first=False``:
+        ``output.view(seq_len, batch, num_directions, hidden_size)``.
+
+    # For example:
+
+    # .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> rnn = flow.nn.LSTM(10, 20, 2)
+        >>> input = flow.Tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
+        >>> h0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
+        >>> c0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
+        >>> output, (hn, cn) = rnn(input, (h0, c0))
+
+    """
+
+    def __init__(
+        self, 
+        input_size: int, 
+        hidden_size: int, 
+        num_layers: int = 1, 
+        bias: bool = True, 
+        batch_first: bool = False, 
+        dropout: float = 0, 
+        bidirectional: bool = False, 
+        proj_size: int = 0):
         super().__init__()
 
         self.input_size = input_size
@@ -606,6 +863,3 @@ if __name__ == "__main__":
     import doctest
 
     doctest.testmod(raise_on_error=True)
-
-
-
