@@ -59,15 +59,14 @@ class SGD(Optimizer):
         momentum: float = 0.0,
         weight_decay: float = 0.0,
     ):
-        super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
         assert weight_decay >= 0.0, f"Invalid weight_decay: {weight_decay}"
-        self._default_options["lr"] = lr
-        self._default_options["momentum"] = momentum
-        self._default_options["weight_decay"] = weight_decay
-
-        self._parse_input_parameters(parameters)
+        options = dict()
+        options["lr"] = lr
+        options["momentum"] = momentum
+        options["weight_decay"] = weight_decay
+        super().__init__(parameters, options)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:

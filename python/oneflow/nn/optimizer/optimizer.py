@@ -53,12 +53,13 @@ class ParamGroup(object):
 
 
 class Optimizer(object):
-    def __init__(self):
+    def __init__(self, parameters, options):
         self.param_groups = list()
-        self._default_options = dict()
+        self._default_options = options
         self._state = dict()
         self._state["step"] = 0
-        self._op = None
+
+        self._parse_input_parameters(parameters)
 
     def add_param_group(self, param_group) -> None:
         raise NotImplementedError()
