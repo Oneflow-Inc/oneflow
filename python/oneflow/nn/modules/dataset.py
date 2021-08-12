@@ -56,7 +56,7 @@ class OfrecordReader(Module):
         if name is not None:
             print("WARNING: name has been deprecated and has NO effect.\n")
 
-        parallel_distribution = []
+        nd_sbp = []
 
         self.placement = placement
         if placement is None:
@@ -67,12 +67,12 @@ class OfrecordReader(Module):
         if placement is not None:
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(sbp, flow.sbp.sbp):
-                parallel_distribution.append(sbp._ToAttrStr())
+                nd_sbp.append(sbp._ToAttrStr())
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-                    parallel_distribution.append(elem._ToAttrStr())
-            assert len(parallel_distribution) == len(placement.hierarchy)
+                    nd_sbp.append(elem._ToAttrStr())
+            assert len(nd_sbp) == len(placement.hierarchy)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
@@ -89,7 +89,7 @@ class OfrecordReader(Module):
             .Attr("shuffle_after_epoch", shuffle_after_epoch)
             .Attr("part_name_suffix_length", part_name_suffix_length)
             .Attr("seed", seed)
-            .Attr("parallel_distribution", parallel_distribution)
+            .Attr("nd_sbp", nd_sbp)
             .Build()
         )
         self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
@@ -148,7 +148,7 @@ class CoinFlip(Module):
         sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     ):
         super().__init__()
-        parallel_distribution = []
+        nd_sbp = []
 
         self.placement = placement
         if placement is None:
@@ -160,12 +160,12 @@ class CoinFlip(Module):
         if placement is not None:
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(sbp, flow.sbp.sbp):
-                parallel_distribution.append(sbp._ToAttrStr())
+                nd_sbp.append(sbp._ToAttrStr())
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-                    parallel_distribution.append(elem._ToAttrStr())
-            assert len(parallel_distribution) == len(placement.hierarchy)
+                    nd_sbp.append(elem._ToAttrStr())
+            assert len(nd_sbp) == len(placement.hierarchy)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
@@ -178,7 +178,7 @@ class CoinFlip(Module):
             .Attr("probability", probability)
             .Attr("has_seed", has_seed)
             .Attr("seed", seed)
-            .Attr("parallel_distribution", parallel_distribution)
+            .Attr("nd_sbp", nd_sbp)
             .Build()
         )
         self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
@@ -661,7 +661,7 @@ class COCOReader(Module):
         if random_seed is None:
             random_seed = random.randrange(sys.maxsize)
 
-        parallel_distribution = []
+        nd_sbp = []
         self.placement = placement
         if placement is None:
             self.device = device or flow.device("cpu")
@@ -675,13 +675,13 @@ class COCOReader(Module):
                 for sbp_item in sbp:
                     if not isinstance(sbp_item, flow.sbp.sbp):
                         raise ValueError(f"invalid sbp item: {sbp_item}")
-                    parallel_distribution.append(sbp_item._ToAttrStr())
+                    nd_sbp.append(sbp_item._ToAttrStr())
             elif isinstance(sbp, flow.sbp.sbp):
-                parallel_distribution.append(sbp._ToAttrStr())
+                nd_sbp.append(sbp._ToAttrStr())
             else:
                 raise ValueError(f"invalid param sbp: {sbp}")
 
-            if len(parallel_distribution) != len(placement.hierarchy):
+            if len(nd_sbp) != len(placement.hierarchy):
                 raise ValueError(
                     "dimensions of sbp and dimensions of hierarchy of placement don't equal"
                 )
@@ -706,7 +706,7 @@ class COCOReader(Module):
                 "remove_images_without_annotations", remove_images_without_annotations
             )
             .Attr("stride_partition", stride_partition)
-            .Attr("parallel_distribution", parallel_distribution)
+            .Attr("nd_sbp", nd_sbp)
             .Build()
         )
         self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
@@ -825,7 +825,7 @@ class GPTIndexedBinDataReader(Module):
     ):
         super().__init__()
 
-        parallel_distribution = []
+        nd_sbp = []
         self.placement = placement
         if placement is None:
             self.device = device or flow.device("cpu")
@@ -839,13 +839,13 @@ class GPTIndexedBinDataReader(Module):
                 for sbp_item in sbp:
                     if not isinstance(sbp_item, flow.sbp.sbp):
                         raise ValueError(f"invalid sbp item: {sbp_item}")
-                    parallel_distribution.append(sbp_item._ToAttrStr())
+                    nd_sbp.append(sbp_item._ToAttrStr())
             elif isinstance(sbp, flow.sbp.sbp):
-                parallel_distribution.append(sbp._ToAttrStr())
+                nd_sbp.append(sbp._ToAttrStr())
             else:
                 raise ValueError(f"invalid param sbp: {sbp}")
 
-            if len(parallel_distribution) != len(placement.hierarchy):
+            if len(nd_sbp) != len(placement.hierarchy):
                 raise ValueError(
                     "dimensions of sbp and dimensions of hierarchy of placement don't equal"
                 )
@@ -879,7 +879,7 @@ class GPTIndexedBinDataReader(Module):
             .Attr("random_seed", random_seed)
             .Attr("split_sizes", split_sizes)
             .Attr("split_index", split_index)
-            .Attr("parallel_distribution", parallel_distribution)
+            .Attr("nd_sbp", nd_sbp)
         )
         self.op_ = op_builder.Build()
         self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
