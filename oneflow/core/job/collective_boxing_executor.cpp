@@ -106,7 +106,7 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
   };
 
   struct NcclDeviceCtx : public DeviceCtx {
-    const cudaStream_t& cuda_stream() const override { return stream; }
+    cudaStream_t cuda_stream() const override { return stream; }
     void AddCallBack(std::function<void()>) const override { UNIMPLEMENTED(); }
 
     cudaStream_t stream = nullptr;

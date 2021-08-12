@@ -29,10 +29,11 @@ class IdentityKernel final : public KernelIf<device_type> {
   ~IdentityKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
   void ForwardHeader(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow

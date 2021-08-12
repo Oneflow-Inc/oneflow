@@ -266,7 +266,7 @@ def _gen_tensor_str_template(inp, is_meta):
         raise RunTimeError("unknow device type")
     if inp.is_lazy:
         suffixes.append("is_lazy='True'")
-    
+
     # Inp is empty, meta or normal
     if inp.numel() == 0:
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
@@ -288,10 +288,11 @@ def _gen_tensor_str_template(inp, is_meta):
 
     return _add_suffixes(prefix + tensor_str, suffixes, indent)
 
+
 def _gen_tensor_str(tensor):
     return _gen_tensor_str_template(tensor, False)
+
 
 def _gen_tensor_meta_str(tensor):
     # meta
     return _gen_tensor_str_template(tensor, True)
-
