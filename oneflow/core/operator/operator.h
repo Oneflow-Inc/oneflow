@@ -30,7 +30,7 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/kernel/kernel.pb.h"
-#include "oneflow/core/job/parallel_distribution_infer_hint.h"
+#include "oneflow/core/job/nd_sbp_infer_hint.h"
 
 namespace oneflow {
 
@@ -142,18 +142,18 @@ class Operator {
                                 const cfg::SbpSignature& sbp_sig_conf,
                                 const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const;
   Maybe<void> FillSbpSignature(const cfg::SbpSignature& sbp_signature);
-  Maybe<void> FillNdSbpSignature(
-      const cfg::NdSbpSignature& signature);
+  Maybe<void> FillParallelDistributionSignature(
+      const cfg::ParallelDistributionSignature& signature);
   Maybe<void> InferSbpSignatureIf(
       const cfg::SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc);
-  Maybe<void> InferNdSbpSignatureIf(
-      const cfg::NdSbpSignature& parallel_distribution_constraints,
+  Maybe<void> InferParallelDistributionSignatureIf(
+      const cfg::ParallelDistributionSignature& nd_sbp_constraints,
       const ParallelDesc& parallel_desc,
-      std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
-          NdSbpInferHint4Ibn);
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn);
   // Infer blob's MirroredSignature
   Maybe<void> InferMirroredSignatureIf(
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
@@ -164,7 +164,7 @@ class Operator {
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const cfg::SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
-  Maybe<const cfg::NdSbp*> NdSbp4BnInOp(
+  Maybe<const cfg::ParallelDistribution*> ParallelDistribution4BnInOp(
       const std::string& bn_in_op) const;
   Maybe<const OptMirroredParallel*> OptMirroredParallel4BnInOp(const std::string& bn_in_op) const;
 
@@ -178,7 +178,7 @@ class Operator {
   std::shared_ptr<OpAttribute> GetOpAttributeWithoutOpNameAndLbn() const;
 
   Maybe<const cfg::SbpSignature*> sbp_signature() const;
-  Maybe<const cfg::NdSbpSignature*> parallel_distribution_signature() const;
+  Maybe<const cfg::ParallelDistributionSignature*> nd_sbp_signature() const;
   BlobLastUsedSignature* mut_blob_last_used_signature();
   BlobBackwardUsedSignature* mut_blob_backward_used_signature();
 
@@ -213,12 +213,12 @@ class Operator {
       const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
-  virtual Maybe<void> InferNdSbpSignature(
-      cfg::NdSbpSignature* parallel_distribution_signature,
-      const cfg::NdSbpSignature& parallel_distribution_constraints,
+  virtual Maybe<void> InferParallelDistributionSignature(
+      cfg::ParallelDistributionSignature* nd_sbp_signature,
+      const cfg::ParallelDistributionSignature& nd_sbp_constraints,
       const ParallelDesc& parallel_desc,
-      std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
-          NdSbpInferHint4Ibn) const;
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn) const;
   virtual Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
     OF_UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
   }
@@ -302,7 +302,7 @@ class Operator {
   std::shared_ptr<const Shape> input_output_fastest_time_shape_;
   std::shared_ptr<const Shape> op_time_shape_;
   std::shared_ptr<const cfg::SbpSignature> sbp_signature_;
-  std::shared_ptr<const cfg::NdSbpSignature> parallel_distribution_signature_;
+  std::shared_ptr<const cfg::ParallelDistributionSignature> nd_sbp_signature_;
   PbRpf<std::string> input_bns_;
   PbRpf<std::string> output_bns_;
   PbRpf<std::string> tmp_bns_;
@@ -423,21 +423,18 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
 
 namespace cfg {
 
-class NdSbp;
+class ParallelDistribution;
 
 }
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
-                              const cfg::NdSbp& parallel_distribution,
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::ParallelDistribution& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const ParallelContext& parallel_ctx);
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
-                              const cfg::NdSbp& parallel_distribution,
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::ParallelDistribution& nd_sbp,
                               const ParallelDesc& parallel_desc, int64_t parallel_id);
 
-Maybe<Shape> GetLogicalShape(const Shape& physical_shape,
-                             const cfg::NdSbp& parallel_distribution,
+Maybe<Shape> GetLogicalShape(const Shape& physical_shape, const cfg::ParallelDistribution& nd_sbp,
                              const ParallelDesc& parallel_desc);
 
 }  // namespace oneflow

@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/cached_caller.h"
 
 namespace oneflow {
 
@@ -103,6 +104,8 @@ class ParallelDesc final {
 
   std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf() const { return cfg_parallel_conf_; }
 
+  bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
+
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
   ParallelDesc() : symbol_id_(Error::SymbolIdUninitialized()) {}
@@ -113,7 +116,6 @@ class ParallelDesc final {
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
-  bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
 
   Maybe<int64_t> symbol_id_;
   DeviceType device_type_;
@@ -137,6 +139,9 @@ class ParallelDesc final {
 Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
                                                   Optional<int64_t>* parallel_id);
 
+std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc);
+
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
 }
@@ -150,6 +155,8 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
 
 ParallelConf GenParallelConfOfCpuZeroOnMaster();
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
+
+bool IsMirroredParallelContext(const ParallelContext& parallel_ctx);
 
 }  // namespace oneflow
 

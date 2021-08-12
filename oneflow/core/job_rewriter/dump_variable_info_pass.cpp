@@ -23,19 +23,19 @@ namespace {
 
 std::string GetNdSbpString(const VariableOpConf& conf,
                                           const ParallelDesc& parallel_desc) {
-  const bool has_parallel_distribution_conf = (conf.parallel_distribution_size() != 0);
+  const bool has_nd_sbp_conf = (conf.nd_sbp_size() != 0);
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
-  if (has_parallel_distribution_conf) { CHECK_EQ(conf.parallel_distribution_size(), num_axes); }
-  std::string parallel_distribution_str;
+  if (has_nd_sbp_conf) { CHECK_EQ(conf.nd_sbp_size(), num_axes); }
+  std::string nd_sbp_str;
   FOR_RANGE(int64_t, i, 0, num_axes) {
-    if (has_parallel_distribution_conf) {
-      parallel_distribution_str += conf.parallel_distribution(i);
+    if (has_nd_sbp_conf) {
+      nd_sbp_str += conf.nd_sbp(i);
     } else {
-      parallel_distribution_str += "B";
+      nd_sbp_str += "B";
     }
-    if (i != num_axes - 1) { parallel_distribution_str += ", "; }
+    if (i != num_axes - 1) { nd_sbp_str += ", "; }
   }
-  return parallel_distribution_str;
+  return nd_sbp_str;
 }
 
 class DumpVariableInfoPass final : public JobPass {

@@ -191,13 +191,12 @@ size_t MirroredTensorMeta::CalcHashValue() const {
 bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
-         && this->parallel_distribution() == other.parallel_distribution()
-         && this->parallel_desc() == other.parallel_desc();
+         && this->nd_sbp() == other.nd_sbp() && this->parallel_desc() == other.parallel_desc();
 }
 
 size_t ConsistentTensorMeta::CalcHashValue() const {
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Symbol<cfg::NdSbp>>()(parallel_distribution())
+         ^ std::hash<Symbol<cfg::ParallelDistribution>>()(nd_sbp())
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
 }
 
@@ -219,13 +218,11 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
 
 namespace {
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
-                              const cfg::NdSbp& parallel_distribution,
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::ParallelDistribution& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {
-    return GetPhysicalShape(logical_shape, parallel_distribution, parallel_desc,
-                            JUST(parallel_id.value()));
+    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id.value()));
   } else {
     return std::make_shared<Shape>(DimVector(logical_shape.NumAxes(), 0));
   }
@@ -238,10 +235,10 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
     const Optional<int64_t>& parallel_id, bool requires_grad, bool is_leaf) {
   const auto& shape = consistent_tensor_meta->shape_ptr();
   const auto& dtype = consistent_tensor_meta->dtype();
-  const auto& parallel_distribution = consistent_tensor_meta->parallel_distribution();
+  const auto& nd_sbp = consistent_tensor_meta->nd_sbp();
   const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
   const auto& cur_rank_phy_shape =
-      JUST(GetPhysicalShape(*shape, *parallel_distribution, *parallel_desc, parallel_id));
+      JUST(GetPhysicalShape(*shape, *nd_sbp, *parallel_desc, parallel_id));
   const auto& cur_rank_phy_tensor_meta =
       std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
   auto cur_rank_phy_tensor_impl =

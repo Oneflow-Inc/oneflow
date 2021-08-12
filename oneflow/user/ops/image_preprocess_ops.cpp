@@ -157,7 +157,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("coin_flip")
     .Attr<int64_t>("batch_size")
     .Attr<int64_t>("seed", -1)
     .Attr<bool>("has_seed", false)
-    .Attr<std::vector<std::string>>("parallel_distribution")
+    .Attr<std::vector<std::string>>("nd_sbp")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
@@ -187,8 +187,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("coin_flip")
         inputs_dist.emplace_back(
             ctx->NdSbp4ArgNameAndIndex(arg_pair.first, arg_pair.second));
       }
-      const auto& dist_conf =
-          ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
+      const auto& dist_conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
       if (dist_conf.size() == 0) {
         FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
           output_dist->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);

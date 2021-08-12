@@ -64,24 +64,21 @@ Maybe<void> InputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InputOp::InferNdSbpSignature(
-    cfg::NdSbpSignature* parallel_distribution_signature,
-    const cfg::NdSbpSignature& parallel_distribution_constraints,
-    const ParallelDesc& parallel_desc,
-    std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
-        NdSbpInferHint4Ibn) const {
+Maybe<void> InputOp::InferParallelDistributionSignature(
+    cfg::ParallelDistributionSignature* nd_sbp_signature,
+    const cfg::ParallelDistributionSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
+    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+        ParallelDistributionInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const InterfaceBlobConf& blob_conf = op_conf().input_conf().blob_conf();
-  cfg::NdSbp& tick_parallel_distribution =
-      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["tick"];
-  tick_parallel_distribution.clear_sbp_parallel();
+  cfg::ParallelDistribution& tick_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["tick"];
+  tick_nd_sbp.clear_sbp_parallel();
   FOR_RANGE(int64_t, i, 0, parallel_hierarchy->NumAxes()) {
-    tick_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+    tick_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
   }
-  cfg::NdSbp& out_parallel_distribution =
-      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
-  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc,
-                                                              &out_parallel_distribution));
+  cfg::ParallelDistribution& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
+  JUST(InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
+                                                              &out_nd_sbp));
   return Maybe<void>::Ok();
 }
 

@@ -26,7 +26,7 @@ REGISTER_NO_GRAD_USER_OP("empty")
     .SetOutputBufferNum(1)
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
-    .Attr<std::vector<std::string>>("parallel_distribution")
+    .Attr<std::vector<std::string>>("nd_sbp")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
@@ -116,8 +116,7 @@ REGISTER_NO_GRAD_USER_OP("empty")
         inputs_dist.emplace_back(
             ctx->NdSbp4ArgNameAndIndex(arg_pair.first, arg_pair.second));
       }
-      const auto& dist_conf =
-          ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
+      const auto& dist_conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
       if (dist_conf.size() == 0) {
         FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
           output_dist->add_sbp_parallel()->mutable_broadcast_parallel();

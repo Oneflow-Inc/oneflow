@@ -250,12 +250,11 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
 
 Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
                                          Symbol<ParallelDesc> parallel_desc,
-                                         Symbol<cfg::NdSbp> parallel_distribution) {
+                                         Symbol<cfg::ParallelDistribution> nd_sbp) {
   Optional<int64_t> parallel_id;
   JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
-  const auto& broadcast_parallel_desc =
-      JUST(GetBroadcastSubParallelDesc(parallel_desc, parallel_distribution));
+  const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
   if (broadcast_parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(FindOrCreatEagerNcclBroadcastOpExpr(broadcast_parallel_desc));
@@ -289,13 +288,12 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
   std::shared_ptr<ConsistentTensor> consistent_tensor;
   {
     CHECK_OR_RETURN(ctx.parallel_desc.has_value());
-    CHECK_OR_RETURN(ctx.parallel_distribution.has_value());
-    const auto& parallel_distribution = JUST(ctx.parallel_distribution.value());
+    CHECK_OR_RETURN(ctx.nd_sbp.has_value());
+    const auto& nd_sbp = JUST(ctx.nd_sbp.value());
     const auto& parallel_desc = JUST(ctx.parallel_desc.value());
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
     ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape),
-                                     input_mirrored_tensor->dtype(), parallel_distribution,
-                                     parallel_desc);
+                                     input_mirrored_tensor->dtype(), nd_sbp, parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
@@ -306,8 +304,8 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
     const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*consistent_tensor));
     if (parallel_id.has_value()) {
-      const auto& synced_tensor = JUST(
-          GetSyncedTensorIfBroadcast(input_mirrored_tensor, parallel_desc, parallel_distribution));
+      const auto& synced_tensor =
+          JUST(GetSyncedTensorIfBroadcast(input_mirrored_tensor, parallel_desc, nd_sbp));
       consistent_tensor_impl->reset_cur_rank_phy_tensor(
           std::dynamic_pointer_cast<MirroredTensor>(synced_tensor));
     }

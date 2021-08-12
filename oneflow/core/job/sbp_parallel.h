@@ -30,7 +30,7 @@ inline bool operator!=(const cfg::SbpSignature& lhs, const cfg::SbpSignature& rh
   return !(lhs == rhs);
 }
 
-inline bool operator!=(const cfg::NdSbp& lhs, const cfg::NdSbp& rhs) {
+inline bool operator!=(const cfg::ParallelDistribution& lhs, const cfg::ParallelDistribution& rhs) {
   return !(lhs == rhs);
 }
 
@@ -52,16 +52,13 @@ bool IsValidSbpParallelString(const std::string& sbp_str);
 bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sbp_parallel);
 std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel);
 
-void SbpSignatureToNdSbpSignature(
-    const cfg::SbpSignature& sbp_signature,
-    cfg::NdSbpSignature* parallel_distribution_signature);
-template<typename NdSbpSignatureT>
-void NdSbpSignatureToSbpSignature(
-    const NdSbpSignatureT& parallel_distribution_signature,
-    cfg::SbpSignature* sbp_signature);
-void CheckSbpSignatureAndNdSbpEquals(
-    const cfg::SbpSignature& sbp_sig,
-    const cfg::NdSbpSignature& parallel_distribution_sig);
+void SbpSignatureToParallelDistributionSignature(
+    const cfg::SbpSignature& sbp_signature, cfg::ParallelDistributionSignature* nd_sbp_signature);
+template<typename ParallelDistributionSignatureT>
+void ParallelDistributionSignatureToSbpSignature(
+    const ParallelDistributionSignatureT& nd_sbp_signature, cfg::SbpSignature* sbp_signature);
+void CheckSbpSignatureAndParallelDistributionEquals(
+    const cfg::SbpSignature& sbp_sig, const cfg::ParallelDistributionSignature& nd_sbp_sig);
 }  // namespace oneflow
 
 namespace std {
