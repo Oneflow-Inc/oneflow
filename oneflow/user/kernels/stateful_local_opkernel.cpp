@@ -243,15 +243,15 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   }
   const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                       int32_t index) const override {
-    const auto& parallel_distribution = ParallelDistribution4ArgNameAndIndex(arg_name, index);
-    CHECK_EQ(parallel_distribution.sbp_parallel_size(), 1);
-    return parallel_distribution.sbp_parallel(0);
+    const auto& nd_sbp = ParallelDistribution4ArgNameAndIndex(arg_name, index);
+    CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
+    return nd_sbp.sbp_parallel(0);
   }
 
   const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
     return *CHECK_NOTNULL(base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))
-                ->parallel_distribution();
+                ->nd_sbp();
   }
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }

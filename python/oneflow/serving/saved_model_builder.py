@@ -291,7 +291,7 @@ def GetInterfaceBlobConf(job_name, lbn, blob_conf=None):
     if split_axis is not None:
         sbp_parallel = sbp_parallel_pb.SbpParallel()
         sbp_parallel.split_parallel.axis = split_axis
-        blob_conf.parallel_distribution.sbp_parallel.extend([sbp_parallel])
+        blob_conf.nd_sbp.sbp_parallel.extend([sbp_parallel])
     blob_conf.is_dynamic = is_dynamic
     return blob_conf
 
