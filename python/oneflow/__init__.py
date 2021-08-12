@@ -225,6 +225,7 @@ from oneflow.nn.modules.logical_and import logical_and_op as logical_and
 from oneflow.nn.modules.logical_or import logical_or_op as logical_or
 from oneflow.nn.modules.logical_xor import logical_xor_op as logical_xor
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
+from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.less import less_op as lt
 from oneflow.nn.modules.less_equal import less_equal_op as le
 from oneflow.nn.modules.log1p import log1p_op as log1p
