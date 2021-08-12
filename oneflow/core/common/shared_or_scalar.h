@@ -31,7 +31,6 @@ class SharedOrScalar final {
   static_assert(IsScalarType<ScalarT>::value, "ScalarT should be scalar type.");
 
   using Shared = std::shared_ptr<StructT>;
-  using SharedMem = char[sizeof(Shared)];
 
   SharedOrScalar(const ScalarT& scalar_value) : is_scalar_(true), scalar_value_(scalar_value) {}
 
@@ -55,7 +54,7 @@ class SharedOrScalar final {
     if (rhs.is_scalar_) {
       scalar_value_ = rhs.scalar_value_;
     } else {
-      new (&shared_mem_) Shared(std::move(rhs.GetShared()));
+      new (&shared_mem_) Shared(std::move(*rhs.MutableShared()));
     }
   }
 
@@ -66,7 +65,7 @@ class SharedOrScalar final {
       if (is_scalar_) {
         new (&shared_mem_) Shared(rhs.GetShared());
       } else {
-        GetShared() = rhs.GetShared();
+        *MutableShared() = rhs.GetShared();
       }
     }
     is_scalar_ = rhs.is_scalar_;
@@ -78,9 +77,9 @@ class SharedOrScalar final {
       scalar_value_ = rhs.scalar_value_;
     } else {
       if (is_scalar_) {
-        new (&shared_mem_) Shared(std::move(rhs.GetShared()));
+        new (&shared_mem_) Shared(std::move(*rhs.MutableShared()));
       } else {
-        GetShared() = std::move(rhs.GetShared());
+        *MutableShared() = std::move(*rhs.MutableShared());
       }
     }
     is_scalar_ = rhs.is_scalar_;
@@ -115,12 +114,12 @@ class SharedOrScalar final {
 
     //  to avoid error(a non-POD class definition is not allowed inside of a statement expression)
     //  in nvcc while using with JUST macro (this type is used in Maybe)
-    SharedMem shared_mem_;
+    alignas(Shared) char shared_mem_[sizeof(Shared)];
   };
 
   const Shared& GetShared() const { return reinterpret_cast<const Shared&>(shared_mem_); }
 
-  Shared& GetShared() { return reinterpret_cast<Shared&>(shared_mem_); }
+  Shared* MutableShared() { return reinterpret_cast<Shared*>(&shared_mem_); }
 };
 
 }  // namespace oneflow

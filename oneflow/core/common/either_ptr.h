@@ -29,26 +29,32 @@ class EitherPtr final {
   using XPtr = std::shared_ptr<X>;
   using YPtr = std::shared_ptr<Y>;
 
-  EitherPtr() : type_(UnionType<X>::value), x_ptr(nullptr) {}
-  EitherPtr(const XPtr& ptr) : type_(UnionType<X>::value), x_ptr(ptr) {}
-  EitherPtr(const YPtr& ptr) : type_(UnionType<Y>::value) { new (&x_ptr) YPtr(ptr); }
+  EitherPtr() : type_(UnionType<X>::value), x_ptr_(nullptr) {}
+  EitherPtr(const XPtr& ptr) : type_(UnionType<X>::value), x_ptr_(ptr) {}
+  EitherPtr(const YPtr& ptr) : type_(UnionType<Y>::value) { new (&x_ptr_) YPtr(ptr); }
 
-  EitherPtr(XPtr&& ptr) : type_(UnionType<X>::value), x_ptr(std::move(ptr)) {}
-  EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value) { new (&x_ptr) YPtr(std::move(ptr)); }
+  EitherPtr(XPtr&& ptr) : type_(UnionType<X>::value), x_ptr_(std::move(ptr)) {}
+  EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value) { new (&x_ptr_) YPtr(std::move(ptr)); }
 
-  EitherPtr(const EitherPtr& either_ptr) : type_(either_ptr.type_), x_ptr(either_ptr.x_ptr) {}
-  EitherPtr(EitherPtr&& either_ptr) : type_(either_ptr.type_), x_ptr(std::move(either_ptr.x_ptr)) {}
+  EitherPtr(const EitherPtr& either_ptr) : type_(either_ptr.type_), x_ptr_(either_ptr.x_ptr_) {}
+  EitherPtr(EitherPtr&& either_ptr) : type_(either_ptr.type_), x_ptr_(std::move(either_ptr.x_ptr_)) {}
 
-  ~EitherPtr() { x_ptr.~XPtr(); }
+  ~EitherPtr() { 
+    if (Has<X>()) {
+      x_ptr_.~XPtr();
+    } else {
+      y_ptr().~YPtr();
+    }
+   }
 
   EitherPtr& operator=(const EitherPtr& either_ptr) {
-    x_ptr = either_ptr.x_ptr;
+    x_ptr_ = either_ptr.x_ptr_;
     type_ = either_ptr.type_;
     return *this;
   }
 
   EitherPtr& operator=(EitherPtr&& either_ptr) {
-    x_ptr = std::move(either_ptr.x_ptr);
+    x_ptr_ = std::move(either_ptr.x_ptr_);
     type_ = either_ptr.type_;
     return *this;
   }
@@ -61,11 +67,6 @@ class EitherPtr final {
   template<typename T>
   const std::shared_ptr<T>& Get() const {
     return Get(tag<T>{});
-  }
-
-  template<typename T>
-  std::shared_ptr<T>& Get() {
-    return const_cast<std::shared_ptr<T>&>(Get(tag<T>{}));
   }
 
  private:
@@ -85,7 +86,7 @@ class EitherPtr final {
 
   const XPtr& Get(tag<X>) const {
     CHECK(Has<X>());
-    return x_ptr;
+    return x_ptr_;
   }
 
   const YPtr& Get(tag<Y>) const {
@@ -93,12 +94,10 @@ class EitherPtr final {
     return y_ptr();
   }
 
-  const YPtr& y_ptr() const { return reinterpret_cast<const YPtr&>(x_ptr); }
-
-  YPtr& y_ptr() { return reinterpret_cast<YPtr&>(x_ptr); }
+  const YPtr& y_ptr() const { return reinterpret_cast<const YPtr&>(x_ptr_); }
 
   int8_t type_;
-  std::shared_ptr<X> x_ptr;
+  std::shared_ptr<X> x_ptr_;
 };
 
 }  // namespace oneflow
