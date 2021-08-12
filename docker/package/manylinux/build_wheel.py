@@ -374,6 +374,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
     parser.add_argument("--mlir", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc4", default=False, action="store_true", required=False)
     parser.add_argument("--gcc7", default=False, action="store_true", required=False)
     parser.add_argument("--gcc9", default=False, action="store_true", required=False)
     parser.add_argument(
@@ -391,7 +392,8 @@ if __name__ == "__main__":
     extra_oneflow_cmake_args = " ".join(
         [" ".join(l) for l in args.extra_oneflow_cmake_args]
     )
-
+    if (not args.gcc4) and (not args.gcc7) and (not args.gcc9):
+        args.gcc7 = True
     cuda_versions = []
     if args.use_aliyun_mirror:
         extra_oneflow_cmake_args += " -DTHIRD_PARTY_MIRROR=aliyun"
@@ -470,7 +472,9 @@ if __name__ == "__main__":
             if args.xla:
                 bash_args = "-l"
             bash_wrap = ""
-            if args.xla or args.gcc7 or args.mlir:
+            if args.gcc4:
+                bash_wrap = "gcc --version"
+            elif args.gcc7:
                 bash_wrap = """
 source scl_source enable devtoolset-7
 gcc --version
@@ -481,7 +485,7 @@ source scl_source enable devtoolset-9
 gcc --version
 """
             else:
-                bash_wrap = "gcc --version"
+                raise ValueError("either one in gcc4, gcc7, gcc9 must be enabled")
 
             global cache_dir
             if args.cache_dir:
@@ -491,6 +495,10 @@ gcc --version
                 sub_dir = cuda_version
                 if args.xla:
                     sub_dir += "-xla"
+                if args.mlir:
+                    sub_dir += "-mlir"
+                if args.gcc4:
+                    sub_dir += "-gcc4"
                 if args.gcc7:
                     sub_dir += "-gcc7"
                 if args.gcc9:
@@ -498,8 +506,6 @@ gcc --version
                 if args.cpu:
                     assert len(cuda_versions) == 1
                     sub_dir += "-cpu"
-                if args.mlir:
-                    sub_dir += "-mlir"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.build_img:
                 return
