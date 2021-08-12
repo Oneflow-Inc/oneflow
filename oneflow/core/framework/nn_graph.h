@@ -45,6 +45,7 @@ class NNGraph final : public NNGraphIf {
   Maybe<void> CompileAndInitRuntime();
 
  private:
+  Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
   void NewRuntimeBuffers();
   void CloseRuntimeBuffers();
 
