@@ -451,7 +451,7 @@ def l2_normalize(input, dim=0, epsilon=1e-12):
     The equation is:
 
     .. math::
-        out = \\frac{x}{\\sqrt{\\Sigma{x^2}+\\epsilon}}
+        out = \\frac{x}{max(\\sqrt{\\Sigma{x^2}}, \\epsilon)}
 
     Args:
         input (oneflow.Tensor): Input Tensor
