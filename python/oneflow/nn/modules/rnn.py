@@ -2,7 +2,7 @@
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
+you may not use this file except in compliance with the License.ls
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import oneflow as flow
 from oneflow import nn
 from oneflow.nn import Module
 from math import sqrt
-
 
 class RNN(Module):
     """The interface is consistent with PyTorch.
@@ -114,7 +114,6 @@ class RNN(Module):
     """
 
     def __init__(
-<<<<<<< HEAD
         self, 
         input_size: int, 
         hidden_size: int, 
@@ -125,18 +124,6 @@ class RNN(Module):
         dropout: float = 0, 
         bidirectional: bool = False):
 
-=======
-        self,
-        input_size : int,
-        hidden_size : int,
-        num_layers : int = 1,
-        nonlinearity: str = "tanh",
-        bias: bool = True,
-        batch_first: bool = False,
-        dropout: float = 0,
-        bidirectional: bool = False,
-    ):
->>>>>>> 44132fc6c3931a6f7546f5002d13ef06dabaed09
         super().__init__()
 
         self.input_size = input_size
@@ -151,20 +138,18 @@ class RNN(Module):
         gate_size = hidden_size
         self.drop = nn.Dropout(self.dropout)
 
-        if self.nonlinearity == "tanh":
+        if self.nonlinearity == 'tanh':
             self.act = nn.Tanh()
-        elif self.nonlinearity == "relu":
+        elif self.nonlinearity == 'relu':
             self.act = nn.LeakyReLU()
         else:
             raise ValueError("Unknown nonlinearity '{}'".format(self.nonlinearity))
 
         for layer in range(num_layers):
             for direction in range(num_directions):
-
+                
                 real_hidden_size = hidden_size
-                layer_input_size = (
-                    input_size if layer == 0 else real_hidden_size * num_directions
-                )
+                layer_input_size = input_size if layer == 0 else real_hidden_size * num_directions 
 
                 w_ih = flow.nn.Parameter(flow.Tensor(gate_size, layer_input_size))
                 w_hh = flow.nn.Parameter(flow.Tensor(gate_size, real_hidden_size))
@@ -172,172 +157,118 @@ class RNN(Module):
                 b_hh = flow.nn.Parameter(flow.Tensor(gate_size))
 
                 layer_params = ()
-
+                
                 if bias:
                     layer_params = (w_ih, w_hh, b_ih, b_hh)
                 else:
                     layer_params = (w_ih, w_hh)
 
-                suffix = "_reverse" if direction == 1 else ""
-                param_names = ["weight_ih_l{}{}", "weight_hh_l{}{}"]
+                suffix = '_reverse' if direction ==1 else ''
+                param_names = ['weight_ih_l{}{}', 'weight_hh_l{}{}']
                 if bias:
-                    param_names += ["bias_ih_l{}{}", "bias_hh_l{}{}"]
+                    param_names += ['bias_ih_l{}{}', 'bias_hh_l{}{}']
                 param_names = [x.format(layer, suffix) for x in param_names]
 
                 for name, param in zip(param_names, layer_params):
                     setattr(self, name, param)
-
+        
         self.reset_parameters()
 
     def reset_parameters(self):
         for param in self.parameters():
             if param.dim() > 1:
                 nn.init.xavier_uniform_(param)
-
+    
     def permute_tensor(self, input):
-        return input.permute(1, 0, 2)
+        return input.permute(1,0,2)
 
     def forward(self, input, hx=None):
         if self.batch_first == False:
-<<<<<<< HEAD
             input = self.permute_tensor(input)
             
-=======
-            x = self.permute_tensor(x)
-
->>>>>>> 44132fc6c3931a6f7546f5002d13ef06dabaed09
         D = 2 if self.bidirectional else 1
         num_layers = self.num_layers
         batch_size, seq_len, _ = input.size()
 
-<<<<<<< HEAD
         if hx is None:
             h_t = flow.zeros((D * num_layers, batch_size, self.hidden_size), dtype=input.dtype, device=input.device)
-=======
-        if hidden is None:
-            h_t = flow.zeros(
-                (D * num_layers, batch_size, self.hidden_size),
-                dtype=x.dtype,
-                device=x.device,
-            )
->>>>>>> 44132fc6c3931a6f7546f5002d13ef06dabaed09
         else:
             h_t = hx
 
         if self.bidirectional:
-            h_t_f = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
-                dim=0,
-            )
-            h_t_b = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
-                dim=0,
-            )
+            h_t_f = flow.cat([h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l%2==0],dim=0)
+            h_t_b = flow.cat([h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l%2!=0],dim=0)
         else:
             h_t_f = h_t
-
-        layer_hidden = []
+        
+        layer_hidden = []       
 
         for layer in range(self.num_layers):
-            hidden_seq_f = []
+            hidden_seq_f = []      
             if self.bidirectional:
-                hidden_seq_b = []
+                hidden_seq_b = []  
 
-            hid_t_f = h_t_f[layer, :, :]
+            hid_t_f = h_t_f[layer, :, :]            
             if self.bidirectional:
                 hid_t_b = h_t_b[layer, :, :]
-
+            
             for t in range(seq_len):
-<<<<<<< HEAD
                 if layer == 0:      
                     x_t_f = input[:, t, :]   
                     if self.bidirectional:
                         x_t_b = input[:, seq_len-1-t, :]  
-=======
-                if layer == 0:
-                    x_t_f = x[:, t, :]
-                    if self.bidirectional:
-                        x_t_b = x[:, seq_len - 1 - t, :]
->>>>>>> 44132fc6c3931a6f7546f5002d13ef06dabaed09
                 else:
-                    x_t_f = hidden_seq[:, t, :]
+                    x_t_f = hidden_seq[:, t, :] 
                     if self.bidirectional:
-                        x_t_b = hidden_seq[:, seq_len - 1 - t, :]
+                        x_t_b = hidden_seq[:, seq_len-1-t, :]
 
-                hy1_f = flow.matmul(
-                    x_t_f,
-                    getattr(self, "weight_ih_l{}{}".format(layer, "")).permute(1, 0),
-                )
-                hy2_f = flow.matmul(
-                    hid_t_f,
-                    getattr(self, "weight_hh_l{}{}".format(layer, "")).permute(1, 0),
-                )
+                hy1_f = flow.matmul(x_t_f, getattr(self,'weight_ih_l{}{}'.format(layer,'')).permute(1,0))
+                hy2_f = flow.matmul(hid_t_f, getattr(self, 'weight_hh_l{}{}'.format(layer,'')).permute(1,0))
                 if self.bias:
-                    hy1_f += getattr(self, "bias_ih_l{}{}".format(layer, ""))
-                    hy2_f += getattr(self, "bias_hh_l{}{}".format(layer, ""))
+                    hy1_f += getattr(self, 'bias_ih_l{}{}'.format(layer,''))
+                    hy2_f += getattr(self, 'bias_hh_l{}{}'.format(layer,''))
                 hid_t_f = self.act(hy1_f + hy2_f)
 
                 hidden_seq_f.append(hid_t_f.unsqueeze(1))
 
                 if self.bidirectional:
-                    hy1_b = flow.matmul(
-                        x_t_b,
-                        getattr(
-                            self, "weight_ih_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
-                    )
-                    hy2_b = flow.matmul(
-                        hid_t_b,
-                        getattr(
-                            self, "weight_hh_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
-                    )
+                    hy1_b = flow.matmul(x_t_b, getattr(self,'weight_ih_l{}{}'.format(layer,'_reverse')).permute(1,0))
+                    hy2_b = flow.matmul(hid_t_b, getattr(self, 'weight_hh_l{}{}'.format(layer,'_reverse')).permute(1,0))
                     if self.bias:
-                        hy1_b += getattr(
-                            self, "bias_ih_l{}{}".format(layer, "_reverse")
-                        )
-                        hy2_b += getattr(
-                            self, "bias_hh_l{}{}".format(layer, "_reverse")
-                        )
+                        hy1_b += getattr(self, 'bias_ih_l{}{}'.format(layer,'_reverse'))
+                        hy2_b += getattr(self, 'bias_hh_l{}{}'.format(layer,'_reverse'))
                     hid_t_b = self.act(hy1_b + hy2_b)
 
                     hidden_seq_b.insert(0, hid_t_b.unsqueeze(1))
-<<<<<<< HEAD
                 
             hidden_seq_f = flow.cat(hidden_seq_f, dim=1)    
-=======
-
-            hidden_seq_f = flow.cat(hidden_seq_f, dim=1)
->>>>>>> 44132fc6c3931a6f7546f5002d13ef06dabaed09
             if self.bidirectional:
-                hidden_seq_b = flow.cat(hidden_seq_b, dim=1)
-
-            if self.dropout != 0 and layer != self.num_layers - 1:
+                hidden_seq_b = flow.cat(hidden_seq_b, dim=1)    
+            
+            if self.dropout != 0 and layer != self.num_layers-1:
                 hidden_seq_f = self.drop(hidden_seq_f)
                 if self.bidirectional:
                     hidden_seq_b = self.drop(hidden_seq_b)
 
             if self.bidirectional:
-                hidden_seq = flow.cat([hidden_seq_f, hidden_seq_b], dim=2)
+                hidden_seq = flow.cat([hidden_seq_f,hidden_seq_b],dim=2)    
             else:
                 hidden_seq = hidden_seq_f
 
             if self.bidirectional:
-                h_t = flow.cat([hid_t_f.unsqueeze(0), hid_t_b.unsqueeze(0)], dim=0)
+                h_t = flow.cat([hid_t_f.unsqueeze(0), hid_t_b.unsqueeze(0)], dim=0)  
             else:
                 h_t = hid_t_f.unsqueeze(0)
 
-            layer_hidden.append(h_t)
-
-        h_t = flow.cat(layer_hidden, dim=0)
-
+            layer_hidden.append(h_t)        
+            
+        h_t = flow.cat(layer_hidden, dim=0)    
+        
         if self.batch_first == False:
             hidden_seq = self.permute_tensor(hidden_seq)
 
         return hidden_seq, h_t
 
-
-<<<<<<< HEAD
 class GRU(Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#GRU
@@ -451,19 +382,6 @@ class GRU(Module):
         batch_first:bool = False, 
         dropout:float = 0, 
         bidirectional:bool = False):
-=======
-class GRU(nn.Module):
-    def __init__(
-        self,
-        input_size,
-        hidden_size,
-        num_layers=1,
-        bias=True,
-        batch_first=False,
-        dropout=0,
-        bidirectional=False,
-    ):
->>>>>>> 44132fc6c3931a6f7546f5002d13ef06dabaed09
         super().__init__()
 
         self.input_size = input_size
@@ -479,42 +397,40 @@ class GRU(nn.Module):
 
         for layer in range(num_layers):
             for direction in range(num_directions):
-
+                
                 real_hidden_size = hidden_size
-                layer_input_size = (
-                    input_size if layer == 0 else real_hidden_size * num_directions
-                )
-
+                layer_input_size = input_size if layer == 0 else real_hidden_size * num_directions
+                
                 w_ih = flow.nn.Parameter(flow.Tensor(gate_size, layer_input_size))
                 w_hh = flow.nn.Parameter(flow.Tensor(gate_size, real_hidden_size))
                 b_ih = flow.nn.Parameter(flow.Tensor(gate_size))
                 b_hh = flow.nn.Parameter(flow.Tensor(gate_size))
 
                 layer_params = ()
-
+                
                 if bias:
                     layer_params = (w_ih, w_hh, b_ih, b_hh)
                 else:
                     layer_params = (w_ih, w_hh)
 
-                suffix = "_reverse" if direction == 1 else ""
-                param_names = ["weight_ih_l{}{}", "weight_hh_l{}{}"]
+                suffix = '_reverse' if direction ==1 else ''
+                param_names = ['weight_ih_l{}{}', 'weight_hh_l{}{}']
                 if bias:
-                    param_names += ["bias_ih_l{}{}", "bias_hh_l{}{}"]
+                    param_names += ['bias_ih_l{}{}', 'bias_hh_l{}{}']
                 param_names = [x.format(layer, suffix) for x in param_names]
 
                 for name, param in zip(param_names, layer_params):
                     setattr(self, name, param)
-
+        
         self.reset_parameters()
 
     def reset_parameters(self):
         stdv = 1.0 / sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.uniform_(-stdv, stdv)
-
+    
     def permute_tensor(self, input):
-        return input.permute(1, 0, 2)
+        return input.permute(1,0,2)
 
     def forward(self, x, hidden=None):
         if self.batch_first == False:
@@ -524,26 +440,16 @@ class GRU(nn.Module):
         batch_size, seq_len, _ = x.size()
 
         if hidden is None:
-            h_t = flow.zeros(
-                (D * num_layers, batch_size, self.hidden_size),
-                dtype=x.dtype,
-                device=x.device,
-            )
+            h_t = flow.zeros((D*num_layers,batch_size, self.hidden_size), dtype=x.dtype, device=x.device)
         else:
             h_t = hidden
 
         if self.bidirectional:
-            h_t_f = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
-                dim=0,
-            )
-            h_t_b = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
-                dim=0,
-            )
+            h_t_f = flow.cat([h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l%2==0],dim=0)
+            h_t_b = flow.cat([h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l%2!=0],dim=0)
         else:
             h_t_f = h_t
-
+        
         layer_hidden = []
 
         for layer in range(self.num_layers):
@@ -554,29 +460,23 @@ class GRU(nn.Module):
             hid_t_f = h_t_f[layer, :, :]
             if self.bidirectional:
                 hid_t_b = h_t_b[layer, :, :]
-
+            
             for t in range(seq_len):
                 if layer == 0:
                     x_t_f = x[:, t, :]
                     if self.bidirectional:
-                        x_t_b = x[:, seq_len - 1 - t, :]
+                        x_t_b = x[:, seq_len-1-t, :]
                 else:
-                    x_t_f = hidden_seq[:, t, :]
+                    x_t_f = hidden_seq[:, t, :] 
                     if self.bidirectional:
-                        x_t_b = hidden_seq[:, seq_len - 1 - t, :]
+                        x_t_b = hidden_seq[:, seq_len-1-t, :]
 
-                gi_f = flow.matmul(
-                    x_t_f,
-                    getattr(self, "weight_ih_l{}{}".format(layer, "")).permute(1, 0),
-                )
-                gh_f = flow.matmul(
-                    hid_t_f,
-                    getattr(self, "weight_hh_l{}{}".format(layer, "")).permute(1, 0),
-                )
+                gi_f = flow.matmul(x_t_f, getattr(self, 'weight_ih_l{}{}'.format(layer,'')).permute(1,0))
+                gh_f = flow.matmul(hid_t_f, getattr(self, 'weight_hh_l{}{}'.format(layer,'')).permute(1,0))
                 if self.bias:
-                    gi_f += getattr(self, "bias_ih_l{}{}".format(layer, ""))
-                    gh_f += getattr(self, "bias_hh_l{}{}".format(layer, ""))
-
+                    gi_f += getattr(self, 'bias_ih_l{}{}'.format(layer,''))
+                    gh_f += getattr(self, 'bias_hh_l{}{}'.format(layer,''))
+                
                 i_r_f, i_i_f, i_n_f = gi_f.chunk(3, dim=1)
                 h_r_f, h_i_f, h_n_f = gh_f.chunk(3, dim=1)
 
@@ -586,25 +486,15 @@ class GRU(nn.Module):
 
                 hid_t_f = newgate_f + inputgate_f * (hid_t_f - newgate_f)
 
-                hidden_seq_f.append(hid_t_f.unsqueeze(1))
-
+                hidden_seq_f.append(hid_t_f.unsqueeze(1))         
+    
                 if self.bidirectional:
-                    gi_b = flow.matmul(
-                        x_t_b,
-                        getattr(
-                            self, "weight_ih_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
-                    )
-                    gh_b = flow.matmul(
-                        hid_t_b,
-                        getattr(
-                            self, "weight_hh_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
-                    )
+                    gi_b = flow.matmul(x_t_b, getattr(self, 'weight_ih_l{}{}'.format(layer,'_reverse')).permute(1,0))
+                    gh_b = flow.matmul(hid_t_b, getattr(self, 'weight_hh_l{}{}'.format(layer,'_reverse')).permute(1,0))
                     if self.bias:
-                        gi_b += getattr(self, "bias_ih_l{}{}".format(layer, "_reverse"))
-                        gh_b += getattr(self, "bias_hh_l{}{}".format(layer, "_reverse"))
-
+                        gi_b += getattr(self, 'bias_ih_l{}{}'.format(layer,'_reverse'))
+                        gh_b += getattr(self, 'bias_hh_l{}{}'.format(layer,'_reverse'))
+                    
                     i_r_b, i_i_b, i_n_b = gi_b.chunk(3, dim=1)
                     h_r_b, h_i_b, h_n_b = gh_b.chunk(3, dim=1)
 
@@ -614,39 +504,38 @@ class GRU(nn.Module):
 
                     hid_t_b = newgate_b + inputgate_b * (hid_t_b - newgate_b)
 
-                    hidden_seq_b.insert(0, hid_t_b.unsqueeze(1))
-
-            hidden_seq_f = flow.cat(hidden_seq_f, dim=1)
+                    hidden_seq_b.insert(0, hid_t_b.unsqueeze(1))     
+            
+            
+            hidden_seq_f = flow.cat(hidden_seq_f, dim=1)    
             if self.bidirectional:
-                hidden_seq_b = flow.cat(hidden_seq_b, dim=1)
-
-            if self.dropout != 0 and layer != self.num_layers - 1:
+                hidden_seq_b = flow.cat(hidden_seq_b, dim=1)    
+            
+            if self.dropout != 0 and layer != self.num_layers-1:
                 hidden_seq_f = self.drop(hidden_seq_f)
                 if self.bidirectional:
                     hidden_seq_b = self.drop(hidden_seq_b)
 
             if self.bidirectional:
-                hidden_seq = flow.cat([hidden_seq_f, hidden_seq_b], dim=2)
+                hidden_seq = flow.cat([hidden_seq_f, hidden_seq_b], dim=2)   
             else:
                 hidden_seq = hidden_seq_f
 
             if self.bidirectional:
-                h_t = flow.cat([hid_t_f.unsqueeze(0), hid_t_b.unsqueeze(0)], dim=0)
+                h_t = flow.cat([hid_t_f.unsqueeze(0), hid_t_b.unsqueeze(0)], dim=0)   
             else:
                 h_t = hid_t_f.unsqueeze(0)
 
-            layer_hidden.append(h_t)
-
-        h_t = flow.cat(layer_hidden, dim=0)
-
+            layer_hidden.append(h_t)        
+            
+        h_t = flow.cat(layer_hidden, dim=0)    
+        
         if self.batch_first == False:
             hidden_seq = self.permute_tensor(hidden_seq)
 
         return hidden_seq, h_t
 
-
 class LSTM(nn.Module):
-<<<<<<< HEAD
     """The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#LSTM
 
@@ -784,19 +673,6 @@ class LSTM(nn.Module):
         dropout: float = 0, 
         bidirectional: bool = False, 
         proj_size: int = 0):
-=======
-    def __init__(
-        self,
-        input_size,
-        hidden_size,
-        num_layers=1,
-        bias=True,
-        batch_first=False,
-        dropout=0,
-        bidirectional=False,
-        proj_size=0,
-    ):
->>>>>>> 44132fc6c3931a6f7546f5002d13ef06dabaed09
         super().__init__()
 
         self.input_size = input_size
@@ -812,27 +688,23 @@ class LSTM(nn.Module):
         self.drop = nn.Dropout(self.dropout)
 
         if proj_size < 0:
-            raise ValueError(
-                "proj_size should be a positive integer or zero to disable projections"
-            )
+            raise ValueError("proj_size should be a positive integer or zero to disable projections")
         if proj_size >= hidden_size:
             raise ValueError("proj_size has to be smaller than hidden_size")
 
         for layer in range(num_layers):
             for direction in range(num_directions):
-
+                
                 real_hidden_size = proj_size if proj_size > 0 else hidden_size
-                layer_input_size = (
-                    input_size if layer == 0 else real_hidden_size * num_directions
-                )
-
+                layer_input_size = input_size if layer == 0 else real_hidden_size * num_directions
+                
                 w_ih = flow.nn.Parameter(flow.Tensor(gate_size, layer_input_size))
                 w_hh = flow.nn.Parameter(flow.Tensor(gate_size, real_hidden_size))
                 b_ih = flow.nn.Parameter(flow.Tensor(gate_size))
                 b_hh = flow.nn.Parameter(flow.Tensor(gate_size))
 
                 layer_params = ()
-
+                
                 if self.proj_size == 0:
                     if bias:
                         layer_params = (w_ih, w_hh, b_ih, b_hh)
@@ -845,26 +717,26 @@ class LSTM(nn.Module):
                     else:
                         layer_params = (w_ih, w_hh, w_hr)
 
-                suffix = "_reverse" if direction == 1 else ""
-                param_names = ["weight_ih_l{}{}", "weight_hh_l{}{}"]
+                suffix = '_reverse' if direction ==1 else ''
+                param_names = ['weight_ih_l{}{}', 'weight_hh_l{}{}']
                 if bias:
-                    param_names += ["bias_ih_l{}{}", "bias_hh_l{}{}"]
+                    param_names += ['bias_ih_l{}{}', 'bias_hh_l{}{}']
                 if self.proj_size > 0:
-                    param_names += ["weight_hr_l{}{}"]
+                    param_names += ['weight_hr_l{}{}']
                 param_names = [x.format(layer, suffix) for x in param_names]
 
                 for name, param in zip(param_names, layer_params):
                     setattr(self, name, param)
-
+        
         self.reset_parameters()
 
     def reset_parameters(self):
         stdv = 1.0 / sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.uniform_(-stdv, stdv)
-
+    
     def permute_tensor(self, input):
-        return input.permute(1, 0, 2)
+        return input.permute(1,0,2)
 
     def forward(self, x, h_x=None):
         if self.batch_first == False:
@@ -874,80 +746,52 @@ class LSTM(nn.Module):
         batch_size, seq_len, _ = x.size()
 
         if h_x is None:
-            real_hidden_size = (
-                self.proj_size if self.proj_size > 0 else self.hidden_size
-            )
-            h_t = flow.zeros(
-                (D * num_layers, batch_size, real_hidden_size),
-                dtype=x.dtype,
-                device=x.device,
-            )
-            c_t = flow.zeros(
-                (D * num_layers, batch_size, self.hidden_size),
-                dtype=x.dtype,
-                device=x.device,
-            )
+            real_hidden_size = self.proj_size if self.proj_size > 0 else self.hidden_size
+            h_t = flow.zeros((D*num_layers, batch_size, real_hidden_size), dtype=x.dtype, device=x.device)
+            c_t = flow.zeros((D*num_layers, batch_size, self.hidden_size), dtype=x.dtype, device=x.device)
             h_x = (h_t, c_t)
         else:
             h_t, c_t = h_x
 
         if self.bidirectional:
-            h_t_f = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
-                dim=0,
-            )
-            h_t_b = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
-                dim=0,
-            )
-            c_t_f = flow.cat(
-                [c_t[l, :, :].unsqueeze(0) for l in range(c_t.size(0)) if l % 2 == 0],
-                dim=0,
-            )
-            c_t_b = flow.cat(
-                [c_t[l, :, :].unsqueeze(0) for l in range(c_t.size(0)) if l % 2 != 0],
-                dim=0,
-            )
+            h_t_f = flow.cat([h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l%2==0],dim=0)
+            h_t_b = flow.cat([h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l%2!=0],dim=0)  
+            c_t_f = flow.cat([c_t[l, :, :].unsqueeze(0) for l in range(c_t.size(0)) if l%2==0],dim=0)
+            c_t_b = flow.cat([c_t[l, :, :].unsqueeze(0) for l in range(c_t.size(0)) if l%2!=0],dim=0)
         else:
             h_t_f = h_t
             c_t_f = c_t
-
-        layer_hidden = []
-        layer_cell = []
+        
+        layer_hidden = [] 
+        layer_cell = [] 
 
         for layer in range(self.num_layers):
-
-            hidden_seq_f = []
+            
+            hidden_seq_f = []     
             if self.bidirectional:
                 hidden_seq_b = []
 
-            hid_t_f = h_t_f[layer, :, :]
-            h_c_t_f = c_t_f[layer, :, :]
+            hid_t_f = h_t_f[layer, :, :]    
+            h_c_t_f = c_t_f[layer, :, :]    
             if self.bidirectional:
                 hid_t_b = h_t_b[layer, :, :]
                 h_c_t_b = c_t_b[layer, :, :]
-
+            
             for t in range(seq_len):
-                if layer == 0:
-                    x_t_f = x[:, t, :]
+                if layer == 0:             
+                    x_t_f = x[:, t, :]    
                     if self.bidirectional:
-                        x_t_b = x[:, seq_len - 1 - t, :]
+                        x_t_b = x[:, seq_len-1-t, :]
                 else:
-                    x_t_f = hidden_seq[:, t, :]
+                    x_t_f = hidden_seq[:, t, :] 
                     if self.bidirectional:
-                        x_t_b = hidden_seq[:, seq_len - 1 - t, :]
+                        x_t_b = hidden_seq[:, seq_len-1-t, :]
 
-                gi_f = flow.matmul(
-                    x_t_f,
-                    getattr(self, "weight_ih_l{}{}".format(layer, "")).permute(1, 0),
-                )
-                gh_f = flow.matmul(
-                    hid_t_f,
-                    getattr(self, "weight_hh_l{}{}".format(layer, "")).permute(1, 0),
-                )
+                gi_f = flow.matmul(x_t_f, getattr(self, 'weight_ih_l{}{}'.format(layer,'')).permute(1,0))
+                gh_f = flow.matmul(hid_t_f, getattr(self, 'weight_hh_l{}{}'.format(layer,'')).permute(1,0))
                 if self.bias:
-                    gi_f += getattr(self, "bias_ih_l{}{}".format(layer, ""))
-                    gh_f += getattr(self, "bias_hh_l{}{}".format(layer, ""))
+                    gi_f += getattr(self, 'bias_ih_l{}{}'.format(layer,''))
+                    gh_f += getattr(self, 'bias_hh_l{}{}'.format(layer,''))
                 gates_f = gi_f + gh_f
                 ingate_f, forgetgate_f, cellgate_f, outgate_f = gates_f.chunk(4, dim=1)
                 ingate_f = flow.sigmoid(ingate_f)
@@ -957,34 +801,17 @@ class LSTM(nn.Module):
                 h_c_t_f = (forgetgate_f * h_c_t_f) + (ingate_f * cellgate_f)
                 hid_t_f = outgate_f * flow.tanh(h_c_t_f)
                 if self.proj_size > 0:
-                    hid_t_f = flow.matmul(
-                        hid_t_f,
-                        getattr(self, "weight_hr_l{}{}".format(layer, "")).permute(
-                            1, 0
-                        ),
-                    )
-                hidden_seq_f.append(hid_t_f.unsqueeze(1))
-
+                    hid_t_f = flow.matmul(hid_t_f, getattr(self, 'weight_hr_l{}{}'.format(layer,'')).permute(1,0))
+                hidden_seq_f.append(hid_t_f.unsqueeze(1))         
+    
                 if self.bidirectional:
-                    gi_b = flow.matmul(
-                        x_t_b,
-                        getattr(
-                            self, "weight_ih_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
-                    )
-                    gh_b = flow.matmul(
-                        hid_t_b,
-                        getattr(
-                            self, "weight_hh_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
-                    )
+                    gi_b = flow.matmul(x_t_b, getattr(self, 'weight_ih_l{}{}'.format(layer,'_reverse')).permute(1,0))
+                    gh_b = flow.matmul(hid_t_b, getattr(self, 'weight_hh_l{}{}'.format(layer,'_reverse')).permute(1,0))
                     if self.bias:
-                        gi_b += getattr(self, "bias_ih_l{}{}".format(layer, "_reverse"))
-                        gh_b += getattr(self, "bias_hh_l{}{}".format(layer, "_reverse"))
+                        gi_b += getattr(self, 'bias_ih_l{}{}'.format(layer,'_reverse'))
+                        gh_b += getattr(self, 'bias_hh_l{}{}'.format(layer,'_reverse'))
                     gates_b = gi_b + gh_b
-                    ingate_b, forgetgate_b, cellgate_b, outgate_b = gates_b.chunk(
-                        4, dim=1
-                    )
+                    ingate_b, forgetgate_b, cellgate_b, outgate_b = gates_b.chunk(4, dim=1)
                     ingate_b = flow.sigmoid(ingate_b)
                     forgetgate_b = flow.sigmoid(forgetgate_b)
                     cellgate_b = flow.tanh(cellgate_b)
@@ -992,46 +819,41 @@ class LSTM(nn.Module):
                     h_c_t_b = (forgetgate_b * h_c_t_b) + (ingate_b * cellgate_b)
                     hid_t_b = outgate_b * flow.tanh(h_c_t_b)
                     if self.proj_size > 0:
-                        hid_t_b = flow.matmul(
-                            hid_t_b,
-                            getattr(
-                                self, "weight_hr_l{}{}".format(layer, "_reverse")
-                            ).permute(1, 0),
-                        )
-                    hidden_seq_b.insert(0, hid_t_b.unsqueeze(1))
-
-            hidden_seq_f = flow.cat(hidden_seq_f, dim=1)
+                        hid_t_b = flow.matmul(hid_t_b, getattr(self, 'weight_hr_l{}{}'.format(layer,'_reverse')).permute(1,0))
+                    hidden_seq_b.insert(0, hid_t_b.unsqueeze(1))     
+            
+            
+            hidden_seq_f = flow.cat(hidden_seq_f, dim=1)   
             if self.bidirectional:
-                hidden_seq_b = flow.cat(hidden_seq_b, dim=1)
-
-            if self.dropout != 0 and layer != self.num_layers - 1:
+                hidden_seq_b = flow.cat(hidden_seq_b, dim=1)    
+            
+            if self.dropout != 0 and layer != self.num_layers-1:
                 hidden_seq_f = self.drop(hidden_seq_f)
                 if self.bidirectional:
                     hidden_seq_b = self.drop(hidden_seq_b)
 
             if self.bidirectional:
-                hidden_seq = flow.cat([hidden_seq_f, hidden_seq_b], dim=2)
+                hidden_seq = flow.cat([hidden_seq_f, hidden_seq_b], dim=2)  
             else:
                 hidden_seq = hidden_seq_f
 
             if self.bidirectional:
-                h_t = flow.cat([hid_t_f.unsqueeze(0), hid_t_b.unsqueeze(0)], dim=0)
-                c_t = flow.cat([h_c_t_f.unsqueeze(0), h_c_t_b.unsqueeze(0)], dim=0)
+                h_t = flow.cat([hid_t_f.unsqueeze(0), hid_t_b.unsqueeze(0)], dim=0)   
+                c_t = flow.cat([h_c_t_f.unsqueeze(0), h_c_t_b.unsqueeze(0)], dim=0)  
             else:
                 h_t = hid_t_f.unsqueeze(0)
                 c_t = h_c_t_f.unsqueeze(0)
 
-            layer_hidden.append(h_t)
-            layer_cell.append(c_t)
-
-        h_t = flow.cat(layer_hidden, dim=0)
-        c_t = flow.cat(layer_cell, dim=0)
-
+            layer_hidden.append(h_t)        
+            layer_cell.append(c_t)         
+            
+        h_t = flow.cat(layer_hidden, dim=0)   
+        c_t = flow.cat(layer_cell, dim=0)     
+        
         if self.batch_first == False:
             hidden_seq = self.permute_tensor(hidden_seq)
 
         return hidden_seq, (h_t, c_t)
-
 
 if __name__ == "__main__":
     import doctest
