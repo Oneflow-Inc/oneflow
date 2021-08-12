@@ -37,8 +37,13 @@ class TestIndexSelect(flow.unittest.TestCase):
             tensor_dim.append(random(2, 6).to(int).value())
 
         index = random_pytorch_tensor(
-            ndim=1, low=0, high=tensor_dim[dim.value()], dtype=int
+            ndim=1,
+            dim0=random(1, 10).to(int),
+            low=0,
+            high=tensor_dim[dim.value()],
+            dtype=int,
         ).to(device)
+
         x = random_pytorch_tensor(
             ndim=4,
             dim0=tensor_dim[0],
@@ -46,6 +51,7 @@ class TestIndexSelect(flow.unittest.TestCase):
             dim2=tensor_dim[2],
             dim3=tensor_dim[3],
         ).to(device)
+
         y = torch.index_select(x, dim, index)
 
         return y
