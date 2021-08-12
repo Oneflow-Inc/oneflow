@@ -37,15 +37,16 @@ class EitherPtr final {
   EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value) { new (&x_ptr_) YPtr(std::move(ptr)); }
 
   EitherPtr(const EitherPtr& either_ptr) : type_(either_ptr.type_), x_ptr_(either_ptr.x_ptr_) {}
-  EitherPtr(EitherPtr&& either_ptr) : type_(either_ptr.type_), x_ptr_(std::move(either_ptr.x_ptr_)) {}
+  EitherPtr(EitherPtr&& either_ptr)
+      : type_(either_ptr.type_), x_ptr_(std::move(either_ptr.x_ptr_)) {}
 
-  ~EitherPtr() { 
+  ~EitherPtr() {
     if (Has<X>()) {
       x_ptr_.~XPtr();
     } else {
       y_ptr().~YPtr();
     }
-   }
+  }
 
   EitherPtr& operator=(const EitherPtr& either_ptr) {
     x_ptr_ = either_ptr.x_ptr_;
