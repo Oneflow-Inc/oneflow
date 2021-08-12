@@ -647,6 +647,41 @@ class SliceGradFunctor : public SliceGradBaseFunctor {
   }
 };
 
+class NarrowFunctor {
+ public:
+  NarrowFunctor() { op_ = CHECK_JUST(one::OpBuilder("narrow").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const int64_t& dim,
+                           const int64_t& start, const int64_t& length) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    JUST(attrs.SetAttr<int64_t>("start", start));
+    JUST(attrs.SetAttr<int64_t>("length", length));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class NarrowGradFunctor {
+ public:
+  NarrowGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("narrow_grad").Input("dy").Input("like").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& like, const int64_t& dim,
+                           const int64_t& start, const int64_t& length) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    JUST(attrs.SetAttr<int64_t>("start", start));
+    JUST(attrs.SetAttr<int64_t>("length", length));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class LogicalSliceFunctor : public SliceBaseFunctor {
  public:
   LogicalSliceFunctor() {
@@ -1326,6 +1361,50 @@ class ReduceSumLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SplitFunctor {
+ public:
+  SplitFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& split_size,
+                                const int64_t& dim) const {
+    CHECK_GE_OR_RETURN(split_size, 0)
+        << "split expects split_size be non-negative, but got split_size=" << split_size;
+    int64_t dim_size = x->shape()->At(dim);
+    int64_t num_splits = std::max<int64_t>((dim_size + split_size - 1) / split_size, 1);
+    TensorTuple splits(num_splits);
+    int64_t last_split_size = split_size - (split_size * num_splits - dim_size);
+    for (int i = 0; i < num_splits; ++i) {
+      int64_t length = i < num_splits - 1 ? split_size : last_split_size;
+      splits[i] = JUST(Narrow(x, dim, i * split_size, length));
+    }
+    return splits;
+  }
+};
+
+class SplitWithSizeFunctor {
+ public:
+  SplitWithSizeFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::vector<int64_t>& split_sizes, const int64_t& dim) const {
+    int64_t dim_size = x->shape()->At(dim);
+    int64_t num_splits = split_sizes.size();
+    TensorTuple splits(num_splits);
+    int64_t start_idx = 0;
+    for (int i = 0; i < num_splits; ++i) {
+      int64_t length = split_sizes[i];
+      CHECK_GE_OR_RETURN(length, 0) << "split_with_sizes expects split_sizes have only "
+                                       "non-negative entries, but split_sizes["
+                                    << i << "] = " << length;
+      splits[i] = JUST(Narrow(x, dim, start_idx, length));
+      start_idx += length;
+    }
+    CHECK_EQ_OR_RETURN(start_idx, dim_size)
+        << "split_with_sizes expects split_sizes to sum exactly to " << dim_size
+        << " (input tensor's size at dimension " << dim << "), "
+        << "but got sum(split_sizes)=" << start_idx;
+    return splits;
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1351,6 +1430,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
+  m.add_functor<impl::NarrowFunctor>("Narrow");
+  m.add_functor<impl::NarrowGradFunctor>("NarrowGrad");
   m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
@@ -1391,6 +1472,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
+  m.add_functor<impl::SplitFunctor>("Split");
+  m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
 };
 
 }  // namespace functional
