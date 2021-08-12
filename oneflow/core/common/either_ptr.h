@@ -25,21 +25,32 @@ template<typename X, typename Y>
 class EitherPtr final {
  public:
   static_assert(!std::is_same<X, Y>::value, "X should not be Y");
-  EitherPtr() : type_(UnionType<X>::value) {}
-  EitherPtr(const std::shared_ptr<X>& ptr) : union_(ptr), type_(UnionType<X>::value) {}
-  EitherPtr(const std::shared_ptr<Y>& ptr) { Set(ptr); }
 
-  EitherPtr(std::shared_ptr<X>&& ptr) : union_(std::move(ptr)), type_(UnionType<X>::value) {}
-  EitherPtr(std::shared_ptr<Y>&& ptr) { Set(std::move(ptr)); }
+  using XPtr = std::shared_ptr<X>;
+  using YPtr = std::shared_ptr<Y>;
 
-  EitherPtr(const EitherPtr<X, Y>& either_ptr) { CopyFrom(either_ptr); }
-  EitherPtr(EitherPtr<X, Y>&& either_ptr)
-      : union_(std::move(either_ptr.union_)), type_(either_ptr.type_) {}
+  EitherPtr() : type_(UnionType<X>::value), x_ptr(nullptr) {}
+  EitherPtr(const XPtr& ptr) : type_(UnionType<X>::value), x_ptr(ptr) {}
+  EitherPtr(const YPtr& ptr) : type_(UnionType<Y>::value), y_ptr(ptr) {}
 
-  ~EitherPtr() { Reset(); }
+  EitherPtr(XPtr&& ptr) : type_(UnionType<X>::value), x_ptr(std::move(ptr)) {}
+  EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value), y_ptr(std::move(ptr)) {}
 
-  EitherPtr& operator=(EitherPtr<X, Y>&& either_ptr) {
-    union_ = std::move(either_ptr.union_);
+  EitherPtr(const EitherPtr& either_ptr) : type_(either_ptr.type_), x_ptr(either_ptr.x_ptr) {}
+  EitherPtr(EitherPtr&& either_ptr) : type_(either_ptr.type_), x_ptr(std::move(either_ptr.x_ptr)) {}
+
+  ~EitherPtr() {
+    x_ptr.~XPtr();
+  }
+
+  EitherPtr& operator=(const EitherPtr& either_ptr) {
+    x_ptr = either_ptr.x_ptr;
+    type_ = either_ptr.type_;
+    return *this;
+  }
+
+  EitherPtr& operator=(EitherPtr&& either_ptr) {
+    x_ptr = std::move(either_ptr.x_ptr);
     type_ = either_ptr.type_;
     return *this;
   }
@@ -49,34 +60,9 @@ class EitherPtr final {
     return type_ == UnionType<T>::value;
   }
 
-  const std::shared_ptr<X>& Get() const {
-    CHECK(this->template Has<X>());
-    return union_;
-  }
-
   template<typename T>
   const std::shared_ptr<T>& Get() const {
-    CHECK(this->template Has<T>());
-    return Cast<T>();
-  }
-
-  void Reset(const std::shared_ptr<X>& ptr) {
-    Reset();
-    Set(ptr);
-  }
-  void Reset(const std::shared_ptr<Y>& ptr) {
-    Reset();
-    Set(ptr);
-  }
-
-  void Reset() {
-    if (type_ == UnionType<X>::value) {
-      union_.reset();
-    } else if (type_ == UnionType<Y>::value) {
-      MutCast<Y>()->reset();
-    } else {
-      LOG(FATAL) << "UNIMPLEMENTED";
-    }
+    return Get(tag<T>{});
   }
 
  private:
@@ -90,52 +76,25 @@ class EitherPtr final {
   struct UnionType<T, typename std::enable_if<std::is_same<Y, T>::value>::type> {
     static constexpr int8_t value = 1;
   };
-  void CopyFrom(const EitherPtr<X, Y>& either_ptr) {
-    if (either_ptr.template Has<X>()) {
-      Set(either_ptr.template Get<X>());
-    } else if (either_ptr.template Has<Y>()) {
-      Set(either_ptr.template Get<Y>());
-    } else {
-      // do nothin
-    }
-  }
-  void Set(const std::shared_ptr<X>& ptr) {
-    CHECK(union_.get() == nullptr);
-    union_ = ptr;
-    type_ = UnionType<X>::value;
-  }
-  void Set(const std::shared_ptr<Y>& ptr) {
-    CHECK(union_.get() == nullptr);
-    *MutCast<Y>() = ptr;
-    type_ = UnionType<Y>::value;
+
+  template <typename>
+  struct tag {};
+
+  const XPtr& Get(tag<X>) const {
+    CHECK(Has<X>());
+    return x_ptr;
   }
 
-  void Set(std::shared_ptr<X>&& ptr) {
-    CHECK(union_.get() == nullptr);
-    union_ = std::move(ptr);
-    type_ = UnionType<X>::value;
-  }
-  void Set(std::shared_ptr<Y>&& ptr) {
-    CHECK(union_.get() == nullptr);
-    *MutCast<Y>() = std::move(ptr);
-    type_ = UnionType<Y>::value;
+  const YPtr& Get(tag<Y>) const {
+    CHECK(Has<Y>());
+    return y_ptr;
   }
 
-  template<typename T>
-  std::shared_ptr<T>* MutCast() {
-    std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
-        reinterpret_cast<std::shared_ptr<T>*>(&union_);
-    return ptr;
-  }
-  template<typename T>
-  const std::shared_ptr<T>& Cast() const {
-    const std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
-        reinterpret_cast<const std::shared_ptr<T>*>(&union_);
-    return *ptr;
-  }
-
-  std::shared_ptr<X> union_;
   int8_t type_;
+  union {
+    std::shared_ptr<X> x_ptr;
+    std::shared_ptr<Y> y_ptr;
+  };
 };
 
 }  // namespace oneflow

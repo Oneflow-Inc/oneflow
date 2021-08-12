@@ -30,25 +30,63 @@ class SharedOrScalar final {
  public:
   static_assert(IsScalarType<ScalarT>::value, "ScalarT should be scalar type.");
 
-  SharedOrScalar(const ScalarT& scalar_value) : scalar_value_(scalar_value), is_scalar_(true) {}
+  using Shared = std::shared_ptr<StructT>;
 
-  SharedOrScalar(const std::shared_ptr<StructT>& shared_ptr) : is_scalar_(false) {
-    new (MutableSharedStorage()) Shared(shared_ptr);
-  }
+  SharedOrScalar(const ScalarT& scalar_value) : is_scalar_(true), scalar_value_(scalar_value)  {}
+
+  SharedOrScalar(const std::shared_ptr<StructT>& shared_ptr) : is_scalar_(false), shared_value_(shared_ptr) {}
+
+  SharedOrScalar(std::shared_ptr<StructT>&& shared_ptr) : is_scalar_(false), shared_value_(std::move(shared_ptr)) {}
 
   SharedOrScalar(const SharedOrScalar& rhs) : is_scalar_(rhs.is_scalar_) {
     if (rhs.is_scalar_) {
       scalar_value_ = rhs.scalar_value_;
     } else {
-      new (MutableSharedStorage()) Shared(*(rhs.GetSharedStorage()));
+      new (&shared_value_) Shared(rhs.shared_value_);
     }
+  }
+
+  SharedOrScalar(SharedOrScalar&& rhs) : is_scalar_(rhs.is_scalar_) {
+    if (rhs.is_scalar_) {
+      scalar_value_ = rhs.scalar_value_;
+    } else {
+      new (&shared_value_) Shared(std::move(rhs.shared_value_));
+    }
+  }
+
+  SharedOrScalar& operator=(const SharedOrScalar& rhs) {
+    if (rhs.is_scalar_) {
+      scalar_value_ = rhs.scalar_value_;
+    } else {
+      if (is_scalar_) {
+        new (&shared_value_) Shared(rhs.shared_value_);
+      } else {
+        shared_value_ = rhs.shared_value_;
+      }
+    }
+    is_scalar_ = rhs.is_scalar_;
+    return *this;
+  }
+
+  SharedOrScalar& operator=(SharedOrScalar&& rhs) {
+    if (rhs.is_scalar_) {
+      scalar_value_ = rhs.scalar_value_;
+    } else {
+      if (is_scalar_) {
+        new (&shared_value_) Shared(std::move(rhs.shared_value_));
+      } else {
+        shared_value_ = std::move(rhs.shared_value_);
+      }
+    }
+    is_scalar_ = rhs.is_scalar_;
+    return *this;
   }
 
   ~SharedOrScalar() {
     if (is_scalar_) {
       scalar_value_.~ScalarT();
     } else {
-      (*MutableSharedStorage()).~Shared();
+      shared_value_.~Shared();
     }
   }
 
@@ -60,33 +98,18 @@ class SharedOrScalar final {
 
   const std::shared_ptr<StructT>& shared_ptr() const {
     CHECK(!is_scalar_);
-    return GetSharedStorage()->data;
+    return shared_value_;
   }
 
   const ScalarT& operator*() const { return scalar_value(); }
 
  private:
-  struct Shared {
-    Shared() = default;
-    Shared(const std::shared_ptr<StructT>& v) : data(v) {}
-    Shared(std::shared_ptr<StructT>&& v) : data(std::move(v)) {}
-    virtual ~Shared() = default;
 
-    std::shared_ptr<StructT> data;
-  };
-
-  Shared* MutableSharedStorage() { return reinterpret_cast<Shared*>(&shared_value_); }
-
-  const Shared* GetSharedStorage() const { return reinterpret_cast<const Shared*>(&shared_value_); }
-
-  template<typename T, typename... Ts>
-  using AlignedUnion = typename std::aligned_union<1, T, Ts...>::type;
-
+  bool is_scalar_;
   union {
     ScalarT scalar_value_;
-    AlignedUnion<Shared> shared_value_;
+    Shared shared_value_;
   };
-  bool is_scalar_;
 };
 
 }  // namespace oneflow
