@@ -43,7 +43,7 @@ def graph_build_context(config_proto, session):
         False,  # is_mirrored
     )
 
-    with lazy_mode.gard(True):
+    with lazy_mode.guard(True):
         with JobBuildAndInferCtx(config_proto):
             with BlockScopeContext(prev_scope, new_scope):
                 yield
@@ -179,7 +179,7 @@ def build_graph_output(op_name, out):
 
     shape = fake_eager_out.shape
     dtype = fake_eager_out.dtype
-    with oneflow._oneflow_internal.lazy_mode.gard(False):
+    with oneflow._oneflow_internal.lazy_mode.guard(False):
         if fake_eager_out.is_consistent:
             eager_out = oneflow.empty(
                 shape,

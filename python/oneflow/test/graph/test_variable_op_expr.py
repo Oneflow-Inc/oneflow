@@ -38,7 +38,7 @@ class TestFeedVariableTensor(unittest.TestCase):
         session = session_ctx.GetDefaultSession()
         test_case.assertTrue(isinstance(session, MultiClientSession))
         session.TryInit()
-        with oneflow._oneflow_internal.lazy_mode.gard(True):
+        with oneflow._oneflow_internal.lazy_mode.guard(True):
             oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
                 "cc_test_variable_op_expr_job"
             )

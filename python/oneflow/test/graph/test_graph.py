@@ -142,9 +142,9 @@ class TestGraph(flow.unittest.TestCase):
 
     def test_graph_build_ctx(test_case):
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
-        with graph_build_util.lazy_mode.gard(True):
+        with graph_build_util.lazy_mode.guard(True):
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
-            with graph_build_util.lazy_mode.gard(False):
+            with graph_build_util.lazy_mode.guard(False):
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
