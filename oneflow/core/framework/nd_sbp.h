@@ -31,14 +31,12 @@ Maybe<Symbol<cfg::ParallelDistribution>> GetNdSbp(
 Maybe<std::vector<std::string>> GetNdSbpStrList(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
 
-Maybe<std::vector<std::string>> GetNdSbpStrList(
-    Symbol<cfg::ParallelDistribution> parallel_distribution);
+Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<cfg::ParallelDistribution> nd_sbp);
 
-Maybe<std::vector<std::string>> GetDualNdSbpStrList(
-    Symbol<cfg::ParallelDistribution> parallel_distribution);
+Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::ParallelDistribution> nd_sbp);
 
 Maybe<std::string> ToString(Symbol<cfg::SbpParallel> sbp_sym);
-Maybe<std::string> ToString(Symbol<cfg::ParallelDistribution> parallel_distribution);
+Maybe<std::string> ToString(Symbol<cfg::ParallelDistribution> nd_sbp);
 
 }  // namespace oneflow
 

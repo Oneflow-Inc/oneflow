@@ -177,9 +177,9 @@ TEST(DecomposeIntoNaiveTransformations, decompose_axis0) {
   const auto& expected_parallel_desc = SymbolOf(ParallelDesc(expected_parallel_conf));
   const auto& ctensor_meta = transformations->at(0).consistent_tensor_meta;
   ASSERT_TRUE(ctensor_meta->parallel_desc() == expected_parallel_desc);
-  ASSERT_EQ(ctensor_meta->parallel_distribution()->sbp_parallel_size(), 1);
+  ASSERT_EQ(ctensor_meta->nd_sbp()->sbp_parallel_size(), 1);
   ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel_size(), 1);
-  ASSERT_TRUE(ctensor_meta->parallel_distribution()->sbp_parallel(0).has_partial_sum_parallel());
+  ASSERT_TRUE(ctensor_meta->nd_sbp()->sbp_parallel(0).has_partial_sum_parallel());
   ASSERT_TRUE(transformations->at(0).dst_nd_sbp->sbp_parallel(0).has_split_parallel());
   ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel(0).split_parallel().axis(), 0);
 }
@@ -205,9 +205,9 @@ TEST(DecomposeIntoNaiveTransformations, decompose_axis1) {
   const auto& expected_parallel_desc = SymbolOf(ParallelDesc(expected_parallel_conf));
   const auto& ctensor_meta = transformations->at(0).consistent_tensor_meta;
   ASSERT_TRUE(ctensor_meta->parallel_desc() == expected_parallel_desc);
-  ASSERT_EQ(ctensor_meta->parallel_distribution()->sbp_parallel_size(), 1);
+  ASSERT_EQ(ctensor_meta->nd_sbp()->sbp_parallel_size(), 1);
   ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel_size(), 1);
-  ASSERT_TRUE(ctensor_meta->parallel_distribution()->sbp_parallel(0).has_partial_sum_parallel());
+  ASSERT_TRUE(ctensor_meta->nd_sbp()->sbp_parallel(0).has_partial_sum_parallel());
   ASSERT_TRUE(transformations->at(0).dst_nd_sbp->sbp_parallel(0).has_split_parallel());
   ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel(0).split_parallel().axis(), 1);
 }
@@ -235,11 +235,11 @@ TEST(DecomposeIntoNaiveTransformations, decompose_two_axes) {
     const auto& expected_parallel_desc = SymbolOf(ParallelDesc(expected_parallel_conf));
     const auto& ctensor_meta = transformations->at(0).consistent_tensor_meta;
     ASSERT_TRUE(ctensor_meta->parallel_desc() == expected_parallel_desc);
-    ASSERT_EQ(ctensor_meta->parallel_distribution()->sbp_parallel_size(), 1);
+    ASSERT_EQ(ctensor_meta->nd_sbp()->sbp_parallel_size(), 1);
     ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel_size(), 1);
-    ASSERT_TRUE(ctensor_meta->parallel_distribution()->sbp_parallel(0).has_split_parallel());
+    ASSERT_TRUE(ctensor_meta->nd_sbp()->sbp_parallel(0).has_split_parallel());
     ASSERT_TRUE(transformations->at(0).dst_nd_sbp->sbp_parallel(0).has_broadcast_parallel());
-    ASSERT_EQ(ctensor_meta->parallel_distribution()->sbp_parallel(0).split_parallel().axis(), 0);
+    ASSERT_EQ(ctensor_meta->nd_sbp()->sbp_parallel(0).split_parallel().axis(), 0);
   }
   {
     ParallelConf expected_parallel_conf;
@@ -248,9 +248,9 @@ TEST(DecomposeIntoNaiveTransformations, decompose_two_axes) {
     const auto& expected_parallel_desc = SymbolOf(ParallelDesc(expected_parallel_conf));
     const auto& ctensor_meta = transformations->at(1).consistent_tensor_meta;
     ASSERT_TRUE(ctensor_meta->parallel_desc() == expected_parallel_desc);
-    ASSERT_EQ(ctensor_meta->parallel_distribution()->sbp_parallel_size(), 1);
+    ASSERT_EQ(ctensor_meta->nd_sbp()->sbp_parallel_size(), 1);
     ASSERT_EQ(transformations->at(1).dst_nd_sbp->sbp_parallel_size(), 1);
-    ASSERT_TRUE(ctensor_meta->parallel_distribution()->sbp_parallel(0).has_partial_sum_parallel());
+    ASSERT_TRUE(ctensor_meta->nd_sbp()->sbp_parallel(0).has_partial_sum_parallel());
     ASSERT_TRUE(transformations->at(1).dst_nd_sbp->sbp_parallel(0).has_split_parallel());
     ASSERT_EQ(transformations->at(1).dst_nd_sbp->sbp_parallel(0).split_parallel().axis(), 0);
   }

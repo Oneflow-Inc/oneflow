@@ -57,8 +57,8 @@ CalcDecomposableEquivalentShapeAndNdSbpPair(const Shape& shape, const Shape& hie
                                             Symbol<cfg::ParallelDistribution> src_nd_sbp,
                                             Symbol<cfg::ParallelDistribution> dst_nd_sbp);
 
-Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
-    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution);
+Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(Symbol<ParallelDesc> parallel_desc,
+                                                        Symbol<cfg::ParallelDistribution> nd_sbp);
 
 Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp);

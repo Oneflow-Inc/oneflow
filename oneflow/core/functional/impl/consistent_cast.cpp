@@ -182,12 +182,11 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
 Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and out */ dtype,
                                        std::shared_ptr<const Shape> physical_shape,
                                        Symbol<ParallelDesc> parallel_desc,
-                                       Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  if (parallel_distribution->sbp_parallel_size() == 1
-      && parallel_distribution->sbp_parallel(0).has_split_parallel()) {
+                                       Symbol<cfg::ParallelDistribution> nd_sbp) {
+  if (nd_sbp->sbp_parallel_size() == 1 && nd_sbp->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape_dtype =
         JUST(BroadcastGatherShapeAndDataType(*physical_shape, *dtype, parallel_desc));
-    int64_t concat_axis = parallel_distribution->sbp_parallel(0).split_parallel().axis();
+    int64_t concat_axis = nd_sbp->sbp_parallel(0).split_parallel().axis();
     JUST(GetConcatenatedShapeAndCheckDtype(logical_shape, dtype, *rank2flat_shape_dtype,
                                            parallel_desc, concat_axis));
   } else {
@@ -197,8 +196,7 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
       physical_shape = JUST(flat_shape_dtype->ToShape());
       *dtype = flat_shape_dtype->dtype();
     }
-    *logical_shape =
-        *JUST(GetLogicalShape(*physical_shape, *parallel_distribution, *parallel_desc));
+    *logical_shape = *JUST(GetLogicalShape(*physical_shape, *nd_sbp, *parallel_desc));
   }
   return Maybe<void>::Ok();
 }
@@ -208,10 +206,9 @@ Maybe<one::UserOpExpr> MakeParallelDistributionOpExpr(
   return OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
       .Input("in")
       .Output("out")
-      .Attr<std::vector<std::string>>("parallel_distribution",
-                                      *JUST(GetNdSbpStrList(sbp_parallels)))
+      .Attr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(sbp_parallels)))
       .Attr<std::string>("grad_mode", "restore")
-      .Attr<std::vector<std::string>>("grad_parallel_distribution", std::vector<std::string>())
+      .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
       .Build();
 }
 
@@ -224,11 +221,10 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& parallel_distribution_cast_op_expr =
-      JUST(CachedParallelDistributionOpExpr(sbp_parallels));
+  const auto& nd_sbp_cast_op_expr = JUST(CachedParallelDistributionOpExpr(sbp_parallels));
 
-  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
-                                                             {consistent_tensor}));
+  const auto& ret =
+      JUST(OpInterpUtil::Dispatch<one::Tensor>(*nd_sbp_cast_op_expr, {consistent_tensor}));
   return ret;
 }
 
@@ -258,16 +254,15 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
       << Error::Unimplemented() << "tensor' device type must be same with placement.";
   CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
       << Error::Unimplemented() << "tensor must be on default device of the current rank.";
-  Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
+  Symbol<cfg::ParallelDistribution> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype();
-  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc,
-                                  parallel_distribution));
+  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {input}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
+      *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
 }
 

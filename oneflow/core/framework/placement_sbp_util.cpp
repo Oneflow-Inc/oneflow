@@ -84,11 +84,10 @@ Maybe<const Shape> GetSelectedShape(const Shape& hierarchy_shape,
   return std::make_shared<const Shape>(dim_vec);
 }
 
-Maybe<Symbol<std::vector<int>>> CalcAxis2IsBroadcast(
-    Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  std::vector<int> axis2is_selected(parallel_distribution->sbp_parallel_size());
+Maybe<Symbol<std::vector<int>>> CalcAxis2IsBroadcast(Symbol<cfg::ParallelDistribution> nd_sbp) {
+  std::vector<int> axis2is_selected(nd_sbp->sbp_parallel_size());
   for (int i = 0; i < axis2is_selected.size(); ++i) {
-    axis2is_selected.at(i) = parallel_distribution->sbp_parallel(i).has_broadcast_parallel();
+    axis2is_selected.at(i) = nd_sbp->sbp_parallel(i).has_broadcast_parallel();
   }
   return SymbolOf(axis2is_selected);
 }
@@ -146,9 +145,9 @@ Maybe<std::vector<int64_t>> GetSelectedParallelIds(const Shape& hierarchy_shape,
   return origin_offsets;
 }
 
-Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
-    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  const auto& axis2is_selected = JUST(GetAxis2IsBroadcast(parallel_distribution));
+Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(Symbol<ParallelDesc> parallel_desc,
+                                                        Symbol<cfg::ParallelDistribution> nd_sbp) {
+  const auto& axis2is_selected = JUST(GetAxis2IsBroadcast(nd_sbp));
   return GetSelectedSubParallelDesc(parallel_desc, axis2is_selected);
 }
 
@@ -304,7 +303,7 @@ Maybe<std::pair<Symbol<one::ConsistentTensorMeta>, Symbol<cfg::ParallelDistribut
 CalcDecomposableEquivalent(Symbol<one::ConsistentTensorMeta> tensor_meta,
                            Symbol<cfg::ParallelDistribution> dst_nd_sbp) {
   std::shared_ptr<const Shape> shape = tensor_meta->shape_ptr();
-  Symbol<cfg::ParallelDistribution> src_nd_sbp = tensor_meta->parallel_distribution();
+  Symbol<cfg::ParallelDistribution> src_nd_sbp = tensor_meta->nd_sbp();
   const auto& hierarchy = tensor_meta->parallel_desc()->hierarchy();
   std::tie(shape, src_nd_sbp, dst_nd_sbp) = *JUST(
       CalcDecomposableEquivalentShapeAndNdSbpPair(*shape, *hierarchy, src_nd_sbp, dst_nd_sbp));
@@ -484,8 +483,8 @@ Maybe<Shape> GetPhysicalShape(const Shape& shape, Symbol<cfg::ParallelDistributi
 Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
     Symbol<cfg::ParallelDistribution> sub_nd_sbp) {
-  const auto& physical_shape = JUST(GetPhysicalShape(
-      tensor_meta->shape(), tensor_meta->parallel_distribution(), tensor_meta->parallel_desc()));
+  const auto& physical_shape = JUST(
+      GetPhysicalShape(tensor_meta->shape(), tensor_meta->nd_sbp(), tensor_meta->parallel_desc()));
   const auto& logical_shape =
       JUST(GetLogicalShape(*physical_shape, *sub_nd_sbp, *sub_parallel_desc));
   one::ConsistentTensorMeta sub_consistent_tensor_meta(logical_shape, tensor_meta->dtype(),
@@ -518,7 +517,7 @@ Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::ParallelDistribution> dst_nd_sbp) {
   std::tie(tensor_meta, dst_nd_sbp) = *JUST(GetDecomposableEquivalent(tensor_meta, dst_nd_sbp));
   const auto& parallel_desc = tensor_meta->parallel_desc();
-  const auto& src_nd_sbp = tensor_meta->parallel_distribution();
+  const auto& src_nd_sbp = tensor_meta->nd_sbp();
   CHECK_EQ_OR_RETURN(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
   std::vector<int64_t> nd_sbp_axis_sequence;
   {
@@ -547,7 +546,7 @@ Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
     const auto& sub_consistent_tensor_meta =
         JUST(GetSubConsistentTensorMeta(tensor_meta, sub_parallel_desc, sub_src_nd_sbp));
     const auto& new_src_nd_sbp =
-        JUST(ReplaceNdSbpComponent(tensor_meta->parallel_distribution(), axis, sub_dst_nd_sbp));
+        JUST(ReplaceNdSbpComponent(tensor_meta->nd_sbp(), axis, sub_dst_nd_sbp));
     tensor_meta = JUST(ReplaceNdSbp(tensor_meta, new_src_nd_sbp));
     transformations->push_back(NaiveBoxingTransformation{
         .consistent_tensor_meta = sub_consistent_tensor_meta,
