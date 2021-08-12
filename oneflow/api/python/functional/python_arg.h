@@ -37,7 +37,7 @@ struct AnyDataBase {
 };
 
 template<typename T>
-struct AnyData : public AnyDataBase {
+struct AnyData final : public AnyDataBase {
   T content;
   explicit AnyData(const T& v) : content(v) {}
 
