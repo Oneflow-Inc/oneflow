@@ -164,3 +164,26 @@ class RMSprop(Optimizer):
                         self._rmsprop(param, param.grad, ms_tensor, **kwargs)
             self._state["step"] = self._state["step"] + 1
             return loss
+
+    def generate_conf_for_graph(self, train_conf, vars_conf):
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+
+            lr = param_group["lr"]
+            decay_rate = param_group["alpha"]
+            centered = param_group["centered"]
+            weight_decay = param_group["weight_decay"]
+
+            epslion = param_group["eps"]
+
+            optimizer_conf.set_base_learning_rate(lr)
+
+            optimizer_conf.mutable_rmsprop_conf().set_decay_rate(decay_rate)
+            optimizer_conf.mutable_rmsprop_conf().set_centered(centered)
+            optimizer_conf.mutable_rmsprop_conf().set_epsilon(epslion)
+
+            # Set l2 penalty as weight decay
+            for param in param_group.parameters:
+                vars_conf[param].l2 = weight_decay
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
