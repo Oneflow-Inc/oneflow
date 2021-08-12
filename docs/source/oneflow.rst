@@ -55,6 +55,7 @@ oneflow
             gelu, 
             gt, 
             in_top_k, 
+            index_select,
             logical_and,
             logical_or,
             logical_xor,
