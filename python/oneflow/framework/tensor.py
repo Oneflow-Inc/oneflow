@@ -149,7 +149,7 @@ def is_nonzero(input):
         raise RuntimeError("bool value of Tensor with no values is ambiguous")
     if shape.numel() > 1:
         raise RuntimeError("bool value of Tensor with more than one value is ambiguous")
-    value = input.tolist()[0]
+    value = input.numpy().item()
     return bool(value)
 
 
