@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
+import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
 import oneflow as flow
@@ -54,7 +55,6 @@ class AdamW(Optimizer):
         eps (float, optional): term added to the denominator to improve
             numerical stability (default: 1e-8)
         weight_decay (float, optional): weight decay (L2 penalty) (In the equation is λ, default: 0)
-        scale (float, optional): the scale factor of loss (default: 1.0)
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
@@ -71,7 +71,6 @@ class AdamW(Optimizer):
         eps: float = 1e-08,
         weight_decay: float = 0,
         amsgrad: bool = False,
-        scale: float = 1.0,
     ):
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
@@ -83,14 +82,12 @@ class AdamW(Optimizer):
             betas[1] >= 0.0 and betas[1] < 1.0
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
-        assert scale > 0.0, f"Invalid scale factor: {scale}"
         assert amsgrad is False, "Not support AMSGrad now!"
         self._default_options["lr"] = lr
         self._default_options["eps"] = eps
         self._default_options["betas"] = betas
         self._default_options["weight_decay"] = weight_decay
         self._default_options["amsgrad"] = amsgrad
-        self._default_options["scale"] = scale
         if isinstance(parameters, collections.abc.Iterator):
             self.param_groups.append(ParamGroup(parameters, self._default_options))
         else:
@@ -127,7 +124,6 @@ class AdamW(Optimizer):
             for param_group in self.param_groups:
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
-                    "scale": param_group["scale"],
                     "weight_decay": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
@@ -141,3 +137,29 @@ class AdamW(Optimizer):
                     self._op(param, param.grad, m_tensor, v_tensor, **kwargs)
             self._state["step"] = self._state["step"] + 1
             return loss
+
+    def generate_conf_for_graph(self, train_conf, vars_conf):
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            lr = param_group["lr"]
+            weight_decay = param_group["weight_decay"]
+            beta1 = param_group["betas"][0]
+            beta2 = param_group["betas"][1]
+            epsilon = param_group["eps"]
+
+            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
+            optimizer_conf.set_base_learning_rate(lr)
+
+            optimizer_conf.mutable_adam_conf().set_beta1(beta1)
+            optimizer_conf.mutable_adam_conf().set_beta2(beta2)
+            optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
+            optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+                False
+            )  # TODO(zzk): Check this option
+
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                weight_decay
+            )
+            for param in param_group.parameters:
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)

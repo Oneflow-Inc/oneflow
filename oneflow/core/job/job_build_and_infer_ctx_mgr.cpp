@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& job_name) {
-  CHECK_OR_RETURN(!has_cur_job_) << Error::UnknownJobBuildAndInferError
+  CHECK_OR_RETURN(!has_cur_job_) << Error::UnknownJobBuildAndInferError()
                                  << "cur job not leave before you enter this job_name:" << job_name;
   CHECK_OR_RETURN(!job_name.empty()) << Error::JobNameEmptyError();
   CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) == job_name2infer_ctx_.end())

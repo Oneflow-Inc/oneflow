@@ -27,12 +27,12 @@ class BroadcastToCompatibleWithKernel final : public KernelIf<device_type> {
 
  private:
   void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+                          const std::function<Blob*(const std::string&)>&) const override;
 };
 
 template<DeviceType device_type, typename T>
 void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* x = BnInOp2Blob("x");
   Blob* y = BnInOp2Blob("y");
   const auto& broadcast_axes =
