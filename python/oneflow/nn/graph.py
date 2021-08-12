@@ -460,10 +460,9 @@ class Graph(object):
     def _shallow_repr(self):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
-    
+
     def __del__(self):
         print("e_s_g try to del graph ", self._name)
-
 
 
 class GraphConfig(FunctionConfig):

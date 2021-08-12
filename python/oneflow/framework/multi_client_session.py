@@ -47,7 +47,7 @@ class MultiClientSession(object):
             config_proto_str = text_format.MessageToString(self.config_proto)
             oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
             self.status_ = self.Status.INITED
-    
+
     def _try_close(self):
         if self.status_ != self.Status.CLOSED:
             oneflow._oneflow_internal.TryDestroyMultiClientSessionContext()
@@ -57,7 +57,6 @@ class MultiClientSession(object):
     def __del__(self):
         print("e_s_g py session close")
         self._try_close()
-
 
     @property
     def status(self):

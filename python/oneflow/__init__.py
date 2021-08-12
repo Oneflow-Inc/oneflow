@@ -77,7 +77,9 @@ env_util.GetEnvHolder()
 
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
-    MultiClientSession(oneflow._oneflow_internal.NewSessionId(), env_util.GetEnvHolder())
+    MultiClientSession(
+        oneflow._oneflow_internal.NewSessionId(), env_util.GetEnvHolder()
+    )
 )
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
@@ -97,6 +99,7 @@ del watcher
 def _ExitOneFlow():
     session_ctx.TryCloseDefaultSession()
     env_util.DelEnvHolder()
+
 
 atexit.register(_ExitOneFlow)
 
