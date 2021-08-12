@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
-import math
 from typing import Callable, Dict, Iterator, List, Union
 
 import oneflow as flow
@@ -49,7 +48,6 @@ class SGD(Optimizer):
         lr (float, optional): learning rate (default: 1e-3)
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
-
     """
 
     def __init__(
