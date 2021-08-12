@@ -82,7 +82,7 @@ class MessagePool final {
       ActorMsg msg;
       size_t ActorMsgSize = sizeof(msg);
       std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
-      size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
+      size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
       char * addr =(char*) malloc(RegisterMemorySize );
       ibv_mr * mr = ibv::wrapper.ibv_reg_mr_wrap(
           pd_, (void*)addr, RegisterMemorySize,
@@ -92,7 +92,7 @@ class MessagePool final {
       for(size_t i = 0;  i < num_of_message_ ; i++){
           char * split_addr =addr + ActorMsgSize * i ;
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
-          message_buf_.push_back(msg_mr);
+          message_buf_.push_front(msg_mr);
       }
     }
     
@@ -115,7 +115,7 @@ class MessagePool final {
 
     void PutMessage(ActorMsgMR * msg_mr) {
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      message_buf_.push_back(msg_mr);
+      message_buf_.push_front(msg_mr);
     }
 
     std::deque<ActorMsgMR*> GetMessageBuf() {
@@ -141,6 +141,8 @@ class IBVerbsQP final {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
   IBVerbsQP() = delete;
   IBVerbsQP(ibv_context*, ibv_pd*, uint8_t port_num, ibv_cq* send_cq, ibv_cq* recv_cq);
+  IBVerbsQP(ibv_context *, ibv_pd*, uint8_t port_num, ibv_cq * send_cq, ibv_cq* recv_cq,
+            std::shared_ptr<MessagePool> recv_msg_buf, std::shared_ptr<MessagePool> send_msg_buf);
   ~IBVerbsQP();
 
   uint32_t qp_num() const { return qp_->qp_num; }
@@ -173,9 +175,9 @@ class IBVerbsQP final {
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
   
-  std::unique_ptr<MessagePool> recv_msg_buf_;
-  std::unique_ptr<MessagePool> send_msg_buf_;
-};
+  std::shared_ptr<MessagePool>  recv_msg_buf_;
+  std::shared_ptr<MessagePool> send_msg_buf_;
+ };
 
 }  // namespace oneflow
 

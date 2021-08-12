@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_COMM_NETWORK_H_
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_COMM_NETWORK_H_
 
+#include <memory>
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
@@ -64,7 +65,10 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   HashMap<std::pair<int64_t, uint64_t>, std::shared_ptr<IBVerbsCommNetRMADesc>>
       remote_regst2rma_desc_;
   std::mutex remote_regst2rma_desc_mutex_;
-};
+
+ std::shared_ptr<MessagePool> recv_msg_buf_;
+ std::shared_ptr<MessagePool> send_msg_buf_;
+}; 
 
 }  // namespace oneflow
 

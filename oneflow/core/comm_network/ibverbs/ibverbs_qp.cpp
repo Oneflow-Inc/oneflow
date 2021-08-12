@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include <cstdint>
+#include <memory>
 #include <vector>
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/comm_network.h"
@@ -36,37 +37,39 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 
 }  // namespace
 
-// void MessagePool::RegisterMessagePool() {
-//       size_t ActorMsgSize = sizeof(ActorMsg);
-//       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_+1);
-//       char * addr =(char*) malloc(RegisterMemorySize * );
-      
-//       /*std::cout<<"mr:"<<mr<<std::endl;
-//       for(uint32_t i =0; i < num_of_message_; i++){
-//         ibv_mr * split_mr =(ibv_mr*) (mr + ActorMsgSize * i);
-//         std::cout<<"split_mr:"<<split_mr<<std::endl;
-//         IBVerbsMemDesc * new_mem_desc =new  IBVerbsMemDesc(split_mr,(void*)(addr + ActorMsgSize * i * sizeof(char)),ActorMsgSize);
-//         std::cout<<"addr:" << addr+ActorMsgSize * i<< std::endl;
-//         ActorMsgMR * msg_mr= new ActorMsgMR(new_mem_desc);
-//         message_buf_.push(msg_mr);
-//   }*/
-// }
-
-// void ActorMsgMR::set_msg(const ActorMsg& val) {
-//     *msg_ = val;
-// }
-
-// uint32_t ActorMsgMR::size() {
-//     return size_;
-// }
-
-// uint32_t ActorMsgMR::lkey(){
-//   return mr_->lkey;
-// }
-
-// ActorMsg   ActorMsgMR::msg(){
-//   return *msg_;
-// }
+IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
+                     ibv_cq* recv_cq,
+                     std::shared_ptr<MessagePool> recv_msg_buf,
+                     std::shared_ptr<MessagePool> send_msg_buf) {
+  // ctx_, pd_
+  ctx_ = ctx;
+  pd_ = pd;
+  port_num_ = port_num;
+  // qp_
+  ibv_device_attr device_attr{};
+  CHECK_EQ(ibv::wrapper.ibv_query_device(ctx, &device_attr), 0);
+  const int64_t user_queue_depth =
+      ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_QUEUE_DEPTH", kDefaultQueueDepth);
+  const uint32_t queue_depth = std::min<uint32_t>(device_attr.max_qp_wr, user_queue_depth);
+  ibv_qp_init_attr qp_init_attr{};
+  qp_init_attr.qp_context = nullptr;
+  qp_init_attr.send_cq = send_cq;
+  qp_init_attr.recv_cq = recv_cq;
+  qp_init_attr.srq = nullptr;
+  qp_init_attr.cap.max_send_wr = queue_depth;
+  qp_init_attr.cap.max_recv_wr = queue_depth;
+  qp_init_attr.cap.max_send_sge = 1;
+  qp_init_attr.cap.max_recv_sge = 1;
+  qp_init_attr.cap.max_inline_data = 0;
+  qp_init_attr.qp_type = IBV_QPT_RC;
+  qp_init_attr.sq_sig_all = 1;
+  qp_ = ibv::wrapper.ibv_create_qp(pd, &qp_init_attr);
+  CHECK(qp_);
+  num_outstanding_send_wr_ = 0;
+  max_outstanding_send_wr_ = queue_depth;
+  recv_msg_buf_ = recv_msg_buf;
+  send_msg_buf_ = send_msg_buf;
+}
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq) {
@@ -94,17 +97,9 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   qp_init_attr.sq_sig_all = 1;
   qp_ = ibv::wrapper.ibv_create_qp(pd, &qp_init_attr);
   CHECK(qp_);
-  // recv_msg_buf_
-  //recv_msg_buf_.assign(queue_depth, nullptr);
- // FOR_RANGE(size_t, i, 0, recv_msg_buf_.size()) { recv_msg_buf_.at(i) = new ActorMsgMR(pd_); }
-  // send_msg_buf_
-  //CHECK(send_msg_buf_.isempty());
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
-  recv_msg_buf_.reset(new MessagePool(pd_, queue_depth));
-  send_msg_buf_.reset(new MessagePool(pd_,queue_depth));
-  //recv_msg_buf_ = new MessagePool(pd_,queue_depth);
- // send_msg_buf_ = new MessagePool(pd_, queue_depth);
+  // recv_msg_buf_.reset(new MessagePool(pd_, queue_depth));
 }
 
 IBVerbsQP::~IBVerbsQP() {
