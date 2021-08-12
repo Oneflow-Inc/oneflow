@@ -71,7 +71,7 @@ message ParallelDistribution {
 }
 
 message ParallelDistributionSignature {
-  map<string, ParallelDistribution> bn_in_op2parallel_distribution = 1;
+  map<string, ParallelDistribution> bn_in_op2nd_sbp = 1;
 }
 
 message SbpSignatureList {
