@@ -23,7 +23,7 @@ namespace oneflow {
 
 template<DeviceType device_type>
 void ForeignWatchKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   OfBlob of_blob(ctx.device_ctx, BnInOp2Blob("in"));
   (*Global<std::shared_ptr<ForeignWatcher>>::Get())
       ->Call(this->op_conf().foreign_watch_conf().handler_uuid(),

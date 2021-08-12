@@ -118,8 +118,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
-    parallel_distribution_signature_ = new cfg::ParallelDistributionSignature(
-        kernel_conf.op_attribute().parallel_distribution_signature());
+    nd_sbp_signature_ =
+        new cfg::ParallelDistributionSignature(kernel_conf.op_attribute().nd_sbp_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = new cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
@@ -160,11 +160,10 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
 
   const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
-    const auto& bn2parallel_distribution =
-        parallel_distribution_signature_->bn_in_op2parallel_distribution();
+    const auto& bn2nd_sbp = nd_sbp_signature_->bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
-    auto it = bn2parallel_distribution.find(bn);
-    CHECK(it != bn2parallel_distribution.end());
+    auto it = bn2nd_sbp.find(bn);
+    CHECK(it != bn2nd_sbp.end());
     return it->second;
   }
 
@@ -186,7 +185,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const cfg::SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
-  const cfg::ParallelDistributionSignature* parallel_distribution_signature_;
+  const cfg::ParallelDistributionSignature* nd_sbp_signature_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
@@ -195,8 +194,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         job_desc_(job_desc),
         parallel_ctx_(kernel_conf.parallel_ctx()),
-        parallel_distribution_signature_(
-            kernel_conf.op_attribute().parallel_distribution_signature()),
+        nd_sbp_signature_(kernel_conf.op_attribute().nd_sbp_signature()),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
@@ -291,11 +289,10 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
   const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
-    const auto& bn2parallel_distribution =
-        parallel_distribution_signature_.bn_in_op2parallel_distribution();
+    const auto& bn2nd_sbp = nd_sbp_signature_.bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
-    auto it = bn2parallel_distribution.find(bn);
-    CHECK(it != bn2parallel_distribution.end());
+    auto it = bn2nd_sbp.find(bn);
+    CHECK(it != bn2nd_sbp.end());
     return it->second;
   }
   void UpdateArg2TensorDesc(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
@@ -350,7 +347,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
   cfg::SbpSignature sbp_signature_;
-  cfg::ParallelDistributionSignature parallel_distribution_signature_;
+  cfg::ParallelDistributionSignature nd_sbp_signature_;
   ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;
@@ -595,7 +592,7 @@ const std::shared_ptr<user_op::OpKernelState>& UserKernel::GetOpKernelState() co
   return opkernel_state_;
 }
 
-void UserKernel::ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
+void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                    user_op::OpKernelState* opkernel_state) const {
   ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
   kernel_->Compute(ctx_.get(), opkernel_state);
@@ -607,13 +604,13 @@ void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {
   opkernel_state_ = CreateOpKernelState(device_ctx);
 }
 
-void UserKernel::ForwardDataContent(const KernelCtx& ctx,
-                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void UserKernel::ForwardDataContent(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
 }
 
 void UserKernel::ForwardShape(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
   infer_cache_->UpdateCacheKey(infer_ctx_.get());
   if (!infer_cache_->IsCacheHit()) {
