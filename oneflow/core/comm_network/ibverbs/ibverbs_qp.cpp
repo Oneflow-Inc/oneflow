@@ -221,7 +221,8 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   wr_id->msg_mr = msg_mr;
   ibv_send_wr wr{};
   ibv_sge sge{};
-  sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
+  sge.addr = reinterpret_cast<uint64_t>(reinterpret_cast<void*>(msg_mr->addr()));
+ // sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
   //sge.length = msg_mr->mem_desc().mem_size();
  // sge.lkey = msg_mr->mem_desc().mr()->lkey;
   sge.length = msg_mr->size();
@@ -297,7 +298,7 @@ void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
   wr_id->msg_mr = msg_mr;
   ibv_recv_wr wr{};
   ibv_sge sge{};
-  sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
+  sge.addr = reinterpret_cast<uint64_t>(reinterpret_cast<void*>(msg_mr->addr()));
   //sge.length = msg_mr->mem_desc().mem_size();
  // sge.lkey = msg_mr->mem_desc().mr()->lkey;
   sge.length = msg_mr->size();

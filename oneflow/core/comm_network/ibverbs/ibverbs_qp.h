@@ -86,10 +86,10 @@ class MessagePool final {
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
       char * addr =(char*) malloc(RegisterMemorySize );
       ibv_mr * mr =  ibv::wrapper.ibv_reg_mr_wrap(
-          pd_, (void*)addr, RegisterMemorySize,
+          pd_,addr, RegisterMemorySize,
           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
       CHECK(mr);
-      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+     // std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       for(size_t i = 0;  i < num_of_message_ ; i++){
           char * split_addr =addr + ActorMsgSize * i ;
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
