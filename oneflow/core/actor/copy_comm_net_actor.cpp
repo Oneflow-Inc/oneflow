@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/register/register.h"
 
+#include <iostream>
 namespace oneflow {
 
 CopyCommNetActor::~CopyCommNetActor() { Global<CommNet>::Get()->DeleteActorReadId(actor_read_id_); }
@@ -69,7 +70,7 @@ bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMs
   regst_ctx.producer = msg.src_actor_id();
   regst_ctx.act_id = msg.act_id();
   regst_ctx.has_sole_empty_blob = msg.has_sole_empty_blob();
-  std::cout<< sequence_number2regst_ctx_.emplace(msg.comm_net_sequence_number(), regst_ctx).second << std::endl;
+  std::cout<< "the sequence:"<<sequence_number2regst_ctx_.emplace(msg.comm_net_sequence_number(), regst_ctx).second << std::endl;
   CHECK(sequence_number2regst_ctx_.emplace(msg.comm_net_sequence_number(), regst_ctx).second);
   return true;
 }
