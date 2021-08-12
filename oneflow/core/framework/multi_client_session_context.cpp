@@ -53,24 +53,6 @@ int32_t GetGpuDeviceNum() {
 
 }  // namespace
 
-MultiClientSessionContext::~MultiClientSessionContext() {
-  if (is_inited_) {
-    {
-      // NOTE(chengcheng): delete runtime global objects
-      Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-    }
-
-    Global<LazyJobBuildAndInferCtxMgr>::Delete();
-    Global<IDMgr>::Delete();
-
-    // TODO(chengcheng): remove template ForEnv and ForSession
-    Global<ResourceDesc, ForSession>::Delete();
-    // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
-    Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
-                                          GlobalProcessCtx::WorldSize());
-  }
-}
-
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
     CHECK_OR_RETURN(JUST(GlobalMultiClientEnv()));
@@ -164,7 +146,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     Global<ResourceDesc, ForSession>::Delete();
     // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
     Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
-                                          GlobalProcessCtx::NumOfProcessPerNode());
+                                          GlobalProcessCtx::WorldSize());
   }
   return Maybe<void>::Ok();
 }

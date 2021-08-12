@@ -106,7 +106,6 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
   Global<ResourceDesc, ForSession>::New(config_proto.resource(), GlobalProcessCtx::WorldSize());
-  Global<const ProfilerConf>::New(config_proto.profiler_conf());
   Global<IDMgr>::New();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();

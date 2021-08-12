@@ -100,7 +100,11 @@ std::string GlobalProcessCtx::LogDirEntry() {
 }
 
 /* static */ int64_t GlobalProcessCtx::LocalRank(int64_t rank) {
-  return rank % NumOfProcessPerNode();
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  HashMap<int64_t, int64_t> node_id2rankoffset = NodeId2RankOffset();
+  int64_t node_id = NodeId4Rank(rank);
+  int64_t offset = CHECK_JUST(MapAt(node_id2rankoffset, rank));
+  return rank - offset;
 }
 
 }  // namespace oneflow
