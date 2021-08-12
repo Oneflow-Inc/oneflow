@@ -137,7 +137,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5, auto_backward=False, rtol=1e-4, atol=1e-4)
+    @autotest(n=5, auto_backward=False, rtol=1e-3, atol=1e-3)
     def test_layernorm_with_random_data(test_case):
         channel = random(1, 6).to(int)
         height = random(1, 6).to(int)

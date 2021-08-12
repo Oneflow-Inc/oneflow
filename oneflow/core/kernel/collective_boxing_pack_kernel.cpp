@@ -28,12 +28,12 @@ class CollectiveBoxingPackKernel final : public KernelIf<device_type> {
  private:
   bool IsStateless() const override { return false; }
   void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+                          const std::function<Blob*(const std::string&)>&) const override;
 };
 
 template<DeviceType device_type, typename T>
 void CollectiveBoxingPackKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
   const CollectiveBoxingPackOpConf& pack_conf = this->op_conf().collective_boxing_pack_conf();

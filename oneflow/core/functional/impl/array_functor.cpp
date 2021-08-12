@@ -59,17 +59,16 @@ class ConsistentConstantFunctor {
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
     if (LazyMode::is_enabled()) {
-      std::vector<std::string> parallel_distribution(sbp_tuple.size());
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
         for (int i = 0; i < sbp_tuple.size(); ++i) {
-          parallel_distribution.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
         }
       }
-      JUST(attrs.SetAttr<std::vector<std::string>>("parallel_distribution", parallel_distribution));
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
     }
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
  private:
@@ -133,17 +132,16 @@ class ConsistentEmptyFunctor {
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
     if (LazyMode::is_enabled()) {
-      std::vector<std::string> parallel_distribution(sbp_tuple.size());
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
         for (int i = 0; i < sbp_tuple.size(); ++i) {
-          parallel_distribution.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
         }
       }
-      JUST(attrs.SetAttr<std::vector<std::string>>("parallel_distribution", parallel_distribution));
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
     }
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, parallel_distribution));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
  private:
@@ -520,6 +518,23 @@ class GatherNdFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& params,
                            const std::shared_ptr<one::Tensor>& indices) const {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {params, indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScatterNdFunctor {
+ public:
+  ScatterNdFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("scatter_nd").Input("indices").Input("updates").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& indices,
+                           const std::shared_ptr<one::Tensor>& updates, const Shape& shape) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates}, attrs);
   }
 
  private:
@@ -1331,6 +1346,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
+  m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");
