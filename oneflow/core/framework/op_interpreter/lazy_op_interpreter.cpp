@@ -614,14 +614,14 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
     grad_mode = "restore";
   }
   auto sbp_list_ptr = JUST(GetNdSbpStrList(sbp_sym));
-  std::shared_ptr<UserOpExpr> parallel_cast_op_expr = JUST(
-      OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
-          .Input("in")
-          .Output("out")
-          .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
-          .Attr<std::string>("grad_mode", grad_mode)
-          .Attr<std::vector<std::string>>("grad_nd_sbp", grad_parallel_distribution)
-          .Build());
+  std::shared_ptr<UserOpExpr> parallel_cast_op_expr =
+      JUST(OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
+               .Input("in")
+               .Output("out")
+               .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
+               .Attr<std::string>("grad_mode", grad_mode)
+               .Attr<std::vector<std::string>>("grad_nd_sbp", grad_parallel_distribution)
+               .Build());
 
   if (input_proxy) {
     (*outputs)[0] =
