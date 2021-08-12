@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.cfg.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
@@ -43,6 +44,20 @@ bool GlobalDeviceIdsContaining(const MachineId2DeviceIdList& bigger,
     }
   }
   return true;
+}
+
+std::shared_ptr<ParallelContext> RawGetParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  int64_t parallel_id_val = -1;
+  bool in_parallel_desc = parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id_val);
+  CHECK(in_parallel_desc);
+  std::shared_ptr<ParallelContext> parallel_ctx = std::make_shared<ParallelContext>();
+  parallel_ctx->set_parallel_id(parallel_id_val);
+  parallel_ctx->set_parallel_num(parallel_desc->parallel_num());
+  return parallel_ctx;
 }
 
 }  // namespace
@@ -181,6 +196,11 @@ Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_
   }
   *parallel_id = parallel_id_iter->second;
   return device_iter->second;
+}
+
+std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc) {
+  return DECORATE(&RawGetParallelContext4CurrentProcessCtx, ThreadLocal)(parallel_desc);
 }
 
 bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,
@@ -357,6 +377,14 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
     parallel_conf.add_device_name(std::string("@") + std::to_string(i) + ":0");
   }
   return parallel_conf;
+}
+
+bool IsMirroredParallelContext(const ParallelContext& parallel_ctx) {
+  if (CHECK_JUST(GlobalMultiClientEnv())) {
+    return parallel_ctx.parallel_id() == 0 && parallel_ctx.parallel_num() == 1
+           && GlobalProcessCtx::WorldSize() > 1;
+  }
+  return false;
 }
 
 }  // namespace oneflow
