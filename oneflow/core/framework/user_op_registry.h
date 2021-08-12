@@ -78,7 +78,7 @@ struct OpRegistryResult {
   InputArgModifyFn input_arg_modify_fn;
   OutputArgModifyFn output_arg_modify_fn;
   OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn;
-  ParallelDistributionInferFn parallel_distribution_infer_fn;
+  ParallelDistributionInferFn nd_sbp_infer_fn;
 };
 
 class OpRegistry final {
