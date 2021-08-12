@@ -36,7 +36,6 @@ if(NOT llvm_monorepo_POPULATED)
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/bin)
   set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/lib)
   set(LLVM_INSTALL_DIR ${THIRD_PARTY_DIR}/llvm)
-  set(LLVM_EXTERNAL_LIT=${LLVM_BINARY_DIR}/bin/llvm-lit)
 
   execute_process(COMMAND "${CMAKE_COMMAND}" ${llvm_monorepo_SOURCE_DIR}/llvm
     -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
@@ -105,6 +104,7 @@ if(NOT llvm_monorepo_POPULATED)
   include_directories(${MLIR_INCLUDE_DIRS})
 endif()
 
+set(LLVM_EXTERNAL_LIT=${LLVM_BINARY_DIR}/bin/llvm-lit)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_BINARY_DIR}/include)
 add_subdirectory(include)
