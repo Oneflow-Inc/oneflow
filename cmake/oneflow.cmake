@@ -2,19 +2,11 @@ include(python)
 include(CheckCXXCompilerFlag)
 
 function(oneflow_add_executable)
-  if (BUILD_CUDA)
-    cuda_add_executable(${ARGV})
-  else()
-    add_executable(${ARGV})
-  endif()
+  add_executable(${ARGV})
 endfunction()
 
 function(oneflow_add_library)
-  if (BUILD_CUDA)
-    cuda_add_library(${ARGV})
-  else()
-    add_library(${ARGV})
-  endif()
+  add_library(${ARGV})
 endfunction()
 
 function(target_try_compile_option target flag)
@@ -289,7 +281,9 @@ if(BUILD_CUDA)
   target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
   set(ONEFLOW_CUDA_LIBS of_cudaobj)
 
-  target_compile_options(of_cudaobj PRIVATE -Werror=return-type)
+  target_compile_options(of_cudaobj PRIVATE -Xcompiler -Werror=return-type)
+  # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
+  target_compile_definitions(of_cudaobj PRIVATE THRUST_IGNORE_CUB_VERSION_CHECK)
 endif()
 
 # cc obj lib
