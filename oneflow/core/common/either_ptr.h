@@ -31,22 +31,22 @@ class EitherPtr final {
 
   EitherPtr() : type_(UnionType<X>::value), x_ptr_(nullptr) {}
   EitherPtr(const XPtr& ptr) : type_(UnionType<X>::value), x_ptr_(ptr) {}
-  EitherPtr(const YPtr& ptr) : type_(UnionType<Y>::value) { new (&x_ptr_) YPtr(ptr); }
+
+  // WARNING: we should assume that the structure of shared_ptr<X> and shared_ptr<Y> is same,
+  // and obviously at most time the assumption holds
+  EitherPtr(const YPtr& ptr)
+      : type_(UnionType<Y>::value), x_ptr_(reinterpret_cast<const XPtr&>(ptr)) {}
 
   EitherPtr(XPtr&& ptr) : type_(UnionType<X>::value), x_ptr_(std::move(ptr)) {}
-  EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value) { new (&x_ptr_) YPtr(std::move(ptr)); }
+  EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value), x_ptr_(reinterpret_cast<XPtr&&>(ptr)) {}
 
   EitherPtr(const EitherPtr& either_ptr) : type_(either_ptr.type_), x_ptr_(either_ptr.x_ptr_) {}
   EitherPtr(EitherPtr&& either_ptr)
       : type_(either_ptr.type_), x_ptr_(std::move(either_ptr.x_ptr_)) {}
 
-  ~EitherPtr() {
-    if (Has<X>()) {
-      x_ptr_.~XPtr();
-    } else {
-      y_ptr().~YPtr();
-    }
-  }
+  // the destructor of X or Y will be called properly because it will be stored in the deleter of
+  // shared_ptr while constructed
+  ~EitherPtr() = default;
 
   EitherPtr& operator=(const EitherPtr& either_ptr) {
     x_ptr_ = either_ptr.x_ptr_;
@@ -92,10 +92,8 @@ class EitherPtr final {
 
   const YPtr& Get(tag<Y>) const {
     CHECK(Has<Y>());
-    return y_ptr();
+    return reinterpret_cast<const YPtr&>(x_ptr_);
   }
-
-  const YPtr& y_ptr() const { return reinterpret_cast<const YPtr&>(x_ptr_); }
 
   int8_t type_;
   std::shared_ptr<X> x_ptr_;
