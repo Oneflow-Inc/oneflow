@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/functional/value_types.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
@@ -240,7 +241,7 @@ bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
 }
 
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
-  const auto& nd_sbp = JUST(tensor.parallel_distribution());
+  const auto& nd_sbp = JUST(tensor.nd_sbp());
   const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());
   for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
     (*tuple)[i] = SymbolOf(nd_sbp->sbp_parallel(i));
@@ -263,6 +264,10 @@ py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
 // 8. ndarray           -> ConsistentTensor  // TODO
 Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype,
                         bool treat_single_int_as_size) {
+  // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
+  //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
+  //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
+  auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
   Symbol<Device> device;
   Symbol<ParallelDesc> placement;
   std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;
