@@ -619,9 +619,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
       OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
           .Input("in")
           .Output("out")
-          .Attr<std::vector<std::string>>("parallel_distribution", *sbp_list_ptr)
+          .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
           .Attr<std::string>("grad_mode", grad_mode)
-          .Attr<std::vector<std::string>>("grad_parallel_distribution", grad_parallel_distribution)
+          .Attr<std::vector<std::string>>("grad_nd_sbp", grad_parallel_distribution)
           .Build());
 
   if (input_proxy) {
