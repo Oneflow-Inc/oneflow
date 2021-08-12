@@ -62,7 +62,7 @@ class _Formatter(object):
 
         else:
             nonzero_finite_vals = flow.masked_select(tensor_view, tensor_view.ne(0))
-            if tensor_view.numel() == 0:
+            if nonzero_finite_vals.numel() == 0:
                 # no valid number, do nothing
                 return
 

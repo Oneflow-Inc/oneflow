@@ -248,11 +248,11 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
                 [ 2.,  3.,  4.]], dtype=oneflow.float32)
 
         >>> LA.norm(a)
-        tensor(7.746, dtype=oneflow.float32)
+        tensor(7.7460, dtype=oneflow.float32)
         >>> LA.norm(b)
-        tensor(7.746, dtype=oneflow.float32)
+        tensor(7.7460, dtype=oneflow.float32)
         >>> LA.norm(b, 'fro')
-        tensor(7.746, dtype=oneflow.float32)
+        tensor(7.7460, dtype=oneflow.float32)
         >>> LA.norm(a, float('inf'))
         tensor(4., dtype=oneflow.float32)
         >>> LA.norm(b, float('inf'))
@@ -271,11 +271,11 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         >>> LA.norm(b, -1)
         tensor(6., dtype=oneflow.float32)
         >>> LA.norm(a, 2)
-        tensor(7.746, dtype=oneflow.float32)
+        tensor(7.7460, dtype=oneflow.float32)
         >>> LA.norm(a, -2)
         tensor(0., dtype=oneflow.float32)
         >>> LA.norm(a, 3)
-        tensor(5.848, dtype=oneflow.float32)
+        tensor(5.8480, dtype=oneflow.float32)
         >>> LA.norm(a, -3)
         tensor(0., dtype=oneflow.float32)
 
@@ -284,7 +284,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         >>> c = flow.tensor([[1., 2., 3.],
         ...                   [-1, 1, 4]])
         >>> LA.norm(c, dim=0)
-        tensor([1.4142, 2.2361, 5.    ], dtype=oneflow.float32)
+        tensor([1.4142, 2.2361, 5.0000], dtype=oneflow.float32)
         >>> LA.norm(c, dim=1, keepdim = True)
         tensor([[3.7417],
                 [4.2426]], dtype=oneflow.float32)
@@ -295,7 +295,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 
         >>> m = flow.tensor(np.arange(8, dtype=np.float32)).reshape((2, 2, 2))
         >>> LA.norm(m, dim=(1,2))
-        tensor([ 3.7417, 11.225 ], dtype=oneflow.float32)
+        tensor([ 3.7417, 11.2250], dtype=oneflow.float32)
     """
     return Norm(ord, dim, keepdim)(input)
 
@@ -440,7 +440,7 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
         >>> LA.matrix_norm(b)
         tensor([14.2829, 14.2829], dtype=oneflow.float32)
         >>> LA.matrix_norm(b, dim=(0, 2))
-        tensor([ 3.1623, 10.    , 17.2627], dtype=oneflow.float32)
+        tensor([ 3.1623, 10.0000, 17.2627], dtype=oneflow.float32)
     """
     return Matrix_Norm(ord, dim, keepdim)(input)
 

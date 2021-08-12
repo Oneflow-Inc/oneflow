@@ -39,7 +39,7 @@ def greater_op(input, other):
 
         >>> out = flow.gt(input1, input2).shape
         >>> out
-        flow.Size([2., 6., 5., 3.])
+        flow.Size([2, 6, 5, 3])
 
     """
 
