@@ -194,7 +194,6 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
 
 REGISTER_UPSAMPNEAREST1D_GPU_KERNEL(float)
 REGISTER_UPSAMPNEAREST1D_GPU_KERNEL(double)
-REGISTER_UPSAMPNEAREST1D_GPU_KERNEL(int)
 
 template<typename T>
 class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
@@ -282,7 +281,6 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
 
 REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(float)
 REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(double)
-REGISTER_UPSAMPLE_NEAREST_2D_GPU_KERNEL(int)
 
 template<typename T>
 class UpsampleNearest3DGPUKernel final : public user_op::OpKernel {
@@ -355,6 +353,5 @@ class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
 
 REGISTER_UPSAMPNEAREST3D_GPU_KERNEL(float)
 REGISTER_UPSAMPNEAREST3D_GPU_KERNEL(double)
-REGISTER_UPSAMPNEAREST3D_GPU_KERNEL(int)
 
 }  // namespace oneflow

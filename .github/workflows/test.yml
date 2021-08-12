@@ -134,25 +134,25 @@ jobs:
         include:
           - test_suite: cuda
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF
             os: [self-hosted, linux, build]
             allow_fail: false
             python_version: 3.6,3.7
           - test_suite: cpu
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --gcc7
+            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF
             os: [self-hosted, linux, build]
             allow_fail: false
             python_version: 3.6,3.7
           - test_suite: xla
             cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF
             os: [self-hosted, linux, build]
             allow_fail: true
             python_version: 3.6
           - test_suite: xla_cpu
             cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --cpu --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+            extra_flags: --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --cpu --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF
             os: [self-hosted, linux, build]
             allow_fail: true
             python_version: 3.6
@@ -184,7 +184,7 @@ jobs:
               echo "is_built=1" >> $GITHUB_ENV
           fi
           if [ "$test_suite" == "cuda" ]; then
-            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7/build-oneflow/bin" >> $GITHUB_ENV
           elif [ "$test_suite" == "cpu" ]; then
             echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7-cpu/build-oneflow/bin" >> $GITHUB_ENV
           fi
@@ -647,6 +647,23 @@ jobs:
               repo: context.repo.repo,
               body: 'CI failed, removing label automerge'
             })
+      - name: Print stacks in all core files
+        timeout-minutes: 45
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) == false && failure()
+        run: |
+          set -x
+          docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            ${image_name} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/print_stack_in_all_dirs.sh"
+      - name: Print stacks in all core files (new interface)
+        timeout-minutes: 45
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) && failure()
+        run: |
+          set -x
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/print_stack_in_all_dirs.sh"
       - name: Query system status
         timeout-minutes: 45
         if: failure()

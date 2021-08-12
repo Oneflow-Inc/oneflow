@@ -15,15 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
-
-
-class Exp(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x):
-        return flow.F.exp(x)
 
 
 @register_tensor_op("exp")
@@ -55,7 +46,7 @@ def exp_op(x):
         tensor([ 2.7183,  7.3891, 20.0855], dtype=oneflow.float32)
 
     """
-    return Exp()(x)
+    return flow.F.exp(x)
 
 
 if __name__ == "__main__":

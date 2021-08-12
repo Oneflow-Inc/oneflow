@@ -55,7 +55,7 @@ class BroadcastBinaryGrad : public OpExprGradFunction<OpExprInterpState> {
   BroadcastBinaryGrad() = default;
   virtual ~BroadcastBinaryGrad() = default;
 
-  virtual Maybe<void> Init(const OpExpr& op) { return Maybe<void>::Ok(); }
+  virtual Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
   Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
