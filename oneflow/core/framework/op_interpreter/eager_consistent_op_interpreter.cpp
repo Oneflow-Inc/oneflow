@@ -65,7 +65,7 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
 namespace {
 
 Maybe<Tensor> GetBoxingOutput(const std::shared_ptr<Tensor>& input,
-                              Symbol<cfg::ParallelDistribution> nd_sbp) {
+                              Symbol<cfg::NdSbp> nd_sbp) {
   const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(*input));
   // Eager boxing
   const auto& boxing_interpreter =

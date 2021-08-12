@@ -31,8 +31,8 @@ class DispatchHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphB
       std::vector<TaskNode*>* sorted_out_tasks,
       std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
       const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-      const BlobDesc& logical_blob_desc, const cfg::ParallelDistribution& in_nd_sbp,
-      const cfg::ParallelDistribution& out_nd_sbp, const Shape& time_shape) const override;
+      const BlobDesc& logical_blob_desc, const cfg::NdSbp& in_nd_sbp,
+      const cfg::NdSbp& out_nd_sbp, const Shape& time_shape) const override;
 
  private:
   struct Impl;
@@ -41,9 +41,9 @@ class DispatchHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphB
 
 void InOutParallelDimReduce(
     const ParallelDesc& in_parallel_desc, const ParallelDesc& out_parallel_desc,
-    const cfg::ParallelDistribution& in_nd_sbp, const cfg::ParallelDistribution& out_nd_sbp,
+    const cfg::NdSbp& in_nd_sbp, const cfg::NdSbp& out_nd_sbp,
     ParallelDesc* reduced_in_parallel_desc, ParallelDesc* reduced_out_parallel_desc,
-    cfg::ParallelDistribution* reduced_in_nd_sbp, cfg::ParallelDistribution* reduced_out_nd_sbp);
+    cfg::NdSbp* reduced_in_nd_sbp, cfg::NdSbp* reduced_out_nd_sbp);
 
 }  // namespace oneflow
 

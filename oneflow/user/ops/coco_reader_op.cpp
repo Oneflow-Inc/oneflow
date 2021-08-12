@@ -91,24 +91,24 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("COCOReader")
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
+    .SetNdSbpInferFn(
+        [](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
           const auto& dist_conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
           const Shape& hierarchy = ctx->parallel_hierarchy();
 
           // the inputs may be produced by tick and others, whose sbp should be broadcast parallel
           // dist
           for (const auto& arg_pair : ctx->inputs()) {
-            cfg::ParallelDistribution* input_dist =
-                ctx->ParallelDistribution4ArgNameAndIndex(arg_pair.first, arg_pair.second);
+            cfg::NdSbp* input_dist =
+                ctx->NdSbp4ArgNameAndIndex(arg_pair.first, arg_pair.second);
             FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
               input_dist->add_sbp_parallel()->mutable_broadcast_parallel();
             }
           }
 
           for (const auto& arg_pair : ctx->outputs()) {
-            cfg::ParallelDistribution* output_dist =
-                ctx->ParallelDistribution4ArgNameAndIndex(arg_pair.first, arg_pair.second);
+            cfg::NdSbp* output_dist =
+                ctx->NdSbp4ArgNameAndIndex(arg_pair.first, arg_pair.second);
             if (dist_conf.size() == 0) {
               // the default parallel dist of outputs of dataset op should be split(0)
               FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {

@@ -26,12 +26,12 @@ class ParallelDesc;
 
 namespace cfg {
 
-class ParallelDistribution;
+class NdSbp;
 
 }
 
 Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(Symbol<ParallelDesc> parallel_desc,
-                                                        Symbol<cfg::ParallelDistribution> nd_sbp);
+                                                        Symbol<cfg::NdSbp> nd_sbp);
 
 Maybe<std::vector<int64_t>> GetBroadcastParallelIds(const Shape& hierarchy_shape,
                                                     const std::vector<bool>& dim2is_broadcast,

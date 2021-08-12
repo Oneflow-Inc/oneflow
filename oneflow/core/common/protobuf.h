@@ -241,8 +241,8 @@ struct hash<oneflow::SbpParallel> {
 };
 
 template<>
-struct hash<oneflow::ParallelDistribution> {
-  size_t operator()(const oneflow::ParallelDistribution& nd_sbp) const {
+struct hash<oneflow::NdSbp> {
+  size_t operator()(const oneflow::NdSbp& nd_sbp) const {
     const auto& sbp_hash = std::hash<oneflow::SbpParallel>();
     size_t hash = 0;
     for (int i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
