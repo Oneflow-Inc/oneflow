@@ -505,6 +505,12 @@ class Module(object):
 
         return self._apply(convert)
 
+    def to_consistent(self, placement=None, sbp=None):
+        def convert(t):
+            return t.to_consistent(placement=placement, sbp=sbp)
+
+        return self._apply(convert)
+
     def _get_name(self):
         return self.__class__.__name__
 

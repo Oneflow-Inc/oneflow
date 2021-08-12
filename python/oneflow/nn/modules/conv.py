@@ -424,7 +424,8 @@ class Conv2d(Module):
     def forward(self, x):
         if x.shape[1] != self.in_channels:
             raise ValueError("The input channels should be equal to self.in_channels")
-        if x.device.type == "cpu" and self.groups > 1:
+        # if x.device.type == "cpu" and self.groups > 1:
+        if not x.is_cuda and self.groups > 1:
             in_channel_axis = 1
             in_split_list = ConvUtil.split(
                 x, axis=in_channel_axis, split_num=self.groups
