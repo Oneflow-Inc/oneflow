@@ -43,4 +43,4 @@ from oneflow.F import dropout
 from oneflow.F import smooth_l1_loss
 from oneflow.F import pad
 from oneflow.F import upsample
-from oneflow.F import one_hot
+from oneflow.nn.modules.one_hot import one_hot
