@@ -146,7 +146,7 @@ def prelu(
         )
     op = (
         flow.user_op_builder(name)
-        .Op("prelu")
+        .Op("tf_prelu")
         .Input("x", [inputs])
         .Input("alpha", [alpha])
         .Output("y")
