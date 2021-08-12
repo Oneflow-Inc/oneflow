@@ -32,7 +32,8 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_mr * mr, char * addr, size_t  size):size_(size), mr_(mr){
+  ActorMsgMR(ibv_mr * mr, char * addr, size_t  size):size_(size){
+    mr_.reset(mr);
     msg_ = reinterpret_cast<ActorMsg*>(addr);
   }
   ~ActorMsgMR() {
@@ -49,7 +50,8 @@ class ActorMsgMR final {
 
  private:
     size_t size_;
-    ibv_mr  *  mr_;
+    //ibv_mr  *  mr_;
+    std::unique_ptr<ibv_mr> mr_;
     ActorMsg * msg_;
 };
 
