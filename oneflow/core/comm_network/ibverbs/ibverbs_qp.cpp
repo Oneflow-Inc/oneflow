@@ -176,10 +176,10 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-  std::queue<ActorMsgMR *> messageBuf = recv_msg_buf_->GetMessageBuf();
+  std::deque<ActorMsgMR *> messageBuf = recv_msg_buf_->GetMessageBuf();
   while(messageBuf.empty() == false) {
       ActorMsgMR * msg_mr = messageBuf.front();
-      messageBuf.pop();
+      messageBuf.pop_front();
       PostRecvRequest(msg_mr);
     } 
 }
