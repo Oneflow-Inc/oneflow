@@ -46,6 +46,10 @@ def _consistent_tensor_to(input, device):
     if device == input.placement.device_type:
         return input
 
+    # NOTE(zwx): eager consistent interpreter for copy is not ready
+    # return flow.F.copy(input, device_type=device, device_id=0)
+
+    # NOTE(zwx): eager consistent interpreter for to_consistent is not ready too
     out_placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
         input.placement, device
     )

@@ -325,7 +325,15 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         g_consistent_to = MyGraph(consistent_to)
 
         e = consistent_to(c_x)
+        test_case.assertTrue(e.is_cuda)
+        test_case.assertTrue(e.is_consistent)
+        test_case.assertTrue(e.sbp[0] == flow.sbp.split(0))
+
         g = g_consistent_to(c_x)
+        test_case.assertTrue(g.is_cuda)
+        test_case.assertTrue(g.is_consistent)
+        test_case.assertTrue(g.sbp[0] == flow.sbp.split(0))
+
         test_case.assertTrue(np.allclose(e.to_local().numpy(), g.to_local().numpy()))
 
     # @unittest.skipIf(True, "")
@@ -338,12 +346,14 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         g = MyGraph(m)
 
         eager_out = m(c_x)
+        test_case.assertTrue(eager_out.is_cuda)
         test_case.assertTrue(eager_out.is_consistent)
         test_case.assertTrue(eager_out.sbp[0] == flow.sbp.split(0))
 
         graph_out = g(c_x)
-        test_case.assertTrue(eager_out.is_consistent)
-        test_case.assertTrue(eager_out.sbp[0] == flow.sbp.split(0))
+        test_case.assertTrue(graph_out.is_cuda)
+        test_case.assertTrue(graph_out.is_consistent)
+        test_case.assertTrue(graph_out.sbp[0] == flow.sbp.split(0))
 
         test_case.assertTrue(
             np.allclose(eager_out.to_local().numpy(), graph_out.to_local().numpy())
