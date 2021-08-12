@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
+import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
 import oneflow as flow
@@ -136,3 +137,29 @@ class AdamW(Optimizer):
                     self._op(param, param.grad, m_tensor, v_tensor, **kwargs)
             self._state["step"] = self._state["step"] + 1
             return loss
+
+    def generate_conf_for_graph(self, train_conf, vars_conf):
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            lr = param_group["lr"]
+            weight_decay = param_group["weight_decay"]
+            beta1 = param_group["betas"][0]
+            beta2 = param_group["betas"][1]
+            epsilon = param_group["eps"]
+
+            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
+            optimizer_conf.set_base_learning_rate(lr)
+
+            optimizer_conf.mutable_adam_conf().set_beta1(beta1)
+            optimizer_conf.mutable_adam_conf().set_beta2(beta2)
+            optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
+            optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+                False
+            )  # TODO(zzk): Check this option
+
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                weight_decay
+            )
+            for param in param_group.parameters:
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)

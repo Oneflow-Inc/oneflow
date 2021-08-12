@@ -26,13 +26,14 @@ class BoxingZerosKernel final : public KernelIf<device_type> {
   ~BoxingZerosKernel() override = default;
 
  private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type>
 void BoxingZerosKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Blob* out = BnInOp2Blob("out");
   Memset<device_type>(ctx.device_ctx, out->mut_dptr(), 0, out->ByteSizeOfBlobBody());
 }
