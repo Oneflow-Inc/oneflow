@@ -49,7 +49,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.attr("uint8") = &CHECK_JUST(DType::Get(DataType::kUInt8));
   m.attr("record") = &CHECK_JUST(DType::Get(DataType::kOFRecord));
   m.attr("tensor_buffer") = &CHECK_JUST(DType::Get(DataType::kTensorBuffer));
-
 }
 
 }  // namespace oneflow
