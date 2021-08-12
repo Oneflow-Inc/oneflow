@@ -29,6 +29,11 @@ namespace atomic {
 
 __device__ __forceinline__ int Add(int* address, int val) { return atomicAdd(address, val); }
 
+__device__ __forceinline__ int64_t Add(int64_t* address, int64_t val) {
+  return static_cast<int64_t>(atomicAdd(reinterpret_cast<unsigned long long int*>(address),
+                                        static_cast<unsigned long long int>(val)));
+}
+
 __device__ __forceinline__ half Add(half* address, half val) {
 #if __CUDA_ARCH__ >= 700 && CUDA_VERSION >= 10000
   return atomicAdd(address, val);

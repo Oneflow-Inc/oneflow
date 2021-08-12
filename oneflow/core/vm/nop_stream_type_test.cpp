@@ -88,9 +88,13 @@ void TestNopStreamTypeNoArgument(
   ASSERT_EQ(instruction->mut_instr_msg(), nop_instr_msg.Mutable());
 }
 
-TEST(NopStreamType, no_argument) { TestNopStreamTypeNoArgument(&NaiveNewVirtualMachine); }
+TEST(NopStreamType, no_argument) {
+  TestResourceDescScope scope(1, 1);
+  TestNopStreamTypeNoArgument(&NaiveNewVirtualMachine);
+}
 
 TEST(NopStreamType, cached_allocator_no_argument) {
+  TestResourceDescScope scope(1, 1);
   TestNopStreamTypeNoArgument(CachedAllocatorNewVirtualMachine());
 }
 
@@ -119,15 +123,18 @@ void TestNopStreamTypeOneArgument(
 }
 
 TEST(NopStreamType, one_argument_dispatch) {
+  TestResourceDescScope scope(1, 1);
   TestNopStreamTypeOneArgument(&NaiveNewVirtualMachine);
 }
 
 TEST(NopStreamType, cached_allocator_one_argument_dispatch) {
+  TestResourceDescScope scope(1, 1);
   TestNopStreamTypeOneArgument(CachedAllocatorNewVirtualMachine());
 }
 
 TEST(NopStreamType, one_argument_triger_next_instruction) {
   InitRankInfoInCluster();
+  TestResourceDescScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NaiveNewVirtualMachine(vm_desc.Get());
@@ -149,6 +156,7 @@ TEST(NopStreamType, one_argument_triger_next_instruction) {
 
 TEST(NopStreamType, one_argument_triger_all_instructions) {
   InitRankInfoInCluster();
+  TestResourceDescScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NaiveNewVirtualMachine(vm_desc.Get());

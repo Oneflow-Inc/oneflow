@@ -19,11 +19,13 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -63,6 +65,8 @@ class TensorImpl {
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<bool> has_eager_blob_object() const = 0;
+  virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const;
@@ -128,12 +132,10 @@ class ConsistentTensorImpl : public TensorImpl {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape_ptr(); }
   DataType dtype() const override { return tensor_meta_->dtype(); }
-  Symbol<cfg::ParallelDistribution> parallel_distribution() const {
-    return tensor_meta_->parallel_distribution();
-  }
+  Symbol<cfg::ParallelDistribution> nd_sbp() const { return tensor_meta_->nd_sbp(); }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
-  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint() const {
-    return consumer_parallel_distribution_constraint_;
+  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint() const {
+    return consumer_nd_sbp_constraint_;
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
@@ -144,8 +146,8 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
-  void set_consumer_parallel_distribution_constraint(Symbol<cfg::ParallelDistribution> val) {
-    consumer_parallel_distribution_constraint_ = val;
+  void set_consumer_nd_sbp_constraint(Symbol<cfg::ParallelDistribution> val) {
+    consumer_nd_sbp_constraint_ = val;
   }
 
   ConsistentTensorMeta* mut_tensor_meta() {
@@ -153,14 +155,24 @@ class ConsistentTensorImpl : public TensorImpl {
     return nullptr;
   }
 
+  const Maybe<TransportToken> transport_token() const { return transport_token_; }
+
+  Maybe<void> set_transport_token(const TransportToken& transport_token) {
+    CHECK_OR_RETURN(!transport_token_.IsOk()) << "transport_token_ is initiliazed";
+    transport_token_ = transport_token;
+    return Maybe<void>::Ok();
+  }
+
  protected:
   ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta, bool requires_grad, bool is_leaf)
       : TensorImpl(requires_grad, is_leaf),
         tensor_meta_(tensor_meta),
-        consumer_parallel_distribution_constraint_() {}
+        consumer_nd_sbp_constraint_(),
+        transport_token_(Error::ValueError("invalid rpc token")) {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint_;
+  Optional<Symbol<cfg::ParallelDistribution>> consumer_nd_sbp_constraint_;
+  Maybe<TransportToken> transport_token_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
@@ -210,6 +222,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
     return tensor_storage_;
   }
   Maybe<bool> has_eager_blob_object() const override { return eager_blob_object_.get(); }
+  Maybe<const Stride> stride() const override { return tensor_meta_->stride_ptr(); }
+  Maybe<int64_t> storage_offset() const override { return tensor_meta_->storage_offset(); }
 
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
@@ -249,24 +263,17 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   bool is_lazy() const override { return false; }
 
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override { return cur_rank_phy_tensor_; }
-
-  static Maybe<EagerConsistentTensorImpl> New(
-      const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor,
-      Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc);
+  void reset_cur_rank_phy_tensor(const std::shared_ptr<MirroredTensor>& val) {
+    cur_rank_phy_tensor_ = val;
+  }
 
   static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
                                               bool requires_grad, bool is_leaf);
 
-  static Maybe<EagerConsistentTensorImpl> NewWithPhyTensor(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
-      int64_t parallel_id, bool requires_grad, bool is_leaf);
-
-  static Maybe<EagerConsistentTensorImpl> NewWithoutPhyTensor(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
-      int64_t parallel_id, bool requires_grad, bool is_leaf);
-
-  typedef Maybe<EagerConsistentTensorImpl> (*NewMethod)(Symbol<ConsistentTensorMeta>,
-                                                        Symbol<Device>, int64_t, bool, bool);
+  static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+                                              Symbol<Device> device,
+                                              const Optional<int64_t>& parallel_id,
+                                              bool requires_grad, bool is_leaf);
 
  private:
   EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,

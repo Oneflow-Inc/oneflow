@@ -39,6 +39,12 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
+#include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
+#ifdef WITH_RDMA
+#include "oneflow/core/platform/include/ibv.h"
+#endif  // WITH_RDMA
 
 namespace oneflow {
 
@@ -51,13 +57,8 @@ std::string LogDir(const std::string& log_dir) {
   return v;
 }
 
-void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) {
-  if (!default_physical_env) {
-    FLAGS_log_dir = LogDir(logging_conf.log_dir());
-  } else {
-    std::string default_env_log_path = JoinPath(logging_conf.log_dir(), "default_physical_env_log");
-    FLAGS_log_dir = LogDir(default_env_log_path);
-  }
+void InitLogging(const CppLoggingConf& logging_conf) {
+  FLAGS_log_dir = LogDir(logging_conf.log_dir());
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
@@ -108,11 +109,23 @@ void ClearAllSymbolAndIdCache() {
   Global<symbol::IdCache<cfg::OpNodeSignature>>::Get()->ClearAll();
 }
 
+#if defined(__linux__) && defined(WITH_RDMA)
+
+bool CommNetIBEnabled() {
+  bool user_enabled = ParseBooleanFromEnv("ONEFLOW_COMM_NET_IB_ENABLE", false);
+  if (user_enabled) {
+    return ibv::IsAvailable();
+  } else {
+    return false;
+  }
+}
+
+#endif
+
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
-  is_default_physical_env_ = env_proto.is_default_physical_env();
-  InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
+  InitLogging(env_proto.cpp_logging_conf());
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
@@ -167,6 +180,18 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #ifdef __linux__
     Global<EpollCommNet>::New();
     Global<Transport>::New();
+    if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+#ifdef WITH_RDMA
+      if (CommNetIBEnabled()) {
+        Global<IBVerbsCommNet>::New();
+        Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
+      } else {
+        Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
+      }
+#else
+      Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
+#endif  // WITH_RDMA
+    }
 #endif  // __linux__
   }
   return Maybe<void>::Ok();
@@ -175,6 +200,11 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
+    if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+      if (Global<EpollCommNet>::Get() != static_cast<EpollCommNet*>(Global<CommNet>::Get())) {
+        Global<CommNet>::Delete();
+      }
+    }
     Global<Transport>::Delete();
     Global<EpollCommNet>::Delete();
 #endif  // __linux__

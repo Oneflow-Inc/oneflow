@@ -27,10 +27,6 @@ class EmptyKernel final : public OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t elem_cnt = out_tensor->shape().elem_cnt();
-    CHECK_GT(elem_cnt, 0);
-
     // Do nothing
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

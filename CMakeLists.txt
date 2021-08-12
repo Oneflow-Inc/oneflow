@@ -1,9 +1,13 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.14.0)
 
-string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
-if(NOT uppercase_CMAKE_BUILD_TYPE MATCHES "^(DEBUG|RELEASE|RELWITHDEBINFO|MINSIZEREL)$")
-    set(CMAKE_BUILD_TYPE "Release")
+if (NOT CMAKE_BUILD_TYPE)
+  message(STATUS "No build type selected, default to Release")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
+endif()
+
+if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
+  message(FATAL_ERROR "Expected CMAKE_BUILD_TYPE is Debug, Release, RelWithDebInfo or MinSizeRel, got ${CMAKE_BUILD_TYPE}")
 endif()
 message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
@@ -28,6 +32,7 @@ option(WITH_COCOAPI "Option to build with COCO API" ON)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
 option(OF_SOFTMAX_USE_FAST_MATH "" ON)
+option(TREAT_WARNINGS_AS_ERRORS "" ON)
 set(RPC_BACKEND "GRPC,LOCAL" CACHE STRING "")
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 set(PIP_INDEX_MIRROR "" CACHE STRING "")
@@ -105,8 +110,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
   CACHE PATH "Where to install third party headers and libs")
 
-set(THIRD_PARTY_SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/build/third_party"
-  CACHE PATH "Where the third party submodules are")
+set(ONEFLOW_PYTHON_DIR "${PROJECT_SOURCE_DIR}/python" CACHE PATH "oneflow python src dir")
 
 if(WIN32)
   set(CMAKE_BUILD_TYPE Debug)
@@ -129,9 +133,6 @@ if(WIN32)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 else()
   set(EXTRA_CXX_FLAGS "-std=c++11 -Wall -Wno-sign-compare -Wno-unused-function -fPIC")
-  if (APPLE)
-     set(EXTRA_CXX_FLAGS "${EXTRA_CXX_FLAGS} -Wno-deprecated-declarations -Wno-mismatched-tags")
-  endif()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${EXTRA_CXX_FLAGS}")

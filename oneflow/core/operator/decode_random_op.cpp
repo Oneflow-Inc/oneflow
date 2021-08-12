@@ -69,5 +69,6 @@ Maybe<void> DecodeRandomOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list
 }
 
 REGISTER_OP(OperatorConf::kDecodeRandomConf, DecodeRandomOp);
+REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kDecodeRandomConf, 1);
 
 }  // namespace oneflow

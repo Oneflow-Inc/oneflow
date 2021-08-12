@@ -4,13 +4,13 @@ set -xe
 export PYTHONUNBUFFERED=1
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"/test_tmp_dir"}
+test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"./test_tmp_dir"}
 
 
 rm -rf $test_tmp_dir
 mkdir -p $test_tmp_dir
 chmod -R o+w $test_tmp_dir
-cp -r $src_dir/oneflow/compatible_single_client_python/test $test_tmp_dir
+cp -r $src_dir/python/oneflow/compatible/single_client/test $test_tmp_dir
 cd $test_tmp_dir
 
 ONEFLOW_TEST_DEVICE_NUM=1 python3 test/ops/test_assign.py --failfast --verbose

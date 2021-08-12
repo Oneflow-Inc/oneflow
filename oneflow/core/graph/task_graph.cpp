@@ -305,11 +305,9 @@ bool IsConnectedLbisAllSameParallelDistribution(const OpEdge* op_edge) {
   CHECK_GT(op_edge->lbis().size(), 0);
   HashSet<bool> predicators;
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
-    const cfg::ParallelDistribution& src_parallel_distribution =
-        src_node->ParallelDistribution4Lbi(lbi);
-    const cfg::ParallelDistribution& dst_parallel_distribution =
-        dst_node->ParallelDistribution4Lbi(lbi);
-    predicators.insert(src_parallel_distribution == dst_parallel_distribution);
+    const cfg::ParallelDistribution& src_nd_sbp = src_node->ParallelDistribution4Lbi(lbi);
+    const cfg::ParallelDistribution& dst_nd_sbp = dst_node->ParallelDistribution4Lbi(lbi);
+    predicators.insert(src_nd_sbp == dst_nd_sbp);
   }
   CHECK_EQ(predicators.size(), 1);
   return *predicators.begin();
@@ -540,7 +538,7 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
 }
 
 void TaskGraph::RemoveEmptyRegsts() {
-  ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedBlob(); });
+  ForEachNode([&](TaskNode* node) { node->EraseUninitializedShapeProducedBlob(); });
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeConsumedRegst(); });
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedRegst(); });
   ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });
@@ -715,20 +713,18 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     std::vector<TaskNode*> out_nodes;
     out_nodes.reserve(sorted_dst_comp_tasks.size());
     std::vector<std::vector<TaskNode*>> sorted_ctrl_tasks;
-    const cfg::ParallelDistribution& src_parallel_distribution =
-        src_op_node->ParallelDistribution4Lbi(lbi);
-    const cfg::ParallelDistribution& dst_parallel_distribution =
-        dst_op_node->ParallelDistribution4Lbi(lbi);
+    const cfg::ParallelDistribution& src_nd_sbp = src_op_node->ParallelDistribution4Lbi(lbi);
+    const cfg::ParallelDistribution& dst_nd_sbp = dst_op_node->ParallelDistribution4Lbi(lbi);
     const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
     const ParallelDesc& dst_parallel_desc = dst_op_node->parallel_desc();
     const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);
     auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
-        dst_parallel_desc, lbi, blob_desc, src_parallel_distribution, dst_parallel_distribution,
+        dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
         *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get())));
     boxing_logger_->Log(*status, src_op_node->op().op_name(), dst_op_node->op().op_name(),
-                        src_parallel_desc, dst_parallel_desc, src_parallel_distribution,
-                        dst_parallel_distribution, lbi, blob_desc);
+                        src_parallel_desc, dst_parallel_desc, src_nd_sbp, dst_nd_sbp, lbi,
+                        blob_desc);
     CHECK_EQ(out_nodes.size(), sorted_dst_comp_tasks.size());
     FOR_RANGE(size_t, i, 0, out_nodes.size()) {
       ConnectWithLbi(out_nodes.at(i), sorted_dst_comp_tasks.at(i), lbi);

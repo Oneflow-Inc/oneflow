@@ -19,32 +19,13 @@ limitations under the License.
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
 #include <iostream>
+#include <cuda_profiler_api.h>
+#include "oneflow/core/device/cuda_util.h"
 #endif  // OF_ENABLE_PROFILER
 
 namespace oneflow {
 
 namespace profiler {
-
-namespace {
-
-bool CaseInsensitiveStringEquals(const std::string& lhs, const std::string& rhs) {
-  return lhs.size() == rhs.size()
-         && std::equal(lhs.begin(), lhs.end(), rhs.begin(),
-                       [](char a, char b) { return std::tolower(a) == std::tolower(b); });
-}
-
-bool StringToBool(const std::string& str) {
-  return CaseInsensitiveStringEquals(str, "1") || CaseInsensitiveStringEquals(str, "true")
-         || CaseInsensitiveStringEquals(str, "yes") || CaseInsensitiveStringEquals(str, "on")
-         || CaseInsensitiveStringEquals(str, "y");
-}
-
-}  // namespace
-
-void ParseBoolFlagFromEnv(const std::string& env_var, bool* flag) {
-  const char* env_p = std::getenv(env_var.c_str());
-  *flag = (env_p != nullptr && StringToBool(env_p));
-}
 
 void NameThisHostThread(const std::string& name) {
 #ifdef OF_ENABLE_PROFILER
@@ -104,6 +85,18 @@ void LogHostMemoryUsage(const std::string& name) {
   const int64_t page_size = sysconf(_SC_PAGE_SIZE);
   LOG(INFO) << "HostMemoryUsage: " << name << " VM " << vm_pages * page_size << " RSS "
             << rss_pages * page_size;
+#endif  // OF_ENABLE_PROFILER
+}
+
+void ProfilerStart() {
+#ifdef OF_ENABLE_PROFILER
+  OF_CUDA_CHECK(cudaProfilerStart());
+#endif  // OF_ENABLE_PROFILER
+}
+
+void ProfilerStop() {
+#ifdef OF_ENABLE_PROFILER
+  OF_CUDA_CHECK(cudaProfilerStop());
 #endif  // OF_ENABLE_PROFILER
 }
 

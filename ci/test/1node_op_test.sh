@@ -10,7 +10,7 @@ test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"./test_tmp_dir"}
 
 rm -rf $test_tmp_dir
 mkdir -p $test_tmp_dir
-cp -r $src_dir/oneflow/compatible_single_client_python/test $test_tmp_dir
+cp -r $src_dir/python/oneflow/compatible/single_client/test $test_tmp_dir
 cd $test_tmp_dir
 
 python3 -m oneflow --doctor

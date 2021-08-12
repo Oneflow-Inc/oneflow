@@ -44,6 +44,7 @@ namespace {
 struct GlobalProcessCtxScope {
   GlobalProcessCtxScope() {
     auto* ctx = Global<ProcessCtx>::New();
+    ctx->mutable_ctrl_addr()->Add();
     ctx->set_rank(0);
     ctx->set_node_size(1);
     Global<RankInfoInCluster>::New()->mutable_num_process_distribution()->add_num_process(1);
@@ -54,6 +55,7 @@ struct GlobalProcessCtxScope {
     Global<RankInfoInCluster>::Delete();
     Global<ProcessCtx>::Delete();
   }
+  ~GlobalProcessCtxScope() { Global<ProcessCtx>::Delete(); }
 };
 
 TEST(SequentialInstruction, front_seq_compute) {

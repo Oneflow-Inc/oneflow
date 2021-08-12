@@ -60,6 +60,7 @@ class CpuExpandKernel final : public user_op::OpKernel {
 REGISTER_EXPAND_KERNEL(float);
 REGISTER_EXPAND_KERNEL(double);
 REGISTER_EXPAND_KERNEL(int);
+REGISTER_EXPAND_KERNEL(int64_t);
 
 template<typename T>
 class CpuExpandGradKernel final : public user_op::OpKernel {
@@ -105,5 +106,6 @@ class CpuExpandGradKernel final : public user_op::OpKernel {
 REGISTER_EXPAND_GRAD_KERNEL(float);
 REGISTER_EXPAND_GRAD_KERNEL(double);
 REGISTER_EXPAND_GRAD_KERNEL(int);
+REGISTER_EXPAND_GRAD_KERNEL(int64_t);
 
 }  // namespace oneflow

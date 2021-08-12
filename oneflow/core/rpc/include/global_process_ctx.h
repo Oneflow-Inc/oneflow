@@ -26,6 +26,7 @@ struct GlobalProcessCtx {
   static void GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id);
   static int64_t Rank();
   static int64_t LocalRank();
+  static int64_t LocalRank(int64_t rank);
   static int64_t NodeSize();
   static int64_t ThisNodeId();
   static int64_t NodeId4Rank(int64_t rank);
