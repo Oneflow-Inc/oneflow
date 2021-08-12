@@ -34,4 +34,5 @@ if(BUILD_CUDA)
     PRIVATE
     ${CUDA_DRIVER_LIBRARY}
   )
+  include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 endif(BUILD_CUDA)
