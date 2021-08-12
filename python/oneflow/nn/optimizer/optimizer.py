@@ -24,9 +24,7 @@ from oneflow.nn.parameter import Parameter
 
 class ParamGroup(object):
     def __init__(
-        self,
-        parameters: Dict[str, Any],
-        default_options: Dict,
+        self, parameters: Dict[str, Any], default_options: Dict,
     ):
         # ParamGroup must be constructed by Dict["params": parameters: List[Parameter or Tensor], "...": ...]
         assert isinstance(parameters, dict) and "params" in parameters
@@ -120,7 +118,9 @@ class Optimizer(object):
         """
         if isinstance(parameters, collections.abc.Iterator):
             # Iterator
-            self.param_groups.append(ParamGroup({"params": list(parameters)}, self._default_options))
+            self.param_groups.append(
+                ParamGroup({"params": list(parameters)}, self._default_options)
+            )
         elif isinstance(parameters, collections.abc.Iterable):
             # List[Dict]
             if isinstance(parameters[0], dict):
@@ -129,6 +129,10 @@ class Optimizer(object):
                     self.param_groups.append(ParamGroup(param, self._default_options))
             # List[Parameter or Tensor]
             else:
-                self.param_groups.append(ParamGroup({"params": parameters}, self._default_options))
+                self.param_groups.append(
+                    ParamGroup({"params": parameters}, self._default_options)
+                )
         else:
-            raise TypeError(f"params argument given to the optimizer should be an iterable of Tensors or dicts, but got {type(parameters)}")
+            raise TypeError(
+                f"params argument given to the optimizer should be an iterable of Tensors or dicts, but got {type(parameters)}"
+            )
