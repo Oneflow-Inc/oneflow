@@ -120,7 +120,7 @@ def compare_with_numpy_rmsprop(
 
     train_by_numpy()
 
-    test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-4, atol=1e-4))
+    test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3))
 
 
 @flow.unittest.skip_unless_1n1d()
