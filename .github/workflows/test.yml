@@ -140,7 +140,7 @@ jobs:
             python_version: 3.6,3.7
           - test_suite: cpu
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --gcc7 --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF
+            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF
             os: [self-hosted, linux, build]
             allow_fail: false
             python_version: 3.6,3.7
@@ -184,7 +184,7 @@ jobs:
               echo "is_built=1" >> $GITHUB_ENV
           fi
           if [ "$test_suite" == "cuda" ]; then
-            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7/build-oneflow/bin" >> $GITHUB_ENV
           elif [ "$test_suite" == "cpu" ]; then
             echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7-cpu/build-oneflow/bin" >> $GITHUB_ENV
           fi

@@ -101,14 +101,14 @@ def _inferface_blob_conf_proto_to_cfg(
     mut_inferface_blob_conf_cfg.mutable_shape().CopyFrom(shape)
     dtype = dtype_proto_cfg.DataType(int(inferface_blob_conf_proto.data_type))
     mut_inferface_blob_conf_cfg.set_data_type(dtype)
-    if inferface_blob_conf_proto.HasField("parallel_distribution"):
-        assert len(inferface_blob_conf_proto.parallel_distribution.sbp_parallel) == 1
-        sbp_proto = inferface_blob_conf_proto.parallel_distribution.sbp_parallel[0]
+    if inferface_blob_conf_proto.HasField("nd_sbp"):
+        assert len(inferface_blob_conf_proto.nd_sbp.sbp_parallel) == 1
+        sbp_proto = inferface_blob_conf_proto.nd_sbp.sbp_parallel[0]
         if sbp_proto.HasField("split_parallel"):
             split_axis = sbp_proto.split_parallel.axis
             sbp = sbp_parallel_cfg.SbpParallel()
             sbp.mutable_split_parallel().set_axis(split_axis)
-            mut_inferface_blob_conf_cfg.mutable_parallel_distribution().mutable_sbp_parallel().Add().CopyFrom(
+            mut_inferface_blob_conf_cfg.mutable_nd_sbp().mutable_sbp_parallel().Add().CopyFrom(
                 sbp
             )
     mut_inferface_blob_conf_cfg.set_is_dynamic(inferface_blob_conf_proto.is_dynamic)
