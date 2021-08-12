@@ -376,7 +376,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   VariableOpConf* var_conf = op_conf.mutable_variable_conf();
   var_conf->set_out("out");
   input_tensor->shape()->ToProto(var_conf->mutable_shape());
-  var_conf->set_data_type(input_tensor->dtype());
+  var_conf->set_data_type(input_tensor->dtype()->data_type());
   // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
   //   by EagerTensor.
   var_conf->mutable_initializer()->mutable_empty_conf();
