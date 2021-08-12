@@ -53,7 +53,7 @@ def one_hot(
     """
     if input.is_consistent:
         raise ValueError(
-            "A consistent tensor can not be applied to one_hot."
+            "A consistent tensor can not be applied to onehot, and use tensor.to_local() to convert it to local tensor first."
         )
     if input.is_lazy:
         raise NotImplementedError
