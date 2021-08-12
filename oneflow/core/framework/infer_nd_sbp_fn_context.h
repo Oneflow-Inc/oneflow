@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_INFER_PARALLEL_DISTRIBUTION_FN_CONTEXT_H_
-#define ONEFLOW_CORE_FRAMEWORK_INFER_PARALLEL_DISTRIBUTION_FN_CONTEXT_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_INFER_ND_SBP_FN_CONTEXT_H_
+#define ONEFLOW_CORE_FRAMEWORK_INFER_ND_SBP_FN_CONTEXT_H_
 
 #include "oneflow/core/framework/user_op_conf.h"
 
@@ -33,7 +33,7 @@ class InferParallelDistributionFnContext {
       const std::string& arg_name, int32_t index) = 0;
   virtual const cfg::ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
       const std::string& arg_name, int32_t index) const = 0;
-  virtual const cfg::ParallelDistributionSignature& parallel_distribution_constraints() const = 0;
+  virtual const cfg::ParallelDistributionSignature& nd_sbp_constraints() const = 0;
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
   virtual int64_t parallel_num() const = 0;
   virtual const Shape& parallel_hierarchy() = 0;
@@ -45,4 +45,4 @@ class InferParallelDistributionFnContext {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_INFER_PARALLEL_DISTRIBUTION_FN_CONTEXT_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_INFER_ND_SBP_FN_CONTEXT_H_
