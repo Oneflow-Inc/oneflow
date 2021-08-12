@@ -173,15 +173,21 @@ def _test_where_broadcast_x_backward(test_case, device):
     x_grad = [[[0.0, 3.0], [3.0, 0.0], [3.0, 0.0]]]
     test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-05, 1e-05))
 
+
 def _test_where_x_y_none(test_case, device):
-    condition = flow.Tensor(np.array([[[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]),
+    condition = flow.Tensor(
+        np.array([[[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]),
         dtype=flow.float32,
         device=flow.device(device),
-        requires_grad=True,)
+        requires_grad=True,
+    )
     of_out = flow.where(condition)
     of_nonzero = flow.nonzero(condition, as_tuple=True)
     for i in range(len(of_out)):
-        test_case.assertTrue(np.allclose(of_out[i].numpy(), of_nonzero[i].numpy(), 1e-05, 1e-05))
+        test_case.assertTrue(
+            np.allclose(of_out[i].numpy(), of_nonzero[i].numpy(), 1e-05, 1e-05)
+        )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestWhere(flow.unittest.TestCase):
@@ -200,6 +206,7 @@ class TestWhere(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()
