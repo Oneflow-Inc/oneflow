@@ -951,3 +951,7 @@
 - name: "l2_normalize"
   signature: "TensorTuple L2Normalize(Tensor input, Int32 axis, Float epsilon, *)"
   bind_python: True
+
+- name: "l2_normalize_grad"
+  signature: "Tensor L2NormalizeGrad(Tensor dy, Tensor y, Tensor square_x_sum, Int32 axis, Float epsilon, *)"
+  bind_python: False

@@ -617,6 +617,30 @@ class L2NormalizeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class L2NormalizeGradFunctor {
+ public:
+  L2NormalizeGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("l2_normalize_grad")
+                         .Input("dy")
+                         .Input("y")
+                         .Input("square_x_sum")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& square_x_sum, const int32_t& axis,
+                           const float& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, square_x_sum}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -645,6 +669,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
   m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
+  m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
 };
 
 }  // namespace functional
