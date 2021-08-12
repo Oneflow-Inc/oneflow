@@ -26,7 +26,7 @@ except ImportError:
     accimage = None
 
 import oneflow as flow
-from oneflow.framework.tensor import Tensor
+from oneflow.framework.tensor import Tensor,tensor
 
 from . import functional_pil as F_pil
 from . import functional_tensor as F_t
@@ -100,13 +100,12 @@ def to_tensor(pic):
 
     # default_float_dtype = flow.get_default_dtype()
     default_float_dtype = flow.float32
-
+    print("type of pic >>>>>>>>>>>>> ", type(pic))
     if isinstance(pic, np.ndarray):
         # handle numpy array
         if pic.ndim == 2:
             pic = pic[:, :, None]
-
-        img = flow.Tensor(pic.transpose((2, 0, 1)))
+        img = Tensor(pic.transpose((2, 0, 1)))
         # backward compatibility
         if img.dtype == flow.int:
             return img.to(dtype=default_float_dtype).div(255)
@@ -116,7 +115,7 @@ def to_tensor(pic):
     if accimage is not None and isinstance(pic, accimage.Image):
         nppic = np.zeros([pic.channels, pic.height, pic.width], dtype=np.float32)
         pic.copyto(nppic)
-        return flow.Tensor(nppic).to(dtype=default_float_dtype)
+        return Tensor(nppic).to(dtype=default_float_dtype)
 
     # handle PIL Image
     mode_to_nptype = {"I": np.int32, "I;16": np.int16, "F": np.float32}
@@ -124,10 +123,25 @@ def to_tensor(pic):
         dtype = flow.int32
     else:
         dtype = flow.float32
+    
+    print("\n=======================functional.py=====================")
+    print(
+        "IsEnvInited >>>",  flow._oneflow_internal.IsEnvInited(),
+        "\nIsMultiClient() >>>", flow._oneflow_internal.IsMultiClient(), 
+        "\nEnvResource() >>> ", flow._oneflow_internal.EnvResource(),
+        "\nCurrentResource() >>> ", flow._oneflow_internal.CurrentResource(),
+        "\nGetRank() >>> ", flow._oneflow_internal.GetRank(),
+        "\nGetWorldSize() >>> ", flow._oneflow_internal.GetWorldSize(),
+        "\n============================================================================\n"
+    )
 
-    img = flow.Tensor(
+    print("functional.py >> to_tensor() >> start")
+    xxx = flow.tensor([[1,2,3,4,5], [6,7,8,9,10]])
+    print("xxx >>>>>>> ", xxx)
+    img = tensor(
         np.array(pic, mode_to_nptype.get(pic.mode, np.uint8), copy=True), dtype=dtype,
     )
+    print("functional.py >> to_tensor() >> finish")
 
     if pic.mode == "1":
         img = 255 * img

@@ -102,7 +102,7 @@ static void set_worker_signal_handlers() {
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static std::map<int64_t, std::set<pid_t>> worker_pids = {};
 
-static void error_if_any_worker_fails(PyObject *noargs) {
+static void error_if_any_worker_fails() {
   printf("\n========================dataloader.cpp error_if_any_worker_fails========================");
   // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
   int error;

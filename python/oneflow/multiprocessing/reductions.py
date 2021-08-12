@@ -1,11 +1,10 @@
+from multiprocessing.reduction import ForkingPickler
+
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
 from oneflow.framework.tensor import Tensor
 
-import os
-import threading
-import multiprocessing
-from multiprocessing.reduction import ForkingPickler
+
 try:
     # Early load resource_sharer to prevent a partially initialized instance
     # from being inherited in a forked child process. The reduce_storage method
@@ -29,3 +28,4 @@ def init_reductions():
     ForkingPickler.register(Tensor, reduce_tensor)
     ForkingPickler.register(flow._oneflow_internal.Tensor, reduce_local_tensor)
     ForkingPickler.register(Parameter, reduce_tensor)
+    ForkingPickler.register(flow._oneflow_internal.nn.Parameter, reduce_tensor)

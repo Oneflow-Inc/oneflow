@@ -587,6 +587,16 @@ class _SingleProcessDataLoaderIter(_BaseDataLoaderIter):
             self._collate_fn,
             self._drop_last,
         )
+        print("\n=======================_SingleProcessDataLoaderIter()=====================")
+        print(
+            "IsEnvInited >>>",  flow._oneflow_internal.IsEnvInited(),
+            "\nIsMultiClient() >>>", flow._oneflow_internal.IsMultiClient(), 
+            "\nEnvResource() >>> ", flow._oneflow_internal.EnvResource(),
+            "\nCurrentResource() >>> ", flow._oneflow_internal.CurrentResource(),
+            "\nGetRank() >>> ", flow._oneflow_internal.GetRank(),
+            "\nGetWorldSize() >>> ", flow._oneflow_internal.GetWorldSize(),
+            "\n============================================================================\n"
+        )
 
     def _next_data(self):
         index = self._next_index()  # may raise StopIteration
@@ -909,7 +919,19 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
 
         assert self._num_workers > 0
+        if self._num_workers == 999:
+            self._num_workers=1
         assert self._prefetch_factor > 0
+        print("\n=======================_MultiProcessingDataLoaderIter=====================")
+        print(
+            "IsEnvInited >>>",  flow._oneflow_internal.IsEnvInited(),
+            "\nIsMultiClient() >>>", flow._oneflow_internal.IsMultiClient(), 
+            "\nEnvResource() >>> ", flow._oneflow_internal.EnvResource(),
+            "\nCurrentResource() >>> ", flow._oneflow_internal.CurrentResource(),
+            "\nGetRank() >>> ", flow._oneflow_internal.GetRank(),
+            "\nGetWorldSize() >>> ", flow._oneflow_internal.GetWorldSize(),
+            "\n============================================================================\n"
+        )
 
         if loader.multiprocessing_context is None:
             multiprocessing_context = multiprocessing
@@ -932,6 +954,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             # Need to `cancel_join_thread` here!
             # See sections (2) and (3b) above.
             index_queue.cancel_join_thread()
+            
             w = multiprocessing_context.Process(
                 target=_utils.worker._worker_loop,
                 args=(self._dataset_kind, self._dataset, index_queue,
