@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test.modules.test_util import GenArgList
+from test_util import GenArgList
 
 
 @flow.unittest.skip_unless_1n1d()
