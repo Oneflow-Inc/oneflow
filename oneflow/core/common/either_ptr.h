@@ -39,9 +39,7 @@ class EitherPtr final {
   EitherPtr(const EitherPtr& either_ptr) : type_(either_ptr.type_), x_ptr(either_ptr.x_ptr) {}
   EitherPtr(EitherPtr&& either_ptr) : type_(either_ptr.type_), x_ptr(std::move(either_ptr.x_ptr)) {}
 
-  ~EitherPtr() {
-    x_ptr.~XPtr();
-  }
+  ~EitherPtr() { x_ptr.~XPtr(); }
 
   EitherPtr& operator=(const EitherPtr& either_ptr) {
     x_ptr = either_ptr.x_ptr;
@@ -77,7 +75,7 @@ class EitherPtr final {
     static constexpr int8_t value = 1;
   };
 
-  template <typename>
+  template<typename>
   struct tag {};
 
   const XPtr& Get(tag<X>) const {

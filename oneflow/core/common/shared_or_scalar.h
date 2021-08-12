@@ -32,11 +32,13 @@ class SharedOrScalar final {
 
   using Shared = std::shared_ptr<StructT>;
 
-  SharedOrScalar(const ScalarT& scalar_value) : is_scalar_(true), scalar_value_(scalar_value)  {}
+  SharedOrScalar(const ScalarT& scalar_value) : is_scalar_(true), scalar_value_(scalar_value) {}
 
-  SharedOrScalar(const std::shared_ptr<StructT>& shared_ptr) : is_scalar_(false), shared_value_(shared_ptr) {}
+  SharedOrScalar(const std::shared_ptr<StructT>& shared_ptr)
+      : is_scalar_(false), shared_value_(shared_ptr) {}
 
-  SharedOrScalar(std::shared_ptr<StructT>&& shared_ptr) : is_scalar_(false), shared_value_(std::move(shared_ptr)) {}
+  SharedOrScalar(std::shared_ptr<StructT>&& shared_ptr)
+      : is_scalar_(false), shared_value_(std::move(shared_ptr)) {}
 
   SharedOrScalar(const SharedOrScalar& rhs) : is_scalar_(rhs.is_scalar_) {
     if (rhs.is_scalar_) {
@@ -104,7 +106,6 @@ class SharedOrScalar final {
   const ScalarT& operator*() const { return scalar_value(); }
 
  private:
-
   bool is_scalar_;
   union {
     ScalarT scalar_value_;
