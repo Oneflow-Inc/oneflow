@@ -37,6 +37,7 @@ class ActorMsgMR final {
     mr_ = mr;
   }
   ~ActorMsgMR() {
+    delete msg_;
    //CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0);
   }
 
@@ -71,7 +72,7 @@ class MessagePool final {
     ~MessagePool() {
       while(message_buf_.empty() == false) {
         delete message_buf_.front();
-        message_buf_.pop_front();
+        message_buf_.pop();
       }
     }//todo:这里可能要修改
 
@@ -86,14 +87,13 @@ class MessagePool final {
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
       char * addr =(char*) malloc(RegisterMemorySize );
       ibv_mr * mr =  ibv::wrapper.ibv_reg_mr_wrap(
-          pd_,addr, RegisterMemorySize,
+          pd_,  reinterpret_cast<void*>(addr), RegisterMemorySize,
           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
       CHECK(mr);
-     // std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       for(size_t i = 0;  i < num_of_message_ ; i++){
           char * split_addr =addr + ActorMsgSize * i ;
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
-          message_buf_.push_back(msg_mr);
+          message_buf_.push(msg_mr);
       }
     }
     
@@ -108,18 +108,18 @@ class MessagePool final {
 
     ActorMsgMR * GetMessageFromBuf() {
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      std::deque<ActorMsgMR*> buf = GetMessageBuf();
+      std::queue<ActorMsgMR*> buf = GetMessageBuf();
       ActorMsgMR * msg_mr = buf.front();
-      buf.pop_front();
+      buf.pop();
       return msg_mr;
     }
 
     void PutMessage(ActorMsgMR * msg_mr) {
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      message_buf_.push_back(msg_mr);
+      message_buf_.push(msg_mr);
     }
 
-    std::deque<ActorMsgMR*> GetMessageBuf() {
+    std::queue<ActorMsgMR*> GetMessageBuf() {
       return message_buf_;
     }
 
@@ -132,7 +132,7 @@ class MessagePool final {
     ibv_pd* pd_;
     size_t  num_of_message_;
     std::mutex message_buf_mutex_;
-    std::deque<ActorMsgMR*> message_buf_;
+    std::queue<ActorMsgMR*> message_buf_;
 };
 
 struct IBVerbsCommNetRMADesc;
