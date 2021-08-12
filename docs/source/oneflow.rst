@@ -65,7 +65,6 @@ oneflow
             masked_fill, 
             masked_select, 
             matmul, 
-            mish, 
             narrow, 
             max, 
             mean,
