@@ -1,14 +1,28 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_CUDA_BASED_CPU_MPI_BOXING_INTERPRETER_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_CUDA_BASED_CPU_MPI_BOXING_INTERPRETER_H_
 
-#include "oneflow/core/framework/boxing/eager_boxing_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
 
 namespace oneflow {
 
 class CudaBasedCpuMpiBoxingInterpreter final : public EagerBoxingInterpreter {
  public:
-  explicit CudaBasedCpuMpiBoxingInterpreter(const std::shared_ptr<EagerBoxingInterpreter>& base_gpu_boxing_interpreter) : base_gpu_boxing_interpreter_(base_gpu_boxing_interpreter) {}
-
+  CudaBasedCpuMpiBoxingInterpreter() = default;
   ~CudaBasedCpuMpiBoxingInterpreter() override = default;
 
  private:
@@ -17,8 +31,8 @@ class CudaBasedCpuMpiBoxingInterpreter final : public EagerBoxingInterpreter {
                                    Symbol<cfg::ParallelDistribution> out_nd_sbp,
                                    Symbol<ParallelDesc> in_parallel_desc,
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
+};
 
-  std::shared_ptr<EagerBoxingInterpreter> base_gpu_boxing_interpreter_;
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_CUDA_BASED_CPU_MPI_BOXING_INTERPRETER_H_

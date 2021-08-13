@@ -38,7 +38,8 @@ Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::ParallelDistribu
 
 namespace private_details {
 
-Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::ParallelDistribution> nd_sbp) ;
+Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(
+    Symbol<cfg::ParallelDistribution> nd_sbp);
 
 }
 

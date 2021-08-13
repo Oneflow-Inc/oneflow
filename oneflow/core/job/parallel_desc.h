@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
@@ -159,13 +160,13 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
 bool IsMirroredParallelContext(const ParallelContext& parallel_ctx);
 
 namespace private_details {
- 
-Maybe<Symbol<ParallelDesc>> RawReplaceDeviceTag(Symbol<ParallelDesc>, DeviceType);
+
+Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc>, DeviceType);
 
 }
 
-static constexpr auto* ReplaceDeviceTag =
-    DECOREATE(&private_details::RawReplaceDeviceTag, ThreadLocal);
+static constexpr auto* ReplaceDeviceType =
+    DECORATE(&private_details::RawReplaceDeviceType, ThreadLocal);
 
 }  // namespace oneflow
 

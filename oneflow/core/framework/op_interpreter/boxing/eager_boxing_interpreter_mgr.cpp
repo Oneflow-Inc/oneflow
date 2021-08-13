@@ -69,22 +69,26 @@ Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
                     std::make_pair(in_nd_sbp->sbp_parallel(0), out_nd_sbp->sbp_parallel(0))));
 }
 
-Maybe<Optional<EagerBoxingInterpreter>> GetCudaBasedCpuMpiBoxingInterpreter(Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                                                   Symbol<cfg::ParallelDistribution> out_nd_sbp,
-                                                   Symbol<ParallelDesc> in_parallel_desc,
-                                                   Symbol<ParallelDesc> out_parallel_desc) {
+Maybe<Optional<EagerBoxingInterpreter>> GetCudaBasedCpuMpiBoxingInterpreter(
+    Symbol<cfg::ParallelDistribution> in_nd_sbp, Symbol<cfg::ParallelDistribution> out_nd_sbp,
+    Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) {
   CHECK_OR_RETURN(in_nd_sbp != out_nd_sbp);
-  const auto& gpu_in_parallel_desc = JUST(ReplaceDeviceTag(in_parallel_desc, DeviceType::kGPU));
-  const auto& gpu_out_parallel_desc = JUST(ReplaceDeviceTag(out_parallel_desc, DeviceType::kGPU));
+  const auto& gpu_in_parallel_desc = JUST(ReplaceDeviceType(in_parallel_desc, DeviceType::kGPU));
+  const auto& gpu_out_parallel_desc = JUST(ReplaceDeviceType(out_parallel_desc, DeviceType::kGPU));
+  CHECK_OR_RETURN(gpu_in_parallel_desc == gpu_out_parallel_desc);
   const auto& gpu_boxing_interpreter =
-      TRY(GetOneDimNcclCollectiveEagerBoxingInterpreter(
-              in_nd_sbp, out_nd_sbp, gpu_in_parallel_desc, gpu_out_parallel_desc));
+      TRY(GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp));
   if (gpu_boxing_interpreter.IsOk()) {
     return Optional<EagerBoxingInterpreter>(
         std::shared_ptr<EagerBoxingInterpreter>(new CudaBasedCpuMpiBoxingInterpreter()));
   } else {
     return Optional<EagerBoxingInterpreter>();
   }
+}
+
+Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDesc> rhs) {
+  if (lhs == rhs) { return true; }
+  return lhs == JUST(ReplaceDeviceType(rhs, lhs->device_type()));
 }
 
 Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribution> in_nd_sbp,
@@ -101,20 +105,20 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribut
       } else if (in_parallel_desc->device_type() == DeviceType::kGPU) {
         return GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp);
       } else if (in_parallel_desc->device_type() == DeviceType::kCPU) {
-        const auto& opt_interpreter =
-          JUST(GetCudaBasedCpuMpiBoxingInterpreter(
-                in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+        const auto& opt_interpreter = JUST(GetCudaBasedCpuMpiBoxingInterpreter(
+            in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
         if (opt_interpreter->has_value()) { return opt_interpreter->value(); }
       }
-    } else if (IgnoringDeviceTypeEqual(in_parallel_desc, out_parallel_desc)) {
+    } else if (JUST(IgnoringDeviceTypeEqual(in_parallel_desc, out_parallel_desc))) {
       if ((in_parallel_desc->device_type() == DeviceType::kGPU
-              && out_parallel_desc->device_type() == DeviceType::kCPU)
+           && out_parallel_desc->device_type() == DeviceType::kCPU)
           || (in_parallel_desc->device_type() == DeviceType::kCPU
               && out_parallel_desc->device_type() == DeviceType::kGPU)) {
         if (in_nd_sbp == out_nd_sbp) {
           return std::shared_ptr<EagerBoxingInterpreter>(new CudaCopyBoxingInterpreter());
         } else {
-          const auto& opt_interpreter = JUST(GetCudaBasedCpuMpiBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+          const auto& opt_interpreter = JUST(GetCudaBasedCpuMpiBoxingInterpreter(
+              in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
           if (opt_interpreter->has_value()) { return opt_interpreter->value(); }
         }
       }
@@ -123,7 +127,7 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribut
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-auto* CachedGetBoxingInterpreter = DECORATE(&GetBoxingInterpreter, ThreadLocal);
+static constexpr auto* CachedGetBoxingInterpreter = DECORATE(&GetBoxingInterpreter, ThreadLocal);
 
 }  // namespace
 
