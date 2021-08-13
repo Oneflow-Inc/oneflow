@@ -39,9 +39,9 @@ class _InstanceNorm(_NormBase):
         variance = x.var(2, keepdim=True)
         normalized = (x - mean) / flow.sqrt(variance + self.eps)
         if self.weight and params_shape[0] == self.weight.nelement():
-            weight = self.weight.reshape(shape=nd_params_shape)
+            weight = flow.reshape(self.weight, shape=nd_params_shape)
         if self.bias and params_shape[0] == self.bias.nelement():
-            bias = self.bias.reshape(shape=nd_params_shape)
+            bias = flow.reshape(self.bias, shape=nd_params_shape)
         if self.weight:
             normalized = normalized * weight
         if self.bias:
@@ -50,9 +50,9 @@ class _InstanceNorm(_NormBase):
 
     def forward(self, x):
         self._check_input_dim(x)
-        reshape_to_1d = x.reshape([x.shape[0], x.shape[1], -1])
+        reshape_to_1d = flow.reshape(x, [x.shape[0], x.shape[1], -1])
         normalized_1d_out = self._forward(reshape_to_1d)
-        reshape_back_to_nd = normalized_1d_out.reshape(list(x.shape))
+        reshape_back_to_nd = flow.reshape(normalized_1d_out, list(x.shape))
         return reshape_back_to_nd
 
 
