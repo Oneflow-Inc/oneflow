@@ -35,7 +35,7 @@ class Randperm(Module):
         super().__init__()
 
         if generator is None:
-            generator = flow.Generator()
+            generator = flow.default_generator()
         if layout is not None:
             print(
                 "WARNING:",
@@ -85,7 +85,7 @@ class Randperm(Module):
         else:
             res = flow.F.randperm(self.n, self.device, self.generator)
         res.requires_grad = self.requires_grad
-        return res.to(self.device, dtype=self.dtype)
+        return res.to(dtype=self.dtype)
 
 
 def randperm(
