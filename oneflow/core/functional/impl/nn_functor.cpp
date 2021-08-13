@@ -598,6 +598,33 @@ class Avgpool3DFunctor : public AvgPoolingNDFunctor {
     op_ = CHECK_JUST(one::OpBuilder("avgpool_3d").Input("x").Output("y").Build());
   }
 };
+class UnfoldFunctor {
+ public:
+  UnfoldFunctor() {
+    unfold_op_ = CHECK_JUST(one::OpBuilder("unfold").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::string data_format, 
+                           const std::vector<int32_t> kernel_size, 
+                           const std::vector<int32_t> dilation_rate, 
+                           const std::vector<int32_t> padding, 
+                           const std::vector<int32_t> strides) const {
+    const auto& x_shape = x->shape();
+    // Only Support 4d tensor now. 
+    CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 4) << "Input Tensor dim should == 4";
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    
+    return OpInterpUtil::Dispatch<Tensor>(*unfold_op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> unfold_op_;
+};
 
 }  // namespace impl
 
@@ -626,6 +653,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Avgpool1DFunctor>("Avgpool1D");
   m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
   m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
+  m.add_functor<impl::UnfoldFunctor>("Unfold");
 };
 
 }  // namespace functional
