@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/log_softmax.cuh"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 namespace user_op {
@@ -50,7 +51,8 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const flo
 }  // namespace
 
 template<typename T, typename K>
-class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
+class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
  public:
   SparseSoftmaxCrossEntropyKernel() = default;
   ~SparseSoftmaxCrossEntropyKernel() override = default;

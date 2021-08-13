@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -61,7 +62,7 @@ struct ComputeScalarByTensor<ByScalarFunc::div, device_type, T> {
 };
 
 template<ByScalarFunc by_scalar_func, DeviceType device, typename T>
-class ScalarAddByTensorKernel final : public user_op::OpKernel {
+class ScalarAddByTensorKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ScalarAddByTensorKernel() = default;
   ~ScalarAddByTensorKernel() = default;
