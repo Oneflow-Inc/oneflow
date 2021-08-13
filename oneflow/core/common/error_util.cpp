@@ -99,7 +99,7 @@ std::string FormatFunctionOfStackFrame(const std::string& function) {
   return ss.str();
 }
 
-Maybe<std::string> FormatMsgOfInStackFrame(std::string error_msg, bool is_last_stack_frame) {
+Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_stack_frame) {
   error_msg = StripBrackets(error_msg);
   if (!is_last_stack_frame) { error_msg = *JUST(ShortenMsg(error_msg)); }
   // error_msg of last stack frame come from "<<"
@@ -154,8 +154,8 @@ Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error)
     ss << FormatFileOfStackFrame(*stack_frame->mutable_file())
        << FormatLineOfStackFrame(*stack_frame->mutable_line())
        << FormatFunctionOfStackFrame(*stack_frame->mutable_function())
-       << *JUST(FormatMsgOfInStackFrame(*stack_frame->mutable_error_msg(),
-                                        stack_frame == error->mutable_stack_frame()->rend() - 1));
+       << *JUST(FormatMsgOfStackFrame(*stack_frame->mutable_error_msg(),
+                                      stack_frame == error->mutable_stack_frame()->rend() - 1));
   }
   // Get msg from error summary and msg of error proto
   std::string error_summary_and_msg_of_error_proto = FormatErrorSummaryAndMsgOfErrorProto(error);
