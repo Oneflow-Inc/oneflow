@@ -248,7 +248,7 @@ jobs:
         if: env.is_built != '1'
       - name: Build OneFlow
         timeout-minutes: 45
-        if: env.is_built != '1' && ((contains(fromJson('["cuda", "cpu"]'), matrix.test_suite) || (contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests))
+        if: env.is_built != '1' && ((contains(fromJson('["cuda", "cpu"]'), matrix.test_suite) || (contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests)))
         uses: ./.github/actions/whl
         with:
           tmp_dir: ${ci_tmp_dir}
