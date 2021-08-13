@@ -394,6 +394,32 @@ class SmoothL1LossFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CombinedMarginLossFunctor {
+  public:
+  CombinedMarginLossFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("combined_margin_loss")
+                          .Input("x")
+                          .Input("label")
+                          .Output("y")
+                          .Output("theta")
+                          .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& label,
+                                const float& m1, const float& m2, const float& m3,
+                                const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("m1", m1));
+    JUST(attrs.SetAttr<float>("m2", m2));
+    JUST(attrs.SetAttr<float>("m3", m3));
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class NormalizationFunctor {
  public:
   NormalizationFunctor() {
@@ -620,6 +646,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
+  m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");

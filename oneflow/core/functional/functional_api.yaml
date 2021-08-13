@@ -439,6 +439,18 @@
     "Tensor SmoothL1LossGrad(Tensor loss_grad, Tensor prediction, Tensor label, *, Float beta)"
   bind_python: False
 
+- name: "combined_margin_loss"
+  signature:
+    "TensorTuple CombinedMarginLoss(Tensor x, Tensor label, *,
+                                    Float m1, Float m2, Float m3, Int64 depth)"
+  bind_python: True
+
+- name: "combined_margin_loss_grad"
+  signature:
+    "Tensor CombinedMarginLossGrad(Tensor dy, Tensor label, Tensor theta, *,
+                                   Float m1, Float m2, Float m3, Int64 depth)"
+  bind_python: False
+
 - name: "where"
   signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
   bind_python: True
