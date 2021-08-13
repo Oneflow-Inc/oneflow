@@ -226,4 +226,10 @@ def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "FuncOp"> {
   let dependentDialects = ["scf::SCFDialect"];
 }
 
+def BufferHostRegisterPass : FunctionPass<"buffer-host-register"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
+  let dependentDialects = ["gpu::GPUDialect"];
+}
+
 #endif // ONEFLOW_PASSES

@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIROneFlow
   Conversion/OneFlowToTosa.cpp
   Conversion/SCFToGPU.cpp
   Conversion/PTXToCubin.cpp
+  Transform/BufferHostRegister.cpp
   Passes.cpp
 
   ADDITIONAL_HEADER_DIRS

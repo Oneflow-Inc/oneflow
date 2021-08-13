@@ -1,5 +1,5 @@
 // RUN: oneflow-opt %s --convert-linalg-to-parallel-loops \
-// RUN:   -gpu-kernel-outlining \
+// RUN:   -gpu-kernel-outlining -buffer-host-register  \
 // RUN:   -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,gpu-to-cubin)' \
 // RUN:   -gpu-to-llvm \
 // RUN: | mlir-cpu-runner \
@@ -19,16 +19,16 @@ module  {
 
     %0 = memref.collapse_shape %arg1 [] : memref<1xf32> into memref<f32>
 
-    %cast_arg0 = memref.cast %arg0 : memref<96x96xi64> to memref<*xi64>
-    gpu.host_register %cast_arg0 : memref<*xi64>
-    %cast_arg1 = memref.cast %arg1 : memref<1xf32> to memref<*xf32>
-    gpu.host_register %cast_arg1 : memref<*xf32>
-    %cast_arg2 = memref.cast %arg2 : memref<96x96xf32> to memref<*xf32>
-    gpu.host_register %cast_arg2 : memref<*xf32>
+    // %cast_arg0 = memref.cast %arg0 : memref<96x96xi64> to memref<*xi64>
+    // gpu.host_register %cast_arg0 : memref<*xi64>
+    // %cast_arg1 = memref.cast %arg1 : memref<1xf32> to memref<*xf32>
+    // gpu.host_register %cast_arg1 : memref<*xf32>
+    // %cast_arg2 = memref.cast %arg2 : memref<96x96xf32> to memref<*xf32>
+    // gpu.host_register %cast_arg2 : memref<*xf32>
 
     %1 = memref.alloc() : memref<96x96xf32>
-    %cast_1 = memref.cast %1 : memref<96x96xf32> to memref<*xf32>
-    gpu.host_register %cast_1 : memref<*xf32>
+    // %cast_1 = memref.cast %1 : memref<96x96xf32> to memref<*xf32>
+    // gpu.host_register %cast_1 : memref<*xf32>
 
     %c1_0 = constant 1 : index
     %2 = affine.apply #map0(%c96)[%c0, %c1]

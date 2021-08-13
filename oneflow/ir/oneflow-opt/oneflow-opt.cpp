@@ -46,6 +46,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerTestOneFlowTraitsPass();
   mlir::registerLowerOneFlowToTosaPassPass();
   mlir::registerMapSCFToGPUPassPass();
+  mlir::registerBufferHostRegisterPassPass();
 #ifdef WITH_CUDA
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_CUDA

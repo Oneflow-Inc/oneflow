@@ -25,6 +25,7 @@ limitations under the License.
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "OneFlow/Conversion/OneFlowToTosa.h"
 #include "OneFlow/Conversion/SCFToGPU.h"
+#include "OneFlow/Transform/BufferHostRegister.h"
 #ifdef WITH_CUDA
 #include "OneFlow/Conversion/PTXToCubin.h"
 #endif  // WITH_CUDA
