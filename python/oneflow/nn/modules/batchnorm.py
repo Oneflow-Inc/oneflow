@@ -103,7 +103,8 @@ class _BatchNorm(_NormBase):
 
     def forward(self, x):
         self._check_input_dim(x)
-        if x.device == flow.device("cpu"):
+        # if x.device == flow.device("cpu"):
+        if not x.is_cuda:
             reduce_axis = []
             for dim in range(len(x.shape)):
                 if dim != 1:

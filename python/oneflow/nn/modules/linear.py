@@ -112,7 +112,8 @@ class Linear(Module):
     def forward(self, x):
         res = flow.F.matmul(x, self.weight, transpose_a=False, transpose_b=True)
         if self.use_bias:
-            res += self.bias
+            # res += self.bias
+            res = res + self.bias
         return res
 
     def extra_repr(self) -> str:
