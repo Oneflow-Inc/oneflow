@@ -131,6 +131,8 @@ jobs:
     steps:
       - name: Checkout OneFlow
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Find changes
         id: changes
         run: |
