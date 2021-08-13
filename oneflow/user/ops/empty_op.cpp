@@ -25,15 +25,12 @@ REGISTER_NO_GRAD_USER_OP("empty")
     .Attr<Shape>("shape")
     .Attr<std::vector<std::string>>("nd_sbp")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->OutputShape("out", 0);
-      const Shape& shape = ctx->Attr<Shape>("shape");
-      *out_shape = Shape(DimVector{shape.dim_vec().cbegin(), shape.dim_vec().cend()});
+      *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
-      DimVector dim_vec{shape.dim_vec().cbegin(), shape.dim_vec().cend()};
+      DimVector dim_vec{shape.dim_vec()};
 
       const cfg::SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       if (out_sbp_para.has_split_parallel()) {
@@ -46,7 +43,7 @@ REGISTER_NO_GRAD_USER_OP("empty")
         }
       }
 
-      *out_shape = Shape(dim_vec);
+      *ctx->OutputShape("out", 0) = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
