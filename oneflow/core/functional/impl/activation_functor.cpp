@@ -186,6 +186,19 @@ class SoftmaxFunctor : public UnaryFunctor {
   }
 };
 
+class LogSoftmaxFunctor : public UnaryFunctor {
+ public:
+  LogSoftmaxFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("logsoftmax").Input("in").Output("out").Output("prob").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class HardSwishFunctor : public UnaryFunctor {
  public:
   HardSwishFunctor() {
@@ -297,6 +310,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");
+  m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
