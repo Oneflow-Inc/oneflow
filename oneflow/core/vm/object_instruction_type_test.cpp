@@ -20,6 +20,7 @@ limitations under the License.
 #define private public
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -36,6 +37,26 @@ namespace test {
 
 namespace {
 
+void InitRank2NodeId(const NumProcessDistribution& num_process_distribution,
+                     PbMap<int64_t, int64_t>* rank2node_id) {
+  int64_t rank_offset = 0;
+  for (int64_t node_id = 0; node_id < num_process_distribution.num_process_size(); ++node_id) {
+    for (int16_t rank = 0; rank < num_process_distribution.num_process(node_id); ++rank) {
+      (*rank2node_id)[rank + rank_offset] = node_id;
+    }
+    rank_offset += num_process_distribution.num_process(node_id);
+  }
+}
+
+void InitNodeId2RankOffset(const NumProcessDistribution& num_process_distribution,
+                           PbMap<int64_t, int64_t>* node_id2rankoffset) {
+  int64_t rank_offset = 0;
+  for (int64_t node_id = 0; node_id < num_process_distribution.num_process_size(); ++node_id) {
+    (*node_id2rankoffset)[node_id] = rank_offset;
+    rank_offset += num_process_distribution.num_process(node_id);
+  }
+}
+
 struct GlobaProcessCtxScope final {
   GlobaProcessCtxScope(int64_t node_size, int64_t world_size) {
     Global<ProcessCtx>::New();
@@ -43,17 +64,17 @@ struct GlobaProcessCtxScope final {
     for (int i = 0; i < world_size; ++i) { ctx->mutable_ctrl_addr()->Add(); }
     ctx->set_rank(0);
     ctx->set_node_size(node_size);
-    Global<RankInfoInCluster>::New();
-    for (size_t i = 0; i < world_size; ++i) {
-      Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(1);
-      (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[i] = i;
-      (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[i] = i;
+    auto* rank_info_in_cluster = ctx->mutable_rank_info_in_cluster();
+    for (size_t i = 0; i < node_size; ++i) {
+      rank_info_in_cluster->mutable_num_process_distribution()->add_num_process(world_size
+                                                                                / node_size);
     }
+    InitRank2NodeId(rank_info_in_cluster->num_process_distribution(),
+                    rank_info_in_cluster->mutable_rank2node_id());
+    InitNodeId2RankOffset(rank_info_in_cluster->num_process_distribution(),
+                          rank_info_in_cluster->mutable_node_id2rankoffset());
   }
-  ~GlobaProcessCtxScope() {
-    Global<RankInfoInCluster>::Delete();
-    Global<ProcessCtx>::Delete();
-  }
+  ~GlobaProcessCtxScope() { Global<ProcessCtx>::Delete(); }
 };
 
 TEST(ControlStreamType, new_object) {
