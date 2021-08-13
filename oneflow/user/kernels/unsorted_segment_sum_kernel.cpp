@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
@@ -76,7 +77,7 @@ std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
 }  // namespace
 
 template<DeviceType device_type, typename T, typename K>
-class UnsortedSegmentSumKernel final : public user_op::OpKernel {
+class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   UnsortedSegmentSumKernel() = default;
   ~UnsortedSegmentSumKernel() override = default;
