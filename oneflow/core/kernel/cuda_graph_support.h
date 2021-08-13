@@ -13,38 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_
-#define ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_
-
-#include "oneflow/core/framework/user_op_tensor.h"
 
 namespace oneflow {
 
-class Blob;
-
 namespace user_op {
 
-class BlobTensorView final : public Tensor {
+class KernelInitContext;
+
+class CudaGraphSupport {
  public:
-  explicit BlobTensorView(Blob* blob);
-  ~BlobTensorView() = default;
+  virtual ~CudaGraphSupport() {}
 
-  const ShapeView& shape() const override;
-  MutShapeView* mut_shape() override;
-  DataType data_type() const override;
-  const MemoryCase& mem_case() const override;
-  const void* raw_dptr() const override;
-  void* mut_raw_dptr() override;
-
-  void Reset(Blob* blob);
-  Blob* blob() const;
-
- private:
-  Blob* blob_;
+  virtual bool IsCudaGraphSupported(KernelInitContext* ctx) const { return true; }
 };
 
 }  // namespace user_op
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_KERNEL_BLOB_TENSOR_VIEW_H_
