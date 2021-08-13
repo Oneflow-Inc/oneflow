@@ -164,6 +164,15 @@ class FreeTensorModule(flow.nn.Module):
         return flow.F.matmul(x, y, transpose_b=True)
 
 
+class ToPlacementModule(flow.nn.Module):
+    def __init__(self, placement):
+        super().__init__()
+        self.placement = placement
+
+    def forward(self, x):
+        return x.to_consistent(placement=self.placement)
+
+
 class MyGraph(flow.nn.Graph):
     def __init__(self, module, optimizer=None):
         super().__init__()
@@ -359,7 +368,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
             np.allclose(eager_out.to_local().numpy(), graph_out.to_local().numpy())
         )
 
-    @unittest.skipIf(True, "")
+    # @unittest.skipIf(True, "")
     def test_to_placement(test_case):
         """ Since there's no way to construct asymmetric consistent tensor,
             skip test of to_consistent for changing placement.
@@ -369,21 +378,37 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_to_placement")
 
         if rank == 0:
-            local_x = flow.Tensor(
-                x, dtype=flow.float32, device=flow.device(f"cuda:{rank}")
-            )
+            x = flow.ones((2, 3), dtype=flow.float32)
         elif rank == 1:
-            local_x = flow.Tensor(tuple()).to("cuda")
+            x = flow.empty(tuple())
         else:
             raise ValueError
 
-        print(
-            f"local_x shape: {local_x.shape}, dtype: {local_x.dtype}, device: {local_x.device}"
+        c_x = x.to_consistent(
+            placement=flow.placement("cpu", {0: [0]}), sbp=flow.sbp.broadcast
         )
-        c_x = local_x.to_consistent(
-            placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
-        )
-        print(f"c_x shape: {c_x.shape}, placment: {c_x.placement}, sbp: {c_x.sbp}")
+        # print(f"c_x shape: {c_x.shape}, placment: {c_x.placement}, sbp: {c_x.sbp}")
+
+        p1 = flow.placement("cpu", {0: [0, 1]})
+        m1 = ToPlacementModule(p1)
+        g1 = MyGraph(m1)
+        y1 = g1(c_x)
+
+        # print(f"y1 shape: {y1.shape}, placment: {y1.placement}, sbp: {y1.sbp}")
+        test_case.assertTrue(y1.placement == p1)
+        test_case.assertTrue(y1.sbp[0] == flow.sbp.broadcast)
+        test_case.assertTrue(y1.to_local().numpy().mean() == 1.0)
+
+        p2 = flow.placement("cuda", {0: [0, 1]})
+        m2 = ToPlacementModule(p2)
+        g2 = MyGraph(m2)
+        y2 = g2(y1)
+
+        # print(f"y2 shape: {y2.shape}, placment: {y2.placement}, sbp: {y2.sbp}")
+        test_case.assertTrue(y2.placement == p2)
+        test_case.assertTrue(y2.sbp[0] == flow.sbp.broadcast)
+        test_case.assertTrue(y2.to_local().numpy().mean() == 1.0)
+
 
     @unittest.skipIf(True, "")
     def test_2d_sbp(test_case):
