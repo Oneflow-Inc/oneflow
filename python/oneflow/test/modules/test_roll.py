@@ -12,12 +12,12 @@ import oneflow.unittest
 class TestRoll(flow.unittest.TestCase):
     @autotest()
     def test_roll_with_random_data(test_case):
-        device = 'cpu'
+        device = random_device()
         x = random_pytorch_tensor(ndim=2).to(device)
         shifts = random(1, 6).to(Union[Tuple[int]])
-        dims = random(0, 1).to(Union[Tuple[int]]) 
-        print(shifts.value())
-        print(dims.value())
+        dims = random(0, 1).to(Union[Tuple[int]])
+        # print(shifts.value())
+        # print(dims.value())
         return torch.roll(
                 x, 
                 shifts=shifts, 
