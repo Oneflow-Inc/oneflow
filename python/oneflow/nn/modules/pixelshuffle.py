@@ -115,32 +115,26 @@ class PixelShufflev2(Module):
         ), "The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or (h_upscale_factor * w_upscale_factor)"
         _new_c = int(_channel / (self.h_upscale_factor * self.w_upscale_factor))
         out = input.reshape(
-            [
-                _batch,
-                _new_c,
-                self.h_upscale_factor * self.w_upscale_factor,
-                _height,
-                _width,
-            ]
+            _batch,
+            _new_c,
+            self.h_upscale_factor * self.w_upscale_factor,
+            _height,
+            _width,
         )
         out = out.reshape(
-            [
-                _batch,
-                _new_c,
-                self.h_upscale_factor,
-                self.w_upscale_factor,
-                _height,
-                _width,
-            ]
+            _batch,
+            _new_c,
+            self.h_upscale_factor,
+            self.w_upscale_factor,
+            _height,
+            _width,
         )
         out = out.permute(0, 1, 4, 2, 5, 3)
         out = out.reshape(
-            [
-                _batch,
-                _new_c,
-                _height * self.h_upscale_factor,
-                _width * self.w_upscale_factor,
-            ]
+            _batch,
+            _new_c,
+            _height * self.h_upscale_factor,
+            _width * self.w_upscale_factor,
         )
         return out
 

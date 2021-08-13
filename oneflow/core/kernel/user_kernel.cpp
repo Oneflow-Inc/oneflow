@@ -26,6 +26,18 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_helper.h"
 
+#ifdef WITH_CUDA
+#include <cuda.h>
+
+#if CUDA_VERSION >= 11000
+#define WITH_USER_KERNEL_CUDA_GRAPH
+#include <cuda_runtime.h>
+#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#endif  // CUDA_VERSION >= 11000
+
+#endif  // WITH_CUDA
+
 namespace oneflow {
 
 using Arg2Tensor =
@@ -44,6 +56,44 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_d
 }
 
 }  // namespace
+
+#ifdef WITH_USER_KERNEL_CUDA_GRAPH
+class UserKernel::CudaGraphContext {
+ public:
+  CudaGraphContext(cudaStream_t stream) : stream_(stream), graph_exec_(nullptr) {}
+  ~CudaGraphContext() {
+    if (graph_exec_ != nullptr) { OF_CUDA_CHECK(cudaGraphExecDestroy(graph_exec_)); }
+  }
+  bool IsCaptured() const { return graph_exec_ != nullptr; }
+
+  void BeginCapture() {
+    OF_CUDA_CHECK(cudaStreamBeginCapture(stream_, cudaStreamCaptureModeThreadLocal));
+  }
+
+  void EndCapture() {
+    cudaGraph_t graph;
+    OF_CUDA_CHECK(cudaStreamEndCapture(stream_, &graph));
+    cudaGraphExecUpdateResult update_result;
+    cudaGraphNode_t error_node;
+    if (graph_exec_ != nullptr) {
+      OF_CUDA_CHECK(cudaGraphExecUpdate(graph_exec_, graph, &error_node, &update_result));
+    }
+    if (graph_exec_ == nullptr || update_result != cudaGraphExecUpdateSuccess) {
+      if (graph_exec_ != nullptr) { OF_CUDA_CHECK(cudaGraphExecDestroy(graph_exec_)); }
+      OF_CUDA_CHECK(cudaGraphInstantiate(&graph_exec_, graph, NULL, NULL, 0));
+    }
+    OF_CUDA_CHECK(cudaGraphDestroy(graph));
+  }
+
+  void Launch() { OF_CUDA_CHECK(cudaGraphLaunch(graph_exec_, stream_)); }
+
+ private:
+  cudaStream_t stream_;
+  cudaGraphExec_t graph_exec_;
+};
+#else
+class UserKernel::CudaGraphContext {};
+#endif  // WITH_USER_KERNEL_CUDA_GRAPH
 
 class UserKernelBaseContext {
  public:
@@ -504,17 +554,31 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
-  void UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  bool UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+    bool updated = false;
     for (auto& pair : arg2bn_tensor_pair_) {
       std::unique_ptr<user_op::BlobTensorView>* arg_tensor_ptr = &pair.second.tensor;
       Blob* blob = BnInOp2Blob(pair.second.bn);
-      if (blob == nullptr) { continue; }
-      if (*arg_tensor_ptr) {
-        arg_tensor_ptr->get()->Reset(blob);
+      if (blob == nullptr) {
+        if (*arg_tensor_ptr) {
+          arg_tensor_ptr->reset(nullptr);
+          updated = true;
+        }
       } else {
-        arg_tensor_ptr->reset(new user_op::BlobTensorView(blob));
+        if (*arg_tensor_ptr) {
+          if (arg_tensor_ptr->get()->blob() != blob) {
+            arg_tensor_ptr->get()->Reset(blob);
+            updated = true;
+          } else {
+            if (blob->blob_desc().is_dynamic()) { updated = true; }
+          }
+        } else {
+          arg_tensor_ptr->reset(new user_op::BlobTensorView(blob));
+          updated = true;
+        }
       }
     }
+    return updated;
   }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -567,6 +631,8 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   UserKernelBaseContext base_ctx_;
 };
 
+UserKernel::~UserKernel() = default;
+
 void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
   ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf(), job_desc()));
   infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf(), job_desc()));
@@ -581,6 +647,19 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
     KernelCreateContext create_ctx(kernel_conf());
     kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
   }
+
+#ifdef WITH_USER_KERNEL_CUDA_GRAPH
+  if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
+    CudaDeviceCtx* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx);
+    const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
+    if (cuda_device_ctx && cuda_graph_support
+        && cuda_graph_support->IsCudaGraphSupported(&init_ctx)) {
+      cuda_graph_ctx_.reset(new CudaGraphContext(cuda_device_ctx->cuda_stream()));
+      LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name();
+    }
+  }
+#endif  // WITH_USER_KERNEL_CUDA_GRAPH
 }
 
 std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(DeviceCtx* device_ctx) {
@@ -594,8 +673,26 @@ const std::shared_ptr<user_op::OpKernelState>& UserKernel::GetOpKernelState() co
 
 void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                    user_op::OpKernelState* opkernel_state) const {
-  ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+  const bool updated = ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+
+#ifdef WITH_USER_KERNEL_CUDA_GRAPH
+  if (cuda_graph_ctx_) {
+    if (cuda_graph_ctx_->IsCaptured() && (!updated)) {
+      cuda_graph_ctx_->Launch();
+      return;
+    }
+    cuda_graph_ctx_->BeginCapture();
+  }
+#endif  // WITH_USER_KERNEL_CUDA_GRAPH
+
   kernel_->Compute(ctx_.get(), opkernel_state);
+
+#ifdef WITH_USER_KERNEL_CUDA_GRAPH
+  if (cuda_graph_ctx_) {
+    cuda_graph_ctx_->EndCapture();
+    cuda_graph_ctx_->Launch();
+  }
+#endif  // WITH_USER_KERNEL_CUDA_GRAPH
 }
 
 void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {

@@ -173,6 +173,24 @@ std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
   return sbp_str;
 }
 
+std::string ParallelDistributionToString(const Symbol<cfg::ParallelDistribution> nd_sbp) {
+  static HashMap<Symbol<cfg::ParallelDistribution>, std::string>* nd_sbp2str =
+      new HashMap<Symbol<cfg::ParallelDistribution>, std::string>();
+  auto iter = nd_sbp2str->find(nd_sbp);
+  if (iter == nd_sbp2str->end()) {
+    std::stringstream nd_sbp_str;
+    nd_sbp_str << "[";
+    int32_t idx = 0;
+    for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+      nd_sbp_str << SbpParallelToString(sbp_parallel);
+      if (++idx != nd_sbp->sbp_parallel_size()) { nd_sbp_str << ", "; }
+    }
+    nd_sbp_str << "]";
+    iter = nd_sbp2str->emplace(nd_sbp, nd_sbp_str.str()).first;
+  }
+  return iter->second;
+}
+
 void SbpSignatureToParallelDistributionSignature(
     const cfg::SbpSignature& sbp_signature, cfg::ParallelDistributionSignature* nd_sbp_signature) {
   for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
