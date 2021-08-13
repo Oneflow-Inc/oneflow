@@ -355,7 +355,6 @@ py::object PyFmod(py::args py_args, py::kwargs py_kwargs) {
         << "The first input should be a tensor or scalar.";
     CHECK_OR_RETURN(PyTensorCheck(other) || PyScalarCheck(other))
         << "The second input should be a tensor or scalar.";
-
     if (PyTensorCheck(input) && PyTensorCheck(other)) {
       auto a = JUST(PyUnpackTensor(input));
       auto b = JUST(PyUnpackTensor(other));
