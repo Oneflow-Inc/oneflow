@@ -132,7 +132,6 @@ Maybe<void> InferNdSbp4SrcOp(user_op::InferParallelDistributionFnContext* ctx,
     cfg::ParallelDistribution* output_nd_sbp =
         ctx->ParallelDistribution4ArgNameAndIndex(output_arg.first, output_arg.second);
     if (sbp_str_list.size() == 0) {
-      // the default sbp of constant's output should be broadcast
       FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
         CHECK_OR_RETURN(
             ParseSbpParallelFromString(default_sbp_str, output_nd_sbp->add_sbp_parallel()));
