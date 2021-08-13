@@ -60,6 +60,7 @@ class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossInterpSta
   Maybe<void> Apply(const CombinedMarginLossInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 2);
+    in_grads->resize(2);
 
     if (ctx->requires_grad) {
       const auto& label = ctx->SavedTensors().at(ctx->label_index);

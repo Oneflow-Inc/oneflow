@@ -1162,6 +1162,48 @@ class SmoothL1Loss(Module):
             return flow.mean(loss)
 
 
+class CombinedMarginLoss(Module):
+    """The operation implement "loss_name == 'margin_softmax'" in insightface.
+    insightface's margin_softmax loss implement by several operators, we combined them for speed up.
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+        label (oneflow.Tensor): label with integer data type
+
+    Returns:
+        oneflow.Tensor: A Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> np_x = np.array([[-0.7027179, 0.0230609], [-0.02721931, -0.16056311], [-0.4565852, -0.64471215]])
+        >>> np_label = np.array([0, 1, 1])
+        >>> x = flow.Tensor(np_x, dtype=flow.float32)
+        >>> label = flow.Tensor(np_label, dtype=flow.int32)
+        >>> loss_func = flow.nn.CombinedMarginLoss(0.3, 0.5, 0.4)
+        >>> out = loss_func(x, label)
+        >>> out
+        tensor([[-0.0423,  0.0231],
+                [-0.0272,  0.1237],
+                [-0.4566, -0.0204]], dtype=oneflow.float32)
+
+    """
+    def __init__(self, m1: float = 1, m2: float = 0, m3: float = 0) -> None:
+        super().__init__()
+        self.m1 = m1
+        self.m2 = m2
+        self.m3 = m3
+
+    def forward(self, x, label):
+        depth = x.shape[1]
+        (y, theta) = flow.F.combined_margin_loss(x, label,
+            m1 = self.m1, m2 = self.m2, m3 = self.m3, depth = depth)
+        return y
+
+
 if __name__ == "__main__":
     import doctest
 

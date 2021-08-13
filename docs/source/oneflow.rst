@@ -32,7 +32,6 @@ oneflow
             chunk, 
             clamp, 
             clip, 
-            combined_margin_loss, 
             cos, 
             cosh, 
             diag, 

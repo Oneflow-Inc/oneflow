@@ -15,9 +15,11 @@ limitations under the License.
 """
 
 import unittest
-import numpy as np
 from collections import OrderedDict
+
+import numpy as np
 from test_util import GenArgList
+
 import oneflow as flow
 
 
@@ -115,29 +117,19 @@ def _test_combined_margin_loss(
     test_case, device_type, input_shape, label_shape, data_type, m1, m2, m3
 ):
     assert device_type in ["cpu", "cuda"]
-
     np_x = np.random.uniform(low=-1, high=1, size=input_shape).astype(np.float32)
     np_labels = np.random.randint(0, input_shape[1], size=(*label_shape,)).astype(np.int32)
-
-    x = flow.Tensor(
-        np_x, device=device_type, dtype=data_type, requires_grad=True
-    )
-    labels = flow.Tensor(
-        np_labels, device=device_type, dtype=flow.int32
-    )
-
-    output = flow.combined_margin_loss(x, labels, m1, m2, m3).to(flow.device(device_type))
-
+    x = flow.Tensor(np_x, device=device_type, dtype=data_type, requires_grad=True)
+    labels = flow.Tensor(np_labels, device=device_type, dtype=flow.int32)
+    loss_func = flow.nn.CombinedMarginLoss(m1, m2, m3).to(flow.device(device_type))
+    output = loss_func(x, labels)
     output.sum().backward()
 
     output_ref = _np_combined_margin_loss(np_x, np_labels, m1, m2, m3)
-
     test_case.assertTrue(
         np.allclose(output.numpy(), output_ref, rtol=1e-5, atol=1e-5)
     )
-
     input_grad_ref = _np_combined_margin_loss_grad(np_x, np_labels, m1, m2, m3)
-
     test_case.assertTrue(
         np.allclose(x.grad.numpy(), input_grad_ref, rtol=1e-4, atol=1e-8)
     )
