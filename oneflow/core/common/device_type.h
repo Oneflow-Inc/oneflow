@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,27 +12,21 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
+*/
+#ifndef ONEFLOW_CORE_COMMON_DEVICE_TYPE_H_
+#define ONEFLOW_CORE_COMMON_DEVICE_TYPE_H_
 
-import unittest
-from collections import OrderedDict
+#include "oneflow/core/common/device_type.pb.h"
 
-import numpy as np
-from automated_test_util import *
+namespace std {
 
-import oneflow as flow
-import oneflow.unittest
+template<>
+struct hash<oneflow::DeviceType> final {
+  size_t operator()(oneflow::DeviceType device_type) const {
+    return static_cast<size_t>(device_type);
+  }
+};
 
+}  // namespace std
 
-@flow.unittest.skip_unless_1n1d()
-class TestParameter(flow.unittest.TestCase):
-    @autotest(n=1)
-    def test_parameter_grad_fn_none(test_case):
-        x = torch.Tensor(2, 3).requires_grad_(True)
-        y = x + x
-        z = torch.nn.Parameter(y)
-        return z.grad_fn
-
-
-if __name__ == "__main__":
-    unittest.main()
+#endif  // ONEFLOW_CORE_COMMON_DEVICE_TYPE_H_
