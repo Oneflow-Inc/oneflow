@@ -112,12 +112,48 @@ std::string FormatErrorSummaryAndMsg(const std::shared_ptr<cfg::ErrorProto>& err
   std::stringstream ss;
   if (error->has_error_summary()) { ss << error->error_summary(); }
   if (error->has_msg()) { ss << (ss.str().size() != 0 ? ", " + error->msg() : error->msg()); }
+  if (error->has_input_device_not_match_error()) {
+    std::stringstream input_device_not_match_ss;
+    input_device_not_match_ss << *error->mutable_input_device_not_match_error()->mutable_info(0);
+    ss << (ss.str().size() != 0 ? ", " + input_device_not_match_ss.str()
+                                : input_device_not_match_ss.str());
+  }
+  if (error->has_memory_zone_out_of_memory_error()) {
+    auto* memory_zone_out_of_memory_error = error->mutable_memory_zone_out_of_memory_error();
+    std::stringstream memory_zone_out_of_memory_ss;
+    memory_zone_out_of_memory_ss << "machine_id: "
+                                 << *memory_zone_out_of_memory_error->mutable_machine_id(0);
+    memory_zone_out_of_memory_ss << ", mem_zone_id: "
+                                 << *memory_zone_out_of_memory_error->mutable_mem_zone_id(0);
+    memory_zone_out_of_memory_ss << ", device_tag: "
+                                 << *memory_zone_out_of_memory_error->mutable_device_tag(0);
+    memory_zone_out_of_memory_ss << ", required: "
+                                 << *memory_zone_out_of_memory_error->mutable_required(0);
+    memory_zone_out_of_memory_ss << ", available: "
+                                 << *memory_zone_out_of_memory_error->mutable_available(0) << ".";
+    ss << (ss.str().size() != 0 ? ", " + memory_zone_out_of_memory_ss.str()
+                                : memory_zone_out_of_memory_ss.str());
+  }
+  if (error->has_multiple_op_kernels_matched_error()) {
+    auto* multiple_op_kernels_matched_error = error->mutable_multiple_op_kernels_matched_error();
+    std::stringstream multiple_op_kernels_matched_ss;
+    for (auto matched_op_kernels_debug_str =
+             multiple_op_kernels_matched_error->mutable_matched_op_kernels_debug_str()->begin();
+         matched_op_kernels_debug_str
+         < multiple_op_kernels_matched_error->mutable_matched_op_kernels_debug_str()->end();
+         matched_op_kernels_debug_str++) {
+      multiple_op_kernels_matched_ss << *matched_op_kernels_debug_str;
+    }
+    ss << (ss.str().size() != 0 ? ", " + multiple_op_kernels_matched_ss.str()
+                                : multiple_op_kernels_matched_ss.str());
+  }
   return ss.str();
 }
 
 }  // namespace
 
 Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error) {
+  std::cout << "erro stack frame\n" << error->DebugString() << std::endl;
   std::stringstream ss;
   for (auto stack_frame = error->mutable_stack_frame()->rbegin();
        stack_frame < error->mutable_stack_frame()->rend(); stack_frame++) {
