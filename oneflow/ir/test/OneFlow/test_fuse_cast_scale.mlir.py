@@ -75,8 +75,7 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         x = (np.random.rand(*shape) * 10).astype(np_in_type)
         ret = FuseCastScaleJob(x)
         (loss, scale) = ret
-        if device == "cpu":
-            test_case.assertTrue(np.allclose(loss, x * scale))
+        test_case.assertTrue(np.allclose(loss, x * scale))
 
 
 if __name__ == "__main__":
