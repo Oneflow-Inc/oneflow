@@ -24,7 +24,7 @@ namespace oneflow {
 namespace one {
 
 struct ConsistentToConsistentOpExprInterpState : public OpExprInterpState {
-  Symbol<cfg::ParallelDistribution> parallel_distribution;
+  Symbol<cfg::ParallelDistribution> nd_sbp;
   Symbol<ParallelDesc> parallel_desc;
 };
 
@@ -43,7 +43,7 @@ class ConsistentToConsistent : public OpExprGradFunction<ConsistentToConsistentO
                       const OpExprInterpContext& interp_ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     ctx->parallel_desc = JUST(inputs.at(0)->parallel_desc());
-    ctx->parallel_distribution = JUST(GetDualNdSbp(JUST(inputs.at(0)->parallel_distribution())));
+    ctx->nd_sbp = JUST(GetDualNdSbp(JUST(inputs.at(0)->nd_sbp())));
     return Maybe<void>::Ok();
   }
 
@@ -53,7 +53,7 @@ class ConsistentToConsistent : public OpExprGradFunction<ConsistentToConsistentO
     in_grads->resize(1);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
         *grad_op_, out_grads,
-        OpExprInterpContext(AttrMap{}, ctx->parallel_desc, ctx->parallel_distribution)));
+        OpExprInterpContext(AttrMap{}, ctx->parallel_desc, ctx->nd_sbp)));
     return Maybe<void>::Ok();
   }
 

@@ -49,24 +49,24 @@ Maybe<Symbol<cfg::ParallelDistribution>> MakeBroadcastParallelDesc() {
 }
 
 Maybe<UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
-    Symbol<cfg::ParallelDistribution> parallel_distribution) {
+    Symbol<cfg::ParallelDistribution> nd_sbp) {
   thread_local HashMap<Symbol<cfg::ParallelDistribution>, std::shared_ptr<UserOpExpr>>
-      parallel_distribution2hierarchical_parallel_cast_op_expr;
-  auto iter = parallel_distribution2hierarchical_parallel_cast_op_expr.find(parallel_distribution);
-  if (iter == parallel_distribution2hierarchical_parallel_cast_op_expr.end()) {
+      nd_sbp2hierarchical_parallel_cast_op_expr;
+  auto iter = nd_sbp2hierarchical_parallel_cast_op_expr.find(nd_sbp);
+  if (iter == nd_sbp2hierarchical_parallel_cast_op_expr.end()) {
     std::shared_ptr<UserOpExpr> op_expr =
         JUST(OpBuilder("hierarchical_parallel_cast",
                        *CHECK_JUST(UniqueStr("hierarchical_parallel_cast")))
                  .Input("in")
                  .Output("out")
-                 .Attr<std::vector<std::string>>("parallel_distribution",
-                                                 *JUST(GetNdSbpStrList(parallel_distribution)))
+                 .Attr<std::vector<std::string>>("nd_sbp",
+                                                 *JUST(GetNdSbpStrList(nd_sbp)))
                  .Attr<std::string>("grad_mode", "restore")
-                 .Attr<std::vector<std::string>>("grad_parallel_distribution",
+                 .Attr<std::vector<std::string>>("grad_nd_sbp",
                                                  std::vector<std::string>())
                  .Build());
-    iter = parallel_distribution2hierarchical_parallel_cast_op_expr
-               .emplace(parallel_distribution, op_expr)
+    iter = nd_sbp2hierarchical_parallel_cast_op_expr
+               .emplace(nd_sbp, op_expr)
                .first;
   }
   return iter->second;
@@ -117,15 +117,15 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
 }
 
 Maybe<Tensor> GetBoxingOutput(const std::shared_ptr<Tensor>& input,
-                              Symbol<cfg::ParallelDistribution> parallel_distribution) {
+                              Symbol<cfg::ParallelDistribution> nd_sbp) {
   // Eager boxing
   const auto& boxing_interpreter =
       JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
-          JUST(input->parallel_distribution()), parallel_distribution, JUST(input->parallel_desc()),
+          JUST(input->nd_sbp()), nd_sbp, JUST(input->parallel_desc()),
           JUST(input->parallel_desc())));
-  const auto& output = JUST(boxing_interpreter->Interpret(
-      input, JUST(input->parallel_distribution()), parallel_distribution,
-      JUST(input->parallel_desc()), JUST(input->parallel_desc())));
+  const auto& output = JUST(boxing_interpreter->Interpret(input, JUST(input->nd_sbp()), nd_sbp,
+                                                          JUST(input->parallel_desc()),
+                                                          JUST(input->parallel_desc())));
   return output;
 }
 
@@ -143,8 +143,8 @@ Maybe<void> RunInstructionLocalCallOpKernel(
     std::shared_ptr<Tensor> input = inputs.at(i);
     const auto& infered_input_meta = result->input_tensor_metas().at(i);
     if (allow_boxing
-        && infered_input_meta->parallel_distribution() != JUST(input->parallel_distribution())) {
-      input = JUST(GetBoxingOutput(input, infered_input_meta->parallel_distribution()));
+        && infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
+      input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp()));
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
@@ -173,7 +173,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   std::shared_ptr<const ConsistentTensorInferResult> result;
   if (inputs.empty()) {
     const auto& infer_args = JUST(SrcOpConsistentTensorMetaInferArgs::New(
-        ctx.attrs, parallel_desc, JUST(ctx.parallel_distribution.value())));
+        ctx.attrs, parallel_desc, JUST(ctx.nd_sbp.value())));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
     const auto& infer_args =
@@ -194,7 +194,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
   // Run instruction LocalCallOpKernel
   JUST(RunInstructionLocalCallOpKernel(user_op_expr, inputs, outputs, ctx, result, device,
-                                       parallel_desc, true));
+                                       parallel_desc, /* allow_boxing */ true));
   return Maybe<void>::Ok();
 }
 
@@ -215,22 +215,22 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const ConsistentToConsistentOp
                                                   const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
-  CHECK_OR_RETURN(ctx.parallel_distribution.has_value());
+  CHECK_OR_RETURN(ctx.nd_sbp.has_value());
   const auto& output_parallel_desc = JUST(ctx.parallel_desc.value());
   const auto& input_parallel_desc = JUST(inputs.at(0)->parallel_desc());
-  const auto& parallel_distribution_cast_op_expr =
-      JUST(FindOrCreatHierarchicalParallelCastOpExpr(JUST(ctx.parallel_distribution.value())));
+  const auto& nd_sbp_cast_op_expr =
+      JUST(FindOrCreatHierarchicalParallelCastOpExpr(JUST(ctx.nd_sbp.value())));
   if (output_parallel_desc == input_parallel_desc) {
     outputs->at(0) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*parallel_distribution_cast_op_expr, inputs));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*nd_sbp_cast_op_expr, inputs));
     return Maybe<void>::Ok();
   } else {
-    static Symbol<cfg::ParallelDistribution> broadcast_parallel_distribution =
+    static Symbol<cfg::ParallelDistribution> broadcast_nd_sbp =
         JUST(MakeBroadcastParallelDesc());
-    const auto& broadcast_parallel_distribution_cast_op_expr =
-        JUST(FindOrCreatHierarchicalParallelCastOpExpr(broadcast_parallel_distribution));
+    const auto& broadcast_nd_sbp_cast_op_expr =
+        JUST(FindOrCreatHierarchicalParallelCastOpExpr(broadcast_nd_sbp));
     std::shared_ptr<TensorTuple> broadcasted_inputs = JUST(
-        OpInterpUtil::Dispatch<TensorTuple>(*broadcast_parallel_distribution_cast_op_expr, inputs));
+        OpInterpUtil::Dispatch<TensorTuple>(*broadcast_nd_sbp_cast_op_expr, inputs));
     const auto& broadcast_op_expr = JUST(FindOrCreatEagerNcclBroadcastOpExpr(output_parallel_desc));
 
     const auto& infer_args = JUST(
@@ -253,10 +253,10 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const ConsistentToConsistentOp
       // Run instruction LocalCallOpKernel
       JUST(RunInstructionLocalCallOpKernel(*broadcast_op_expr, *broadcasted_inputs,
                                            &broadcasted_outputs, ctx, result, device,
-                                           output_parallel_desc, false));
+                                           output_parallel_desc, /* allow_boxing */ false));
     }
     outputs->at(0) = JUST(
-        OpInterpUtil::Dispatch<Tensor>(*parallel_distribution_cast_op_expr, broadcasted_outputs));
+        OpInterpUtil::Dispatch<Tensor>(*nd_sbp_cast_op_expr, broadcasted_outputs));
     return Maybe<void>::Ok();
   }
 }
