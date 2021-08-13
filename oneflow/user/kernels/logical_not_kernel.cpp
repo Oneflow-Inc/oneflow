@@ -5,7 +5,7 @@ namespace oneflow {
 namespace {
 
 template <typename T>
-void LogicalNot(DeviceCtx *ctx, const int64_t n, const T *x, T *y) {
+void LogicalNot(DeviceCtx *ctx, const int64_t n, const T *x, int8_t *y) {
   for (int64_t i = 0; i != n; ++i) {
     y[i] = !static_cast<bool>(x[i]);
   }
@@ -24,21 +24,36 @@ private:
     LogicalNot<T>(ctx->device_ctx(),
            in_tensor->shape().elem_cnt(),
            in_tensor->dptr<T>(),
-           out_tensor->mut_dptr<T>());
+           out_tensor->mut_dptr<int8_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_RELU_KERNEL(device, dtype)               \
+#define REGISTER_LOGICAL_NOT_KERNEL(device, dtype)               \
   REGISTER_USER_KERNEL("logical_not")                     \
       .SetCreateFn<LogicalNotKernel<device, dtype>>()     \
       .SetIsMatchedHob(                                   \
           (user_op::HobDeviceTag() == device) &           \
-          (user_op::HobDataType("out", 0)                 \
+          (user_op::HobDataType("in", 0)                 \
             == GetDataType<dtype>::value));
 
-REGISTER_RELU_KERNEL(DeviceType::kCPU, int8_t)
-REGISTER_RELU_KERNEL(DeviceType::kGPU, int8_t)
+
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kCPU, int8_t);
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kCPU, int32_t);
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kCPU, int64_t);
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kCPU, float);
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kCPU, double);
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kCPU, float16);
+
+
+
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kGPU, int8_t);
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kGPU, int32_t);
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kGPU, int64_t);
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kGPU, float);
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kGPU, double);
+REGISTER_LOGICAL_NOT_KERNEL(DeviceType::kCPU, float16);
+
 } // namespace
 
 } // namespace oneflow

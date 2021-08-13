@@ -949,5 +949,5 @@
   bind_python: True
 
 - name: "logical_not"
-  signature: "Bool LogicalNot(Tensor x)"
+  signature: "Tensor LogicalNot(Tensor x)"
   bind_python: True

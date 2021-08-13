@@ -21,7 +21,7 @@ REGISTER_USER_OP("logical_not")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+     *ctx->OutputDType("out", 0) = DataType::kInt8;
       return Maybe<void>::Ok();
     });
 }  // namespace
