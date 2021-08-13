@@ -30,8 +30,7 @@ Maybe<one::Tensor> CudaCopyBoxingInterpreter::InterpretImpl(
   CHECK_OR_RETURN(JUST(ReplaceDeviceType(in_parallel_desc, DeviceType::kGPU)) == out_parallel_desc);
   const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
   const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
-  return one::functional::ToConsistent(local_tensor, out_parallel_desc, *sbp_list,
-                                       Optional<Shape>());
+  return one::functional::ToConsistent(local_tensor, out_parallel_desc, *sbp_list);
 }
 
 }  // namespace oneflow

@@ -132,13 +132,13 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribut
           return opt_interpreter->value();
         } else {
           UNIMPLEMENTED_THEN_RETURN()
-            << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
-            << ParallelDistributionToString(out_nd_sbp) << "\'"
-            << " not support yet\n"
-            << GetSupportedBoxingTypeInfo();
+              << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
+              << ParallelDistributionToString(out_nd_sbp) << "\'"
+              << " not support yet\n"
+              << GetSupportedBoxingTypeInfo();
         }
       } else {
-          UNIMPLEMENTED_THEN_RETURN()
+        UNIMPLEMENTED_THEN_RETURN()
             << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
             << ParallelDistributionToString(out_nd_sbp) << "\'"
             << " not support yet\n"
@@ -158,18 +158,18 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribut
             return opt_interpreter->value();
           } else {
             UNIMPLEMENTED_THEN_RETURN()
-              << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
-              << ParallelDistributionToString(out_nd_sbp) << "\'"
-              << " not support yet\n"
-              << GetSupportedBoxingTypeInfo();
+                << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
+                << ParallelDistributionToString(out_nd_sbp) << "\'"
+                << " not support yet\n"
+                << GetSupportedBoxingTypeInfo();
           }
         }
       } else {
         UNIMPLEMENTED_THEN_RETURN()
-          << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
-          << ParallelDistributionToString(out_nd_sbp) << "\'"
-          << " not support yet\n"
-          << GetSupportedBoxingTypeInfo();
+            << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
+            << ParallelDistributionToString(out_nd_sbp) << "\'"
+            << " not support yet\n"
+            << GetSupportedBoxingTypeInfo();
       }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Eager boxing with different placement not support yet\n"
