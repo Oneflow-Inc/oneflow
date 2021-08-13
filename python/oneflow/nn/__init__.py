@@ -117,7 +117,6 @@ from oneflow.nn.modules.upsampling import (
 from oneflow.nn.modules.zeropad2d import ZeroPad2d
 from oneflow.nn.parameter import Parameter
 from oneflow.nn import utils
-from oneflow.nn.modules.norm import l2_normalize
 
 from . import functional
 
