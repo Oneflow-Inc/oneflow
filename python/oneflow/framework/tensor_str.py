@@ -53,7 +53,7 @@ class _Formatter(object):
         self.random_sample_num = 50
 
         with flow.no_grad():
-            tensor_view = tensor.reshape([-1])
+            tensor_view = tensor.reshape(-1)
 
         if not self.floating_dtype:
             for value in tensor_view:
