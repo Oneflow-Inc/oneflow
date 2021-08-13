@@ -19,15 +19,18 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.F.one_hot,
     r"""
-    one_hot(input, num_classes=-1)
+    one_hot(input, num_classes=-1, on_value=1, off_value=0)
     This operator generates a onehot Tensor from input Tensor.
 
     If input Tensor's rank is `N`, the corresponding onehot Tensor's rank is `N+1`.
 
+    Oneflow.one_ hot is aligned with tf.one_hot operator. If you want to use torch version, you can turn on_ Value is set to 1, off_ Value is set to 0.
+
     Args:
         input (Tensor): The input Tensor.
         num_classes (int): The length of onehot Tensor.
- 
+        on_value (Union[int, float], optional): The fill value when `x[i] == i`. Defaults to 1.
+        off_value (Union[int, float], optional): The fill value when `x[i] != i`. Defaults to 0.
     Note:
 
         The data type of input blob should be `int32` or `int64`.

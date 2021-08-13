@@ -23,24 +23,28 @@ from automated_test_util import *
 import oneflow as flow
 
 
+def _test_onehot(test_case, device, num_classes, size):
+    x = np.random.randint(9, size=size)
+    input = flow.Tensor(x, device=flow.device(device) ,dtype=flow.int64)
+    output = flow.nn.functional.one_hot(input, num_classes=num_classes)
+    if num_classes == -1:
+        np_out = np.eye(np.max(x)+1)[x]
+    else:
+        np_out = np.eye(num_classes)[x]
+    test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+
 @flow.unittest.skip_unless_1n1d()
 class TestOnehot(flow.unittest.TestCase):
-    @autotest(auto_backward=False)
-    def test_one_hot_with_random_data(test_case):
-        device = random_device()
-        hight = random(1, 6).to(int)
-        input = random_pytorch_tensor(high=hight, dtype=int).to(device)
-        num_classes = random(low=hight + 1, high=hight + 6).to(int).value()
-        y = torch.nn.functional.one_hot(input, num_classes=num_classes)
-        return y
-
-    @autotest(auto_backward=False)
-    def test_one_hot_num_classes_with_random_data(test_case):
-        device = random_device()
-        hight = random(1, 6).to(int)
-        input = random_pytorch_tensor(high=hight, dtype=int).to(device)
-        y = torch.nn.functional.one_hot(input, num_classes=-1)
-        return y
+    def test_onehot(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_onehot,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["num_classes"] = [-1, 10, 11]
+        arg_dict["size"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
