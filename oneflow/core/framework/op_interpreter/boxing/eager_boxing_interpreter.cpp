@@ -35,8 +35,10 @@ Maybe<EagerBoxingCall> EagerBoxingCall::New(Symbol<cfg::ParallelDistribution> in
 }
 
 Maybe<one::Tensor> EagerBoxingCall::Apply(const std::shared_ptr<one::Tensor>& input) const {
-  CHECK_OR_RETURN(JUST(input->nd_sbp()) == this->in_nd_sbp);
-  CHECK_OR_RETURN(JUST(input->parallel_desc()) == this->in_parallel_desc);
+  const auto& input_nd_sbp = JUST(input->nd_sbp());
+  const auto& input_parallel_desc = JUST(input->parallel_desc());
+  CHECK_OR_RETURN(input_nd_sbp == this->in_nd_sbp);
+  CHECK_OR_RETURN(input_parallel_desc == this->in_parallel_desc);
   return this->boxing_interpreter->Interpret(input, this->in_nd_sbp, this->out_nd_sbp,
                                              this->in_parallel_desc, this->out_parallel_desc);
 }

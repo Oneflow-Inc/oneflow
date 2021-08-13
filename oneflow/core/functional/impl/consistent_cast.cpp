@@ -225,6 +225,8 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
 
   const auto& ret =
       JUST(OpInterpUtil::Dispatch<one::Tensor>(*nd_sbp_cast_op_expr, {consistent_tensor}));
+  const auto& ret_parallel_desc = JUST(ret->parallel_desc());
+  CHECK_OR_RETURN(ret_parallel_desc == parallel_desc);
   return ret;
 }
 

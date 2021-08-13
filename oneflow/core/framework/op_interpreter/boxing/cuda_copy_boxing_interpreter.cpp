@@ -25,12 +25,17 @@ Maybe<one::Tensor> CudaCopyBoxingInterpreter::InterpretImpl(
     Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(in_nd_sbp == out_nd_sbp);
-  CHECK_EQ_OR_RETURN(in_parallel_desc->device_type(), DeviceType::kCPU);
-  CHECK_EQ_OR_RETURN(out_parallel_desc->device_type(), DeviceType::kGPU);
-  CHECK_OR_RETURN(JUST(ReplaceDeviceType(in_parallel_desc, DeviceType::kGPU)) == out_parallel_desc);
+  const auto& new_tag_in_parallel_desc =
+      JUST(ReplaceDeviceType(in_parallel_desc, out_parallel_desc->device_type()));
+  CHECK_OR_RETURN(new_tag_in_parallel_desc == out_parallel_desc);
   const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
   const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
-  return one::functional::ToConsistent(local_tensor, out_parallel_desc, *sbp_list);
+  const auto& tensor =
+      JUST(one::functional::ToConsistent(local_tensor, out_parallel_desc, *sbp_list));
+  CHECK_OR_RETURN(tensor->is_consistent());
+  const auto& tensor_placement = JUST(tensor->parallel_desc());
+  CHECK_OR_RETURN(tensor_placement == out_parallel_desc);
+  return tensor;
 }
 
 }  // namespace oneflow
