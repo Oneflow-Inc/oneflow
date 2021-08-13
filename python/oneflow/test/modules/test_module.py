@@ -23,7 +23,6 @@ from typing import Tuple, Union
 import numpy as np
 
 import oneflow as flow
-import oneflow.typing as tp
 import oneflow.unittest
 
 
