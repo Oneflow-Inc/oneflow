@@ -43,7 +43,7 @@ struct AvgPoolingInterpState : public OpExprInterpState {
 class AvgPoolingNdGrad : public OpExprGradFunction<AvgPoolingInterpState> {
  public:
   virtual ~AvgPoolingNdGrad() = default;
-  Maybe<void> Init(const OpExpr& op);
+  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(AvgPoolingInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const AvgPoolingInterpState* ctx, const TensorTuple& out_grads,

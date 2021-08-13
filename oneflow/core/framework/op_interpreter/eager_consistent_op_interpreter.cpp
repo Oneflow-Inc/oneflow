@@ -65,19 +65,18 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
 }
 
 Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input,
-                               Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+                               Symbol<cfg::ParallelDistribution> out_nd_sbp,
                                bool current_rank_local_is_valid) {
   if (!current_rank_local_is_valid) { return input; }
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
   // Eager boxing
-  const auto& in_parallel_distribution = JUST(input->parallel_distribution());
+  const auto& in_nd_sbp = JUST(input->nd_sbp());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& out_parallel_desc = in_parallel_desc;
-  const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
-      in_parallel_distribution, out_parallel_distribution, in_parallel_desc, out_parallel_desc));
-  const auto& output =
-      JUST(boxing_interpreter->Interpret(input, in_parallel_distribution, out_parallel_distribution,
-                                         in_parallel_desc, out_parallel_desc));
+  const auto& boxing_interpreter = JUST(
+      mgr->GetEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+  const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
+                                                          in_parallel_desc, out_parallel_desc));
   return output;
 }
 
@@ -91,7 +90,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   std::shared_ptr<const ConsistentTensorInferResult> result;
   if (inputs.empty()) {
     const auto& infer_args = JUST(SrcOpConsistentTensorMetaInferArgs::New(
-        ctx.attrs, parallel_desc, JUST(ctx.parallel_distribution.value())));
+        ctx.attrs, parallel_desc, JUST(ctx.nd_sbp.value())));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
     const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
@@ -114,9 +113,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   for (int i = 0; i < inputs.size(); ++i) {
     std::shared_ptr<Tensor> input = inputs.at(i);
     const auto& infered_input_meta = result->input_tensor_metas().at(i);
-    if (infered_input_meta->parallel_distribution() != JUST(input->parallel_distribution())) {
-      input = JUST(GetBoxingOutput(input, infered_input_meta->parallel_distribution(),
-                                   parallel_id.has_value()));
+    if (infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
+      input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(), parallel_id.has_value()));
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
@@ -132,7 +130,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, parallel_desc.shared_from_symbol(), instr_type_name);
+                                      result, ctx, parallel_desc.shared_from_symbol(),
+                                      instr_type_name);
   }));
   return Maybe<void>::Ok();
 }

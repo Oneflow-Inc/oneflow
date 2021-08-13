@@ -115,7 +115,7 @@ class ArgBlobDef(object):
         interface_blob_conf.is_dynamic = self.is_dynamic
         sbp_parallel = sbp_parallel_pb.SbpParallel()
         sbp_parallel.split_parallel.axis = 0
-        interface_blob_conf.parallel_distribution.sbp_parallel.extend([sbp_parallel])
+        interface_blob_conf.nd_sbp.sbp_parallel.extend([sbp_parallel])
         return interface_blob_conf
 
     def _Distribute2Str(self):
@@ -136,90 +136,6 @@ class ArgBlobDef(object):
             return ":B"
         else:
             raise NotImplementedError
-
-
-class FixedTensorDef(ArgBlobDef):
-    def __init__(
-        self,
-        shape: Sequence[int],
-        dtype: oneflow.dtype = oneflow.float,
-        name: Optional[str] = None,
-    ) -> None:
-        ArgBlobDef.__init__(self, shape, dtype=dtype, name=name)
-
-    @property
-    def is_dynamic(self) -> bool:
-        return False
-
-    def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
-        return compile_context.CurJobAddConsistentOp(op_conf)
-
-    def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
-        parallel_symbol = oneflow.current_scope().device_parallel_desc_symbol
-        if (
-            parallel_symbol.device_tag == "gpu"
-            and list(dict(parallel_symbol.machine_id2device_id_list).keys()) == [0]
-            and (parallel_symbol.parallel_num == 1)
-        ):
-            device_tag = "gpu"
-            device_ids = "@0:%s" % parallel_symbol.machine_id2device_id_list[0][0]
-        else:
-            device_tag = "cpu"
-            device_ids = "@0:0"
-        with oneflow.scope.placement(device_tag, device_ids):
-            return compile_context.CurJobAddConsistentOp(op_conf)
-
-    def _CheckNdarray(self, ndarray: np.ndarray) -> None:
-        assert isinstance(ndarray, np.ndarray)
-        assert ndarray.shape == self.shape
-
-    def _AsyncPush(self, session: object, arg_ndarray: np.ndarray) -> None:
-        session.AsyncPush(self.op_name, _MakePushNdarrayCallback(arg_ndarray))
-
-
-class MirroredTensorDef(ArgBlobDef):
-    def __init__(
-        self,
-        shape: Sequence[int],
-        dtype: oneflow.dtype = oneflow.float,
-        name: Optional[str] = None,
-    ) -> None:
-        assert type(shape) is tuple
-        ArgBlobDef.__init__(self, shape, dtype=dtype, name=name)
-        self.sub_consistent_blob_list_ = []
-
-    @property
-    def is_dynamic(self) -> bool:
-        return True
-
-    def AddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> None:
-        _AddAndInferMirroredOp(
-            self.unique_name, op_conf, self.sub_consistent_blob_list_
-        )
-
-    def EagerAddAndInferOp(self, op_conf: op_conf_util.OperatorConf) -> Any:
-        return compile_context.CurJobAddMirroredOp(op_conf)
-
-    def _CheckNdarray(self, ndarray_list: Sequence[np.ndarray]) -> None:
-        assert isinstance(ndarray_list, (list, tuple))
-        assert len(self.sub_consistent_blob_list_) == len(ndarray_list)
-
-        def GetElemCnt(shape):
-            return reduce(lambda x, y: x * y, shape, 1)
-
-        for (consistent_blob, ndarray) in zip(
-            self.sub_consistent_blob_list_, ndarray_list
-        ):
-            assert type(ndarray) is np.ndarray
-            assert len(ndarray.shape) == len(self.shape)
-            assert GetElemCnt(ndarray.shape) <= GetElemCnt(self.shape)
-
-    def _AsyncPush(self, session: object, ndarray_list: Sequence[np.ndarray]) -> None:
-        for i in range(len(ndarray_list)):
-            sub_blob = self.sub_consistent_blob_list_[i]
-            session.AsyncPush(
-                sub_blob.op_name, _MakePushNdarrayCallback(ndarray_list[i])
-            )
 
 
 def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
@@ -252,31 +168,3 @@ def _MakePushNdarrayCallback(ndarray):
         ofblob.CopyFromNdarray(copied)
 
     return Copy
-
-
-class DeprecatedFixedTensorDef(FixedTensorDef):
-    def __init__(self, *args, **kwargs):
-        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
-        if not running_script.endswith('input_blob_def.py"'):
-            print(
-                "WARNING: oneflow.FixedTensorDef has been deprecated. Please use oneflow.typing.Numpy.Placeholder instead."
-            )
-            print(
-                "For instance:\n            - def job_func(images=oneflow.FixedTensorDef((32, 1, 28, 28), dtype=flow.float))\n            + def job_func(images:oneflow.typing.Numpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"
-            )
-            print(traceback.format_stack()[-2])
-        super().__init__(*args, **kwargs)
-
-
-class DeprecatedMirroredTensorDef(MirroredTensorDef):
-    def __init__(self, *args, **kwargs):
-        running_script = traceback.format_stack()[-2].split(",")[0].split(" ")[3]
-        if not running_script.endswith('input_blob_def.py"'):
-            print(
-                "WARNING: oneflow.MirroredTensorDef has been deprecated. Please use oneflow.typing.ListNumpy.Placeholder instead."
-            )
-            print(
-                "For instance:\n            - def job_func(images=oneflow.MirroredTensorDef((32, 1, 28, 28), dtype=flow.float))\n            + def job_func(images:oneflow.typing.ListNumpy.Placeholder((32, 1, 28, 28), dtype=flow.float))"
-            )
-            print(traceback.format_stack()[-2])
-        super().__init__(*args, **kwargs)

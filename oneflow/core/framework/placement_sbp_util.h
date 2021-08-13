@@ -31,8 +31,8 @@ class ParallelDistribution;
 
 }
 
-Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(
-    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> parallel_distribution);
+Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(Symbol<ParallelDesc> parallel_desc,
+                                                        Symbol<cfg::ParallelDistribution> nd_sbp);
 
 Maybe<std::vector<int64_t>> GetBroadcastParallelIds(const Shape& hierarchy_shape,
                                                     const std::vector<bool>& dim2is_broadcast,

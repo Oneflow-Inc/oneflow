@@ -23,17 +23,17 @@ limitations under the License.
 
 namespace oneflow {
 
-class FlatTensorConsistency;
+struct FlatTensorConsistency;
 
 class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
  public:
   CheckConsistencyAsyncTransportCtx(
       const TransportToken& transport_token, Symbol<one::ConsistentTensorMeta> tensor_meta,
-      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint,
+      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint,
       const TransportToken& tensor_transport_token)
       : AsyncTransportCtx(transport_token),
         tensor_meta_(tensor_meta),
-        consumer_parallel_distribution_constraint_(consumer_parallel_distribution_constraint),
+        consumer_nd_sbp_constraint_(consumer_nd_sbp_constraint),
         tensor_transport_token_(tensor_transport_token) {}
 
   ~CheckConsistencyAsyncTransportCtx() override;
@@ -48,7 +48,7 @@ class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
 
  private:
   Symbol<one::ConsistentTensorMeta> tensor_meta_;
-  Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
+  Optional<Symbol<cfg::ParallelDistribution>> consumer_nd_sbp_constraint_;
   TransportToken tensor_transport_token_;
   std::shared_ptr<FlatTensorConsistency> flat_tensor_consistency_;
 };

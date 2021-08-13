@@ -23,32 +23,28 @@ namespace oneflow {
 namespace {
 
 Maybe<Symbol<cfg::ParallelDistribution>> GetBroadcastParallelDistribution() {
-  cfg::ParallelDistribution broadcast_parallel_distribution;
-  broadcast_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-  return SymbolOf(broadcast_parallel_distribution);
+  cfg::ParallelDistribution broadcast_nd_sbp;
+  broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  return SymbolOf(broadcast_nd_sbp);
 }
 
 }  // namespace
 
 Maybe<one::Tensor> NcclS2PBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input,
-    Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-    Symbol<cfg::ParallelDistribution> out_parallel_distribution,
-    Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2P(
-      in_parallel_distribution->sbp_parallel(0), out_parallel_distribution->sbp_parallel(0)));
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
+    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    Symbol<ParallelDesc> out_parallel_desc) const {
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2P(in_nd_sbp->sbp_parallel(0),
+                                                          out_nd_sbp->sbp_parallel(0)));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
-  static thread_local Symbol<cfg::ParallelDistribution> mid_parallel_distribution =
-      JUST(GetBroadcastParallelDistribution());
-  static thread_local std::shared_ptr<NcclCollectiveAllGatherBoxingInterpreter> s2b_interpreter =
+  static Symbol<cfg::ParallelDistribution> mid_nd_sbp = JUST(GetBroadcastParallelDistribution());
+  static std::shared_ptr<NcclCollectiveAllGatherBoxingInterpreter> s2b_interpreter =
       std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>();
   static thread_local std::shared_ptr<NaiveB2PBoxingInterpreter> b2p_interpreter =
       std::make_shared<NaiveB2PBoxingInterpreter>();
-  const auto& mid_tesnor =
-      JUST(s2b_interpreter->Interpret(input, in_parallel_distribution, mid_parallel_distribution,
-                                      in_parallel_desc, out_parallel_desc));
-  return JUST(b2p_interpreter->Interpret(mid_tesnor, mid_parallel_distribution,
-                                         out_parallel_distribution, in_parallel_desc,
+  const auto& mid_tesnor = JUST(s2b_interpreter->Interpret(input, in_nd_sbp, mid_nd_sbp,
+                                                           in_parallel_desc, out_parallel_desc));
+  return JUST(b2p_interpreter->Interpret(mid_tesnor, mid_nd_sbp, out_nd_sbp, in_parallel_desc,
                                          out_parallel_desc));
 }
 

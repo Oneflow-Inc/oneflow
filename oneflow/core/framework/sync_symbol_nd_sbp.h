@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +12,25 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow.core.common.data_type_pb2 as data_type_conf_util
-import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
+*/
+#ifndef ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_ND_SBP_H_
+#define ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_ND_SBP_H_
 
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/framework/transport_util.h"
+#include "oneflow/core/framework/transport_token.h"
 
-def truncated_normal_initializer(
-    stddev: float = 1.0,
-) -> initializer_conf_util.InitializerConf:
-    initializer = initializer_conf_util.InitializerConf()
-    setattr(initializer.truncated_normal_conf, "std", float(stddev))
-    return initializer
+namespace oneflow {
+
+namespace cfg {
+
+class ParallelDistribution;
+
+}
+
+Maybe<void> SyncSymbolParallelDistribution(uint64_t symbol_id, Symbol<cfg::ParallelDistribution>);
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_ND_SBP_H_

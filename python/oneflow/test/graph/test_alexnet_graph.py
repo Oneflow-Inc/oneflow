@@ -44,7 +44,10 @@ def _parse_args():
         help="dataset path",
     )
     parser.add_argument(
-        "--train_dataset_size", type=int, default=40, help="train_dataset size"
+        "--train_dataset_size", type=int, default=400, help="train_dataset size"
+    )
+    parser.add_argument(
+        "--val_dataset_size", type=int, default=40, help="val_dataset size"
     )
     # training hyper-parameters
     parser.add_argument(
@@ -100,7 +103,7 @@ def _test_alexnet_graph_repr(test_case, args):
     alexnet_graph.debug()
 
     alexnet_module.train()
-    image, label = train_data_loader.get_batch()
+    image, label = train_data_loader()
     image = image.to(args.device)
     label = label.to(args.device)
     loss = alexnet_graph(image, label)
@@ -115,13 +118,16 @@ def _test_alexnet_graph(test_case, args):
         dataset_size=args.train_dataset_size,
         batch_size=args.train_batch_size,
     )
+    val_data_loader = OFRecordDataLoader(
+        ofrecord_root=args.ofrecord_path,
+        mode="val",
+        dataset_size=args.val_dataset_size,
+        batch_size=args.val_batch_size,
+    )
 
     # oneflow init
     start_t = time.time()
     alexnet_module = alexnet()
-    if args.load_checkpoint != "":
-        print("load_checkpoint >>>>>>>>> ", args.load_checkpoint)
-        alexnet_module.load_state_dict(flow.load(args.load_checkpoint))
     end_t = time.time()
     print("init time : {}".format(end_t - start_t))
 
@@ -137,11 +143,15 @@ def _test_alexnet_graph(test_case, args):
     class AlexNetGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
+            self.train_data_loader = train_data_loader
             self.alexnet = alexnet_module
             self.cross_entropy = of_cross_entropy
             self.add_optimizer("sgd", of_sgd)
 
-        def build(self, image, label):
+        def build(self):
+            image, label = self.train_data_loader()
+            image = image.to(args.device)
+            label = label.to(args.device)
             logits = self.alexnet(image)
             loss = self.cross_entropy(logits, label)
             loss.backward()
@@ -149,22 +159,33 @@ def _test_alexnet_graph(test_case, args):
 
     alexnet_graph = AlexNetGraph()
 
+    class AlexNetEvalGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.val_data_loader = val_data_loader
+            self.alexnet = alexnet_module
+
+        def build(self):
+            with flow.no_grad():
+                image, label = self.val_data_loader()
+                image = image.to(args.device)
+                logits = self.alexnet(image)
+                predictions = logits.softmax()
+            return predictions, label
+
+    alexnet_eval_graph = AlexNetEvalGraph()
+
     of_losses = []
-    print_interval = 1
+    all_samples = len(val_data_loader) * args.val_batch_size
+    print_interval = 10
 
     for epoch in range(args.epochs):
         alexnet_module.train()
 
         for b in range(len(train_data_loader)):
-            image, label = train_data_loader.get_batch()
-
             # oneflow graph train
             start_t = time.time()
-            image = image.to(args.device)
-            label = label.to(args.device)
-
-            loss = alexnet_graph(image, label)
-
+            loss = alexnet_graph()
             end_t = time.time()
             if b % print_interval == 0:
                 l = loss.numpy()
@@ -174,6 +195,24 @@ def _test_alexnet_graph(test_case, args):
                         epoch, b, l, end_t - start_t
                     )
                 )
+        print("epoch %d train done, start validation" % epoch)
+
+        alexnet_module.eval()
+        correct_of = 0.0
+        for b in range(len(val_data_loader)):
+
+            start_t = time.time()
+            predictions, label = alexnet_eval_graph()
+            of_predictions = predictions.numpy()
+            clsidxs = np.argmax(of_predictions, axis=1)
+
+            label_nd = label.numpy()
+            for i in range(args.val_batch_size):
+                if clsidxs[i] == label_nd[i]:
+                    correct_of += 1
+            end_t = time.time()
+
+        print("epoch %d, oneflow top1 val acc: %f" % (epoch, correct_of / all_samples))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -184,14 +223,15 @@ class TestAlexnetGraph(oneflow.unittest.TestCase):
         args.device = "cuda"
         _test_alexnet_graph_repr(test_case, args)
 
-    def _test_alexnet_graph_gpu(test_case):
+    def test_alexnet_graph_gpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cuda"
         _test_alexnet_graph(test_case, args)
 
-    def _test_alexnet_graph_cpu(test_case):
+    def test_alexnet_graph_cpu(test_case):
         args, unknown_args = _parse_args()
         args.device = "cpu"
+        args.train_batch_size = 40
         _test_alexnet_graph(test_case, args)
 
 

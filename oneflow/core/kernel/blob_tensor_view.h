@@ -37,6 +37,7 @@ class BlobTensorView final : public Tensor {
   void* mut_raw_dptr() override;
 
   void Reset(Blob* blob);
+  Blob* blob() const;
 
  private:
   Blob* blob_;
