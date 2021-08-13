@@ -19,11 +19,13 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/cached_caller.h"
 
 namespace oneflow {
 
@@ -102,6 +104,7 @@ class ParallelDesc final {
   bool ContainingMachineId(int64_t machine_id) const;
 
   std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf() const { return cfg_parallel_conf_; }
+  bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
@@ -113,7 +116,6 @@ class ParallelDesc final {
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
-  bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
 
   Maybe<int64_t> symbol_id_;
   DeviceType device_type_;
@@ -136,6 +138,20 @@ class ParallelDesc final {
 
 Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
                                                   Optional<int64_t>* parallel_id);
+
+namespace private_details {
+
+Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc);
+Maybe<const ParallelContext> CalcParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc);
+
+}  // namespace private_details
+
+static constexpr auto* GetParallelId4CurrentProcessCtx =
+    DECORATE(&private_details::CalcParallelId4CurrentProcessCtx, ThreadLocal);
+
+static constexpr auto* GetParallelContext4CurrentProcessCtx =
+    DECORATE(&private_details::CalcParallelContext4CurrentProcessCtx, ThreadLocal);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);

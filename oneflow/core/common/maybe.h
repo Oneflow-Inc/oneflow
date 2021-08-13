@@ -30,6 +30,16 @@ template<typename T, typename Enabled = void>
 class Maybe;
 
 template<typename T>
+struct is_maybe {
+  static const bool value = false;
+};
+
+template<typename T>
+struct is_maybe<Maybe<T>> {
+  static const bool value = true;
+};
+
+template<typename T>
 class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScalarType<T>::value)
                                        && !std::is_reference<T>::value>::type>
     final {
@@ -294,7 +304,7 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
   })(__FUNCTION__)                                                             \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
+#define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
 
 #define OF_RETURN_IF_ERROR(...)                                                              \
   for (MAYBE_CONST_AUTO_REF maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \

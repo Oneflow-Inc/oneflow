@@ -29,7 +29,7 @@ class ShapeElemCntKernel final : public KernelIf<device_type> {
 
  private:
   void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+                          const std::function<Blob*(const std::string&)>&) const override;
   int32_t GetShapePartialElemCnt(const ShapeView& shape) const;
 };
 

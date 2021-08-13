@@ -68,6 +68,34 @@ class BernoulliFunctor {
   std::shared_ptr<OpExpr> bernoulli_op_;
 };
 
+
+class RandPermFunctor {
+ public:
+  RandPermFunctor() { randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build()); }
+  Maybe<Tensor> operator()(const int32_t n, const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("n", n));
+    std::shared_ptr<one::Generator> gen;
+
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+
+    const auto& randperm_kernel_state = std::make_shared<RandpermKernelState>(gen);
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(
+          *randperm_op_, {}, OpExprInterpContext(attrs, device_symbol, randperm_kernel_state));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {},
+                                            OpExprInterpContext(attrs, randperm_kernel_state));
+>>>>>>> ce0f2122667d15d2fa2d30566a438ad6ba6b4020
 class RandNFunctor {
  public:
   RandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
@@ -146,13 +174,19 @@ class ConsistentRandNFunctor {
 
     const auto& normal_kernel_state = std::make_shared<NormalKernelState>(gen);
 
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+      JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
     }
     return OpInterpUtil::Dispatch<Tensor>(
+
         *op_, {},
         OpExprInterpContext(attrs, placement, parallel_distribution, normal_kernel_state));
+
+
+        *randperm_op_, {},
+        OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
+
   }
 
  private:
@@ -188,6 +222,7 @@ class RandPermFunctor {
 
  private:
   std::shared_ptr<OpExpr> randperm_op_;
+<<<<<<< HEAD
 };
 
 class ConsistentRandPermFunctor {
@@ -220,6 +255,13 @@ class ConsistentRandPermFunctor {
     return OpInterpUtil::Dispatch<Tensor>(
         *randperm_op_, {},
         OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
+=======
+        *op_, {},
+        OpExprInterpContext(attrs, placement, parallel_distribution, normal_kernel_state));
+
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, normal_kernel_state));
+
+>>>>>>> ce0f2122667d15d2fa2d30566a438ad6ba6b4020
   }
 
  private:

@@ -30,7 +30,7 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void VirtualKernelInit() override;
   void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+                          const std::function<Blob*(const std::string&)>&) const override;
 
   PbRpf<std::string> ibn_0_;
   PbRpf<std::string> obn_0_;
