@@ -241,7 +241,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
         tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)
-        >>> b = a.reshape((3, 3))
+        >>> b = a.reshape(3, 3)
         >>> b
         tensor([[-4., -3., -2.],
                 [-1.,  0.,  1.],
@@ -293,7 +293,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 
     Using the :attr:`dim` argument to compute matrix norms::
 
-        >>> m = flow.tensor(np.arange(8, dtype=np.float32)).reshape((2, 2, 2))
+        >>> m = flow.tensor(np.arange(8, dtype=np.float32)).reshape(2, 2, 2)
         >>> LA.norm(m, dim=(1,2))
         tensor([ 3.7417, 11.225 ], dtype=oneflow.float32)
     """
@@ -360,7 +360,7 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
         tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)
-        >>> b = a.reshape((3, 3))
+        >>> b = a.reshape(3, 3)
         >>> b
         tensor([[-4., -3., -2.],
                 [-1.,  0.,  1.],
@@ -419,7 +419,7 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
         >>> import oneflow as flow
         >>> from oneflow import linalg as LA
         >>> import numpy as np
-        >>> a = flow.tensor(np.arange(9, dtype=np.float32)).reshape((3,3))
+        >>> a = flow.tensor(np.arange(9, dtype=np.float32)).reshape(3,3)
         >>> a
         tensor([[0., 1., 2.],
                 [3., 4., 5.],

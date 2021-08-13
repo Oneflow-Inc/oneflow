@@ -15,13 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/batch_gather_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 template<DeviceType device_type, typename T, typename K>
-class BatchGatherKernel final : public user_op::OpKernel {
+class BatchGatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   BatchGatherKernel() = default;
   ~BatchGatherKernel() = default;
