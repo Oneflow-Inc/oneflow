@@ -59,7 +59,7 @@ def where_op(condition, x=None, y=None):
 
     """
 
-    if x == None and y == None:
+    if x is None and y is None:
         return flow.nonzero(condition, as_tuple=True)
 
     assert condition.dtype == flow.int32 or condition.dtype == flow.int8
