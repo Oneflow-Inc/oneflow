@@ -39,9 +39,7 @@ class ScalarFModGrad : public OpExprGradFunction<ScalarFModGradInterpState> {
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
-    std::cout << __FILE__ << __LINE__ << std::endl;
     if (ctx->requires_grad) { in_grads->at(0) = out_grads.at(0); }
-
     return Maybe<void>::Ok();
   }
 };

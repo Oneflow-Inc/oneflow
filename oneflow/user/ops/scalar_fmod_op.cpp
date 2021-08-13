@@ -46,13 +46,4 @@ namespace oneflow {
 
 REGISTER_SCALAR_LOGICAL_OP("scalar_fmod");
 
-REGISTER_USER_OP_GRAD("scalar_fmod")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("in", 0)) {
-        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "in", 0);
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow

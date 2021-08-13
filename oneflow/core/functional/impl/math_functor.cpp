@@ -466,7 +466,6 @@ class ScalarFModFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
     }
-    std::cout << __FILE__ << __LINE__ << std::endl;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
