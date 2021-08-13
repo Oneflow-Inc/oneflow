@@ -29,11 +29,12 @@ class EitherPtr final {
   using XPtr = std::shared_ptr<X>;
   using YPtr = std::shared_ptr<Y>;
 
-  EitherPtr() : type_(UnionType<X>::value), x_ptr_(nullptr) {}
-  EitherPtr(const XPtr& ptr) : type_(UnionType<X>::value), x_ptr_(ptr) {}
-
   // WARNING: we should assume that the structure of shared_ptr<X> and shared_ptr<Y> is same,
   // and obviously at most time the assumption holds
+  static_assert(sizeof(XPtr) == sizeof(YPtr), "unsupported shared_ptr implementation");
+
+  EitherPtr() : type_(UnionType<X>::value), x_ptr_(nullptr) {}
+  EitherPtr(const XPtr& ptr) : type_(UnionType<X>::value), x_ptr_(ptr) {}
   EitherPtr(const YPtr& ptr)
       : type_(UnionType<Y>::value), x_ptr_(reinterpret_cast<const XPtr&>(ptr)) {}
 

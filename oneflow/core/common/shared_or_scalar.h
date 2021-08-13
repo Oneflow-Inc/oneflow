@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SHARED_OR_SCALAR_H_
 
 #include <memory>
-#include <type_traits>
 
 #include <glog/logging.h>
 #include "oneflow/core/common/type_traits.h"
@@ -63,6 +62,7 @@ class SharedOrScalar final {
       scalar_value_ = rhs.scalar_value_;
     } else {
       if (is_scalar_) {
+        scalar_value_.~ScalarT();
         new (&shared_mem_) Shared(rhs.GetShared());
       } else {
         *MutableShared() = rhs.GetShared();
@@ -77,6 +77,7 @@ class SharedOrScalar final {
       scalar_value_ = rhs.scalar_value_;
     } else {
       if (is_scalar_) {
+        scalar_value_.~ScalarT();
         new (&shared_mem_) Shared(std::move(*rhs.MutableShared()));
       } else {
         *MutableShared() = std::move(*rhs.MutableShared());
