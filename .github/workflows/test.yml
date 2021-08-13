@@ -120,10 +120,35 @@ jobs:
         timeout-minutes: 45
         env:
           CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+  changed_files:
+    runs-on: ubuntu-latest
+    outputs:
+      all: ${{ steps.changes.outputs.all}}
+      python: ${{ steps.changes.outputs.python }}
+      should_run_single_client_tests: ${{ steps.should_run_single_client_tests.outputs.result }}
+    steps:
+      - name: Checkout OneFlow
+        uses: actions/checkout@v2
+      - name: Find changes
+        id: changes
+        run: |
+          echo "::set-output name=all::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)"
+          echo "::set-output name=python::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep .py$ | xargs)"
+      - name: Should run single client tests
+        id: should_run_single_client_tests
+        if: contains(steps.changes.outputs.python, 'python/oneflow/compatible/single_client') && steps.changes.outputs.python != steps.changes.outputs.all
+        run: |
+          echo "::set-output name=result::true"
 
   build:
     name: Build
-    needs: [check_license_and_format, mirror_third_party, cancel_previous]
+    needs:
+      [
+        check_license_and_format,
+        mirror_third_party,
+        cancel_previous,
+        changed_files,
+      ]
     continue-on-error: ${{ matrix.allow_fail }}
     runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
@@ -214,7 +239,7 @@ jobs:
         if: env.is_built != '1'
       - name: Build OneFlow
         timeout-minutes: 45
-        if: env.is_built != '1'
+        if: env.is_built != '1' && needs.changed_files.outputs.should_run_single_client_tests
         uses: ./.github/actions/whl
         with:
           tmp_dir: ${ci_tmp_dir}
@@ -224,7 +249,7 @@ jobs:
           python_version: ${{ matrix.python_version }}
       - name: Single client custom Op test (run by oneflow build docker)
         timeout-minutes: 45
-        if: matrix.test_suite == 'cpu' && env.is_built != '1'
+        if: matrix.test_suite == 'cpu' && env.is_built != '1' && needs.changed_files.outputs.should_run_single_client_tests
         run: |
           set -x
           docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
@@ -285,7 +310,7 @@ jobs:
 
   test:
     name: Test suite
-    needs: [build, wait_for_gpu_slot]
+    needs: [build, wait_for_gpu_slot, changed_files]
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow_fail }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
@@ -418,21 +443,21 @@ jobs:
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
       - name: Single client op test (distributed, 1st try)
         timeout-minutes: 45
-        if: matrix.test_suite == 'cuda'
+        if: matrix.test_suite == 'cuda' && needs.changed_files.outputs.should_run_single_client_tests
         continue-on-error: true
         id: distributed_try_1
         run: |
           python3 ci/test/distributed_run.py --mode=single_client --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Single client op test (distributed, 2nd try)
         timeout-minutes: 45
-        if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
+        if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure' && needs.changed_files.outputs.should_run_single_client_tests
         continue-on-error: true
         id: distributed_try_2
         run: |
           python3 ci/test/distributed_run.py --mode=single_client --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Single client op test (distributed, 3rd try)
         timeout-minutes: 45
-        if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
+        if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure' && needs.changed_files.outputs.should_run_single_client_tests
         continue-on-error: false
         id: distributed_try_3
         run: |
@@ -448,7 +473,7 @@ jobs:
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/doctest.sh"
       - name: Single client dry run test (run without runtime)
         timeout-minutes: 45
-        if: matrix.test_suite == 'cuda'
+        if: matrix.test_suite == 'cuda' && needs.changed_files.outputs.should_run_single_client_tests
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
@@ -574,7 +599,7 @@ jobs:
             })
       - name: Single client op test
         timeout-minutes: 45
-        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op'
+        if: contains(fromJson('["cuda", "cuda_op"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests
         run: |
           set -x
           docker run \
@@ -583,7 +608,7 @@ jobs:
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
       - name: Single client model test
         timeout-minutes: 45
-        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
+        if: contains(fromJson('["cuda", "cuda"]'), matrix.test_suite)  && needs.changed_files.outputs.should_run_single_client_tests
         run: |
           set -x
           docker run \
@@ -593,7 +618,7 @@ jobs:
       - name: Single client model serve test
         timeout-minutes: 45
         id: model_serve_test
-        if: matrix.test_suite == 'cuda'
+        if: matrix.test_suite == 'cuda' && needs.changed_files.outputs.should_run_single_client_tests
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
@@ -608,7 +633,7 @@ jobs:
             ${image_name} bash ci/test/print_stack_from_core.sh python3 serving-tmp
       - name: Single client benchmark (mainly for backward compatibility)
         timeout-minutes: 45
-        if: matrix.test_suite == 'cuda'
+        if: matrix.test_suite == 'cuda' && needs.changed_files.outputs.should_run_single_client_tests
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
@@ -616,7 +641,7 @@ jobs:
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
       - name: Single client benchmark FP16 (mainly for backward compatibility)
         timeout-minutes: 45
-        if: matrix.test_suite == 'cuda'
+        if: matrix.test_suite == 'cuda' && needs.changed_files.outputs.should_run_single_client_tests
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
@@ -624,7 +649,7 @@ jobs:
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
       - name: Single client XLA Test
         timeout-minutes: 45
-        if: contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && env.is_built != '1'
+        if: contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
