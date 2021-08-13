@@ -18,10 +18,7 @@ from collections import OrderedDict, namedtuple
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import numpy as np
-
 import oneflow as flow
-from oneflow.framework.check_point_v2 import FeedValueToVariable
-from oneflow.framework.function_util import global_function_or_identity
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
 
