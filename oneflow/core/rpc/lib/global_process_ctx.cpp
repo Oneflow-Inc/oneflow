@@ -44,15 +44,15 @@ int64_t GlobalProcessCtx::NodeSize() {
   return Global<ProcessCtx>::Get()->node_size();
 }
 
-int64_t GlobalProcessCtx::ThisNodeId() {
-  CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return NodeId4Rank(Rank());
-}
-
-int64_t GlobalProcessCtx::NodeId4Rank(int64_t rank) {
+int64_t GlobalProcessCtx::NodeId(int64_t rank) {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   const auto& rank2node_id = Global<ProcessCtx>::Get()->rank_info_in_cluster().rank2node_id();
   return CHECK_JUST(MapAt(rank2node_id, rank));
+}
+
+int64_t GlobalProcessCtx::ThisNodeId() {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return NodeId(Rank());
 }
 
 HashMap<int64_t, int64_t> GlobalProcessCtx::NodeId2RankOffset() {
@@ -102,7 +102,7 @@ std::string GlobalProcessCtx::LogDirEntry() {
 /* static */ int64_t GlobalProcessCtx::LocalRank(int64_t rank) {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   HashMap<int64_t, int64_t> node_id2rankoffset = NodeId2RankOffset();
-  int64_t node_id = NodeId4Rank(rank);
+  int64_t node_id = NodeId(rank);
   int64_t offset = CHECK_JUST(MapAt(node_id2rankoffset, rank));
   return rank - offset;
 }

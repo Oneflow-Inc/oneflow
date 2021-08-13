@@ -225,6 +225,7 @@ from oneflow.nn.modules.logical_and import logical_and_op as logical_and
 from oneflow.nn.modules.logical_or import logical_or_op as logical_or
 from oneflow.nn.modules.logical_xor import logical_xor_op as logical_xor
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
+from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.less import less_op as lt
 from oneflow.nn.modules.less_equal import less_equal_op as le
 from oneflow.nn.modules.log1p import log1p_op as log1p
@@ -264,6 +265,7 @@ from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.math_ops import variance_op as var
 from oneflow.nn.modules.matmul import matmul_op as matmul
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.ne import ne_op as ne
 from oneflow.nn.modules.ne import ne_op as not_equal
 from oneflow.nn.modules.negative import negative_op as neg
@@ -286,6 +288,7 @@ from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.softplus import softplus_op as softplus
 from oneflow.nn.modules.sort import sort_op as sort
+from oneflow.nn.modules.split import split_op as split
 from oneflow.nn.modules.squeeze import squeeze_op as squeeze
 from oneflow.nn.modules.stack import stack
 from oneflow.nn.modules.tan import tan_op as tan
