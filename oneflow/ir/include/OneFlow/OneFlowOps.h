@@ -31,6 +31,7 @@ namespace OpTrait {
 namespace impl {
 OpFoldResult foldIdempotentOfIdenticalPlacement(Operation* op);
 OpFoldResult foldInvolutionOfIdenticalPlacement(Operation* op);
+OpFoldResult foldInvolutionOfTransposeOp(Operation* op);
 }  // namespace impl
 
 template<typename ConcreteType>
@@ -70,6 +71,25 @@ class IsInvolutionOfIdenticalPlacement
   static OpFoldResult foldTrait(Operation* op, ArrayRef<Attribute> operands) {
     assert(op->hasAttr("device_name"));
     return impl::foldInvolutionOfIdenticalPlacement(op);
+  }
+};
+
+template<typename ConcreteType>
+class IsInvolutionOfTransposeOp : public TraitBase<ConcreteType, IsInvolutionOfTransposeOp> {
+ public:
+  static LogicalResult verifyTrait(Operation* op) {
+    static_assert(ConcreteType::template hasTrait<OneResult>(),
+                  "expected operation to produce one result");
+    static_assert(ConcreteType::template hasTrait<OneOperand>(),
+                  "expected operation to take one operand");
+    static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
+                  "expected operation to preserve type");
+    return impl::verifyIsInvolutionOfTransposeOp(op);
+  }
+
+  static OpFoldResult foldTrait(Operation* op, ArrayRef<Attribute> operands) {
+    assert(op->hasAttr("device_name"));
+    return impl::foldInvolutionOfTransposeOp(op);
   }
 };
 

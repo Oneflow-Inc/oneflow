@@ -157,6 +157,15 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
   }
   return {};
 }
+OpFoldResult OpTrait::impl::foldInvolutionOfTransposeOp(Operation* op) {
+  auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue();
+  if(!op_type_name.equals("transpose") return {}
+  auto* argument_op = op->getOperand(0).getDefiningOp();
+  if (argument_op && op->getName() == argument_op->getName()) {
+    return op->getOperand(0);
+  }
+  return {}
+}
 
 ModuleOp Fuse(Operation* op) { return {}; }
 
