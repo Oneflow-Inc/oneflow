@@ -44,61 +44,77 @@ std::string StripBrackets(std::string str) {
 
 Maybe<std::string> ShortenMsg(std::string str) {
   // 150 characters is the threshold
-  const int num_displayed_char = 150;
+  const int character_num_threshold = 150;
+  const int num_displayed_char = 50;
   if (str.size() == 0) { return str; }
   // strip space when JUST(  xx  );
   str = StripSpace(str);
-  if (str.size() < num_displayed_char) { return str; }
+  if (str.size() < character_num_threshold) { return str; }
 
-  // Find first index where the number of characters from the start to the index is less than 50,
-  // last index is the same
-  int first_index = -1;
-  int last_index = -1;
-  int pre_index = 0;
-  CHECK_OR_RETURN(str.size() >= 1);
-  for (int i = 1; i < str.size(); i++) {
-    if (IsLetterNumberOrUnderline(str.at(i)) && !IsLetterNumberOrUnderline(str.at(i - 1))) {
-      if (first_index == -1 && i >= num_displayed_char / 3) { first_index = pre_index; }
-      if (last_index == -1 && str.size() - i <= num_displayed_char / 3) { last_index = i; }
-      pre_index = i;
+  // left part whose number of characters is just over 50
+  int left_index = num_displayed_char;
+  if (IsLetterNumberOrUnderline(str.at(left_index))) {
+    for (; left_index < str.size(); left_index++) {
+      if (!IsLetterNumberOrUnderline(str.at(left_index))) { break; }
+    }
+  } else {
+    for (; left_index < str.size(); left_index++) {
+      if (IsLetterNumberOrUnderline(str.at(left_index))) { break; }
     }
   }
-  // A string of more than 150 characters
-  if (first_index == -1 && last_index == -1) { return str; }
-  CHECK_OR_RETURN(first_index <= str.size());
-  CHECK_OR_RETURN(last_index <= str.size());
-  std::stringstream ss;
-  // The number of characters before the first word exceeds 50
-  if (first_index == -1) {
-    ss << " ... " << str.substr(last_index);
-  }
-  // The number of characters after the last word exceeds 50
-  else if (last_index == -1) {
-    ss << str.substr(0, first_index) << " ... ";
+
+  // right part whose number of characters is just over 50
+  int right_index = str.size() - num_displayed_char;
+  if (IsLetterNumberOrUnderline(str.at(right_index))) {
+    for (; right_index >= 0; right_index--) {
+      if (!IsLetterNumberOrUnderline(str.at(right_index))) {
+        right_index++;
+        break;
+      }
+    }
   } else {
-    ss << str.substr(0, first_index) << " ... " << str.substr(last_index);
+    for (; right_index >= 0; right_index--) {
+      if (IsLetterNumberOrUnderline(str.at(right_index))) {
+        right_index++;
+        break;
+      }
+    }
   }
+  // a long word of more than 150
+  if (right_index - left_index < 50) { return str; }
+  std::stringstream ss;
+  CHECK_OR_RETURN(left_index >= 0);
+  CHECK_OR_RETURN(left_index < str.size());
+  ss << str.substr(0, left_index);
+  ss << " ... ";
+  CHECK_OR_RETURN(right_index >= 0);
+  CHECK_OR_RETURN(right_index < str.size());
+  ss << str.substr(right_index);
   return ss.str();
 }
 
+// file info in stack frame
 std::string FormatFileOfStackFrame(const std::string& file) {
   std::stringstream ss;
   ss << "\n  File \"" << file << "\", ";
   return ss.str();
 }
 
+// line info in stack frame
 std::string FormatLineOfStackFrame(const int64_t& line) {
   std::stringstream ss;
   ss << "line " << line << ",";
   return ss.str();
 }
 
+// function info in stack frame
 std::string FormatFunctionOfStackFrame(const std::string& function) {
   std::stringstream ss;
   ss << " in " << function;
   return ss.str();
 }
 
+// msg in stack frame
 Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_stack_frame) {
   error_msg = StripBrackets(error_msg);
   if (!is_last_stack_frame) { error_msg = *JUST(ShortenMsg(error_msg)); }
@@ -109,6 +125,7 @@ Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_sta
   return ss.str();
 }
 
+// the error_summary and msg in error proto
 std::string FormatErrorSummaryAndMsgOfErrorProto(const std::shared_ptr<cfg::ErrorProto>& error) {
   std::stringstream ss;
   if (error->has_error_summary()) { ss << error->error_summary(); }
@@ -116,7 +133,7 @@ std::string FormatErrorSummaryAndMsgOfErrorProto(const std::shared_ptr<cfg::Erro
   return ss.str();
 }
 
-// The msg in error type instance.
+// the msg in error type instance.
 Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<cfg::ErrorProto>& error) {
   std::stringstream ss;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
@@ -139,7 +156,7 @@ Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<cfg::ErrorProto>& 
     case cfg::ErrorProto::kConfigAssertFailedError:
       ss << error->config_assert_failed_error().DebugString();
       break;
-    default: OF_UNIMPLEMENTED();
+    default: ss << "";
   }
   return ss.str();
 }

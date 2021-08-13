@@ -53,6 +53,7 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
     }
     *tensor_z->mut_shape() = out_shape;
   }
+  CHECK_OR_RETURN(1 == 2) << " this is a test !   ";
   tensor_z->set_is_dynamic(tensor_x.is_dynamic() || tensor_y.is_dynamic());
   return Maybe<void>::Ok();
 }
