@@ -1163,12 +1163,17 @@ class SmoothL1Loss(Module):
 
 
 class CombinedMarginLoss(Module):
-    """The operation implement "loss_name == 'margin_softmax'" in insightface.
-    insightface's margin_softmax loss implement by several operators, we combined them for speed up.
+    """The operation implements "margin_softmax" in InsightFace:
+    https://github.com/deepinsight/insightface/blob/master/recognition/arcface_mxnet/train.py
+    The implementation of margin_softmax in InsightFace is composed of multiple operators.
+    We fuse them for speed up.
 
     Args:
         x (oneflow.Tensor): A Tensor
         label (oneflow.Tensor): label with integer data type
+        m1 (float): loss m1 parameter
+        m2 (float): loss m2 parameter
+        m3 (float): loss m3 parameter
 
     Returns:
         oneflow.Tensor: A Tensor
@@ -1191,7 +1196,7 @@ class CombinedMarginLoss(Module):
                 [-0.4566, -0.0204]], dtype=oneflow.float32)
 
     """
-    def __init__(self, m1: float = 1, m2: float = 0, m3: float = 0) -> None:
+    def __init__(self, m1: float = 1.0, m2: float = 0.0, m3: float = 0.0) -> None:
         super().__init__()
         self.m1 = m1
         self.m2 = m2
@@ -1199,7 +1204,7 @@ class CombinedMarginLoss(Module):
 
     def forward(self, x, label):
         depth = x.shape[1]
-        (y, theta) = flow.F.combined_margin_loss(x, label,
+        (y, _) = flow.F.combined_margin_loss(x, label,
             m1 = self.m1, m2 = self.m2, m3 = self.m3, depth = depth)
         return y
 

@@ -131,7 +131,7 @@ def _test_combined_margin_loss(
     )
     input_grad_ref = _np_combined_margin_loss_grad(np_x, np_labels, m1, m2, m3)
     test_case.assertTrue(
-        np.allclose(x.grad.numpy(), input_grad_ref, rtol=1e-4, atol=1e-8)
+        np.allclose(x.grad.numpy(), input_grad_ref, rtol=1e-4, atol=1e-4)
     )
 
 
