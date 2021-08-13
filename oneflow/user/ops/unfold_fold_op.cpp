@@ -9,10 +9,9 @@ namespace user_op {
 namespace {
 
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
-    GenBackwardOpConfFn;
 
-TensorDescInferFn MakeFwTensorDescInferFn() {
+
+TensorDescInferFn UnfoldTensorDescInferFn() {
   return [](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
     const int32_t spatial_ndim = x_shape.NumAxes() - 2;
@@ -53,13 +52,13 @@ TensorDescInferFn MakeFwTensorDescInferFn() {
   };
 }
 
-Maybe<void> SetFwDTypeFn(user_op::InferContext* ctx) {
+Maybe<void> SetUnfoldDTypeFn(user_op::InferContext* ctx) {
   *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0); 
   return Maybe<void>::Ok();
 }
 
 
-Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
+Maybe<void> GetUnfoldSbpFn(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
        .Split(user_op::OpArg("x", 0), 0)
        .Split(user_op::OpArg("y", 0), 0)
@@ -72,48 +71,70 @@ Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-// Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
-//   *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
-//   return Maybe<void>::Ok();
-// }
+TensorDescInferFn FoldTensorDescInferFn() {
+  return [](user_op::InferContext* ctx) -> Maybe<void> {
+    const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+    const int32_t spatial_ndim = x_shape.NumAxes() - 1; // (n, c*K*K, h*w)  
+    
+    std::string data_format = ctx->Attr<std::string>("data_format");
+    std::vector<int32_t> output_size = ctx->Attr<std::vector<int32_t>>("output_size");
+    std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
+    const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+    const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
+    const std::vector<int32_t>& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const size_t c_dim = data_format == "channels_first" ? 1 : spatial_ndim;
+    const size_t length_dim = data_format == "channels_first" ? spatial_ndim : 1;
+    
+    const int32_t input_planes = x_shape.At(c_dim); 
+    const int32_t input_length = x_shape.At(length_dim);
 
-// Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
-//   ctx->NewBuilder()
-//       .Split(user_op::OpArg("x", 0), 0)
-//       .Split(user_op::OpArg("y", 0), 0)
-//       .Split(user_op::OpArg("dy", 0), 0)
-//       .Split(user_op::OpArg("dx", 0), 0)
-//       .Build();
-//   ctx->NewBuilder()
-//       .Split(user_op::OpArg("x", 0), 1)
-//       .Split(user_op::OpArg("y", 0), 1)
-//       .Split(user_op::OpArg("dy", 0), 1)
-//       .Split(user_op::OpArg("dx", 0), 1)
-//       .Build();
-//   }
-//   return Maybe<void>::Ok();
-// }
+    CHECK_EQ_OR_RETURN(spatial_ndim, 2); // only support 4-D tensor now. 
+    CHECK_EQ_OR_RETURN(output_size.size(), spatial_ndim);
+    CHECK_EQ_OR_RETURN(kernel_size.size(), spatial_ndim);
+    for (int32_t kernel : kernel_size) { CHECK_GT_OR_RETURN(kernel, 0); }
+    CHECK_EQ_OR_RETURN(strides.size(), spatial_ndim);
+    for (int32_t stride : strides) { CHECK_GT_OR_RETURN(stride, 0); }
+    CHECK_EQ_OR_RETURN(dilation_rate.size(), spatial_ndim);
+    for (int32_t dilation : dilation_rate) { CHECK_GE_OR_RETURN(dilation, 1); }
+    
+    CHECK_EQ_OR_RETURN(input_planes%(kernel_size[0]*kernel_size[1]), 0); // C*K*K should be divided by K*K
 
-// GenBackwardOpConfFn MakeGenBackwardOpConfFn() {
-//   return [](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
-//     if (op.NeedGenGradTensor4OpInput("x", 0)) {
-//       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-//       user_op::UserOpConfWrapper grad_op =
-//           builder.Op("unfold_grad")
-//               .Input("x", op.input("x", 0))
-//               .Input("y", op.output("y", 0))
-//               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-//               .Output("dx")
-//               .Attr("padding", op.attr<std::vector<int32_t>>("padding"))
-//               .Attr("kernel_size", op.attr<std::vector<int32_t>>("kernel_size"))
-//               .Attr("strides", op.attr<std::vector<int32_t>>("strides"))
-//               .Attr("dilation_rate", op.attr<std::vector<int32_t>>("dilation_rate"))
-//               .Build();
-//       op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-//       AddOp(grad_op);
-//     }
-//   };
-// }
+    const int32_t output_height = (output_size[0] + 2*padding[0]
+                     - dilation_rate[0] * (kernel_size[0] - 1) - 1)/ strides[0] + 1;
+    const int32_t output_width = (output_size[1] + 2*padding[1]
+                     - dilation_rate[1] * (kernel_size[1] - 1) - 1)/ strides[1] + 1;
+    CHECK_EQ_OR_RETURN(output_height*output_width, input_length); // input_length == OH*OW
+    
+    DimVector y_shape(4);
+    y_shape.at(0) = x_shape.At(0);
+    y_shape.at(1) = input_planes / (kernel_size[0]*kernel_size[1]); 
+    y_shape.at(2) = output_size[0]; 
+    y_shape.at(3) = output_size[1]; 
+
+    user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+    *y_desc->mut_shape() = Shape(y_shape);
+    return Maybe<void>::Ok();
+  };
+}
+
+Maybe<void> FoldDTypeFn(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0); 
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetFoldSbpFn(user_op::SbpContext* ctx) {
+  // ctx->NewBuilder()
+  //      .Split(user_op::OpArg("x", 0), 0)
+  //      .Split(user_op::OpArg("y", 0), 0)
+  //      .Build();
+  
+  // ctx->NewBuilder()
+  //      .Split(user_op::OpArg("x", 0), 1)
+  //      .Split(user_op::OpArg("y", 0), 1)
+  //      .Build();
+  return Maybe<void>::Ok();
+}
+
 
 }  // namespace
 
@@ -125,23 +146,23 @@ REGISTER_USER_OP("unfold")
     .Attr<std::vector<int32_t>>("padding")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<std::vector<int32_t>>("dilation_rate")
-    .SetTensorDescInferFn(MakeFwTensorDescInferFn())
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(SetFwDTypeFn);
+    .SetTensorDescInferFn(UnfoldTensorDescInferFn())
+    .SetGetSbpFn(GetUnfoldSbpFn)
+    .SetDataTypeInferFn(SetUnfoldDTypeFn);
 
-// REGISTER_USER_OP("unfold_grad")
-//     .Input("x")
-//     .Input("y")
-//     .Input("dy")
-//     .Output("dx")
-//     .Attr<std::vector<int32_t>>("kernel_size")
-//     .Attr<std::vector<int32_t>>("padding")
-//     .Attr<std::vector<int32_t>>("strides")
-//     .Attr<std::vector<int32_t>>("dilation_rate")
-//     .SetTensorDescInferFn(BwTensorDescInferFn)
-//     .SetGetSbpFn(BwGetSbpFn);
+REGISTER_USER_OP("fold")
+    .Input("x")
+    .Output("y")
+    .Attr<std::vector<int32_t>>("output_size")
+    .Attr<std::vector<int32_t>>("kernel_size")
+    .Attr<std::vector<int32_t>>("strides")
+    .Attr<std::vector<int32_t>>("padding")
+    .Attr<std::vector<int32_t>>("dilation_rate")
+    .SetTensorDescInferFn(FoldTensorDescInferFn())
+    .SetGetSbpFn(GetFoldSbpFn)
+    .SetDataTypeInferFn(FoldDTypeFn);
 
-// REGISTER_USER_OP_GRAD("unfold").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn());
+
 
 }  // namespace user_op
 
