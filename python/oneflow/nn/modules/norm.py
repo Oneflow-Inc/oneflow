@@ -472,6 +472,7 @@ def l2_normalize(input, dim=0, epsilon=1e-12):
         tensor([[0.3162, 0.4472],
                 [0.9487, 0.8944]], dtype=oneflow.float32)
         >>> out = flow.nn.l2_normalize(x, 1)
+        >>> out
         tensor([[0.4472, 0.8944],
                 [0.6   , 0.8   ]], dtype=oneflow.float32)
 
