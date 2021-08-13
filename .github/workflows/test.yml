@@ -145,7 +145,7 @@ jobs:
           echo ${{steps.changes.outputs.python}}
       - name: Should run single client tests
         id: should_run_single_client_tests
-        if: contains(steps.changes.outputs.python, 'python/oneflow/compatible/single_client') && steps.changes.outputs.python != steps.changes.outputs.all
+        if: contains(steps.changes.outputs.python, 'python/oneflow/compatible/single_client') || steps.changes.outputs.python != steps.changes.outputs.all
         run: |
           echo "::set-output name=result::true"
 
