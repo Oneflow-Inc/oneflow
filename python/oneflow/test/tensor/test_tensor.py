@@ -21,7 +21,6 @@ import numpy as np
 from automated_test_util import *
 
 import oneflow as flow
-import oneflow.typing as oft
 import oneflow.unittest
 
 
@@ -578,7 +577,7 @@ class TestTensor(flow.unittest.TestCase):
             [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         ).astype(np.float32)
         input = flow.Tensor(x)
-        of_shape = input.reshape(shape=[2, 2, 2, -1]).numpy().shape
+        of_shape = input.reshape(2, 2, 2, -1).numpy().shape
         np_shape = (2, 2, 2, 2)
         test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
@@ -586,7 +585,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_reshape_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
-        y = x.reshape(shape=(-1,))
+        y = x.reshape(-1,)
         return y
 
     @autotest()
@@ -1131,6 +1130,45 @@ class TestTensor(flow.unittest.TestCase):
         of_out = of_out.sum()
         of_out.backward()
         test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+    @autotest(auto_backward=False)
+    def test_eq_tensor_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        return x.eq(y)
+
+    @autotest(auto_backward=False)
+    def test_eq_tensor_with_same_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        return x.eq(x)
+
+    @autotest()
+    def test_erf_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.erf()
+
+    @autotest()
+    def test_erfc_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.erfc()
+
+    @autotest()
+    def test_exp_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.exp()
+
+    @autotest()
+    def test_round_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.round()
 
 
 if __name__ == "__main__":

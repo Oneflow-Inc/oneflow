@@ -98,8 +98,7 @@ class RandPermFunctor {
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {},
                                             OpExprInterpContext(attrs, randperm_kernel_state));
-=======
-  class RandNFunctor {
+class RandNFunctor {
  public:
   RandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Optional<DataType>& dtype,
@@ -187,11 +186,12 @@ class ConsistentRandNFunctor {
     const auto& parallel_distribution = JUST(MakeParallelDistribution(sbp_tuple));
     const auto& normal_kernel_state = std::make_shared<NormalKernelState>(gen);
 
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+      JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
     }
     return OpInterpUtil::Dispatch<Tensor>(
+
 
         *randperm_op_, {},
         OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
@@ -217,6 +217,9 @@ class ConsistentRandNFunctor {
   std::shared_ptr<OpExpr> randperm_op_;
         *op_, {},
         OpExprInterpContext(attrs, placement, parallel_distribution, normal_kernel_state));
+
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, normal_kernel_state));
+
   }
 
  private:

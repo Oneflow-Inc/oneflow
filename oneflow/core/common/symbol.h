@@ -28,7 +28,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-class SymbolUtil;
+struct SymbolUtil;
 
 template<typename T>
 class Symbol final {

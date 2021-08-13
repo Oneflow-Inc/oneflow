@@ -51,17 +51,15 @@ void SortSbpSignatureListByCopyCost(
 bool IsValidSbpParallelString(const std::string& sbp_str);
 bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sbp_parallel);
 std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel);
+std::string ParallelDistributionToString(const Symbol<cfg::ParallelDistribution> nd_sbp);
 
 void SbpSignatureToParallelDistributionSignature(
-    const cfg::SbpSignature& sbp_signature,
-    cfg::ParallelDistributionSignature* parallel_distribution_signature);
+    const cfg::SbpSignature& sbp_signature, cfg::ParallelDistributionSignature* nd_sbp_signature);
 template<typename ParallelDistributionSignatureT>
 void ParallelDistributionSignatureToSbpSignature(
-    const ParallelDistributionSignatureT& parallel_distribution_signature,
-    cfg::SbpSignature* sbp_signature);
+    const ParallelDistributionSignatureT& nd_sbp_signature, cfg::SbpSignature* sbp_signature);
 void CheckSbpSignatureAndParallelDistributionEquals(
-    const cfg::SbpSignature& sbp_sig,
-    const cfg::ParallelDistributionSignature& parallel_distribution_sig);
+    const cfg::SbpSignature& sbp_sig, const cfg::ParallelDistributionSignature& nd_sbp_sig);
 }  // namespace oneflow
 
 namespace std {
