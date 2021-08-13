@@ -215,6 +215,7 @@ def launch_worker_via_agent(host=None, env_proto=None):
 
 class TestCase(unittest.TestCase):
     def setUp(self):
+        print("test setup")
         global _unittest_env_initilized
         global _unittest_worker_initilized
         if has_node_list():

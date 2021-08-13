@@ -199,6 +199,15 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  LOG(ERROR) << "Try to delete env ";
+  auto session_ctx = Global<MultiClientSessionContext>::Get();
+  if (session_ctx != nullptr) {
+    LOG(ERROR) << "session not cleand.";
+    session_ctx->TryClose();
+  } else {
+    LOG(ERROR) << "session expired ";
+  }
+    
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {

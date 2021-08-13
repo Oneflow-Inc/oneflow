@@ -33,7 +33,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   // multi-client lazy global session context
   m.def("CreateMultiClientSessionContext", &CreateMultiClientSessionContext);
   m.def("InitMultiClientSessionContext", &InitMultiClientSessionContext);
-  m.def("TryDestroyMultiClientSessionContext", &TryDestroyMultiClientSessionContext);
+  m.def("MultiClientSessionContextAddCGraph", &MultiClientSessionContextAddCGraph);
+  m.def("TryDestroyMultiClientSessionContext", &TryDestroyMultiClientSessionContext, py::call_guard<py::gil_scoped_release>());
 
   using namespace oneflow;
   m.def("NewSessionId", &NewSessionId);

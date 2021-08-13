@@ -396,7 +396,9 @@ class EnvHolder(object):
         print("e_s_g evn init")
 
     def __del__(self):
-        _SyncOnMasterFn()
+        # print("evn del sync")
+        # _SyncOnMasterFn()
+        # print("evn del sync finish")
         oneflow._oneflow_internal.DestroyEnv()
         oneflow._oneflow_internal.SetShuttingDown()
         print("e_s_g env close")

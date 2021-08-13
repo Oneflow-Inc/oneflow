@@ -119,10 +119,24 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
   return Maybe<void>::Ok();
 }
 
+Maybe<void> MultiClientSessionContext::AddCGraph(const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+  graphs_.push_back(c_graph_ptr);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
-    VLOG(2) << "Try to delete multi client session context." << std::endl;
-    JUST(vm::MultiClientSync());
+    // JUST(vm::MultiClientSync());
+    LOG(ERROR) << "Try to delete multi client session context. after sync" << std::endl;
+    for (auto wk_graph_ptr : graphs_) {
+        LOG(ERROR) << " graph count " << wk_graph_ptr.use_count();
+        if (auto sh_graph_ptr = wk_graph_ptr.lock()) {
+          LOG(ERROR) << "grap name " << sh_graph_ptr->job_name() << " not cleand.";
+          JUST(sh_graph_ptr->Close());
+        } else {
+          LOG(ERROR) << "graph expired ";
+        }
+    }
     {
       // NOTE(chengcheng): delete runtime global objects
       Global<boxing::collective::CollectiveBoxingDeviceCtxPoller>::Delete();

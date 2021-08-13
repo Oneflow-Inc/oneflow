@@ -37,3 +37,4 @@ class TestLinearGraphDestruct(oneflow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    del linear_g

@@ -167,6 +167,7 @@ class Graph(object):
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
+        self._session.AddCGraph(self._c_nn_graph)
         print("e_s_g try to create graph ", self._name)
 
         with graph_build_util.graph_build_context(self.config.proto, self._session):

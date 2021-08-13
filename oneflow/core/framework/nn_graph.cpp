@@ -25,18 +25,29 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/plan_util.h"
-#include "oneflow/core/job/runtime.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
 NNGraph::~NNGraph() {
-  VLOG(2) << "Try to delete c nn graph name " << name_ << "." << std::endl;
-  CloseRuntimeBuffers();
-  runtime_.reset();
-  Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
-  VLOG(2) << "Finish delete c nn graph name " << name_ << "." << std::endl;
+  if (!is_closed_) {
+    LOG(ERROR) << "graph destructor Try to delete c nn graph name " << name_ << "." << std::endl;
+    Close();
+  }
+}
+
+Maybe<void> NNGraph::Close() {
+  if (!is_closed_) {
+      LOG(ERROR) << "Try to delete c nn graph name " << name_ << "." << std::endl;
+      vm::MultiClientSync();
+      CloseRuntimeBuffers();
+      runtime_.reset();
+      Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
+      LOG(ERROR) << "Finish delete c nn graph name " << name_ << "." << std::endl;
+      is_closed_ = true;
+  }
+  return Maybe<void>::Ok();
 }
 
 const std::vector<std::string>& NNGraph::inputs_op_names() const { return input_op_names_; }
