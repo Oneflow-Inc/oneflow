@@ -371,7 +371,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
           new CudnnTensorDesc(CUDNN_TENSOR_NHWC, bias_diff->data_type(), 1,
                               static_cast<int32_t>(bias_diff->shape().At(0)), 1, 1));
     }
-    return std::move(state);
+    return state;
   }
 
  private:
