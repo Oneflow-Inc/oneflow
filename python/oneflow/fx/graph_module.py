@@ -20,7 +20,7 @@ import oneflow.nn as nn
 # from torch.package import PackageImporter, PackageExporter
 import linecache
 from typing import Type, Dict, List, Any, Union, Optional, Set
-from .graph import Graph, _is_from_torch, _custom_builtins, PythonCode
+from .graph import Graph, _is_from_oneflow, _custom_builtins, PythonCode
 
 # from torch.package import Importer, sys_importer
 import copy
@@ -73,7 +73,7 @@ def _forward_from_src(src: str, globals: Dict[str, Any]):
 # def _format_import_statement(name: str, obj: Any, importer: Importer) -> str:
 #     if name in _custom_builtins:
 #         return _custom_builtins[name].import_str
-#     if _is_from_torch(name):
+#     if _is_from_oneflow(name):
 #         return "import oneflow"
 #     module_name, attr_name = importer.get_name(obj)
 #     return f"from {module_name} import {attr_name} as {name}"

@@ -281,27 +281,6 @@ class Proxy:
             "module scope"
         )
 
-    def __torch_function__(self, orig_method, types, args=None, kwargs=None):
-        args = args if args else ()
-        kwargs = kwargs if kwargs else {}
-        if isinstance(orig_method, oneflow._C.ScriptMethod):
-            args = (orig_method.owner,) + args
-            return self.tracer.create_proxy(
-                "call_method", orig_method.name, args, kwargs
-            )
-        if oneflow.overrides.is_tensor_method_or_property(orig_method):
-            return self.tracer.create_proxy(
-                "call_method", orig_method.__name__, args, kwargs
-            )
-        else:
-            return self.tracer.create_proxy(
-                "call_function",
-                orig_method,
-                args,
-                kwargs,
-                name=self.tracer.graph._target_to_str(orig_method.__name__),
-            )
-
 
 class Attribute(Proxy):
     def __init__(self, root: Proxy, attr: str):

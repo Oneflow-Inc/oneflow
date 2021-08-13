@@ -86,6 +86,7 @@ _register_custom_builtin(
 _register_custom_builtin("pytree", "import oneflow.utils._pytree as pytree", pytree)
 
 
+
 def _is_magic(x: str) -> bool:
     return x.startswith("__") and x.endswith("__")
 
@@ -109,7 +110,7 @@ def _snake_case(s: str) -> str:
     return "".join(chars)
 
 
-def _is_from_torch(obj: Any) -> bool:
+def _is_from_oneflow(obj: Any) -> bool:
     module_name = getattr(obj, "__module__", None)
     if module_name is not None:
         base_module = module_name.partition(".")[0]
@@ -903,7 +904,7 @@ class Graph:
             Returns: the global name that should be used to reference 'obj' in generated source.
             """
             if (
-                _is_from_torch(obj) and obj != oneflow.device
+                _is_from_oneflow(obj) and obj != oneflow.device
             ):  # to support registering oneflow.device
                 # HACK: workaround for how oneflow custom ops are registered. We
                 # can't import them like normal modules so they must retain their

@@ -16,7 +16,6 @@ limitations under the License.
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
-
 @register_tensor_op("exp")
 def exp_op(x):
     """This operator computes the exponential of Tensor.

@@ -541,6 +541,7 @@ class Tracer(TracerBase):
         if isinstance(concrete_args, tuple):
             assert len(arg_names) == len(concrete_args)
             concrete_args = {name: val for name, val in zip(arg_names, concrete_args)}
+        
         args.extend(proxy_placeholder(names) for names in arg_names)
 
         if co.co_kwonlyargcount > 0 or co.co_flags & HAS_VARSTUFF:
@@ -700,6 +701,7 @@ _wrapped_fns_to_patch: List[Tuple[dict, str]] = []
 # List of methods on classes to wrap (class type, function name)
 # this currently only works for Tensor.* methods that aren't traced properly
 _wrapped_methods_to_patch: List[Tuple[type, str]] = []
+
 
 if os.environ.get("FX_PATCH_GETITEM") == "1":
     # This change is needed to trace models like PositionalEmbedding from BERT:
@@ -942,8 +944,8 @@ def wrap(fn_or_name: Union[str, Callable]):
     # consider implementing Callable version of this via _autowrap_function_ids / _autowrap_search
     # semantics would be slightly different, but would add support `from x import wrapped_function`
     _wrapped_fns_to_patch.append((f.f_globals, fn_name))
+    print(f.f_globals, ' ', fn_name)
     return fn_or_name
-
 
 def symbolic_trace(
     root: Union[oneflow.nn.Module, Callable],
