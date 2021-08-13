@@ -63,8 +63,7 @@ REGISTER_USER_OP("copy")
       CHECK_EQ_OR_RETURN(inputs.size(), 1);
       const auto& input =
           ctx->LogicalTensorDesc4InputArgNameAndIndex(inputs[0].first, inputs[0].second);
-      int64_t num_axes = input.shape().NumAxes();
-      for (int64_t axis = 0; axis < num_axes; ++axis) {
+      for (int64_t axis = 0; axis < input.shape().NumAxes(); ++axis) {
         ctx->NewBuilder().Split(inputs, axis).Split(ctx->outputs(), axis).Build();
       }
       ctx->NewBuilder().PartialSum(inputs).PartialSum(ctx->outputs()).Build();

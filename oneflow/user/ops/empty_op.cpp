@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/operator/operator.h"
-#include "oneflow/core/common/global.h"
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
@@ -53,45 +50,12 @@ REGISTER_NO_GRAD_USER_OP("empty")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType dtype = ctx->Attr<DataType>("dtype");
-      *ctx->OutputDType("out", 0) = dtype;
+      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      return Maybe<void>::Ok();
-    })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
-                                        -> Maybe<void> {
-      const Shape& hierarchy = ctx->parallel_hierarchy();
-      const auto& dist_conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
-
-      // the input of src op is usually tick whose sbp should be broadcast parallel dist
-      for (const auto& arg_pair : ctx->inputs()) {
-        cfg::ParallelDistribution* input_dist =
-            ctx->ParallelDistribution4ArgNameAndIndex(arg_pair.first, arg_pair.second);
-        FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
-          input_dist->add_sbp_parallel()->mutable_broadcast_parallel();
-        }
-      }
-
-      cfg::ParallelDistribution* output_dist = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-      if (dist_conf.size() == 0) {
-        // the default parallel dist of constant's output should be broadcast
-        FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
-          output_dist->add_sbp_parallel()->mutable_broadcast_parallel();
-        }
-      } else {
-        CHECK_EQ_OR_RETURN(dist_conf.size(), hierarchy.NumAxes());
-        for (const std::string& sbp_str : dist_conf) {
-          cfg::SbpParallel sbp_parallel;
-          CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
-          CHECK_OR_RETURN(sbp_parallel.has_split_parallel()
-                          || sbp_parallel.has_broadcast_parallel());
-          *output_dist->add_sbp_parallel() = sbp_parallel;
-        }
-      }
-
-      return Maybe<void>::Ok();
-    });
-
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
+    .SetParallelDistributionInferFn(
+        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
+          return user_op::InferNdSbp4SrcOp(ctx, "B");
+        });
 }  // namespace oneflow
