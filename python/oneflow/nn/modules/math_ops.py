@@ -538,7 +538,7 @@ def fmod_op(input, other):
         tensor([ 1.,  0.,  0.,  1., -0.], dtype=oneflow.float32)
 
     """
-    return flow.F.mufmod(input, other)
+    return flow.F.fmod(input, other)
 
 
 @register_tensor_op("fmod")
