@@ -1,6 +1,6 @@
 // RUN: oneflow-opt %s --convert-linalg-to-parallel-loops \
 // RUN:   -gpu-kernel-outlining -buffer-host-register  \
-// RUN:   -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,gpu-to-cubin)' \
+// RUN:   -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
 // RUN:   -gpu-to-llvm \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \

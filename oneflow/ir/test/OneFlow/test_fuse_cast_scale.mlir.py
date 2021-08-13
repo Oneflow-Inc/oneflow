@@ -38,7 +38,6 @@ class TestMLIROptimizations(flow.unittest.TestCase):
         for arg in GenArgDict(d):
             self.run_fuse_cast_scale_mlir(**arg)
 
-    @unittest.skip("skipgpu")
     def test_gpu(self):
         d = OrderedDict(
             {
