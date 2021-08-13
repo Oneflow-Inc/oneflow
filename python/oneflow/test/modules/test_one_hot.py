@@ -23,15 +23,16 @@ from automated_test_util import *
 import oneflow as flow
 
 
-def _test_onehot(test_case, device, num_classes, size):
+def _test_onehot(test_case, device, num_classes, size, on_value, off_value):
     x = np.random.randint(9, size=size)
     input = flow.Tensor(x, device=flow.device(device) ,dtype=flow.int64)
-    output = flow.nn.functional.one_hot(input, num_classes=num_classes)
+    output = flow.nn.functional.one_hot(input, num_classes, on_value, off_value)
     if num_classes == -1:
-        np_out = np.eye(np.max(x)+1)[x]
+        np_outtmp = np.eye(np.max(x)+1)[x]
     else:
-        np_out = np.eye(num_classes)[x]
-    test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+        np_outtmp = np.eye(num_classes)[x]
+    np_out = np.where(np_outtmp==1, on_value, off_value)
+    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-06, 1e-06))
 
 @flow.unittest.skip_unless_1n1d()
 class TestOnehot(flow.unittest.TestCase):
@@ -43,6 +44,8 @@ class TestOnehot(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["num_classes"] = [-1, 10, 11]
         arg_dict["size"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        arg_dict["on_value"] = [-1, -0.9, 0, 0.9, 1]
+        arg_dict["off_value"] = [-2, -0.5, 0, 0.5, 2]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
