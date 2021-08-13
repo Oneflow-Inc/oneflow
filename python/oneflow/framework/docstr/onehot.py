@@ -24,7 +24,7 @@ add_docstr(
 
     If input Tensor's rank is `N`, the corresponding onehot Tensor's rank is `N+1`.
 
-    Oneflow.one_ hot is aligned with tf.one_hot operator. If you want to use torch version, you can turn on_ Value is set to 1, off_ Value is set to 0.
+    Oneflow.one_hot is aligned with tf.one_hot operator. If you want to use torch version, you can turn on_value is set to 1, off_value is set to 0.
 
     Args:
         input (Tensor): The input Tensor.
