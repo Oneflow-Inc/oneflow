@@ -40,7 +40,7 @@ def evaluate_accuracy(data_iter, net, device=None):
     net.eval()
     with flow.no_grad():
         for images, labels in data_iter:
-            images = images.reshape((-1, 28 * 28))
+            images = images.reshape(-1, 28 * 28)
             images = images.to(device=device)
             labels = labels.to(device=device)
             n_correct += (net(images).argmax(dim=1).numpy() == labels.numpy()).sum()
@@ -85,7 +85,7 @@ def test_train_and_eval(test_case):
     for epoch in range(num_epochs):
         train_loss, n_correct, n_samples = 0.0, 0.0, 0
         for images, labels in train_iter:
-            images = images.reshape((-1, 28 * 28))
+            images = images.reshape(-1, 28 * 28)
             images = images.to(device=device)
             labels = labels.to(device=device)
             features = model(images)
