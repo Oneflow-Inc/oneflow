@@ -36,7 +36,7 @@ template<template<typename T> class BIN_OP, typename T>
 struct ScalarFmodFunctor<DeviceType::kCPU, BIN_OP, T> final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in,
                   T* out) {
-    DoScalarLogical<BIN_OP, T>(elem_cnt, scalar, in, out);
+    DoScalar<BIN_OP, T>(elem_cnt, scalar, in, out);
   }
 };
 
@@ -74,18 +74,13 @@ class ScalarFmodKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SCALAR_FMOD_KERNEL(device, dtype)                                            \
-  REGISTER_USER_KERNEL("scalar_fmod")                                                         \
-    .SetCreateFn<ScalarFmodKernel<device, BinaryFuncLE, dtype>>()                             \
-    .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, float)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, double)
 
-// #ifdef WITH_CUDA
-// REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, float)
-// REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, double)
-// #endif
+#ifdef WITH_CUDA
+REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, float)
+REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, double)
+#endif
 
 }  // namespace oneflow

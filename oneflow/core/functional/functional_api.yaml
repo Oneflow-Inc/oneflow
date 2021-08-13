@@ -154,7 +154,7 @@
 
 - name: "fmod"
   signature: "Tensor BroadcastFMod(Tensor x, Tensor y)"
-  bind_python: Fasle
+  bind_python: False
 
 - name: "log"
   signature: "Tensor Log(Tensor x)"
