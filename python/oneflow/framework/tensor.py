@@ -96,8 +96,17 @@ def _getitem(self, key):
 
 
 def _setitem(self, key, value):
-    if isinstance(value, (int, float)):
-        value = flow.F.constant([1], value, self.dtype)
+    if self.is_consistent:
+        if isinstance(value, (int, float)):
+            value = flow.F.consistent_constant(
+                [1], value, self.dtype, placement=self.placement, sbp=flow.sbp.broadcast
+            )
+    else:
+        if isinstance(value, (int, float)):
+            value = flow.F.constant([1], value, self.dtype, device=self.device)
+        else:
+            value = value.to(device=self.device)
+
     flow.F.tensor_setitem(self, key, value)
     return self
 
