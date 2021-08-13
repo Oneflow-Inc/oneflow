@@ -87,6 +87,7 @@ class MessagePool final {
       std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
       char * addr =(char*) malloc(RegisterMemorySize );
+    //  std::cout<<"the addr:"
       ibv_mr * mr =  ibv::wrapper.ibv_reg_mr_wrap(
           pd_,  addr, RegisterMemorySize,
           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
