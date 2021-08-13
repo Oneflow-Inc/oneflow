@@ -104,6 +104,10 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("COCOReader")
       *segm_index_desc->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
     .SetParallelDistributionInferFn(
         [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
           const auto& dist_conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");

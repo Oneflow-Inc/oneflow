@@ -57,6 +57,9 @@ REGISTER_NO_GRAD_USER_OP("empty")
       *ctx->OutputDType("out", 0) = dtype;
       return Maybe<void>::Ok();
     })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
+    })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const Shape& hierarchy = ctx->parallel_hierarchy();
