@@ -35,11 +35,10 @@ class EitherPtr final {
 
   EitherPtr() : type_(UnionType<X>::value), x_ptr_(nullptr) {}
   EitherPtr(const XPtr& ptr) : type_(UnionType<X>::value), x_ptr_(ptr) {}
-  EitherPtr(const YPtr& ptr)
-      : type_(UnionType<Y>::value), x_ptr_(reinterpret_cast<const XPtr&>(ptr)) {}
+  EitherPtr(const YPtr& ptr) : type_(UnionType<Y>::value) { new (&x_ptr_) YPtr(ptr); }
 
   EitherPtr(XPtr&& ptr) : type_(UnionType<X>::value), x_ptr_(std::move(ptr)) {}
-  EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value), x_ptr_(reinterpret_cast<XPtr&&>(ptr)) {}
+  EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value) { new (&x_ptr_) YPtr(std::move(ptr)); }
 
   EitherPtr(const EitherPtr& either_ptr) : type_(either_ptr.type_), x_ptr_(either_ptr.x_ptr_) {}
   EitherPtr(EitherPtr&& either_ptr)
@@ -93,7 +92,8 @@ class EitherPtr final {
 
   const YPtr& Get(tag<Y>) const {
     CHECK(Has<Y>());
-    return reinterpret_cast<const YPtr&>(x_ptr_);
+    const auto* __attribute__((__may_alias__)) ptr = reinterpret_cast<const YPtr*>(&x_ptr_);
+    return *ptr;
   }
 
   int8_t type_;
