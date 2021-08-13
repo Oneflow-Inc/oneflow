@@ -95,7 +95,9 @@ def _l2_norm_backward_np(dy, y, square_x_sum, dim, epsilon=1e-12):
 def _test_l2_normalize(test_case, device, dim, shape):
     input = np.random.randn(*shape)
     np_out, square_x_sum = _l2_norm_numpy(input, dim)
-    of_input = flow.tensor(input, dtype=flow.float32, requires_grad=True)
+    of_input = flow.tensor(
+        input, dtype=flow.float32, requires_grad=True, device=flow.device(device)
+    )
     of_out = flow.nn.functional.l2_normalize(of_input, dim)
 
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
@@ -113,7 +115,7 @@ class TestL2Normalize(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_l2_normalize,
         ]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["dim"] = [0, 1, 2, 3]
         arg_dict["shape"] = [
             (10, 10, 20, 30),
