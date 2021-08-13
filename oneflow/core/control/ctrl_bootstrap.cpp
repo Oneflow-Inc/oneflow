@@ -89,7 +89,7 @@ Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_
       JUST(SetHostByMaster(addr, worker_process_info.rank()));
     }
     JUST(SetNodeSize(ret_process_ctx));
-    InitProcessDistributionInClusterInfo(ret_process_ctx);
+    InitProcessDistributionInfoInCluster(ret_process_ctx);
     mut_bootstrap_client()->PushMasterKV("BroadcastProcessCtx", *ret_process_ctx);
   } else {
     mut_bootstrap_client()->PullMasterKV("BroadcastProcessCtx", ret_process_ctx);
@@ -137,7 +137,7 @@ Maybe<void> HostListCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> HostListCtrlBootstrap::InitProcessDistributionInClusterInfo(
+Maybe<void> HostListCtrlBootstrap::InitProcessDistributionInfoInCluster(
     ProcessCtx* process_ctx) const {
   for (int64_t rank = 0; rank < world_size(); ++rank) {
     process_ctx->mutable_rank_info_in_cluster()
@@ -175,7 +175,7 @@ Maybe<void> RankInfoCtrlBootstrap::InitRank2HosAndNumProcess() const {
   CHECK_ISNULL(rank2host_and_num_process_on_corresponding_node_.get());
   rank2host_and_num_process_on_corresponding_node_ =
       std::make_shared<std::vector<std::pair<std::string, int64_t>>>(world_size_);
-  const auto& host2ranks = CHECK_JUST(bootstrap_server_->host2ranks());
+  const auto& host2ranks = JUST(bootstrap_server_->host2ranks());
   int64_t total_proecss_num = 0;
   for (const auto& pair : host2ranks) {
     for (const int64_t& rank : pair.second) {
@@ -221,12 +221,12 @@ Maybe<void> RankInfoCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
     process_ctx->set_node_size(bootstrap_conf_.node_size());
     return Maybe<void>::Ok();
   }
-  const auto& host2ranks = CHECK_JUST(bootstrap_server_->host2ranks());
+  const auto& host2ranks = JUST(bootstrap_server_->host2ranks());
   process_ctx->set_node_size(host2ranks.size());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RankInfoCtrlBootstrap::InitProcessDistributionInClusterInfo(
+Maybe<void> RankInfoCtrlBootstrap::InitProcessDistributionInfoInCluster(
     ProcessCtx* process_ctx) const {
   if (!rank2host_and_num_process_on_corresponding_node_) { InitRank2HosAndNumProcess(); }
   for (int64_t rank = 0; rank < world_size();) {
