@@ -73,7 +73,6 @@ class OfrecordReader(Module):
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
                     nd_sbp.append(elem._ToAttrStr())
             assert len(nd_sbp) == len(placement.hierarchy)
-            print("cclog: ", nd_sbp)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
