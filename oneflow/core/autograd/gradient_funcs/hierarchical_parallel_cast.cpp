@@ -39,7 +39,7 @@ Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
                        *CHECK_JUST(UniqueStr("hierarchical_parallel_cast")))
                  .Input("in")
                  .Output("out")
-                 .Attr<std::vector<std::string>>("nd_sbp", *JUST(GetDualNdSbpStrList(nd_sbp)))
+                 .Attr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp)))
                  .Attr<std::string>("grad_mode", "restore")
                  .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
                  .Build());
@@ -65,7 +65,7 @@ class HerarchicalParallelCast
 
   Maybe<void> Capture(HerarchicalParallelCastOpExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->nd_sbp = JUST(inputs.at(0)->nd_sbp());
+    ctx->nd_sbp = JUST(GetDualNdSbp(JUST(inputs.at(0)->nd_sbp())));
     return Maybe<void>::Ok();
   }
 

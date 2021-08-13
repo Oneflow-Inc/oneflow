@@ -52,8 +52,7 @@ class ConsistentToConsistent : public OpExprGradFunction<ConsistentToConsistentO
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *grad_op_, out_grads,
-        OpExprInterpContext(AttrMap{}, ctx->parallel_desc, ctx->nd_sbp)));
+        *grad_op_, out_grads, OpExprInterpContext(AttrMap{}, ctx->parallel_desc, ctx->nd_sbp)));
     return Maybe<void>::Ok();
   }
 

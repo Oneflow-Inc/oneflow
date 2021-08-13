@@ -22,11 +22,11 @@ limitations under the License.
 
 namespace oneflow {
 
-class NcclCollectiveAllGatherBoxingInterpreter final : public EagerBoxingInterpreter {
+class NcclAllGatherBoxingInterpreter final : public EagerBoxingInterpreter {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveAllGatherBoxingInterpreter);
-  NcclCollectiveAllGatherBoxingInterpreter() = default;
-  ~NcclCollectiveAllGatherBoxingInterpreter() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NcclAllGatherBoxingInterpreter);
+  NcclAllGatherBoxingInterpreter() = default;
+  ~NcclAllGatherBoxingInterpreter() override = default;
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
@@ -36,11 +36,11 @@ class NcclCollectiveAllGatherBoxingInterpreter final : public EagerBoxingInterpr
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
 };
 
-class NcclCollectiveAllReduceBoxingInterpreter final : public EagerBoxingInterpreter {
+class NcclAllReduceBoxingInterpreter final : public EagerBoxingInterpreter {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveAllReduceBoxingInterpreter);
-  NcclCollectiveAllReduceBoxingInterpreter() = default;
-  ~NcclCollectiveAllReduceBoxingInterpreter() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NcclAllReduceBoxingInterpreter);
+  NcclAllReduceBoxingInterpreter() = default;
+  ~NcclAllReduceBoxingInterpreter() override = default;
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
@@ -50,11 +50,11 @@ class NcclCollectiveAllReduceBoxingInterpreter final : public EagerBoxingInterpr
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
 };
 
-class NcclCollectiveReduceScatterBoxingInterpreter final : public EagerBoxingInterpreter {
+class NcclReduceScatterBoxingInterpreter final : public EagerBoxingInterpreter {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveReduceScatterBoxingInterpreter);
-  NcclCollectiveReduceScatterBoxingInterpreter(const std::string& op_type) : op_type_(op_type) {}
-  ~NcclCollectiveReduceScatterBoxingInterpreter() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NcclReduceScatterBoxingInterpreter);
+  NcclReduceScatterBoxingInterpreter(const std::string& op_type) : op_type_(op_type) {}
+  ~NcclReduceScatterBoxingInterpreter() override = default;
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,

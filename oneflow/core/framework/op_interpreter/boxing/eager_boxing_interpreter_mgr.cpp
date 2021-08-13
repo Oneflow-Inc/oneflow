@@ -49,17 +49,17 @@ Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
   return SymbolOf(partial_sum_sbp);
 }
 
-Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
+Maybe<EagerBoxingInterpreter> GetOneDimNcclEagerBoxingInterpreter(
     Symbol<cfg::ParallelDistribution> in_nd_sbp, Symbol<cfg::ParallelDistribution> out_nd_sbp) {
   static SbpPair2EagerBoxingInterpreter sbp_pair2eager_boxing_interpreter = {
       {{*JUST(GetSplitSbpParallel(0)), *JUST(MakeBroadcastSbpParallel())},  // S(0) -> B
-       std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>()},
+       std::make_shared<NcclAllGatherBoxingInterpreter>()},
       {{*JUST(MakeBroadcastSbpParallel()), *JUST(GetSplitSbpParallel(0))},  // B -> S(0)
-       std::make_shared<NcclCollectiveReduceScatterBoxingInterpreter>("max")},
+       std::make_shared<NcclReduceScatterBoxingInterpreter>("max")},
       {{*JUST(MakePartialSumSbpParallel()), *JUST(MakeBroadcastSbpParallel())},  // P -> B
-       std::make_shared<NcclCollectiveAllReduceBoxingInterpreter>()},
+       std::make_shared<NcclAllReduceBoxingInterpreter>()},
       {{*JUST(MakePartialSumSbpParallel()), *JUST(GetSplitSbpParallel(0))},  // P -> S(0)
-       std::make_shared<NcclCollectiveReduceScatterBoxingInterpreter>("sum")},
+       std::make_shared<NcclReduceScatterBoxingInterpreter>("sum")},
       {{*JUST(GetSplitSbpParallel(0)), *JUST(MakePartialSumSbpParallel())},  // S(0) -> P
        std::make_shared<NcclS2PBoxingInterpreter>()},
   };
@@ -84,7 +84,7 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribut
             std::make_shared<NaiveB2PBoxingInterpreter>();
         return naive_bp_boxing_interpreter;
       } else if (in_parallel_desc->device_type() == DeviceType::kGPU) {
-        return GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp);
+        return GetOneDimNcclEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp);
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }

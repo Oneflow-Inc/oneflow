@@ -87,7 +87,7 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclReduceScatterOpExpr(Symbol<ParallelDe
 }
 }  // namespace
 
-Maybe<one::Tensor> NcclCollectiveAllGatherBoxingInterpreter::InterpretImpl(
+Maybe<one::Tensor> NcclAllGatherBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
     Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
@@ -99,7 +99,7 @@ Maybe<one::Tensor> NcclCollectiveAllGatherBoxingInterpreter::InterpretImpl(
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
-Maybe<one::Tensor> NcclCollectiveAllReduceBoxingInterpreter::InterpretImpl(
+Maybe<one::Tensor> NcclAllReduceBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
     Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
@@ -111,7 +111,7 @@ Maybe<one::Tensor> NcclCollectiveAllReduceBoxingInterpreter::InterpretImpl(
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
-Maybe<one::Tensor> NcclCollectiveReduceScatterBoxingInterpreter::InterpretImpl(
+Maybe<one::Tensor> NcclReduceScatterBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
     Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {

@@ -97,8 +97,4 @@ Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<cfg::ParallelDistribution
   return FindOrCreateNdSbpString(nd_sbp);
 }
 
-Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::ParallelDistribution> nd_sbp) {
-  return GetNdSbpStrList(JUST(GetDualNdSbp(nd_sbp)));
-}
-
 }  // namespace oneflow
