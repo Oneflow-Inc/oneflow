@@ -55,6 +55,7 @@ std::string GetSupportedBoxingTypeInfo() {
       "============ Supported eager boxing type============\n"
       "\'[S(0)] -> [B]\' on GPU\n"
       "\'[S(0)] -> [P]\' on GPU\n"
+      "\'[S(m)] -> [S(n)]\' on GPU\n"
       "\'[P] -> [B]\' on GPU\n"
       "\'[P] -> [S(0)]\' on GPU\n"
       "\'[B] -> [S(0)]\' on GPU\n"
@@ -101,10 +102,16 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribut
     if (in_parallel_desc == out_parallel_desc) {
       if (EagerBoxingInterpreterUtil::IsBoxingB2P(in_nd_sbp->sbp_parallel(0),
                                                   out_nd_sbp->sbp_parallel(0))) {
-        std::shared_ptr<EagerBoxingInterpreter> naive_bp_boxing_interpreter =
+        std::shared_ptr<EagerBoxingInterpreter> naive_b2p_boxing_interpreter =
             std::make_shared<NaiveB2PBoxingInterpreter>();
-        return naive_bp_boxing_interpreter;
+        return naive_b2p_boxing_interpreter;
       } else if (in_parallel_desc->device_type() == DeviceType::kGPU) {
+        if (EagerBoxingInterpreterUtil::IsBoxingS2S(in_nd_sbp->sbp_parallel(0),
+                                                    out_nd_sbp->sbp_parallel(0))) {
+          std::shared_ptr<EagerBoxingInterpreter> nccl_s2s_boxing_interpreter =
+              std::make_shared<NcclCollectiveS2SBoxingInterpreter>();
+          return nccl_s2s_boxing_interpreter;
+        }
         return GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp);
       } else {
         UNIMPLEMENTED_THEN_RETURN()
