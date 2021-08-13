@@ -155,10 +155,10 @@ class ConsistentTensorImpl : public TensorImpl {
     return nullptr;
   }
 
-  const Maybe<TransportToken> transport_token() const { return transport_token_; }
+  Maybe<TransportToken> transport_token() const { return transport_token_.value(); }
 
   Maybe<void> set_transport_token(const TransportToken& transport_token) {
-    CHECK_OR_RETURN(!transport_token_.IsOk()) << "transport_token_ is initiliazed";
+    CHECK_OR_RETURN(!transport_token_.has_value());
     transport_token_ = transport_token;
     return Maybe<void>::Ok();
   }
@@ -168,11 +168,11 @@ class ConsistentTensorImpl : public TensorImpl {
       : TensorImpl(requires_grad, is_leaf),
         tensor_meta_(tensor_meta),
         consumer_nd_sbp_constraint_(),
-        transport_token_(Error::ValueError("invalid rpc token")) {}
+        transport_token_() {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
   Optional<Symbol<cfg::ParallelDistribution>> consumer_nd_sbp_constraint_;
-  Maybe<TransportToken> transport_token_;
+  Optional<TransportToken> transport_token_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
