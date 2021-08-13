@@ -39,26 +39,6 @@ EnvProto GetEnvProto(int64_t machine_num) {
   return ret;
 }
 
-void InitRank2NodeId(const NumProcessDistribution& num_process_distribution,
-                     PbMap<int64_t, int64_t>* rank2node_id) {
-  int64_t rank_offset = 0;
-  for (int64_t node_id = 0; node_id < num_process_distribution.num_process_size(); ++node_id) {
-    for (int16_t rank = 0; rank < num_process_distribution.num_process(node_id); ++rank) {
-      (*rank2node_id)[rank + rank_offset] = node_id;
-    }
-    rank_offset += num_process_distribution.num_process(node_id);
-  }
-}
-
-void InitNodeId2RankOffset(const NumProcessDistribution& num_process_distribution,
-                           PbMap<int64_t, int64_t>* node_id2rankoffset) {
-  int64_t rank_offset = 0;
-  for (int64_t node_id = 0; node_id < num_process_distribution.num_process_size(); ++node_id) {
-    (*node_id2rankoffset)[node_id] = rank_offset;
-    rank_offset += num_process_distribution.num_process(node_id);
-  }
-}
-
 TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu_device_num,
                                              int64_t machine_num) {
   Global<ProcessCtx>::New();
