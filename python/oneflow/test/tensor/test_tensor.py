@@ -21,7 +21,6 @@ import numpy as np
 from automated_test_util import *
 
 import oneflow as flow
-import oneflow.typing as oft
 import oneflow.unittest
 
 
@@ -113,13 +112,38 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
         test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
 
-    @unittest.skipIf(True, "consistent_tensor doesn't work right now")
     def test_creating_consistent_tensor(test_case):
+        placement = flow.placement("cuda", {0: 0})
+        sbp = flow.sbp.broadcast
         shape = (2, 3)
-        x = flow.Tensor(*shape, placement=flow.placement("gpu", ["0:0"], None))
-        x.set_placement(flow.placement("cpu", ["0:0"], None))
-        x.set_is_consistent(True)
-        test_case.assertTrue(not x.is_cuda)
+
+        # Shape -> ConsistentTensor
+        x = flow.Tensor(*shape, placement=placement, sbp=sbp)
+        test_case.assertTrue(x.is_consistent)
+
+        # LocalTensor -> ConsistentTensor
+        x = flow.Tensor(*shape, device="cpu")
+        test_case.assertTrue(x.is_local)
+        y = flow.Tensor(x, placement=placement, sbp=sbp)
+        test_case.assertTrue(y.is_consistent)
+
+        # ConsistentTensor -> ConsistentTensor
+        z = flow.Tensor(y, placement=placement, sbp=sbp)
+        test_case.assertTrue(z.is_consistent)
+
+        # TODO: ndarray -> ConsistentTensor
+
+    def test_construct_local_from_consistent_tensor(test_case):
+        placement = flow.placement("cuda", {0: 0})
+        sbp = flow.sbp.broadcast
+        shape = (2, 3)
+        x = flow.Tensor(*shape, placement=placement, sbp=sbp)
+        test_case.assertTrue(x.is_consistent)
+        # ConsistentTensor -> LocalTensor
+        y = flow.Tensor(x)
+        test_case.assertTrue(y.is_local)
+        y = flow.Tensor(x, device="cuda")
+        test_case.assertTrue(y.is_local)
 
     def test_tensor_with_single_int(test_case):
         x = flow.Tensor(5)
@@ -553,7 +577,7 @@ class TestTensor(flow.unittest.TestCase):
             [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         ).astype(np.float32)
         input = flow.Tensor(x)
-        of_shape = input.reshape(shape=[2, 2, 2, -1]).numpy().shape
+        of_shape = input.reshape(2, 2, 2, -1).numpy().shape
         np_shape = (2, 2, 2, 2)
         test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
@@ -561,7 +585,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_reshape_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
-        y = x.reshape(shape=(-1,))
+        y = x.reshape(-1,)
         return y
 
     @autotest()
@@ -905,6 +929,14 @@ class TestTensor(flow.unittest.TestCase):
         y = x.arctanh()
         return y
 
+    @autotest(n=5, auto_backward=False)
+    def test_tensor_nonzero_with_random_data(test_case):
+        device = random_device()
+        ndim = random(2, 6).to(int)
+        x = random_pytorch_tensor(ndim=ndim).to(device)
+        y = x.nonzero()
+        return y
+
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
@@ -1098,6 +1130,45 @@ class TestTensor(flow.unittest.TestCase):
         of_out = of_out.sum()
         of_out.backward()
         test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+    @autotest(auto_backward=False)
+    def test_eq_tensor_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        y = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        return x.eq(y)
+
+    @autotest(auto_backward=False)
+    def test_eq_tensor_with_same_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+        x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
+        return x.eq(x)
+
+    @autotest()
+    def test_erf_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.erf()
+
+    @autotest()
+    def test_erfc_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.erfc()
+
+    @autotest()
+    def test_exp_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.exp()
+
+    @autotest()
+    def test_round_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.round()
 
 
 if __name__ == "__main__":

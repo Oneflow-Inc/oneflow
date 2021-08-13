@@ -15,11 +15,12 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ScalarMulUserKernel final : public user_op::OpKernel {
+class ScalarMulUserKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ScalarMulUserKernel() = default;
   ~ScalarMulUserKernel() = default;
