@@ -18,8 +18,11 @@ limitations under the License.
 
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
+
+class ParallelDesc;
 
 const static int kTransportTokenTypeBit = 2;
 const static int kTransportTokenThreadConsistentUIdBit = 3;
@@ -64,7 +67,7 @@ class TransportToken final {
   TransportToken(TransportToken&) = default;
   ~TransportToken() = default;
 
-  static TransportToken NewDataTransportToken();
+  static TransportToken NewDataTransportToken(Symbol<ParallelDesc> parallel_desc);
   static Maybe<TransportToken> NewMetaTransportToken();
   static Maybe<TransportToken> AcquireCtrlTransportToken(RankGroupCtrlCmd cmd);
   Maybe<void> TryAcquireCtrlTransportTokenLock() const;
