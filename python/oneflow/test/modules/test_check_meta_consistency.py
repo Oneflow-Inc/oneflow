@@ -36,7 +36,6 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
         sbp = (flow.sbp.broadcast,)
         y = x.to_consistent(placement=placement, sbp=sbp)
         y.check_meta_consistency()
-        print(y.shape, y.placement, y.sbp)
         y = y.to_consistent(sbp=flow.sbp.split(0))
         y.check_meta_consistency()
 

@@ -230,8 +230,8 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
-Maybe<void> TouchConsistentTensor(const one::Tensor& tensor) {
-  CHECK_OR_RETURN(tensor.is_consistent());
+Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
+  CHECK_OR_RETURN(tensor->is_consistent());
   return Maybe<void>::Ok();
 }
 
@@ -463,7 +463,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());
            })
       .def("check_meta_consistency",
-           [](const one::Tensor& tensor) { return CheckMetaConsistency(tensor).GetOrThrow(); })
+           [](const std::shared_ptr<one::Tensor>& tensor) {
+             return CheckMetaConsistency(tensor).GetOrThrow();
+           })
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)

@@ -44,23 +44,6 @@ template<typename... Args>
 struct CheckConsistentTensorMeta;
 
 template<typename RetT, typename... Args>
-struct CheckConsistentTensorMeta<RetT, const one::Tensor&, Args...> {
-  static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
-  template<RetT (*func)(const one::Tensor&, Args...)>
-  static RetT Call(const one::Tensor& tensor, Args... args) {
-    std::shared_ptr<private_details::CheckConsistencyAsyncTransportCtx> ctx;
-    int64_t* depth = private_details::MutThreadLocalDepth();
-    if (*depth == 0) { ctx = JUST(private_details::LaunchTensorMetaConsistencyCheck(tensor)); }
-    ++*depth;
-    RetT&& ret = func(tensor, args...);
-    --*depth;
-    // Always synchronize consistent tensor meta even if `func` failed.
-    if (*depth == 0) { JUST(private_details::BuzyWaitAndCheck(ctx)); }
-    return ret;
-  }
-};
-
-template<typename RetT, typename... Args>
 struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args...> {
   static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
   template<RetT (*func)(const std::shared_ptr<one::Tensor>&, Args...)>
