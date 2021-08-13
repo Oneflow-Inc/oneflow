@@ -40,10 +40,15 @@ Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, 
 }
 
 template<typename MapT, typename KeyT>
-Maybe<typename MapT::mapped_type*> MapAt(MapT* map, const KeyT& key) {
+Maybe<typename MapT::mapped_type*> MutMapAt(MapT* map, const KeyT& key) {
   const auto& iter = map->find(key);
   CHECK_OR_RETURN(iter != map->end());
   return &iter->second;
+}
+
+template<typename MapT, typename KeyT>
+Maybe<typename MapT::mapped_type*> MapAt(MapT* map, const KeyT& key) {
+  return MutMapAt(map, key);
 }
 
 template<typename VecT>
