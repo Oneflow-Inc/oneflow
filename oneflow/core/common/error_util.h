@@ -24,8 +24,6 @@ namespace oneflow {
 namespace cfg {
 class ErrorProto;
 }
-std::string* MutErrorStr();
-const std::string& GetErrorStr();
 Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error);
 }  // namespace oneflow
 

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <sstream>
 #include "oneflow/core/common/error_util.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -41,7 +42,7 @@ std::string StripBrackets(std::string str) {
   return str;
 }
 
-Maybe<std::string> ShortenErrorMsg(std::string str) {
+Maybe<std::string> ShortenMsg(std::string str) {
   // 150 characters is the threshold
   const int num_displayed_char = 150;
   if (str.size() == 0) { return str; }
@@ -80,27 +81,27 @@ Maybe<std::string> ShortenErrorMsg(std::string str) {
   return ss.str();
 }
 
-std::string FormatFile(const std::string& file) {
+std::string FormatFileOfStackFrame(const std::string& file) {
   std::stringstream ss;
   ss << "\n  File \"" << file << "\", ";
   return ss.str();
 }
 
-std::string FormatLine(const int64_t& line) {
+std::string FormatLineOfStackFrame(const int64_t& line) {
   std::stringstream ss;
   ss << "line " << line << ",";
   return ss.str();
 }
 
-std::string FormatFunction(const std::string& function) {
+std::string FormatFunctionOfStackFrame(const std::string& function) {
   std::stringstream ss;
   ss << " in " << function;
   return ss.str();
 }
 
-Maybe<std::string> FormatErrorMsg(std::string error_msg, bool is_last_stack_frame) {
+Maybe<std::string> FormatMsgOfInStackFrame(std::string error_msg, bool is_last_stack_frame) {
   error_msg = StripBrackets(error_msg);
-  if (!is_last_stack_frame) { error_msg = *JUST(ShortenErrorMsg(error_msg)); }
+  if (!is_last_stack_frame) { error_msg = *JUST(ShortenMsg(error_msg)); }
   // error_msg of last stack frame come from "<<"
   if (is_last_stack_frame) { error_msg = StripSpace(error_msg); }
   std::stringstream ss;
@@ -108,44 +109,37 @@ Maybe<std::string> FormatErrorMsg(std::string error_msg, bool is_last_stack_fram
   return ss.str();
 }
 
-std::string FormatErrorSummaryAndMsg(const std::shared_ptr<cfg::ErrorProto>& error) {
+std::string FormatErrorSummaryAndMsgOfErrorProto(const std::shared_ptr<cfg::ErrorProto>& error) {
   std::stringstream ss;
   if (error->has_error_summary()) { ss << error->error_summary(); }
-  if (error->has_msg()) { ss << (ss.str().size() != 0 ? ", " + error->msg() : error->msg()); }
-  if (error->has_input_device_not_match_error()) {
-    std::stringstream input_device_not_match_ss;
-    input_device_not_match_ss << *error->mutable_input_device_not_match_error()->mutable_info(0);
-    ss << (ss.str().size() != 0 ? ", " + input_device_not_match_ss.str()
-                                : input_device_not_match_ss.str());
-  }
-  if (error->has_memory_zone_out_of_memory_error()) {
-    auto* memory_zone_out_of_memory_error = error->mutable_memory_zone_out_of_memory_error();
-    std::stringstream memory_zone_out_of_memory_ss;
-    memory_zone_out_of_memory_ss << "machine_id: "
-                                 << *memory_zone_out_of_memory_error->mutable_machine_id(0);
-    memory_zone_out_of_memory_ss << ", mem_zone_id: "
-                                 << *memory_zone_out_of_memory_error->mutable_mem_zone_id(0);
-    memory_zone_out_of_memory_ss << ", device_tag: "
-                                 << *memory_zone_out_of_memory_error->mutable_device_tag(0);
-    memory_zone_out_of_memory_ss << ", required: "
-                                 << *memory_zone_out_of_memory_error->mutable_required(0);
-    memory_zone_out_of_memory_ss << ", available: "
-                                 << *memory_zone_out_of_memory_error->mutable_available(0) << ".";
-    ss << (ss.str().size() != 0 ? ", " + memory_zone_out_of_memory_ss.str()
-                                : memory_zone_out_of_memory_ss.str());
-  }
-  if (error->has_multiple_op_kernels_matched_error()) {
-    auto* multiple_op_kernels_matched_error = error->mutable_multiple_op_kernels_matched_error();
-    std::stringstream multiple_op_kernels_matched_ss;
-    for (auto matched_op_kernels_debug_str =
-             multiple_op_kernels_matched_error->mutable_matched_op_kernels_debug_str()->begin();
-         matched_op_kernels_debug_str
-         < multiple_op_kernels_matched_error->mutable_matched_op_kernels_debug_str()->end();
-         matched_op_kernels_debug_str++) {
-      multiple_op_kernels_matched_ss << *matched_op_kernels_debug_str;
-    }
-    ss << (ss.str().size() != 0 ? ", " + multiple_op_kernels_matched_ss.str()
-                                : multiple_op_kernels_matched_ss.str());
+  if (error->has_msg()) { ss << (ss.str().size() != 0 ? "\n" + error->msg() : error->msg()); }
+  return ss.str();
+}
+
+// The msg in error type instance.
+Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<cfg::ErrorProto>& error) {
+  std::stringstream ss;
+  CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
+  switch (error->error_type_case()) {
+    case cfg::ErrorProto::kInputDeviceNotMatchError:
+      ss << error->input_device_not_match_error().DebugString();
+      break;
+    case cfg::ErrorProto::kMemoryZoneOutOfMemoryError:
+      ss << error->memory_zone_out_of_memory_error().DebugString();
+      break;
+    case cfg::ErrorProto::kMultipleOpKernelsMatchedError:
+      ss << error->multiple_op_kernels_matched_error().DebugString();
+      break;
+    case cfg::ErrorProto::kOpKernelNotFoundError:
+      ss << error->op_kernel_not_found_error().DebugString();
+      break;
+    case cfg::ErrorProto::kConfigResourceUnavailableError:
+      ss << error->config_resource_unavailable_error().DebugString();
+      break;
+    case cfg::ErrorProto::kConfigAssertFailedError:
+      ss << error->config_assert_failed_error().DebugString();
+      break;
+    default: OF_UNIMPLEMENTED();
   }
   return ss.str();
 }
@@ -153,16 +147,25 @@ std::string FormatErrorSummaryAndMsg(const std::shared_ptr<cfg::ErrorProto>& err
 }  // namespace
 
 Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error) {
-  std::cout << "erro stack frame\n" << error->DebugString() << std::endl;
   std::stringstream ss;
+  // Get msg from stack frame of error proto
   for (auto stack_frame = error->mutable_stack_frame()->rbegin();
        stack_frame < error->mutable_stack_frame()->rend(); stack_frame++) {
-    ss << FormatFile(*stack_frame->mutable_file()) << FormatLine(*stack_frame->mutable_line())
-       << FormatFunction(*stack_frame->mutable_function())
-       << *JUST(FormatErrorMsg(*stack_frame->mutable_error_msg(),
-                               stack_frame == error->mutable_stack_frame()->rend() - 1));
+    ss << FormatFileOfStackFrame(*stack_frame->mutable_file())
+       << FormatLineOfStackFrame(*stack_frame->mutable_line())
+       << FormatFunctionOfStackFrame(*stack_frame->mutable_function())
+       << *JUST(FormatMsgOfInStackFrame(*stack_frame->mutable_error_msg(),
+                                        stack_frame == error->mutable_stack_frame()->rend() - 1));
   }
-  ss << "\n" << FormatErrorSummaryAndMsg(error);
+  // Get msg from error summary and msg of error proto
+  std::string error_summary_and_msg_of_error_proto = FormatErrorSummaryAndMsgOfErrorProto(error);
+  if (error_summary_and_msg_of_error_proto.size() != 0) {
+    ss << "\n" << error_summary_and_msg_of_error_proto;
+  }
+  // Get msg from error type of error proto
+  std::string msg_of_error_type = *JUST(FormatMsgOfErrorType(error));
+  if (msg_of_error_type.size() != 0) { ss << "\n" << msg_of_error_type; }
+
   return ss.str();
 }
 
