@@ -64,9 +64,8 @@ struct LogSoftmaxKernelUtil<DeviceType::kGPU, T> {
     // sum | tmp[i] = Sum_j(prob[i][j])
     NdarrayUtil<DeviceType::kGPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
                                                 reduce_storage_var);
-    // div |  prob[i][j] = out[i][j]/tmp[i]
-    NdarrayUtil<DeviceType::kGPU, T>::BroadcastDiv(ctx, Var({n, w}, out), Val({n, w}, in),
-                                                   Val({n, 1}, tmp));
+    // div | prob[i][j] /= tmp[i]
+    NdarrayUtil<DeviceType::kGPU, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
     // tmp | tmp[i] = log(tmp[i])
     ComputeLogGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, tmp, tmp);

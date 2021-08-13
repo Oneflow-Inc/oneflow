@@ -45,7 +45,7 @@ Maybe<void> LogSoftmax::Init(const OpExpr& op) {
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   const std::string& op_name = fw_op_expr->op_name();
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  grad_op_ = JUST(op_expr_helper::LogSoftmaxGradOp(GradientOpName(op_name)));
+  grad_op_ = JUST(one::OpBuilder("logsoftmax_grad", GradientOpName(op_name)).Input("prob").Input("dy").Output("dx").Build());
   return Maybe<void>::Ok();
 }
 

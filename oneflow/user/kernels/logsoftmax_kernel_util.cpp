@@ -55,9 +55,8 @@ struct LogSoftmaxKernelUtil<DeviceType::kCPU, T> {
     // sum | tmp[i] = Sum_j(prob[i][j])
     NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
                                                 reduce_storage_var);
-    // div |  prob[i][j] = out[i][j]/tmp[i]
-    NdarrayUtil<DeviceType::kCPU, T>::BroadcastDiv(ctx, Var({n, w}, out), Val({n, w}, in),
-                                                   Val({n, 1}, tmp));
+    // div | prob[i][j] /= tmp[i]
+    NdarrayUtil<DeviceType::kCPU, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
     // tmp | tmp[i] = log(tmp[i])
     FOR_RANGE(int64_t, i, 0, n) { tmp[i] = SafeLog(tmp[i]); }
     // sub | out[i][j] -= tmp[i]

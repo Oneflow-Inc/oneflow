@@ -841,9 +841,5 @@ Maybe<one::UserOpExpr> SoftmaxGradOp() { return SoftmaxGradOp("softmax_grad"); }
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name) {
   return one::OpBuilder("softmax_grad", name).Input("y").Input("dy").Output("dx").Build();
 }
-
-Maybe<one::UserOpExpr> LogSoftmaxGradOp(const std::string& name) {
-  return one::OpBuilder("logsoftmax_grad", name).Input("prob").Input("dy").Output("dx").Build();
-}
 }  // namespace op_expr_helper
 }  // namespace oneflow
