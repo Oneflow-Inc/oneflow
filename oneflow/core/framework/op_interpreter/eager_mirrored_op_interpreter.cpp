@@ -102,11 +102,12 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       if (oneflow::DTREnabled()) {
         const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
         outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
+        output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
       } else {
         const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
         outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);
+        output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
       }
-      output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
     } else {
       bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
       CHECK_OR_RETURN(has_eager_blob_object);
