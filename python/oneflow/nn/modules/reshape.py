@@ -18,19 +18,18 @@ from typing import Sequence
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
+from oneflow.nn.modules.utils import _single
 
 
-class Reshape(Module):
-    def __init__(self, shape: Sequence[int]) -> None:
-        super().__init__()
-        self.shape = shape
-
-    def forward(self, x):
-        return flow.F.reshape(x, shape=self.shape)
+def _input_args_is_int(args):
+    return all((isinstance(x, int) for x in args))
 
 
-@register_tensor_op("reshape")
-def reshape_op(x, shape: Sequence[int] = None):
+def _input_args_is_flow_size(args):
+    return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
+
+
+def reshape_op(input, shape: Sequence[int] = None):
     """This operator reshapes a Tensor.
 
     We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
@@ -57,11 +56,46 @@ def reshape_op(x, shape: Sequence[int] = None):
         flow.Size([2, 2, 2, 2])
 
     """
-    return Reshape(shape=shape)(x)
+    return flow.F.reshape(input, shape)
+
+
+@register_tensor_op("reshape")
+def reshape_tensor_op(input, *shape):
+    """This operator reshapes a Tensor.
+
+    We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
+
+    Args:
+        x: A Tensor.
+        *shape: tuple of python::ints or int...
+    Returns:
+        A Tensor has the same type as `x`.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = np.array(
+        ...    [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+        ... ).astype(np.float32)
+        >>> input = flow.Tensor(x)
+
+        >>> y = input.reshape(2, 2, 2, -1).shape
+        >>> y
+        flow.Size([2, 2, 2, 2])
+
+    """
+    if _input_args_is_int(shape):
+        new_shape = _single(shape)
+    else:
+        raise ValueError("the input shape parameter of reshape is not illegal!")
+    return flow.F.reshape(input, new_shape)
 
 
 @register_tensor_op("view")
-def view_op(x, shape: Sequence[int] = None):
+def view_op(input, *shape):
     """
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.view.html
@@ -87,10 +121,10 @@ def view_op(x, shape: Sequence[int] = None):
     :meth:`contiguous`) otherwise.
 
     Args:
-        x: A Tensor.
-        shape: Shape of the output tensor.
+        input: A Tensor.
+        *shape: flow.Size or int...
     Returns:
-        A Tensor has the same type as `x`.
+        A Tensor has the same type as `input`.
 
     For example:
 
@@ -104,12 +138,18 @@ def view_op(x, shape: Sequence[int] = None):
         ... ).astype(np.float32)
         >>> input = flow.Tensor(x)
 
-        >>> y = flow.view(input, shape=[2, 2, 2, -1]).numpy().shape
+        >>> y = input.view(2, 2, 2, -1).numpy().shape
         >>> y
         (2, 2, 2, 2)
 
     """
-    return Reshape(shape=shape)(x)
+    if _input_args_is_int(shape):
+        new_shape = _single(shape)
+    elif _input_args_is_flow_size(shape):
+        new_shape = _single(*shape)
+    else:
+        raise ValueError("the input shape parameter of view is not illegal!")
+    return flow.F.reshape(input, new_shape)
 
 
 if __name__ == "__main__":

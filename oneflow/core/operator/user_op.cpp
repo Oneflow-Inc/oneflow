@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
-#include "oneflow/core/framework/infer_parallel_distribution_fn_context.h"
+#include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
 
 namespace oneflow {
 
@@ -228,11 +228,10 @@ class UserOpInferContext final : public user_op::InferContext {
 
   const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
-    const auto& bn2parallel_distribution =
-        CHECK_JUST(op_->parallel_distribution_signature())->bn_in_op2parallel_distribution();
+    const auto& bn2nd_sbp = CHECK_JUST(op_->nd_sbp_signature())->bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
-    auto it = bn2parallel_distribution.find(bn);
-    CHECK(it != bn2parallel_distribution.end());
+    auto it = bn2nd_sbp.find(bn);
+    CHECK(it != bn2nd_sbp.end());
     return it->second;
   }
 
@@ -418,20 +417,19 @@ class UserOpInferParallelDistributionFnContext
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
   UserOpInferParallelDistributionFnContext(
-      const UserOp* op, cfg::ParallelDistributionSignature* parallel_distribution_signature,
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
+      const UserOp* op, cfg::ParallelDistributionSignature* nd_sbp_signature,
+      const cfg::ParallelDistributionSignature& nd_sbp_constraints,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn)
       : op_(op),
-        parallel_distribution_signature_(parallel_distribution_signature),
-        parallel_distribution_constraints_(parallel_distribution_constraints),
-        parallel_distribution_infer_hint4ibn_fn_(std::move(ParallelDistributionInferHint4Ibn)) {
+        nd_sbp_signature_(nd_sbp_signature),
+        nd_sbp_constraints_(nd_sbp_constraints),
+        nd_sbp_infer_hint4ibn_fn_(std::move(ParallelDistributionInferHint4Ibn)) {
     const auto& user_op_conf = op->op_conf().user_conf();
     for (const auto& it : user_op_conf.input()) {
       const std::string& arg_name = it.first;
       for (int32_t i = 0; i < it.second.s_size(); ++i) {
-        auto hint =
-            CHECK_JUST(parallel_distribution_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, i)));
+        auto hint = CHECK_JUST(nd_sbp_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, i)));
         CHECK(arg2tensor_desc_
                   .emplace(std::make_pair(arg_name, i),
                            GenTensorDescFromBlobDesc(&hint->logical_blob_desc()))
@@ -449,21 +447,19 @@ class UserOpInferParallelDistributionFnContext
     return it->second;
   }
 
-  const cfg::ParallelDistributionSignature& parallel_distribution_constraints() const override {
-    return parallel_distribution_constraints_;
+  const cfg::ParallelDistributionSignature& nd_sbp_constraints() const override {
+    return nd_sbp_constraints_;
   }
 
   cfg::ParallelDistribution* ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
                                                                   int32_t index) override {
-    return &(*parallel_distribution_signature_
-                  ->mutable_bn_in_op2parallel_distribution())[GenRepeatedBn(arg_name, index)];
+    return &(*nd_sbp_signature_->mutable_bn_in_op2nd_sbp())[GenRepeatedBn(arg_name, index)];
   }
 
   const cfg::ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
       const std::string& arg_name, int32_t index) const override {
-    auto hint =
-        CHECK_JUST(parallel_distribution_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, index)));
-    return hint->parallel_distribution();
+    auto hint = CHECK_JUST(nd_sbp_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, index)));
+    return hint->nd_sbp();
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return op_->user_op_conf(); }
@@ -482,10 +478,10 @@ class UserOpInferParallelDistributionFnContext
  private:
   const UserOp* op_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
-  cfg::ParallelDistributionSignature* parallel_distribution_signature_;
-  cfg::ParallelDistributionSignature parallel_distribution_constraints_;
+  cfg::ParallelDistributionSignature* nd_sbp_signature_;
+  cfg::ParallelDistributionSignature nd_sbp_constraints_;
   std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-      parallel_distribution_infer_hint4ibn_fn_;
+      nd_sbp_infer_hint4ibn_fn_;
 };
 
 Maybe<void> UserOp::InitFromOpConf() {
@@ -756,24 +752,32 @@ bool IgnoreInferParallelDistributionFnWhenFlatHierarchy(const std::string& op_ty
 }  // namespace
 
 Maybe<void> UserOp::InferParallelDistributionSignature(
-    cfg::ParallelDistributionSignature* parallel_distribution_signature,
-    const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
-    const ParallelDesc& parallel_desc,
+    cfg::ParallelDistributionSignature* nd_sbp_signature,
+    const cfg::ParallelDistributionSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) const {
-  if (val_->parallel_distribution_infer_fn
+  if (val_->nd_sbp_infer_fn
       && (parallel_desc.hierarchy()->NumAxes() > 1
           || !IgnoreInferParallelDistributionFnWhenFlatHierarchy(
               this->user_op_conf().op_type_name()))) {
-    UserOpInferParallelDistributionFnContext ctx(this, parallel_distribution_signature,
-                                                 parallel_distribution_constraints,
+    UserOpInferParallelDistributionFnContext ctx(this, nd_sbp_signature, nd_sbp_constraints,
                                                  ParallelDistributionInferHint4Ibn);
-    return val_->parallel_distribution_infer_fn(&ctx);
+    JUST(val_->nd_sbp_infer_fn(&ctx));
   } else {
-    return Operator::InferParallelDistributionSignature(
-        parallel_distribution_signature, parallel_distribution_constraints, parallel_desc,
-        ParallelDistributionInferHint4Ibn);
+    JUST(Operator::InferParallelDistributionSignature(
+        nd_sbp_signature, nd_sbp_constraints, parallel_desc, ParallelDistributionInferHint4Ibn));
   }
+  std::string tick_bn = GenRepeatedBn(user_op::kUserSourceOpTickInputArgName, 0);
+  if (std::find(input_bns().begin(), input_bns().end(), tick_bn) != input_bns().end()) {
+    auto* map = nd_sbp_signature->mutable_bn_in_op2nd_sbp();
+    if (map->count(tick_bn) == 0) {
+      auto* sbp_list = (*map)[tick_bn].mutable_sbp_parallel();
+      for (int i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
+        sbp_list->Add()->mutable_broadcast_parallel();
+      }
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 Symbol<OperatorConf> UserOp::GetOpConfWithoutOpNameAndLbn() const {

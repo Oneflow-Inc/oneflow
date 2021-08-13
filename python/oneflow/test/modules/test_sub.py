@@ -23,6 +23,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_sub_impl(test_case, shape, device):
@@ -109,6 +110,17 @@ class TestSubModule(flow.unittest.TestCase):
                 },
                 device=arg[1],
             )
+
+    @autotest(auto_backward=False)
+    def test_sub_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(2, 0, 3).to(device)
+        y = random_pytorch_tensor(2, 1, 3).to(device)
+        out1 = x - y
+        out2 = x - 2
+        out3 = 2 - x
+        out4 = torch.sub(x, y)
+        return out1, out2, out3, out4
 
 
 if __name__ == "__main__":

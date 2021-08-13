@@ -38,7 +38,7 @@ void CheckPosExtent(const int64_t num_axes, const Shape& shape, const NdIndex& p
 
 void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
-  CHECK_GT(num_axes, 0);
+  CHECK_GE(num_axes, 0);
   CheckPosExtent(num_axes, desc.dst_shape, desc.dst_pos, desc.extent);
   CheckPosExtent(num_axes, desc.src_shape, desc.src_pos, desc.extent);
 }
@@ -127,6 +127,7 @@ MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
   reduced.dst_pos = NdIndex(dst_pos_vec);
   reduced.src_pos = NdIndex(src_pos_vec);
   reduced.extent = Shape(extent_vec);
+  reduced.data_type = data_type;
   return reduced;
 }
 
@@ -134,7 +135,15 @@ void MemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
                         const MemoryCopyNdDesc& desc) const {
   CheckMemoryCopyNdDesc(desc);
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
-  if (num_axes == 1) {
+  if (num_axes == 0) {
+    if (desc.src_shape.NumAxes() == 0 && desc.dst_shape.NumAxes() == 0
+        && desc.src_shape.elem_cnt() == 1 && desc.dst_shape.elem_cnt() == 1) {
+      size_t copy_size = GetSizeOfDataType(desc.data_type);
+      Copy1D(ctx, dst, src, copy_size);
+    } else {
+      LOG(FATAL) << "MemoryCopier::Copy() Error: illegal copy case!";
+    }
+  } else if (num_axes == 1) {
     Copy1D(ctx, (unsigned char*)dst + desc.dst_pos.At(0), (unsigned char*)src + desc.src_pos.At(0),
            desc.extent.At(0));
   } else if (num_axes == 2) {
@@ -231,6 +240,16 @@ void CudaAsyncMemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
                                  const MemoryCopyNdDesc& desc) const {
   CheckMemoryCopyNdDesc(desc);
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
+  if (num_axes == 0) {
+    if (desc.src_shape.NumAxes() == 0 && desc.dst_shape.NumAxes() == 0
+        && desc.src_shape.elem_cnt() == 1 && desc.dst_shape.elem_cnt() == 1) {
+      size_t copy_size = GetSizeOfDataType(desc.data_type);
+      Copy1D(ctx, dst, src, copy_size);
+    } else {
+      LOG(FATAL) << "MemoryCopier::Copy() Error: illegal copy case!";
+    }
+    return;
+  }
   const bool use_nd_impl =
       CanCurDevAccessPointer(dst) && CanCurDevAccessPointer(src) && (num_axes != 1);
   if (use_nd_impl) {
@@ -313,6 +332,7 @@ MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
 #define SPECIALIZE_COPY_ELEM(dtype)                                                        \
   template void MemoryCopier::CopyElem<dtype>(DeviceCtx * ctx, void* dst, const void* src, \
                                               const MemoryCopyNdDesc& desc) const;
+
 SPECIALIZE_COPY_ELEM(float16)
 SPECIALIZE_COPY_ELEM(float)
 SPECIALIZE_COPY_ELEM(double)

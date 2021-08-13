@@ -92,35 +92,6 @@ def env_init():
     return True
 
 
-def api_get_current_resource() -> resource_util.Resource:
-    """Get current resources, such as:machine nums, cpu/gpu device nums,
-            epoch network threed num, rdma params...
-
-    Returns:
-        resource_util.Resource: [description]
-    """
-    return enable_if.unique([get_current_resource])()
-
-
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_current_resource():
-    return c_api_util.CurrentResource()
-
-
-def api_get_current_machine_id():
-    """Get machine id of current machine/node
-
-    Returns:
-        [type]: [description]
-    """
-    return enable_if.unique([get_current_machine_id])()
-
-
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_current_machine_id() -> int:
-    return oneflow._oneflow_internal.CurrentMachineId()
-
-
 def api_machine(*val: list) -> None:
     """Set machines' hostnames.
 

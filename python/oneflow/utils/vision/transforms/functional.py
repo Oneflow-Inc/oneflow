@@ -132,7 +132,7 @@ def to_tensor(pic):
     if pic.mode == "1":
         img = 255 * img
 
-    img = img.reshape(shape=(pic.size[1], pic.size[0], len(pic.getbands())))
+    img = flow.reshape(img, shape=(pic.size[1], pic.size[0], len(pic.getbands())))
     # put it from HWC to CHW format
     res = img.permute(2, 0, 1)
     if img.dtype == flow.int:
@@ -182,16 +182,16 @@ def normalize(
     std = flow.tensor(std, dtype=dtype, device=tensor.device)
     # TODO: use tensor.any()
     # if (std == 0).any():
-    if std.eq(0).sum().numpy()[0] > 0:
+    if std.eq(0).sum().numpy() > 0:
         raise ValueError(
             "std evaluated to zero after conversion to {}, leading to division by zero.".format(
                 dtype
             )
         )
     if mean.ndim == 1:
-        mean = mean.reshape(shape=(-1, 1, 1))
+        mean = mean.reshape(-1, 1, 1)
     if std.ndim == 1:
-        std = std.reshape(shape=(-1, 1, 1))
+        std = std.reshape(-1, 1, 1)
     tensor = tensor.sub(mean).div(std)
     # tensor.sub_(mean).div_(std)
     return tensor

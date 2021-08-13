@@ -142,11 +142,18 @@ class TestSlice(flow.unittest.TestCase):
 class TestSliceUpdate(flow.unittest.TestCase):
     def test_slice_update(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
-        input = flow.Tensor(x)
-        update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
+        input = flow.Tensor(x, requires_grad=True)
+        update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
         y = flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
+        z = y.sum()
+        z.backward()
         test_case.assertTrue(np.array_equal(y.numpy(), output))
+        np_grad = np.zeros(x.shape)
+        np_grad[0] = 1
+        np_grad[4] = 1
+        test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
+        test_case.assertTrue(np.array_equal(update.grad.numpy(), np.ones(update.shape)))
 
 
 @flow.unittest.skip_unless_1n1d()

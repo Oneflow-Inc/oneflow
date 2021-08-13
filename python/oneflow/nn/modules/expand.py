@@ -13,26 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional
-
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
+from oneflow.nn.modules.utils import _single
 
 
-class Expand(Module):
-    def __init__(self, *sizes) -> None:
-        super().__init__()
-        self.expand_size = list(*sizes)
+def _input_args_is_int(args):
+    return all((isinstance(x, int) for x in args))
 
-    def forward(self, x):
-        if x.dtype == flow.int8:
-            x = flow.cast(x, flow.int32)
-        return flow.F.expand(x, self.expand_size)
+
+def _input_args_is_tuple_int(args):
+    return all((_input_args_is_int(x) for x in args))
+
+
+def _input_args_is_flow_size(args):
+    return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
 
 
 @register_tensor_op("expand")
-def expand_op(x, *sizes):
+def expand_op(input, *sizes):
     """This operator expand the input tensor to a larger size.
 
     Passing -1 as the size for a dimension means not changing the size of that dimension.
@@ -42,7 +41,7 @@ def expand_op(x, *sizes):
     For the new dimensions, the size cannot be set to -1.
 
     Args:
-        x (oneflow.Tensor): The input Tensor.
+        input (oneflow.Tensor): The input Tensor.
         *sizes  (flow.Size or int): The desired expanded size.
 
     Returns:
@@ -65,7 +64,18 @@ def expand_op(x, *sizes):
         flow.Size([1, 3, 2, 2])
 
     """
-    return Expand(sizes)(x)
+    if _input_args_is_int(sizes):
+        expand_size = _single(sizes)
+    elif _input_args_is_tuple_int(sizes):
+        expand_size = _single(*sizes)
+    elif _input_args_is_flow_size(sizes):
+        expand_size = _single(*sizes)[0]
+    else:
+        raise ValueError("input sizes parameter is not illegal!")
+
+    if input.dtype == flow.int8:
+        input = flow.cast(input, flow.int32)
+    return flow.F.expand(input, expand_size)
 
 
 if __name__ == "__main__":

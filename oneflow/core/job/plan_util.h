@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/job.pb.h"
 
@@ -28,6 +29,8 @@ struct PlanUtil {
   static std::function<const TaskProto*(int64_t)> MakeGetterTaskProto4TaskId(const Plan& plan);
   static void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan);
   static void GenMemBlockAndChunk4Plan(Plan* plan);
+  static void GenMemBlockAndChunkWithVariableOpNames4Plan(
+      Plan* plan, const HashSet<std::string>& variable_op_names);
   static void CleanUselessMemBlockAndCheckValid(Plan* plan);
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);

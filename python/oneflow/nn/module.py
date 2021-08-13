@@ -86,7 +86,14 @@ class Module(object):
                 if not isinstance(result, tuple):
                     result = (result,)
                 args = result
+
         res = self.forward(*args)
+
+        for hook in itertools.chain(self._forward_hooks.values()):
+            result = hook(self, args, res)
+            if result is not None:
+                res = result
+
         return res
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:
@@ -461,6 +468,9 @@ class Module(object):
     def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
 
+    def register_forward_hook(self, hook: Callable[..., None]) -> None:
+        self._forward_hooks[len(self._forward_hooks)] = hook
+
     def _apply(self, fn):
         for module in self.children():
             module._apply(fn)
@@ -521,6 +531,21 @@ class Module(object):
         main_str = self._get_name() + "("
         if lines:
             if len(extra_lines) == 1 and (not child_lines):
+                main_str += extra_lines[0]
+            else:
+                main_str += "\n  " + "\n  ".join(lines) + "\n"
+        main_str += ")"
+        return main_str
+
+    def _shallow_repr(self):
+        extra_lines = []
+        extra_repr = self.extra_repr()
+        if extra_repr:
+            extra_lines = extra_repr.split("\n")
+        lines = extra_lines
+        main_str = self._get_name() + "("
+        if lines:
+            if len(extra_lines) == 1:
                 main_str += extra_lines[0]
             else:
                 main_str += "\n  " + "\n  ".join(lines) + "\n"

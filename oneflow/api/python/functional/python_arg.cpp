@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_attr.cfg.h"
@@ -166,6 +167,11 @@ Maybe<std::shared_ptr<one::Generator>> PythonArg::ObjectAs<std::shared_ptr<one::
 template<>
 Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
   return *JUST(detail::cast<std::shared_ptr<one::Generator>>(Borrow()));
+}
+
+template<>
+Maybe<Symbol<Device>> PythonArg::ObjectAs<Symbol<Device>>() const {
+  return **JUST(detail::cast<std::shared_ptr<Symbol<Device>>>(Borrow()));
 }
 
 template<>

@@ -50,8 +50,6 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->stop, stop))
         << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
   }
-  CHECK_LT_OR_RETURN(*start, *stop)
-      << "Slice stop must be greater than start since 0 size shape is not allowed currently.";
   return Maybe<void>::Ok();
 }
 
@@ -150,14 +148,13 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   const DataType dtype = JUST(InferScalarType(object));
   const auto& sizes = JUST(InferArraySizes(object));
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor = JUST(MirroredTensor::MakeTensor(sizes, dtype, *device, /*is_lazy=*/false,
-                                                       /*requires_grad=*/false, /*is_leaf=*/true));
+  const auto& tensor = JUST(functional::Empty(*sizes, dtype, device));
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
   auto handle = std::shared_ptr<PyObject>(PyObjectPtr(object));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->AccessBlobByCallback(
-        tensor,
+        std::dynamic_pointer_cast<MirroredTensor>(tensor),
         [handle](uint64_t of_blob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
@@ -165,7 +162,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
         "mut"));
     return Maybe<void>::Ok();
   }));
-  return std::dynamic_pointer_cast<Tensor>(tensor);
+  return tensor;
 }
 
 Maybe<IndexItem> UnpackIndexItem(PyObject* object) {

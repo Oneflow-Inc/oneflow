@@ -57,7 +57,7 @@ def _test_user_op_graph(test_case, is_cuda):
     test_case.assertTrue(isinstance(session, MultiClientSession))
     session.TryInit()
 
-    with oneflow._oneflow_internal.lazy_mode.gard(True):
+    with oneflow._oneflow_internal.lazy_mode.guard(True):
 
         oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
             "cc_test_user_op_expr_job_with_cuda" + str(is_cuda)
@@ -149,6 +149,7 @@ class TestUserOpGraph(unittest.TestCase):
     def test_user_op_graph_cpu(test_case):
         _test_user_op_graph(test_case, False)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_user_op_graph_gpu(test_case):
         _test_user_op_graph(test_case, True)
 

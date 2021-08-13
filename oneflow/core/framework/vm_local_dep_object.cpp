@@ -88,7 +88,7 @@ ObjectMsgPtr<LocalDepObject> GetRecycledLocalDepObject(const ParallelDesc& paral
   ObjectMsgPtr<LocalDepObject> object = thread_local_free_list->Begin();
   thread_local_free_list->Erase(object.Mutable());
   CHECK_EQ(object->ref_cnt(), 1);  // hold by `object` only
-  return std::move(object);
+  return object;
 }
 
 void MoveLocalDepObjectToZombieList(ObjectMsgPtr<LocalDepObject>&& local_dep_object) {

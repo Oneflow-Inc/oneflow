@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import os
 import unittest
 from collections import OrderedDict
 
@@ -26,7 +26,10 @@ import oneflow.unittest
 dummy_val = np.random.randn(2, 3)
 in_val = np.full((2, 3), -2)
 cpu0_device = flow.device("cpu")
-gpu0_device = flow.device("cuda")
+if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+    gpu0_device = cpu0_device
+else:
+    gpu0_device = flow.device("cuda")
 
 
 class DummyModule(flow.nn.Module):
@@ -79,6 +82,7 @@ def _test_dummy_module_to(test_case):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestModuleTo(flow.unittest.TestCase):
     def test_module_to(test_case):
         arg_dict = OrderedDict()

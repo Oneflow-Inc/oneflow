@@ -151,9 +151,10 @@ types_allowed = {
     "Shape",
     "Generator",
     "TensorIndex",
-    "ParallelDesc",
-    "SbpParallel",
-    "SbpParallelList",
+    "Device",
+    "Placement",
+    "Sbp",
+    "SbpList",
 }
 
 generic_type_aliases = {
@@ -182,9 +183,10 @@ argument_type_aliases = {
     "Shape": "const Shape&",
     "Generator": "const std::shared_ptr<one::Generator>&",
     "TensorIndex": "const TensorIndex&",
-    "ParallelDesc": "const Symbol<ParallelDesc>&",
-    "SbpParallel": "const Symbol<cfg::SbpParallel>&",
-    "SbpParallelList": "const std::vector<Symbol<cfg::SbpParallel>>&",
+    "Device": "const Symbol<Device>&",
+    "Placement": "const Symbol<ParallelDesc>&",
+    "Sbp": "const Symbol<cfg::SbpParallel>&",
+    "SbpList": "const std::vector<Symbol<cfg::SbpParallel>>&",
     **generic_type_aliases,
 }
 
@@ -205,9 +207,10 @@ optional_argument_type_aliases = {
     "Shape": "const Optional<Shape>&",
     "Generator": "const Optional<one::Generator>&",
     "TensorIndex": "const Optional<TensorIndex>&",
-    "ParallelDesc": "const Optional<Symbol<ParallelDesc>>&",
-    "SbpParallel": "const Optional<Symbol<SbpParallel>>&",
-    "SbpParallelList": "const Optional<std::vector<Symbol<cfg::SbpParallel>>>&",
+    "Device": "const Optional<Symbol<Device>>&",
+    "Placement": "const Optional<Symbol<ParallelDesc>>&",
+    "Sbp": "const Optional<Symbol<SbpParallel>>&",
+    "SbpList": "const Optional<std::vector<Symbol<cfg::SbpParallel>>>&",
     **{k: "const Optional<{0}>".format(v) for k, v in generic_type_aliases.items()},
 }
 

@@ -27,6 +27,8 @@ from .generators import Nothing, generator, random_tensor
 
 postulate = [".rand", ".Tensor"]
 
+testing = False
+
 
 def torch_tensor_to_flow(x):
     return flow.tensor(x.cpu().numpy())
@@ -78,9 +80,20 @@ def get_args(callable, *args, **kwargs):
         return x
 
     for arg in args:
-        arg = get_generator_value(arg)
-        pytorch_args.append(get_pytorch_value(arg))
-        oneflow_args.append(get_oneflow_value(arg))
+        # TODO: refine codes
+        if isinstance(arg, tuple):
+            pytorch_tuple_args = []
+            oneflow_tuple_args = []
+            for t in arg:
+                t = get_generator_value(t)
+                pytorch_tuple_args.append(get_pytorch_value(t))
+                oneflow_tuple_args.append(get_oneflow_value(t))
+            pytorch_args.append(tuple(pytorch_tuple_args))
+            oneflow_args.append(tuple(oneflow_tuple_args))
+        else:
+            arg = get_generator_value(arg)
+            pytorch_args.append(get_pytorch_value(arg))
+            oneflow_args.append(get_oneflow_value(arg))
     for (key, value) in kwargs.items():
         value = get_generator_value(value)
         if isinstance(value, Nothing):
@@ -175,9 +188,11 @@ class DualObject:
             state_dict = pytorch.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
             oneflow.load_state_dict(state_dict)
-            dual_modules_to_test.append(self)
+            if testing:
+                dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
-            dual_objects_to_test.append(self)
+            if testing:
+                dual_objects_to_test.append(self)
 
     def __repr__(self):
         return f"PyTorch object:\n{self.pytorch}\n\nOneFlow object:\n{self.oneflow}"
@@ -228,10 +243,13 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     if torch_tensor.grad is not None:
         assert (
             flow_tensor.grad is not None
-        ), "OneFlow tensor doesn't have grad while PyTorch tensor has one"
-        if not np.allclose(
-            torch_tensor.grad.detach().cpu().numpy(), flow_tensor.grad.numpy()
-        ):
+        ), f"OneFlow tensor doesn't have grad while PyTorch tensor has one, PyTorch tensor is\n {torch_tensor}\n, OneFlow tensor is\n{flow_tensor} "
+        torch_grad = torch_tensor.grad.detach().cpu().numpy()
+        flow_grad = flow_tensor.grad.numpy()
+        if not np.allclose(torch_grad, flow_grad, rtol=rtol, atol=atol):
+            print(
+                "Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
+            )
             return False
     return np.allclose(
         torch_tensor.detach().cpu().numpy(),
@@ -254,14 +272,22 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
         @functools.wraps(f)
         def new_f(test_case):
             nonlocal n
+            loop_limit = n * 20
+            loop = 0
             while n > 0:
+                if loop > loop_limit:
+                    raise ValueError("autotest stuck in an endless loop!")
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
                 try:
+                    global testing
+                    testing = True
                     res = f(test_case)
+                    testing = False
                 except PyTorchDoesNotSupportError as e:
                     if verbose:
                         print(e)
+                    loop += 1
                     continue
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
@@ -281,10 +307,11 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                             )
                         )
                 for x in dual_objects_to_test:
-                    test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol))
+                    test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
                 if verbose:
                     print("test passed")
                 n -= 1
+                loop += 1
 
         return new_f
 

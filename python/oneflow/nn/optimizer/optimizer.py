@@ -15,6 +15,7 @@ limitations under the License.
 """
 import collections
 import warnings
+from copy import deepcopy
 from typing import Any, Callable, Dict, Iterator, Union
 
 from oneflow.framework.tensor import Tensor
@@ -29,11 +30,11 @@ class ParamGroup(object):
     ):
         if isinstance(parameters, collections.abc.Iterator):
             self._parameters = list(parameters)
-            self._options = default_options
+            self._options = deepcopy(default_options)
         else:
             assert "params" in parameters
             self._parameters = list(parameters["params"])
-            self._options = default_options
+            self._options = deepcopy(default_options)
             for key in self._options:
                 if key in parameters:
                     self._options[key] = parameters[key]

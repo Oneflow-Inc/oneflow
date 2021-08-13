@@ -54,6 +54,13 @@ class TestExpm1Module(flow.unittest.TestCase):
         y = torch.expm1(input)
         return y
 
+    @autotest(auto_backward=False)
+    def test_expm1_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = torch.expm1(x)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_sign_impl(test_case, shape, device):
@@ -46,6 +47,13 @@ class TestSign(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_sign_impl(test_case, *arg)
+
+    @autotest(auto_backward=False)
+    def test_sign_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 3, 0, 4).to(device)
+        y = torch.sign(x)
+        return y
 
 
 if __name__ == "__main__":
