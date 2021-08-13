@@ -27,6 +27,37 @@ limitations under the License.
 #include "oneflow/core/job/rank_group_scope.h"
 
 namespace oneflow {
+namespace private_details {
+
+class FlatTensorConsistency;
+
+class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
+ public:
+  CheckConsistencyAsyncTransportCtx(
+      const TransportToken& transport_token, Symbol<one::ConsistentTensorMeta> tensor_meta,
+      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint,
+      const TransportToken& tensor_transport_token)
+      : AsyncTransportCtx(transport_token),
+        tensor_meta_(tensor_meta),
+        consumer_nd_sbp_constraint_(consumer_nd_sbp_constraint),
+        tensor_transport_token_(tensor_transport_token) {}
+
+  ~CheckConsistencyAsyncTransportCtx() override;
+
+  Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                           std::function<void()>* Callback) override;
+
+  Maybe<void> PrepareRecvBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
+                                           std::function<void()>* Callback) override;
+
+  Maybe<void> Check() const;
+
+ private:
+  Symbol<one::ConsistentTensorMeta> tensor_meta_;
+  Optional<Symbol<cfg::ParallelDistribution>> consumer_nd_sbp_constraint_;
+  TransportToken tensor_transport_token_;
+  std::shared_ptr<FlatTensorConsistency> flat_tensor_consistency_;
+};
 
 // clang-format off
 FLAT_MSG_BEGIN(FlatTensorConsistency);
@@ -117,6 +148,11 @@ Maybe<void> CheckConsistencyAsyncTransportCtx::Check() const {
   return Maybe<void>::Ok();
 }
 
+int64_t* MutThreadLocalDepth() {
+  static thread_local int64_t depth = 0;
+  return &depth;
+}
+
 Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(const one::Tensor& tensor) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
@@ -131,4 +167,16 @@ Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(const 
   return ctx;
 }
 
+Maybe<void> BuzyWaitAndCheck(std::shared_ptr<CheckConsistencyAsyncTransportCtx>& ctx) {
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+  JUST(ctx->Check());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RunCallback(const std::shared_ptr<one::Tensor>& tensor,
+                        const std::function<Maybe<void>()>& Callback) {
+  return Callback();
+}
+
+}
 }  // namespace oneflow

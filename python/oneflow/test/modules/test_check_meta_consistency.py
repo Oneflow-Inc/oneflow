@@ -18,20 +18,26 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from automated_test_util import *
-
 import oneflow as flow
+import os
+
 import oneflow.unittest
+from test_util import GenArgList
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestParameter(flow.unittest.TestCase):
-    @autotest(n=1)
-    def test_parameter_grad_fn_none(test_case):
-        x = torch.Tensor(2, 3).requires_grad_(True)
-        y = x + x
-        z = torch.nn.Parameter(y)
-        return z.grad_fn
+@flow.unittest.skip_unless_1n2d()
+class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
+    def test_check_meta_consistency(test_case):
+        if os.getenv("RANK") == "0":
+            x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        else:
+            x = flow.zeros((1,), device=flow.device("cuda"), dtype=flow.float)
+        placement = flow.placement("cuda", {0: [0]})
+        sbp = (flow.sbp.broadcast,)
+        y = x.to_consistent(placement=placement, sbp=sbp)
+        y.check_meta_consistency()
+        y = y.to_consistent(sbp=flow.sbp.split(0))
+        y.check_meta_consistency()
 
 
 if __name__ == "__main__":
