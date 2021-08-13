@@ -13,24 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/*
-Copyright 2020 The OneFlow Authors. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 
 #define REGISTER_SCALAR_LOGICAL_OP(op_name)                                           \
-  REGISTER_NO_GRAD_USER_OP(op_name)                                                   \
+  REGISTER_USER_OP(op_name)                                                           \
       .Input("in")                                                                    \
       .Output("out")                                                                  \
       .Attr<bool>("has_int_operand")                                                  \
@@ -51,10 +40,19 @@ namespace oneflow {
         return Maybe<void>::Ok();                                                     \
       })                                                                              \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {             \
-        *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);                        \
+        *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);                       \
         return Maybe<void>::Ok();                                                     \
       });
 
 REGISTER_SCALAR_LOGICAL_OP("scalar_fmod");
+
+REGISTER_USER_OP_GRAD("scalar_fmod")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "in", 0);
+      }
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow

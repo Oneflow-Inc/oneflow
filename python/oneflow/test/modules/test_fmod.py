@@ -52,7 +52,6 @@ def _test_fmod_same_shape_tensor(test_case, shape, device):
     of_out = flow.fmod(input, other)
     np_out = _numpy_fmod(input.numpy(), other.numpy())
     of_out.sum().backward()
-    print("fmod tensor")
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), _numpy_fmod_grad(input.numpy()), 1e-05, 1e-05)
@@ -70,7 +69,6 @@ def _test_fmod_tensor_vs_scalar(test_case, shape, device):
     of_out = flow.fmod(input, other)
     np_out = _numpy_fmod(input.numpy(), other)
     of_out.sum().backward()
-    print("fmod scalar")
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), _numpy_fmod_grad(input.numpy()), 1e-05, 1e-05)

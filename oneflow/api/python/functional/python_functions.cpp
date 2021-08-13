@@ -362,7 +362,6 @@ py::object PyFmod(py::args py_args, py::kwargs py_kwargs) {
       return functional::BroadcastFMod(a, b);
     } else {
       if (PyTensorCheck(input)) {
-        std::cout << __FILE__ << __LINE__ << std::endl;
         CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar.";
         auto a = JUST(PyUnpackTensor(input));
         auto b = *JUST(PyUnpackScalar(other));
@@ -393,7 +392,6 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("clamp", &functional::PyClamp);
   m.def("scatter", &functional::PyScatter);
   m.def("mufmod", &functional::PyFmod);
-
 }
 
 }  // namespace oneflow
