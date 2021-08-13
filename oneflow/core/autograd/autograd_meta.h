@@ -95,9 +95,9 @@ class TensorInfo final {
  private:
   std::shared_ptr<const Shape> shape_;
   Symbol<DType> dtype_;
-  Optional<Symbol<Device>> device_;                                    // for local tensor
-  Optional<Symbol<ParallelDesc>> parallel_desc_;                       // for consistent tensor
-  Optional<Symbol<cfg::ParallelDistribution>> parallel_distribution_;  // for consistent tensor
+  Optional<Symbol<Device>> device_;                     // for local tensor
+  Optional<Symbol<ParallelDesc>> parallel_desc_;        // for consistent tensor
+  Optional<Symbol<cfg::ParallelDistribution>> nd_sbp_;  // for consistent tensor
 };
 
 }  // namespace one
