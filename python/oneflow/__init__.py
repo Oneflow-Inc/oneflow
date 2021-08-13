@@ -322,3 +322,27 @@ from . import (
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
+
+from functools import wraps
+from typing import Any
+
+class no_grad(object):
+    def __init__(self):
+        self.entered = False
+ 
+    def __call__(self, func):
+        @wraps(func)
+        def wrapped_function(*args, **kwargs):
+            with oneflow._oneflow_internal.autograd.no_grad():
+                return func(*args, **kwargs)
+        return wrapped_function
+
+    def __enter__(self):
+        self.entered = True
+        oneflow._oneflow_internal.autograd._set_grad_enabled(False)
+        return self
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any):
+        self.entered = False
+        oneflow._oneflow_internal.autograd._set_grad_enabled(True)
+        return self

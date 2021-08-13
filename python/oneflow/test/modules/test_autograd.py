@@ -74,12 +74,39 @@ def _test_autograd_grad(test_case, shape, device):
     grad = flow.autograd.grad(of_out_sum, of_input, flow.ones_like(of_out_sum) * 3)[0]
     test_case.assertTrue(np.allclose(grad.numpy(), np_input * 6, 0.0001, 0.0001))
 
+# @flow.no_grads()
+def _test_no_grad_with(test_case, shape, device):
+    np_input = np.random.rand(*shape)
+    input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    with flow.no_grad():
+        try:
+            output = input.sum()
+            output.backward()
+            test_case.assertTrue(False)
+        except:
+            test_case.assertTrue(True)
+
+@flow.no_grad()
+def _test_no_grad_annotation(test_case, shape, device):
+    np_input = np.random.rand(*shape)
+    input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    try:
+        output = input.sum()
+        output.backward()
+        test_case.assertTrue(False)
+    except:
+        test_case.assertTrue(True)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAutograd(flow.unittest.TestCase):
     def test_autograd_interface(test_case):
         arg_dict = OrderedDict()
-        arg_dict["case"] = [_test_autograd_backward, _test_autograd_grad]
+        arg_dict["case"] = [_test_autograd_backward, _test_autograd_grad, _test_no_grad_with, _test_no_grad_annotation]
         arg_dict["shape"] = [(2, 3), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
