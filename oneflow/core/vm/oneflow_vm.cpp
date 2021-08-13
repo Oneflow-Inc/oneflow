@@ -64,12 +64,14 @@ OneflowVM::~OneflowVM() {
   for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
   schedule_thread_.join();
   CHECK(scheduler_exited_);
-  CHECK(mut_vm()->Empty());
+  CHECK(!vm_);
 }
 
 void OneflowVM::Loop() {
   auto* vm = mut_vm();
   while (!exiting_) { vm->Schedule(); }
+  while (!mut_vm()->Empty()) { vm->Schedule(); }
+  vm_.Reset();
   scheduler_exited_ = true;
 }
 
