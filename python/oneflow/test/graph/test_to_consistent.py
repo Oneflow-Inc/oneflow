@@ -410,11 +410,38 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         test_case.assertTrue(y2.to_local().numpy().mean() == 1.0)
 
 
-    @unittest.skipIf(True, "")
-    def test_2d_sbp(test_case):
-        """ Should test 2D SBP case after 2D SBP tensor could be constructed
-        """
-        pass
+class MyModule5(flow.nn.Module):
+    def __init__(self, transpose_a=False, transpose_b=False, sbp=[]):
+        super().__init__()
+        self.transpose_a = transpose_a
+        self.transpose_b = transpose_b
+        self.sbp = sbp
+
+    def forward(self, x, y):
+        z = flow.F.matmul(x, y, self.transpose_a, self.transpose_b)
+        assert z.is_consistent
+        assert len(z.sbp) == len(self.sbp)
+        return z.to_consistent(sbp=self.sbp)
+
+
+@unittest.skipIf(True, "")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n4d()
+class ToConsistent2DGraphTestCase(oneflow.unittest.TestCase):
+    def test_matmul(test_case):
+        placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+        x = flow.ones(
+            (4, 6), placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
+        )
+        y = flow.ones(
+            (4, 6), placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.split(1)]
+        )
+        z = flow.F.matmul(x, y, transpose_b=True)
+        print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
+
+        # m = MyModule5(transpose_b=True, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
+        # z = m(x, y)
+        # print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
 
 
 if __name__ == "__main__":
