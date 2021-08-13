@@ -65,9 +65,8 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
   *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
   *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
-  const auto& parallel_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-  *out_shape = *JUST(
-      GetPhysicalShape(shape, parallel_distribution, ctx->parallel_desc(), ctx->parallel_ctx()));
+  const auto& nd_sbp = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+  *out_shape = *JUST(GetPhysicalShape(shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
   return Maybe<void>::Ok();
 }

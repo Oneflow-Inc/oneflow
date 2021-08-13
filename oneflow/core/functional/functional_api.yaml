@@ -546,6 +546,14 @@
   signature: "Tensor SliceGrad(Tensor dy, Tensor like, *, Int64List start, Int64List stop, Int64List step)"
   bind_python: False
 
+- name: "narrow"
+  signature: "Tensor Narrow(Tensor in, *, Int64 dim, Int64 start, Int64 length)"
+  bind_python: True
+
+- name: "narrow_grad"
+  signature: "Tensor NarrowGrad(Tensor dy, Tensor like, *, Int64 dim, Int64 start, Int64 length)"
+  bind_python: False
+
 - name: "slice_update"
   signature:
     "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop,
@@ -962,6 +970,14 @@
   signature: "Tensor ScalarLogicalLessEqual(Tensor in, Scalar scalar)"
   bind_python: False
   
+- name: "split"
+  signature: "TensorTuple Split(Tensor x, *, Int64 split_size, Int64 dim=0)"
+  bind_python: True
+
+- name: "split_with_size"
+  signature: "TensorTuple SplitWithSize(Tensor x, *, Int64List split_sizes, Int64 dim=0)"
+  bind_python: True
+
 - name: "randn"
   signature: "Tensor RandN(*, Shape shape, DataType dtype=None, Device device=None, 
                            Generator generator=None)"
