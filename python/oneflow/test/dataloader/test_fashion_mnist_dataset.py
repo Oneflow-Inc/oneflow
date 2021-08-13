@@ -80,7 +80,7 @@ class FlattenLayer(nn.Module):
         super(FlattenLayer, self).__init__()
 
     def forward(self, x):  # x shape: (batch, *, *, ...)
-        res = x.reshape(shape=[x.shape[0], -1])
+        res = x.reshape(x.shape[0], -1)
         return res
 
 
