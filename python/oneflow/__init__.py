@@ -329,3 +329,5 @@ from . import autograd, distributed, linalg, optim, saved_model, fx
 import oneflow.utils.data
 import oneflow.utils.vision
 import oneflow.utils._pytree
+
+oneflow.fx.wrap('exp')

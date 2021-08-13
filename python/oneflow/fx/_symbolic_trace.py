@@ -164,6 +164,7 @@ def _patch_function(fn: FunctionType, nargs: int) -> FunctionType:
             co.co_cellvars,
         )
     new_code = CodeType(*co_args)  # type: ignore[arg-type]
+
     return FunctionType(
         new_code, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__
     )
@@ -681,6 +682,7 @@ class Tracer(TracerBase):
                     _autowrap_check(
                         patcher, module.__dict__, self._autowrap_function_ids
                     )
+
                 self.create_node(
                     "output",
                     "output",
@@ -862,7 +864,7 @@ def _patch_wrapped_functions(patcher: _Patcher):
         if name not in frame_dict and hasattr(builtins, name):
             orig_fn = getattr(builtins, name)
         else:
-            orig_fn = frame_dict[name]
+             orig_fn = frame_dict[name]
         patcher.patch(frame_dict, name, _create_wrapped_func(orig_fn))
 
     for cls, name in _wrapped_methods_to_patch:
@@ -933,7 +935,7 @@ def wrap(fn_or_name: Union[str, Callable]):
             fn_or_name, str
         ), "fn_or_name must be a global function or string name"
         fn_name = fn_or_name
-
+  
     currentframe = inspect.currentframe()
     assert currentframe is not None
     f = currentframe.f_back
@@ -944,7 +946,6 @@ def wrap(fn_or_name: Union[str, Callable]):
     # consider implementing Callable version of this via _autowrap_function_ids / _autowrap_search
     # semantics would be slightly different, but would add support `from x import wrapped_function`
     _wrapped_fns_to_patch.append((f.f_globals, fn_name))
-    print(f.f_globals, ' ', fn_name)
     return fn_or_name
 
 def symbolic_trace(

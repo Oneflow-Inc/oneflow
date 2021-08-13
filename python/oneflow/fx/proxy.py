@@ -319,7 +319,6 @@ for method in magic_methods:
 
     scope(method)
 
-
 def _define_reflectable(orig_method_name):
     method_name = f"__r{orig_method_name}__"
 
