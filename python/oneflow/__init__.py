@@ -277,6 +277,7 @@ from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min
 from oneflow.nn.modules.reduce_ops import _sum as sum
+from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view

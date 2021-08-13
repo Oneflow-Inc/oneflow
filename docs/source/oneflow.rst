@@ -80,6 +80,7 @@ oneflow
             ones, 
             ones_like, 
             pow, 
+            prod,
             randn,
             repeat, 
             reshape, 
