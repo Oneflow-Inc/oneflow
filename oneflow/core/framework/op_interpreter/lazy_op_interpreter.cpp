@@ -575,8 +575,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   const auto& input_tensor = inputs[0];
   CHECK_OR_RETURN(input_tensor->is_lazy());
   CHECK_OR_RETURN(input_tensor->is_consistent());
-  const auto& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-  CHECK_OR_RETURN(!input_lbn.empty());
 
   bool identity_grad = JUST(ctx.attrs.GetAttr<bool>("identity_grad"));
   const auto& grad_sbp_list = JUST(ctx.attrs.GetAttr<std::vector<std::string>>("grad_sbp"));
@@ -586,9 +584,12 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
   const auto& sbp_sym = JUST(ctx.nd_sbp.value());
 
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_OR_RETURN(!(*outputs)[0]);
+  std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  if (input_lbn.empty()) {
+    JUST(AddFreeEagerTensorToVariableOp(input_tensor));
+    input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+    CHECK_OR_RETURN(!input_lbn.empty());
+  }
 
   std::shared_ptr<Tensor> input_proxy;
   if (!JUST(GetParallelDescOfTensor(input_tensor))
@@ -614,15 +615,18 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
     grad_mode = "restore";
   }
   auto sbp_list_ptr = JUST(GetNdSbpStrList(sbp_sym));
-  std::shared_ptr<UserOpExpr> parallel_cast_op_expr = JUST(
-      OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
-          .Input("in")
-          .Output("out")
-          .Attr<std::vector<std::string>>("parallel_distribution", *sbp_list_ptr)
-          .Attr<std::string>("grad_mode", grad_mode)
-          .Attr<std::vector<std::string>>("grad_parallel_distribution", grad_parallel_distribution)
-          .Build());
+  std::shared_ptr<UserOpExpr> parallel_cast_op_expr =
+      JUST(OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
+               .Input("in")
+               .Output("out")
+               .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
+               .Attr<std::string>("grad_mode", grad_mode)
+               .Attr<std::vector<std::string>>("grad_nd_sbp", grad_parallel_distribution)
+               .Build());
 
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  CHECK_OR_RETURN(!(*outputs)[0]);
   if (input_proxy) {
     (*outputs)[0] =
         JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_cast_op_expr, {input_proxy}));
