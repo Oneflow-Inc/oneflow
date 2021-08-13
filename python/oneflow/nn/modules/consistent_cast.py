@@ -36,7 +36,7 @@ class ToConsistent(Module):
 
 @register_tensor_op("to_consistent")
 def to_consistent_op(
-    input, placement=None, sbp=None, shape=None, identity_grad=False, grad_sbp=None
+    input, placement=None, sbp=None, identity_grad=False, grad_sbp=None
 ):
     """Cast a local tensor to consistent tensor or cast a
     consistent tensor to another consistent tensor with 
@@ -47,9 +47,6 @@ def to_consistent_op(
         input (Tensor): the input tensor.
         placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own placement.
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
-        shape (flow.Size, optional) the logical shape of returned consistent tensor.
-        identity_grad - If True, autograd will pass the output grad directly as input grad.
-        grad_sbp - Manually specify the sbp of input grad.
 
     For example:
 
@@ -71,13 +68,13 @@ def to_consistent_op(
             pass
         elif isinstance(sbp, (tuple, list)):
             if not all(isinstance(sbp_item, flow.sbp.sbp) for sbp_item in sbp):
-                raise ValueError(
+                raise TypeError(
                     "sbp parameter must be type of flow.sbp.sbp or list/tuple of flow.sbp.sbp"
                 )
         elif isinstance(sbp, flow.sbp.sbp):
             sbp = (sbp,)
         else:
-            raise ValueError(f"Invalid parameter sbp with type {type(sbp)}")
+            raise TypeError(f"Invalid parameter sbp with type {type(sbp)}")
 
         return sbp
 
@@ -109,7 +106,7 @@ def to_consistent_op(
     if grad_sbp is None:
         grad_sbp = tuple()
 
-    return flow.F.to_consistent(input, placement, sbp, shape, identity_grad, grad_sbp)
+    return flow.F.to_consistent(input, placement, sbp, identity_grad, grad_sbp)
 
 
 class ToLocal(Module):

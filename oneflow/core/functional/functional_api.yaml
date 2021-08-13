@@ -915,7 +915,7 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, Shape shape=None, Bool identity_grad=False, SbpList grad_sbp)"
+  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, Bool identity_grad=False, SbpList grad_sbp)"
   bind_python: True
 
 - name: "to_local"
