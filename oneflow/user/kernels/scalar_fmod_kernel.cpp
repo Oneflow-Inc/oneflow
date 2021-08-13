@@ -23,7 +23,7 @@ namespace oneflow {
 template<template<typename T> class BIN_OP, typename T>
 struct ScalarFmodFunctor<DeviceType::kCPU, BIN_OP, T> final {
   void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
-    DoScalar<BIN_OP, T>(elem_cnt, scalar, in, out);
+    DoScalarFmod<BIN_OP, T>(elem_cnt, scalar, in, out);
   }
 };
 
