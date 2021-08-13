@@ -42,7 +42,7 @@ class MeshGrid(Module):
         for i in range(size):
             view_shape = [1] * size
             view_shape[i] = -1
-            outputs.append(inputs[i].reshape(view_shape).expand(*shape))
+            outputs.append(flow.reshape(inputs[i], view_shape).expand(*shape))
         return outputs
 
 
