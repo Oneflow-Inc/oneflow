@@ -29,7 +29,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
     .Attr<int64_t>("seed", -1)
     .Attr<int32_t>("shuffle_buffer_size", 1024)
     .Attr<bool>("shuffle_after_epoch", false)
-    .Attr<std::vector<std::string>>("parallel_distribution")
+    .Attr<std::vector<std::string>>("nd_sbp")
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
@@ -62,8 +62,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
         inputs_dist.emplace_back(
             ctx->ParallelDistribution4ArgNameAndIndex(arg_pair.first, arg_pair.second));
       }
-      const auto& dist_conf =
-          ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
+      const auto& dist_conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
       if (dist_conf.size() == 0) {
         FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
           output_dist->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);

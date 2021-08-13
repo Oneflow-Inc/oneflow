@@ -1,4 +1,5 @@
 include(python)
+include(CheckCXXCompilerFlag)
 
 function(oneflow_add_executable)
   if (BUILD_CUDA)
@@ -13,6 +14,56 @@ function(oneflow_add_library)
     cuda_add_library(${ARGV})
   else()
     add_library(${ARGV})
+  endif()
+endfunction()
+
+function(target_try_compile_option target flag)
+  # We cannot check for -Wno-foo as this won't throw a warning so we must check for the -Wfoo option directly
+  # http://stackoverflow.com/questions/38785168/cc1plus-unrecognized-command-line-option-warning-on-any-other-warning
+  string(REGEX REPLACE "^-Wno-" "-W" checkedFlag ${flag})
+  string(REGEX REPLACE "[-=]" "_" varName CXX_FLAG${checkedFlag})
+  # Avoid double checks. A compiler will not magically support a flag it did not before
+  if(NOT DEFINED ${varName}_SUPPORTED)
+    check_cxx_compiler_flag(${checkedFlag} ${varName}_SUPPORTED)
+  endif()
+  if (${varName}_SUPPORTED)
+    target_compile_options(${target} PRIVATE ${flag})
+  endif ()
+endfunction()
+
+function(target_try_compile_options target)
+  foreach(flag ${ARGN})
+    target_try_compile_option(${target} ${flag})
+  endforeach()
+endfunction()
+
+function(target_treat_warnings_as_errors target)
+  if (TREAT_WARNINGS_AS_ERRORS)
+    target_compile_options(${target} PRIVATE -Werror)
+
+    # TODO: remove it while fixing all deprecated call
+    target_try_compile_options(${target} -Wno-error=deprecated-declarations)
+
+    # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
+    target_try_compile_options(${target} 
+      -Wno-error=unused-const-variable 
+      -Wno-error=unused-variable
+      -Wno-error=unused-local-typedefs
+      -Wno-error=unused-private-field
+      -Wno-error=unused-lambda-capture
+    )
+
+    target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
+
+    # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
+    target_try_compile_options(${target} -Wno-error=mismatched-tags)
+
+    # disable for pointer operations of intrusive linked lists
+    target_try_compile_options(${target} -Wno-error=array-bounds)
+
+    # avoid check of memcpy for non-trivial types in opencv headers
+    target_try_compile_options(${target} -Wno-error=class-memaccess)
+
   endif()
 endfunction()
 
@@ -257,31 +308,7 @@ if (BUILD_SHARED_LIBS)
 endif()
 
 target_compile_options(of_ccobj PRIVATE -Werror=return-type)
-
-if (TREAT_WARNINGS_AS_ERRORS)
-  target_compile_options(of_ccobj PRIVATE -Werror)
-
-  # TODO: remove it while fixing all deprecated call
-  target_compile_options(of_ccobj PRIVATE -Wno-error=deprecated-declarations)
-
-  # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
-  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-const-variable)
-  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-variable)
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(of_ccobj PRIVATE -Wno-error=unused-private-field)
-    target_compile_options(of_ccobj PRIVATE -Wno-error=unused-local-typedef)
-    target_compile_options(of_ccobj PRIVATE -Wno-error=unused-lambda-capture)
-    target_compile_options(of_ccobj PRIVATE -Wno-error=instantiation-after-specialization)
-  endif()
-
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
-    target_compile_options(of_ccobj PRIVATE -Wno-error=mismatched-tags)
-
-    # TODO: remove it while `oneflow/user/kernels/upsample_kernel.h:141:9: error: implicit conversion from 'double' to 'int' changes value from -0.75 to 0 [-Wliteral-conversion]` is fixed
-    target_compile_options(of_ccobj PRIVATE -Wno-error=literal-conversion)
-  endif()
-endif()
+target_treat_warnings_as_errors(of_ccobj)
 
 # py ext lib
 add_library(of_pyext_obj ${of_pyext_obj_cc})
@@ -292,6 +319,7 @@ if(BUILD_SHARED_LIBS AND APPLE)
 endif()
 add_dependencies(of_pyext_obj of_ccobj)
 target_compile_options(of_pyext_obj PRIVATE -Werror=return-type)
+target_treat_warnings_as_errors(of_pyext_obj)
 
 if(APPLE)
   set(of_libs -Wl,-force_load ${ONEFLOW_CUDA_LIBS} of_ccobj of_protoobj of_cfgobj)
@@ -309,6 +337,9 @@ set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+
+target_compile_options(oneflow_internal PRIVATE -Werror=return-type)
+target_treat_warnings_as_errors(oneflow_internal)
 
 set(gen_pip_args "")
 if (BUILD_CUDA)
