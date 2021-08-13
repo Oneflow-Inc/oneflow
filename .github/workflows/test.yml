@@ -141,8 +141,8 @@ jobs:
           echo "::set-output name=python::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep .py$ | xargs)"
       - name: echo changed files
         run: |
-          echo ${{needs.changedfiles.outputs.all}}
-          echo ${{needs.changedfiles.outputs.python}}
+          echo ${{needs.changes.outputs.all}}
+          echo ${{needs.changes.outputs.python}}
       - name: Should run single client tests
         id: should_run_single_client_tests
         if: contains(steps.changes.outputs.python, 'python/oneflow/compatible/single_client') && steps.changes.outputs.python != steps.changes.outputs.all
