@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <algorithm>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"

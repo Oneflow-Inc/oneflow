@@ -46,20 +46,6 @@ bool GlobalDeviceIdsContaining(const MachineId2DeviceIdList& bigger,
   return true;
 }
 
-std::shared_ptr<ParallelContext> RawGetParallelContext4CurrentProcessCtx(
-    Symbol<ParallelDesc> parallel_desc) {
-  int64_t machine_id = 0;
-  int64_t device_id = 0;
-  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  int64_t parallel_id_val = -1;
-  bool in_parallel_desc = parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id_val);
-  CHECK(in_parallel_desc);
-  std::shared_ptr<ParallelContext> parallel_ctx = std::make_shared<ParallelContext>();
-  parallel_ctx->set_parallel_id(parallel_id_val);
-  parallel_ctx->set_parallel_num(parallel_desc->parallel_num());
-  return parallel_ctx;
-}
-
 }  // namespace
 
 Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id,
@@ -198,10 +184,34 @@ Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_
   return device_iter->second;
 }
 
-std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(
-    Symbol<ParallelDesc> parallel_desc) {
-  return DECORATE(&RawGetParallelContext4CurrentProcessCtx, ThreadLocal)(parallel_desc);
+namespace private_details {
+
+Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  int64_t parallel_id = -1;
+  if (parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id)) {
+    return Optional<int64_t>(parallel_id);
+  } else {
+    return Optional<int64_t>();
+  }
 }
+
+Maybe<const ParallelContext> CalcParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  int64_t parallel_id_val = -1;
+  CHECK_OR_RETURN(parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id_val));
+  std::shared_ptr<ParallelContext> parallel_ctx = std::make_shared<ParallelContext>();
+  parallel_ctx->set_parallel_id(parallel_id_val);
+  parallel_ctx->set_parallel_num(parallel_desc->parallel_num());
+  return std::shared_ptr<const ParallelContext>(parallel_ctx);
+}
+
+}  // namespace private_details
 
 bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,
                                     int64_t* parallel_id) const {
