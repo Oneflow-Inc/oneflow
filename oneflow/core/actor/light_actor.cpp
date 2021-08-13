@@ -145,9 +145,9 @@ struct ArrayBaseStateContainer {
     size = new_size;
   }
 
-  IndexType Size() const { return size; }
+  inline IndexType Size() const { return size; }
 
-  RegstState<IndexType>& Get(IndexType index) {
+  inline RegstState<IndexType>& Get(IndexType index) {
     CHECK_LT(index, size);
     return arr[index];
   }
@@ -160,9 +160,9 @@ template<typename IndexType>
 struct VectorBaseStateContainer {
   void Resize(IndexType new_size) { vec.resize(new_size); }
 
-  IndexType Size() const { return static_cast<IndexType>(vec.size()); }
+  inline IndexType Size() const { return static_cast<IndexType>(vec.size()); }
 
-  RegstState<IndexType>& Get(IndexType index) { return vec.at(index); }
+  inline RegstState<IndexType>& Get(IndexType index) { return vec.at(index); }
 
   std::vector<RegstState<IndexType>> vec;
 };
@@ -325,7 +325,7 @@ class LightActor : public ActorBase {
 
   void InitActMsg() {
     const bool is_kernel_launch_synchronized =
-        exec_kernel && kernel_info_[0]->kernel->IsKernelLaunchSynchronized();
+        (!exec_kernel) || kernel_info_[0]->kernel->IsKernelLaunchSynchronized();
     const int64_t actor_id = task_proto_->task_id();
     const int64_t global_work_stream_id =
         Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id);
