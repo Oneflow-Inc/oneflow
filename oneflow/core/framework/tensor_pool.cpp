@@ -28,7 +28,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     vm::DTREagerBlobObject* best(nullptr);
     for (auto tensor : candidates_) {
         if (static_cast<bool>(tensor->compute_path()) && !tensor->is_pinned()) {
-            double cur_cost = tensor->cost();
+            double cur_cost = tensor->neighbor_cost();
             if (min_cost < 0 || min_cost > cur_cost) {
                 best = tensor;
                 min_cost = cur_cost;
@@ -36,6 +36,13 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
         }
     }
     return best;
+}
+
+Maybe<void> DTRTensorPool::find_best_tensor_and_evict() {
+    auto* best = JUST(find_best_tensor());
+    CHECK_NOTNULL_OR_RETURN(best);
+    JUST(best->evict());
+    return Maybe<void>::Ok();
 }
 
 Maybe<void> DTRTensorPool::insert(vm::DTREagerBlobObject* blob_object) {

@@ -32,6 +32,7 @@ struct DTRTensorPool {
     Maybe<void> evict(vm::DTREagerBlobObject* blob_object);
 
     Maybe<vm::DTREagerBlobObject*> find_best_tensor();
+    Maybe<void> find_best_tensor_and_evict();
     // do not need Maybe
     const std::chrono::steady_clock::time_point start_time() { return start_time_; }
     double duration();

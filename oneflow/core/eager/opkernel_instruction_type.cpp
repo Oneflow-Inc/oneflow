@@ -165,6 +165,28 @@ Maybe<void> ForEachOutputBnAndBlobObject(vm::Instruction* instruction, const T& 
   return Maybe<void>::Ok();
 }
 
+template<typename DoEachT>
+Maybe<void> ForEachDTROutputTensor(LocalCallOpKernelPhyInstrOperand* operand, const DoEachT& DoEach) {
+  for (const auto& output : *operand->outputs()) {
+      CHECK_OR_RETURN(static_cast<bool>(output.get()));
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(output.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      JUST(DoEach(dtr_blob_object));
+  }
+  return Maybe<void>::Ok();
+}
+
+template<typename DoEachT>
+Maybe<void> ForEachDTRInputTensor(LocalCallOpKernelPhyInstrOperand* operand, const DoEachT& DoEach) {
+  for (const auto& input : *operand->inputs()) {
+      CHECK_OR_RETURN(static_cast<bool>(input.get()));
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      JUST(DoEach(dtr_blob_object));
+  }
+  return Maybe<void>::Ok();
+}
+
 template<typename T>
 Maybe<void> MakeBlobDesc4BnInOp(vm::Instruction* instruction, const T& args,
                                 std::function<BlobDesc*(const std::string&)>* BlobDesc4BnInOp) {
@@ -473,6 +495,12 @@ struct LocalCallOpKernelUtil {
   static inline Maybe<void> UpdateTensorInfo(vm::Instruction* instruction, double compute_time) {
     return Maybe<void>::Ok();
   }
+  static inline Maybe<void> recompute(vm::DTREagerBlobObject* blob_object) {
+    return Maybe<void>::Ok();
+  }
+  // static inline Maybe<void> evict(vm::DTREagerBlobObject* blob_object) {
+  //   return Maybe<void>::Ok();
+  // }
 
  protected:
   static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
@@ -609,16 +637,15 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   static inline Maybe<void> Prepare(vm::Instruction* instruction) {
     std::cout << "DTR tensor prepared." << std::endl;
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
-    JUST(operand->ForEachInputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
-      CHECK_OR_RETURN(static_cast<bool>(blob_object));
-      // Change pointer of EagerBlobObject -> DTREagerBlobObject
-      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object);
-      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+    JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
       // pin inputs
       dtr_blob_object->pin();
       if (!dtr_blob_object->is_in_memory()) {
         // TODO: recursive recompute the inputs
+        JUST(recompute(dtr_blob_object));
       }
+      dtr_blob_object->update_access_time();
+      dtr_blob_object->update_user_paths(instruction);
       return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();
@@ -626,11 +653,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
 
   static inline Maybe<void> InitOutputBlobAttrs(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
-    JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
-      CHECK_OR_RETURN(static_cast<bool>(blob_object));
-      // Change pointer of EagerBlobObject -> DTREagerBlobObject
-      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object);
-      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+    JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
       JUST(dtr_blob_object->InitBlobAttrs(instruction));
       return Maybe<void>::Ok();
     }));
@@ -639,19 +662,12 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
 
   static inline Maybe<void> UpdateTensorInfo(vm::Instruction* instruction, double compute_time=-1.0) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
-    JUST(operand->ForEachInputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
-      CHECK_OR_RETURN(static_cast<bool>(blob_object));
-      // Change pointer of EagerBlobObject -> DTREagerBlobObject
-      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object);
-      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+    JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
       // unpin inputs
       dtr_blob_object->unpin();
       return Maybe<void>::Ok();
     }));
-    JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
-      CHECK_OR_RETURN(static_cast<bool>(blob_object));
-      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object);
-      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+    JUST(ForEachDTROutputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
       dtr_blob_object->set_compute_time(compute_time);
       // TODO: condition - insert current blob into candidates only when blob memory > threshold
       JUST(Global<one::DTRTensorPool>::Get()->insert(dtr_blob_object));
@@ -659,6 +675,39 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     }));
     return Maybe<void>::Ok();
   }
+
+  static inline Maybe<void> recompute(vm::DTREagerBlobObject* object) {
+    // recursive recompute inputs
+    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(object->compute_path()));
+    JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
+      // pin inputs
+      dtr_blob_object->pin();
+      if (!dtr_blob_object->is_in_memory()) {
+        // TODO: recursive recompute the inputs
+        JUST(recompute(dtr_blob_object));
+      }
+      dtr_blob_object->update_access_time();
+      return Maybe<void>::Ok();
+    }));
+
+    // TODO: execute function, update outputs, if execute failure (OOM), evict()
+    while(JUST(object->execute())) {
+      JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict());
+    }
+
+    // unpin inputs
+    JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
+      dtr_blob_object->unpin();
+      return Maybe<void>::Ok();
+    }));
+
+    return Maybe<void>::Ok();
+  }
+
+  // static inline Maybe<void> evict(vm::DTREagerBlobObject* object) {
+  //   object->evict();
+  //   return Maybe<void>::Ok();
+  // }
 };
 
 void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {

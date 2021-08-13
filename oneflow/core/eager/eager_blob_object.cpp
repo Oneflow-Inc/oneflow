@@ -96,7 +96,8 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(vm::Instruction* instruction) {
   pinned_ = 0;
 
   // current time 
-  last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
+  update_access_time();
+  // last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
 
   CHECK_OR_RETURN(static_cast<bool>(instruction));
   compute_path_ = instruction;
@@ -104,8 +105,58 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(vm::Instruction* instruction) {
   return Maybe<void>::Ok();
 }
 
+void DTREagerBlobObject::update_access_time() {
+  last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
+}
+
+void DTREagerBlobObject::update_user_paths(vm::Instruction* instruction) {
+  user_paths_.emplace_back(instruction);
+}
+
 bool DTREagerBlobObject::is_in_memory() {
-  return (tensor_buffer_.get()->blob_dptr() != nullptr);
+  return !evict_flag_;
+  // return (tensor_buffer_.get()->blob_dptr() != nullptr);
+}
+
+double DTREagerBlobObject::parent_cost() {
+  double cost = 0;
+
+  // auto* operand = JUST(vm::LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(compute_path_));
+
+  // while (operand->inputs()->size() > 0) {
+  //   cost += JUST(operand->ForEachDTRInputTensor([&](vm::DTREagerBlobObject* dtr_blob_object) -> double {
+  //     if (!dtr_blob_object->is_in_memory()) {
+  //       return dtr_blob_object->compute_time() + dtr_object_object->parent_cost();
+  //     } else {
+  //       return 0;
+  //     }
+  //   }));
+  // }
+
+  return cost;
+}
+
+double DTREagerBlobObject::child_cost() {
+  double cost = 0;
+
+  // for (auto* instruction : user_paths()) {
+  //   auto* operand = JUST(vm::LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction));
+  //   while (operand->outputs()->size() > 0) {
+  //     cost += JUST(operand->ForEachDTROutputTensor([&](vm::DTREagerBlobObject* dtr_blob_object) -> double {
+  //       if (!dtr_blob_object->is_in_memory()) {
+  //         return dtr_blob_object->compute_time() + dtr_object_object->child_cost();
+  //       } else {
+  //         return 0;
+  //       }
+  //     }));
+  //   }
+  // }
+
+  return cost;
+}
+
+double DTREagerBlobObject::neighbor_cost() {
+  return parent_cost() + child_cost() + compute_time_;
 }
 
 }  // namespace vm
