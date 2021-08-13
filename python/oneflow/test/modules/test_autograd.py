@@ -74,7 +74,7 @@ def _test_autograd_grad(test_case, shape, device):
     grad = flow.autograd.grad(of_out_sum, of_input, flow.ones_like(of_out_sum) * 3)[0]
     test_case.assertTrue(np.allclose(grad.numpy(), np_input * 6, 0.0001, 0.0001))
 
-# @flow.no_grads()
+
 def _test_no_grad_with(test_case, shape, device):
     np_input = np.random.rand(*shape)
     input = flow.Tensor(

@@ -38,7 +38,6 @@ ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
       m.def("_set_grad_enabled", &set_grad_enabled);
 }
 
-
 }  // namespace autograd
 
 }  // namespace oneflow
