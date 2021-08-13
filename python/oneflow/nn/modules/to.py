@@ -46,15 +46,20 @@ def _consistent_tensor_to(input, device):
     if device == input.placement.device_type:
         return input
 
-    # NOTE(zwx): eager consistent interpreter for copy is not ready
-    # return flow.F.copy(input, device_type=device, device_id=0)
+    if input.is_lazy:
+        return flow.F.copy(input, device_type=device, device_id=0)
+    else:
+        # NOTE(zwx): Use the way that input.to_local() -> to(out_device) -> out.to_consistent()
+        # before eager consistent interpreter for F.copy is ready
+        out_placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
+            input.placement, device
+        )
+        sbp = input.sbp
+        device = flow.device(device)
 
-    # NOTE(zwx): eager consistent interpreter for to_consistent is not ready too
-    out_placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
-        input.placement, device
-    )
-    sbp = input.sbp
-    return input.to_consistent(out_placement, sbp)
+        local_input = input.to_local()
+        local_output = _tensor_to(local_input, device, None, False)
+        return local_output.to_consistent(out_placement, sbp)
 
 
 def _safe_get(list, index, default):

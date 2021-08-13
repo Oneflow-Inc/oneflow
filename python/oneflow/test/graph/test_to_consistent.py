@@ -317,9 +317,9 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
     # @unittest.skipIf(True, "")
     def test_consistent_to(test_case):
-        local_x = flow.Tensor(x, device="cpu")
-        placement = flow.placement("cpu", {0: [0, 1]})
-        c_x = local_x.to_consistent(placement, sbp=flow.sbp.split(0))
+        c_x = flow.ones(
+            (4, 3), placement=flow.placement("cpu", {0: [0, 1]}), sbp=flow.sbp.split(0)
+        )
 
         consistent_to = ConsistentToModule("cuda")
         g_consistent_to = MyGraph(consistent_to)
