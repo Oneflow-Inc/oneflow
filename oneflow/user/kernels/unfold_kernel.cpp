@@ -14,12 +14,11 @@ class UnfoldOpKernelState : public OpKernelState {
  public:
   using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
   UnfoldOpKernelState(const ShapeView& input_shape, const std::vector<int32_t>& kernel_size,
-                      const std::vector<int32_t>& padding_before,
-                      const std::vector<int32_t>& padding_after, const std::vector<int32_t>& stride,
+                      const std::vector<int32_t>& padding, const std::vector<int32_t>& stride,
                       const std::vector<int32_t>& dilation)
       : params_(input_shape.At(0), input_shape.At(ParamType::kInputChannelDim),
-                input_shape.ptr() + SDIM, kernel_size.data(), padding_before.data(),
-                padding_after.data(), stride.data(), dilation.data()) {}
+                input_shape.ptr() + SDIM, kernel_size.data(), padding.data(),
+                stride.data(), dilation.data()) {}
   const ParamType& params() const { return params_; }
 
  private:
@@ -29,12 +28,11 @@ class UnfoldOpKernelState : public OpKernelState {
 template<typename INDEX_T, int NDIM, int SDIM>
 std::shared_ptr<OpKernelState> CreateUnfoldOpKernelState(const ShapeView& input_shape,
                                                          const std::vector<int32_t>& kernel_size,
-                                                         const std::vector<int32_t>& padding_before,
-                                                         const std::vector<int32_t>& padding_after,
+                                                         const std::vector<int32_t>& padding,
                                                          const std::vector<int32_t>& stride,
                                                          const std::vector<int32_t>& dilation) {
   return std::make_shared<UnfoldOpKernelState<INDEX_T, NDIM, SDIM>>(
-      input_shape, kernel_size, padding_before, padding_after, stride, dilation);
+      input_shape, kernel_size, padding, stride, dilation);
 }
 
 template<typename INDEX_T, int NDIM, int SDIM>
@@ -65,11 +63,11 @@ class UnfoldKernel final : public OpKernel {
     if (input_desc->is_dynamic()) { return std::shared_ptr<OpKernelState>(nullptr); }
     const auto& data_format = ctx->Attr<std::string>("data_format");
     const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding");
+    const auto& padding = ctx->Attr<std::vector<int32_t>>("padding");
     const auto& stride = ctx->Attr<std::vector<int32_t>>("strides");
     const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     int spatial_ndim = input_desc->shape().NumAxes() - 2;
-    // int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format"));
+    int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format"));
     DataType index_dtype = input_desc->shape().elem_cnt() < std::numeric_limits<int32_t>::max()
                                ? DataType::kInt32
                                : DataType::kInt64;
@@ -78,18 +76,18 @@ class UnfoldKernel final : public OpKernel {
                                            padding, stride, dilation);
   }
 
-//  private:
-  // int GetSpatialDim(const std::string& data_format) const {
-  //   int spatial_dim = 0;
-  //   if (data_format == "channels_first") {
-  //     spatial_dim = 2;
-  //   } else if (data_format == "channels_last") {
-  //     spatial_dim = 1;
-  //   } else {
-  //     UNIMPLEMENTED();
-  //   }
-  //   return spatial_dim;
-  // }
+ private:
+  int GetSpatialDim(const std::string& data_format) const {
+    int spatial_dim = 0;
+    if (data_format == "channels_first") {
+      spatial_dim = 2;
+    } else if (data_format == "channels_last") {
+      spatial_dim = 1;
+    } else {
+      UNIMPLEMENTED();
+    }
+    return spatial_dim;
+  }
 
 #define SWITCH_ENTRY(func_name, itype, ndim, sdim) \
   UnfoldKernelUtil<device_type, T, itype, ndim, sdim>::func_name
@@ -103,7 +101,7 @@ class UnfoldKernel final : public OpKernel {
     const Tensor* input = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* output = ctx->Tensor4ArgNameAndIndex("y", 0);
     int spatial_ndim = input->shape().NumAxes() - 2;
-    int spatial_dim = 2 // channels first
+    int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format")); 
     DataType index_dtype = input->shape().elem_cnt() < std::numeric_limits<int32_t>::max()
                                ? DataType::kInt32
                                : DataType::kInt64;
