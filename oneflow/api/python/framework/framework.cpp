@@ -25,7 +25,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RegisterGlobalForeignCallback", &RegisterGlobalForeignCallback);
   m.def("DestroyGlobalForeignCallback", &DestroyGlobalForeignCallback);
   m.def("RegisterGlobalWatcher", &RegisterGlobalWatcher);
-  m.def("DestroyGlobalWatcher", &DestroyGlobalWatcher);
   m.def("LaunchJob", &LaunchJob, py::call_guard<py::gil_scoped_release>());
 
   m.def("GetSerializedInterUserJobInfo",

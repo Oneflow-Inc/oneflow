@@ -201,24 +201,19 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
   return Maybe<void>::Ok();
 }
 
-Maybe<one::UserOpExpr> FindOrCreatParallelDistributionOpExpr(
+Maybe<one::UserOpExpr> MakeParallelDistributionOpExpr(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
-  thread_local HashMap<std::vector<Symbol<cfg::SbpParallel>>, std::shared_ptr<one::UserOpExpr>>
-      sbp_list2hierarchical_parallel_cast_op_expr;
-  auto iter = sbp_list2hierarchical_parallel_cast_op_expr.find(sbp_parallels);
-  if (iter == sbp_list2hierarchical_parallel_cast_op_expr.end()) {
-    const auto& op_expr =
-        JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
-                 .Input("in")
-                 .Output("out")
-                 .Attr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(sbp_parallels)))
-                 .Attr<std::string>("grad_mode", "restore")
-                 .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
-                 .Build());
-    iter = sbp_list2hierarchical_parallel_cast_op_expr.emplace(sbp_parallels, op_expr).first;
-  }
-  return iter->second;
+  return OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(sbp_parallels)))
+      .Attr<std::string>("grad_mode", "restore")
+      .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
+      .Build();
 }
+
+auto* CachedParallelDistributionOpExpr =
+    DECORATE(&MakeParallelDistributionOpExpr, ThreadLocalCopiable);
 
 Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      Symbol<ParallelDesc> parallel_desc,
@@ -226,7 +221,8 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& nd_sbp_cast_op_expr = JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
+  const auto& nd_sbp_cast_op_expr = JUST(CachedParallelDistributionOpExpr(sbp_parallels));
+
   const auto& ret =
       JUST(OpInterpUtil::Dispatch<one::Tensor>(*nd_sbp_cast_op_expr, {consistent_tensor}));
   return ret;
