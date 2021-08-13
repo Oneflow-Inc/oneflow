@@ -89,7 +89,7 @@ class PReLU(Module):
     def __init__(self, num_parameters: int = 1, init: float = 0.25) -> None:
         super().__init__()
         self.num_parameters = num_parameters
-        self.weight = flow.nn.Parameter(flow.Tensor(num_parameters, 1, 1).fill_(init))
+        self.weight = flow.nn.Parameter(flow.Tensor(num_parameters).fill_(init))
 
     def forward(self, x):
         assert (
@@ -564,12 +564,12 @@ def softmax_op(tensor, dim=None):
 
 
 class LogSoftmax(Module):
-    """Applies the :math:`\\log(\\text{Softmax}(x))` function to an n-dimensional
+    r"""Applies the LogSoftmax function to an n-dimensional
     input Tensor.
     The LogSoftmax formulation can be simplified as:
 
     .. math::
-        \\text{LogSoftmax}(x_{i}) = \\log\\left(\\frac{\\exp(x_i) }{ \\sum_j \\exp(x_j)} \\right)
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right) = x_i - \log({ \sum_j \exp(x_j)})
 
     Args:
         dim (int): A dimension along which LogSoftmax will be computed.
@@ -612,11 +612,10 @@ class LogSoftmax(Module):
         (need_transpose, permute) = _softmax_need_transpose(x, self.dim)
         if need_transpose:
             x = flow.F.transpose(x, perm=permute)
-        x = x.softmax()
-        res = x.log()
+        x = flow.F.logsoftmax(x)
         if need_transpose:
-            res = flow.F.transpose(res, perm=permute)
-        return res
+            x = flow.F.transpose(x, perm=permute)
+        return x
 
     def extra_repr(self):
         return f"dim={self.dim}"

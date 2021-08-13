@@ -90,10 +90,6 @@ oneflow._oneflow_internal.RegisterGlobalForeignCallback(
 )
 del python_callback
 del register_python_callback
-from oneflow.framework import watcher
-
-oneflow._oneflow_internal.RegisterGlobalWatcher(watcher._global_watcher)
-del watcher
 
 
 def _ExitOneFlow():
@@ -142,7 +138,6 @@ import oneflow.nn.modules.sign
 import oneflow.nn.modules.sinh
 import oneflow.nn.modules.tan
 import oneflow.nn.modules.tensor_ops
-import oneflow.tmp
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
@@ -153,17 +148,10 @@ from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
 from oneflow.framework.generator import create_generator as Generator
 from oneflow.framework.generator import default_generator, manual_seed
-from oneflow.framework.model import Model
+
+# NOTE(chengcheng) oneflow.Model is unavailable now.
+# from oneflow.framework.model import Model
 from oneflow.framework.scope_util import api_current_scope as current_scope
-from oneflow.framework.session_util import (
-    api_clear_default_session as clear_default_session,
-)
-from oneflow.framework.session_util import (
-    api_find_or_create_module as find_or_create_module,
-)
-from oneflow.framework.session_util import (
-    api_sync_default_session as sync_default_session,
-)
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import tensor as tensor
 from oneflow.nn.modules.abs import abs_op as abs
@@ -179,8 +167,6 @@ from oneflow.nn.modules.activation import silu_op as silu
 from oneflow.nn.modules.activation import selu_op as selu
 from oneflow.nn.modules.activation import softsign_op as softsign
 from oneflow.nn.modules.activation import mish_op as mish
-
-
 from oneflow.nn.modules.adaptive_pool import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
@@ -220,6 +206,7 @@ from oneflow.nn.modules.logical_and import logical_and_op as logical_and
 from oneflow.nn.modules.logical_or import logical_or_op as logical_or
 from oneflow.nn.modules.logical_xor import logical_xor_op as logical_xor
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
+from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.less import less_op as lt
 from oneflow.nn.modules.less_equal import less_equal_op as le
 from oneflow.nn.modules.log1p import log1p_op as log1p
@@ -259,6 +246,7 @@ from oneflow.nn.modules.math_ops import topk_op as topk
 from oneflow.nn.modules.math_ops import variance_op as var
 from oneflow.nn.modules.matmul import matmul_op as matmul
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.narrow import narrow_op as narrow
 from oneflow.nn.modules.ne import ne_op as ne
 from oneflow.nn.modules.ne import ne_op as not_equal
 from oneflow.nn.modules.negative import negative_op as neg
@@ -279,8 +267,10 @@ from oneflow.nn.modules.sign import sign_op as sign
 from oneflow.nn.modules.sinh import sinh_op as sinh
 from oneflow.nn.modules.slice import slice_op as slice
 from oneflow.nn.modules.slice import slice_update_op as slice_update
+from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.softplus import softplus_op as softplus
 from oneflow.nn.modules.sort import sort_op as sort
+from oneflow.nn.modules.split import split_op as split
 from oneflow.nn.modules.squeeze import squeeze_op as squeeze
 from oneflow.nn.modules.stack import stack
 from oneflow.nn.modules.tan import tan_op as tan
@@ -298,8 +288,8 @@ from oneflow.nn.modules.transpose import transpose_op as transpose
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
+from oneflow.nn.modules.scatter import *
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
-from oneflow.ops.get_variable import api_get_variable as get_variable
 from oneflow.ops.initializer_util import constant_initializer, empty_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
 from oneflow.ops.initializer_util import (
@@ -318,8 +308,12 @@ from oneflow.ops.initializer_util import (
     variance_scaling_initializer,
     zeros_initializer,
 )
-from oneflow.nn.modules.scatter import *
 
-from . import autograd, distributed, linalg, optim, saved_model
+from . import (
+    autograd,
+    distributed,
+    linalg,
+    optim,
+)  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
