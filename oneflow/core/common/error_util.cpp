@@ -25,8 +25,8 @@ std::string StripSpace(std::string str) {
   if (str.size() == 0) { return ""; }
   size_t pos = str.find_first_not_of(" ");
   if (pos != std::string::npos) { str.erase(0, pos); }
-  pos = str.find_last_not_of(" ") + 1;
-  if (pos != std::string::npos) { str.erase(pos); }
+  pos = str.find_last_not_of(" ");
+  if (pos != std::string::npos) { str.erase(pos + 1); }
   return str;
 }
 
@@ -45,14 +45,14 @@ std::string StripBrackets(std::string str) {
 Maybe<std::string> ShortenMsg(std::string str) {
   // 150 characters is the threshold
   const int character_num_threshold = 150;
-  const int num_displayed_char = 50;
+  const int displayed_char_num = 50;
   if (str.size() == 0) { return str; }
   // strip space when JUST(  xx  );
   str = StripSpace(str);
   if (str.size() < character_num_threshold) { return str; }
 
   // left part whose number of characters is just over 50
-  int left_index = num_displayed_char;
+  int left_index = displayed_char_num;
   if (IsLetterNumberOrUnderline(str.at(left_index))) {
     for (; left_index < str.size(); left_index++) {
       if (!IsLetterNumberOrUnderline(str.at(left_index))) { break; }
@@ -64,7 +64,7 @@ Maybe<std::string> ShortenMsg(std::string str) {
   }
 
   // right part whose number of characters is just over 50
-  int right_index = str.size() - num_displayed_char;
+  int right_index = str.size() - displayed_char_num;
   if (IsLetterNumberOrUnderline(str.at(right_index))) {
     for (; right_index >= 0; right_index--) {
       if (!IsLetterNumberOrUnderline(str.at(right_index))) {
