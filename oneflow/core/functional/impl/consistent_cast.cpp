@@ -201,30 +201,16 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
   return Maybe<void>::Ok();
 }
 
-Maybe<one::UserOpExpr> MakeParallelDistributionOpExpr(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
-  return OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(sbp_parallels)))
-      .Attr<std::string>("grad_mode", "restore")
-      .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
-      .Build();
-}
-
-auto* CachedParallelDistributionOpExpr =
-    DECORATE(&MakeParallelDistributionOpExpr, ThreadLocalCopiable);
-
 Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      Symbol<ParallelDesc> parallel_desc,
-                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                                     const std::shared_ptr<OpExpr>& op) {
   const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& nd_sbp_cast_op_expr = JUST(CachedParallelDistributionOpExpr(sbp_parallels));
-
-  const auto& ret =
-      JUST(OpInterpUtil::Dispatch<one::Tensor>(*nd_sbp_cast_op_expr, {consistent_tensor}));
+  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {consistent_tensor},
+      OpExprInterpContext(AttrMap{}, parallel_desc, JUST(GetNdSbp(sbp_parallels)))));
   return ret;
 }
 
@@ -271,22 +257,26 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
 class ToConsistentFunctor {
  public:
   ToConsistentFunctor() {
-    op_ =
+    local_to_consistent_op_ =
         CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+    consistent_to_consistent_op_ = CHECK_JUST(
+        one::ConsistentToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_consistent"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) const {
     if (x->is_consistent()) {
-      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels));
+      return JUST(
+          ConsistentToConsistent(x, parallel_desc, sbp_parallels, consistent_to_consistent_op_));
     } else {
-      return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, op_));
+      return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
     }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> local_to_consistent_op_;
+  std::shared_ptr<OpExpr> consistent_to_consistent_op_;
 };
 
 class ConsistentToLocalFunctor {

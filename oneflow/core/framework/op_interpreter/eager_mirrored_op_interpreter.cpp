@@ -293,6 +293,12 @@ Maybe<Tensor> TryReshapeTensor(const std::shared_ptr<Tensor>& tensor,
 
 }  // namespace
 
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
+                                                const TensorTuple& inputs, TensorTuple* outputs,
+                                                const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
+}
+
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {

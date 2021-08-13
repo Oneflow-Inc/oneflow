@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -57,12 +58,18 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape(), out->shape());
-    CHECK_EQ(in->data_type(), out->data_type());
     int64_t root = ctx->Attr<int64_t>("root");
-    CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                                                in->data_type(), root,
-                                                kernel_state->parallel_desc(), ctx->device_ctx()));
+    if (GlobalProcessCtx::Rank() == root) {
+      CHECK_EQ(in->shape(), out->shape());
+      CHECK_EQ(in->data_type(), out->data_type());
+      CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(
+          in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), root,
+          kernel_state->parallel_desc(), ctx->device_ctx()));
+    } else {
+      CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(
+          nullptr, out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), root,
+          kernel_state->parallel_desc(), ctx->device_ctx()));
+    }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
