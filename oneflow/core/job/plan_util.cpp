@@ -869,6 +869,51 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
   }
 }
 
+void PlanUtil::GenRegisterHint(Plan* plan) {
+  HashSet<int64_t> multi_regst_regst_desc_ids;
+  HashSet<int64_t> dynamic_regst_desc_ids;
+  for (const TaskProto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.register_num() != 1) {
+        multi_regst_regst_desc_ids.emplace(pair.second.regst_desc_id());
+      }
+      if (pair.second.regst_desc_type().has_data_regst_desc()) {
+        for (const auto& lbi7blob_desc :
+             pair.second.regst_desc_type().data_regst_desc().lbi2blob_desc()) {
+          if (lbi7blob_desc.blob_desc().is_dynamic()) {
+            dynamic_regst_desc_ids.emplace(pair.second.regst_desc_id());
+            break;
+          }
+        }
+      }
+    }
+  }
+  for (TaskProto& task : *(plan->mutable_task())) {
+    bool all_register_num_is_one = true;
+    bool all_blob_is_static = true;
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (all_register_num_is_one && pair.second.register_num() != 1) {
+        all_register_num_is_one = false;
+      }
+      if (all_blob_is_static && dynamic_regst_desc_ids.count(pair.second.regst_desc_id()) > 0) {
+        all_blob_is_static = false;
+      }
+    }
+    for (const auto& pair : task.consumed_regst_desc_id()) {
+      for (auto regst_desc_id : pair.second.regst_desc_id()) {
+        if (all_register_num_is_one && multi_regst_regst_desc_ids.count(regst_desc_id) > 0) {
+          all_register_num_is_one = false;
+        }
+        if (all_blob_is_static && dynamic_regst_desc_ids.count(regst_desc_id) > 0) {
+          all_blob_is_static = false;
+        }
+      }
+    }
+    task.set_all_register_num_is_one_hint(all_register_num_is_one);
+    task.set_all_blob_is_static_hint(all_blob_is_static);
+  }
+}
+
 const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t job_id,
                                                      const oneflow::KernelConf& kernel_conf) {
   if (kernel_conf.has_op_attribute()) {
