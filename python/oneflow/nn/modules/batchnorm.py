@@ -103,7 +103,9 @@ class _BatchNorm(_NormBase):
 
     def forward(self, x):
         self._check_input_dim(x)
-        # if x.device == flow.device("cpu"):
+        # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
+        # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
+        # no device, however using `x.is_cuda` is not a good choice.
         if not x.is_cuda:
             reduce_axis = []
             for dim in range(len(x.shape)):
