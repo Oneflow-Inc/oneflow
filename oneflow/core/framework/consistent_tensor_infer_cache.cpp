@@ -57,7 +57,6 @@ void InputConsistentTensorMeta::assign(
 
 size_t ConsistentTensorMetaInferArgs::hash_value() const {
   size_t hash_value = std::hash<AttrMap>()(attrs_);
-  hash_value ^= std::hash<Symbol<ParallelDesc>>()(parallel_desc_);
   const auto& tensor_meta_hash_functor = std::hash<InputConsistentTensorMeta>();
   for (const auto& tensor_meta : input_consistent_tensor_metas_) {
     HashCombine(&hash_value, tensor_meta_hash_functor(tensor_meta));
@@ -126,12 +125,11 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionInferHints(
 }
 
 Maybe<ConsistentTensorMetaInferArgs> ConsistentTensorMetaInferArgs::New(
-    const AttrMap& attrs, const TensorTuple& input_tensors, Symbol<ParallelDesc> parallel_desc) {
+    const AttrMap& attrs, const TensorTuple& input_tensors) {
   std::shared_ptr<ConsistentTensorMetaInferArgs> infer_args(new ConsistentTensorMetaInferArgs());
   infer_args->attrs_ = attrs;
   infer_args->input_consistent_tensor_metas_.resize(input_tensors.size());
   JUST(infer_args->InitInputConsistentTensorMetas(input_tensors));
-  infer_args->parallel_desc_ = parallel_desc;
   return infer_args;
 }
 
@@ -188,7 +186,8 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
 /* static */ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
     const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
   CHECK_GT_OR_RETURN(infer_args.input_consistent_tensor_metas().size(), 0);
-  Symbol<ParallelDesc> parallel_desc = infer_args.parallel_desc();
+  Symbol<ParallelDesc> parallel_desc =
+      infer_args.input_consistent_tensor_metas().at(0).tensor_meta()->parallel_desc();
   JUST(CheckInputParallelDescIdentical(infer_args));
   JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
   std::vector<OpArgMutConsistentTensorMeta> output_mut_metas(user_op_expr.output_size());
