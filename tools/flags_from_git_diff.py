@@ -42,6 +42,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     files = get_changed_files(base=args.base, head=args.head)
     if should_run_single_client_tests(changed=files) or args.need_single_client_tests:
-        print_github_action_output(name="should_run_single_client_tests", value="true")
-    else:
-        print_github_action_output(name="should_run_single_client_tests", value="false")
+        print_github_action_output(name="should_run_single_client_tests", value="1")
