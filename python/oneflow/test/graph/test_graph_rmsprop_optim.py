@@ -99,7 +99,7 @@ def compare_with_numpy_rmsprop(
         g = np.zeros_like(x)
 
         def np_train_one_iter(grad):
-            # ref to: https://github.com/Oneflow-Inc/oneflow/blob/master/python/oneflow/test/modules/test_optim_rmsprop.py#L78-L99
+            # ref to: ../modules/test_optim_rmsprop.py -> train_by_numpy()
 
             # weight decay is equivalent to l2 penalty
             grad = grad + weight_decay * x

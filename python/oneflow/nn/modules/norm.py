@@ -445,6 +445,42 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
     return Matrix_Norm(ord, dim, keepdim)(input)
 
 
+def l2_normalize(input, dim=0, epsilon=1e-12):
+    """Use L2 norm to normalizes along dimension `dim`
+
+    The equation is:
+
+    .. math::
+        out = \\frac{x}{max(\\sqrt{\\Sigma{x^2}}, \\epsilon)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+        dim (int): The axis on which to apply L2 normalization. Defaults to 0.
+        epsilon (float, optional): The epsilon value is used to avoid division by zero. Defaults to 1e-12.
+
+    Returns:
+        oneflow.Tensor: The normalized Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([[1, 2], [3, 4]], dtype=flow.float32)
+        >>> out = flow.nn.functional.l2_normalize(x, 0)
+        >>> out
+        tensor([[0.3162, 0.4472],
+                [0.9487, 0.8944]], dtype=oneflow.float32)
+        >>> out = flow.nn.functional.l2_normalize(x, 1)
+        >>> out
+        tensor([[0.4472, 0.8944],
+                [0.6   , 0.8   ]], dtype=oneflow.float32)
+
+    """
+    y, _ = flow.F.l2_normalize(input, dim, epsilon)
+    return y
+
+
 if __name__ == "__main__":
     import doctest
 

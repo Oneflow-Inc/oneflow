@@ -92,7 +92,7 @@ def compare_with_numpy_sgd(
             np_res_list.append(x)
 
     train_by_numpy()
-    test_case.assertTrue(np.allclose(np_res_list, of_res_list, rtol=0.001, atol=0.001))
+    test_case.assertTrue(np.allclose(np_res_list, of_res_list, rtol=1e-3, atol=1e-3))
 
 
 @flow.unittest.skip_unless_1n1d()
