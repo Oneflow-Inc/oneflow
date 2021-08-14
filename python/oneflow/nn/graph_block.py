@@ -394,6 +394,7 @@ class BlockConfig(object):
     def stage_id(self):
         return self._stage_id
 
+    @stage_id.setter
     def stage_id(self, value: int = None):
         self._stage_id = value
 
@@ -401,5 +402,6 @@ class BlockConfig(object):
     def activation_checkpointing(self):
         return self._activation_checkpointing
 
+    @activation_checkpointing.setter
     def activation_checkpointing(self, value: bool = False):
         self._activation_checkpointing = value
