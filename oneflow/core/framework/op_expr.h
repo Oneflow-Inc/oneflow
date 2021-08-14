@@ -157,32 +157,6 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
 };
 
-class ConsistentToConsistentOpExpr : public OpExpr {
- public:
-  virtual ~ConsistentToConsistentOpExpr() = default;
-
-  static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name,
-                                                 Symbol<cfg::ParallelDistribution> grad_nd_sbp);
-  static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name);
-  const Optional<Symbol<cfg::ParallelDistribution>>& grad_nd_sbp() const { return grad_nd_sbp_; }
-  const std::string& op_name() const { return op_name_; }
-  const std::string& op_type_name() const override;
-  int input_size() const override { return 1; }
-  int output_size() const override { return 1; }
-
-  Maybe<bool> IsGradDisabled() const override { return false; }
-  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
-
- protected:
-  ConsistentToConsistentOpExpr(const std::string& op_name,
-                               Symbol<cfg::ParallelDistribution> grad_nd_sbp);
-  ConsistentToConsistentOpExpr(const std::string& op_name);
-
-  std::string op_name_;
-  Optional<Symbol<cfg::ParallelDistribution>> grad_nd_sbp_;  //  Reserved for configuring grad sbp
-  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
-};
-
 class CastConsistentOpExpr : public OpExpr {
  public:
   virtual ~CastConsistentOpExpr() = default;
@@ -192,6 +166,7 @@ class CastConsistentOpExpr : public OpExpr {
   int output_size() const override { return 1; }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  protected:
   CastConsistentOpExpr(const std::string& op_name);
@@ -205,9 +180,7 @@ class CastToConsistentOpExpr final : public CastConsistentOpExpr {
   ~CastToConsistentOpExpr() = default;
 
   static Maybe<CastToConsistentOpExpr> New(const std::string& op_name);
-
   const std::string& op_type_name() const override;
-  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
   CastToConsistentOpExpr(const std::string& op_name);
@@ -218,12 +191,21 @@ class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
   ~CastFromConsistentOpExpr() = default;
 
   static Maybe<CastFromConsistentOpExpr> New(const std::string& op_name);
-
   const std::string& op_type_name() const override;
-  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
   CastFromConsistentOpExpr(const std::string& op_name);
+};
+
+class ConsistentToConsistentOpExpr final : public CastConsistentOpExpr {
+ public:
+  ~ConsistentToConsistentOpExpr() = default;
+
+  static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name);
+  const std::string& op_type_name() const override;
+
+ private:
+  ConsistentToConsistentOpExpr(const std::string& op_name);
 };
 
 // NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.

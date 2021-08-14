@@ -201,36 +201,24 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
   return Maybe<void>::Ok();
 }
 
-Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
-                                     Symbol<ParallelDesc> parallel_desc,
-                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                                     const std::shared_ptr<OpExpr>& op) {
-  const auto& consistent_tensor = JUST(x->AsConsistentTensor());
-  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
-  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {consistent_tensor},
-      OpExprInterpContext(AttrMap{}, parallel_desc, JUST(GetNdSbp(sbp_parallels)))));
-  return ret;
-}
-
-Maybe<Tensor> LazyConsistentToConsistent(
+Maybe<Tensor> ConsistentToConsistent(
     const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels, bool identity_grad,
     const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels,
     const std::shared_ptr<OpExpr>& op) {
-  CHECK_OR_RETURN(x->is_lazy());
   CHECK_OR_RETURN(x->is_consistent());
+  const auto& consistent_tensor = JUST(x->AsConsistentTensor());
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor);
 
-  Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
-  std::vector<std::string> grad_parallel_distribution = *JUST(GetNdSbpStrList(grad_sbp_parallels));
+  Symbol<cfg::ParallelDistribution> nd_sbp_sym = JUST(GetNdSbp(sbp_parallels));
+  std::vector<std::string> grad_sbp_str_list = *JUST(GetNdSbpStrList(grad_sbp_parallels));
 
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<bool>("identity_grad", identity_grad));
-  JUST(attrs.SetAttr<std::vector<std::string>>("grad_sbp", grad_parallel_distribution));
+  JUST(attrs.SetAttr<std::vector<std::string>>("grad_sbp", grad_sbp_str_list));
 
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
+      *op, {consistent_tensor}, OpExprInterpContext(attrs, parallel_desc, nd_sbp_sym)));
   return output;
 }
 
@@ -291,13 +279,8 @@ class ToConsistentFunctor {
                            bool identity_grad,
                            const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) const {
     if (x->is_consistent()) {
-      if (x->is_lazy()) {
-        return JUST(LazyConsistentToConsistent(x, parallel_desc, sbp_parallels, identity_grad,
-                                               grad_sbp_parallels, consistent_to_consistent_op_));
-      } else {
-        return JUST(
-            ConsistentToConsistent(x, parallel_desc, sbp_parallels, consistent_to_consistent_op_));
-      }
+      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, identity_grad,
+                                         grad_sbp_parallels, consistent_to_consistent_op_));
     } else {
       return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
     }

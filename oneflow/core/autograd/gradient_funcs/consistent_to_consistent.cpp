@@ -19,13 +19,16 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 namespace one {
 
 struct ConsistentToConsistentOpExprInterpState : public OpExprInterpState {
-  Symbol<cfg::ParallelDistribution> nd_sbp;
   Symbol<ParallelDesc> parallel_desc;
+  bool identity_grad;
+  Symbol<cfg::ParallelDistribution> nd_sbp;
 };
 
 class ConsistentToConsistent : public OpExprGradFunction<ConsistentToConsistentOpExprInterpState> {
@@ -42,8 +45,24 @@ class ConsistentToConsistent : public OpExprGradFunction<ConsistentToConsistentO
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    ctx->parallel_desc = JUST(inputs.at(0)->parallel_desc());
-    ctx->nd_sbp = JUST(GetDualNdSbp(JUST(inputs.at(0)->nd_sbp())));
+    ctx->parallel_desc = JUST(inputs[0]->parallel_desc());
+    ctx->identity_grad = JUST(interp_ctx.attrs.GetAttr<bool>("identity_grad"));
+    if (!ctx->identity_grad) {
+      const auto& grad_sbp_str_list =
+          JUST(interp_ctx.attrs.GetAttr<std::vector<std::string>>("grad_sbp"));
+      if (grad_sbp_str_list.size() > 0) {
+        CHECK_EQ_OR_RETURN(grad_sbp_str_list.size(), ctx->parallel_desc->hierarchy()->NumAxes());
+        cfg::ParallelDistribution nd_sbp;
+        for (const auto& sbp_str : grad_sbp_str_list) {
+          CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, nd_sbp.add_sbp_parallel()));
+        }
+        // manual
+        ctx->nd_sbp = SymbolOf(nd_sbp);
+      } else {
+        // restore
+        ctx->nd_sbp = JUST(inputs[0]->nd_sbp());
+      }
+    }
     return Maybe<void>::Ok();
   }
 
@@ -51,8 +70,12 @@ class ConsistentToConsistent : public OpExprGradFunction<ConsistentToConsistentO
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *grad_op_, out_grads, OpExprInterpContext(AttrMap{}, ctx->parallel_desc, ctx->nd_sbp)));
+    if (ctx->identity_grad) {
+      (*in_grads)[0] = out_grads[0];
+    } else {
+      (*in_grads)[0] = JUST(OpInterpUtil::Dispatch<Tensor>(
+          *grad_op_, out_grads, OpExprInterpContext(AttrMap{}, ctx->parallel_desc, ctx->nd_sbp)));
+    }
     return Maybe<void>::Ok();
   }
 
