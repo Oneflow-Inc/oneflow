@@ -365,15 +365,6 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
 
 
-def _SyncOnMasterFn():
-    if not oneflow._oneflow_internal.IsEnvInited():
-        return
-    if oneflow.framework.distribute.is_multi_client():
-        oneflow._oneflow_internal.eager.multi_client.Sync()
-    elif oneflow.framework.distribute.get_rank() == 0:
-        oneflow._oneflow_internal.eager.single_client.Sync()
-
-
 class EnvHolder(object):
     def __init__(self):
         if not HasAllMultiClientEnvVars():
@@ -382,7 +373,6 @@ class EnvHolder(object):
         api_env_init()
 
     def __del__(self):
-        _SyncOnMasterFn()
         oneflow._oneflow_internal.DestroyEnv()
         oneflow._oneflow_internal.SetShuttingDown()
 

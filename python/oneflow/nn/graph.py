@@ -21,6 +21,7 @@ import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
+from oneflow.framework.distribute import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
@@ -66,6 +67,8 @@ class Graph(object):
         return self._job_proto
 
     def debug(self, mode: bool = True) -> None:
+        if get_rank() != 0:
+            return
         self._debug = mode
         for name, block in self._blocks.items():
             assert block.type == BlockType.MODULE
