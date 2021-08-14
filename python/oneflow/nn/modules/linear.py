@@ -112,7 +112,10 @@ class Linear(Module):
     def forward(self, x):
         res = flow.F.matmul(x, self.weight, transpose_a=False, transpose_b=True)
         if self.use_bias:
-            res += self.bias
+            # TODO(zwx): Inplace add is not supported yet with consistent tensor,
+            # use non-inplace version before inplace broadcast add has been implemented.
+            # res += self.bias
+            res = res + self.bias
         return res
 
     def extra_repr(self) -> str:
