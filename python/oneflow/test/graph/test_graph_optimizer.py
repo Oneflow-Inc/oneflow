@@ -56,7 +56,8 @@ class TestGraphOptimizer(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = m
-                self.add_optimizer("opt0", sgd0, cosine_lr)
+                opt0 = {"optim": sgd0, "lr_sch": cosine_lr}
+                self.add_opt_group(opt0)
 
             def build(self, x):
                 out = self.m(x)

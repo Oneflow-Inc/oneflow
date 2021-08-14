@@ -26,7 +26,7 @@ from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph_block import Block, BlockType
-from oneflow.nn.graph_optimizer import OptimizerConfig, VariableConfig
+from oneflow.nn.graph_optimizer import OptGroup, OptimizerConfig, VariableConfig
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
@@ -44,6 +44,7 @@ class Graph(object):
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         self._blocks = OrderedDict()
         self._optimizers_conf = OrderedDict()
+        self._opt_groups = []
         self._variables_conf = OrderedDict()
         self._is_compiled = False
         self._job_proto = None
@@ -71,6 +72,14 @@ class Graph(object):
 
     def build(self, *args):
         raise NotImplementedError()
+
+    def add_opt_group(self, opt_group):
+        assert isinstance(opt_group, dict), "opt group must be a dict"
+        assert "optim" in opt_group, "opt group must has an optimizer"
+        assert isinstance(opt_group["optim"], Optimizer)
+        if "lr_sch" in opt_group:
+            assert isinstance(opt_group["lr_sch"], LrScheduler)
+        self._opt_groups.append(opt_group)
 
     def add_optimizer(
         self,
@@ -107,7 +116,7 @@ class Graph(object):
                 yield bu
 
     def _generate_optimizer_and_variable_configs(self):
-        if len(self._optimizers_conf) > 0:
+        if len(self._optimizers_conf) > 0 or len(self._opt_groups) > 0:
             self.config._train(True)
         for state_block in self._state():
             if state_block.type == BlockType.PARAMETER:
@@ -115,8 +124,13 @@ class Graph(object):
                     state_block.name_prefix + state_block.name
                 )
         for name, opt_config in self._optimizers_conf.items():
-            self.config._generate_optimizer_and_variable_configs(
+            self.config._generate_optimizer_and_variable_configs_deprecated(
                 opt_config, self._variables_conf
+            )
+        for opt in self._opt_groups:
+            opt_group = OptGroup(opt)
+            self.config._generate_optimizer_and_variable_configs(
+                opt_group, self._variables_conf
             )
 
     def _compile(self, *args):
@@ -486,12 +500,21 @@ class GraphConfig(FunctionConfig):
         else:
             self.proto.mutable_predict_conf()
 
-    def _generate_optimizer_and_variable_configs(
+    def _generate_optimizer_and_variable_configs_deprecated(
         self,
         optimizer_config: OptimizerConfig = None,
         variables_conf: OrderedDict = None,
     ):
         optimizer_config.generate_optimizer_and_variable_configs(
+            self.proto.mutable_train_conf(), variables_conf
+        )
+
+    def _generate_optimizer_and_variable_configs(
+        self,
+        opt_group: OptGroup= None,
+        variables_conf: OrderedDict = None,
+    ):
+        opt_group.generate_optimizer_and_variable_configs(
             self.proto.mutable_train_conf(), variables_conf
         )
 

@@ -17,6 +17,25 @@ from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 
 
+class OptGroup(object):
+    def __init__(
+        self,
+        opt_group,
+    ):
+        assert isinstance(opt_group, dict), "opt group must be a dict"
+        assert "optim" in opt_group, "opt group must has an optimizer"
+        self._optimizer = opt_group["optim"]
+        assert isinstance(opt_group["optim"], Optimizer)
+        if "lr_sch" in opt_group:
+            assert isinstance(opt_group["lr_sch"], LrScheduler)
+            self._lr_scheduler = opt_group["lr_sch"]
+
+    def generate_optimizer_and_variable_configs(self, train_conf, vars_conf):
+        if self._optimizer is not None:
+            opt_confs = self._optimizer.generate_conf_for_graph(train_conf, vars_conf)
+        if self._lr_scheduler is not None:
+            self._lr_scheduler.generate_conf_for_graph(opt_confs)
+
 class OptimizerConfig(object):
     def __init__(
         self,
