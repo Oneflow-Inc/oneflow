@@ -462,9 +462,7 @@ class Graph(object):
         return shallow_repr
     
     def __del__(self):
-        print("graph del sync start")
         oneflow._oneflow_internal.eager.multi_client.Sync()
-        print("graph del sync end")
 
 
 class GraphConfig(FunctionConfig):
