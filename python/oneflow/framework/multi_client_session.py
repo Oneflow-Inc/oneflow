@@ -31,7 +31,6 @@ class MultiClientSession(object):
         CLOSED = 3
 
     def __init__(self, sess_id, env_holder):
-        print("e_s_g py session init")
         self._env_holder = env_holder
         self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
         oneflow._oneflow_internal.CreateMultiClientSessionContext()
@@ -54,14 +53,12 @@ class MultiClientSession(object):
         oneflow._oneflow_internal.MultiClientSessionContextAddCGraph(graph)
 
     def _try_close(self):
-        print("e_s_g py session try close")
         if self.status_ != self.Status.CLOSED:
             oneflow._oneflow_internal.TryDestroyMultiClientSessionContext()
             oneflow._oneflow_internal.ClearSessionById(self.id)
         self.status_ = self.Status.CLOSED
 
     def __del__(self):
-        print("e_s_g py session close")
         self._try_close()
 
     @property

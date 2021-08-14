@@ -32,20 +32,20 @@ namespace oneflow {
 
 NNGraph::~NNGraph() {
   if (!is_closed_) {
-    LOG(ERROR) << "graph destructor Try to delete c nn graph name " << name_ << "." << std::endl;
+    VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
     Close();
   }
 }
 
 Maybe<void> NNGraph::Close() {
   if (!is_closed_) {
-    LOG(ERROR) << "Try to delete c nn graph name " << name_ << "." << std::endl;
+    VLOG(2) << "Try to close c nn graph name " << name_ << "." << std::endl;
     vm::MultiClientSync();
     CloseRuntimeBuffers();
     runtime_.reset();
     Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
-    LOG(ERROR) << "Finish delete c nn graph name " << name_ << "." << std::endl;
     is_closed_ = true;
+    VLOG(2) << "Finish close c nn graph name " << name_ << "." << std::endl;
   }
   return Maybe<void>::Ok();
 }

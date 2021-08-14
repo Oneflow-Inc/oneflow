@@ -94,13 +94,6 @@ del register_python_callback
 
 def _ExitOneFlow():
     session_ctx.TryCloseDefaultSession()
-    # sess = session_ctx.GetDefaultSession()
-    # sess._try_close()
-    # import time
-    # print("sleep 10 s to wait release of session")
-    # time.sleep(10)
-    # del time
-    # print("after sleep 10 s to wait release of session")
     env_util.DelEnvHolder()
 
 

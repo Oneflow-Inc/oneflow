@@ -127,15 +127,11 @@ Maybe<void> MultiClientSessionContext::AddCGraph(
 
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
-    // JUST(vm::MultiClientSync());
-    LOG(ERROR) << "Try to delete multi client session context. after sync" << std::endl;
+    VLOG(2) << "Try to delete multi client session context." << std::endl;
     for (auto wk_graph_ptr : graphs_) {
-      LOG(ERROR) << " graph count " << wk_graph_ptr.use_count();
       if (auto sh_graph_ptr = wk_graph_ptr.lock()) {
-        LOG(ERROR) << "grap name " << sh_graph_ptr->job_name() << " not cleand.";
+        VLOG(2) << "grap name " << sh_graph_ptr->job_name() << " not closed, try to close it.";
         JUST(sh_graph_ptr->Close());
-      } else {
-        LOG(ERROR) << "graph expired ";
       }
     }
     {

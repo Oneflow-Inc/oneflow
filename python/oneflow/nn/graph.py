@@ -168,7 +168,6 @@ class Graph(object):
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
         self._session.AddCGraph(self._c_nn_graph)
-        print("e_s_g try to create graph ", self._name)
 
         with graph_build_util.graph_build_context(self.config.proto, self._session):
             # Deal with inputs
@@ -461,9 +460,6 @@ class Graph(object):
     def _shallow_repr(self):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
-
-    def __del__(self):
-        print("e_s_g try to del graph ", self._name)
 
 
 class GraphConfig(FunctionConfig):

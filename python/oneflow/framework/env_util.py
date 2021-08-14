@@ -383,15 +383,11 @@ class EnvHolder(object):
             SetDefaultMultiClientEnvVars()
         oneflow._oneflow_internal.SetIsMultiClient(True)
         api_env_init()
-        print("e_s_g evn init")
 
     def __del__(self):
-        # print("evn del sync")
-        # _SyncOnMasterFn()
-        # print("evn del sync finish")
+        _SyncOnMasterFn()
         oneflow._oneflow_internal.DestroyEnv()
         oneflow._oneflow_internal.SetShuttingDown()
-        print("e_s_g env close")
 
 
 def GetEnvHolder():
