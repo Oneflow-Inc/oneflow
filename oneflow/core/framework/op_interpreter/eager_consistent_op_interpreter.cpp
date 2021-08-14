@@ -65,7 +65,7 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
 }
 
 Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input,
-                               Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                               Symbol<cfg::NdSbp> out_nd_sbp,
                                bool current_rank_local_is_valid) {
   if (!current_rank_local_is_valid) { return input; }
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();

@@ -51,7 +51,7 @@ void SortSbpSignatureListByCopyCost(
 bool IsValidSbpParallelString(const std::string& sbp_str);
 bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sbp_parallel);
 std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel);
-std::string ParallelDistributionToString(const Symbol<cfg::ParallelDistribution> nd_sbp);
+std::string NdSbpToString(const Symbol<cfg::NdSbp> nd_sbp);
 
 void SbpSignatureToNdSbpSignature(
     const cfg::SbpSignature& sbp_signature, cfg::NdSbpSignature* nd_sbp_signature);
