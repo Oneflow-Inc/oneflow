@@ -374,7 +374,6 @@ def _SyncOnMasterFn():
         oneflow._oneflow_internal.eager.single_client.Sync()
 
 
-
 class EnvHolder(object):
     def __init__(self):
         if not HasAllMultiClientEnvVars():
