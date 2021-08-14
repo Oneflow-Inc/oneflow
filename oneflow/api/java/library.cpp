@@ -69,10 +69,13 @@ jboolean JNICALL Java_org_oneflow_OneFlow_isEnvInited(JNIEnv* env, jobject obj) 
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_initEnv(JNIEnv* env, jobject obj, jstring env_proto_jstr) {
-  std::string env_proto_str = ConvertToString(env, env_proto_jstr);
+void JNICALL Java_org_oneflow_OneFlow_initEnv(JNIEnv* env, jobject obj, jint ctrl_port) {
+  return InitEnv(ctrl_port);
+}
 
-  return oneflow::InitEnv(env_proto_str, false).GetOrThrow();
+JNIEXPORT
+jlong JNICALL Java_org_oneflow_OneFlow_currentMachineId(JNIEnv* env, jobject obj) {
+  return CurrentMachineId();
 }
 
 JNIEXPORT
@@ -86,9 +89,9 @@ jboolean JNICALL Java_org_oneflow_OneFlow_isSessionInited(JNIEnv* env, jobject o
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_initSession(JNIEnv* env, jobject obj, jstring config_proto) {
-  std::string config_proto_str = ConvertToString(env, config_proto);
-  return InitSession(config_proto_str);
+void JNICALL Java_org_oneflow_OneFlow_initSession(JNIEnv* env, jobject obj, jstring device_tag) {
+  std::string device_tag_ = ConvertToString(env, device_tag);
+  return InitSession(device_tag_);
 }
 
 JNIEXPORT

@@ -16,10 +16,11 @@ JNIEXPORT jint          JNICALL Java_org_oneflow_OneFlow_getNodeSize(JNIEnv* env
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_setIsMultiClient(JNIEnv* env, jobject obj, jboolean is_multi_client);
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_initDefaultSession(JNIEnv* env, jobject obj);
 JNIEXPORT jboolean      JNICALL Java_org_oneflow_OneFlow_isEnvInited(JNIEnv* env, jobject obj);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_initEnv(JNIEnv* env, jobject obj, jstring jstr);
+JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_initEnv(JNIEnv* env, jobject obj, jint ctrl_port);
+JNIEXPORT jlong         JNICALL Java_org_oneflow_OneFlow_currentMachineId(JNIEnv* env, jobject obj);
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_initScopeStack(JNIEnv* env, jobject obj);
 JNIEXPORT jboolean      JNICALL Java_org_oneflow_OneFlow_isSessionInited(JNIEnv* env, jobject obj);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_initSession(JNIEnv* env, jobject obj, jstring config_proto);
+JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_initSession(JNIEnv* env, jobject obj, jstring device_tag);
 
 // compile
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring jstr);
