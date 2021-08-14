@@ -46,12 +46,11 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetNdSbpInferFn(
-        [](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
-          cfg::SbpParallel default_sbp;
-          default_sbp.mutable_split_parallel()->set_axis(0);
-          return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
-        })
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      cfg::SbpParallel default_sbp;
+      default_sbp.mutable_split_parallel()->set_axis(0);
+      return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
+    })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       if (!conf.has_input("iteration", 0)) { return Maybe<void>::Ok(); }

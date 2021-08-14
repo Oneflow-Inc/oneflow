@@ -226,8 +226,8 @@ class UserOpInferContext final : public user_op::InferContext {
     return it->second;
   }
 
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const override {
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
     const auto& bn2nd_sbp = CHECK_JUST(op_->nd_sbp_signature())->bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
@@ -412,15 +412,13 @@ class UserOpInferOutputBlobTimeShapeFnContext : public user_op::InferOutputBlobT
   Shape* output_blob_time_shape_;
 };
 
-class UserOpInferNdSbpFnContext
-    : public user_op::InferNdSbpFnContext {
+class UserOpInferNdSbpFnContext : public user_op::InferNdSbpFnContext {
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
   UserOpInferNdSbpFnContext(
       const UserOp* op, cfg::NdSbpSignature* nd_sbp_signature,
       const cfg::NdSbpSignature& nd_sbp_constraints,
-      std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
-          NdSbpInferHint4Ibn)
+      std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn)
       : op_(op),
         nd_sbp_signature_(nd_sbp_signature),
         nd_sbp_constraints_(nd_sbp_constraints),
@@ -447,17 +445,14 @@ class UserOpInferNdSbpFnContext
     return it->second;
   }
 
-  const cfg::NdSbpSignature& nd_sbp_constraints() const override {
-    return nd_sbp_constraints_;
-  }
+  const cfg::NdSbpSignature& nd_sbp_constraints() const override { return nd_sbp_constraints_; }
 
-  cfg::NdSbp* NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                                                  int32_t index) override {
+  cfg::NdSbp* NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return &(*nd_sbp_signature_->mutable_bn_in_op2nd_sbp())[GenRepeatedBn(arg_name, index)];
   }
 
-  const cfg::NdSbp& NdSbpHint4InputArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const override {
+  const cfg::NdSbp& NdSbpHint4InputArgNameAndIndex(const std::string& arg_name,
+                                                   int32_t index) const override {
     auto hint = CHECK_JUST(nd_sbp_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, index)));
     return hint->nd_sbp();
   }
@@ -480,8 +475,7 @@ class UserOpInferNdSbpFnContext
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
   cfg::NdSbpSignature* nd_sbp_signature_;
   cfg::NdSbpSignature nd_sbp_constraints_;
-  std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
-      nd_sbp_infer_hint4ibn_fn_;
+  std::function<Maybe<const NdSbpInferHint*>(const std::string&)> nd_sbp_infer_hint4ibn_fn_;
 };
 
 Maybe<void> UserOp::InitFromOpConf() {
@@ -752,20 +746,17 @@ bool IgnoreInferNdSbpFnWhenFlatHierarchy(const std::string& op_type_name) {
 }  // namespace
 
 Maybe<void> UserOp::InferNdSbpSignature(
-    cfg::NdSbpSignature* nd_sbp_signature,
-    const cfg::NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
-    std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
-        NdSbpInferHint4Ibn) const {
+    cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
+    const ParallelDesc& parallel_desc,
+    std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
   if (val_->nd_sbp_infer_fn
       && (parallel_desc.hierarchy()->NumAxes() > 1
-          || !IgnoreInferNdSbpFnWhenFlatHierarchy(
-              this->user_op_conf().op_type_name()))) {
-    UserOpInferNdSbpFnContext ctx(this, nd_sbp_signature, nd_sbp_constraints,
-                                                 NdSbpInferHint4Ibn);
+          || !IgnoreInferNdSbpFnWhenFlatHierarchy(this->user_op_conf().op_type_name()))) {
+    UserOpInferNdSbpFnContext ctx(this, nd_sbp_signature, nd_sbp_constraints, NdSbpInferHint4Ibn);
     JUST(val_->nd_sbp_infer_fn(&ctx));
   } else {
-    JUST(Operator::InferNdSbpSignature(
-        nd_sbp_signature, nd_sbp_constraints, parallel_desc, NdSbpInferHint4Ibn));
+    JUST(Operator::InferNdSbpSignature(nd_sbp_signature, nd_sbp_constraints, parallel_desc,
+                                       NdSbpInferHint4Ibn));
   }
   std::string tick_bn = GenRepeatedBn(user_op::kUserSourceOpTickInputArgName, 0);
   if (std::find(input_bns().begin(), input_bns().end(), tick_bn) != input_bns().end()) {

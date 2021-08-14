@@ -32,8 +32,8 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
                                                 const Shape& logical_shape,
                                                 const std::vector<int64_t>& parallel_rank);
 TensorSliceView GetTensorSliceView4ParallelId(const Shape& parallel_hierarchy,
-                                              const cfg::NdSbp& nd_sbp,
-                                              const Shape& logical_shape, int64_t parallel_id);
+                                              const cfg::NdSbp& nd_sbp, const Shape& logical_shape,
+                                              int64_t parallel_id);
 TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc);
 
 }  // namespace oneflow

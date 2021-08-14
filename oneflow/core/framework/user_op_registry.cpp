@@ -193,8 +193,7 @@ OpRegistry& OpRegistry::SetOutputBlobTimeShapeInferFn(
   return *this;
 }
 
-OpRegistry& OpRegistry::SetNdSbpInferFn(
-    NdSbpInferFn nd_sbp_infer_fn) {
+OpRegistry& OpRegistry::SetNdSbpInferFn(NdSbpInferFn nd_sbp_infer_fn) {
   result_.nd_sbp_infer_fn = std::move(nd_sbp_infer_fn);
   return *this;
 }

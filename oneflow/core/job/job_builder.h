@@ -77,10 +77,9 @@ class JobBuilder final {
   const cfg::SbpSignature SbpSignature4OpName(const std::string& op_name) const;
   void AddSbpSignature4OpName(const std::string& op_name, const cfg::SbpSignature& sbp_signature);
 
-  const NdSbpSignature& NdSbpSignature4OpName(
-      const std::string& op_name) const;
-  void AddNdSbpSignature4OpName(
-      const std::string& op_name, const cfg::NdSbpSignature& nd_sbp_signature);
+  const NdSbpSignature& NdSbpSignature4OpName(const std::string& op_name) const;
+  void AddNdSbpSignature4OpName(const std::string& op_name,
+                                const cfg::NdSbpSignature& nd_sbp_signature);
 
  private:
   void AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,

@@ -30,8 +30,7 @@ class NcclCollectiveAllGatherBoxingInterpreter final : public EagerBoxingInterpr
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                   Symbol<cfg::NdSbp> in_nd_sbp,
-                                   Symbol<cfg::NdSbp> out_nd_sbp,
+                                   Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                    Symbol<ParallelDesc> in_parallel_desc,
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
 };
@@ -44,8 +43,7 @@ class NcclCollectiveAllReduceBoxingInterpreter final : public EagerBoxingInterpr
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                   Symbol<cfg::NdSbp> in_nd_sbp,
-                                   Symbol<cfg::NdSbp> out_nd_sbp,
+                                   Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                    Symbol<ParallelDesc> in_parallel_desc,
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
 };
@@ -58,8 +56,7 @@ class NcclCollectiveReduceScatterBoxingInterpreter final : public EagerBoxingInt
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                   Symbol<cfg::NdSbp> in_nd_sbp,
-                                   Symbol<cfg::NdSbp> out_nd_sbp,
+                                   Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                    Symbol<ParallelDesc> in_parallel_desc,
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
 

@@ -191,16 +191,16 @@ std::string NdSbpToString(const Symbol<cfg::NdSbp> nd_sbp) {
   return iter->second;
 }
 
-void SbpSignatureToNdSbpSignature(
-    const cfg::SbpSignature& sbp_signature, cfg::NdSbpSignature* nd_sbp_signature) {
+void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
+                                  cfg::NdSbpSignature* nd_sbp_signature) {
   for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
     *((*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[pair.first].add_sbp_parallel()) = pair.second;
   }
 }
 
 template<typename NdSbpSignatureT>
-void NdSbpSignatureToSbpSignature(
-    const NdSbpSignatureT& nd_sbp_signature, cfg::SbpSignature* sbp_signature) {
+void NdSbpSignatureToSbpSignature(const NdSbpSignatureT& nd_sbp_signature,
+                                  cfg::SbpSignature* sbp_signature) {
   for (const auto& pair : nd_sbp_signature.bn_in_op2nd_sbp()) {
     CHECK_EQ(pair.second.sbp_parallel_size(), 1);
     (*sbp_signature->mutable_bn_in_op2sbp_parallel())[pair.first] =
@@ -208,14 +208,14 @@ void NdSbpSignatureToSbpSignature(
   }
 }
 
-template void NdSbpSignatureToSbpSignature(
-    const NdSbpSignature& nd_sbp_signature, cfg::SbpSignature* sbp_signature);
+template void NdSbpSignatureToSbpSignature(const NdSbpSignature& nd_sbp_signature,
+                                           cfg::SbpSignature* sbp_signature);
 
-template void NdSbpSignatureToSbpSignature(
-    const cfg::NdSbpSignature& nd_sbp_signature, cfg::SbpSignature* sbp_signature);
+template void NdSbpSignatureToSbpSignature(const cfg::NdSbpSignature& nd_sbp_signature,
+                                           cfg::SbpSignature* sbp_signature);
 
-void CheckSbpSignatureAndNdSbpEquals(
-    const cfg::SbpSignature& sbp_sig, const cfg::NdSbpSignature& nd_sbp_sig) {
+void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
+                                     const cfg::NdSbpSignature& nd_sbp_sig) {
   CHECK_EQ(sbp_sig.bn_in_op2sbp_parallel_size(), nd_sbp_sig.bn_in_op2nd_sbp_size());
   for (const auto& pair : nd_sbp_sig.bn_in_op2nd_sbp()) {
     const auto& bn_in_op2sbp_parallel = sbp_sig.bn_in_op2sbp_parallel();

@@ -22,8 +22,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> FindOrCreateNdSbp(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
+Maybe<Symbol<cfg::NdSbp>> FindOrCreateNdSbp(const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
   static thread_local auto* sbp_list2nd_sbp =
       new HashMap<std::vector<Symbol<cfg::SbpParallel>>, Symbol<cfg::NdSbp>>();
   auto iter = sbp_list2nd_sbp->find(sbp_list);
@@ -69,8 +68,7 @@ Maybe<void> GetDualSbpParallel(const cfg::SbpParallel& sbp_parallel,
 }  // namespace
 
 Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
-  static thread_local HashMap<Symbol<cfg::NdSbp>, Symbol<cfg::NdSbp>>
-      map;
+  static thread_local HashMap<Symbol<cfg::NdSbp>, Symbol<cfg::NdSbp>> map;
   auto iter = map.find(nd_sbp);
   if (iter == map.end()) {
     cfg::NdSbp dual_nd_sbp;
@@ -83,8 +81,7 @@ Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
   return iter->second;
 }
 
-Maybe<Symbol<cfg::NdSbp>> GetNdSbp(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
+Maybe<Symbol<cfg::NdSbp>> GetNdSbp(const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
   return FindOrCreateNdSbp(sbp_list);
 }
 

@@ -249,8 +249,8 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
     return nd_sbp.sbp_parallel(0);
   }
 
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const override {
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
     return *CHECK_NOTNULL(base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))
                 ->nd_sbp();
   }

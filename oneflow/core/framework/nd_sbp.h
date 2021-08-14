@@ -25,8 +25,7 @@ namespace oneflow {
 
 Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> sbp_list);
 
-Maybe<Symbol<cfg::NdSbp>> GetNdSbp(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
+Maybe<Symbol<cfg::NdSbp>> GetNdSbp(const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
 
 Maybe<std::vector<std::string>> GetNdSbpStrList(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);

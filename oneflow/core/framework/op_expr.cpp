@@ -294,8 +294,7 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
     UNIMPLEMENTED();
     return *(const cfg::SbpParallel*)nullptr;
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&,
-                                                                        int32_t) const override {
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const override {
     UNIMPLEMENTED();
     return *(const cfg::NdSbp*)nullptr;
   }

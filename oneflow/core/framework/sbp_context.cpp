@@ -121,16 +121,14 @@ Maybe<void> InferNdSbp4SrcOp(user_op::InferNdSbpFnContext* ctx,
 
   // src op may have tick inputs whose sbp should be broadcast
   for (const auto& input_arg : ctx->inputs()) {
-    cfg::NdSbp* input_nd_sbp =
-        ctx->NdSbp4ArgNameAndIndex(input_arg.first, input_arg.second);
+    cfg::NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex(input_arg.first, input_arg.second);
     FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
       input_nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
     }
   }
 
   for (const auto& output_arg : ctx->outputs()) {
-    cfg::NdSbp* output_nd_sbp =
-        ctx->NdSbp4ArgNameAndIndex(output_arg.first, output_arg.second);
+    cfg::NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex(output_arg.first, output_arg.second);
     size_t nd_sbp_size = sbp_str_list.size();
     if (nd_sbp_size == 0) {
       nd_sbp_size = hierarchy.NumAxes();

@@ -90,8 +90,8 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
 }
 
 TensorSliceView GetTensorSliceView4ParallelId(const Shape& parallel_hierarchy,
-                                              const cfg::NdSbp& nd_sbp,
-                                              const Shape& logical_shape, int64_t parallel_id) {
+                                              const cfg::NdSbp& nd_sbp, const Shape& logical_shape,
+                                              int64_t parallel_id) {
   NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
       parallel_hierarchy.dim_vec().data(), parallel_hierarchy.NumAxes());
   std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);

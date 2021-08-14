@@ -503,8 +503,7 @@ void CalcOutLbi2OutDiffLbi(const OpGraph& op_graph,
 
 void ForEachAggregatedParamGroup(
     const OpGraph& op_graph, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-    const std::function<void(const ParallelDesc& parallel_desc,
-                             const cfg::NdSbp& nd_sbp,
+    const std::function<void(const ParallelDesc& parallel_desc, const cfg::NdSbp& nd_sbp,
                              const std::vector<LogicalBlobId>& libs)>& Handler) {
   HashMap<LogicalBlobId, const ParallelDesc*> lbi2parallel_desc;
   HashMap<std::pair<ParallelDesc, cfg::NdSbp>, std::vector<LogicalBlobId>> group;
@@ -1043,8 +1042,7 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     if (model_op_node->parallel_desc().parallel_num() <= 1) { continue; }
     const int64_t scope_symbol_id = model_op_node->op().op_conf().scope_symbol_id();
     std::vector<std::string> nd_sbp;
-    for (const auto& sbp_parallel :
-         model_op_node->NdSbp4BnInOp("out").sbp_parallel()) {
+    for (const auto& sbp_parallel : model_op_node->NdSbp4BnInOp("out").sbp_parallel()) {
       nd_sbp.push_back(SbpParallelToString(sbp_parallel));
     }
     auto parallel_cast_op =

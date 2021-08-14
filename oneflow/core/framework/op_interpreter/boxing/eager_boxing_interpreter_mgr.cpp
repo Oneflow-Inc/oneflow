@@ -79,8 +79,8 @@ Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
   const auto& key = std::make_pair(in_nd_sbp->sbp_parallel(0), out_nd_sbp->sbp_parallel(0));
   CHECK_OR_RETURN(sbp_pair2eager_boxing_interpreter.find(key)
                   != sbp_pair2eager_boxing_interpreter.end())
-      << "Eager boxing type \'" << NdSbpToString(in_nd_sbp) << " -> "
-      << NdSbpToString(out_nd_sbp) << "\'"
+      << "Eager boxing type \'" << NdSbpToString(in_nd_sbp) << " -> " << NdSbpToString(out_nd_sbp)
+      << "\'"
       << " not support yet\n"
       << GetSupportedBoxingTypeInfo();
 
@@ -107,20 +107,18 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
       } else if (in_parallel_desc->device_type() == DeviceType::kGPU) {
         return GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp);
       } else {
-        UNIMPLEMENTED_THEN_RETURN()
-            << "Eager boxing type \'" << NdSbpToString(in_nd_sbp) << " -> "
-            << NdSbpToString(out_nd_sbp) << "\'"
-            << " not support yet\n"
-            << GetSupportedBoxingTypeInfo();
+        UNIMPLEMENTED_THEN_RETURN() << "Eager boxing type \'" << NdSbpToString(in_nd_sbp) << " -> "
+                                    << NdSbpToString(out_nd_sbp) << "\'"
+                                    << " not support yet\n"
+                                    << GetSupportedBoxingTypeInfo();
       }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Eager boxing with different placement not support yet\n"
                                   << GetSupportedBoxingTypeInfo();
     }
   } else {
-    UNIMPLEMENTED_THEN_RETURN() << "N-dim eager boxing type \'"
-                                << NdSbpToString(in_nd_sbp) << " -> "
-                                << NdSbpToString(out_nd_sbp) << "\'"
+    UNIMPLEMENTED_THEN_RETURN() << "N-dim eager boxing type \'" << NdSbpToString(in_nd_sbp)
+                                << " -> " << NdSbpToString(out_nd_sbp) << "\'"
                                 << " not support yet\n"
                                 << GetSupportedBoxingTypeInfo();
   }

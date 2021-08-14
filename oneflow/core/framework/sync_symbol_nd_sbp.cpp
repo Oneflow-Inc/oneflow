@@ -94,9 +94,8 @@ FLAT_MSG_END(FlatNdSbp);
 
 class FlatNdSbpAsyncTransportCtx : public AsyncTransportCtx {
  public:
-  FlatNdSbpAsyncTransportCtx(const TransportToken& transport_token,
-                                            uint64_t symbol_id,
-                                            Symbol<cfg::NdSbp> nd_sbp)
+  FlatNdSbpAsyncTransportCtx(const TransportToken& transport_token, uint64_t symbol_id,
+                             Symbol<cfg::NdSbp> nd_sbp)
       : AsyncTransportCtx(transport_token), symbol_id_(symbol_id), nd_sbp_(nd_sbp) {}
 
   ~FlatNdSbpAsyncTransportCtx() override {}
@@ -137,11 +136,10 @@ class FlatNdSbpAsyncTransportCtx : public AsyncTransportCtx {
 
 namespace {}
 
-Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id,
-                                           Symbol<cfg::NdSbp> symbol) {
+Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id, Symbol<cfg::NdSbp> symbol) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  const auto& transport_token = JUST(
-      TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncSymbolNdSbp));
+  const auto& transport_token =
+      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncSymbolNdSbp));
   FlatNdSbpAsyncTransportCtx ctx(transport_token, symbol_id, symbol);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));

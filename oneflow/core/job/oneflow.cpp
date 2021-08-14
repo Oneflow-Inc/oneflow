@@ -71,9 +71,7 @@ bool operator==(const NdSbp& lhs, const NdSbp& rhs) {
   return true;
 }
 
-bool operator!=(const NdSbp& lhs, const NdSbp& rhs) {
-  return !(lhs == rhs);
-}
+bool operator!=(const NdSbp& lhs, const NdSbp& rhs) { return !(lhs == rhs); }
 
 bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
   return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())

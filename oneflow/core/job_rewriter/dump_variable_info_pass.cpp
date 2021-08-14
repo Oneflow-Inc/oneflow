@@ -21,8 +21,7 @@ namespace oneflow {
 
 namespace {
 
-std::string GetNdSbpString(const VariableOpConf& conf,
-                                          const ParallelDesc& parallel_desc) {
+std::string GetNdSbpString(const VariableOpConf& conf, const ParallelDesc& parallel_desc) {
   const bool has_nd_sbp_conf = (conf.nd_sbp_size() != 0);
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
   if (has_nd_sbp_conf) { CHECK_EQ(conf.nd_sbp_size(), num_axes); }

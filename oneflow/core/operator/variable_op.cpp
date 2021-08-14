@@ -21,9 +21,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> ParseNdSbpFromConf(const VariableOpConf& conf,
-                                              const ParallelDesc& parallel_desc,
-                                              cfg::NdSbp* nd_sbp) {
+Maybe<void> ParseNdSbpFromConf(const VariableOpConf& conf, const ParallelDesc& parallel_desc,
+                               cfg::NdSbp* nd_sbp) {
   const bool has_nd_sbp_conf = (conf.nd_sbp_size() != 0);
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
   if (has_nd_sbp_conf) { CHECK_EQ(conf.nd_sbp_size(), num_axes); }
@@ -110,10 +109,9 @@ Symbol<OperatorConf> VariableOp::GetOpConfWithoutOpNameAndLbn() const {
 }
 
 Maybe<void> VariableOp::InferNdSbpSignature(
-    cfg::NdSbpSignature* nd_sbp_signature,
-    const cfg::NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
-    std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
-        NdSbpInferHint4Ibn) const {
+    cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
+    const ParallelDesc& parallel_desc,
+    std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const VariableOpConf& conf = this->op_conf().variable_conf();
   cfg::NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];

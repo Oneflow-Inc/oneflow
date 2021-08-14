@@ -40,9 +40,8 @@ class ConsistentTensorMeta;
 class InputConsistentTensorMeta final {
  public:
   InputConsistentTensorMeta() : tensor_meta_(), consumer_nd_sbp_constraint_() {}
-  InputConsistentTensorMeta(
-      Symbol<ConsistentTensorMeta> tensor_meta,
-      const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint)
+  InputConsistentTensorMeta(Symbol<ConsistentTensorMeta> tensor_meta,
+                            const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint)
       : tensor_meta_(tensor_meta), consumer_nd_sbp_constraint_(consumer_nd_sbp_constraint) {}
 
   InputConsistentTensorMeta(const InputConsistentTensorMeta&) = default;
@@ -81,15 +80,15 @@ class ConsistentTensorMetaInferArgs final {
 
   bool operator==(const ConsistentTensorMetaInferArgs& other) const;
 
-  Maybe<void> MakeNdSbpConstraints(
-      const UserOpExpr& user_op_expr, cfg::NdSbpSignature* nd_sbp_signature) const;
+  Maybe<void> MakeNdSbpConstraints(const UserOpExpr& user_op_expr,
+                                   cfg::NdSbpSignature* nd_sbp_signature) const;
 
   Maybe<void> MakeInputBlobDescs(const UserOpExpr& user_op_expr,
                                  std::vector<BlobDesc>* blob_descs) const;
 
-  Maybe<void> MakeNdSbpInferHints(
-      const UserOpExpr& user_op_expr, const std::vector<BlobDesc>& blob_descs,
-      std::vector<NdSbpInferHint>* hints) const;
+  Maybe<void> MakeNdSbpInferHints(const UserOpExpr& user_op_expr,
+                                  const std::vector<BlobDesc>& blob_descs,
+                                  std::vector<NdSbpInferHint>* hints) const;
 
   static Maybe<ConsistentTensorMetaInferArgs> New(const AttrMap& attrs,
                                                   const TensorTuple& input_tensors);

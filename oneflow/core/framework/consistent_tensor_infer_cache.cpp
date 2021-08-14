@@ -37,8 +37,7 @@ bool OptionalEqual(const Optional<Symbol<cfg::NdSbp>>& lhs,
 size_t InputConsistentTensorMeta::hash_value() const {
   size_t hash_value = std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta());
   if (consumer_nd_sbp_constraint().has_value()) {
-    hash_value ^= std::hash<Symbol<cfg::NdSbp>>()(
-        CHECK_JUST(consumer_nd_sbp_constraint().value()));
+    hash_value ^= std::hash<Symbol<cfg::NdSbp>>()(CHECK_JUST(consumer_nd_sbp_constraint().value()));
   }
   return hash_value;
 }
@@ -134,8 +133,7 @@ Maybe<ConsistentTensorMetaInferArgs> ConsistentTensorMetaInferArgs::New(
 }
 
 Maybe<SrcOpConsistentTensorMetaInferArgs> SrcOpConsistentTensorMetaInferArgs::New(
-    const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
-    Symbol<cfg::NdSbp> nd_sbp) {
+    const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc, Symbol<cfg::NdSbp> nd_sbp) {
   std::shared_ptr<SrcOpConsistentTensorMetaInferArgs> infer_args(
       new SrcOpConsistentTensorMetaInferArgs());
   infer_args->attrs_ = attrs;
@@ -210,16 +208,14 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
     std::vector<NdSbpInferHint> pd_infer_hints;
     JUST(infer_args.MakeNdSbpInferHints(user_op_expr, blob_descs, &pd_infer_hints));
     const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
-    const auto& NdSbpInferHint4Ibn =
-        [&](const std::string& ibn) -> Maybe<const NdSbpInferHint*> {
+    const auto& NdSbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const NdSbpInferHint*> {
       int32_t input_index = input_arg_tuple.bn_in_op2tensor_tuple_index().at(ibn);
       CHECK_GE_OR_RETURN(input_index, 0);
       CHECK_LT_OR_RETURN(input_index, pd_infer_hints.size());
       return &pd_infer_hints.at(input_index);
     };
     // The inferred results can be retrieved by op->NdSbp4BnInOp(obn).
-    JUST(op->InferNdSbpSignatureIf(nd_sbp_constraints, *parallel_desc,
-                                                  NdSbpInferHint4Ibn));
+    JUST(op->InferNdSbpSignatureIf(nd_sbp_constraints, *parallel_desc, NdSbpInferHint4Ibn));
   }
   auto* result =
       new ConsistentTensorInferResult(user_op_expr.input_size(), user_op_expr.output_size());

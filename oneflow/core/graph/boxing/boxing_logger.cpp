@@ -71,8 +71,7 @@ std::string MakeBoxingLoggerCsvRow(const SubTskGphBuilderStatus& status,
                                    const std::string& src_op_name, const std::string& dst_op_name,
                                    const ParallelDesc& src_parallel_desc,
                                    const ParallelDesc& dst_parallel_desc,
-                                   const cfg::NdSbp& src_nd_sbp,
-                                   const cfg::NdSbp& dst_nd_sbp,
+                                   const cfg::NdSbp& src_nd_sbp, const cfg::NdSbp& dst_nd_sbp,
                                    const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc) {
   std::string serialized_status;
   serialized_status += src_op_name + ",";
@@ -105,8 +104,7 @@ CsvBoxingLogger::~CsvBoxingLogger() { log_stream_->Flush(); }
 
 void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status, const std::string& src_op_name,
                           const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
-                          const ParallelDesc& dst_parallel_desc,
-                          const cfg::NdSbp& src_nd_sbp,
+                          const ParallelDesc& dst_parallel_desc, const cfg::NdSbp& src_nd_sbp,
                           const cfg::NdSbp& dst_nd_sbp, const LogicalBlobId& lbi,
                           const BlobDesc& logical_blob_desc) {
   log_stream_ << MakeBoxingLoggerCsvRow(status, src_op_name, dst_op_name, src_parallel_desc,

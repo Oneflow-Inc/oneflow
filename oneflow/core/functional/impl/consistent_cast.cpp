@@ -201,8 +201,7 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
   return Maybe<void>::Ok();
 }
 
-Maybe<one::UserOpExpr> MakeNdSbpOpExpr(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+Maybe<one::UserOpExpr> MakeNdSbpOpExpr(const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
   return OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
       .Input("in")
       .Output("out")
@@ -212,8 +211,7 @@ Maybe<one::UserOpExpr> MakeNdSbpOpExpr(
       .Build();
 }
 
-auto* CachedNdSbpOpExpr =
-    DECORATE(&MakeNdSbpOpExpr, ThreadLocalCopiable);
+auto* CachedNdSbpOpExpr = DECORATE(&MakeNdSbpOpExpr, ThreadLocalCopiable);
 
 Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      Symbol<ParallelDesc> parallel_desc,

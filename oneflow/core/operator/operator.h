@@ -142,18 +142,15 @@ class Operator {
                                 const cfg::SbpSignature& sbp_sig_conf,
                                 const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const;
   Maybe<void> FillSbpSignature(const cfg::SbpSignature& sbp_signature);
-  Maybe<void> FillNdSbpSignature(
-      const cfg::NdSbpSignature& signature);
+  Maybe<void> FillNdSbpSignature(const cfg::NdSbpSignature& signature);
   Maybe<void> InferSbpSignatureIf(
       const cfg::SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc);
   Maybe<void> InferNdSbpSignatureIf(
-      const cfg::NdSbpSignature& nd_sbp_constraints,
-      const ParallelDesc& parallel_desc,
-      std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
-          NdSbpInferHint4Ibn);
+      const cfg::NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
+      std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn);
   // Infer blob's MirroredSignature
   Maybe<void> InferMirroredSignatureIf(
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
@@ -164,8 +161,7 @@ class Operator {
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const cfg::SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
-  Maybe<const cfg::NdSbp*> NdSbp4BnInOp(
-      const std::string& bn_in_op) const;
+  Maybe<const cfg::NdSbp*> NdSbp4BnInOp(const std::string& bn_in_op) const;
   Maybe<const OptMirroredParallel*> OptMirroredParallel4BnInOp(const std::string& bn_in_op) const;
 
   Maybe<void> GetSbpSignaturesIf(
@@ -214,11 +210,9 @@ class Operator {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
   virtual Maybe<void> InferNdSbpSignature(
-      cfg::NdSbpSignature* nd_sbp_signature,
-      const cfg::NdSbpSignature& nd_sbp_constraints,
+      cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
       const ParallelDesc& parallel_desc,
-      std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
-          NdSbpInferHint4Ibn) const;
+      std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const;
   virtual Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
     OF_UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
   }

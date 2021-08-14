@@ -232,8 +232,7 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sb
   return false;
 }
 
-bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
-                                       const cfg::NdSbp& src_nd_sbp,
+bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_nd_sbp,
                                        const cfg::NdSbp& dst_nd_sbp,
                                        const std::shared_ptr<Shape> hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
@@ -310,8 +309,7 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
   return false;
 }
 
-bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
-                                       const cfg::NdSbp& src_nd_sbp,
+bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret, const cfg::NdSbp& src_nd_sbp,
                                        const cfg::NdSbp& dst_nd_sbp,
                                        const std::shared_ptr<Shape> hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
@@ -349,8 +347,7 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   cfg::NdSbp src_nd_sbp;
   cfg::NdSbp dst_nd_sbp;
   InOutParallelDimReduce(src_node->parallel_desc(), dst_node->parallel_desc(),
-                         src_node->NdSbp4Lbi(lbi),
-                         dst_node->NdSbp4Lbi(lbi), &src_parallel_desc,
+                         src_node->NdSbp4Lbi(lbi), dst_node->NdSbp4Lbi(lbi), &src_parallel_desc,
                          &dst_parallel_desc, &src_nd_sbp, &dst_nd_sbp);
 
   const int64_t parallel_num = src_parallel_desc.parallel_num();
@@ -376,8 +373,7 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
       return TryBuildNcclBy2DHierarchySameDim0(ret, src_nd_sbp, dst_nd_sbp, src_hierarchy, lbn,
                                                scope_symbol_id, logical_blob_desc);
     } else if (src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1)) {
-      if (!(NdSbpAllSameSplitParallel(src_nd_sbp)
-            || NdSbpAllSameSplitParallel(dst_nd_sbp))) {
+      if (!(NdSbpAllSameSplitParallel(src_nd_sbp) || NdSbpAllSameSplitParallel(dst_nd_sbp))) {
         return TryBuildNcclBy2DHierarchySameDim1(ret, src_nd_sbp, dst_nd_sbp, src_hierarchy, lbn,
                                                  scope_symbol_id, logical_blob_desc);
       }
@@ -434,12 +430,11 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
           LOG(INFO) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name
-                    << "](order=" << src_order << ", nd_sbp="
-                    << NdSbpToString(src_node->NdSbp4Lbi(lbi))
-                    << ")->[" << dst_op_name << "](order=" << node2subgraph_order.at(dst_node)
-                    << ", nd_sbp="
-                    << NdSbpToString(dst_node->NdSbp4Lbi(lbi))
-                    << ") and before: [" << next_op_name << "](order=" << src_order + 1 << ")\n";
+                    << "](order=" << src_order
+                    << ", nd_sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << ")->["
+                    << dst_op_name << "](order=" << node2subgraph_order.at(dst_node)
+                    << ", nd_sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << ") and before: ["
+                    << next_op_name << "](order=" << src_order + 1 << ")\n";
         }
         nccl_op_confs->push_back(nccl_op);
         nccl_op_parallel_confs->push_back(src_node->parallel_desc().parallel_conf());
@@ -579,8 +574,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
         nccl_op_info.order = op_node2global_order.at(src_node);
         nccl_op_info.debug_str =
             (" After ACC insert nccl op: " + nccl_op.name() + " from: [" + src_op_name + "]("
-             + NdSbpToString(src_node->NdSbp4Lbi(lbi)) + ")->["
-             + dst_op_name + "]("
+             + NdSbpToString(src_node->NdSbp4Lbi(lbi)) + ")->[" + dst_op_name + "]("
              + NdSbpToString(dst_node->NdSbp4Lbi(lbi))
              + "), src_order = " + std::to_string(nccl_op_info.order) + "\n");
         nccl_op_infos.push_back(nccl_op_info);

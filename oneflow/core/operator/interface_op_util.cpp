@@ -107,9 +107,9 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InterfaceOpUtil::ParseNdSbpFromBlobConf(
-    const InterfaceBlobConf& blob_conf, const ParallelDesc& parallel_desc,
-    cfg::NdSbp* nd_sbp) {
+Maybe<void> InterfaceOpUtil::ParseNdSbpFromBlobConf(const InterfaceBlobConf& blob_conf,
+                                                    const ParallelDesc& parallel_desc,
+                                                    cfg::NdSbp* nd_sbp) {
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
   if (blob_conf.has_nd_sbp()) {
     *nd_sbp = cfg::NdSbp(blob_conf.nd_sbp());

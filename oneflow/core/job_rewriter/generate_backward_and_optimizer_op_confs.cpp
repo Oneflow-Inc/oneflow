@@ -41,9 +41,9 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
   }
 }
 
-void SetNdSbpSignatureHintByIdenticalSbpObaPairs(
-    const OpGraph& op_graph, const OpBlobArgPairs& identical_sbp_oba_pairs,
-    JobBuilder* job_builder) {
+void SetNdSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph,
+                                                 const OpBlobArgPairs& identical_sbp_oba_pairs,
+                                                 JobBuilder* job_builder) {
   HashMap<OpBlobArg, const cfg::NdSbp*> oba2nd_sbp;
   op_graph.ForEachNode([&](OpNode* op_node) {
     auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
@@ -55,9 +55,7 @@ void SetNdSbpSignatureHintByIdenticalSbpObaPairs(
       oba2nd_sbp[oba] = &op_node->NdSbp4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
     });
   });
-  auto HasNdSbp = [&](const OpBlobArg& oba) {
-    return oba2nd_sbp.find(oba) != oba2nd_sbp.end();
-  };
+  auto HasNdSbp = [&](const OpBlobArg& oba) { return oba2nd_sbp.find(oba) != oba2nd_sbp.end(); };
   for (const auto& pair : identical_sbp_oba_pairs.pair()) {
     const cfg::NdSbp* nd_sbp = nullptr;
     if (HasNdSbp(pair.first()) && HasNdSbp(pair.second())) {
@@ -213,8 +211,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     return Maybe<void>::Ok();
   }));
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder.get());
-  SetNdSbpSignatureHintByIdenticalSbpObaPairs(op_graph, identical_sbp_oba_pairs,
-                                                             job_builder.get());
+  SetNdSbpSignatureHintByIdenticalSbpObaPairs(op_graph, identical_sbp_oba_pairs, job_builder.get());
   return Maybe<void>::Ok();
 }
 

@@ -61,8 +61,7 @@ bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
   }
 }
 
-Maybe<void> GenNdSbpByTensor(NdSbp* nd_sbp,
-                                            const std::shared_ptr<Tensor>& tensor) {
+Maybe<void> GenNdSbpByTensor(NdSbp* nd_sbp, const std::shared_ptr<Tensor>& tensor) {
   nd_sbp->clear_sbp_parallel();
   if (tensor->is_local()) {
     // NOTE(chengcheng):
@@ -75,8 +74,8 @@ Maybe<void> GenNdSbpByTensor(NdSbp* nd_sbp,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenVariableOpConfNdSbpStringByTensor(
-    VariableOpConf* var_conf, const std::shared_ptr<Tensor>& tensor) {
+Maybe<void> GenVariableOpConfNdSbpStringByTensor(VariableOpConf* var_conf,
+                                                 const std::shared_ptr<Tensor>& tensor) {
   var_conf->clear_nd_sbp();
   if (tensor->is_local()) {
     cfg::SbpParallel broadcast;

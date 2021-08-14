@@ -33,10 +33,10 @@ class FlatTensorConsistency;
 
 class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
  public:
-  CheckConsistencyAsyncTransportCtx(
-      const TransportToken& transport_token, Symbol<one::ConsistentTensorMeta> tensor_meta,
-      const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint,
-      const TransportToken& tensor_transport_token)
+  CheckConsistencyAsyncTransportCtx(const TransportToken& transport_token,
+                                    Symbol<one::ConsistentTensorMeta> tensor_meta,
+                                    const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint,
+                                    const TransportToken& tensor_transport_token)
       : AsyncTransportCtx(transport_token),
         tensor_meta_(tensor_meta),
         consumer_nd_sbp_constraint_(consumer_nd_sbp_constraint),

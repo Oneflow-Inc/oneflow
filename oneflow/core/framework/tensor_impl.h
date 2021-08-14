@@ -146,9 +146,7 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
-  void set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) {
-    consumer_nd_sbp_constraint_ = val;
-  }
+  void set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
 
   ConsistentTensorMeta* mut_tensor_meta() {
     UNIMPLEMENTED();

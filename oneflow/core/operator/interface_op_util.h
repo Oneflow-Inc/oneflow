@@ -41,8 +41,7 @@ struct InterfaceOpUtil final {
                                   const ParallelBlobConf& parallel_blob_conf);
 
   static Maybe<void> ParseNdSbpFromBlobConf(const InterfaceBlobConf& blob_conf,
-                                                           const ParallelDesc& parallel_desc,
-                                                           cfg::NdSbp* nd_sbp);
+                                            const ParallelDesc& parallel_desc, cfg::NdSbp* nd_sbp);
 };
 
 }  // namespace oneflow

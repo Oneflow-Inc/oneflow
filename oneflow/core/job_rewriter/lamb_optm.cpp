@@ -36,8 +36,7 @@ OperatorConf GenerateLAMBHelperVariableOpConf(const VariableOp& op, const std::s
   return helper_variable_op;
 }
 
-void SetScalarShapeAndNdSbpConf(const ParallelDesc& parallel_desc,
-                                               OperatorConf* op_conf) {
+void SetScalarShapeAndNdSbpConf(const ParallelDesc& parallel_desc, OperatorConf* op_conf) {
   op_conf->mutable_variable_conf()->mutable_shape()->clear_dim();
   op_conf->mutable_variable_conf()->mutable_shape()->add_dim(1);
   op_conf->mutable_variable_conf()->clear_nd_sbp();

@@ -279,8 +279,8 @@ class LocalUserOpInferContext : public user_op::InferContext {
     UNIMPLEMENTED();
     return *(const cfg::SbpParallel*)nullptr;
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const override {
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
     UNIMPLEMENTED();
     return *(const cfg::NdSbp*)nullptr;
   }

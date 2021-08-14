@@ -42,12 +42,11 @@ class ModelSaveOp final : public Operator {
     return Maybe<void>::Ok();
   };
 
-  Maybe<void> InferNdSbpSignature(
-      cfg::NdSbpSignature* nd_sbp_signature,
-      const cfg::NdSbpSignature& nd_sbp_constraints,
-      const ParallelDesc& parallel_desc,
-      std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
-          NdSbpInferHint4Ibn) const override {
+  Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
+                                  const cfg::NdSbpSignature& nd_sbp_constraints,
+                                  const ParallelDesc& parallel_desc,
+                                  std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+                                      NdSbpInferHint4Ibn) const override {
     cfg::NdSbp broadcast_distribution;
     for (int64_t i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
       broadcast_distribution.add_sbp_parallel()->mutable_broadcast_parallel();

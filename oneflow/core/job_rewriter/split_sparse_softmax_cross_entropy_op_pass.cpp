@@ -109,7 +109,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     (*reduce_max_device_stage_signature.mutable_bn_in_op2nd_sbp())["count_0"] =
         cfg::NdSbp(prediction_nd_sbp);
     job_builder->AddNdSbpSignature4OpName(reduce_max_device_stage_op.op_name(),
-                                                         reduce_max_device_stage_signature);
+                                          reduce_max_device_stage_signature);
 
     auto reduce_max_global_stage_op =
         user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_max_global_stage")
@@ -132,7 +132,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     (*reduce_max_global_stage_signature.mutable_bn_in_op2nd_sbp())["out_0"] =
         stat_distribution_for_consumer;
     job_builder->AddNdSbpSignature4OpName(reduce_max_global_stage_op.op_name(),
-                                                         reduce_max_global_stage_signature);
+                                          reduce_max_global_stage_signature);
 
     auto broadcast_sub_max_op =
         user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_sub_max")

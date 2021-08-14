@@ -73,14 +73,11 @@ class Tensor {
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
-  virtual Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint()
-      const {
+  virtual Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const {
     OF_UNIMPLEMENTED();
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
-  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) {
-    OF_UNIMPLEMENTED();
-  }
+  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   virtual bool requires_grad() const = 0;
@@ -159,9 +156,7 @@ class StaticZerosTensor final : public Tensor {
     OF_UNIMPLEMENTED();
   }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) {
-    OF_UNIMPLEMENTED();
-  }
+  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   bool requires_grad() const {
@@ -290,8 +285,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<const Stride> stride() const override { return tensor_->stride(); }
   Maybe<int64_t> storage_offset() const override { return tensor_->storage_offset(); }
 
-  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint()
-      const override {
+  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const override {
     return tensor_->consumer_nd_sbp_constraint();
   }
   Maybe<TransportToken> transport_token() const override { return tensor_->transport_token(); }
@@ -449,8 +443,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<Symbol<Device>*> mut_device() override { OF_UNIMPLEMENTED(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
-  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint()
-      const override {
+  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const override {
     return impl_->consumer_nd_sbp_constraint();
   }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
@@ -504,8 +497,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<Tensor> clone() const override { return Error::Unimplemented(); }
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                            DataType dtype,
-                                            Symbol<cfg::NdSbp> nd_sbp,
+                                            DataType dtype, Symbol<cfg::NdSbp> nd_sbp,
                                             Symbol<ParallelDesc> parallel_desc, bool is_lazy,
                                             bool requires_grad, bool is_leaf);
 

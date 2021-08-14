@@ -63,19 +63,15 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
     const LogicalBlobId& parallel_cast_in_lbi = GenLogicalBlobId(conf_wrapper.input("in", 0));
     const LogicalBlobId& parallel_cast_out_lbi = GenLogicalBlobId(conf_wrapper.output("out", 0));
     const OpNode* producer = op_graph.OpNode4OpName(parallel_cast_in_lbi.op_name());
-    const cfg::NdSbp& parallel_cast_nd_sbp =
-        op_node->NdSbp4Lbi(parallel_cast_in_lbi);
-    const cfg::NdSbp& producer_nd_sbp =
-        producer->NdSbp4Lbi(parallel_cast_in_lbi);
+    const cfg::NdSbp& parallel_cast_nd_sbp = op_node->NdSbp4Lbi(parallel_cast_in_lbi);
+    const cfg::NdSbp& producer_nd_sbp = producer->NdSbp4Lbi(parallel_cast_in_lbi);
     if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
     if (parallel_cast_nd_sbp != producer_nd_sbp && op_node->out_edges().size() > 1) { return; }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       if (IsParallelCastOp(consumer->op().op_conf())) { return; }
       if (consumer->parallel_desc() != op_node->parallel_desc()) { return; }
-      if (consumer->NdSbp4Lbi(parallel_cast_out_lbi) != parallel_cast_nd_sbp) {
-        return;
-      }
+      if (consumer->NdSbp4Lbi(parallel_cast_out_lbi) != parallel_cast_nd_sbp) { return; }
     }
     op_name2nd_sbp_signature[producer->op().op_name()] = producer->nd_sbp_signature();
     for (const OpEdge* out_edge : op_node->out_edges()) {

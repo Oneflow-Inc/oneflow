@@ -78,8 +78,7 @@ class GPTDataLoader final : public OpKernelState {
       shard_index_ = GlobalProcessCtx::Rank();
     } else {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-      const cfg::NdSbp& paral_dist =
-          ctx->NdSbp4ArgNameAndIndex("out", 0);
+      const cfg::NdSbp& paral_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
       CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
       num_shards_ = GetNumShards(hierarchy, paral_dist);
       CHECK_EQ(num_samples % num_shards_, 0);

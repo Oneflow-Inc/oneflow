@@ -110,8 +110,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   int64_t GetParallelNum(const std::string& op_name) const;
   const cfg::SbpParallel& GetSbpParallel(const std::string& op_name,
                                          const LogicalBlobId& lbi) const;
-  const cfg::NdSbp& GetNdSbp(const std::string& op_name,
-                                                           const LogicalBlobId& lbi) const;
+  const cfg::NdSbp& GetNdSbp(const std::string& op_name, const LogicalBlobId& lbi) const;
   DataType GetBlobDataType(const LogicalBlobId& lbi) const;
   const BlobDesc& GetLogicalBlobDesc(const LogicalBlobId& lbi) const;
 
@@ -136,8 +135,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void CheckIsDAG() const;
   void InferBlobLastUsed() const;
   void InferTimeShape() const;
-  void InferOpNodeNdSbpSignature(
-      OpNode* op_node, const cfg::NdSbpSignature& nd_sbp_sig_conf) const;
+  void InferOpNodeNdSbpSignature(OpNode* op_node, const cfg::NdSbpSignature& nd_sbp_sig_conf) const;
   Maybe<void> InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const;
   Maybe<void> InferLogicalBlobDesc(const Job& job) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;

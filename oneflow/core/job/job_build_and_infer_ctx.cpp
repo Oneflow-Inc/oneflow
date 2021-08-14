@@ -175,8 +175,7 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
 
 void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(
     const OperatorConf& operator_conf, const ParallelDesc& parallel_desc,
-    const cfg::NdSbpSignature& nd_sbp_signature,
-    bool is_mirrored_parallel_view) const {
+    const cfg::NdSbpSignature& nd_sbp_signature, bool is_mirrored_parallel_view) const {
   auto* op_name2sbp_sig =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
   auto* op_name2nd_sbp_sig =
@@ -227,9 +226,9 @@ Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(
-    Operator* op, const cfg::NdSbpSignature& nd_sbp_sig_conf,
-    const ParallelDesc& parallel_desc) {
+Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(Operator* op,
+                                                 const cfg::NdSbpSignature& nd_sbp_sig_conf,
+                                                 const ParallelDesc& parallel_desc) {
   HashMap<std::string, NdSbpInferHint> ibn2nd_sbp_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
@@ -246,17 +245,14 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(
         << " consumed op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
         << " not infer parallel distribution";
     const cfg::NdSbp* nd_sbp = &nd_sbp_it->second;
-    ibn2nd_sbp_infer_hint.emplace(ibn,
-                                  NdSbpInferHint(pd, logical_blob_desc, nd_sbp));
+    ibn2nd_sbp_infer_hint.emplace(ibn, NdSbpInferHint(pd, logical_blob_desc, nd_sbp));
   }
 
-  const auto NdSbpInferHint4Ibn =
-      [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
+  const auto NdSbpInferHint4Ibn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
     return &ibn2nd_sbp_infer_hint.at(bn);
   };
 
-  JUST(op->InferNdSbpSignatureIf(nd_sbp_sig_conf, parallel_desc,
-                                                NdSbpInferHint4Ibn));
+  JUST(op->InferNdSbpSignatureIf(nd_sbp_sig_conf, parallel_desc, NdSbpInferHint4Ibn));
 
   const auto& bn2nd_sbp = JUST(op->nd_sbp_signature())->bn_in_op2nd_sbp();
   for (const auto& obn : op->output_bns()) {

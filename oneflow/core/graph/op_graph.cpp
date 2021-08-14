@@ -42,8 +42,7 @@ const cfg::SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const 
   return it->second.sbp_parallel(0);
 }
 
-const cfg::NdSbp& OpNode::NdSbp4BnInOp(
-    const std::string& bn_in_op) const {
+const cfg::NdSbp& OpNode::NdSbp4BnInOp(const std::string& bn_in_op) const {
   return *CHECK_JUST(op().NdSbp4BnInOp(bn_in_op));
 }
 
@@ -296,8 +295,8 @@ void OpGraph::InferTimeShape() const {
   });
 }
 
-void OpGraph::InferOpNodeNdSbpSignature(
-    OpNode* op_node, const cfg::NdSbpSignature& nd_sbp_sig_conf) const {
+void OpGraph::InferOpNodeNdSbpSignature(OpNode* op_node,
+                                        const cfg::NdSbpSignature& nd_sbp_sig_conf) const {
   HashMap<std::string, NdSbpInferHint> ibn2nd_sbp_infer_hint;
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
@@ -305,17 +304,15 @@ void OpGraph::InferOpNodeNdSbpSignature(
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const cfg::NdSbp* nd_sbp = &producer->NdSbp4Lbi(lbi);
-    ibn2nd_sbp_infer_hint.emplace(
-        ibn, NdSbpInferHint(parallel_desc, logical_blob_desc, nd_sbp));
+    ibn2nd_sbp_infer_hint.emplace(ibn, NdSbpInferHint(parallel_desc, logical_blob_desc, nd_sbp));
   }
-  const auto NdSbpInferHint4Ibn =
-      [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
+  const auto NdSbpInferHint4Ibn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
     auto it = ibn2nd_sbp_infer_hint.find(bn);
     CHECK_OR_RETURN(it != ibn2nd_sbp_infer_hint.end());
     return Maybe<const NdSbpInferHint*>(&it->second);
   };
-  CHECK_JUST(op_node->mut_op()->InferNdSbpSignatureIf(
-      nd_sbp_sig_conf, op_node->parallel_desc(), NdSbpInferHint4Ibn));
+  CHECK_JUST(op_node->mut_op()->InferNdSbpSignatureIf(nd_sbp_sig_conf, op_node->parallel_desc(),
+                                                      NdSbpInferHint4Ibn));
   op_node->InitLbi2NdSbp();
 }
 
@@ -378,9 +375,8 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
           const auto& op_name2sbp_sig_conf = job_parallel_view_conf.op_name2sbp_signature_conf();
           const auto& op_name2sbp_sig_conf_it = op_name2sbp_sig_conf.find(op_node->op().op_name());
           CHECK(op_name2sbp_sig_conf_it != op_name2sbp_sig_conf.end());
-          CheckSbpSignatureAndNdSbpEquals(
-              cfg::SbpSignature(op_name2sbp_sig_conf_it->second),
-              cfg::NdSbpSignature(iter->second));
+          CheckSbpSignatureAndNdSbpEquals(cfg::SbpSignature(op_name2sbp_sig_conf_it->second),
+                                          cfg::NdSbpSignature(iter->second));
         } else {
           // do nothing
         }
@@ -403,8 +399,7 @@ const cfg::SbpParallel& OpGraph::GetSbpParallel(const std::string& op_name,
       ->SbpParallel4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
 
-const cfg::NdSbp& OpGraph::GetNdSbp(const std::string& op_name,
-                                                                  const LogicalBlobId& lbi) const {
+const cfg::NdSbp& OpGraph::GetNdSbp(const std::string& op_name, const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
       ->NdSbp4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
