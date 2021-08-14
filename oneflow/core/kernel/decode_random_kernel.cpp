@@ -50,7 +50,7 @@ uint32_t DecodeRandomKernel<device_type>::GenNextRandomSeed() const {
 
 template<DeviceType device_type>
 void DecodeRandomKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const DecodeRandomOpConf& conf = this->op_conf().decode_random_conf();
   if (is_init_ == false) {
     RandomFillBlob(ctx.device_ctx, device_type, conf.data_initializer(), this->GenNextRandomSeed(),

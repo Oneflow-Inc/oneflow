@@ -34,7 +34,7 @@ add_docstr(
         >>> import oneflow as flow
 
         >>> x = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
-        >>> alpha = flow.nn.Parameter(flow.Tensor(1, 1, 1).fill_(0.25))
+        >>> alpha = flow.nn.Parameter(flow.Tensor(1).fill_(0.25))
         >>> print(flow.F.prelu(x, alpha).numpy())
         [[[[ 1.  -0.5]
            [ 3.   4. ]]]]
@@ -68,7 +68,7 @@ add_docstr(
 
         >>> out = flow.F.gelu(input)
         >>> out
-        tensor([-0.1543,  0.    ,  0.3457], dtype=oneflow.float32)
+        tensor([-0.1543,  0.0000,  0.3457], dtype=oneflow.float32)
 
     See    
     :class:`~oneflow.nn.GELU` for more details.
@@ -170,7 +170,7 @@ add_docstr(
         >>> input = flow.Tensor(x) 
         >>> out = flow.F.softsign(input)
         >>> out
-        tensor([0.5   , 0.6667, 0.75  ], dtype=oneflow.float32)
+        tensor([0.5000, 0.6667, 0.7500], dtype=oneflow.float32)
  
     See :class:`~oneflow.nn.Softsign` for more details.
     
@@ -232,7 +232,7 @@ add_docstr(
 
         >>> out = flow.F.mish(input)
         >>> out
-        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+        tensor([0.8651, 1.9440, 2.9865], dtype=oneflow.float32)
 
     See :
     class:`~oneflow.nn.Mish` for more details.
@@ -361,7 +361,7 @@ add_docstr(
         >>> input = flow.Tensor(x)
         >>> out = flow.nn.functional.elu(input, alpha=1.0)
         >>> out
-        tensor([-0.3935,  0.    ,  0.5   ], dtype=oneflow.float32)
+        tensor([-0.3935,  0.0000,  0.5000], dtype=oneflow.float32)
     """,
 )
 add_docstr(

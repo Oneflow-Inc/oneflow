@@ -37,9 +37,16 @@ Maybe<void> FlatShape::Check(const Shape& shape) const {
 }
 
 Maybe<Shape> FlatShape::ToShape() const {
+  const auto& shape = std::make_shared<Shape>();
+  JUST(ToShape(shape.get()));
+  return shape;
+}
+
+Maybe<void> FlatShape::ToShape(Shape* shape) const {
   DimVector dim_vec;
   for (int i = 0; i < this->dim_size(); ++i) { dim_vec.push_back(this->dim(i)); }
-  return std::make_shared<Shape>(dim_vec);
+  *shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
