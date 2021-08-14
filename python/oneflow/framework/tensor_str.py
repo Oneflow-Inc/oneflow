@@ -205,8 +205,9 @@ def _tensor_str(self, indent):
     if self.is_consistent:
         return "[...]"
 
-    formatter = _Formatter(get_summarized_data(self) if summarize else self)
-    return _tensor_str_with_formatter(self, indent, summarize, formatter)
+    with flow.no_grad():
+        formatter = _Formatter(get_summarized_data(self) if summarize else self)
+        return _tensor_str_with_formatter(self, indent, summarize, formatter)
 
 
 def _add_suffixes(tensor_str, suffixes, indent):
