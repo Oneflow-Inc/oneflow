@@ -505,7 +505,7 @@ gcc --version
                     assert len(cuda_versions) == 1
                     sub_dir += "-cpu"
                 if args.shared_lib:
-                    sub_dir += "-shared_lib"
+                    sub_dir += "-shared"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.build_img:
                 return
