@@ -133,21 +133,14 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: Set extra args
+        if: contains(github.event.pull_request.labels.*.name, 'need-single-client-tests')
+        run: |
+          echo "extra_args_from_labels=--need_single_client_tests" >> $GITHUB_ENV
       - name: Find changes
         id: changes
         run: |
-          git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }}
-          echo "::set-output name=all::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)"
-          echo "::set-output name=python::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep .py$ | xargs)"
-      - name: echo changed files
-        run: |
-          echo ${{steps.changes.outputs.all}}
-          echo ${{steps.changes.outputs.python}}
-      - name: Should run single client tests
-        id: should_run_single_client_tests
-        if: contains(steps.changes.outputs.python, 'python/oneflow/compatible/single_client') || steps.changes.outputs.python != steps.changes.outputs.all
-        run: |
-          echo "::set-output name=result::true"
+          python3 tools/flags_from_git_diff.py --base ${{ github.event.pull_request.base.sha }} --head ${{ github.sha }} ${{ env.extra_args_from_labels }}
 
   build:
     name: Build

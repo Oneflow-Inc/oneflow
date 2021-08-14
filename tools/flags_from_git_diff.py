@@ -3,7 +3,9 @@ import subprocess
 
 def get_changed_files(base=None, head=None):
     changed = subprocess.check_output(
-        "git diff --name-only --diff-filter=ACMRT master HEAD", shell=True, text=True
+        f"git diff --name-only --diff-filter=ACMRT {base} {head}",
+        shell=True,
+        text=True,
     )
     changed = str(changed).splitlines()
     return changed
