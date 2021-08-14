@@ -65,7 +65,7 @@ void TestNopStreamTypeNoArgument(
   auto nop_instr_msg = NewInstruction("Nop");
   list.PushBack(nop_instr_msg.Mutable());
   ASSERT_TRUE(vm->pending_msg_list().empty());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   ASSERT_EQ(vm->pending_msg_list().size(), 1 * 2);
   vm->Schedule();
   ASSERT_TRUE(vm->pending_msg_list().empty());
@@ -104,7 +104,7 @@ void TestNopStreamTypeOneArgument(
   nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
   ASSERT_TRUE(vm->pending_msg_list().empty());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
@@ -134,7 +134,7 @@ TEST(NopStreamType, one_argument_triger_next_instruction) {
   auto nop1_instr_msg = NewInstruction("Nop");
   nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
@@ -154,7 +154,7 @@ TEST(NopStreamType, one_argument_triger_all_instructions) {
   auto nop1_instr_msg = NewInstruction("Nop");
   nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
