@@ -130,8 +130,12 @@ class TestModule(flow.unittest.TestCase):
         params = list(m.parameters())
         test_case.assertEqual(len(params), 2)
 
-        test_case.assertTrue(np.allclose(params[0].numpy(), param1.numpy(), atol=1e-4, rtol=1e-4))
-        test_case.assertTrue(np.allclose(params[1].numpy(), param0.numpy(), atol=1e-4, rtol=1e-4))
+        test_case.assertTrue(
+            np.allclose(params[0].numpy(), param1.numpy(), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(params[1].numpy(), param0.numpy(), atol=1e-4, rtol=1e-4)
+        )
         children = list(m.children())
         test_case.assertEqual(len(children), 1)
         child = children[0]
