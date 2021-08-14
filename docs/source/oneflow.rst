@@ -78,6 +78,7 @@ oneflow
             ones, 
             ones_like, 
             pow, 
+            rand,
             randn,
             repeat, 
             reshape, 
