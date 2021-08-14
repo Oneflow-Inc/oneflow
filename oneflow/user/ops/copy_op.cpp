@@ -58,6 +58,17 @@ REGISTER_USER_OP("copy")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const auto& inputs = ctx->inputs();
+      CHECK_EQ_OR_RETURN(inputs.size(), 1);
+      const auto& input =
+          ctx->LogicalTensorDesc4InputArgNameAndIndex(inputs[0].first, inputs[0].second);
+      for (int64_t axis = 0; axis < input.shape().NumAxes(); ++axis) {
+        ctx->NewBuilder().Split(inputs, axis).Split(ctx->outputs(), axis).Build();
+      }
+      ctx->NewBuilder().PartialSum(inputs).PartialSum(ctx->outputs()).Build();
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace
 }  // namespace oneflow
