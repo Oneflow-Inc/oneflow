@@ -207,7 +207,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   } else {
     LOG(ERROR) << "session expired ";
   }
-    
+
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {

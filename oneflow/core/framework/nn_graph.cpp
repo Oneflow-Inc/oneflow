@@ -39,13 +39,13 @@ NNGraph::~NNGraph() {
 
 Maybe<void> NNGraph::Close() {
   if (!is_closed_) {
-      LOG(ERROR) << "Try to delete c nn graph name " << name_ << "." << std::endl;
-      vm::MultiClientSync();
-      CloseRuntimeBuffers();
-      runtime_.reset();
-      Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
-      LOG(ERROR) << "Finish delete c nn graph name " << name_ << "." << std::endl;
-      is_closed_ = true;
+    LOG(ERROR) << "Try to delete c nn graph name " << name_ << "." << std::endl;
+    vm::MultiClientSync();
+    CloseRuntimeBuffers();
+    runtime_.reset();
+    Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
+    LOG(ERROR) << "Finish delete c nn graph name " << name_ << "." << std::endl;
+    is_closed_ = true;
   }
   return Maybe<void>::Ok();
 }

@@ -128,7 +128,8 @@ inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> MultiClientSessionContextAddCGraph(const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+inline Maybe<void> MultiClientSessionContextAddCGraph(
+    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
   JUST(Global<MultiClientSessionContext>::Get()->AddCGraph(c_graph_ptr));
   return Maybe<void>::Ok();
 }

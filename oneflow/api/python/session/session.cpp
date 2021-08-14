@@ -34,7 +34,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CreateMultiClientSessionContext", &CreateMultiClientSessionContext);
   m.def("InitMultiClientSessionContext", &InitMultiClientSessionContext);
   m.def("MultiClientSessionContextAddCGraph", &MultiClientSessionContextAddCGraph);
-  m.def("TryDestroyMultiClientSessionContext", &TryDestroyMultiClientSessionContext, py::call_guard<py::gil_scoped_release>());
+  m.def("TryDestroyMultiClientSessionContext", &TryDestroyMultiClientSessionContext,
+        py::call_guard<py::gil_scoped_release>());
 
   using namespace oneflow;
   m.def("NewSessionId", &NewSessionId);
