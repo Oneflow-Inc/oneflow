@@ -26,8 +26,8 @@ def should_run_single_client_tests(changed=None):
     return len(not_single_client_files) < len(changed)
 
 
-def print_github_action_output(changed=None):
-    print(should_run_single_client_tests(changed))
+def print_github_action_output(name=None, value=None):
+    print(f"::set-output name={name}::{value}")
 
 
 if __name__ == "__main__":
@@ -36,6 +36,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", type=str, required=True)
     parser.add_argument("--head", type=str, required=True)
+    parser.add_argument("--need_single_client_tests", action="store_true")
     args = parser.parse_args()
     files = get_changed_files(base=args.base, head=args.head)
-    print_github_action_output(files)
+    if should_run_single_client_tests(changed=files) or args.need_single_client_tests:
+        print_github_action_output(name="should_run_single_client_tests", value="true")
+    else:
+        print_github_action_output(name="should_run_single_client_tests", value="false")
