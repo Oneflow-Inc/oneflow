@@ -297,9 +297,7 @@ if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
 
-if (BUILD_SHARED_LIBS)
-  target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)
-endif()
+target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)
 
 target_compile_options(of_ccobj PRIVATE -Werror=return-type)
 target_treat_warnings_as_errors(of_ccobj)
