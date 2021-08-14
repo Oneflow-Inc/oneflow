@@ -41,8 +41,6 @@ class InferParallelDistributionFnContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 };
 
-Maybe<void> InferSourceOpParallelDistribution(user_op::InferParallelDistributionFnContext* ctx);
-
 }  // namespace user_op
 
 }  // namespace oneflow

@@ -39,11 +39,19 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
-      *out_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
+      *ctx->OutputTensorDesc("out", 0)->mut_data_type() = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(&user_op::InferSourceOpParallelDistribution)
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetParallelDistributionInferFn(
+        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
+          cfg::SbpParallel default_sbp;
+          default_sbp.mutable_split_parallel()->set_axis(0);
+          return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
+        })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       if (!conf.has_input("iteration", 0)) { return Maybe<void>::Ok(); }
@@ -52,7 +60,6 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
       input_modifier->set_is_mutable(true);
       input_modifier->set_requires_grad(false);
       return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+    });
 
 }  // namespace oneflow

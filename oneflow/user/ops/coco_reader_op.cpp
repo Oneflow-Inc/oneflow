@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 
@@ -87,11 +86,33 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("COCOReader")
       *segm_index_desc->mut_shape() = Shape({batch_size});
       return Maybe<void>::Ok();
     })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* image_desc = ctx->OutputTensorDesc("image", 0);
+      *image_desc->mut_data_type() = DataType::kTensorBuffer;
+      user_op::TensorDesc* image_id_desc = ctx->OutputTensorDesc("image_id", 0);
+      *image_id_desc->mut_data_type() = DataType::kInt64;
+      user_op::TensorDesc* image_size_desc = ctx->OutputTensorDesc("image_size", 0);
+      *image_size_desc->mut_data_type() = DataType::kInt32;
+      user_op::TensorDesc* bbox_desc = ctx->OutputTensorDesc("gt_bbox", 0);
+      *bbox_desc->mut_data_type() = DataType::kTensorBuffer;
+      user_op::TensorDesc* label_desc = ctx->OutputTensorDesc("gt_label", 0);
+      *label_desc->mut_data_type() = DataType::kTensorBuffer;
+      user_op::TensorDesc* segm_desc = ctx->OutputTensorDesc("gt_segm", 0);
+      *segm_desc->mut_data_type() = DataType::kTensorBuffer;
+      user_op::TensorDesc* segm_index_desc = ctx->OutputTensorDesc("gt_segm_index", 0);
+      *segm_index_desc->mut_data_type() = DataType::kTensorBuffer;
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(&user_op::InferSourceOpParallelDistribution)
+    .SetParallelDistributionInferFn(
+        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
+          cfg::SbpParallel default_sbp;
+          default_sbp.mutable_split_parallel()->set_axis(0);
+          return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
+        })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);
@@ -122,23 +143,6 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("COCOReader")
           GetOutputArgModifierFn("gt_segm_index", 0);
       CHECK_OR_RETURN(gt_segm_index_modifier != nullptr);
       gt_segm_index_modifier->set_header_infered_before_compute(false);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* image_desc = ctx->OutputTensorDesc("image", 0);
-      *image_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* image_id_desc = ctx->OutputTensorDesc("image_id", 0);
-      *image_id_desc->mut_data_type() = DataType::kInt64;
-      user_op::TensorDesc* image_size_desc = ctx->OutputTensorDesc("image_size", 0);
-      *image_size_desc->mut_data_type() = DataType::kInt32;
-      user_op::TensorDesc* bbox_desc = ctx->OutputTensorDesc("gt_bbox", 0);
-      *bbox_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* label_desc = ctx->OutputTensorDesc("gt_label", 0);
-      *label_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* segm_desc = ctx->OutputTensorDesc("gt_segm", 0);
-      *segm_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* segm_index_desc = ctx->OutputTensorDesc("gt_segm_index", 0);
-      *segm_index_desc->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
 
