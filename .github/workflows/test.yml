@@ -602,7 +602,7 @@ jobs:
             })
       - name: Single client op test
         timeout-minutes: 45
-        if: contains(fromJson('["cpu", "cuda_op"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1'
+        if: contains(fromJson('["cuda_op", "cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run \
@@ -611,7 +611,7 @@ jobs:
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
       - name: Single client model test
         timeout-minutes: 45
-        if: contains(fromJson('["cuda", "cuda"]'), matrix.test_suite)  && needs.changed_files.outputs.should_run_single_client_tests == '1'
+        if: contains(fromJson('["cuda", "cpu"]'), matrix.test_suite)  && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run \
