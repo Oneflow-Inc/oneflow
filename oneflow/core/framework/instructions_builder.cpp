@@ -949,7 +949,7 @@ Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     std::shared_ptr<std::function<void(uint64_t)>> Callback, const std::string& modifier) {
   using SharedFunc = std::shared_ptr<std::function<void(uint64_t)>>;
   const auto& callback_ptr = std::make_shared<SharedFunc>(Callback);
-  const auto& CallbackWrapper = [&spin_counter, callback_ptr](uint64_t ofblob_ptr) {
+  const auto& CallbackWrapper = [spin_counter, callback_ptr](uint64_t ofblob_ptr) {
     (**callback_ptr)(ofblob_ptr);
     CHECK_GT(callback_ptr->use_count(), 1);
     // What we want to do here is dereferencing the `Callback` in scheduler thread, because we don't
