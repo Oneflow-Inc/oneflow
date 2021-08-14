@@ -278,7 +278,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
                     || py::isinstance<py::str>(device_kwarg));
 
     if (py::isinstance<py::str>(device_kwarg)) {
-      device = DeviceExportUtil::New(py::cast<std::string>(device_kwarg));
+      device = DeviceExportUtil::ParseAndNew(py::cast<std::string>(device_kwarg));
     } else {
       device = py::cast<Symbol<Device>>(device_kwarg);
     }

@@ -68,8 +68,8 @@ def clip_grad_norm_(
         >>> norm1
         tensor(6., dtype=oneflow.float32)
         >>> x1.grad
-        tensor([[0.1, 0.1, 0.1],
-                [0.1, 0.1, 0.1]], dtype=oneflow.float32)
+        tensor([[0.1000, 0.1000, 0.1000],
+                [0.1000, 0.1000, 0.1000]], dtype=oneflow.float32)
         >>> x2 = flow.Tensor(np.array([[-2, -3, -4], [2.5, 0, 3.2]]).astype(np.float32), requires_grad=True)
         >>> out2 = flow.atan(x2)
         >>> out2 = out2.sum()
@@ -79,7 +79,7 @@ def clip_grad_norm_(
         tensor(1.0394, dtype=oneflow.float32)
         >>> x2.grad
         tensor([[0.0962, 0.0481, 0.0283],
-                [0.0663, 0.481 , 0.0428]], dtype=oneflow.float32)
+                [0.0663, 0.4810, 0.0428]], dtype=oneflow.float32)
 
     """
 
