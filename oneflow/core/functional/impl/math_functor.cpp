@@ -214,9 +214,7 @@ class ArangeFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
 
     OpExprInterpContext ctx(attrs);
-    if (device) {
-      ctx.device = JUST(device.value());
-    }
+    if (device) { ctx.device = JUST(device.value()); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 
