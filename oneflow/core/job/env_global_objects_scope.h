@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/multi_client_session_context.h"
 
 namespace oneflow {
 

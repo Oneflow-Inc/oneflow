@@ -39,7 +39,6 @@ def OpenDefaultSession(sess):
 
 
 def TryCloseDefaultSession():
-    print("_+++++++++ try  close session")
     global _sess_id2sess
     default_sess_id = oneflow._oneflow_internal.GetDefaultSessionId()
     assert default_sess_id in _sess_id2sess

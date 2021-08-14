@@ -15,7 +15,6 @@ limitations under the License.
 """
 import enum
 import inspect
-import gc
 
 from google.protobuf import text_format
 

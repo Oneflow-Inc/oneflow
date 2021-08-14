@@ -19,7 +19,6 @@ limitations under the License.
 #include <string>
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/cluster_instruction.h"
