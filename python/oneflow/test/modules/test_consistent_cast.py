@@ -219,7 +219,8 @@ class TestConsistentCast(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(4)})
         device = flow.device("cuda")
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
-        test_case.assertTrue(consistent_tensor.to_local().device == device)
+        local_tensor = consistent_tensor.to_local()
+        test_case.assertTrue(local_tensor.device == device)
         test_case.assertTrue(consistent_tensor.placement == placement)
 
 

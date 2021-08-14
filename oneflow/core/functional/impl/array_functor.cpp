@@ -1177,6 +1177,7 @@ class TensorGetItemFunctor {
       step[i] = slice.step();
     }
     bool is_identity = [&]() {
+      if (target_shape.NumAxes() == 0) { return false; }
       for (int i = 0; i < ndims; ++i) {
         if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
       }
