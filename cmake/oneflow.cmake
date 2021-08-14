@@ -356,20 +356,6 @@ add_dependencies(of_pyscript_copy of_protoobj)
 
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
-# get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-# foreach(dir ${include_dirs})
-#   message("-I'${dir}' ")
-# endforeach()
-
-# build main
-set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
-foreach(cc ${of_main_cc})
-  get_filename_component(main_name ${cc} NAME_WE)
-  oneflow_add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-  set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-endforeach()
-
 # build test
 if(BUILD_TESTING)
   if (of_all_test_cc)
@@ -377,14 +363,6 @@ if(BUILD_TESTING)
     target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
     set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     add_test(NAME oneflow_test COMMAND oneflow_testexe)
-  endif()
-  if (of_separate_test_cc)
-    foreach(cc ${of_separate_test_cc})
-      get_filename_component(test_name ${cc} NAME_WE)
-      string(CONCAT test_exe_name ${test_name} exe)
-      oneflow_add_executable(${test_exe_name} ${cc})
-      target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-    endforeach()
   endif()
 endif()
 
