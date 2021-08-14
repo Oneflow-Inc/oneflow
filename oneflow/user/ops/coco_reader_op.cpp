@@ -91,43 +91,7 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("COCOReader")
       ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const auto& dist_conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
-          const Shape& hierarchy = ctx->parallel_hierarchy();
-
-          // the inputs may be produced by tick and others, whose sbp should be broadcast parallel
-          // dist
-          for (const auto& arg_pair : ctx->inputs()) {
-            cfg::ParallelDistribution* input_dist =
-                ctx->ParallelDistribution4ArgNameAndIndex(arg_pair.first, arg_pair.second);
-            FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
-              input_dist->add_sbp_parallel()->mutable_broadcast_parallel();
-            }
-          }
-
-          for (const auto& arg_pair : ctx->outputs()) {
-            cfg::ParallelDistribution* output_dist =
-                ctx->ParallelDistribution4ArgNameAndIndex(arg_pair.first, arg_pair.second);
-            if (dist_conf.size() == 0) {
-              // the default parallel dist of outputs of dataset op should be split(0)
-              FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
-                output_dist->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
-              }
-            } else {
-              CHECK_EQ_OR_RETURN(dist_conf.size(), hierarchy.NumAxes());
-              for (const std::string& sbp_str : dist_conf) {
-                cfg::SbpParallel sbp_parallel;
-                CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
-                CHECK_OR_RETURN(
-                    (sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == 0)
-                    || sbp_parallel.has_broadcast_parallel());
-                *output_dist->add_sbp_parallel() = sbp_parallel;
-              }
-            }
-          }
-          return Maybe<void>::Ok();
-        })
+    .SetParallelDistributionInferFn(&user_op::InferSourceOpParallelDistribution)
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);
