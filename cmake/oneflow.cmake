@@ -37,8 +37,8 @@ function(target_treat_warnings_as_errors target)
     target_try_compile_options(${target} -Wno-error=deprecated-declarations)
 
     # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
-    target_try_compile_options(${target} 
-      -Wno-error=unused-const-variable 
+    target_try_compile_options(${target}
+      -Wno-error=unused-const-variable
       -Wno-error=unused-variable
       -Wno-error=unused-local-typedefs
       -Wno-error=unused-private-field
@@ -297,9 +297,7 @@ if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
 
-if (BUILD_SHARED_LIBS)
-  target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)
-endif()
+target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)
 
 target_compile_options(of_ccobj PRIVATE -Werror=return-type)
 target_treat_warnings_as_errors(of_ccobj)
@@ -325,7 +323,7 @@ if (WITH_MLIR)
 endif()
 
 if(APPLE)
-  set(of_libs -Wl,-force_load ${ONEFLOW_CUDA_LIBS} ${ONEFLOW_MLIR_LIBS} of_ccobj of_protoobj of_cfgobj)
+  set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj ${ONEFLOW_MLIR_LIBS})
 elseif(UNIX)
   set(of_libs -Wl,--whole-archive ${ONEFLOW_CUDA_LIBS} ${ONEFLOW_MLIR_LIBS} of_ccobj of_protoobj of_cfgobj -Wl,--no-whole-archive -ldl -lrt)
 elseif(WIN32)
@@ -368,20 +366,6 @@ add_dependencies(of_pyscript_copy of_protoobj)
 
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
-# get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-# foreach(dir ${include_dirs})
-#   message("-I'${dir}' ")
-# endforeach()
-
-# build main
-set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
-foreach(cc ${of_main_cc})
-  get_filename_component(main_name ${cc} NAME_WE)
-  oneflow_add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-  set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-endforeach()
-
 # build test
 if(BUILD_TESTING)
   if (of_all_test_cc)
@@ -389,14 +373,6 @@ if(BUILD_TESTING)
     target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
     set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     add_test(NAME oneflow_test COMMAND oneflow_testexe)
-  endif()
-  if (of_separate_test_cc)
-    foreach(cc ${of_separate_test_cc})
-      get_filename_component(test_name ${cc} NAME_WE)
-      string(CONCAT test_exe_name ${test_name} exe)
-      oneflow_add_executable(${test_exe_name} ${cc})
-      target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-    endforeach()
   endif()
 endif()
 
