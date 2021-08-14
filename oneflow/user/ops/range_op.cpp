@@ -22,6 +22,7 @@ REGISTER_NO_GRAD_USER_OP("range")
     .Attr<int64_t>("delta")
     .Attr<int64_t>("limit")
     .Attr<DataType>("dtype")
+    .Attr<std::vector<std::string>>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);
       int64_t start = ctx->Attr<int64_t>("start");
@@ -39,6 +40,7 @@ REGISTER_NO_GRAD_USER_OP("range")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
-    });
+    })
+    .SetParallelDistributionInferFn(&user_op::InferSourceOpParallelDistribution);
 
 }  // namespace oneflow
