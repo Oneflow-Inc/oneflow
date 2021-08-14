@@ -196,7 +196,7 @@ template<>
   CHECK_EQ_OR_RETURN(tensor->is_lazy(), is_lazy);
   CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
   const auto& dtype = DataType(blob_attr->get_dtype());
-  CHECK_EQ_OR_RETURN(tensor->dtype(), dtype);
+  CHECK_EQ_OR_RETURN(tensor->dtype()->data_type(), dtype);
   CHECK_EQ_OR_RETURN(tensor->requires_grad(), requires_grad);
   CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
   if (is_local) {
