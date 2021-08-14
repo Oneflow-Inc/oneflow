@@ -71,7 +71,6 @@ class Adam(Optimizer):
         amsgrad: bool = False,
         do_bias_correction: bool = False,
     ):
-        super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert (
@@ -82,17 +81,15 @@ class Adam(Optimizer):
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert amsgrad is False, "Not support AMSGrad now!"
-        self.do_bias_correction = do_bias_correction
-        self._default_options["lr"] = lr
-        self._default_options["eps"] = eps
-        self._default_options["betas"] = betas
-        self._default_options["weight_decay"] = weight_decay
-        self._default_options["amsgrad"] = amsgrad
-        if isinstance(parameters, collections.abc.Iterator):
-            self.param_groups.append(ParamGroup(parameters, self._default_options))
-        else:
-            for param in parameters:
-                self.param_groups.append(ParamGroup(param, self._default_options))
+        options = dict()
+        options["do_bias_correction"] = do_bias_correction
+        options["lr"] = lr
+        options["eps"] = eps
+        options["betas"] = betas
+        options["weight_decay"] = weight_decay
+        options["amsgrad"] = amsgrad
+        super().__init__(parameters, options)
+
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
@@ -129,7 +126,7 @@ class Adam(Optimizer):
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
                 }
-                if self.do_bias_correction:
+                if param_group["do_bias_correction"]:
                     kwargs["learning_rate_val"] = (
                         param_group["lr"]
                         * math.sqrt(1 - kwargs["beta2"] ** (self._state["step"] + 1))
@@ -162,7 +159,7 @@ class Adam(Optimizer):
             optimizer_conf.mutable_adam_conf().set_beta2(beta2)
             optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
             optimizer_conf.mutable_adam_conf().set_do_bias_correction(
-                self.do_bias_correction
+                param_group["do_bias_correction"]
             )  # TODO(zzk): Check this option
 
             for param in param_group.parameters:
