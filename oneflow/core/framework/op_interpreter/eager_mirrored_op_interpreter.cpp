@@ -307,7 +307,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_OR_RETURN(!inputs.at(0)->is_consistent());
     const auto& input_tensor = JUST(inputs.at(0)->detach());
-    input_mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(input_tensor);
+    input_mirrored_tensor = JUST(input_tensor->AsMirroredTensor());
     CHECK_OR_RETURN(input_mirrored_tensor) << Error::ValueError("Tensor Cast Error");
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
     input_mirrored_tensor->set_requires_grad(requires_grad);
@@ -337,8 +337,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
       const auto& synced_tensor =
           JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
       CHECK_EQ_OR_RETURN(dtype, input_mirrored_tensor->dtype());
-      consistent_tensor_impl->reset_cur_rank_phy_tensor(
-          std::dynamic_pointer_cast<MirroredTensor>(synced_tensor));
+      consistent_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsMirroredTensor()));
       return Maybe<void>::Ok();
     }));
   }

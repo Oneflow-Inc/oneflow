@@ -225,6 +225,26 @@ class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
  private:
   CastFromConsistentOpExpr(const std::string& op_name);
 };
+
+class ConsistentToConsistentOpExpr final : public CastConsistentOpExpr {
+ public:
+  ~ConsistentToConsistentOpExpr() = default;
+
+  static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name);
+
+  const std::string& op_type_name() const override;
+
+  // Note(zwx): ConsistentToConsistentOpExpr is currently only used by lazy,
+  //     there's no need to gen grad through autograd engine
+  Maybe<bool> IsGradDisabled() const override { return true; }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+
+ private:
+  ConsistentToConsistentOpExpr(const std::string& op_name);
+};
+
 // NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
 using FeedInputOpExpr = BuiltinOpExprImpl<FeedInputOpConf>;
 using FeedVariableOpExpr = BuiltinOpExprImpl<FeedVariableOpConf>;

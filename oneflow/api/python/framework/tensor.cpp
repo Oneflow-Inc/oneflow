@@ -279,7 +279,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
                     || py::isinstance<py::str>(device_kwarg));
 
     if (py::isinstance<py::str>(device_kwarg)) {
-      device = DeviceExportUtil::New(py::cast<std::string>(device_kwarg));
+      device = DeviceExportUtil::ParseAndNew(py::cast<std::string>(device_kwarg));
     } else {
       device = py::cast<Symbol<Device>>(device_kwarg);
     }
@@ -313,7 +313,9 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
       if (other_tensor->is_local()) {
         if (placement) {
           // LocalTensor -> ConsistentTensor
-          tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple));
+          tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple,
+                                                 /* identity_grad */ false,
+                                                 /* grad_sbp_parallels */ {}));
         } else {
           // LocalTensor -> LocalTensor
           if (!device) { device = JUST(Device::New("cpu")); }
@@ -322,7 +324,9 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
       } else {
         if (placement) {
           // ConsistentTensor -> ConsistentTensor
-          tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple));
+          tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple,
+                                                 /* identity_grad */ false,
+                                                 /* grad_sbp_parallels */ {}));
         } else {
           // ConsistentTensor -> LocalTensor
           tensor = JUST(functional::ConsistentToLocal(other_tensor));
