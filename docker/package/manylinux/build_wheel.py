@@ -389,6 +389,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.skip_img:
         "Arg skip_img is deprecated. Setting it has no effect. If you want to build image, use --build_img"
+    if args.skip_wheel:
+        args.skip_audit = True
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
     assert args.package_name
     extra_oneflow_cmake_args = " ".join(
