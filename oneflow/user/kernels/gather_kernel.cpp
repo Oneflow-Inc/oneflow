@@ -92,6 +92,7 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     const int64_t axis = ctx->Attr<int64_t>("axis");
     const int64_t num_indices = indices->shape().elem_cnt();
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    if (out->shape().elem_cnt() == 0) { return; }
 
     int64_t offset = 0;
     if (state != nullptr) {
