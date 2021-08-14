@@ -314,8 +314,8 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     const auto& nd_sbp = JUST(ctx.nd_sbp.value());
     const auto& parallel_desc = JUST(ctx.parallel_desc.value());
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
-    ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape),
-                                     input_mirrored_tensor->dtype()->data_type(), nd_sbp,
+    DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
+    ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
                                      parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
@@ -339,6 +339,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
   outputs->at(0) = consistent_tensor;
   return Maybe<void>::Ok();
 }
+
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
