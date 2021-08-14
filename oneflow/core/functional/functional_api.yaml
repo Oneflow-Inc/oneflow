@@ -919,7 +919,7 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp)"
+  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, Bool identity_grad=False, SbpList grad_sbp)"
   bind_python: True
 
 - name: "to_local"
@@ -976,3 +976,11 @@
 - name: "split_with_size"
   signature: "TensorTuple SplitWithSize(Tensor x, *, Int64List split_sizes, Int64 dim=0)"
   bind_python: True
+
+- name: "l2_normalize"
+  signature: "TensorTuple L2Normalize(Tensor input, Int32 axis, Float epsilon, *)"
+  bind_python: True
+
+- name: "l2_normalize_grad"
+  signature: "Tensor L2NormalizeGrad(Tensor dy, Tensor y, Tensor square_x_sum, Int32 axis, Float epsilon, *)"
+  bind_python: False
