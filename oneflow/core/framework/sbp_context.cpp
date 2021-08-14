@@ -114,6 +114,43 @@ Maybe<void> GetSbpFnUtil::SplitForEachAxis(SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferNdSbp4SrcOp(user_op::InferParallelDistributionFnContext* ctx,
+                             const cfg::SbpParallel& default_sbp) {
+  const Shape& hierarchy = ctx->parallel_hierarchy();
+  const auto& sbp_str_list = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
+
+  // src op may have tick inputs whose sbp should be broadcast
+  for (const auto& input_arg : ctx->inputs()) {
+    cfg::ParallelDistribution* input_nd_sbp =
+        ctx->ParallelDistribution4ArgNameAndIndex(input_arg.first, input_arg.second);
+    FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
+      input_nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
+    }
+  }
+
+  for (const auto& output_arg : ctx->outputs()) {
+    cfg::ParallelDistribution* output_nd_sbp =
+        ctx->ParallelDistribution4ArgNameAndIndex(output_arg.first, output_arg.second);
+    size_t nd_sbp_size = sbp_str_list.size();
+    if (nd_sbp_size == 0) {
+      nd_sbp_size = hierarchy.NumAxes();
+    } else {
+      CHECK_EQ_OR_RETURN(nd_sbp_size, hierarchy.NumAxes());
+    }
+    FOR_RANGE(size_t, i, 0, nd_sbp_size) {
+      cfg::SbpParallel* sbp = output_nd_sbp->add_sbp_parallel();
+      if (sbp_str_list.size() == 0) {
+        *sbp = default_sbp;
+      } else {
+        CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str_list[i], sbp));
+      }
+      CHECK_OR_RETURN(sbp->has_split_parallel() || sbp->has_broadcast_parallel());
+    }
+  }
+
+  return Maybe<void>::Ok();
+}
+
 }  // namespace user_op
 
 }  // namespace oneflow
