@@ -48,7 +48,9 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
     })
     .SetParallelDistributionInferFn(
         [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          return user_op::InferNdSbp4SrcOp(ctx, "S(0)");
+          cfg::SbpParallel default_sbp;
+          default_sbp.mutable_split_parallel()->set_axis(0);
+          return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
         })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {

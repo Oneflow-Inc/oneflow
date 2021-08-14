@@ -96,7 +96,7 @@ struct GetSbpFnUtil {
 };
 
 Maybe<void> InferNdSbp4SrcOp(user_op::InferParallelDistributionFnContext* ctx,
-                             const std::string& default_sbp_str);
+                             const cfg::SbpParallel& default_sbp);
 
 }  // namespace user_op
 

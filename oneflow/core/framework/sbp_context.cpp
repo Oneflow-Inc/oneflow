@@ -115,7 +115,7 @@ Maybe<void> GetSbpFnUtil::SplitForEachAxis(SbpContext* ctx) {
 }
 
 Maybe<void> InferNdSbp4SrcOp(user_op::InferParallelDistributionFnContext* ctx,
-                             const std::string& default_sbp_str) {
+                             const cfg::SbpParallel& default_sbp) {
   const Shape& hierarchy = ctx->parallel_hierarchy();
   const auto& sbp_str_list = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
 
@@ -131,18 +131,20 @@ Maybe<void> InferNdSbp4SrcOp(user_op::InferParallelDistributionFnContext* ctx,
   for (const auto& output_arg : ctx->outputs()) {
     cfg::ParallelDistribution* output_nd_sbp =
         ctx->ParallelDistribution4ArgNameAndIndex(output_arg.first, output_arg.second);
-    if (sbp_str_list.size() == 0) {
-      FOR_RANGE(int, i, 0, hierarchy.NumAxes()) {
-        CHECK_OR_RETURN(
-            ParseSbpParallelFromString(default_sbp_str, output_nd_sbp->add_sbp_parallel()));
-      }
+    size_t nd_sbp_size = sbp_str_list.size();
+    if (nd_sbp_size == 0) {
+      nd_sbp_size = hierarchy.NumAxes();
     } else {
-      CHECK_EQ_OR_RETURN(sbp_str_list.size(), hierarchy.NumAxes());
-      for (const std::string& sbp_str : sbp_str_list) {
-        cfg::SbpParallel* sbp = output_nd_sbp->add_sbp_parallel();
-        CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, sbp));
-        CHECK_OR_RETURN(sbp->has_split_parallel() || sbp->has_broadcast_parallel());
+      CHECK_EQ_OR_RETURN(nd_sbp_size, hierarchy.NumAxes());
+    }
+    FOR_RANGE(size_t, i, 0, nd_sbp_size) {
+      cfg::SbpParallel* sbp = output_nd_sbp->add_sbp_parallel();
+      if (sbp_str_list.size() == 0) {
+        *sbp = default_sbp;
+      } else {
+        CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str_list[i], sbp));
       }
+      CHECK_OR_RETURN(sbp->has_split_parallel() || sbp->has_broadcast_parallel());
     }
   }
 
