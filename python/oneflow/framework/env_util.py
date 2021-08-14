@@ -369,6 +369,7 @@ def _SyncOnMasterFn():
     if not oneflow._oneflow_internal.IsEnvInited():
         return
     if oneflow.framework.distribute.is_multi_client():
+        print("evn sync called")
         oneflow._oneflow_internal.eager.multi_client.Sync()
     elif oneflow.framework.distribute.get_rank() == 0:
         oneflow._oneflow_internal.eager.single_client.Sync()

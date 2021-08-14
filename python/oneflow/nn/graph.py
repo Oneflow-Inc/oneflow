@@ -39,7 +39,6 @@ class Graph(object):
         self.config = GraphConfig()
         self._generate_name()
         self.config.proto.set_job_name(self._name)
-        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         self._blocks = OrderedDict()
         self._optimizers_conf = OrderedDict()
         self._variables_conf = OrderedDict()
@@ -48,7 +47,11 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
-        self._session = None
+        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
+        self._session = session_ctx.GetDefaultSession()
+        assert type(self._session) is MultiClientSession
+        self._session.TryInit()
+        self._session.AddCGraph(self._c_nn_graph)
 
     @property
     def name(self):
@@ -163,11 +166,6 @@ class Graph(object):
 
     def _build_forward_graph(self, *args):
         self._generate_optimizer_and_variable_configs()
-
-        self._session = session_ctx.GetDefaultSession()
-        assert type(self._session) is MultiClientSession
-        self._session.TryInit()
-        self._session.AddCGraph(self._c_nn_graph)
 
         with graph_build_util.graph_build_context(self.config.proto, self._session):
             # Deal with inputs

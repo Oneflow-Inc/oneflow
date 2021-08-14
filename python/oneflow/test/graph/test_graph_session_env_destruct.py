@@ -43,7 +43,6 @@ class LinearGraphDestruct(flow.nn.Graph):
 linear_g_d = LinearGraphDestruct()
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestLinearGraphDestruct(oneflow.unittest.TestCase):
     def test_linear_graph_destruct(test_case):
