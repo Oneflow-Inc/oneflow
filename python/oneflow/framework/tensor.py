@@ -361,6 +361,12 @@ def _get_device(self):
     raise NotImplementedError("get_device is only available for GPU tensor.")
 
 
+def _format(self, format_spec):
+    if self.dim() == 0:
+        return self.tolist().__format__(format_spec)
+    return object.__format__(self, format_spec)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -396,6 +402,7 @@ def RegisterMethods():
     Tensor.__rtruediv__ = _rtruediv
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
+    Tensor.__format__ = _format
     Tensor.uniform_ = _uniform_
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal
