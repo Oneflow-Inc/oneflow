@@ -16,25 +16,12 @@ limitations under the License.
 import os
 import unittest
 
-import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.optim as optim
+import oneflow.utils.vision.transforms as transforms
+import oneflow.unittest
 from data_utils import load_data_cifar10
-
-
-classes = (
-    "plane",
-    "car",
-    "bird",
-    "cat",
-    "deer",
-    "dog",
-    "frog",
-    "horse",
-    "ship",
-    "truck",
-)
 
 
 class Net(nn.Module):
@@ -71,8 +58,13 @@ def test(test_case):
 
     transform = flow.utils.vision.transforms.Compose(
         [
-            flow.utils.vision.transforms.ToTensor(),
-            flow.utils.vision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            transforms.Pad(10),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomVerticalFlip(p=0.5),
+            transforms.CenterCrop(32),
+            transforms.Resize([32, 32]),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
     )
 
@@ -111,14 +103,14 @@ def test(test_case):
 
             # print statistics
             running_loss += loss.numpy()
-            if i % 200 == 0:  # print every 200 mini-batches
-                final_loss = running_loss / 200
+            # print every 2000 mini-batches
+            if i % 2000 == 0:
+                final_loss = running_loss / 2000
                 print("epoch: %d  step: %5d  loss: %.3f " % (epoch, i, final_loss))
                 running_loss = 0.0
-                break
 
     print("final loss : ", final_loss)
-    # test_case.assertLess(final_loss, 1.50)
+    # test_case.assertLess(final_loss, 1.79)
 
 
 @flow.unittest.skip_unless_1n1d()
