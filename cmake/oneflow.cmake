@@ -37,8 +37,8 @@ function(target_treat_warnings_as_errors target)
     target_try_compile_options(${target} -Wno-error=deprecated-declarations)
 
     # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
-    target_try_compile_options(${target} 
-      -Wno-error=unused-const-variable 
+    target_try_compile_options(${target}
+      -Wno-error=unused-const-variable
       -Wno-error=unused-variable
       -Wno-error=unused-local-typedefs
       -Wno-error=unused-private-field
@@ -316,7 +316,7 @@ target_compile_options(of_pyext_obj PRIVATE -Werror=return-type)
 target_treat_warnings_as_errors(of_pyext_obj)
 
 if(APPLE)
-  set(of_libs -Wl,-force_load ${ONEFLOW_CUDA_LIBS} of_ccobj of_protoobj of_cfgobj)
+  set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj)
 elseif(UNIX)
   set(of_libs -Wl,--whole-archive ${ONEFLOW_CUDA_LIBS} of_ccobj of_protoobj of_cfgobj -Wl,--no-whole-archive -ldl -lrt)
 elseif(WIN32)
