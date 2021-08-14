@@ -29,7 +29,8 @@ class Blob;
 
 class NNGraph final : public NNGraphIf {
  public:
-  explicit NNGraph(const std::string& name) : name_(name), runtime_inited_(false), is_closed_(false) {}
+  explicit NNGraph(const std::string& name)
+      : name_(name), runtime_inited_(false), is_closed_(false) {}
   ~NNGraph();
 
   const std::string& job_name() const { return name_; }

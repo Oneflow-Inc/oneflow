@@ -48,11 +48,10 @@ class MultiClientSession(object):
             config_proto_str = text_format.MessageToString(self.config_proto)
             oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
             self.status_ = self.Status.INITED
-    
+
     def AddCGraph(self, graph):
         self._check_status(self.Status.INITED)
         oneflow._oneflow_internal.MultiClientSessionContextAddCGraph(graph)
-
 
     def _try_close(self):
         print("e_s_g py session try close")

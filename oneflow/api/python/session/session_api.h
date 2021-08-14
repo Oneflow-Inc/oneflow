@@ -43,7 +43,8 @@ inline void InitMultiClientSessionContext(const std::string& config_proto_str) {
   return oneflow::InitMultiClientSessionContext(config_proto_str).GetOrThrow();
 }
 
-inline void MultiClientSessionContextAddCGraph(const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+inline void MultiClientSessionContextAddCGraph(
+    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
   return oneflow::MultiClientSessionContextAddCGraph(c_graph_ptr).GetOrThrow();
 }
 
