@@ -42,6 +42,7 @@ class LinearGraphDestruct1(flow.nn.Graph):
 
 # test graph destruction when graph is not compiled
 linear_g_d_not_compiled = LinearGraphDestruct1()
+print("test graph destruction when graph is not compiled")
 
 
 if __name__ == "__main__":
