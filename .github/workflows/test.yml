@@ -122,7 +122,7 @@ jobs:
           CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
   changed_files:
-    name: "Change files"
+    name: "Changed files"
     runs-on: ubuntu-latest
     outputs:
       all: ${{ steps.changes.outputs.all}}
