@@ -40,7 +40,6 @@ NNGraph::~NNGraph() {
 Maybe<void> NNGraph::Close() {
   if (!is_closed_) {
     VLOG(2) << "Try to close c nn graph name " << name_ << "." << std::endl;
-    vm::MultiClientSync();
     CloseRuntimeBuffers();
     runtime_.reset();
     Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
