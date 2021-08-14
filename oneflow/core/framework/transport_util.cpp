@@ -22,20 +22,14 @@ limitations under the License.
 #include "oneflow/core/thread/consistent_unique_id.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
-  const auto& start = std::chrono::steady_clock::now();
-  const auto& cond_cnt = ctx.flying_cnt();
-  while (*cond_cnt > 0) {
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
-        << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
-  }
+  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds));
   JUST(ctx.transport_token().TryReleaseCtrlTransportTokenLock());
   return Maybe<void>::Ok();
 }
