@@ -1005,7 +1005,7 @@ class BCEWithLogitsLoss(Module):
         _neg_input = flow.negative(input)
         _max_val = flow.clip(_neg_input, 0)
         _neg_max_val = flow.negative(_max_val)
-        if self.pos_weight:
+        if self.pos_weight is not None:
             _log_weight = (self.pos_weight - 1) * target + 1
             _loss = (1 - target) * input + _log_weight * (
                 flow.log(flow.exp(_neg_max_val) + flow.exp(_neg_input - _max_val))
