@@ -41,7 +41,8 @@ class Kernel {
 
   void Init(const JobDesc* job_desc, const KernelConf&, DeviceCtx*);
 
-  void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void Launch(const KernelCtx& ctx,
+              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
@@ -54,22 +55,22 @@ class Kernel {
   virtual bool IsKernelLaunchSynchronized() const { return true; }
 
   void SystemForwardHeader(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
     ForwardHeader(ctx, BnInOp2Blob);
   }
   void SystemForwardDataContent(const KernelCtx& ctx,
-                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                                const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
   virtual void Forward(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
   void SetOutputBlobProducerInferAccessChecker(
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void SetOutputBlobProducerComputeAccessChecker(
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void SetOutputBlobConsumerAccessChecker(
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
  protected:
   Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
@@ -94,7 +95,7 @@ class Kernel {
   }
 
   template<typename HandlerT>
-  void ForEachObnAndIsMutableByConsumer(std::function<Blob*(const std::string&)> BnInOp2Blob,
+  void ForEachObnAndIsMutableByConsumer(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                         const HandlerT& Handler) const {
     const auto& modifier_map =
         this->kernel_conf_.op_attribute().arg_modifier_signature().obn2output_blob_modifier();
@@ -108,29 +109,19 @@ class Kernel {
   }
 
   virtual void ForwardHeader(const KernelCtx& ctx,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  virtual void ForwardShape(const KernelCtx& ctx,
-                            std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  void NaiveForwardShape(std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  // TODO(niuchong) : rename ForwardDataContent to ForwardBody
-  virtual void ForwardDataContent(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
-  virtual bool IsStateless() const { return false; }
-  virtual const PbMessage& GetCustomizedOpConf() const {
-    UNIMPLEMENTED();
-    return *(const PbMessage*)nullptr;
-  }
-  virtual const PbMessage& GetCustomizedKernelConf() const {
-    UNIMPLEMENTED();
-    return *(const PbMessage*)nullptr;
-  }
-  void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  virtual void ForwardShape(const KernelCtx& ctx,
+                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  // TODO(niuchong) : rename ForwardDataContent to ForwardBody
+  virtual void ForwardDataContent(
+      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const = 0;
+  virtual bool IsStateless() const { return false; }
 
  private:
   const JobDesc* job_desc_;
   RuntimeBlobShapeInferHelper* shape_infer_helper_;
   KernelConf kernel_conf_;
+  bool blob_access_checker_disabled_;
 };
 
 template<DeviceType device_type>

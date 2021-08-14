@@ -1683,7 +1683,7 @@ def l2_normalize(
     The equation is:
 
     .. math::
-        out = \\frac{x}{\\sqrt{\\Sigma{x^2}+\\epsilon}}
+        out = \\frac{x}{max(\\sqrt{\\Sigma{x^2}}, \\epsilon)}
 
     Args:
         input (oneflow._oneflow_internal.BlobDesc): Input Blob

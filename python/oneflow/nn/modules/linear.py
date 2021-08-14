@@ -110,15 +110,12 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        assert len(x.shape) >= 2, "Tensor x's dim should >=2"
-        if len(x.shape) == 2:
-            res = flow.F.matmul(x, self.weight, transpose_a=False, transpose_b=True)
-        else:
-            res = flow.F.broadcast_matmul(
-                x, self.weight, transpose_a=False, transpose_b=True
-            )
+        res = flow.F.matmul(x, self.weight, transpose_a=False, transpose_b=True)
         if self.use_bias:
-            res += self.bias
+            # TODO(zwx): Inplace add is not supported yet with consistent tensor,
+            # use non-inplace version before inplace broadcast add has been implemented.
+            # res += self.bias
+            res = res + self.bias
         return res
 
     def extra_repr(self) -> str:

@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/tensor_meta.h"
-#include "oneflow/core/framework/rpc_token.h"
+#include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -132,13 +132,10 @@ class ConsistentTensorImpl : public TensorImpl {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape_ptr(); }
   DataType dtype() const override { return tensor_meta_->dtype(); }
-  Symbol<cfg::ParallelDistribution> parallel_distribution() const {
-    return tensor_meta_->parallel_distribution();
-  }
+  Symbol<cfg::ParallelDistribution> nd_sbp() const { return tensor_meta_->nd_sbp(); }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
-  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint()
-      const {
-    return consumer_parallel_distribution_constraint_;
+  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint() const {
+    return consumer_nd_sbp_constraint_;
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
@@ -149,8 +146,8 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
-  void set_consumer_parallel_distribution_constraint(Symbol<cfg::ParallelDistribution> val) {
-    consumer_parallel_distribution_constraint_ = val;
+  void set_consumer_nd_sbp_constraint(Symbol<cfg::ParallelDistribution> val) {
+    consumer_nd_sbp_constraint_ = val;
   }
 
   ConsistentTensorMeta* mut_tensor_meta() {
@@ -158,11 +155,11 @@ class ConsistentTensorImpl : public TensorImpl {
     return nullptr;
   }
 
-  const Maybe<RpcToken> rpc_token() const { return rpc_token_; }
+  Maybe<TransportToken> transport_token() const { return transport_token_.value(); }
 
-  Maybe<void> set_rpc_token(const RpcToken& rpc_token) {
-    CHECK_OR_RETURN(!rpc_token_.IsOk()) << "rpc_token_ is initiliazed";
-    rpc_token_ = rpc_token;
+  Maybe<void> set_transport_token(const TransportToken& transport_token) {
+    CHECK_OR_RETURN(!transport_token_.has_value());
+    transport_token_ = transport_token;
     return Maybe<void>::Ok();
   }
 
@@ -170,12 +167,12 @@ class ConsistentTensorImpl : public TensorImpl {
   ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta, bool requires_grad, bool is_leaf)
       : TensorImpl(requires_grad, is_leaf),
         tensor_meta_(tensor_meta),
-        consumer_parallel_distribution_constraint_(),
-        rpc_token_(Error::ValueError("invalid rpc token")) {}
+        consumer_nd_sbp_constraint_(),
+        transport_token_() {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
-  Maybe<RpcToken> rpc_token_;
+  Optional<Symbol<cfg::ParallelDistribution>> consumer_nd_sbp_constraint_;
+  Optional<TransportToken> transport_token_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {

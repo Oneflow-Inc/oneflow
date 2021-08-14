@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/error_util.h"
 
 namespace oneflow {
 
@@ -34,9 +35,11 @@ std::shared_ptr<cfg::ErrorProto>* MutThreadLocalError() {
 
 }  // namespace
 
-Error&& Error::AddStackFrame(const std::string& location, const std::string& function) {
+Error&& Error::AddStackFrame(const std::string& file, const int64_t& line,
+                             const std::string& function) {
   auto* stack_frame = error_proto_->add_stack_frame();
-  stack_frame->set_location(location);
+  stack_frame->set_file(file);
+  stack_frame->set_line(line);
   stack_frame->set_function(function);
   return std::move(*this);
 }
@@ -277,12 +280,15 @@ Error Error::InputDeviceNotMatchError() {
 }
 
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
+  const auto& maybe_error = TRY(FormatErrorStr(error));
+  const auto& error_str = maybe_error.GetDataAndErrorProto(error->DebugString());
+
   *MutThreadLocalError() = error;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
   switch (error->error_type_case()) {
 #define MAKE_ENTRY(cls)                                      \
   case cfg::ErrorProto::OF_PP_CAT(k, OF_PP_CAT(cls, Error)): \
-    throw OF_PP_CAT(cls, Exception)(error->DebugString());
+    throw OF_PP_CAT(cls, Exception)(error_str.first);
 
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, EXCEPTION_SEQ)
 

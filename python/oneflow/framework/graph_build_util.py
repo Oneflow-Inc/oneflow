@@ -16,6 +16,7 @@ limitations under the License.
 from contextlib import contextmanager
 
 from google.protobuf import text_format
+import oneflow
 
 import oneflow._oneflow_internal
 from oneflow._oneflow_internal.oneflow.core.framework import (
@@ -24,7 +25,6 @@ from oneflow._oneflow_internal.oneflow.core.framework import (
 import oneflow.core.job.scope_pb2 as scope_pb2_util
 import oneflow.framework.attr_util as attr_util
 import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.placement_util as placement_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor
@@ -43,7 +43,7 @@ def graph_build_context(config_proto, session):
         False,  # is_mirrored
     )
 
-    with lazy_mode.gard(True):
+    with lazy_mode.guard(True):
         with JobBuildAndInferCtx(config_proto):
             with BlockScopeContext(prev_scope, new_scope):
                 yield
@@ -58,11 +58,12 @@ class JobBuildAndInferCtx(object):
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(self._job_conf)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
-        oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
         if exc_type is None:
+            oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
+            oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
             return True
         else:
+            oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
             return False
 
 
@@ -174,5 +175,19 @@ def build_graph_output(op_name, out):
     )
     attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
 
-    eager_out = output_op.apply([out], attrs)[0]
+    fake_eager_out = output_op.apply([out], attrs)[0]
+
+    shape = fake_eager_out.shape
+    dtype = fake_eager_out.dtype
+    with oneflow._oneflow_internal.lazy_mode.guard(False):
+        if fake_eager_out.is_consistent:
+            eager_out = oneflow.empty(
+                shape,
+                dtype=dtype,
+                placement=fake_eager_out.placement,
+                sbp=fake_eager_out.sbp,
+            )
+        else:
+            eager_out = oneflow.empty(shape, dtype=dtype, device=fake_eager_out.device)
+
     return eager_out

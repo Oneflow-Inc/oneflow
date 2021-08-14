@@ -59,7 +59,7 @@ class AutogradMeta final {
   const std::vector<Hook>& hooks() const { return hooks_; }
 
   // Setters
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) { acc_grad_ = grad; }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad);
   std::shared_ptr<Tensor> mut_acc_grad() { return acc_grad_; }
   void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
   void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
@@ -94,9 +94,9 @@ class TensorInfo final {
  private:
   std::shared_ptr<const Shape> shape_;
   DataType dtype_;
-  Optional<Symbol<Device>> device_;                                    // for local tensor
-  Optional<Symbol<ParallelDesc>> parallel_desc_;                       // for consistent tensor
-  Optional<Symbol<cfg::ParallelDistribution>> parallel_distribution_;  // for consistent tensor
+  Optional<Symbol<Device>> device_;                     // for local tensor
+  Optional<Symbol<ParallelDesc>> parallel_desc_;        // for consistent tensor
+  Optional<Symbol<cfg::ParallelDistribution>> nd_sbp_;  // for consistent tensor
 };
 
 }  // namespace one

@@ -14,11 +14,14 @@ OneFlow API Reference
     oneflow
     tensor
     nn
+    functional
     module
     F
     linalg
     image
     optim
+    utils
+
 
 
 Indices and tables

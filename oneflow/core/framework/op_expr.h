@@ -120,7 +120,7 @@ class ConsistentTensorInferCache;
 
 class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
  public:
-  UserOpExpr() = default;
+  UserOpExpr() = delete;
   virtual ~UserOpExpr() = default;
 
   static Maybe<UserOpExpr> New(const std::string& op_name, UserOpConf&& op_proto,
@@ -197,6 +197,26 @@ class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
  private:
   CastFromConsistentOpExpr(const std::string& op_name);
 };
+
+class ConsistentToConsistentOpExpr final : public CastConsistentOpExpr {
+ public:
+  ~ConsistentToConsistentOpExpr() = default;
+
+  static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name);
+
+  const std::string& op_type_name() const override;
+
+  // Note(zwx): ConsistentToConsistentOpExpr is currently only used by lazy,
+  //     there's no need to gen grad through autograd engine
+  Maybe<bool> IsGradDisabled() const override { return true; }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+
+ private:
+  ConsistentToConsistentOpExpr(const std::string& op_name);
+};
+
 // NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
 using FeedInputOpExpr = BuiltinOpExprImpl<FeedInputOpConf>;
 using FeedVariableOpExpr = BuiltinOpExprImpl<FeedVariableOpConf>;
@@ -209,6 +229,34 @@ using DistributeSplitOpExpr = BuiltinOpExprImpl<DistributeSplitOpConf>;
 using DistributeCloneOpExpr = BuiltinOpExprImpl<DistributeCloneOpConf>;
 using DistributeConcatOpExpr = BuiltinOpExprImpl<DistributeConcatOpConf>;
 using DistributeAddOpExpr = BuiltinOpExprImpl<DistributeAddOpConf>;
+
+class SelectFirstOpExpr final : public OpExpr {
+ public:
+  static Maybe<SelectFirstOpExpr> New() {
+    return std::shared_ptr<SelectFirstOpExpr>(new SelectFirstOpExpr());
+  }
+
+  const std::string& op_type_name() const override {
+    static const std::string kOpTypeName = "select_first";
+    return kOpTypeName;
+  }
+
+  int input_size() const override {
+    UNIMPLEMENTED();
+    return 0;
+  }
+
+  int output_size() const override { return 1; }
+
+  Maybe<bool> IsGradDisabled() const override { return false; }
+
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
+
+ private:
+  SelectFirstOpExpr() = default;
+
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
+};
 
 class OpExprInterpState;
 // TODO(): Finish the class definition of `FunctionOpExpr`.

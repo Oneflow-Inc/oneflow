@@ -51,6 +51,7 @@ class CustomModule(flow.nn.Module):
         return x
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraph(flow.unittest.TestCase):
     def test_add_nested_module(test_case):
@@ -87,8 +88,6 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
     def test_graph_config(test_case):
-        print("cclog: CustomGraphConfig begin")
-
         class CustomGraphConfig(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -106,11 +105,8 @@ class TestGraph(flow.unittest.TestCase):
         for s in g._state():
             print("g state: ", repr(s))
         print(repr(g))
-        print("cclog: CustomGraphConfig done")
 
     def test_graph_name(test_case):
-        print("cclog: GraphName begin")
-
         class ACustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -143,13 +139,12 @@ class TestGraph(flow.unittest.TestCase):
         flow.nn.Graph._child_init_cnt.clear()
         for i in range(0, 3):
             create_graph(i)
-        print("cclog: GraphName done")
 
     def test_graph_build_ctx(test_case):
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
-        with graph_build_util.lazy_mode.gard(True):
+        with graph_build_util.lazy_mode.guard(True):
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
-            with graph_build_util.lazy_mode.gard(False):
+            with graph_build_util.lazy_mode.guard(False):
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
@@ -201,9 +196,10 @@ class TestGraph(flow.unittest.TestCase):
                     "pipeline_stage_id_hint"
                 ].at_int64
                 test_case.assertEqual(stage_int, 0)
+                out = self.conv1(x)
                 weight = self.conv1.weight
-                test_case.assertEqual(type(weight), flow.nn.graph.Block)
-                return self.conv1(x)
+                test_case.assertTrue(weight.is_lazy)
+                return out
 
         class SubModule1(flow.nn.Module):
             def __init__(self):
