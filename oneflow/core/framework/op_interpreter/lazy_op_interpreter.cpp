@@ -306,14 +306,20 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
                                                         const OpExprInterpContext& ctx) {
   bool is_local;
   std::shared_ptr<const ParallelDesc> parallel_desc;
-  if (ctx.parallel_desc.has_value()) {  // NOTE(chengcheng): consistent
+  if (ctx.parallel_desc.has_value()) {
+    // NOTE(chengcheng): consistent
     CHECK_OR_RETURN(!ctx.device.has_value());
     parallel_desc = JUST(ctx.parallel_desc.value()).shared_from_symbol();
     is_local = false;
   } else {
-    CHECK_OR_RETURN(ctx.device.has_value());  // NOTE(chengcheng): local
+    // NOTE(chengcheng): local
     CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
-    parallel_desc = JUST(ctx.device.value())->parallel_desc_ptr();
+    if (ctx.device.has_value()) {
+      parallel_desc = JUST(ctx.device.value())->parallel_desc_ptr();
+    } else {
+      // NOTE(chengcheng): if functor NOT set device, using cpu device default.
+      parallel_desc = JUST(Device::New("cpu"))->parallel_desc_ptr();
+    }
     is_local = true;
   }
   std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
