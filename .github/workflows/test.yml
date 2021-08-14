@@ -602,7 +602,7 @@ jobs:
             })
       - name: Single client op test
         timeout-minutes: 45
-        if: contains(fromJson('["cuda", "cuda_op"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1'
+        if: contains(fromJson('["cpu", "cuda_op"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run \
