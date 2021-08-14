@@ -5,13 +5,11 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-device = flow.device("cuda")
 linear = flow.nn.Linear(3, 8, False)
-linear = linear.to(device)
 input_arr = np.random.randn(8, 3).astype(np.float32)
 np_weight = np.ones((3, 8)).astype(np.float32)
 np_weight.fill(2.3)
-x = flow.tensor(input_arr, device=device)
+x = flow.tensor(input_arr)
 flow.nn.init.constant_(linear.weight, 2.3)
 of_eager_out = linear(x)
 np_out = np.matmul(input_arr, np_weight)
