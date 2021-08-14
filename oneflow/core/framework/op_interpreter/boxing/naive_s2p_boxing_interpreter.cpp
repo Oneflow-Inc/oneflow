@@ -40,7 +40,7 @@ Maybe<one::Tensor> NcclS2PBoxingInterpreter::InterpretImpl(
   static Symbol<cfg::NdSbp> mid_nd_sbp = JUST(GetBroadcastNdSbp());
   static std::shared_ptr<NcclCollectiveAllGatherBoxingInterpreter> s2b_interpreter =
       std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>();
-  static std::shared_ptr<NaiveB2PBoxingInterpreter> b2p_interpreter =
+  static thread_local std::shared_ptr<NaiveB2PBoxingInterpreter> b2p_interpreter =
       std::make_shared<NaiveB2PBoxingInterpreter>();
   const auto& mid_tesnor = JUST(s2b_interpreter->Interpret(input, in_nd_sbp, mid_nd_sbp,
                                                            in_parallel_desc, out_parallel_desc));

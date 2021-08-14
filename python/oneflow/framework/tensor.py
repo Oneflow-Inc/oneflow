@@ -96,8 +96,17 @@ def _getitem(self, key):
 
 
 def _setitem(self, key, value):
-    if isinstance(value, (int, float)):
-        value = flow.F.constant([1], value, self.dtype)
+    if self.is_consistent:
+        if isinstance(value, (int, float)):
+            value = flow.F.consistent_constant(
+                [1], value, self.dtype, placement=self.placement, sbp=flow.sbp.broadcast
+            )
+    else:
+        if isinstance(value, (int, float)):
+            value = flow.F.constant([1], value, self.dtype, device=self.device)
+        else:
+            value = value.to(device=self.device)
+
     flow.F.tensor_setitem(self, key, value)
     return self
 
@@ -262,10 +271,7 @@ def _init_eager_local_tensor_by_initializer_conf(
 
 def _init_by_initializer_conf(tensor, initializer_conf):
     if tensor.is_consistent:
-        with tensor._placement_scope():
-            check_point_v2.init_by_initializer_conf(
-                tensor, initializer_conf, True, None
-            )
+        raise NotImplementedError(" consistent initializer unvailiable now")
     else:
         _init_eager_local_tensor_by_initializer_conf(tensor, initializer_conf)
     return tensor
@@ -316,6 +322,12 @@ def _get_device(self):
     raise NotImplementedError("get_device is only available for GPU tensor.")
 
 
+def _format(self, format_spec):
+    if self.dim() == 0:
+        return self.tolist().__format__(format_spec)
+    return object.__format__(self, format_spec)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -350,6 +362,7 @@ def RegisterMethods():
     Tensor.__rtruediv__ = _rtruediv
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
+    Tensor.__format__ = _format
     Tensor.uniform_ = _uniform_
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal

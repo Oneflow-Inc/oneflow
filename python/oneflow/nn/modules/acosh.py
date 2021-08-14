@@ -36,7 +36,7 @@ def acosh_op(input):
         >>> x1 = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         >>> out1 = flow.acosh(x1)
         >>> out1
-        tensor([1.317 , 1.7627, 2.0634], dtype=oneflow.float32)
+        tensor([1.3170, 1.7627, 2.0634], dtype=oneflow.float32)
         >>> x2 = flow.Tensor(np.array([1.5, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
         >>> out2 = flow.acosh(x2)
         >>> out2

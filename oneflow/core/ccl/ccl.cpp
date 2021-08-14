@@ -46,11 +46,17 @@ Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
                                         int64_t root, Symbol<ParallelDesc> parallel_desc,
                                         DeviceCtx* ctx) {
   CHECK_EQ_OR_RETURN(parallel_desc->device_type(), DeviceType::kCPU);
-  static thread_local std::vector<int64_t> rank_heap{};
-  JUST(InitBroadcastRankHeap(&rank_heap, *parallel_desc, root));
-  TransportToken transport_token = TransportToken::NewDataTransportToken();
   CHECK_OR_RETURN(IsPODDataType(dtype));
   size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
+  TransportToken transport_token = TransportToken::NewDataTransportToken();
+  return CpuBroadcast(in, out, buffer_size, root, parallel_desc, transport_token);
+}
+
+Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t root,
+                         Symbol<ParallelDesc> parallel_desc,
+                         const TransportToken& transport_token) {
+  static thread_local std::vector<int64_t> rank_heap{};
+  JUST(InitBroadcastRankHeap(&rank_heap, *parallel_desc, root));
   NaiveAsyncTransportCtx transport_ctx(
       transport_token,
       [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
@@ -67,6 +73,7 @@ Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
       });
   JUST(TransportUtil::ReceiveDataFromParentInHeap(rank_heap, transport_token, &transport_ctx));
   JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
+  JUST(transport_token.TryAcquireCtrlTransportTokenLock());
   JUST(TransportUtil::SendDataToChildrenInHeap(rank_heap, transport_token, &transport_ctx));
   if (GlobalProcessCtx::Rank() == root && out != in) { std::memcpy(out, in, buffer_size); }
   JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));

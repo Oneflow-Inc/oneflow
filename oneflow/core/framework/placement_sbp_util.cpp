@@ -17,6 +17,11 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -139,6 +144,86 @@ Maybe<std::vector<int64_t>> GetBroadcastParallelIds(const Shape& hierarchy_shape
     origin_offsets->at(i) = origin_offset;
   }
   return origin_offsets;
+}
+
+namespace {
+
+Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
+    Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc,
+    bool allow_across_node) {
+  CHECK_EQ_OR_RETURN(src_parallel_desc->parallel_num(),
+                     src_parallel_desc->sorted_machine_ids().size());
+  CHECK_EQ_OR_RETURN(dst_parallel_desc->parallel_num(),
+                     dst_parallel_desc->sorted_machine_ids().size());
+  CHECK_EQ_OR_RETURN(src_parallel_desc->device_type(), dst_parallel_desc->device_type());
+  CHECK_LE_OR_RETURN(src_parallel_desc->parallel_num(), dst_parallel_desc->parallel_num());
+  const auto& src_process_ids = src_parallel_desc->sorted_machine_ids();
+  HashMap<int64_t, std::vector<int64_t>> process_id2group{};
+  HashMap<int64_t, std::vector<int64_t>> node_id2src_process_id{};
+  for (int64_t process_id : src_process_ids) {
+    std::vector<int64_t> vec{process_id};
+    CHECK_OR_RETURN(process_id2group.emplace(process_id, vec).second);
+    CHECK_OR_RETURN(dst_parallel_desc->ContainingMachineId(process_id));
+    node_id2src_process_id[GlobalProcessCtx::NodeId(process_id)].push_back(process_id);
+  }
+  std::vector<int64_t> remainder_process_ids{};
+  remainder_process_ids.reserve(dst_parallel_desc->sorted_machine_ids().size());
+  HashMap<int64_t, int64_t> node_id2counter{};
+  for (int64_t process_id : dst_parallel_desc->sorted_machine_ids()) {
+    if (!src_parallel_desc->ContainingMachineId(process_id)) {
+      const auto& node_iter = node_id2src_process_id.find(GlobalProcessCtx::NodeId(process_id));
+      if (node_iter == node_id2src_process_id.end()) {
+        CHECK_OR_RETURN(allow_across_node)
+            << Error::Unimplemented() << "\n----[src_placement]----\n"
+            << src_parallel_desc->parallel_conf().DebugString() << "\n----[dst_placement]----\n"
+            << dst_parallel_desc->parallel_conf().DebugString();
+        // handle `process_id` later.
+        remainder_process_ids.push_back(process_id);
+      } else {
+        // balancedly put `process_id` into the groups within the same node..
+        int64_t node_id = node_iter->first;
+        const auto& src_process_ids = node_iter->second;
+        int64_t src_process_index = (node_id2counter[node_id]++) % src_process_ids.size();
+        int64_t src_process_id = src_process_ids.at(src_process_index);
+        JUST(MutMapAt(&process_id2group, src_process_id))->push_back(process_id);
+      }
+    }
+  }
+  // put remainder process ids into src groups.
+  for (int i = 0; i < remainder_process_ids.size(); ++i) {
+    int64_t src_process_id = src_process_ids.at(i % src_process_ids.size());
+    JUST(MutMapAt(&process_id2group, src_process_id))->push_back(remainder_process_ids.at(i));
+  }
+  const auto& map = std::make_shared<std::unordered_map<int64_t, Symbol<ParallelDesc>>>();
+  for (const auto& pair : process_id2group) {
+    const auto& group = pair.second;
+    ParallelConf parallel_conf;
+    parallel_conf.set_device_tag(dst_parallel_desc->parallel_conf().device_tag());
+    for (int64_t process_id : group) {
+      const auto& device_ids = dst_parallel_desc->sorted_dev_phy_ids(process_id);
+      CHECK_EQ_OR_RETURN(device_ids.size(), 1);
+      parallel_conf.add_device_name(std::string("@") + std::to_string(process_id) + ":"
+                                    + std::to_string(device_ids.at(0)));
+    }
+    const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+    for (int64_t process_id : group) {
+      CHECK_OR_RETURN(map->emplace(process_id, parallel_desc).second);
+    }
+  }
+  return map;
+}
+auto* CachedBroadcastGroup = DECORATE(&CalcBroadcastGroup, ThreadLocal);
+
+}  // namespace
+
+Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroup(
+    Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc) {
+  return CachedBroadcastGroup(src_parallel_desc, dst_parallel_desc, true);
+}
+
+Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroupWithoutAcrossNode(
+    Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc) {
+  return CachedBroadcastGroup(src_parallel_desc, dst_parallel_desc, false);
 }
 
 }  // namespace oneflow

@@ -27,10 +27,10 @@ const static int kTransportTokenRankGroupLevelBit = 3;
 
 enum TransportTokenType {
   // Begin
-  kDataTransportTokenType = 0,  // e.g. for tensor data transportation
-  kMetaTransportTokenType,      // e.g. for tensor meta checking
-  kCtrlTransportTokenType,      // e.g. for rank_group or thread checking. see RankGroupCtrlCmd
-  kExtendedTransportTokenType,  // for compatibility
+  kInvalidTransportTokenType = 0,
+  kDataTransportTokenType,  // e.g. for tensor data transportation
+  kMetaTransportTokenType,  // e.g. for tensor meta checking
+  kCtrlTransportTokenType,  // e.g. for rank_group or thread checking. see RankGroupCtrlCmd
   // End
   kTransportTokenTypeSize,
 };
@@ -45,7 +45,7 @@ enum RankGroupCtrlCmd {
   kRankGroupCtrlCmdSyncSymbolConsistentTensorMeta,
   kRankGroupCtrlCmdCheckRankGroupConsistency,
   kRankGroupCtrlCmdCheckTensorConsistency,
-  kRankGroupCtrlCmdAll2AllSyncShape,
+  kRankGroupCtrlCmdSyncLocalShapeDtype,
   // End
   kSizeOfRankGroupCtrlCmd
 };
@@ -59,6 +59,7 @@ struct IsScalarType<TransportToken> final {
 
 class TransportToken final {
  public:
+  TransportToken() : TransportToken(kInvalidTransportTokenType) {}
   TransportToken(const TransportToken&) = default;
   TransportToken(TransportToken&) = default;
   ~TransportToken() = default;
@@ -66,7 +67,8 @@ class TransportToken final {
   static TransportToken NewDataTransportToken();
   static Maybe<TransportToken> NewMetaTransportToken();
   static Maybe<TransportToken> AcquireCtrlTransportToken(RankGroupCtrlCmd cmd);
-  Maybe<void> ReleaseCtrlTransportToken() const;
+  Maybe<void> TryAcquireCtrlTransportTokenLock() const;
+  Maybe<void> TryReleaseCtrlTransportTokenLock() const;
 
   static constexpr size_t MaxNumberOfThreadConsistentUId() {
     return (1 << kTransportTokenThreadConsistentUIdBit);

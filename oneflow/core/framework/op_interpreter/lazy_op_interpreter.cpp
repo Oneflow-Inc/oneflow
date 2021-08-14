@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -25,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -561,6 +564,77 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Tens
   // TODO(hjchen2)
   OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
                      << " has not been supported in LazyInterpreter::Apply.";
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
+                                       const TensorTuple& inputs, TensorTuple* outputs,
+                                       const OpExprInterpContext& ctx) const {
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  const auto& input_tensor = inputs[0];
+  CHECK_OR_RETURN(input_tensor->is_lazy());
+  CHECK_OR_RETURN(input_tensor->is_consistent());
+
+  bool identity_grad = JUST(ctx.attrs.GetAttr<bool>("identity_grad"));
+  const auto& grad_sbp_list = JUST(ctx.attrs.GetAttr<std::vector<std::string>>("grad_sbp"));
+
+  CHECK_OR_RETURN(ctx.parallel_desc.has_value());
+  const auto& parallel_desc_sym = JUST(ctx.parallel_desc.value());
+  CHECK_OR_RETURN(ctx.nd_sbp.has_value());
+  const auto& sbp_sym = JUST(ctx.nd_sbp.value());
+
+  std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  if (input_lbn.empty()) {
+    JUST(AddFreeEagerTensorToVariableOp(input_tensor));
+    input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+    CHECK_OR_RETURN(!input_lbn.empty());
+  }
+
+  std::shared_ptr<Tensor> input_proxy;
+  if (!JUST(GetParallelDescOfTensor(input_tensor))
+           ->EqualsIgnoringHierarchy(*parallel_desc_sym.shared_from_symbol())) {
+    // NOTE(zwx): The input tensor's parallel_desc is not equal to that of op's,
+    // create a proxy input with the parallel_desc that is the same as op's
+    input_proxy = JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype(),
+                                                    JUST(input_tensor->nd_sbp()), parallel_desc_sym,
+                                                    /* is_lazy= */ true,
+                                                    /*requires_grad=*/false, /*is_leaf=*/true));
+    TensorNameScope::Global()->Record(input_proxy, input_lbn);
+  }
+
+  // build parallel cast op expr
+  std::string grad_mode;
+  std::vector<std::string> grad_parallel_distribution;
+  if (identity_grad) {
+    grad_mode = "identity";
+  } else if (grad_sbp_list.size() > 0) {
+    grad_mode = "manual";
+    grad_parallel_distribution = grad_sbp_list;
+  } else {
+    grad_mode = "restore";
+  }
+  auto sbp_list_ptr = JUST(GetNdSbpStrList(sbp_sym));
+  std::shared_ptr<UserOpExpr> parallel_cast_op_expr =
+      JUST(OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
+               .Input("in")
+               .Output("out")
+               .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
+               .Attr<std::string>("grad_mode", grad_mode)
+               .Attr<std::vector<std::string>>("grad_nd_sbp", grad_parallel_distribution)
+               .Build());
+
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  CHECK_OR_RETURN(!(*outputs)[0]);
+  if (input_proxy) {
+    (*outputs)[0] =
+        JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_cast_op_expr, {input_proxy}));
+  } else {
+    (*outputs)[0] =
+        JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_cast_op_expr, {input_tensor}));
+  }
+
   return Maybe<void>::Ok();
 }
 
