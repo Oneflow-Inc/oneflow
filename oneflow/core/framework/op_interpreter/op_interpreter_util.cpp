@@ -48,8 +48,25 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
-Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs,
-                                          const OpExprInterpContext& ctx) {
+std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr) {
+  std::stringstream error_str;
+  error_str << "Got input tensors with inconsistent attributes!\n"
+            << "op_type_name: " << op_expr.op_type_name() << "\n"
+            << "attributes of inputs is:\n";
+  int32_t idx = 0;
+  for (const auto& tensor : inputs) {
+    if (tensor->is_local()) {
+      error_str << "local";
+    } else {
+      error_str << "consistent";
+    }
+    if (++idx != inputs.size()) { error_str << ", "; }
+  }
+  return error_str.str();
+}
+
+Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExprInterpContext& ctx,
+                                          const OpExpr& op_expr) {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
   static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
@@ -68,24 +85,34 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs,
         if (inputs.size() == 1) {
           // do nothing
         } else if (inputs.size() == 2) {
-          CHECK_OR_RETURN(inputs.at(1)->is_consistent());  // unroll loop for efficiency
+          CHECK_OR_RETURN(inputs.at(1)->is_consistent())
+              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else if (inputs.size() == 3) {
-          CHECK_OR_RETURN(inputs.at(1)->is_consistent());  // unroll loop for efficiency
-          CHECK_OR_RETURN(inputs.at(2)->is_consistent());  // unroll loop for efficiency
+          CHECK_OR_RETURN(inputs.at(1)->is_consistent())
+              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+          CHECK_OR_RETURN(inputs.at(2)->is_consistent())
+              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else {
-          for (const auto& tensor : inputs) { CHECK_OR_RETURN(tensor->is_consistent()); }
+          for (const auto& tensor : inputs) {
+            CHECK_OR_RETURN(tensor->is_consistent()) << ErrorString4Inputs(inputs, op_expr);
+          }
         }
         return g_eager_consistent_interpreter;
       } else {
         if (inputs.size() == 1) {
           // do nothing
         } else if (inputs.size() == 2) {
-          CHECK_OR_RETURN(inputs.at(1)->is_local());  // unroll loop for efficiency
+          CHECK_OR_RETURN(inputs.at(1)->is_local())
+              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else if (inputs.size() == 3) {
-          CHECK_OR_RETURN(inputs.at(1)->is_local());  // unroll loop for efficiency
-          CHECK_OR_RETURN(inputs.at(2)->is_local());  // unroll loop for efficiency
+          CHECK_OR_RETURN(inputs.at(1)->is_local())
+              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
+          CHECK_OR_RETURN(inputs.at(2)->is_local())
+              << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else {
-          for (const auto& tensor : inputs) { CHECK_OR_RETURN(tensor->is_local()); }
+          for (const auto& tensor : inputs) {
+            CHECK_OR_RETURN(tensor->is_local()) << ErrorString4Inputs(inputs, op_expr);
+          }
         }
         return g_eager_mirrored_interpreter;
       }
@@ -115,7 +142,7 @@ template<>
 /* static */ Maybe<void> OpInterpUtil::Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
-  return JUST(GetInterpreter(inputs, ctx))->Apply(op_expr, inputs, outputs, ctx);
+  return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
 }
 
 /* static */ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(

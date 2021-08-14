@@ -113,7 +113,6 @@ struct TransportUtil final {
 
   static Maybe<void> SendToNextRankInRing(Symbol<RankGroup> rank_group, const TransportToken& token,
                                           AsyncTransportCtx* ctx);
-
   static Maybe<void> ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group,
                                                const TransportToken& token, AsyncTransportCtx* ctx);
 
@@ -122,6 +121,15 @@ struct TransportUtil final {
 
   static Maybe<void> CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
                                               const TransportToken& token, AsyncTransportCtx* ctx);
+
+  static Maybe<void> BroadcastToOtherRanks(Symbol<RankGroup> src_rank_group,
+                                           Symbol<RankGroup> dst_rank_group,
+                                           const TransportToken& token, AsyncTransportCtx* ctx);
+
+  static Maybe<void> CollectFromOtherRanks(Symbol<RankGroup> src_rank_group,
+                                           Symbol<RankGroup> dst_rank_group,
+                                           const TransportToken& token, AsyncTransportCtx* ctx);
+
   static Maybe<void> SendDataToChildrenInHeap(const std::vector<int64_t>& rank_heap,
                                               const TransportToken& token, AsyncTransportCtx* ctx);
   static Maybe<void> ReceiveDataFromParentInHeap(const std::vector<int64_t>& rank_heap,
