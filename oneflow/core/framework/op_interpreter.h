@@ -136,6 +136,7 @@ class LazyInterpreter : public OpExprInterpreter {
   DECLARE_NORMAL_APPLY_FUNC(FeedVariableOp);
   DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
+  DECLARE_NORMAL_APPLY_FUNC(ConsistentToConsistentOp);
 };
 
 class EagerInterpreter : public OpExprInterpreter {
