@@ -460,7 +460,7 @@ class Graph(object):
     def _shallow_repr(self):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
-    
+
     def __del__(self):
         oneflow._oneflow_internal.eager.multi_client.Sync()
 
