@@ -31,7 +31,7 @@ np_out = np.matmul(input_arr, np_weight)
 assert np.allclose(of_eager_out.numpy(), np_out, 1e-05, 1e-05)
 
 
-class LinearGraph(flow.nn.Graph):
+class LinearGraphDestruct(flow.nn.Graph):
     def __init__(self):
         super().__init__()
         self.my_linear = linear
@@ -40,17 +40,16 @@ class LinearGraph(flow.nn.Graph):
         return self.my_linear(x)
 
 
-linear_g = LinearGraph()
+linear_g_d = LinearGraphDestruct()
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestLinearGraphDestruct(oneflow.unittest.TestCase):
     def test_linear_graph_destruct(test_case):
-        of_lazy_out = linear_g(x)
+        of_lazy_out = linear_g_d(x)
         assert np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy())
 
 
 if __name__ == "__main__":
     unittest.main()
-    del linear_g
