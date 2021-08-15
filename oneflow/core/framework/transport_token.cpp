@@ -143,8 +143,9 @@ TransportToken::TransportToken(TransportTokenType type) {
   type_ = type;
 }
 
-/*static*/ TransportToken TransportToken::NewDataTransportToken() {
-  static auto* seq_id = new std::atomic<int64_t>();
+/*static*/ TransportToken TransportToken::NewDataTransportToken(Symbol<ParallelDesc> parallel_desc) {
+  static thread_local HashMap<Symbol<ParallelDesc>, int64_t> parallel_desc2seq_id;
+  auto* seq_id = parallel_desc2seq_id[parallel_desc];
   TransportToken transport_token(kDataTransportTokenType);
   CHECK_JUST(DataTransportTokenView::MutCast(&transport_token))->set_data_seq_id(++*seq_id);
   return transport_token;
