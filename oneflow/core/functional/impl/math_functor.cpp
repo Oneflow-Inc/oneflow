@@ -473,6 +473,7 @@ class ScalarFModFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
+
 class ScalarLogicalBaseFunctor {
  public:
   explicit ScalarLogicalBaseFunctor(std::string op_name) {
