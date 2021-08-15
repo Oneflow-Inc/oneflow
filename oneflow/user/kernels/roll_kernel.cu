@@ -25,17 +25,11 @@ limitations under the License.
 #include "oneflow/user/kernels/roll_kernel.h"
 
 namespace oneflow {
+    
 template<typename T>
 struct RollChange<DeviceType::kGPU, T> {
-    static void Invoke(DeviceCtx *ctx, std::vector<int32_t> move, oneflow::fixed_vector<long int, 20> dim, 
-                     const T *x, T *y) {
-     int32_t len = dim[0];
-     int32_t width = dim[1];
-     int32_t shift = move[0]%len;
-     bool isPositive = (shift>=0)?1:0;
-     int32_t cpyFirst, cpySec;
-     cpyFirst = width*(len-shift);
-     cpySec = width*shift;      
+    static void Invoke(DeviceCtx *ctx, bool isPositive, int32_t cpyFirst, 
+                       int32_t cpySec, const T *x, T *y) {
      if(isPositive) {
         cudaMemcpy(y, x+cpySec, cpyFirst*sizeof(T), cudaMemcpyDefault);
         cudaMemcpy(y+cpyFirst, x, cpySec*sizeof(T), cudaMemcpyDefault);     
@@ -43,7 +37,7 @@ struct RollChange<DeviceType::kGPU, T> {
         cudaMemcpy(y, x+cpyFirst, cpySec*sizeof(T), cudaMemcpyDefault);
         cudaMemcpy(y+cpySec, x, cpyFirst*sizeof(T), cudaMemcpyDefault);
      }
-    }
+    } 
 };
 
 REGISTER_ROLL_USER_KERNEL(DeviceType::kGPU, float);

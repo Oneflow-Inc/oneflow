@@ -66,7 +66,7 @@ Maybe<void> Roll::Apply(const RollInterpState* ctx, const TensorTuple& out_grads
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   std::vector<int32_t> shifts;
   for(auto shift : ctx->shifts) {
-    shifts.push_back(shift);
+    shifts.push_back(shift*(-1));
   }
   in_grads->at(0) = JUST(functional::Roll(
       out_grads.at(0), shifts, ctx->dims

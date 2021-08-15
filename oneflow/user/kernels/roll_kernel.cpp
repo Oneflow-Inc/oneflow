@@ -30,16 +30,9 @@ namespace oneflow {
 
 template<typename T>
 struct RollChange<DeviceType::kCPU, T> {
-    static void Invoke(DeviceCtx *ctx, std::vector<int32_t> move, oneflow::fixed_vector<long int, 20> dim, 
-              const T *x, T *y) {
+     static void Invoke(DeviceCtx *ctx, bool isPositive, int32_t cpyFirst, 
+                       int32_t cpySec, const T *x, T *y){
 
-     int32_t len = dim[0];
-     int32_t width = dim[1];
-     int32_t shift = move[0]%len;
-     bool isPositive = (shift>=0)?1:0;
-     int32_t cpyFirst, cpySec;
-     cpyFirst = width*(len-shift);
-     cpySec = width*shift;      
      if(isPositive) {
          memcpy(y, x+cpySec, cpyFirst*sizeof(T));
          memcpy(y+cpyFirst, x, cpySec*sizeof(T));     
@@ -48,8 +41,9 @@ struct RollChange<DeviceType::kCPU, T> {
          memcpy(y+cpySec, x, cpyFirst*sizeof(T));
      }
      // std::cout << "shift=" << shift << " width=" << width << " len="  << len << std::endl; 
-    }
-};
+     }
+};    
+
 
 REGISTER_ROLL_USER_KERNEL(DeviceType::kCPU, float)
 REGISTER_ROLL_USER_KERNEL(DeviceType::kCPU, double)

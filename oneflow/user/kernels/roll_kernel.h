@@ -22,8 +22,8 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct RollChange {
-  static void Invoke(DeviceCtx *ctx, std::vector<int32_t> move, oneflow::fixed_vector<long int, 20> dim, 
-                   const T *x, T *y);
+  static void Invoke(DeviceCtx *ctx, bool isPositive, int32_t cpyFirst, 
+                     int32_t cpySec, const T *x, T *y);
 };
 
 template<DeviceType device_type, typename T>
@@ -39,9 +39,17 @@ private:
         const user_op::TensorDesc* in_shape = ctx->TensorDesc4ArgNameAndIndex("in", 0);
         const oneflow::fixed_vector<long int, 20> in_dim_vec = in_shape->shape().dim_vec();
         const std::vector<int32_t> move = ctx->Attr<std::vector<int32_t>>("shifts");
+        int32_t len = in_dim_vec[0];
+        int32_t width = in_dim_vec[1];
+        int32_t shift = move[0]%len;
+        bool isPositive = (shift>=0)?1:0;
+        int32_t cpyFirst, cpySec;
+        cpyFirst = width*(len-shift);
+        cpySec = width*shift;  
         RollChange<device_type, T>::Invoke(ctx->device_ctx(),
-           move,
-           in_dim_vec,
+           isPositive,
+           cpyFirst, 
+           cpySec,
            in->dptr<T>(),
            out->mut_dptr<T>());
     }
