@@ -28,15 +28,12 @@ class MyModuleWithEagerTensorForward(flow.nn.Module):
 
     def forward(self, x):
         y0 = self.linear(x)
-        y1 = y0 > 0.5
-        eager_t = flow.tensor([0.5], dtype=y0.dtype, device=y0.device)
-        assert eager_t.is_eager
-        y2 = y0 > eager_t
-        z = flow.eq(y1, y2)
-        return z
+        eager_t = flow.tensor([1.0], dtype=y0.dtype, device=y0.device)
+        out = y0 + eager_t
+        return out
 
 
-@unittest.skip("still have bug")
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
     def test_eager_tensor_forward_graph(test_case):
