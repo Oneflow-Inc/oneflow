@@ -228,9 +228,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     Plan* plan, const HashSet<std::string>& variable_op_names) {
   HashMap<int64_t, std::unique_ptr<MemBlockProto>> mem_block_id2mem_block;
 
-  for (const auto& var_name : variable_op_names) {
-    std::cout << "cclog: In PlanUtil: var name = " << var_name << "\n\n";
-  }
   auto IsVariableRegst = [&](const TaskProto* task, std::string* name) -> bool {
     if (variable_op_names.empty()) { return false; }
     if (task->exec_sequence().exec_node_size() != 1) { return false; }
@@ -239,10 +236,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
             .op_conf();
     if (!op_conf.has_variable_conf()) { return false; }
     const std::string& var_name = op_conf.name();
-    std::cout << "In PlanUtil: clog: variable_op_name = " << var_name << "\n\n";
     if (variable_op_names.find(var_name) == variable_op_names.end()) { return false; }
-    std::cout << "Yeah! In PlanUtil: clog: variable_op_name = " << var_name
-              << " is variable_regst\n\n";
     *name = var_name;
     return true;
   };
