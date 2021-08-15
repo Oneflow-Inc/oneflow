@@ -288,7 +288,6 @@ class TestSoftmax(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestHardsigmoidModule(flow.unittest.TestCase):
     @autotest()
@@ -301,149 +300,17 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-
-def _test_logsoftmax(test_case, device):
-    dim = 1
-    m = flow.nn.LogSoftmax(dim)
-    input_arr = np.random.randn(4, 7)
-    x = flow.Tensor(input_arr, device=flow.device(device))
-    y = m(x)
-    output = numpy_logsoftmax(input_arr, dim)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
-
-
-def _test_logsoftmax_dim_2(test_case, device):
-    dim = 2
-    m = flow.nn.LogSoftmax(dim)
-    input_arr = np.random.randn(3, 4, 5)
-    x = flow.Tensor(input_arr, device=flow.device(device))
-    y = m(x)
-    output = numpy_logsoftmax(input_arr, dim)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
-
-
-def _test_logsoftmax_dim_3(test_case, device):
-    dim = 3
-    m = flow.nn.LogSoftmax(dim)
-    input_arr = np.random.randn(8, 9, 7, 3)
-    x = flow.Tensor(input_arr, device=flow.device(device))
-    y = m(x)
-    output = numpy_logsoftmax(input_arr, dim)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
-
-
-def _test_logsoftmax_backward(test_case, device):
-    axis = 0
-    m = flow.nn.LogSoftmax(axis)
-    input_arr = np.array(
-        [
-            [
-                [
-                    [2.0, 1.0, 9.0, 3.0, 4.0],
-                    [1.0, 6.0, 7.0, 1.0, 4.0],
-                    [4.0, 7.0, 5.0, 8.0, 1.0],
-                    [9.0, 5.0, 7.0, 8.0, 5.0],
-                ],
-                [
-                    [1.0, 1.0, 5.0, 3.0, 5.0],
-                    [3.0, 6.0, 3.0, 7.0, 8.0],
-                    [8.0, 8.0, 1.0, 2.0, 6.0],
-                    [3.0, 5.0, 6.0, 1.0, 1.0],
-                ],
-                [
-                    [8.0, 3.0, 6.0, 3.0, 7.0],
-                    [8.0, 5.0, 1.0, 2.0, 7.0],
-                    [3.0, 9.0, 4.0, 6.0, 5.0],
-                    [5.0, 1.0, 2.0, 3.0, 6.0],
-                ],
-            ],
-            [
-                [
-                    [3.0, 5.0, 3.0, 1.0, 7.0],
-                    [5.0, 2.0, 6.0, 3.0, 5.0],
-                    [5.0, 1.0, 8.0, 6.0, 9.0],
-                    [9.0, 8.0, 4.0, 5.0, 1.0],
-                ],
-                [
-                    [7.0, 5.0, 7.0, 1.0, 6.0],
-                    [3.0, 3.0, 6.0, 6.0, 7.0],
-                    [9.0, 4.0, 1.0, 5.0, 7.0],
-                    [7.0, 6.0, 9.0, 8.0, 6.0],
-                ],
-                [
-                    [6.0, 7.0, 5.0, 3.0, 9.0],
-                    [4.0, 1.0, 2.0, 3.0, 2.0],
-                    [4.0, 3.0, 8.0, 7.0, 8.0],
-                    [1.0, 3.0, 8.0, 6.0, 2.0],
-                ],
-            ],
-        ]
-    )
-    x = flow.Tensor(
-        input_arr, requires_grad=True, device=flow.device(device), dtype=flow.float64
-    )
-    x_grad = np.array(
-        [
-            [
-                [
-                    [0.46211716, 0.96402758, -0.99505475, -0.76159416, 0.90514825],
-                    [0.96402758, -0.96402758, -0.46211716, 0.76159416, 0.46211716],
-                    [0.46211716, -0.99505475, 0.90514825, -0.76159416, 0.9993293],
-                    [0.0, 0.90514825, -0.90514825, -0.90514825, -0.96402758],
-                ],
-                [
-                    [0.99505475, 0.96402758, 0.76159416, -0.76159416, 0.46211716],
-                    [0.0, -0.90514825, 0.90514825, -0.46211716, -0.46211716],
-                    [0.46211716, -0.96402758, 0.0, 0.90514825, 0.46211716],
-                    [0.96402758, 0.46211716, 0.90514825, 0.9981779, 0.9866143],
-                ],
-                [
-                    [-0.76159416, 0.96402758, -0.46211716, 0.0, 0.76159416],
-                    [-0.96402758, -0.96402758, 0.46211716, 0.46211716, -0.9866143],
-                    [0.46211716, -0.99505475, 0.96402758, 0.46211716, 0.90514825],
-                    [-0.96402758, 0.76159416, 0.99505475, 0.90514825, -0.96402758],
-                ],
-            ],
-            [
-                [
-                    [-0.46211716, -0.96402758, 0.99505475, 0.76159416, -0.90514825],
-                    [-0.96402758, 0.96402758, 0.46211716, -0.76159416, -0.46211716],
-                    [-0.46211716, 0.99505475, -0.90514825, 0.76159416, -0.9993293],
-                    [0.0, -0.90514825, 0.90514825, 0.90514825, 0.96402758],
-                ],
-                [
-                    [-0.99505475, -0.96402758, -0.76159416, 0.76159416, -0.46211716],
-                    [0.0, 0.90514825, -0.90514825, 0.46211716, 0.46211716],
-                    [-0.46211716, 0.96402758, 0.0, -0.90514825, -0.46211716],
-                    [-0.96402758, -0.46211716, -0.90514825, -0.9981779, -0.9866143],
-                ],
-                [
-                    [0.76159416, -0.96402758, 0.46211716, 0.0, -0.76159416],
-                    [0.96402758, 0.96402758, -0.46211716, -0.46211716, 0.9866143],
-                    [-0.46211716, 0.99505475, -0.96402758, -0.46211716, -0.90514825],
-                    [0.96402758, -0.76159416, -0.99505475, -0.90514825, 0.96402758],
-                ],
-            ],
-        ]
-    )
-    y = m(x).sum()
-    y.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
-class TestLogSoftmax(flow.unittest.TestCase):
-    def test_log_softmax(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["fun"] = [
-            _test_logsoftmax,
-            _test_logsoftmax_dim_2,
-            _test_logsoftmax_dim_3,
-            _test_logsoftmax_backward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+class TestLogSoftmaxModule(flow.unittest.TestCase):
+    @autotest()
+    def test_logsoftmax_module_with_random_data(test_case):
+        m = torch.nn.LogSoftmax(dim=random(low=1, high=4).to(int) | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = m(x)
+        return y
 
 
 @flow.unittest.skip_unless_1n1d()
