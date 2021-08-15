@@ -21,7 +21,6 @@ import numpy as np
 from automated_test_util import *
 
 import oneflow as flow
-import oneflow.typing as oft
 import oneflow.unittest
 
 
@@ -160,6 +159,19 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(x.is_cuda)
         x = flow.Tensor(*shape, device=flow.device("cpu"))
         test_case.assertTrue(not x.is_cuda)
+
+    def test_tensor_to_bool(test_case):
+        x = flow.tensor([0.0])
+        test_case.assertFalse(bool(x))
+        x = flow.tensor([0.0]).to("cuda")
+        test_case.assertFalse(bool(x))
+        x = flow.tensor([1.5])
+        test_case.assertTrue(bool(x))
+        x = flow.tensor([3])
+        test_case.assertTrue(bool(x))
+        with test_case.assertRaises(RuntimeError):
+            bool(flow.tensor([1, 3, 5]))
+            bool(flow.tensor([]))
 
     def test_tensor_autograd_related_methods(test_case):
         shape = (2, 3, 4, 5)
@@ -578,7 +590,7 @@ class TestTensor(flow.unittest.TestCase):
             [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         ).astype(np.float32)
         input = flow.Tensor(x)
-        of_shape = input.reshape(shape=[2, 2, 2, -1]).numpy().shape
+        of_shape = input.reshape(2, 2, 2, -1).numpy().shape
         np_shape = (2, 2, 2, 2)
         test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
@@ -586,7 +598,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_reshape_tensor_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
-        y = x.reshape(shape=(-1,))
+        y = x.reshape(-1,)
         return y
 
     @autotest()
