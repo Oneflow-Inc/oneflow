@@ -120,7 +120,7 @@ def _LoadSingleVariable(
         return loaded
 
     assert isinstance(path, str)
-    return FileBackendVariableBlob(path)
+    return flow.tensor(FileBackendVariableBlob(path).numpy())
 
 
 def _broadcast_py_object(obj, src: int = 0):

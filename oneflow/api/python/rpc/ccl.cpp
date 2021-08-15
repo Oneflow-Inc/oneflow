@@ -36,6 +36,7 @@ Maybe<py::bytes> CpuBroadcast(py::bytes* in, size_t elem_cnt, int64_t root) {
 
   auto out = std::make_unique<char[]>(elem_cnt);
   if (GlobalProcessCtx::Rank() == root) {
+    CHECK_NOTNULL_OR_RETURN(in);
     JUST(ccl::Broadcast<DeviceType::kCPU>(py::cast<std::string>(*in).c_str(), out.get(), elem_cnt,
                                           DataType::kChar, root, parallel_desc, nullptr));
   } else {
