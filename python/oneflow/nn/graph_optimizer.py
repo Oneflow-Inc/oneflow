@@ -19,8 +19,7 @@ from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 
 class OptGroup(object):
     def __init__(
-        self,
-        opt_group,
+        self, opt_group,
     ):
         assert isinstance(opt_group, dict), "opt group must be a dict"
         assert "optim" in opt_group, "opt group must has an optimizer"
@@ -36,6 +35,7 @@ class OptGroup(object):
         if self._lr_scheduler is not None:
             self._lr_scheduler.generate_conf_for_graph(opt_confs)
 
+
 class OptimizerConfig(object):
     def __init__(
         self,
@@ -48,7 +48,7 @@ class OptimizerConfig(object):
         self._name = name
         self._optimizer = optimizer
         self._lr_scheduler = lr_scheduler
-        #self.grad_clipping_conf = grad_clipping_conf
+        # self.grad_clipping_conf = grad_clipping_conf
 
     def generate_optimizer_and_variable_configs(self, train_conf, vars_conf):
         if self._optimizer is not None:

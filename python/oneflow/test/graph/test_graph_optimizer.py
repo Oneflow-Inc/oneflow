@@ -50,7 +50,9 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 }
             ]
         )
-        cosine_lr = flow.optim.lr_scheduler.CosineAnnealingLR(sgd0, steps=100, alpha=0.1)
+        cosine_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
+            sgd0, steps=100, alpha=0.1
+        )
 
         class CustomGraph0(flow.nn.Graph):
             def __init__(self):
@@ -119,11 +121,16 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 },
             ]
         )
-        cosine_lr0 = flow.optim.lr_scheduler.CosineAnnealingLR(sgd0, steps=10, alpha=0.01)
-        cosine_lr1 = flow.optim.lr_scheduler.CosineAnnealingLR(sgd1, steps=100, alpha=0.1)
+        cosine_lr0 = flow.optim.lr_scheduler.CosineAnnealingLR(
+            sgd0, steps=10, alpha=0.01
+        )
+        cosine_lr1 = flow.optim.lr_scheduler.CosineAnnealingLR(
+            sgd1, steps=100, alpha=0.1
+        )
 
-        opt0  = {"optim": sgd0, "lr_sch": cosine_lr0}
-        opt1  = {"optim": sgd1, "lr_sch": cosine_lr1}
+        opt0 = {"optim": sgd0, "lr_sch": cosine_lr0}
+        opt1 = {"optim": sgd1, "lr_sch": cosine_lr1}
+        # opt2  = {"optim": sgd3, "lr_sch": cosine_lr2, "grad_clip", clip_conf}
 
         class CustomGraph0(flow.nn.Graph):
             def __init__(self):

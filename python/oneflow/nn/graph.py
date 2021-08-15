@@ -95,9 +95,7 @@ class Graph(object):
         assert isinstance(
             optimizer, Optimizer
         ), "optimizer must be an instance of Optimizer"
-        self._optimizers_conf[name] = OptimizerConfig(
-            name, optimizer, lr_scheduler,
-        )
+        self._optimizers_conf[name] = OptimizerConfig(name, optimizer, lr_scheduler,)
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -510,9 +508,7 @@ class GraphConfig(FunctionConfig):
         )
 
     def _generate_optimizer_and_variable_configs(
-        self,
-        opt_group: OptGroup= None,
-        variables_conf: OrderedDict = None,
+        self, opt_group: OptGroup = None, variables_conf: OrderedDict = None,
     ):
         opt_group.generate_optimizer_and_variable_configs(
             self.proto.mutable_train_conf(), variables_conf

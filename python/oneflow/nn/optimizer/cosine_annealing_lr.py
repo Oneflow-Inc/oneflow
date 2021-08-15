@@ -79,7 +79,7 @@ class CosineAnnealingLR(LrScheduler):
             return [base_lr * decay_factor for base_lr in self.base_lrs]
         else:
             return [base_lr * self.alpha for base_lr in self.base_lrs]
-    
+
     def generate_conf_for_graph(self, opt_confs):
         # TODO(): deal with the else branch in get_lr
         for opt_conf in opt_confs:
