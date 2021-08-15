@@ -130,7 +130,6 @@ class TestGraphOptimizer(flow.unittest.TestCase):
 
         opt0 = {"optim": sgd0, "lr_sch": cosine_lr0}
         opt1 = {"optim": sgd1, "lr_sch": cosine_lr1}
-        # opt2  = {"optim": sgd3, "lr_sch": cosine_lr2, "grad_clip", clip_conf}
 
         class CustomGraph0(flow.nn.Graph):
             def __init__(self):
