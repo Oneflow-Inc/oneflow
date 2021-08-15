@@ -24,7 +24,7 @@ namespace oneflow {
 namespace one {
 
 struct ConsistentToConsistentOpExprInterpState : public OpExprInterpState {
-  Symbol<cfg::ParallelDistribution> nd_sbp;
+  Symbol<cfg::NdSbp> nd_sbp;
   Symbol<ParallelDesc> parallel_desc;
 };
 

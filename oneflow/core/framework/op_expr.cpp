@@ -399,12 +399,12 @@ Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
-ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(
-    const std::string& op_name, Symbol<cfg::ParallelDistribution> grad_nd_sbp)
+ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(const std::string& op_name,
+                                                           Symbol<cfg::NdSbp> grad_nd_sbp)
     : op_name_(op_name), grad_nd_sbp_(grad_nd_sbp) {}
 
 /* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
-    const std::string& op_name, Symbol<cfg::ParallelDistribution> grad_nd_sbp) {
+    const std::string& op_name, Symbol<cfg::NdSbp> grad_nd_sbp) {
   return std::shared_ptr<ConsistentToConsistentOpExpr>(
       new ConsistentToConsistentOpExpr(op_name, grad_nd_sbp));
 }

@@ -162,9 +162,9 @@ class ConsistentToConsistentOpExpr : public OpExpr {
   virtual ~ConsistentToConsistentOpExpr() = default;
 
   static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name,
-                                                 Symbol<cfg::ParallelDistribution> grad_nd_sbp);
+                                                 Symbol<cfg::NdSbp> grad_nd_sbp);
   static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name);
-  const Optional<Symbol<cfg::ParallelDistribution>>& grad_nd_sbp() const { return grad_nd_sbp_; }
+  const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp() const { return grad_nd_sbp_; }
   const std::string& op_name() const { return op_name_; }
   const std::string& op_type_name() const override;
   int input_size() const override { return 1; }
@@ -174,12 +174,11 @@ class ConsistentToConsistentOpExpr : public OpExpr {
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  protected:
-  ConsistentToConsistentOpExpr(const std::string& op_name,
-                               Symbol<cfg::ParallelDistribution> grad_nd_sbp);
+  ConsistentToConsistentOpExpr(const std::string& op_name, Symbol<cfg::NdSbp> grad_nd_sbp);
   ConsistentToConsistentOpExpr(const std::string& op_name);
 
   std::string op_name_;
-  Optional<Symbol<cfg::ParallelDistribution>> grad_nd_sbp_;  //  Reserved for configuring grad sbp
+  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp_;  //  Reserved for configuring grad sbp
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
