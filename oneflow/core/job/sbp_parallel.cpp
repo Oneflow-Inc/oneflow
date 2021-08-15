@@ -173,9 +173,9 @@ std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
   return sbp_str;
 }
 
-std::string ParallelDistributionToString(const Symbol<cfg::ParallelDistribution> nd_sbp) {
-  static HashMap<Symbol<cfg::ParallelDistribution>, std::string>* nd_sbp2str =
-      new HashMap<Symbol<cfg::ParallelDistribution>, std::string>();
+std::string NdSbpToString(const Symbol<cfg::NdSbp> nd_sbp) {
+  static HashMap<Symbol<cfg::NdSbp>, std::string>* nd_sbp2str =
+      new HashMap<Symbol<cfg::NdSbp>, std::string>();
   auto iter = nd_sbp2str->find(nd_sbp);
   if (iter == nd_sbp2str->end()) {
     std::stringstream nd_sbp_str;
@@ -191,16 +191,16 @@ std::string ParallelDistributionToString(const Symbol<cfg::ParallelDistribution>
   return iter->second;
 }
 
-void SbpSignatureToParallelDistributionSignature(
-    const cfg::SbpSignature& sbp_signature, cfg::ParallelDistributionSignature* nd_sbp_signature) {
+void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
+                                  cfg::NdSbpSignature* nd_sbp_signature) {
   for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
     *((*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[pair.first].add_sbp_parallel()) = pair.second;
   }
 }
 
-template<typename ParallelDistributionSignatureT>
-void ParallelDistributionSignatureToSbpSignature(
-    const ParallelDistributionSignatureT& nd_sbp_signature, cfg::SbpSignature* sbp_signature) {
+template<typename NdSbpSignatureT>
+void NdSbpSignatureToSbpSignature(const NdSbpSignatureT& nd_sbp_signature,
+                                  cfg::SbpSignature* sbp_signature) {
   for (const auto& pair : nd_sbp_signature.bn_in_op2nd_sbp()) {
     CHECK_EQ(pair.second.sbp_parallel_size(), 1);
     (*sbp_signature->mutable_bn_in_op2sbp_parallel())[pair.first] =
@@ -208,14 +208,14 @@ void ParallelDistributionSignatureToSbpSignature(
   }
 }
 
-template void ParallelDistributionSignatureToSbpSignature(
-    const ParallelDistributionSignature& nd_sbp_signature, cfg::SbpSignature* sbp_signature);
+template void NdSbpSignatureToSbpSignature(const NdSbpSignature& nd_sbp_signature,
+                                           cfg::SbpSignature* sbp_signature);
 
-template void ParallelDistributionSignatureToSbpSignature(
-    const cfg::ParallelDistributionSignature& nd_sbp_signature, cfg::SbpSignature* sbp_signature);
+template void NdSbpSignatureToSbpSignature(const cfg::NdSbpSignature& nd_sbp_signature,
+                                           cfg::SbpSignature* sbp_signature);
 
-void CheckSbpSignatureAndParallelDistributionEquals(
-    const cfg::SbpSignature& sbp_sig, const cfg::ParallelDistributionSignature& nd_sbp_sig) {
+void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
+                                     const cfg::NdSbpSignature& nd_sbp_sig) {
   CHECK_EQ(sbp_sig.bn_in_op2sbp_parallel_size(), nd_sbp_sig.bn_in_op2nd_sbp_size());
   for (const auto& pair : nd_sbp_sig.bn_in_op2nd_sbp()) {
     const auto& bn_in_op2sbp_parallel = sbp_sig.bn_in_op2sbp_parallel();

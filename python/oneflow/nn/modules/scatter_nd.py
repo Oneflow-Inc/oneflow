@@ -34,7 +34,8 @@ def _scatter_nd_op(index, update, shape):
         >>> update = flow.Tensor(np.array([10.2,5.1,12.7]), dtype=flow.float)
         >>> out = flow.scatter_nd(index, update, [8])
         >>> out
-        tensor([ 0. , 10.2,  0. ,  0. , 12.7,  0. ,  5.1,  0. ], dtype=oneflow.float32)
+        tensor([ 0.0000, 10.2000,  0.0000,  0.0000, 12.7000,  0.0000,  5.1000,  0.0000],
+               dtype=oneflow.float32)
 
     """
     return flow.F.scatternd(index, update, shape)
