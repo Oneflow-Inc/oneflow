@@ -24,7 +24,9 @@ import oneflow as flow
 import oneflow._oneflow_internal
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import oneflow.framework.dtype as dtype_util
+import pickle
 
+SNAPSHOT_DONE_FILENAME = "snapshot_done"
 META_INFO_FILENAME = "meta"
 DATA_FILENAME = "out"
 
@@ -99,41 +101,66 @@ def _ElemCnt(shape):
     return np.prod(shape).astype(int).item()
 
 
-def _LoadSingleVariable(path: str, consistent_src_rank: Optional[int] = None) -> Optional[FileBackendVariableBlob]:
-    if os.path.isfile(os.path.join(path, DATA_FILENAME)):
-        if consistent_src_rank is not None:
-            rank = flow.framework.distribute.get_rank()
-            if rank == consistent_src_rank:
-                file_backed_blob = FileBackendVariableBlob(path)
-                loaded = flow.tensor(file_backed_blob.numpy(), dtype=file_backed_blob.dtype).to('cuda')
-            else:
-                loaded = flow.tensor([]).to('cuda')
-            loaded = loaded.to_consistent(flow.placement('cuda', {0: [0]}), flow.sbp.broadcast)
-            return loaded
+def _LoadSingleVariable(path: Optional[str], consistent_src_rank: Optional[int] = None) -> "flow.Tensor":
+    if consistent_src_rank is not None:
+        rank = flow.framework.distribute.get_rank()
+        if rank == consistent_src_rank:
+            assert isinstance(path, str)
+            file_backed_blob = FileBackendVariableBlob(path)
+            loaded = flow.tensor(file_backed_blob.numpy(), dtype=file_backed_blob.dtype).to('cuda')
+        else:
+            loaded = flow.tensor([]).to('cuda')
+        loaded = loaded.to_consistent(flow.placement('cuda', {0: [0]}), flow.sbp.broadcast)
+        return loaded
 
-        assert NotImplementedError()
-        return FileBackendVariableBlob(path)
-    return None
+    assert isinstance(path, str)
+    return FileBackendVariableBlob(path)
+
+
+def _broadcast_py_object(obj, src: int=0):
+    rank = flow.framework.distribute.get_rank()
+    if src == rank:
+        obj_bytes = pickle.dumps(obj)
+        return pickle.loads(flow._oneflow_internal.cpu_broadcast(obj_bytes, len(obj_bytes), src))
+    else:
+        return pickle.loads(flow._oneflow_internal.cpu_broadcast(None, 0, src))
 
 
 def Load(
     path: str,
     consistent_src_rank: Optional[int]=None,
-) -> Union[Dict[str, "flow.Tensor"], "flow.Tensor"]:
+) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
-    single_var = _LoadSingleVariable(path, consistent_src_rank)
-    if single_var is not None:
-        return single_var
+    rank = flow.framework.distribute.get_rank()
     var_dict = {}
-    for f in os.listdir(path):
+    if consistent_src_rank is None or rank == consistent_src_rank:
+        all_files = os.listdir(path)
+        assert SNAPSHOT_DONE_FILENAME in all_files
+        all_files.remove(SNAPSHOT_DONE_FILENAME)
+        if consistent_src_rank is not None:
+            _broadcast_py_object(all_files, consistent_src_rank)
+    else:
+        all_files = _broadcast_py_object(None, consistent_src_rank)
+    for f in all_files:
         var_dir = os.path.join(path, f)
-        var = _LoadSingleVariable(var_dir, consistent_src_rank)
-        if var is not None:
-            var_dict[f] = var
+        var_dict[f] = _LoadSingleVariable(var_dir, consistent_src_rank)
     return var_dict
 
 
 def save(var_dict: Dict[str, "flow.Tensor"], path: str, consistent_dst_rank: Optional[int]=None) -> None:
+    consistent_mode = consistent_dst_rank is not None
+    for (name, var) in var_dict.items():
+        if consistent_mode:
+            assert var.is_consistent, "consistent tensor is needed, but {name} is a local tensor"
+            var_dict[name] = var.to_consistent(sbp=flow.sbp.broadcast).to_local()
+        else:
+            assert not var.is_consistent, "local tensor is needed, but {name} is a consistent tensor"
+
+
+    rank = flow.framework.distribute.get_rank()
+    if consistent_mode and rank != consistent_dst_rank:
+        return
+
     def IsFileOrNonEmptyDir(path):
         if os.path.isfile(path):
             return True
@@ -146,10 +173,8 @@ def save(var_dict: Dict[str, "flow.Tensor"], path: str, consistent_dst_rank: Opt
     ), "{} is a file or non-empty directory! Note that flow.save is different from torch.save. It saves each weight as a separated file so that a directory instead of a file should be given.".format(
         path
     )
-    consistent_mode = consistent_dst_rank is not None
-    for (name, var) in var_dict.items():
-        assert var.is_consistent == consistent_mode, "`consistent_dst_rank` is {'not' if consistent_mode else ''} None, {'consistent' if consistent_mode else 'local'} tensor is needed, but {name} is a {'local' if consistent_mode else 'consistent'} tensor"
     os.makedirs(path, exist_ok=True)
+
     for (name, var) in var_dict.items():
         meta_info = variable_meta_info_pb.VariableMetaInfo()
         meta_info.shape.dim[:] = var.shape
@@ -160,20 +185,11 @@ def save(var_dict: Dict[str, "flow.Tensor"], path: str, consistent_dst_rank: Opt
         param_path = os.path.join(var_dir, DATA_FILENAME)
         os.makedirs(os.path.dirname(param_path))
         with open(param_path, "wb") as f:
-            if consistent_dst_rank is not None:
-                rank = flow.framework.distribute.get_rank()
-                if rank == consistent_dst_rank:
-                    f.write(var.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy().tobytes())
-                else:
-                    # do nothing
-                    pass
-            else:
-                assert not var.is_consistent
-                f.write(var.numpy().tobytes())
+            f.write(var.numpy().tobytes())
 
         with open(os.path.join(var_dir, META_INFO_FILENAME), "w") as f:
             f.write(text_format.MessageToString(meta_info))
-    with open(os.path.join(path, "snapshot_done"), "w"):
+    with open(os.path.join(path,SNAPSHOT_DONE_FILENAME), "w"):
         pass
 
 

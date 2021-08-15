@@ -102,7 +102,15 @@ def _setitem(self, key, value):
                 [1], value, self.dtype, placement=self.placement, sbp=flow.sbp.broadcast
             )
         else:
-            value = value.to_consistent(self.placement, sbp=flow.sbp.broadcast)
+            if value.is_consistent:
+                value = value.to_consistent(sbp=flow.sbp.broadcast)
+                # TODO: remove these lines after asymmetric boxing is ready
+                local_tensor = value.to_local()
+                if local_tensor.nelement() == 0:
+                    local_tensor = flow.zeros(*value.shape)
+                value = local_tensor.to_consistent(self.placement, sbp=flow.sbp.broadcast)
+            else:
+                value = value.to_consistent(self.placement, sbp=flow.sbp.broadcast)
     else:
         if isinstance(value, (int, float)):
             value = flow.F.constant([1], value, self.dtype, device=self.device)

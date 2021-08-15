@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import collections.abc
 import tempfile
 import unittest
@@ -192,8 +193,7 @@ class TestModule(flow.unittest.TestCase):
         res2 = m()
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
 
-    # TODO: change to 1n2d when asymmetric boxing is ready
-    @flow.unittest.skip_unless_1n1d()
+    @flow.unittest.skip_unless_1n2d()
     def test_save_and_load_consistent(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
@@ -204,23 +204,34 @@ class TestModule(flow.unittest.TestCase):
                 return self.param
 
         m = CustomModule()
-        m.param = flow.nn.Parameter(m.param.to_consistent(flow.placement("cuda", {0: range(1)}), flow.sbp.broadcast))
+        m = m.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
         res1 = m()
         state_dict = m.state_dict()
-        with tempfile.TemporaryDirectory() as save_dir:
-            with test_case.assertRaises(AssertionError):
-                flow.save(state_dict, save_dir)
-            flow.save(state_dict, save_dir, consistent_dst_rank=0)
+
+        with tempfile.TemporaryDirectory() as f:
+            with test_case.assertRaises(Exception):
+                flow.save(state_dict, f)
+
+            consistent_src_dst_rank = 0
+            flow.save(state_dict, f, consistent_dst_rank=consistent_src_dst_rank)
+            rank = flow.framework.distribute.get_rank()
+            if rank != consistent_src_dst_rank:
+                test_case.assertEqual(len(os.listdir(f)), 0)
 
             m = CustomModule()
-            m.param = flow.nn.Parameter(m.param.to_consistent(flow.placement("cuda", {0: range(1)}), flow.sbp.broadcast))
+            m = m.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
 
-            with test_case.assertRaises(AssertionError):
-                flow.load(save_dir)
-            loaded_state_dict = flow.load(save_dir, consistent_src_rank=0)
+            with test_case.assertRaises(Exception):
+                loaded_state_dict = flow.load(f)
+                m.load_state_dict(loaded_state_dict)
+
+            loaded_state_dict = flow.load(f, consistent_src_rank=consistent_src_dst_rank)
+            test_case.assertEqual(len(loaded_state_dict), 1)
+            test_case.assertEqual(list(loaded_state_dict.keys())[0], 'param')
             m.load_state_dict(loaded_state_dict)
-        res2 = m()
-        test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
+            res2 = m()
+
+        test_case.assertTrue(np.array_equal(res1.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(), res2.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy()))
 
 if __name__ == "__main__":
     unittest.main()
