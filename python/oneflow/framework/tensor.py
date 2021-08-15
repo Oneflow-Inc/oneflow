@@ -123,6 +123,53 @@ def _meta_repr(self):
     return tensor_str_util._gen_tensor_meta_str(self)
 
 
+def _eq(self, other):
+    return self.eq(other)
+
+
+def _ne(self, other):
+    return self.ne(other)
+
+
+def is_nonzero(input):
+    r"""
+    is_nonzero(input) -> (bool)
+
+    Returns True if the :attr:`input` is a single element tensor which is not equal to zero
+    after type conversions. i.e. not equal to ``flow.tensor([0.])`` or ``flow.tensor([0])``.
+
+    Throws a ``RuntimeError`` if ``input.shape.numel() != 1``
+
+    For Example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.is_nonzero(flow.tensor([0.]))
+        False
+        >>> flow.is_nonzero(flow.tensor([1.5]))
+        True
+        >>> flow.is_nonzero(flow.tensor([3]))
+        True
+        >>> flow.is_nonzero(flow.tensor([1, 3, 5]))
+        Traceback (most recent call last):
+        ...
+        RuntimeError: bool value of Tensor with more than one value is ambiguous
+        >>> flow.is_nonzero(flow.tensor([]))
+        Traceback (most recent call last):
+        ...
+        RuntimeError: bool value of Tensor with no values is ambiguous
+
+    """
+    shape = input.shape
+    if shape.numel() == 0:
+        raise RuntimeError("bool value of Tensor with no values is ambiguous")
+    if shape.numel() > 1:
+        raise RuntimeError("bool value of Tensor with more than one value is ambiguous")
+    value = input.numpy().item()
+    return bool(value)
+
+
 def _gt(self, other):
     return self.gt(other)
 
@@ -322,6 +369,12 @@ def _get_device(self):
     raise NotImplementedError("get_device is only available for GPU tensor.")
 
 
+def _format(self, format_spec):
+    if self.dim() == 0:
+        return self.tolist().__format__(format_spec)
+    return object.__format__(self, format_spec)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -341,6 +394,9 @@ def RegisterMethods():
     Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
+    Tensor.__eq__ = _eq
+    Tensor.__ne__ = _ne
+    Tensor.__bool__ = is_nonzero
     Tensor.__gt__ = _gt
     Tensor.__lt__ = _lt
     Tensor.__ge__ = _ge
@@ -356,6 +412,7 @@ def RegisterMethods():
     Tensor.__rtruediv__ = _rtruediv
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
+    Tensor.__format__ = _format
     Tensor.uniform_ = _uniform_
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal

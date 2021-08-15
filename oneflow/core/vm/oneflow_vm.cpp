@@ -49,7 +49,7 @@ void ControlSync(vm::VirtualMachine* vm) {
   BlockingCounter bc(1);
   vm::InstructionMsgList list;
   MakeCtrlSeqInstructions(&list, [&] { bc.Decrease(); });
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   bc.WaitUntilCntEqualZero();
 }
 
