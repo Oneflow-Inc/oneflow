@@ -91,6 +91,35 @@ class TestModule(flow.unittest.TestCase):
             {"param2.param1": tensor0, "param2.param2": tensor1, "param1": tensor1},
         )
 
+    def test_parameter(test_case):
+        shape = (3, 4)
+        t = flow.Tensor(*shape)
+        p = flow.nn.Parameter(t)
+        test_case.assertEqual(type(p), flow.nn.Parameter)
+        test_case.assertEqual(p.shape, shape)
+
+    def test_module_forward(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self, w):
+                super().__init__()
+                self.w = w
+
+            def forward(self, x):
+                return x + self.w
+
+        m = CustomModule(5)
+        test_case.assertEqual(m(1), 6)
+        m = CustomModule(4)
+        test_case.assertEqual(m(3), 7)
+
+    def test_train_eval(test_case):
+        m = flow.nn.Module()
+        test_case.assertEqual(m.training, True)
+        m.train()
+        test_case.assertEqual(m.training, True)
+        m.eval()
+        test_case.assertEqual(m.training, False)
+
     @flow.unittest.skip_unless_1n1d()
     def test_parameter(test_case):
         shape = (3, 4)
