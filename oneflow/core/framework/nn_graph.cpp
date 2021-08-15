@@ -81,9 +81,12 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
 Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
   const auto& free_eager_tensors =
       Global<MultiClientSessionContext>::Get()->GetFreeEagerTensorNamePairByGraphName(name_);
+  std::cout << "cclog: try get free_eager_tensors size = " << free_eager_tensors.size()
+            << " in graph = " << name_ << "\n";
   for (const auto& pair : free_eager_tensors) {
     const std::string& var_name = pair.first;
     const std::shared_ptr<one::Tensor>& var = pair.second;
+    std::cout << "cclog: free_eager_tensor name = " << var_name << "\n\n";
     CHECK_OR_RETURN(var->is_eager());
     Blob* var_blob = nullptr;
     if (var->is_consistent()) {
@@ -96,6 +99,7 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
     CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
+  std::cout << "cclog: try get free_eager_tensors in graph = " << name_ << ", DONE.\n";
   return Maybe<void>::Ok();
 }
 
@@ -114,6 +118,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
+    for (const auto& var_name : variable_op_names_) {
+      std::cout << "cclog: var name = " << var_name << "\n\n";
+    }
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
 
     LOG(INFO) << "\njob_id: " << job_ctx->job_id() << " , job_name: " << name_
