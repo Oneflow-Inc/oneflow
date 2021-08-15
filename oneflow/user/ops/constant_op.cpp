@@ -35,11 +35,10 @@ REGISTER_NO_GRAD_USER_OP("constant")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          cfg::SbpParallel default_sbp;
-          default_sbp.mutable_broadcast_parallel();
-          return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
-        });
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      cfg::SbpParallel default_sbp;
+      default_sbp.mutable_broadcast_parallel();
+      return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
+    });
 
 }  // namespace oneflow

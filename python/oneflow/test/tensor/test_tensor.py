@@ -197,9 +197,15 @@ class TestTensor(flow.unittest.TestCase):
         grad = flow.Tensor(*shape)
         grad.fill_(1.0)
         w.backward(gradient=grad, retain_graph=True)
-        test_case.assertNotEqual(v.grad, None)
-        test_case.assertNotEqual(y.grad, None)
-        test_case.assertNotEqual(z.grad, None)
+        test_case.assertTrue(
+            np.allclose(v.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(y.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(z.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
         test_case.assertIsNone(x.grad)
         w.backward(gradient=grad, retain_graph=True)
 
@@ -209,7 +215,9 @@ class TestTensor(flow.unittest.TestCase):
         x.register_hook(lambda grad: grad * 2 + 1)
         y = x.sum() + (x * 2).sum()
         y.backward()
-        test_case.assertTrue(np.array_equal(x.grad.numpy(), np.ones(shape) * 7))
+        test_case.assertTrue(
+            np.allclose(x.grad.numpy(), np.ones(shape) * 7, atol=1e-4, rtol=1e-4)
+        )
         x = flow.Tensor(*shape, requires_grad=True)
         new_grad = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         x.register_hook(lambda _: new_grad)
