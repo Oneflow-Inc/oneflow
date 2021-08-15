@@ -27,7 +27,6 @@ if(USE_SYSTEM_NCCL)
             PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
     find_package_handle_standard_args(
             NCCL DEFAULT_MSG NCCL_INCLUDE_DIR NCCL_LIBRARY)
-    mark_as_advanced(NCCL_ROOT_DIR NCCL_LIBRARY NCCL_INCLUDE_DIR)
     set(NCCL_LIBRARIES ${NCCL_LIBRARY})
     add_custom_target(nccl)
 else()
