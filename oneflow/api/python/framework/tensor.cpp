@@ -397,7 +397,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property(
           "grad",
           [](const Tensor& t) -> std::shared_ptr<Tensor> {
-            if (t.has_autograd_meta()) {
+            if (t.has_autograd_meta() && t.requires_grad()) {
               return t.acc_grad().GetPtrOrThrow();
             } else {
               return std::shared_ptr<Tensor>();
@@ -427,11 +427,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       // Methods of pytorch
       .def(
           "requires_grad_",
-          [](Tensor& t, bool requires_grad) -> Tensor& {
-            ApiSetRequiresGrad(t, requires_grad);
+          [](Tensor& t, bool requires_grad_) -> Tensor& {
+            ApiSetRequiresGrad(t, requires_grad_);
             return t;
           },
-          "requires_grad"_a = true)
+          "requires_grad_"_a = true)
       .def("retain_grad",
            [](Tensor& t) {
              if (!t.is_leaf()) { t.set_retain_grad(true).GetOrThrow(); }
