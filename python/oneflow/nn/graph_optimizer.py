@@ -33,7 +33,9 @@ class OptGroup(object):
         if self._optimizer is not None:
             opt_confs = self._optimizer.generate_conf_for_graph(train_conf, vars_conf)
         if self._lr_scheduler is not None:
-            assert self._lr_scheduler._optimizer is self._optimizer, ("lr_scheduler's optimizer must be the same optimizer in the opt group.")
+            assert (
+                self._lr_scheduler._optimizer is self._optimizer
+            ), "lr_scheduler's optimizer must be the same optimizer in the opt group."
             self._lr_scheduler.generate_conf_for_graph(opt_confs)
 
 

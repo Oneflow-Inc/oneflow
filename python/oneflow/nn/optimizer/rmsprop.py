@@ -188,6 +188,6 @@ class RMSprop(Optimizer):
                 vars_conf[param].l2 = weight_decay
                 if param.requires_grad:
                     optimizer_conf.add_variable_op_names(vars_conf[param].name)
-            
+
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs

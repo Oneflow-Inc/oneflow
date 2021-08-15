@@ -79,7 +79,9 @@ class Graph(object):
         assert isinstance(opt_group["optim"], Optimizer)
         if "lr_sch" in opt_group:
             assert isinstance(opt_group["lr_sch"], LrScheduler)
-            assert opt_group["lr_sch"]._optimizer is opt_group["optim"], ("lr_scheduler's optimizer must be the same optimizer in the opt group.")
+            assert (
+                opt_group["lr_sch"]._optimizer is opt_group["optim"]
+            ), "lr_scheduler's optimizer must be the same optimizer in the opt group."
         self._opt_groups.append(opt_group)
 
     def add_optimizer(
