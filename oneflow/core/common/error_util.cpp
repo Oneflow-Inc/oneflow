@@ -135,29 +135,19 @@ std::string FormatErrorSummaryAndMsgOfErrorProto(const std::shared_ptr<cfg::Erro
 
 // the msg in error type instance.
 Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<cfg::ErrorProto>& error) {
+  CHECK_NE_OR_RETURN(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
   std::stringstream ss;
-  CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
-  switch (error->error_type_case()) {
-    case cfg::ErrorProto::kInputDeviceNotMatchError:
-      ss << error->input_device_not_match_error().DebugString();
-      break;
-    case cfg::ErrorProto::kMemoryZoneOutOfMemoryError:
-      ss << error->memory_zone_out_of_memory_error().DebugString();
-      break;
-    case cfg::ErrorProto::kMultipleOpKernelsMatchedError:
-      ss << error->multiple_op_kernels_matched_error().DebugString();
-      break;
-    case cfg::ErrorProto::kOpKernelNotFoundError:
-      ss << error->op_kernel_not_found_error().DebugString();
-      break;
-    case cfg::ErrorProto::kConfigResourceUnavailableError:
-      ss << error->config_resource_unavailable_error().DebugString();
-      break;
-    case cfg::ErrorProto::kConfigAssertFailedError:
-      ss << error->config_assert_failed_error().DebugString();
-      break;
-    default: ss << "";
-  }
+  ErrorProto pb_error;
+  error->ToProto(&pb_error);
+  const google::protobuf::Descriptor* pb_error_des = pb_error.GetDescriptor();
+  const google::protobuf::OneofDescriptor* oneof_field_des =
+      pb_error_des->FindOneofByName("error_type");
+  const google::protobuf::Reflection* pb_error_ref = pb_error.GetReflection();
+  const google::protobuf::FieldDescriptor* field_des =
+      pb_error_ref->GetOneofFieldDescriptor(pb_error, oneof_field_des);
+  CHECK_OR_RETURN(field_des != nullptr);
+  const google::protobuf::Message& error_type = pb_error_ref->GetMessage(pb_error, field_des);
+  ss << error_type.DebugString();
   return ss.str();
 }
 
@@ -182,7 +172,6 @@ Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error)
   // Get msg from error type of error proto
   std::string msg_of_error_type = *JUST(FormatMsgOfErrorType(error));
   if (msg_of_error_type.size() != 0) { ss << "\n" << msg_of_error_type; }
-
   return ss.str();
 }
 

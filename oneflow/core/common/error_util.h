@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include "oneflow/core/common/error.cfg.h"
+#include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
