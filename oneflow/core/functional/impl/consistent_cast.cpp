@@ -182,7 +182,7 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
 Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and out */ dtype,
                                        std::shared_ptr<const Shape> physical_shape,
                                        Symbol<ParallelDesc> parallel_desc,
-                                       Symbol<cfg::ParallelDistribution> nd_sbp) {
+                                       Symbol<cfg::NdSbp> nd_sbp) {
   if (nd_sbp->sbp_parallel_size() == 1 && nd_sbp->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape_dtype =
         JUST(BroadcastGatherShapeAndDataType(*physical_shape, *dtype, parallel_desc));
@@ -201,8 +201,7 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
   return Maybe<void>::Ok();
 }
 
-Maybe<one::UserOpExpr> MakeParallelDistributionOpExpr(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+Maybe<one::UserOpExpr> MakeNdSbpOpExpr(const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
   return OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
       .Input("in")
       .Output("out")
@@ -212,8 +211,7 @@ Maybe<one::UserOpExpr> MakeParallelDistributionOpExpr(
       .Build();
 }
 
-auto* CachedParallelDistributionOpExpr =
-    DECORATE(&MakeParallelDistributionOpExpr, ThreadLocalCopiable);
+auto* CachedNdSbpOpExpr = DECORATE(&MakeNdSbpOpExpr, ThreadLocalCopiable);
 
 Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      Symbol<ParallelDesc> parallel_desc,
@@ -221,7 +219,7 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& nd_sbp_cast_op_expr = JUST(CachedParallelDistributionOpExpr(sbp_parallels));
+  const auto& nd_sbp_cast_op_expr = JUST(CachedNdSbpOpExpr(sbp_parallels));
 
   const auto& ret =
       JUST(OpInterpUtil::Dispatch<one::Tensor>(*nd_sbp_cast_op_expr, {consistent_tensor}));
@@ -236,7 +234,7 @@ Maybe<Tensor> LazyConsistentToConsistent(
   CHECK_OR_RETURN(x->is_lazy());
   CHECK_OR_RETURN(x->is_consistent());
 
-  Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
+  Symbol<cfg::NdSbp> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
   std::vector<std::string> grad_parallel_distribution = *JUST(GetNdSbpStrList(grad_sbp_parallels));
 
   MutableAttrMap attrs;
@@ -276,7 +274,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
       << Error::Unimplemented() << "tensor' device type must be same with placement.";
   CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
       << Error::Unimplemented() << "tensor must be on default device of the current rank.";
-  Symbol<cfg::ParallelDistribution> nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));

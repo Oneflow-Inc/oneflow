@@ -227,7 +227,7 @@ class Conv1d(Module):
                             * self.out_channel_groups : (i + 1)
                             * self.out_channel_groups
                         ]
-                        if self.bias
+                        if self.bias is not None
                         else None,
                         stride=self.stride,
                         padding=self.padding,
@@ -450,7 +450,7 @@ class Conv2d(Module):
                             * self.out_channel_groups : (i + 1)
                             * self.out_channel_groups
                         ]
-                        if self.bias
+                        if self.bias is not None
                         else None,
                         stride=self.stride,
                         padding=self.padding,
@@ -654,7 +654,7 @@ class Conv3d(Module):
                             * self.out_channel_groups : (i + 1)
                             * self.out_channel_groups
                         ]
-                        if self.bias
+                        if self.bias is not None
                         else None,
                         stride=self.stride,
                         padding=self.padding,

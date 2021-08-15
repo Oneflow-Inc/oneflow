@@ -29,7 +29,7 @@ limitations under the License.
 namespace oneflow {
 
 namespace cfg {
-class ParallelDistribution;
+class NdSbp;
 }
 class Device;
 
@@ -52,7 +52,7 @@ class Tensor {
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual Symbol<DType> dtype() const = 0;
   virtual Maybe<TransportToken> transport_token() const = 0;
-  virtual Maybe<Symbol<cfg::ParallelDistribution>> nd_sbp() const = 0;
+  virtual Maybe<Symbol<cfg::NdSbp>> nd_sbp() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
   virtual Maybe<Symbol<Device>> device() const = 0;
   virtual Maybe<Symbol<Device>*> mut_device() = 0;
@@ -74,14 +74,11 @@ class Tensor {
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
-  virtual Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&> consumer_nd_sbp_constraint()
-      const {
+  virtual Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const {
     OF_UNIMPLEMENTED();
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
-  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::ParallelDistribution> val) {
-    OF_UNIMPLEMENTED();
-  }
+  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   virtual bool requires_grad() const = 0;
@@ -125,7 +122,7 @@ class StaticZerosTensor final : public Tensor {
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
   Symbol<DType> dtype() const { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const { OF_UNIMPLEMENTED(); }
-  Maybe<Symbol<cfg::ParallelDistribution>> nd_sbp() const { OF_UNIMPLEMENTED(); }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<Device>> device() const { return device_; }
   Maybe<Symbol<Device>*> mut_device() { OF_UNIMPLEMENTED(); }
@@ -156,13 +153,11 @@ class StaticZerosTensor final : public Tensor {
   Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
-  Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&> consumer_nd_sbp_constraint() const {
+  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const {
     OF_UNIMPLEMENTED();
   }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::ParallelDistribution> val) {
-    OF_UNIMPLEMENTED();
-  }
+  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   bool requires_grad() const {
@@ -263,7 +258,7 @@ class Parameter final : public TensorIf<Parameter> {
 
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
   Symbol<DType> dtype() const override { return tensor_->dtype(); }
-  Maybe<Symbol<cfg::ParallelDistribution>> nd_sbp() const override { return tensor_->nd_sbp(); }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return tensor_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override { return tensor_->device(); }
   Maybe<Symbol<Device>*> mut_device() override { return tensor_->mut_device(); }
@@ -291,15 +286,14 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<const Stride> stride() const override { return tensor_->stride(); }
   Maybe<int64_t> storage_offset() const override { return tensor_->storage_offset(); }
 
-  Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&> consumer_nd_sbp_constraint()
-      const override {
+  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const override {
     return tensor_->consumer_nd_sbp_constraint();
   }
   Maybe<TransportToken> transport_token() const override { return tensor_->transport_token(); }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
     return tensor_->cur_rank_phy_tensor();
   }
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::ParallelDistribution> val) override {
+  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) override {
     return tensor_->set_consumer_nd_sbp_constraint(val);
   }
 
@@ -363,7 +357,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { OF_UNIMPLEMENTED(); }
-  Maybe<Symbol<cfg::ParallelDistribution>> nd_sbp() const override { OF_UNIMPLEMENTED(); }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<Device>> device() const override { return impl_->device(); }
   Maybe<Symbol<Device>*> mut_device() override { return impl_->mut_device(); }
@@ -444,14 +438,13 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
-  Maybe<Symbol<cfg::ParallelDistribution>> nd_sbp() const override { return impl_->nd_sbp(); }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<Device>*> mut_device() override { OF_UNIMPLEMENTED(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
-  Maybe<const Optional<Symbol<cfg::ParallelDistribution>>&> consumer_nd_sbp_constraint()
-      const override {
+  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const override {
     return impl_->consumer_nd_sbp_constraint();
   }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
@@ -472,7 +465,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
 
   // Setters
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::ParallelDistribution> val) override {
+  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) override {
     impl_->set_consumer_nd_sbp_constraint(val);
     return Maybe<void>::Ok();
   }
@@ -505,8 +498,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<Tensor> clone() const override { return Error::Unimplemented(); }
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                            DataType dtype,
-                                            Symbol<cfg::ParallelDistribution> nd_sbp,
+                                            DataType dtype, Symbol<cfg::NdSbp> nd_sbp,
                                             Symbol<ParallelDesc> parallel_desc, bool is_lazy,
                                             bool requires_grad, bool is_leaf);
 

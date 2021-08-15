@@ -448,6 +448,67 @@ class MaximumFunctor {
   std::shared_ptr<OpExpr> broadcast_maximum_op_;
 };
 
+class ScalarLogicalBaseFunctor {
+ public:
+  explicit ScalarLogicalBaseFunctor(std::string op_name) {
+    op_ = CHECK_JUST(one::OpBuilder(op_name).Input("in").Output("out").Build());
+  }
+  virtual ~ScalarLogicalBaseFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    MutableAttrMap attrs;
+
+    if (IsFloatingDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+    } else if (IsIntegralDataType(x->dtype())) {
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarLogicalEqualFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalEqualFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_equal") {}
+};
+
+class ScalarLogicalNotEqualFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalNotEqualFunctor()
+      : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_not_equal") {}
+};
+
+class ScalarLogicalGreaterFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalGreaterFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_greater") {}
+};
+
+class ScalarLogicalGreaterEqualFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalGreaterEqualFunctor()
+      : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_greater_equal") {}
+};
+
+class ScalarLogicalLessFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalLessFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_less") {}
+};
+
+class ScalarLogicalLessEqualFunctor : public ScalarLogicalBaseFunctor {
+ public:
+  ScalarLogicalLessEqualFunctor()
+      : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_less_equal") {}
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -470,6 +531,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
   m.add_functor<impl::MinimumFunctor>("Minimum");
   m.add_functor<impl::MaximumFunctor>("Maximum");
+  m.add_functor<impl::ScalarLogicalEqualFunctor>("ScalarLogicalEqual");
+  m.add_functor<impl::ScalarLogicalNotEqualFunctor>("ScalarLogicalNotEqual");
+  m.add_functor<impl::ScalarLogicalGreaterFunctor>("ScalarLogicalGreater");
+  m.add_functor<impl::ScalarLogicalGreaterEqualFunctor>("ScalarLogicalGreaterEqual");
+  m.add_functor<impl::ScalarLogicalLessFunctor>("ScalarLogicalLess");
+  m.add_functor<impl::ScalarLogicalLessEqualFunctor>("ScalarLogicalLessEqual");
 };
 
 }  // namespace functional

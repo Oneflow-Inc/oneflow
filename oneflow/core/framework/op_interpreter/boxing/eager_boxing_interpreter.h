@@ -39,8 +39,7 @@ class EagerBoxingInterpreter {
   virtual ~EagerBoxingInterpreter() = default;
 
   Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input,
-                               Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                               Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                               Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> in_parallel_desc,
                                Symbol<ParallelDesc> out_parallel_desc) {
     JUST(CheckEagerBoxingDataType(input->dtype()->data_type()));
@@ -49,8 +48,8 @@ class EagerBoxingInterpreter {
 
  protected:
   virtual Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                           Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                                           Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                                           Symbol<cfg::NdSbp> in_nd_sbp,
+                                           Symbol<cfg::NdSbp> out_nd_sbp,
                                            Symbol<ParallelDesc> in_parallel_desc,
                                            Symbol<ParallelDesc> out_parallel_desc) const = 0;
 };
