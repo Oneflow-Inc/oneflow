@@ -44,7 +44,7 @@ def type_as_op(input, target):
 
 
 @register_tensor_op("int")
-def long_op(input):
+def int_op(input):
     """`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
 
     Args:
@@ -90,7 +90,7 @@ def long_op(input):
 
 
 @register_tensor_op("float")
-def long_op(input):
+def float_op(input):
     """`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
 
     Args:
@@ -113,7 +113,7 @@ def long_op(input):
 
 
 @register_tensor_op("double")
-def long_op(input):
+def double_op(input):
     """`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
 
     Args:
