@@ -143,35 +143,8 @@ class TestGelu(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
-
-
-def numpy_softmax(x, axis):
-    x = x - x.max(axis=axis, keepdims=True)
-    y = np.exp(x)
-    return y / y.sum(axis=axis, keepdims=True)
-
-
-def numpy_logsoftmax(x, dim):
-    e_x = np.exp(x - np.max(x, axis=dim, keepdims=True))
-    return np.log(e_x / e_x.sum(axis=dim, keepdims=True))
-
-
-def numpy_softplus(x, beta, threshold):
-    return np.where(
-        x * beta > threshold, x, 1.0 / beta * np.log(1.0 + np.exp(beta * x))
-    )
-
-
-def numpy_mish_grad(x):
-    f = 1 + np.exp(x)
-    y_grad = (f * f - 1) / (f * f + 1) + x * (4 * f * (f - 1)) / (
-        (f * f + 1) * (f * f + 1)
-    )
-    return y_grad
-
-
 @flow.unittest.skip_unless_1n1d()
-class TestSigmoid(flow.unittest.TestCase):
+class TestSigmoidModule(flow.unittest.TestCase):
     @autotest()
     def test_sigmoid_module_with_random_data(test_case):
         m = torch.nn.Sigmoid()
@@ -196,6 +169,10 @@ class TestSigmoid(flow.unittest.TestCase):
         y = x.sigmoid()
         return y
 
+def numpy_softmax(x, axis):
+    x = x - x.max(axis=axis, keepdims=True)
+    y = np.exp(x)
+    return y / y.sum(axis=axis, keepdims=True)
 
 def _test_softmax(test_case, device):
     axis = 0
@@ -325,6 +302,10 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+def numpy_softplus(x, beta, threshold):
+    return np.where(
+        x * beta > threshold, x, 1.0 / beta * np.log(1.0 + np.exp(beta * x))
+    )
 
 def _test_softplus(test_case, device):
     m = flow.nn.Softplus()
@@ -404,41 +385,17 @@ class TestHardswishModule(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
-
-
-def _np_hardtanh_grad(x):
-    return np.where(x <= -2.0, 0.0, np.where(x >= 2.3, 0.0, 1.0))
-
-
-def _test_hardtanh_impl(test_case, shape, device):
-    m = flow.nn.Hardtanh()
-    arr = np.random.randn(*shape)
-    np_out = np.maximum(-1, np.minimum(1, arr))
-    x = flow.Tensor(arr, device=flow.device(device))
-    of_out = m(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    m = flow.nn.Hardtanh(min_val=-2.0, max_val=2.3)
-    arr = np.random.randn(*shape)
-    np_out = np.maximum(-2.0, np.minimum(2.3, arr))
-    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
-    of_out = m(x)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), _np_hardtanh_grad(np_out), 1e-05, 1e-05)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestHardtanhModule(flow.unittest.TestCase):
-    def test_hardtanh(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_hardtanh_impl(test_case, *arg)
-
+    @autotest()
+    def test_hardtanh_module_with_random_data(test_case):
+        m = torch.nn.Hardtanh(min_val=random().to(float) | nothing(), max_val=random().to(float) | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = m(x)
+        return y
 
 @flow.unittest.skip_unless_1n1d()
 class TestLeakyReLUModule(flow.unittest.TestCase):
