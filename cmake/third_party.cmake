@@ -98,6 +98,8 @@ if (BUILD_CUDA)
       message(FATAL_ERROR "cuda lib not found: ${cublas_lib_dir}/libcublas_static.a or ${cuda_lib_dir}/libcublas_static.a")
     endif()
   endif()
+  set(CMAKE_CUDA_COMPILER ${CUDA_NVCC_EXECUTABLE})
+  set(CMAKE_CUDA_STANDARD 11)
   find_package(CUDNN REQUIRED)
 endif()
 
