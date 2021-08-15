@@ -53,13 +53,6 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
         my_g = GraphEagerTensorCaught()
         graph_out = my_g(x)
         eager_out = my_net_module(x)
-        print(graph_out)
-        print(eager_out)
-        eager_out = my_net_module(x)
-        print(eager_out)
-        graph_out = my_g(x)
-        print(graph_out)
-
         test_case.assertTrue(
             np.allclose(graph_out.numpy(), eager_out.numpy(), 1e-4, 1e-4)
         )
