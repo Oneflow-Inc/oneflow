@@ -602,10 +602,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
            ->EqualsIgnoringHierarchy(*parallel_desc_sym.shared_from_symbol())) {
     // NOTE(zwx): The input tensor's parallel_desc is not equal to that of op's,
     // create a proxy input with the parallel_desc that is the same as op's
-    input_proxy = JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
-                                                    JUST(input_tensor->nd_sbp()), parallel_desc_sym,
-                                                    /* is_lazy= */ true,
-                                                    /*requires_grad=*/false, /*is_leaf=*/true));
+    input_proxy =
+        JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
+                                          JUST(input_tensor->nd_sbp()), parallel_desc_sym,
+                                          /* is_lazy= */ true,
+                                          /*requires_grad=*/false, /*is_leaf=*/true));
     TensorNameScope::Global()->Record(input_proxy, input_lbn);
   }
 
