@@ -54,7 +54,7 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
         graph_out = my_g(x)
         eager_out = my_net_module(x)
         test_case.assertTrue(
-            np.allclose(graph_out.numpy(), eager_out.numpy(), 1e-4, 1e-4)
+            np.allclose(graph_out.numpy(), eager_out.numpy(), atol=1e-4, rtol=1e-4)
         )
 
 

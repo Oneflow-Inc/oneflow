@@ -270,7 +270,7 @@ class CropMirrorNormalize(Module):
         )
 
     def forward(self, input, mirror=None):
-        if mirror != None:
+        if mirror is not None:
             if input.dtype is flow.uint8:
                 res = self._op_uint8_with_mirror(input, mirror)[0]
             elif input.dtype is flow.tensor_buffer:
