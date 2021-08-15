@@ -447,7 +447,6 @@ class MaximumFunctor {
   std::shared_ptr<OpExpr> broadcast_maximum_op_;
 };
 
-
 class ScalarFModFunctor {
  public:
   ScalarFModFunctor() {
