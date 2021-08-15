@@ -328,4 +328,4 @@ from oneflow.nn.modules.scatter import *
 from . import autograd, distributed, linalg, optim, saved_model
 import oneflow.utils.data
 import oneflow.utils.vision
-from oneflow.F import relu as relu
+from oneflow.nn.modules.relu import relu_op as relu

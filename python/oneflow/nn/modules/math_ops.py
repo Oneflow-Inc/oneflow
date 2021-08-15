@@ -1338,14 +1338,6 @@ def maximum(x, y):
     """
     return flow.F.maximum(x, y)
 
-@register_tensor_op("relu")
-def relu_op(x):
-    """
-    Applies the rectified linear unit function element-wise. See :class:`~oneflow.nn.ReLU` for more details. 
-    
-    """
-    return flow.F.relu(x)
-
 if __name__ == "__main__":
     import doctest
 
