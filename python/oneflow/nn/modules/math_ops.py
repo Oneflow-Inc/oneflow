@@ -346,7 +346,7 @@ def asinh_op(input):
         >>> output1.shape
         flow.Size([2, 3])
         >>> output1
-        tensor([[-0.8814,  0.    , -0.39  ],
+        tensor([[-0.8814,  0.0000, -0.3900],
                 [ 2.3124,  2.6441,  0.7327]], dtype=oneflow.float32)
 
     """
@@ -533,9 +533,9 @@ def fmod_op(input, other):
         >>> flow.fmod(flow.tensor([-3., -2, -1, 1, 2, 3]), 2)
         tensor([-1., -0., -1.,  1.,  0.,  1.], dtype=oneflow.float32)
         >>> flow.fmod(flow.tensor([1, 2, 3, 4, 5]), 1.5)
-        tensor([1. , 0.5, 0. , 1. , 0.5], dtype=oneflow.float32)
+        tensor([1.0000, 0.5000, 0.0000, 1.0000, 0.5000], dtype=oneflow.float32)
         >>> flow.fmod(flow.tensor([1, 2, 3, 4, -5]), flow.tensor([4, 2, 1, 3., 1]))
-        tensor([ 1.,  0.,  0.,  1., -0.], dtype=oneflow.float32)
+        tensor([1., 0., 0., 1., -0.], dtype=oneflow.float32)
 
     """
     return flow.F.fmod(input, other)
@@ -795,8 +795,8 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         >>> mat2 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5],[3.7,2.2,8.1]])) 
         >>> output = flow.addmm(input, mat1, mat2)
         >>> output
-        tensor([[100.68,  33.83, 126.87],
-                [110.01,  43.48, 133.61]], dtype=oneflow.float64)
+        tensor([[100.6800,  33.8300, 126.8700],
+                [110.0100,  43.4800, 133.6100]], dtype=oneflow.float64)
         >>> output.shape
         flow.Size([2, 3])
 
@@ -805,9 +805,9 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         >>> mat2 = flow.tensor(np.array([[1,2,3.7],[5,9.1,6.8]]))
         >>> output2 = flow.addmm(input2, mat1, mat2, alpha=1, beta=2)
         >>> output2
-        tensor([[14.4 , 23.6 , 20.7 ],
-                [53.9 , 96.21, 83.78],
-                [18.1 , 31.54, 41.41]], dtype=oneflow.float64)
+        tensor([[14.4000, 23.6000, 20.7000],
+                [53.9000, 96.2100, 83.7800],
+                [18.1000, 31.5400, 41.4100]], dtype=oneflow.float64)
         >>> output2.shape
         flow.Size([3, 3])
     """
@@ -899,19 +899,19 @@ def clamp_op(input, min=None, max=None):
         >>> input = flow.Tensor(arr)
         >>> output = flow.clamp(input, min=-0.5, max=0.5)
         >>> output
-        tensor([ 0.2,  0.5, -0.5, -0.3], dtype=oneflow.float32)
+        tensor([ 0.2000,  0.5000, -0.5000, -0.3000], dtype=oneflow.float32)
 
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
         >>> output = flow.clamp(input, min=None, max=0.5)
         >>> output
-        tensor([ 0.2,  0.5, -1.5, -0.3], dtype=oneflow.float32)
+        tensor([ 0.2000,  0.5000, -1.5000, -0.3000], dtype=oneflow.float32)
 
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
         >>> output = flow.clamp(input, min=-0.5, max=None)
         >>> output
-        tensor([ 0.2,  0.6, -0.5, -0.3], dtype=oneflow.float32)
+        tensor([ 0.2000,  0.6000, -0.5000, -0.3000], dtype=oneflow.float32)
 
     """
     return flow.F.clamp(input, min, max)

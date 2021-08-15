@@ -69,6 +69,11 @@ const std::string& CastFromConsistentOpExpr::op_type_name() const {
   return kOpTypeName;
 }
 
+const std::string& ConsistentToConsistentOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "consistent_to_consistent";
+  return kOpTypeName;
+}
+
 #define DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(_T, _bool) \
   template<>                                                    \
   Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {   \
@@ -289,10 +294,9 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
     UNIMPLEMENTED();
     return *(const cfg::SbpParallel*)nullptr;
   }
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
-                                                                        int32_t) const override {
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const override {
     UNIMPLEMENTED();
-    return *(const cfg::ParallelDistribution*)nullptr;
+    return *(const cfg::NdSbp*)nullptr;
   }
   int64_t parallel_num() const override {
     UNIMPLEMENTED();
@@ -410,6 +414,14 @@ CastFromConsistentOpExpr::CastFromConsistentOpExpr(const std::string& op_name)
 /* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
     const std::string& op_name) {
   return std::shared_ptr<CastFromConsistentOpExpr>(new CastFromConsistentOpExpr(op_name));
+}
+
+ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(const std::string& op_name)
+    : CastConsistentOpExpr(op_name) {}
+
+/* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
+    const std::string& op_name) {
+  return std::shared_ptr<ConsistentToConsistentOpExpr>(new ConsistentToConsistentOpExpr(op_name));
 }
 
 template<>

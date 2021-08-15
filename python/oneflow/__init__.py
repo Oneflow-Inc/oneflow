@@ -159,6 +159,8 @@ from oneflow.framework.generator import default_generator, manual_seed
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import tensor as tensor
+from oneflow.framework.tensor import is_nonzero
+
 from oneflow.nn.modules.abs import abs_op as abs
 from oneflow.nn.modules.acos import acos_op as acos
 from oneflow.nn.modules.acosh import acosh_op as acosh
@@ -258,6 +260,7 @@ from oneflow.nn.modules.negative import negative_op as neg
 from oneflow.nn.modules.negative import negative_op as negative
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.random_ops import bernoulli
+from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
