@@ -101,6 +101,8 @@ def _setitem(self, key, value):
             value = flow.F.consistent_constant(
                 [1], value, self.dtype, placement=self.placement, sbp=flow.sbp.broadcast
             )
+        else:
+            value = value.to_consistent(self.placement, sbp=flow.sbp.broadcast)
     else:
         if isinstance(value, (int, float)):
             value = flow.F.constant([1], value, self.dtype, device=self.device)
@@ -297,30 +299,25 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     copy_from_numpy(np_arr)
 
 
-def _init_eager_local_tensor_by_initializer_conf(
-    eager_local_tensor, initializer_conf, random_seed=None
-):
+def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
         random_seed = flow.default_generator().seed()
-    shape = tuple(eager_local_tensor.shape)
+    shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
-    # initializer is None if and only if the initializer_conf is empty_initializer
-    if initializer is None:
-        return
 
-    _copy_from_numpy_to_eager_local_tensor(
-        eager_local_tensor,
-        check_point_v2.generate_values_by_initializer(
-            initializer, shape, eager_local_tensor.dtype
-        ),
+    np_arr = check_point_v2.generate_values_by_initializer(
+        initializer, shape, tensor.dtype
     )
-
-
-def _init_by_initializer_conf(tensor, initializer_conf):
     if tensor.is_consistent:
-        raise NotImplementedError(" consistent initializer unvailiable now")
+        src_tensor = flow.tensor(np_arr)
+        src_tensor = src_tensor.to_consistent(
+            placement=tensor.placement, sbp=flow.sbp.broadcast
+        )
+        tensor.copy_(src_tensor)
     else:
-        _init_eager_local_tensor_by_initializer_conf(tensor, initializer_conf)
+        _copy_from_numpy_to_eager_local_tensor(
+            tensor, np_arr,
+        )
     return tensor
 
 
@@ -328,7 +325,7 @@ def _convert_to_placement_scope(placement_or_device):
     if isinstance(placement_or_device, flow.placement):
         placement = placement_or_device
         return flow.scope.placement(
-            placement.device_tag,
+            placement.device_type,
             list(placement.parallel_conf.device_name()),
             placement.hierarchy,
         )
@@ -354,13 +351,18 @@ def _placement_scope(self):
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
-    if isinstance(other, (Tensor, check_point_v2.FileBackendVariableBlob)):
-        src_np = other.numpy()
+    if self.is_consistent:
+        assert isinstance(other, Tensor)
+        assert other.is_consistent
+        self[:] = other
     else:
-        assert isinstance(other, np.ndarray)
-        src_np = other
+        if isinstance(other, (Tensor)):
+            src_np = other.numpy()
+        else:
+            assert isinstance(other, np.ndarray)
+            src_np = other
 
-    _copy_from_numpy_to_eager_local_tensor(self, src_np)
+        _copy_from_numpy_to_eager_local_tensor(self, src_np)
 
 
 def _get_device(self):

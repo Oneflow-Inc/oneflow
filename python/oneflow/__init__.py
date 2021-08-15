@@ -298,7 +298,7 @@ from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
-from oneflow.ops.initializer_util import constant_initializer, empty_initializer
+from oneflow.ops.initializer_util import constant_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
 from oneflow.ops.initializer_util import (
     glorot_normal_initializer as xavier_normal_initializer,
