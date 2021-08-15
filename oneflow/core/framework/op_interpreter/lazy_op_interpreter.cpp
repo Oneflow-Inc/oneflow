@@ -610,12 +610,12 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
 
   // build parallel cast op expr
   std::string grad_mode;
-  std::vector<std::string> grad_parallel_distribution;
+  std::vector<std::string> grad_nd_sbp;
   if (identity_grad) {
     grad_mode = "identity";
   } else if (grad_sbp_list.size() > 0) {
     grad_mode = "manual";
-    grad_parallel_distribution = grad_sbp_list;
+    grad_nd_sbp = grad_sbp_list;
   } else {
     grad_mode = "restore";
   }
@@ -626,7 +626,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
                .Output("out")
                .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
                .Attr<std::string>("grad_mode", grad_mode)
-               .Attr<std::vector<std::string>>("grad_nd_sbp", grad_parallel_distribution)
+               .Attr<std::vector<std::string>>("grad_nd_sbp", grad_nd_sbp)
                .Build());
 
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);

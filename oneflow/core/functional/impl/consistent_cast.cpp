@@ -234,15 +234,15 @@ Maybe<Tensor> LazyConsistentToConsistent(
   CHECK_OR_RETURN(x->is_lazy());
   CHECK_OR_RETURN(x->is_consistent());
 
-  Symbol<cfg::NdSbp> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
-  std::vector<std::string> grad_parallel_distribution = *JUST(GetNdSbpStrList(grad_sbp_parallels));
+  Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  std::vector<std::string> grad_nd_sbp = *JUST(GetNdSbpStrList(grad_sbp_parallels));
 
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<bool>("identity_grad", identity_grad));
-  JUST(attrs.SetAttr<std::vector<std::string>>("grad_sbp", grad_parallel_distribution));
+  JUST(attrs.SetAttr<std::vector<std::string>>("grad_sbp", grad_nd_sbp));
 
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
+      *op, {x}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
 }
 
