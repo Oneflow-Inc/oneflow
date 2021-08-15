@@ -399,22 +399,14 @@ Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
-ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(const std::string& op_name,
-                                                           Symbol<cfg::NdSbp> grad_nd_sbp)
-    : op_name_(op_name), grad_nd_sbp_(grad_nd_sbp) {}
+ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(
+    const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp)
+    : grad_nd_sbp_(grad_nd_sbp) {}
 
 /* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
-    const std::string& op_name, Symbol<cfg::NdSbp> grad_nd_sbp) {
-  return std::shared_ptr<ConsistentToConsistentOpExpr>(
-      new ConsistentToConsistentOpExpr(op_name, grad_nd_sbp));
-}
-
-ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(const std::string& op_name)
-    : op_name_(op_name) {}
-
-/* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
-    const std::string& op_name) {
-  return std::shared_ptr<ConsistentToConsistentOpExpr>(new ConsistentToConsistentOpExpr(op_name));
+    const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
+  auto* ptr = new ConsistentToConsistentOpExpr(grad_nd_sbp);
+  return std::shared_ptr<ConsistentToConsistentOpExpr>(ptr);
 }
 
 CastConsistentOpExpr::CastConsistentOpExpr(const std::string& op_name) : op_name_(op_name) {}

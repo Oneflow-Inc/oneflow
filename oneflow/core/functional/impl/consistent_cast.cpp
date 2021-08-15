@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/ccl/ccl.h"
 
 namespace oneflow {
@@ -201,37 +202,32 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
   return Maybe<void>::Ok();
 }
 
-Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
-                                     Symbol<ParallelDesc> parallel_desc,
-                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                                     const std::shared_ptr<OpExpr>& op) {
-  const auto& consistent_tensor = JUST(x->AsConsistentTensor());
-  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
-  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {consistent_tensor},
-      OpExprInterpContext(AttrMap{}, parallel_desc, JUST(GetNdSbp(sbp_parallels)))));
-  return ret;
+namespace {
+
+Maybe<one::OpExpr> RawGetConsistentToConsistentOpExpr(
+    const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) {
+  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp;
+  if (!grad_sbp_parallels.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_parallels)); }
+  std::shared_ptr<one::OpExpr> op_expr = JUST(one::ConsistentToConsistentOpExpr::New(grad_nd_sbp));
+  return op_expr;
 }
 
-Maybe<Tensor> LazyConsistentToConsistent(
+}  // namespace
+
+static constexpr auto* GetConsistentToConsistentOpExpr =
+    DECORATE(&RawGetConsistentToConsistentOpExpr, ThreadLocal);
+
+Maybe<Tensor> ConsistentToConsistent(
     const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels, bool identity_grad,
-    const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels,
-    const std::shared_ptr<OpExpr>& op) {
-  CHECK_OR_RETURN(x->is_lazy());
-  CHECK_OR_RETURN(x->is_consistent());
-
-  Symbol<cfg::NdSbp> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
-  std::vector<std::string> grad_parallel_distribution = *JUST(GetNdSbpStrList(grad_sbp_parallels));
-
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<bool>("identity_grad", identity_grad));
-  JUST(attrs.SetAttr<std::vector<std::string>>("grad_sbp", grad_parallel_distribution));
-
-  const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
-  return output;
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+    const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) {
+  const auto& consistent_tensor = JUST(x->AsConsistentTensor());
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
+  const auto& op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
+  const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
+  return ret;
 }
 
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
@@ -281,23 +277,14 @@ class ToConsistentFunctor {
   ToConsistentFunctor() {
     local_to_consistent_op_ =
         CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
-    consistent_to_consistent_op_ = CHECK_JUST(
-        one::ConsistentToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_consistent"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                           bool identity_grad,
                            const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) const {
     if (x->is_consistent()) {
-      if (x->is_lazy()) {
-        return JUST(LazyConsistentToConsistent(x, parallel_desc, sbp_parallels, identity_grad,
-                                               grad_sbp_parallels, consistent_to_consistent_op_));
-      } else {
-        return JUST(
-            ConsistentToConsistent(x, parallel_desc, sbp_parallels, consistent_to_consistent_op_));
-      }
+      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
       return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
     }
@@ -305,7 +292,6 @@ class ToConsistentFunctor {
 
  private:
   std::shared_ptr<OpExpr> local_to_consistent_op_;
-  std::shared_ptr<OpExpr> consistent_to_consistent_op_;
 };
 
 class ConsistentToLocalFunctor {

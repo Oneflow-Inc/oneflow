@@ -59,17 +59,15 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t root = ctx->Attr<int64_t>("root");
+    const void* in_ptr = nullptr;
     if (GlobalProcessCtx::Rank() == root) {
       CHECK_EQ(in->shape(), out->shape());
       CHECK_EQ(in->data_type(), out->data_type());
-      CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(
-          in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), root,
-          kernel_state->parallel_desc(), ctx->device_ctx()));
-    } else {
-      CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(
-          nullptr, out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), root,
-          kernel_state->parallel_desc(), ctx->device_ctx()));
+      in_ptr = in->dptr();
     }
+    CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(in_ptr, out->mut_dptr(), out->shape().elem_cnt(),
+                                                out->data_type(), root,
+                                                kernel_state->parallel_desc(), ctx->device_ctx()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

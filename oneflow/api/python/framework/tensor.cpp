@@ -301,7 +301,6 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
         if (placement) {
           // LocalTensor -> ConsistentTensor
           tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple,
-                                                 /* identity_grad */ false,
                                                  /* grad_sbp_parallels */ {}));
         } else {
           // LocalTensor -> LocalTensor
@@ -312,7 +311,6 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
         if (placement) {
           // ConsistentTensor -> ConsistentTensor
           tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple,
-                                                 /* identity_grad */ false,
                                                  /* grad_sbp_parallels */ {}));
         } else {
           // ConsistentTensor -> LocalTensor

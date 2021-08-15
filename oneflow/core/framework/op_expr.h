@@ -161,11 +161,9 @@ class ConsistentToConsistentOpExpr : public OpExpr {
  public:
   virtual ~ConsistentToConsistentOpExpr() = default;
 
-  static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name,
-                                                 Symbol<cfg::NdSbp> grad_nd_sbp);
-  static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name);
+  static Maybe<ConsistentToConsistentOpExpr> New(const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp);
+
   const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp() const { return grad_nd_sbp_; }
-  const std::string& op_name() const { return op_name_; }
   const std::string& op_type_name() const override;
   int input_size() const override { return 1; }
   int output_size() const override { return 1; }
@@ -174,10 +172,8 @@ class ConsistentToConsistentOpExpr : public OpExpr {
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  protected:
-  ConsistentToConsistentOpExpr(const std::string& op_name, Symbol<cfg::NdSbp> grad_nd_sbp);
-  ConsistentToConsistentOpExpr(const std::string& op_name);
+  ConsistentToConsistentOpExpr(const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp);
 
-  std::string op_name_;
   Optional<Symbol<cfg::NdSbp>> grad_nd_sbp_;  //  Reserved for configuring grad sbp
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
