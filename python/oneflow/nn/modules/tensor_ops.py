@@ -43,6 +43,29 @@ def type_as_op(input, target):
     return input.to(dtype=target.dtype)
 
 
+@register_tensor_op("int")
+def long_op(input):
+    """`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.int()
+        >>> input.dtype
+        oneflow.int32
+
+    """
+    return input.to(dtype=flow.int32)
+
+
 @register_tensor_op("long")
 def long_op(input):
     """`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
@@ -64,6 +87,52 @@ def long_op(input):
 
     """
     return input.to(dtype=flow.int64)
+
+
+@register_tensor_op("float")
+def long_op(input):
+    """`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = input.float()
+        >>> input.dtype
+        oneflow.float32
+
+    """
+    return input.to(dtype=flow.float32)
+
+
+@register_tensor_op("double")
+def long_op(input):
+    """`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = input.double()
+        >>> input.dtype
+        oneflow.float64
+
+    """
+    return input.to(dtype=flow.float64)
 
 
 if __name__ == "__main__":
