@@ -108,7 +108,9 @@ def _setitem(self, key, value):
                 local_tensor = value.to_local()
                 if local_tensor.nelement() == 0:
                     local_tensor = flow.zeros(*value.shape)
-                value = local_tensor.to_consistent(self.placement, sbp=flow.sbp.broadcast)
+                value = local_tensor.to_consistent(
+                    self.placement, sbp=flow.sbp.broadcast
+                )
             else:
                 value = value.to_consistent(self.placement, sbp=flow.sbp.broadcast)
     else:

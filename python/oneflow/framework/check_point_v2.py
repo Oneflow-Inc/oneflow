@@ -101,34 +101,41 @@ def _ElemCnt(shape):
     return np.prod(shape).astype(int).item()
 
 
-def _LoadSingleVariable(path: Optional[str], consistent_src_rank: Optional[int] = None) -> "flow.Tensor":
+def _LoadSingleVariable(
+    path: Optional[str], consistent_src_rank: Optional[int] = None
+) -> "flow.Tensor":
     if consistent_src_rank is not None:
         rank = flow.framework.distribute.get_rank()
         if rank == consistent_src_rank:
             assert isinstance(path, str)
             file_backed_blob = FileBackendVariableBlob(path)
-            loaded = flow.tensor(file_backed_blob.numpy(), dtype=file_backed_blob.dtype).to('cuda')
+            loaded = flow.tensor(
+                file_backed_blob.numpy(), dtype=file_backed_blob.dtype
+            ).to("cuda")
         else:
-            loaded = flow.tensor([]).to('cuda')
-        loaded = loaded.to_consistent(flow.placement('cuda', {0: [0]}), flow.sbp.broadcast)
+            loaded = flow.tensor([]).to("cuda")
+        loaded = loaded.to_consistent(
+            flow.placement("cuda", {0: [0]}), flow.sbp.broadcast
+        )
         return loaded
 
     assert isinstance(path, str)
     return FileBackendVariableBlob(path)
 
 
-def _broadcast_py_object(obj, src: int=0):
+def _broadcast_py_object(obj, src: int = 0):
     rank = flow.framework.distribute.get_rank()
     if src == rank:
         obj_bytes = pickle.dumps(obj)
-        return pickle.loads(flow._oneflow_internal.cpu_broadcast(obj_bytes, len(obj_bytes), src))
+        return pickle.loads(
+            flow._oneflow_internal.cpu_broadcast(obj_bytes, len(obj_bytes), src)
+        )
     else:
         return pickle.loads(flow._oneflow_internal.cpu_broadcast(None, 0, src))
 
 
 def Load(
-    path: str,
-    consistent_src_rank: Optional[int]=None,
+    path: str, consistent_src_rank: Optional[int] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.framework.distribute.get_rank()
@@ -147,15 +154,22 @@ def Load(
     return var_dict
 
 
-def save(var_dict: Dict[str, "flow.Tensor"], path: str, consistent_dst_rank: Optional[int]=None) -> None:
+def save(
+    var_dict: Dict[str, "flow.Tensor"],
+    path: str,
+    consistent_dst_rank: Optional[int] = None,
+) -> None:
     consistent_mode = consistent_dst_rank is not None
     for (name, var) in var_dict.items():
         if consistent_mode:
-            assert var.is_consistent, "consistent tensor is needed, but {name} is a local tensor"
+            assert (
+                var.is_consistent
+            ), "consistent tensor is needed, but {name} is a local tensor"
             var_dict[name] = var.to_consistent(sbp=flow.sbp.broadcast).to_local()
         else:
-            assert not var.is_consistent, "local tensor is needed, but {name} is a consistent tensor"
-
+            assert (
+                not var.is_consistent
+            ), "local tensor is needed, but {name} is a consistent tensor"
 
     rank = flow.framework.distribute.get_rank()
     if consistent_mode and rank != consistent_dst_rank:
@@ -189,7 +203,7 @@ def save(var_dict: Dict[str, "flow.Tensor"], path: str, consistent_dst_rank: Opt
 
         with open(os.path.join(var_dir, META_INFO_FILENAME), "w") as f:
             f.write(text_format.MessageToString(meta_info))
-    with open(os.path.join(path,SNAPSHOT_DONE_FILENAME), "w"):
+    with open(os.path.join(path, SNAPSHOT_DONE_FILENAME), "w"):
         pass
 
 

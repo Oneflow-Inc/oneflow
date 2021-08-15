@@ -91,35 +91,6 @@ class TestModule(flow.unittest.TestCase):
             {"param2.param1": tensor0, "param2.param2": tensor1, "param1": tensor1},
         )
 
-    def test_parameter(test_case):
-        shape = (3, 4)
-        t = flow.Tensor(*shape)
-        p = flow.nn.Parameter(t)
-        test_case.assertEqual(type(p), flow.nn.Parameter)
-        test_case.assertEqual(p.shape, shape)
-
-    def test_module_forward(test_case):
-        class CustomModule(flow.nn.Module):
-            def __init__(self, w):
-                super().__init__()
-                self.w = w
-
-            def forward(self, x):
-                return x + self.w
-
-        m = CustomModule(5)
-        test_case.assertEqual(m(1), 6)
-        m = CustomModule(4)
-        test_case.assertEqual(m(3), 7)
-
-    def test_train_eval(test_case):
-        m = flow.nn.Module()
-        test_case.assertEqual(m.training, True)
-        m.train()
-        test_case.assertEqual(m.training, True)
-        m.eval()
-        test_case.assertEqual(m.training, False)
-
     @flow.unittest.skip_unless_1n1d()
     def test_parameter(test_case):
         shape = (3, 4)
@@ -248,19 +219,29 @@ class TestModule(flow.unittest.TestCase):
                 test_case.assertEqual(len(os.listdir(f)), 0)
 
             m = CustomModule()
-            m = m.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+            m = m.to_consistent(
+                flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast
+            )
 
             with test_case.assertRaises(Exception):
                 loaded_state_dict = flow.load(f)
                 m.load_state_dict(loaded_state_dict)
 
-            loaded_state_dict = flow.load(f, consistent_src_rank=consistent_src_dst_rank)
+            loaded_state_dict = flow.load(
+                f, consistent_src_rank=consistent_src_dst_rank
+            )
             test_case.assertEqual(len(loaded_state_dict), 1)
-            test_case.assertEqual(list(loaded_state_dict.keys())[0], 'param')
+            test_case.assertEqual(list(loaded_state_dict.keys())[0], "param")
             m.load_state_dict(loaded_state_dict)
             res2 = m()
 
-        test_case.assertTrue(np.array_equal(res1.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(), res2.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy()))
+        test_case.assertTrue(
+            np.array_equal(
+                res1.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+                res2.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
