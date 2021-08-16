@@ -128,10 +128,10 @@ def _broadcast_py_object(obj, src: int = 0):
     if src == rank:
         obj_bytes = pickle.dumps(obj)
         return pickle.loads(
-            flow._oneflow_internal.cpu_broadcast(obj_bytes, len(obj_bytes), src)
+            flow._oneflow_internal.cpu_broadcast(obj_bytes, src)
         )
     else:
-        return pickle.loads(flow._oneflow_internal.cpu_broadcast(None, 0, src))
+        return pickle.loads(flow._oneflow_internal.cpu_broadcast(None, src))
 
 
 def Load(
