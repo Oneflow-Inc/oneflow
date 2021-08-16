@@ -29,9 +29,8 @@ namespace oneflow {
 
 namespace {
 
-void ParallelDimReduce(const ParallelDesc& parallel_desc, const cfg::ParallelDistribution& nd_sbp,
-                       ParallelDesc* reduced_parallel_desc,
-                       cfg::ParallelDistribution* reduced_nd_sbp) {
+void ParallelDimReduce(const ParallelDesc& parallel_desc, const cfg::NdSbp& nd_sbp,
+                       ParallelDesc* reduced_parallel_desc, cfg::NdSbp* reduced_nd_sbp) {
   const auto& hierarchy = parallel_desc.hierarchy();
   DimVector reduced_hierarchy;
   reduced_hierarchy.push_back(hierarchy->At(0));
@@ -49,11 +48,12 @@ void ParallelDimReduce(const ParallelDesc& parallel_desc, const cfg::ParallelDis
   *reduced_parallel_desc = ParallelDesc(reduced_parallel_conf);
 }
 
-void CollaborativeParallelDimReduce(
-    const ParallelDesc& in_parallel_desc, const ParallelDesc& out_parallel_desc,
-    const cfg::ParallelDistribution& in_nd_sbp, const cfg::ParallelDistribution& out_nd_sbp,
-    ParallelDesc* reduced_in_parallel_desc, ParallelDesc* reduced_out_parallel_desc,
-    cfg::ParallelDistribution* reduced_in_nd_sbp, cfg::ParallelDistribution* reduced_out_nd_sbp) {
+void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
+                                    const ParallelDesc& out_parallel_desc,
+                                    const cfg::NdSbp& in_nd_sbp, const cfg::NdSbp& out_nd_sbp,
+                                    ParallelDesc* reduced_in_parallel_desc,
+                                    ParallelDesc* reduced_out_parallel_desc,
+                                    cfg::NdSbp* reduced_in_nd_sbp, cfg::NdSbp* reduced_out_nd_sbp) {
   const auto& in_hierarchy = in_parallel_desc.hierarchy();
   const auto& out_hierarchy = out_parallel_desc.hierarchy();
   CHECK_EQ(in_hierarchy->NumAxes(), out_hierarchy->NumAxes());
@@ -102,7 +102,7 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   return std::make_shared<ChainSubTskGphBuilder>(builders);
 }
 
-bool ParallelDistributionAllSameSplitParallel(const cfg::ParallelDistribution& nd_sbp) {
+bool NdSbpAllSameSplitParallel(const cfg::NdSbp& nd_sbp) {
   CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
   const cfg::SbpParallel& first_sbp = nd_sbp.sbp_parallel(0);
   if (!first_sbp.has_split_parallel()) { return false; }
@@ -114,11 +114,11 @@ bool ParallelDistributionAllSameSplitParallel(const cfg::ParallelDistribution& n
 
 }  // namespace
 
-void InOutParallelDimReduce(
-    const ParallelDesc& in_parallel_desc, const ParallelDesc& out_parallel_desc,
-    const cfg::ParallelDistribution& in_nd_sbp, const cfg::ParallelDistribution& out_nd_sbp,
-    ParallelDesc* reduced_in_parallel_desc, ParallelDesc* reduced_out_parallel_desc,
-    cfg::ParallelDistribution* reduced_in_nd_sbp, cfg::ParallelDistribution* reduced_out_nd_sbp) {
+void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
+                            const ParallelDesc& out_parallel_desc, const cfg::NdSbp& in_nd_sbp,
+                            const cfg::NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
+                            ParallelDesc* reduced_out_parallel_desc, cfg::NdSbp* reduced_in_nd_sbp,
+                            cfg::NdSbp* reduced_out_nd_sbp) {
   const int64_t in_hierarchy_axes = in_parallel_desc.hierarchy()->NumAxes();
   const int64_t out_hierarchy_axes = out_parallel_desc.hierarchy()->NumAxes();
   if (in_hierarchy_axes == 1 && out_hierarchy_axes == 1) {
@@ -142,13 +142,15 @@ class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
   FlatSubTskGphBuilder() { sub_tsk_gph_builder_ = Make1DSubTskGphBuilder(); }
   ~FlatSubTskGphBuilder() override = default;
 
-  Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-      std::vector<TaskNode*>* sorted_out_tasks,
-      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
-      const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-      const BlobDesc& logical_blob_desc, const cfg::ParallelDistribution& in_nd_sbp,
-      const cfg::ParallelDistribution& out_nd_sbp, const Shape& time_shape) const override {
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_in_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks,
+                                      const ParallelDesc& in_parallel_desc,
+                                      const ParallelDesc& out_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const cfg::NdSbp& in_nd_sbp, const cfg::NdSbp& out_nd_sbp,
+                                      const Shape& time_shape) const override {
     if (in_parallel_desc.hierarchy()->NumAxes() == 1
         && out_parallel_desc.hierarchy()->NumAxes() == 1) {
       return sub_tsk_gph_builder_->Build(ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks,
@@ -170,13 +172,15 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
   IntraGroupSubTskGphBuilder() { sub_tsk_gph_builder_ = Make1DSubTskGphBuilder(); }
   ~IntraGroupSubTskGphBuilder() override = default;
 
-  Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-      std::vector<TaskNode*>* sorted_out_tasks,
-      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
-      const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-      const BlobDesc& logical_blob_desc, const cfg::ParallelDistribution& in_nd_sbp,
-      const cfg::ParallelDistribution& out_nd_sbp, const Shape& time_shape) const override {
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_in_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks,
+                                      const ParallelDesc& in_parallel_desc,
+                                      const ParallelDesc& out_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const cfg::NdSbp& in_nd_sbp, const cfg::NdSbp& out_nd_sbp,
+                                      const Shape& time_shape) const override {
     if (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy()
         && in_parallel_desc.hierarchy()->NumAxes() == 2
         && in_nd_sbp.sbp_parallel(0) == out_nd_sbp.sbp_parallel(0)
@@ -246,19 +250,20 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
   InterGroupSubTskGphBuilder() { sub_tsk_gph_builder_ = Make1DSubTskGphBuilder(); }
   ~InterGroupSubTskGphBuilder() override = default;
 
-  Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-      std::vector<TaskNode*>* sorted_out_tasks,
-      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
-      const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-      const BlobDesc& logical_blob_desc, const cfg::ParallelDistribution& in_nd_sbp,
-      const cfg::ParallelDistribution& out_nd_sbp, const Shape& time_shape) const override {
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_in_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks,
+                                      const ParallelDesc& in_parallel_desc,
+                                      const ParallelDesc& out_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const cfg::NdSbp& in_nd_sbp, const cfg::NdSbp& out_nd_sbp,
+                                      const Shape& time_shape) const override {
     if (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy()
         && in_parallel_desc.hierarchy()->NumAxes() == 2
         && in_nd_sbp.sbp_parallel(1) == out_nd_sbp.sbp_parallel(1)
         && in_nd_sbp.sbp_parallel(0) != out_nd_sbp.sbp_parallel(0)
-        && !ParallelDistributionAllSameSplitParallel(in_nd_sbp)
-        && !ParallelDistributionAllSameSplitParallel(out_nd_sbp)) {
+        && !NdSbpAllSameSplitParallel(in_nd_sbp) && !NdSbpAllSameSplitParallel(out_nd_sbp)) {
       const auto& hierarchy = in_parallel_desc.hierarchy();
       std::vector<SubTskGphBuilderStatus> status;
       const int64_t num_groups = hierarchy->At(0);
@@ -318,28 +323,28 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
   std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
 };
 
-class Dim0ParallelDistributionMismatchedSubTskGphBuilder final
-    : public HierarchicalSubTskGphBuilder {
+class Dim0NdSbpMismatchedSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Dim0ParallelDistributionMismatchedSubTskGphBuilder);
-  Dim0ParallelDistributionMismatchedSubTskGphBuilder() {
+  OF_DISALLOW_COPY_AND_MOVE(Dim0NdSbpMismatchedSubTskGphBuilder);
+  Dim0NdSbpMismatchedSubTskGphBuilder() {
     inter_group_sub_tsk_gph_builder_.reset(new InterGroupSubTskGphBuilder());
   }
-  ~Dim0ParallelDistributionMismatchedSubTskGphBuilder() override = default;
+  ~Dim0NdSbpMismatchedSubTskGphBuilder() override = default;
 
-  Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-      std::vector<TaskNode*>* sorted_out_tasks,
-      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
-      const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-      const BlobDesc& logical_blob_desc, const cfg::ParallelDistribution& in_nd_sbp,
-      const cfg::ParallelDistribution& out_nd_sbp, const Shape& time_shape) const override {
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_in_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks,
+                                      const ParallelDesc& in_parallel_desc,
+                                      const ParallelDesc& out_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const cfg::NdSbp& in_nd_sbp, const cfg::NdSbp& out_nd_sbp,
+                                      const Shape& time_shape) const override {
     if (in_parallel_desc.hierarchy()->NumAxes() == 2
         && (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy())
         && in_nd_sbp.sbp_parallel(0) != out_nd_sbp.sbp_parallel(0)
         && in_nd_sbp.sbp_parallel(1) == out_nd_sbp.sbp_parallel(1)) {
-      if (!(ParallelDistributionAllSameSplitParallel(in_nd_sbp)
-            || ParallelDistributionAllSameSplitParallel(out_nd_sbp))) {
+      if (!(NdSbpAllSameSplitParallel(in_nd_sbp) || NdSbpAllSameSplitParallel(out_nd_sbp))) {
         return inter_group_sub_tsk_gph_builder_->Build(
             ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
             out_parallel_desc, lbi, logical_blob_desc, in_nd_sbp, out_nd_sbp, time_shape);
@@ -360,18 +365,19 @@ class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
   OF_DISALLOW_COPY_AND_MOVE(Same2DHierarchySubTskGphBuilder);
   Same2DHierarchySubTskGphBuilder() {
     intra_group_sub_tsk_gph_builder_.reset(new IntraGroupSubTskGphBuilder());
-    dim0_nd_sbp_mismatched_sub_tsk_gph_builder_.reset(
-        new Dim0ParallelDistributionMismatchedSubTskGphBuilder());
+    dim0_nd_sbp_mismatched_sub_tsk_gph_builder_.reset(new Dim0NdSbpMismatchedSubTskGphBuilder());
   }
   ~Same2DHierarchySubTskGphBuilder() override = default;
 
-  Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-      std::vector<TaskNode*>* sorted_out_tasks,
-      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
-      const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-      const BlobDesc& logical_blob_desc, const cfg::ParallelDistribution& in_nd_sbp,
-      const cfg::ParallelDistribution& out_nd_sbp, const Shape& time_shape) const override {
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_in_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks,
+                                      const ParallelDesc& in_parallel_desc,
+                                      const ParallelDesc& out_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const cfg::NdSbp& in_nd_sbp, const cfg::NdSbp& out_nd_sbp,
+                                      const Shape& time_shape) const override {
     if (in_parallel_desc.hierarchy()->NumAxes() == 2
         && (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy())) {
       if (in_nd_sbp.sbp_parallel(0) == out_nd_sbp.sbp_parallel(0)) {
@@ -392,8 +398,7 @@ class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
 
  private:
   std::unique_ptr<IntraGroupSubTskGphBuilder> intra_group_sub_tsk_gph_builder_;
-  std::unique_ptr<Dim0ParallelDistributionMismatchedSubTskGphBuilder>
-      dim0_nd_sbp_mismatched_sub_tsk_gph_builder_;
+  std::unique_ptr<Dim0NdSbpMismatchedSubTskGphBuilder> dim0_nd_sbp_mismatched_sub_tsk_gph_builder_;
 };
 
 class ExpandToSame2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
@@ -404,19 +409,21 @@ class ExpandToSame2DHierarchySubTskGphBuilder final : public HierarchicalSubTskG
   }
   ~ExpandToSame2DHierarchySubTskGphBuilder() override = default;
 
-  Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
-      std::vector<TaskNode*>* sorted_out_tasks,
-      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
-      const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-      const BlobDesc& logical_blob_desc, const cfg::ParallelDistribution& in_nd_sbp,
-      const cfg::ParallelDistribution& out_nd_sbp, const Shape& time_shape) const override {
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_in_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks,
+                                      const ParallelDesc& in_parallel_desc,
+                                      const ParallelDesc& out_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const cfg::NdSbp& in_nd_sbp, const cfg::NdSbp& out_nd_sbp,
+                                      const Shape& time_shape) const override {
     if (in_parallel_desc.hierarchy()->elem_cnt() == out_parallel_desc.hierarchy()->elem_cnt()
         && in_parallel_desc.hierarchy()->NumAxes() == 1
         && out_parallel_desc.hierarchy()->NumAxes() == 2) {
       ParallelConf intermediate_parallel_conf = in_parallel_desc.parallel_conf();
       out_parallel_desc.hierarchy()->ToProto(intermediate_parallel_conf.mutable_hierarchy());
-      cfg::ParallelDistribution intermediate_nd_sbp;
+      cfg::NdSbp intermediate_nd_sbp;
       *intermediate_nd_sbp.add_sbp_parallel() = in_nd_sbp.sbp_parallel(0);
       *intermediate_nd_sbp.add_sbp_parallel() = in_nd_sbp.sbp_parallel(0);
       return same_2d_hierarchy_sub_tsk_gph_builder_->Build(
@@ -428,7 +435,7 @@ class ExpandToSame2DHierarchySubTskGphBuilder final : public HierarchicalSubTskG
                && out_parallel_desc.hierarchy()->NumAxes() == 1) {
       ParallelConf intermediate_parallel_conf = out_parallel_desc.parallel_conf();
       in_parallel_desc.hierarchy()->ToProto(intermediate_parallel_conf.mutable_hierarchy());
-      cfg::ParallelDistribution intermediate_nd_sbp;
+      cfg::NdSbp intermediate_nd_sbp;
       *intermediate_nd_sbp.add_sbp_parallel() = out_nd_sbp.sbp_parallel(0);
       *intermediate_nd_sbp.add_sbp_parallel() = out_nd_sbp.sbp_parallel(0);
       return same_2d_hierarchy_sub_tsk_gph_builder_->Build(
@@ -470,12 +477,12 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
     std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const cfg::ParallelDistribution& in_nd_sbp,
-    const cfg::ParallelDistribution& out_nd_sbp, const Shape& time_shape) const {
+    const BlobDesc& logical_blob_desc, const cfg::NdSbp& in_nd_sbp, const cfg::NdSbp& out_nd_sbp,
+    const Shape& time_shape) const {
   ParallelDesc reduced_in_parallel_desc = in_parallel_desc;
   ParallelDesc reduced_out_parallel_desc = out_parallel_desc;
-  cfg::ParallelDistribution reduced_in_nd_sbp;
-  cfg::ParallelDistribution reduced_out_nd_sbp;
+  cfg::NdSbp reduced_in_nd_sbp;
+  cfg::NdSbp reduced_out_nd_sbp;
   InOutParallelDimReduce(in_parallel_desc, out_parallel_desc, in_nd_sbp, out_nd_sbp,
                          &reduced_in_parallel_desc, &reduced_out_parallel_desc, &reduced_in_nd_sbp,
                          &reduced_out_nd_sbp);

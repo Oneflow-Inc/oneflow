@@ -146,13 +146,13 @@ class CrossEntropyLoss(Module):
         >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
         >>> out = flow.nn.CrossEntropyLoss(reduction="none")(input, target)
         >>> out
-        tensor([0.802 , 1.1167, 0.3583], dtype=oneflow.float32)
+        tensor([0.8020, 1.1167, 0.3583], dtype=oneflow.float32)
         >>> out_sum = flow.nn.CrossEntropyLoss(reduction="sum")(input, target)
         >>> out_sum
         tensor(2.2769, dtype=oneflow.float32)
         >>> out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
         >>> out_mean
-        tensor(0.759, dtype=oneflow.float32)
+        tensor(0.7590, dtype=oneflow.float32)
 
     """
 
@@ -268,7 +268,7 @@ class BCELoss(Module):
         >>> out = m(sigmoid_input, target)
         >>> out
         tensor([[2.9266, 1.1963, 1.1087],
-                [0.8064, 2.075 , 4.2539]], dtype=oneflow.float32)
+                [0.8064, 2.0750, 4.2539]], dtype=oneflow.float32)
         >>> m_sum = flow.nn.BCELoss(weight, reduction="sum")
         >>> out = m_sum(sigmoid_input, target)
         >>> out
@@ -536,7 +536,7 @@ class KLDivLoss(Module):
         >>> m = flow.nn.KLDivLoss(reduction="none", log_target=False)
         >>> out = m(input, target)
         >>> out
-        tensor([ 1.3514,  0.    , -0.0836], dtype=oneflow.float32)
+        tensor([ 1.3514,  0.0000, -0.0836], dtype=oneflow.float32)
         >>> m = flow.nn.KLDivLoss(reduction="mean", log_target=False)
         >>> out = m(input, target)
         >>> out
@@ -714,7 +714,7 @@ class MarginRankingLoss(Module):
         >>> m = flow.nn.MarginRankingLoss(margin = 0.3, reduction="sum")
         >>> out = m(x1, x2, target)
         >>> out
-        tensor(8.2, dtype=oneflow.float32)
+        tensor(8.2000, dtype=oneflow.float32)
 
         >>> m = flow.nn.MarginRankingLoss(margin = 10, reduction="mean")
         >>> out = m(x1, x2, target)
@@ -958,8 +958,8 @@ class BCEWithLogitsLoss(Module):
         >>> out = m(input, target)
         >>> out
         tensor([[2.9266, 1.5552, 1.1087],
-                [0.9676, 2.075 , 5.9554],
-                [0.9676, 2.075 , 5.9554]], dtype=oneflow.float32)
+                [0.9676, 2.0750, 5.9554],
+                [0.9676, 2.0750, 5.9554]], dtype=oneflow.float32)
 
         >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="mean")
         >>> out = m(input, target)
@@ -1005,7 +1005,7 @@ class BCEWithLogitsLoss(Module):
         _neg_input = flow.negative(input)
         _max_val = flow.clip(_neg_input, 0)
         _neg_max_val = flow.negative(_max_val)
-        if self.pos_weight:
+        if self.pos_weight is not None:
             _log_weight = (self.pos_weight - 1) * target + 1
             _loss = (1 - target) * input + _log_weight * (
                 flow.log(flow.exp(_neg_max_val) + flow.exp(_neg_input - _max_val))
@@ -1114,17 +1114,17 @@ class SmoothL1Loss(Module):
         >>> m = flow.nn.SmoothL1Loss(reduction="none")
         >>> out = m(x, y)
         >>> out
-        tensor([0.02 , 0.125, 1.7  , 0.005, 0.18 ], dtype=oneflow.float32)
+        tensor([0.0200, 0.1250, 1.7000, 0.0050, 0.1800], dtype=oneflow.float32)
 
         >>> m = flow.nn.SmoothL1Loss(reduction="mean")
         >>> out = m(x, y)
         >>> out
-        tensor(0.406, dtype=oneflow.float32)
+        tensor(0.4060, dtype=oneflow.float32)
 
         >>> m = flow.nn.SmoothL1Loss(reduction="sum")
         >>> out = m(x, y)
         >>> out
-        tensor(2.03, dtype=oneflow.float32)
+        tensor(2.0300, dtype=oneflow.float32)
     """
 
     def __init__(

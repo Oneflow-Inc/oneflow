@@ -91,22 +91,19 @@ class RMSprop(Optimizer):
         momentum: float = 0.0,
         centered: bool = False,
     ):
-        super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert alpha >= 0.0, f"Invalid alpha value: {alpha}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert momentum == 0.0, "Not support momentum greater than zeros now!"
-        self._default_options["lr"] = lr
-        self._default_options["alpha"] = alpha
-        self._default_options["eps"] = eps
-        self._default_options["weight_decay"] = weight_decay
-        self._default_options["centered"] = centered
-        if isinstance(parameters, collections.abc.Iterator):
-            self.param_groups.append(ParamGroup(parameters, self._default_options))
-        else:
-            for param in parameters:
-                self.param_groups.append(ParamGroup(param, self._default_options))
+        options = dict()
+        options["lr"] = lr
+        options["alpha"] = alpha
+        options["eps"] = eps
+        options["weight_decay"] = weight_decay
+        options["centered"] = centered
+        super().__init__(parameters, options)
+
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
