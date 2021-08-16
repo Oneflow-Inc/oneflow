@@ -74,12 +74,12 @@ class BernoulliFunctor {
 class RandFunctor {
  public:
   RandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const Optional<DataType>& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value());
+      dtype_val = JUST(dtype.value())->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << dtype_val << "not supported in rand";
       }
@@ -121,11 +121,11 @@ class ConsistentRandFunctor {
   ConsistentRandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
-                           const Optional<DataType>& dtype,
+                           const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value());
+      dtype_val = JUST(dtype.value())->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
         OF_UNIMPLEMENTED() << dtype_val << "not supported in rand";
       }
