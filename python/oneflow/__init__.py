@@ -110,7 +110,7 @@ def _SyncOnMasterFn():
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
 atexit.register(oneflow._oneflow_internal.DestroyEnv)
 atexit.register(oneflow.framework.session_context.TryCloseDefaultSession)
-atexit.register(_SyncOnMasterFn)
+atexit.register(_SyncOnMasterFn())
 del atexit
 del oneflow
 import oneflow.framework.docstr as docstr
