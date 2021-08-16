@@ -31,13 +31,20 @@ class DataTransportTokenView final {
     return reinterpret_cast<DataTransportTokenView*>(transport_token);
   }
 
+  Maybe<void> set_thread_consistent_id(int32_t val) {
+    CHECK_LT_OR_RETURN(val, (1 << kDataTransportTokenThreadConsistentUIdBit));
+    thread_consistent_id_ = val;
+    return Maybe<void>::Ok();
+  }
+
   void set_data_seq_id(int64_t seq_id) { data_seq_id_ = seq_id; }
 
  private:
   uint16_t src_rank_;
   uint16_t dst_rank_;
-  uint32_t type_ : 2;  // TransportTokenType
-  uint32_t data_seq_id_ : 30;
+  uint8_t type_ : kTransportTokenTypeBit;  // TransportTokenType
+  uint8_t thread_consistent_id_;
+  uint16_t data_seq_id_;
 };
 static_assert(sizeof(DataTransportTokenView) == sizeof(uint64_t), "");
 
@@ -58,7 +65,7 @@ class MetaTransportTokenView final {
 
   Maybe<void> set_thread_consistent_unique_id(int8_t val) {
     CHECK_GE_OR_RETURN(val, 0);
-    CHECK_LT_OR_RETURN(val, 1 << kTransportTokenThreadConsistentUIdBit);
+    CHECK_LT_OR_RETURN(val, 1 << kCtrlTransportTokenThreadConsistentUIdBit);
     thread_consistent_unique_id_ = val;
     return Maybe<void>::Ok();
   }
@@ -80,7 +87,7 @@ class MetaTransportTokenView final {
   uint16_t src_rank_;
   uint16_t dst_rank_;
   uint8_t type_ : 2;  // TransportTokenType
-  uint8_t thread_consistent_unique_id_ : kTransportTokenThreadConsistentUIdBit;
+  uint8_t thread_consistent_unique_id_ : kCtrlTransportTokenThreadConsistentUIdBit;
   uint8_t rank_group_level_ : kTransportTokenRankGroupLevelBit;
   uint8_t high_meta_seq_id_;
   uint16_t low_meta_seq_id_;
@@ -104,7 +111,7 @@ class CtrlTransportTokenView final {
 
   Maybe<void> set_thread_consistent_unique_id(int8_t val) {
     CHECK_GE_OR_RETURN(val, 0);
-    CHECK_LT_OR_RETURN(val, 1 << kTransportTokenThreadConsistentUIdBit);
+    CHECK_LT_OR_RETURN(val, 1 << kCtrlTransportTokenThreadConsistentUIdBit);
     thread_consistent_unique_id_ = val;
     return Maybe<void>::Ok();
   }
@@ -128,7 +135,7 @@ class CtrlTransportTokenView final {
   uint16_t src_rank_;
   uint16_t dst_rank_;
   uint8_t type_ : 2;  // TransportTokenType
-  uint8_t thread_consistent_unique_id_ : kTransportTokenThreadConsistentUIdBit;
+  uint8_t thread_consistent_unique_id_ : kCtrlTransportTokenThreadConsistentUIdBit;
   uint8_t rank_group_level_ : kTransportTokenRankGroupLevelBit;
   uint8_t cmd_;
   uint16_t ctrl_seq_id_;
@@ -143,11 +150,14 @@ TransportToken::TransportToken(TransportTokenType type) {
   type_ = type;
 }
 
-/*static*/ TransportToken TransportToken::NewDataTransportToken(Symbol<ParallelDesc> parallel_desc) {
+/*static*/ Maybe<TransportToken> TransportToken::NewDataTransportToken(Symbol<ParallelDesc> parallel_desc) {
+  int32_t thread_consistent_unique_id = JUST(GetThisThreadConsistentUniqueId());
   static thread_local HashMap<Symbol<ParallelDesc>, int64_t> parallel_desc2seq_id;
   auto* seq_id = parallel_desc2seq_id[parallel_desc];
   TransportToken transport_token(kDataTransportTokenType);
-  CHECK_JUST(DataTransportTokenView::MutCast(&transport_token))->set_data_seq_id(++*seq_id);
+  auto* data_token_view = JUST(DataTransportTokenView::MutCast(&transport_token));
+  JUST(data_token_view->set_thread_consistent_id(thread_consistent_unique_id));
+  data_token_view->set_data_seq_id(++*seq_id);
   return transport_token;
 }
 

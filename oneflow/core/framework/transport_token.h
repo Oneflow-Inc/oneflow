@@ -25,8 +25,10 @@ namespace oneflow {
 class ParallelDesc;
 
 const static int kTransportTokenTypeBit = 2;
-const static int kTransportTokenThreadConsistentUIdBit = 3;
+const static int kCtrlTransportTokenThreadConsistentUIdBit = 3;
 const static int kTransportTokenRankGroupLevelBit = 3;
+
+const static int kDataTransportTokenThreadConsistentUIdBit = 8;
 
 enum TransportTokenType {
   // Begin
@@ -67,14 +69,14 @@ class TransportToken final {
   TransportToken(TransportToken&) = default;
   ~TransportToken() = default;
 
-  static TransportToken NewDataTransportToken(Symbol<ParallelDesc> parallel_desc);
+  static Maybe<TransportToken> NewDataTransportToken(Symbol<ParallelDesc> parallel_desc);
   static Maybe<TransportToken> NewMetaTransportToken();
   static Maybe<TransportToken> AcquireCtrlTransportToken(RankGroupCtrlCmd cmd);
   Maybe<void> TryAcquireCtrlTransportTokenLock() const;
   Maybe<void> TryReleaseCtrlTransportTokenLock() const;
 
   static constexpr size_t MaxNumberOfThreadConsistentUId() {
-    return (1 << kTransportTokenThreadConsistentUIdBit);
+    return (1 << kCtrlTransportTokenThreadConsistentUIdBit);
   }
 
   // Getters
