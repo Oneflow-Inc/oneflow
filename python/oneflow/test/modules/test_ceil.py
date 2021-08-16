@@ -21,6 +21,7 @@ import oneflow as flow
 import oneflow.unittest
 from automated_test_util import *
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestCeilModule(flow.unittest.TestCase):
     @autotest()

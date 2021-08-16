@@ -20,6 +20,7 @@ import oneflow as flow
 import oneflow.unittest
 from automated_test_util import *
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestStackModule(flow.unittest.TestCase):
     @autotest()
@@ -29,6 +30,7 @@ class TestStackModule(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
         out = torch.stack((x, y), dim=random(low=1, high=4).to(int))
         return out
+
 
 if __name__ == "__main__":
     unittest.main()

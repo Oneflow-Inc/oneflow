@@ -23,6 +23,8 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestBatchNormModule(flow.unittest.TestCase):
     @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)

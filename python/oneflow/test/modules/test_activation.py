@@ -143,6 +143,8 @@ class TestGelu(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestSigmoidModule(flow.unittest.TestCase):
     @autotest()
@@ -168,17 +170,20 @@ class TestSigmoidModule(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = x.sigmoid()
         return y
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestSoftmax(flow.unittest.TestCase):
     @autotest()
     def test_softmax_module_with_random_data(test_case):
-        m = torch.nn.Softmax(dim = random(low=1, high=4).to(int) | nothing())
+        m = torch.nn.Softmax(dim=random(low=1, high=4).to(int) | nothing())
         m.train(random())
         device = random_device()
         m.to(device)
         x = random_pytorch_tensor(ndim=4).to(device)
         y = m(x)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestHardsigmoidModule(flow.unittest.TestCase):
@@ -191,6 +196,7 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogSoftmaxModule(flow.unittest.TestCase):
@@ -217,10 +223,12 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+
 def numpy_softplus(x, beta, threshold):
     return np.where(
         x * beta > threshold, x, 1.0 / beta * np.log(1.0 + np.exp(beta * x))
     )
+
 
 def _test_softplus(test_case, device):
     m = flow.nn.Softplus()
@@ -300,17 +308,23 @@ class TestHardswishModule(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestHardtanhModule(flow.unittest.TestCase):
     @autotest()
     def test_hardtanh_module_with_random_data(test_case):
-        m = torch.nn.Hardtanh(min_val=random().to(float) | nothing(), max_val=random().to(float) | nothing())
+        m = torch.nn.Hardtanh(
+            min_val=random().to(float) | nothing(),
+            max_val=random().to(float) | nothing(),
+        )
         m.train(random())
         device = random_device()
         m.to(device)
         x = random_pytorch_tensor(ndim=4).to(device)
         y = m(x)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestLeakyReLUModule(flow.unittest.TestCase):
@@ -349,6 +363,7 @@ class TestSiluModule(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSeluModule(flow.unittest.TestCase):
