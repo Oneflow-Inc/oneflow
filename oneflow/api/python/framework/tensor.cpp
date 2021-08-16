@@ -77,27 +77,18 @@ void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
 template<typename T>
 Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
                                               py::array_t<T> array,
-                                              void (*Copy)(uint64_t, py::array_t<T>),
+                                              Maybe<void> (*Copy)(uint64_t, py::array_t<T>),
                                               const std::string& modifier) {
   auto tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
-  std::atomic<bool> synced(false);
 
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        tensor,
-        [&array, &synced, &Copy](uint64_t ofblob_ptr) {
-          Copy(ofblob_ptr, array);
-          synced = true;
-        },
-        modifier));
-    return Maybe<void>::Ok();
+  const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
+      [&array, &Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array)); });
+  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
+    });
   }));
-
-  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
-                                                                    while (!synced) {}
-  });
-
   return Maybe<void>::Ok();
 }
 
@@ -192,17 +183,13 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   std::vector<Shape> shapes;
   std::vector<const DType*> dtypes;
-  std::atomic<bool> synced(false);
 
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        tensor, [&synced](uint64_t of_blob_ptr) { synced = true; }, "const"));
-    return Maybe<void>::Ok();
+  const auto& Callback = std::make_shared<std::function<void(uint64_t)>>([](uint64_t) {});
+  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(tensor, sc, Callback, "const");
+    });
   }));
-
-  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
-    while (!synced) {}
-  });
 
   const Blob& blob = JUST(tensor->eager_blob_object())->blob();
   const Shape& blob_shape = blob.static_shape();
@@ -279,7 +266,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
                     || py::isinstance<py::str>(device_kwarg));
 
     if (py::isinstance<py::str>(device_kwarg)) {
-      device = DeviceExportUtil::New(py::cast<std::string>(device_kwarg));
+      device = DeviceExportUtil::ParseAndNew(py::cast<std::string>(device_kwarg));
     } else {
       device = py::cast<Symbol<Device>>(device_kwarg);
     }
