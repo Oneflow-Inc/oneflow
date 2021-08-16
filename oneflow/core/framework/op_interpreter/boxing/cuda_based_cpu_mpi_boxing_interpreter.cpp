@@ -26,7 +26,7 @@ struct CudaBaseMpiEagerBoxingCall {
 };
 
 Maybe<CudaBaseMpiEagerBoxingCall> RawGetCudaBaseMpiEagerBoxingCall(
-    Symbol<cfg::ParallelDistribution> in_nd_sbp, Symbol<cfg::ParallelDistribution> out_nd_sbp,
+    Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) {
   const auto& gpu_in_parallel_desc = JUST(ReplaceDeviceType(in_parallel_desc, DeviceType::kGPU));
   const auto& gpu_out_parallel_desc = JUST(ReplaceDeviceType(out_parallel_desc, DeviceType::kGPU));
@@ -48,8 +48,8 @@ static constexpr auto* GetCudaBaseMpiEagerBoxingCall =
     DECORATE(&RawGetCudaBaseMpiEagerBoxingCall, ThreadLocal);
 
 Maybe<one::Tensor> CudaBasedCpuMpiBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   const auto& call = JUST(
       GetCudaBaseMpiEagerBoxingCall(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));

@@ -21,8 +21,8 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<one::Tensor> CudaCopyBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(in_nd_sbp == out_nd_sbp);
   const auto& new_tag_in_parallel_desc =
@@ -31,7 +31,7 @@ Maybe<one::Tensor> CudaCopyBoxingInterpreter::InterpretImpl(
   const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
   const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
   const auto& tensor =
-      JUST(one::functional::ToConsistent(local_tensor, out_parallel_desc, *sbp_list));
+      JUST(one::functional::ToConsistent(local_tensor, out_parallel_desc, *sbp_list, {}));
   CHECK_OR_RETURN(tensor->is_consistent());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == out_parallel_desc);

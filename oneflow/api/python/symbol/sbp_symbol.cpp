@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
 
@@ -30,17 +31,7 @@ namespace oneflow {
 namespace {
 
 std::string SbpParallelSymbolToString(const Symbol<cfg::SbpParallel>& sbp_sym) {
-  std::string sbp_str = "oneflow.sbp.";
-  if (sbp_sym->has_broadcast_parallel()) {
-    sbp_str += "broadcast";
-  } else if (sbp_sym->has_partial_sum_parallel()) {
-    sbp_str += "partial_sum";
-  } else if (sbp_sym->has_split_parallel()) {
-    sbp_str += "split(axis=" + std::to_string(sbp_sym->split_parallel().axis()) + ")";
-  } else {
-    UNIMPLEMENTED();
-  }
-  return sbp_str;
+  return *SbpToString(sbp_sym).GetPtrOrThrow();
 }
 
 Maybe<std::vector<Symbol<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {

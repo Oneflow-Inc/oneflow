@@ -13,13 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <typeinfo>
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 
 namespace oneflow {
 
-Maybe<EagerBoxingCall> EagerBoxingCall::New(Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                                            Symbol<cfg::ParallelDistribution> out_nd_sbp,
+Maybe<one::Tensor> EagerBoxingInterpreter::Interpret(const std::shared_ptr<one::Tensor>& input,
+                                                     Symbol<cfg::NdSbp> in_nd_sbp,
+                                                     Symbol<cfg::NdSbp> out_nd_sbp,
+                                                     Symbol<ParallelDesc> in_parallel_desc,
+                                                     Symbol<ParallelDesc> out_parallel_desc) const {
+  JUST(CheckEagerBoxingDataType(input->dtype()));
+  const auto& tensor =
+      JUST(InterpretImpl(input, in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
+  const auto& tensor_placement = JUST(tensor->parallel_desc());
+  CHECK_OR_RETURN(tensor_nd_sbp == out_nd_sbp) << typeid(*this).name();
+  CHECK_OR_RETURN(tensor_placement == out_parallel_desc) << typeid(*this).name();
+  return tensor;
+}
+
+Maybe<EagerBoxingCall> EagerBoxingCall::New(Symbol<cfg::NdSbp> in_nd_sbp,
+                                            Symbol<cfg::NdSbp> out_nd_sbp,
                                             Symbol<ParallelDesc> in_parallel_desc,
                                             Symbol<ParallelDesc> out_parallel_desc) {
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();

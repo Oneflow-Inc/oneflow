@@ -39,33 +39,28 @@ class EagerBoxingInterpreter {
   virtual ~EagerBoxingInterpreter() = default;
 
   Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input,
-                               Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                               Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                               Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> in_parallel_desc,
-                               Symbol<ParallelDesc> out_parallel_desc) const {
-    JUST(CheckEagerBoxingDataType(input->dtype()));
-    return InterpretImpl(input, in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc);
-  }
+                               Symbol<ParallelDesc> out_parallel_desc) const;
 
  protected:
   virtual Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                           Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                                           Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                                           Symbol<cfg::NdSbp> in_nd_sbp,
+                                           Symbol<cfg::NdSbp> out_nd_sbp,
                                            Symbol<ParallelDesc> in_parallel_desc,
                                            Symbol<ParallelDesc> out_parallel_desc) const = 0;
 };
 
 struct EagerBoxingCall {
-  static Maybe<EagerBoxingCall> New(Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                                    Symbol<cfg::ParallelDistribution> out_nd_sbp,
+  static Maybe<EagerBoxingCall> New(Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                     Symbol<ParallelDesc> in_parallel_desc,
                                     Symbol<ParallelDesc> out_parallel_desc);
 
   Maybe<one::Tensor> Apply(const std::shared_ptr<one::Tensor>& input) const;
 
   const std::shared_ptr<const EagerBoxingInterpreter> boxing_interpreter;
-  const Symbol<cfg::ParallelDistribution> in_nd_sbp;
-  const Symbol<cfg::ParallelDistribution> out_nd_sbp;
+  const Symbol<cfg::NdSbp> in_nd_sbp;
+  const Symbol<cfg::NdSbp> out_nd_sbp;
   const Symbol<ParallelDesc> in_parallel_desc;
   const Symbol<ParallelDesc> out_parallel_desc;
 };

@@ -47,9 +47,10 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Maybe(const T& data) : data_or_error_(std::make_shared<T>(data)) {}
   Maybe(const Error& error) : data_or_error_(error.error_proto()) {}
   Maybe(const std::shared_ptr<T>& data) : data_or_error_(data) {}
+  Maybe(std::shared_ptr<T>&& data) : data_or_error_(std::move(data)) {}
   Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : data_or_error_(error) {}
   Maybe(const Maybe&) = default;
-  Maybe(Maybe&&) = default;
+  Maybe(Maybe&& other) : data_or_error_(std::move(other.data_or_error_)) {}
   ~Maybe() = default;
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
@@ -268,47 +269,40 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
-// fix CUDA 11.1 compiler crashes
-#if defined(__CUDACC__)
-#define MAYBE_CONST_AUTO_REF const auto
-#else
-#define MAYBE_CONST_AUTO_REF const auto&
-#endif  // defined(__CUDACC__)
-
 #define TRY(...) __MaybeErrorStackCheckWrapper__(__VA_ARGS__)
-#define JUST(...)                                                              \
-  ({                                                                           \
-    MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-    if (!maybe.IsOk()) {                                                       \
-      auto* stack_frame = maybe.error()->add_stack_frame();                    \
-      stack_frame->set_file(__FILE__);                                         \
-      stack_frame->set_line(__LINE__);                                         \
-      stack_frame->set_function(__FUNCTION__);                                 \
-      stack_frame->set_error_msg(OF_PP_STRINGIZE((__VA_ARGS__)));              \
-      return maybe.error();                                                    \
-    }                                                                          \
-    maybe;                                                                     \
+#define JUST(...)                                                 \
+  ({                                                              \
+    auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);  \
+    if (!maybe.IsOk()) {                                          \
+      auto* stack_frame = maybe.error()->add_stack_frame();       \
+      stack_frame->set_file(__FILE__);                            \
+      stack_frame->set_line(__LINE__);                            \
+      stack_frame->set_function(__FUNCTION__);                    \
+      stack_frame->set_error_msg(OF_PP_STRINGIZE((__VA_ARGS__))); \
+      return maybe.error();                                       \
+    }                                                             \
+    std::move(maybe);                                             \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
-#define CHECK_JUST(...)                                                        \
-  ([&](const char* func_name) {                                                \
-    MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-    if (!maybe.IsOk()) {                                                       \
-      auto* stack_frame = maybe.error()->add_stack_frame();                    \
-      stack_frame->set_file(__FILE__);                                         \
-      stack_frame->set_line(__LINE__);                                         \
-      stack_frame->set_function(func_name);                                    \
-      stack_frame->set_error_msg(OF_PP_STRINGIZE((__VA_ARGS__)));              \
-      LOG(FATAL) << maybe.GetSerializedError();                                \
-    }                                                                          \
-    return maybe;                                                              \
-  })(__FUNCTION__)                                                             \
+#define CHECK_JUST(...)                                           \
+  ([&](const char* func_name) {                                   \
+    auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);  \
+    if (!maybe.IsOk()) {                                          \
+      auto* stack_frame = maybe.error()->add_stack_frame();       \
+      stack_frame->set_file(__FILE__);                            \
+      stack_frame->set_line(__LINE__);                            \
+      stack_frame->set_function(func_name);                       \
+      stack_frame->set_error_msg(OF_PP_STRINGIZE((__VA_ARGS__))); \
+      LOG(FATAL) << maybe.GetSerializedError();                   \
+    }                                                             \
+    return std::move(maybe);                                      \
+  })(__FUNCTION__)                                                \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
 
-#define OF_RETURN_IF_ERROR(...)                                                              \
-  for (MAYBE_CONST_AUTO_REF maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-       !maybe_##__LINE__.IsOk();)                                                            \
+#define OF_RETURN_IF_ERROR(...)                                                \
+  for (auto&& maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
+       !maybe_##__LINE__.IsOk();)                                              \
   return Error(maybe_##__LINE__.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
 #else

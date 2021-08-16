@@ -68,4 +68,4 @@ class NormalKernel final : public user_op::OpKernel {
 }  // namespace
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_NORMAL_KERNEL_H_
+#endif  // ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_KERNEL_H_
