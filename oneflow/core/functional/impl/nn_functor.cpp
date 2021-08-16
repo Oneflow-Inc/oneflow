@@ -629,6 +629,8 @@ class OneHotFunctor {
 
  private:
   std::shared_ptr<OpExpr> one_hot_op_;
+};
+
 
 class L2NormalizeFunctor {
  public:
@@ -703,7 +705,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
-
 };
 
 }  // namespace functional
