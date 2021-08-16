@@ -10,10 +10,6 @@ public class InferenceSession {
 
     private final Option option;
 
-    public InferenceSession() {
-        this.option = new Option();
-    }
-
     public InferenceSession(Option option) {
         this.option = option;
     }
@@ -23,7 +19,6 @@ public class InferenceSession {
 
         if (!OneFlow.isEnvInited()) {
             OneFlow.initEnv(option.getControlPort());
-
             if (OneFlow.currentMachineId() == 0) {
                 OneFlow.initScopeStack();
             }
@@ -37,16 +32,9 @@ public class InferenceSession {
         launch();
     }
 
-    public void loadModel(String path) {
-        loadModel(path, "", 10);
-    }
-
-    /**
-     * try search the .pb/.prototxt file from given path and load it
-     */
-    public void loadModel(String path, String signatureName, int batchSize) {
+    private void loadModel(String path) {
         // Todo: support different version
-        String version = "2";
+        String version = option.getModelVersion();
 
         // Todo: check existence
         String savedModelPath = path + File.separator + version + File.separator;
@@ -55,11 +43,11 @@ public class InferenceSession {
         OneFlow.loadModel(option);
     }
 
-    public void launch() {
+    private void launch() {
         OneFlow.startLazyGlobalSession();
 
         String path = option.getSavedModelDir() + File.separator +
-                "2" + File.separator +
+                option.getModelVersion() + File.separator +
                 option.getCheckpointDir();
         byte[] checkpointBytes = path.getBytes();
         ByteBuffer checkpointBuffer = ByteBuffer.allocateDirect(checkpointBytes.length);

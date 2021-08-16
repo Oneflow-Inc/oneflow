@@ -14,7 +14,7 @@ public class Option {
     private String fullPathName;
     private String checkpointDir;
 
-    // config
+    // job config
     private String graphName;
     private String signatureName;
     private Integer batchSize;

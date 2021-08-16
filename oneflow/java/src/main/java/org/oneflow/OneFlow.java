@@ -42,7 +42,6 @@ class OneFlow {
     // launch
     static native void startLazyGlobalSession();
     static native void loadCheckpoint(Buffer path);
-//    static native void loadCheckpoint(Option option);
 
     // forward
     static native String getPushJobNames();

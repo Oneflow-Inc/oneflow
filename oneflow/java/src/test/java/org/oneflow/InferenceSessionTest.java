@@ -8,8 +8,6 @@ import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
 import java.io.*;
 import java.math.BigInteger;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.file.Files;
@@ -40,7 +38,7 @@ public class InferenceSessionTest {
      * delete: https://www.baeldung.com/java-delete-directory
      */
     @BeforeClass
-    public static void downloadModel() throws NoSuchAlgorithmException, IOException {
+    public static void downloadResources() throws NoSuchAlgorithmException, IOException {
         boolean needDownload = true;
 
         System.out.println("Checking file existence and calculating md5");
@@ -129,7 +127,8 @@ public class InferenceSessionTest {
         option.setDeviceTag("gpu")
                 .setControlPort(11245)
                 .setMirroredView(false)
-                .setSavedModelDir(savedModelDir);
+                .setSavedModelDir(savedModelDir)
+                .setModelVersion("2");
 
         InferenceSession inferenceSession = new InferenceSession(option);
         inferenceSession.open();
