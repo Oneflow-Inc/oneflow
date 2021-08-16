@@ -232,6 +232,10 @@
   signature: "Tensor Softmax(Tensor x)"
   bind_python: True
 
+- name: "logsoftmax"
+  signature: "Tensor LogSoftmax(Tensor x)"
+  bind_python: True
+
 - name: "hardswish"
   signature: "Tensor HardSwish(Tensor x)"
   bind_python: True
@@ -261,8 +265,16 @@
                                    Tensor gamma, Float epsilon, Int32 axis)"
   bind_python: False
 
-- name: "range"
-  signature: "Tensor Range(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64)"
+- name: "arange"
+  signature:
+    "Tensor Arange(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64,
+                   Device device=None)"
+  bind_python: True
+
+- name: "consistent_arange"
+  signature:
+    "Tensor ConsistentArange(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64,
+                             Placement placement, SbpList sbp_tuple)"
   bind_python: True
 
 - name: "flatten"
@@ -546,6 +558,14 @@
   signature: "Tensor SliceGrad(Tensor dy, Tensor like, *, Int64List start, Int64List stop, Int64List step)"
   bind_python: False
 
+- name: "narrow"
+  signature: "Tensor Narrow(Tensor in, *, Int64 dim, Int64 start, Int64 length)"
+  bind_python: True
+
+- name: "narrow_grad"
+  signature: "Tensor NarrowGrad(Tensor dy, Tensor like, *, Int64 dim, Int64 start, Int64 length)"
+  bind_python: False
+
 - name: "slice_update"
   signature:
     "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop,
@@ -748,6 +768,10 @@
   signature: "Tensor Softplus(Tensor x)"
   bind_python: True
 
+- name: "one_hot"
+  signature: "Tensor OneHot(Tensor x, *, Int64 num_classes=-1, Scalar on_value=1, Scalar off_value=0)"
+  bind_python: True
+
 - name: "unsorted_segment_sum_like"
   signature:
     "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
@@ -907,7 +931,7 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, Shape shape=None)"
+  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, Bool identity_grad=False, SbpList grad_sbp)"
   bind_python: True
 
 - name: "to_local"
@@ -938,6 +962,41 @@
   signature: "Tensor ReduceSumLike(Tensor in, Tensor like, *,Int32List axis)"
   bind_python: True
 
+- name: "scalar_logical_equal"
+  signature: "Tensor ScalarLogicalEqual(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "scalar_logical_not_equal"
+  signature: "Tensor ScalarLogicalNotEqual(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "scalar_logical_greater"
+  signature: "Tensor ScalarLogicalGreater(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "scalar_logical_greater_equal"
+  signature: "Tensor ScalarLogicalGreaterEqual(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "scalar_logical_less"
+  signature: "Tensor ScalarLogicalLess(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "scalar_logical_less_equal"
+  signature: "Tensor ScalarLogicalLessEqual(Tensor in, Scalar scalar)"
+  bind_python: False
+  
+- name: "split"
+  signature: "TensorTuple Split(Tensor x, *, Int64 split_size, Int64 dim=0)"
+- name: "rand"
+  signature: "Tensor Rand(*, Shape shape, DataType dtype=None, Device device=None, Generator generator=None)"
+  bind_python: True
+
+- name: "consistent_rand"
+  signature: "Tensor ConsistentRand(*, Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None,
+              Generator generator=None)"
+  bind_python: True
+
 - name: "randn"
   signature: "Tensor RandN(*, Shape shape, DataType dtype=None, Device device=None, 
                            Generator generator=None)"
@@ -953,3 +1012,19 @@
                             Int32List dilation_rate, Int32List padding, 
                             Int32List strides)"
   bind_python: True
+  
+- name: "split"
+  signature: "TensorTuple Split(Tensor x, *, Int64 split_size, Int64 dim=0)"
+  bind_python: True
+  
+- name: "split_with_size"
+  signature: "TensorTuple SplitWithSize(Tensor x, *, Int64List split_sizes, Int64 dim=0)"
+  bind_python: True
+
+- name: "l2_normalize"
+  signature: "TensorTuple L2Normalize(Tensor input, Int32 axis, Float epsilon, *)"
+  bind_python: True
+
+- name: "l2_normalize_grad"
+  signature: "Tensor L2NormalizeGrad(Tensor dy, Tensor y, Tensor square_x_sum, Int32 axis, Float epsilon, *)"
+  bind_python: False

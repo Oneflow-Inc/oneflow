@@ -42,12 +42,11 @@ const cfg::SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const 
   return it->second.sbp_parallel(0);
 }
 
-const cfg::ParallelDistribution& OpNode::ParallelDistribution4BnInOp(
-    const std::string& bn_in_op) const {
-  return *CHECK_JUST(op().ParallelDistribution4BnInOp(bn_in_op));
+const cfg::NdSbp& OpNode::NdSbp4BnInOp(const std::string& bn_in_op) const {
+  return *CHECK_JUST(op().NdSbp4BnInOp(bn_in_op));
 }
 
-const cfg::ParallelDistribution& OpNode::ParallelDistribution4Lbi(const LogicalBlobId& lbi) const {
+const cfg::NdSbp& OpNode::NdSbp4Lbi(const LogicalBlobId& lbi) const {
   auto it = lbi2nd_sbp_.find(lbi);
   CHECK(it != lbi2nd_sbp_.end());
   return it->second;
@@ -137,11 +136,11 @@ void OpNode::InitLbi2SourceNode() {
   }
 }
 
-void OpNode::InitLbi2ParallelDistribution() {
+void OpNode::InitLbi2NdSbp() {
   const auto Update = [&](const PbRpf<std::string>& bns) {
     for (const auto& bn : bns) {
       const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
-      const cfg::ParallelDistribution& nd_sbp = ParallelDistribution4BnInOp(bn);
+      const cfg::NdSbp& nd_sbp = NdSbp4BnInOp(bn);
       auto it = lbi2nd_sbp_.find(lbi);
       if (it == lbi2nd_sbp_.end()) {
         lbi2nd_sbp_[lbi] = nd_sbp;
@@ -296,27 +295,25 @@ void OpGraph::InferTimeShape() const {
   });
 }
 
-void OpGraph::InferOpNodeParallelDistributionSignature(
-    OpNode* op_node, const cfg::ParallelDistributionSignature& nd_sbp_sig_conf) const {
-  HashMap<std::string, ParallelDistributionInferHint> ibn2nd_sbp_infer_hint;
+void OpGraph::InferOpNodeNdSbpSignature(OpNode* op_node,
+                                        const cfg::NdSbpSignature& nd_sbp_sig_conf) const {
+  HashMap<std::string, NdSbpInferHint> ibn2nd_sbp_infer_hint;
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
-    const cfg::ParallelDistribution* nd_sbp = &producer->ParallelDistribution4Lbi(lbi);
-    ibn2nd_sbp_infer_hint.emplace(
-        ibn, ParallelDistributionInferHint(parallel_desc, logical_blob_desc, nd_sbp));
+    const cfg::NdSbp* nd_sbp = &producer->NdSbp4Lbi(lbi);
+    ibn2nd_sbp_infer_hint.emplace(ibn, NdSbpInferHint(parallel_desc, logical_blob_desc, nd_sbp));
   }
-  const auto ParallelDistributionInferHint4Ibn =
-      [&](const std::string& bn) -> Maybe<const ParallelDistributionInferHint*> {
+  const auto NdSbpInferHint4Ibn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
     auto it = ibn2nd_sbp_infer_hint.find(bn);
     CHECK_OR_RETURN(it != ibn2nd_sbp_infer_hint.end());
-    return Maybe<const ParallelDistributionInferHint*>(&it->second);
+    return Maybe<const NdSbpInferHint*>(&it->second);
   };
-  CHECK_JUST(op_node->mut_op()->InferParallelDistributionSignatureIf(
-      nd_sbp_sig_conf, op_node->parallel_desc(), ParallelDistributionInferHint4Ibn));
-  op_node->InitLbi2ParallelDistribution();
+  CHECK_JUST(op_node->mut_op()->InferNdSbpSignatureIf(nd_sbp_sig_conf, op_node->parallel_desc(),
+                                                      NdSbpInferHint4Ibn));
+  op_node->InitLbi2NdSbp();
 }
 
 Maybe<void> OpGraph::InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const {
@@ -368,25 +365,24 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
       if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
     }
     JUST(InferOpNodeMirroredSignature(op_node, is_mirrored_conf));
-    cfg::ParallelDistributionSignature nd_sbp_sig_conf;
+    cfg::NdSbpSignature nd_sbp_sig_conf;
     {
       const auto& op_name2nd_sbp_sig_conf = job_parallel_view_conf.op_name2nd_sbp_signature_conf();
       const auto& iter = op_name2nd_sbp_sig_conf.find(op_node->op().op_name());
       if (iter != op_name2nd_sbp_sig_conf.end()) {
-        nd_sbp_sig_conf = cfg::ParallelDistributionSignature(iter->second);
+        nd_sbp_sig_conf = cfg::NdSbpSignature(iter->second);
         if (op_node->parallel_desc().hierarchy()->NumAxes() == 1) {
           const auto& op_name2sbp_sig_conf = job_parallel_view_conf.op_name2sbp_signature_conf();
           const auto& op_name2sbp_sig_conf_it = op_name2sbp_sig_conf.find(op_node->op().op_name());
           CHECK(op_name2sbp_sig_conf_it != op_name2sbp_sig_conf.end());
-          CheckSbpSignatureAndParallelDistributionEquals(
-              cfg::SbpSignature(op_name2sbp_sig_conf_it->second),
-              cfg::ParallelDistributionSignature(iter->second));
+          CheckSbpSignatureAndNdSbpEquals(cfg::SbpSignature(op_name2sbp_sig_conf_it->second),
+                                          cfg::NdSbpSignature(iter->second));
         } else {
           // do nothing
         }
       }
     }
-    InferOpNodeParallelDistributionSignature(op_node, nd_sbp_sig_conf);
+    InferOpNodeNdSbpSignature(op_node, nd_sbp_sig_conf);
     JUST(op_node->mut_op()->InferLogicalOutBlobDescsIf());
     return Maybe<void>::Ok();
   }));
@@ -403,10 +399,9 @@ const cfg::SbpParallel& OpGraph::GetSbpParallel(const std::string& op_name,
       ->SbpParallel4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
 
-const cfg::ParallelDistribution& OpGraph::GetParallelDistribution(const std::string& op_name,
-                                                                  const LogicalBlobId& lbi) const {
+const cfg::NdSbp& OpGraph::GetNdSbp(const std::string& op_name, const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
-      ->ParallelDistribution4Lbi(GetLogicalBlobIdKey(op_name, lbi));
+      ->NdSbp4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
 
 DataType OpGraph::GetBlobDataType(const LogicalBlobId& lbi) const {
@@ -498,7 +493,7 @@ void OpGraph::DumpLogicalBlobDesc(Job* job) const {
   });
 }
 
-void OpGraph::DumpParallelDistributionSignature(Job* job) const {
+void OpGraph::DumpNdSbpSignature(Job* job) const {
   ForEachNode([&](const OpNode* node) -> void {
     CHECK_JUST(node->op().nd_sbp_signature())
         ->ToProto(&(*job->mutable_job_parallel_view_conf()
