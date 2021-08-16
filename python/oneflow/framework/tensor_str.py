@@ -25,7 +25,7 @@ import oneflow as flow
 
 class __PrinterOptions(object):
     precision: int = 4
-    threshold: float = 60
+    threshold: float = 1000
     edgeitems: int = 3
     linewidth: int = 80
     sci_mode: Optional[bool] = None
