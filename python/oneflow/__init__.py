@@ -91,6 +91,7 @@ oneflow._oneflow_internal.RegisterGlobalForeignCallback(
 del python_callback
 del register_python_callback
 
+
 def _SyncOnMasterFn():
     if not oneflow._oneflow_internal.IsEnvInited():
         return
@@ -98,6 +99,7 @@ def _SyncOnMasterFn():
         oneflow._oneflow_internal.eager.multi_client.Sync()
     elif oneflow.framework.distribute.get_rank() == 0:
         oneflow._oneflow_internal.eager.single_client.Sync()
+
 
 def _ExitOneFlow():
     _SyncOnMasterFn()
