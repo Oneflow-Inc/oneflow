@@ -40,7 +40,7 @@ class TestPowModule(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=2, dim1=2).to(device)
         return torch.pow(x, y)
 
-    @unittest.skip("pow has a bug")
+    @unittest.skip("not support for broadcast currently")
     @autotest()
     def test_pow_broadcast_with_random_data(test_case):
         device = random_device()

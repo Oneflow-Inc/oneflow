@@ -15,11 +15,10 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
 
 import oneflow as flow
 from automated_test_util import *
-from test_util import GenArgList
+import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestAbsModule(flow.unittest.TestCase):
