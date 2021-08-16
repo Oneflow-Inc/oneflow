@@ -88,7 +88,6 @@ oneflow
             scatter,
             scatter_add,
             scatter_nd, 
-            one_hot, 
             sin, 
             sinh, 
             sign, 
