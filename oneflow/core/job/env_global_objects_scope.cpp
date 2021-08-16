@@ -201,7 +201,10 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   auto session_ctx = Global<MultiClientSessionContext>::Get();
-  if (session_ctx != nullptr) { session_ctx->TryClose(); }
+  if (session_ctx != nullptr) {
+    VLOG(2) <<  "Multi client session has not closed , env close it at env scope destruction.";
+    session_ctx->TryClose();
+  }
 
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
