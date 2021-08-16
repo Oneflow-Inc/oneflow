@@ -599,6 +599,79 @@ class Avgpool3DFunctor : public AvgPoolingNDFunctor {
   }
 };
 
+class OneHotFunctor {
+ public:
+  OneHotFunctor() {
+    one_hot_op_ = CHECK_JUST(one::OpBuilder("one_hot").Input("indices").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& num_classes,
+                           const Scalar& on_value, const Scalar& off_value) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", num_classes));
+    bool is_on_value_double = on_value.IsFloatingPoint();
+    bool is_off_value_double = off_value.IsFloatingPoint();
+    if (is_on_value_double || is_off_value_double) {
+      JUST(attrs.SetAttr<DataType>("dtype", kDouble));
+      JUST(attrs.SetAttr<double>("floating_on_value", JUST(on_value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_off_value", JUST(off_value.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integer_on_value", 0));
+      JUST(attrs.SetAttr<int64_t>("integer_off_value", 0));
+    } else {
+      JUST(attrs.SetAttr<DataType>("dtype", kInt64));
+      JUST(attrs.SetAttr<double>("floating_on_value", 0));
+      JUST(attrs.SetAttr<double>("floating_off_value", 0));
+      JUST(attrs.SetAttr<int64_t>("integer_on_value", JUST(on_value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_off_value", JUST(off_value.As<int64_t>())));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> one_hot_op_;
+};
+
+class L2NormalizeFunctor {
+ public:
+  L2NormalizeFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("l2_normalize").Input("x").Output("y").Output("square_x_sum").Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
+                                const float& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class L2NormalizeGradFunctor {
+ public:
+  L2NormalizeGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("l2_normalize_grad")
+                         .Input("dy")
+                         .Input("y")
+                         .Input("square_x_sum")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& square_x_sum, const int32_t& axis,
+                           const float& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, square_x_sum}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -626,6 +699,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Avgpool1DFunctor>("Avgpool1D");
   m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
   m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
+  m.add_functor<impl::OneHotFunctor>("OneHot");
+  m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
+  m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
 };
 
 }  // namespace functional

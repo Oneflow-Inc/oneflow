@@ -68,9 +68,9 @@ def _mean(input, dim=None, keepdim=False):
         >>> import oneflow as flow
         >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         >>> flow.mean(input)
-        tensor(3.5, dtype=oneflow.float32)
+        tensor(3.5000, dtype=oneflow.float32)
         >>> flow.mean(input, dim=0)
-        tensor([2.5, 3.5, 4.5], dtype=oneflow.float32)
+        tensor([2.5000, 3.5000, 4.5000], dtype=oneflow.float32)
         >>> flow.mean(input, dim=1)
         tensor([2., 5.], dtype=oneflow.float32)
 
