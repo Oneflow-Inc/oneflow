@@ -33,16 +33,16 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_mr *  mr, char * addr, size_t  size):size_(size){
+  ActorMsgMR(ibv_mr *   mr, char * addr, size_t  size):size_(size){
     msg_ = reinterpret_cast<ActorMsg*>(addr);
-    mr_ = mr;
+    mr_.reset(mr);
   }
   ~ActorMsgMR() {
+    mr_.reset();
     delete msg_;
-   //CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0);
   }
 
-  char * addr() { return reinterpret_cast<char *>(msg_) ; }
+  char * addr() { return reinterpret_cast<char *>(msg_) ; } //这个是没错的
   uint32_t size() {return size_ ;}
   uint32_t lkey() { return mr_->lkey ; }
   ActorMsg  msg()  { return *msg_;}
@@ -52,7 +52,7 @@ class ActorMsgMR final {
 
  private:
     size_t size_;
-    ibv_mr * mr_;
+    std::shared_ptr<ibv_mr> mr_;
     ActorMsg * msg_;
 };
 
@@ -87,8 +87,7 @@ class MessagePool final {
       std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
       char * addr =(char*) malloc(RegisterMemorySize );
-    //  std::cout<<"the addr:"
-      ibv_mr * mr =  ibv::wrapper.ibv_reg_mr_wrap(
+      ibv_mr *   mr =ibv::wrapper.ibv_reg_mr_wrap(
           pd_,  addr, RegisterMemorySize,
           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
       CHECK(mr);
