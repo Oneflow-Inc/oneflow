@@ -21,7 +21,7 @@ import oneflow.unittest
 from automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
-class TestStack(flow.unittest.TestCase):
+class TestStackModule(flow.unittest.TestCase):
     @autotest()
     def test_stack_with_random_data(test_case):
         device = random_device()
