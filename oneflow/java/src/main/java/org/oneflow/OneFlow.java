@@ -22,12 +22,14 @@ class OneFlow {
     static native void setIsMultiClient(boolean isMultiClient);
     static native void initDefaultSession();
     static native boolean isEnvInited();
-    static native void initEnv(String envProto);
+    static native void initEnv(int port);
+    static native long currentMachineId();
     static native void initScopeStack();
     static native boolean isSessionInited();
-    static native void initSession(String configProto);
+    static native void initSession(String deviceTag);
 
     // compile
+    static native void loadModel(Option option);
     static native void openJobBuildAndInferCtx(String jobName);
     static native void setJobConfForCurJobBuildAndInferCtx(String jobConfProto);
     static native void setScopeForCurJob(String jobConfProto, String ids, String device);
@@ -39,9 +41,12 @@ class OneFlow {
 
     // launch
     static native void startLazyGlobalSession();
-    static native void loadCheckpoint(String jobName, Buffer path);
+    static native void loadCheckpoint(Buffer path);
+//    static native void loadCheckpoint(Option option);
 
     // forward
+    static native String getPushJobNames();
+    static native String getPullJobNames();
     static native void runSinglePushJob(Buffer data,
                                         Buffer shape,
                                         int dTypeCode,

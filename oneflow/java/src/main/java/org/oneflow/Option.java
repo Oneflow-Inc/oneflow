@@ -1,65 +1,133 @@
 package org.oneflow;
 
-import org.oneflow.util.ConfigConst;
-
 public class Option {
 
-    /**
-     * The tag of device can be: "gpu" or "cpu"
-     */
+    // device
     private String deviceTag;
+    private Boolean mirroredView;
+    private Integer controlPort;
 
-    /**
-     * The number of devices used, the default value is 1
-     */
-    private int deviceNum;
+    // file
+    private String savedModelDir;
+    private String ModelVersion;
+    private String metaFileBaseName;
+    private String fullPathName;
+    private String checkpointDir;
 
-    /**
-     * The setting of distributed training: mirrored or consistent
-     */
-    private boolean mirroredView;
-
-    /**
-     * Control port: default ConfigConst.PORT(11235)
-     */
-    private int controlPort;
+    // config
+    private String graphName;
+    private String signatureName;
+    private Integer batchSize;
 
     public Option() {
-        this.deviceTag = "gpu";
-        this.deviceNum = 1;
-        this.mirroredView = false;
-        this.controlPort = ConfigConst.PORT;
     }
 
     public String getDeviceTag() {
         return deviceTag;
     }
 
-    public void setDeviceTag(String deviceTag) {
+    public Option setDeviceTag(String deviceTag) {
         this.deviceTag = deviceTag;
+        return this;
     }
 
-    public int getDeviceNum() {
-        return deviceNum;
-    }
-
-    public void setDeviceNum(int deviceNum) {
-        this.deviceNum = deviceNum;
-    }
-
-    public boolean isMirroredView() {
+    public Boolean getMirroredView() {
         return mirroredView;
     }
 
-    public void setMirroredView(boolean mirroredView) {
+    public Option setMirroredView(Boolean mirroredView) {
         this.mirroredView = mirroredView;
+        return this;
     }
 
-    public int getControlPort() {
+    public Integer getControlPort() {
         return controlPort;
     }
 
-    public void setControlPort(int controlPort) {
+    public Option setControlPort(Integer controlPort) {
         this.controlPort = controlPort;
+        return this;
+    }
+
+    public String getSavedModelDir() {
+        return savedModelDir;
+    }
+
+    public Option setSavedModelDir(String savedModelDir) {
+        this.savedModelDir = savedModelDir;
+        return this;
+    }
+
+    public String getModelVersion() {
+        return ModelVersion;
+    }
+
+    public Option setModelVersion(String modelVersion) {
+        ModelVersion = modelVersion;
+        return this;
+    }
+
+    public String getMetaFileBaseName() {
+        return metaFileBaseName;
+    }
+
+    public Option setMetaFileBaseName(String metaFileBaseName) {
+        this.metaFileBaseName = metaFileBaseName;
+        return this;
+    }
+
+    public String getGraphName() {
+        return graphName;
+    }
+
+    public Option setGraphName(String graphName) {
+        this.graphName = graphName;
+        return this;
+    }
+
+    public String getSignatureName() {
+        return signatureName;
+    }
+
+    public Option setSignatureName(String signatureName) {
+        this.signatureName = signatureName;
+        return this;
+    }
+
+    public Integer getBatchSize() {
+        return batchSize;
+    }
+
+    public Option setBatchSize(Integer batchSize) {
+        this.batchSize = batchSize;
+        return this;
+    }
+
+    public String getCheckpointDir() {
+        return checkpointDir;
+    }
+
+    public String getFullPathName() {
+        return fullPathName;
+    }
+
+    public Option setFullPathName(String fullPathName) {
+        this.fullPathName = fullPathName;
+        return this;
+    }
+
+    @Override
+    public String toString() {
+        return "Option{" +
+                "deviceTag='" + deviceTag + '\'' +
+                ", mirroredView=" + mirroredView +
+                ", controlPort=" + controlPort +
+                ", savedModelDir='" + savedModelDir + '\'' +
+                ", ModelVersion=" + ModelVersion +
+                ", metaFileBaseName='" + metaFileBaseName + '\'' +
+                ", graphName='" + graphName + '\'' +
+                ", signatureName='" + signatureName + '\'' +
+                ", batchSize=" + batchSize +
+                '}';
     }
 }

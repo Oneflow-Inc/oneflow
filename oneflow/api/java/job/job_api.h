@@ -76,6 +76,8 @@ struct PullTensor {
   }
 };
 
+
+
 inline void SetJobConfForCurJobBuildAndInferCtx(const std::string& job_conf_proto) {
   oneflow::JobConfigProto job_conf;
   oneflow::TxtString2PbMessage(job_conf_proto, &job_conf);

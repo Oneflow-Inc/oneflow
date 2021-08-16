@@ -14,61 +14,63 @@ public class App {
         String savedModelDir = "./models";
         float[] image = readImage("./7.png");
         Tensor imageTensor = Tensor.fromBlob(image, new long[]{ 1, 1, 28, 28 });
-        Tensor tagTensor = Tensor.fromBlob(new int[]{ 1 }, new long[]{ 1 });
         Map<String, Tensor> tensorMap = new HashMap<>();
-        tensorMap.put("image", imageTensor);  // Todo: support signature
-//        tensorMap.put("Input_15", tagTensor);
+        tensorMap.put("image", imageTensor);
 
-        // Option
-        Option option = new Option();
-        option.setDeviceTag(args[0]);
-
-        InferenceSession inferenceSession = new InferenceSession(option);
+        InferenceSession inferenceSession = new InferenceSession();
         inferenceSession.open();
         inferenceSession.loadModel(savedModelDir);
         inferenceSession.launch();
 
         Map<String, Tensor> resultMap = inferenceSession.run(jobName, tensorMap);
-        for (Map.Entry<String, Tensor> entry : resultMap.entrySet()) {
-            Tensor resTensor = entry.getValue();
-            float[] resFloatArray = resTensor.getDataAsFloatArray();
-            for (float v : resFloatArray) {
-                System.out.print(v + " ");
-            }
-            System.out.println();
+        Tensor resultTensor = resultMap.get("output");
+        float[] resFloatArray = resultTensor.getDataAsFloatArray();
+        for (float v : resFloatArray) {
+            System.out.print(v + " ");
         }
-
-        int forwardTimes = Integer.parseInt(args[1]);
-        long curTime = System.currentTimeMillis();
-        for (int i = 0; i < forwardTimes; i++) {
-            resultMap = inferenceSession.run(jobName, tensorMap);
-            for (Map.Entry<String, Tensor> entry : resultMap.entrySet()) {
-                Tensor resTensor = entry.getValue();
-                resTensor.getDataAsFloatArray();
-            }
-        }
-        System.out.printf("It takes %fs to forward %d times\n",
-                (System.currentTimeMillis() - curTime) / 1000.0f,
-                forwardTimes);
 
         inferenceSession.close();
 
-        // assert
-        float[] vector = resultMap.get("output").getDataAsFloatArray();
-        if (10 != vector.length) {
-            System.out.println("vector.length is not equal to 10");
-            System.exit(-1);
-        }
-        float[] expectedVector = { -129.57167f, -89.084816f, -139.21355f , -103.455025f, -9.179366f,
-                -69.568474f, -133.39594f,  -16.204329f, -114.90876f,  -47.933548f };
-        float delta = 0.0001f;
-        for (int i = 0; i < 10; i++) {
-            if (Math.abs(expectedVector[i] - vector[i]) > delta) {
-                System.out.println("vector is not expected");
-                System.exit(-1);
-            }
-        }
-        System.out.println("Pass");
+//        for (Map.Entry<String, Tensor> entry : resultMap.entrySet()) {
+//            Tensor resTensor = entry.getValue();
+//            float[] resFloatArray = resTensor.getDataAsFloatArray();
+//            for (float v : resFloatArray) {
+//                System.out.print(v + " ");
+//            }
+//            System.out.println();
+//        }
+//
+//        int forwardTimes = Integer.parseInt(args[1]);
+//        long curTime = System.currentTimeMillis();
+//        for (int i = 0; i < forwardTimes; i++) {
+//            resultMap = inferenceSession.run(jobName, tensorMap);
+//            for (Map.Entry<String, Tensor> entry : resultMap.entrySet()) {
+//                Tensor resTensor = entry.getValue();
+//                resTensor.getDataAsFloatArray();
+//            }
+//        }
+//        System.out.printf("It takes %fs to forward %d times\n",
+//                (System.currentTimeMillis() - curTime) / 1000.0f,
+//                forwardTimes);
+//
+//        inferenceSession.close();
+//
+//        // assert
+//        float[] vector = resultMap.get("output").getDataAsFloatArray();
+//        if (10 != vector.length) {
+//            System.out.println("vector.length is not equal to 10");
+//            System.exit(-1);
+//        }
+//        float[] expectedVector = { -129.57167f, -89.084816f, -139.21355f , -103.455025f, -9.179366f,
+//                -69.568474f, -133.39594f,  -16.204329f, -114.90876f,  -47.933548f };
+//        float delta = 0.0001f;
+//        for (int i = 0; i < 10; i++) {
+//            if (Math.abs(expectedVector[i] - vector[i]) > delta) {
+//                System.out.println("vector is not expected");
+//                System.exit(-1);
+//            }
+//        }
+//        System.out.println("Pass");
     }
 
     public static float[] readImage(String filePath) {

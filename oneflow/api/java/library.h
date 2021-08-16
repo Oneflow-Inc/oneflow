@@ -23,6 +23,7 @@ JNIEXPORT jboolean      JNICALL Java_org_oneflow_OneFlow_isSessionInited(JNIEnv*
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_initSession(JNIEnv* env, jobject obj, jstring device_tag);
 
 // compile
+JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_loadModel(JNIEnv* env, jobject obj, jobject option);
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring jstr);
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_setJobConfForCurJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring jstr);
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_setScopeForCurJob(JNIEnv* env, jobject obj, jstring job_conf_proto, jstring ids, jstring device);
@@ -34,7 +35,9 @@ JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_closeJobBuildAndInferCt
 
 // launch
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_startLazyGlobalSession(JNIEnv* env, jobject obj);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_loadCheckpoint(JNIEnv* env, jobject obj, jstring load_job, jobject path);
+JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_loadCheckpoint(JNIEnv* env, jobject obj, jobject path);
+JNIEXPORT jstring       JNICALL Java_org_oneflow_OneFlow_getPushJobNames(JNIEnv* env, jobject obj);
+JNIEXPORT jstring       JNICALL Java_org_oneflow_OneFlow_getPullJobNames(JNIEnv* env, jobject obj);
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_runSinglePushJob(JNIEnv* env, jobject obj, jobject data, jobject shape, jint dtype_code, jstring job_name, jstring op_name);
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_runInferenceJob(JNIEnv* env, jobject obj, jstring jstr);
 JNIEXPORT jobject       JNICALL Java_org_oneflow_OneFlow_runPullJob(JNIEnv* env, jobject obj, jstring job_name, jstring op_name);

@@ -34,4 +34,26 @@ inline int Endian() {
   return *y;
 }
 
+inline jobject GetOptionField(JNIEnv* env, jobject obj, const char* field_name, 
+                              const char* signature) {
+  jclass option_class = (*env).FindClass("org/oneflow/Option");
+  jfieldID fid = (*env).GetFieldID(option_class, field_name, signature);
+  jobject field_obj = (*env).GetObjectField(obj, fid);
+  return field_obj;
+}
+
+inline int GetIntFromField(JNIEnv* env, jobject obj) {
+  jclass integer_class = (*env).FindClass("java/lang/Integer");
+  jmethodID mid = (*env).GetMethodID(integer_class, "intValue", "()I");
+  int value = (*env).CallIntMethod(integer_class, mid);
+  return value;
+}
+
+inline void SetStringField(JNIEnv* env, jobject obj, const char* field_name,
+                           const char* signature, jstring value) {
+  jclass option_class = (*env).FindClass("org/oneflow/Option");
+  jfieldID fid = (*env).GetFieldID(option_class, field_name, signature);
+  (*env).SetObjectField(obj, fid, (jobject) value);
+}
+
 #endif  // ONEFLOW_API_JAVA_UTIL_JNI_UTIL_H_

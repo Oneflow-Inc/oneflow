@@ -1,0 +1,416 @@
+name: "mlp"
+version: 2
+checkpoint_dir: "variables"
+graphs {
+  key: "mlp_inference"
+  value {
+    op_list {
+      name: "Input_14"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427486206
+      input_conf {
+        out: "out"
+        blob_conf {
+          shape {
+            dim: 1
+            dim: 1
+            dim: 28
+            dim: 28
+          }
+          data_type: kFloat
+          is_dynamic: false
+          parallel_distribution {
+            sbp_parallel {
+              split_parallel {
+                axis: 0
+              }
+            }
+          }
+        }
+      }
+    }
+    op_list {
+      name: "Input_15"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427486206
+      input_conf {
+        out: "out"
+        blob_conf {
+          shape {
+            dim: 1
+          }
+          data_type: kInt32
+          is_dynamic: false
+          parallel_distribution {
+            sbp_parallel {
+              split_parallel {
+                axis: 0
+              }
+            }
+          }
+        }
+      }
+    }
+    op_list {
+      name: "Reshape_16"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427490302
+      user_conf {
+        op_type_name: "reshape"
+        input {
+          key: "in"
+          value {
+            s: "Input_14/out"
+          }
+        }
+        output {
+          key: "out"
+          value {
+            s: "Reshape_16/out_0"
+          }
+        }
+        attr {
+          key: "shape"
+          value {
+            at_shape {
+              dim: 1
+              dim: 784
+            }
+          }
+        }
+      }
+    }
+    op_list {
+      name: "dense1-weight"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427494398
+      variable_conf {
+        out: "out"
+        shape {
+          dim: 500
+          dim: 784
+        }
+        data_type: kFloat
+        initializer {
+          random_uniform_conf {
+            min: -0.035714287
+            max: 0.035714287
+          }
+        }
+        model_name: "weight"
+        trainable: true
+        parallel_distribution: "B"
+      }
+    }
+    op_list {
+      name: "dense1-matmul"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427494398
+      user_conf {
+        op_type_name: "matmul"
+        input {
+          key: "a"
+          value {
+            s: "Reshape_16/out_0"
+          }
+        }
+        input {
+          key: "b"
+          value {
+            s: "dense1-weight/out"
+          }
+        }
+        output {
+          key: "out"
+          value {
+            s: "dense1-matmul/out_0"
+          }
+        }
+        attr {
+          key: "alpha"
+          value {
+            at_double: 1.0
+          }
+        }
+        attr {
+          key: "transpose_a"
+          value {
+            at_bool: false
+          }
+        }
+        attr {
+          key: "transpose_b"
+          value {
+            at_bool: true
+          }
+        }
+      }
+    }
+    op_list {
+      name: "dense1-bias"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427494398
+      variable_conf {
+        out: "out"
+        shape {
+          dim: 500
+        }
+        data_type: kFloat
+        initializer {
+          random_uniform_conf {
+            min: -0.035714287
+            max: 0.035714287
+          }
+        }
+        model_name: "bias"
+        trainable: true
+        parallel_distribution: "B"
+      }
+    }
+    op_list {
+      name: "dense1-bias_add"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427494398
+      user_conf {
+        op_type_name: "bias_add"
+        input {
+          key: "a"
+          value {
+            s: "dense1-matmul/out_0"
+          }
+        }
+        input {
+          key: "b"
+          value {
+            s: "dense1-bias/out"
+          }
+        }
+        output {
+          key: "out"
+          value {
+            s: "dense1-bias_add/out_0"
+          }
+        }
+        attr {
+          key: "axis"
+          value {
+            at_int32: 1
+          }
+        }
+      }
+    }
+    op_list {
+      name: "dense1-activation"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427494398
+      user_conf {
+        op_type_name: "relu"
+        input {
+          key: "in"
+          value {
+            s: "dense1-bias_add/out_0"
+          }
+        }
+        output {
+          key: "out"
+          value {
+            s: "dense1-activation/out_0"
+          }
+        }
+      }
+    }
+    op_list {
+      name: "dense2-weight"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427498494
+      variable_conf {
+        out: "out"
+        shape {
+          dim: 10
+          dim: 500
+        }
+        data_type: kFloat
+        initializer {
+          random_uniform_conf {
+            min: -0.04472136
+            max: 0.04472136
+          }
+        }
+        model_name: "weight"
+        trainable: true
+        parallel_distribution: "B"
+      }
+    }
+    op_list {
+      name: "dense2-matmul"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427498494
+      user_conf {
+        op_type_name: "matmul"
+        input {
+          key: "a"
+          value {
+            s: "dense1-activation/out_0"
+          }
+        }
+        input {
+          key: "b"
+          value {
+            s: "dense2-weight/out"
+          }
+        }
+        output {
+          key: "out"
+          value {
+            s: "dense2-matmul/out_0"
+          }
+        }
+        attr {
+          key: "alpha"
+          value {
+            at_double: 1.0
+          }
+        }
+        attr {
+          key: "transpose_a"
+          value {
+            at_bool: false
+          }
+        }
+        attr {
+          key: "transpose_b"
+          value {
+            at_bool: true
+          }
+        }
+      }
+    }
+    op_list {
+      name: "dense2-bias"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427498494
+      variable_conf {
+        out: "out"
+        shape {
+          dim: 10
+        }
+        data_type: kFloat
+        initializer {
+          random_uniform_conf {
+            min: -0.04472136
+            max: 0.04472136
+          }
+        }
+        model_name: "bias"
+        trainable: true
+        parallel_distribution: "B"
+      }
+    }
+    op_list {
+      name: "dense2-bias_add"
+      device_tag: "gpu"
+      scope_symbol_id: 4611686018427498494
+      user_conf {
+        op_type_name: "bias_add"
+        input {
+          key: "a"
+          value {
+            s: "dense2-matmul/out_0"
+          }
+        }
+        input {
+          key: "b"
+          value {
+            s: "dense2-bias/out"
+          }
+        }
+        output {
+          key: "out"
+          value {
+            s: "dense2-bias_add/out_0"
+          }
+        }
+        attr {
+          key: "axis"
+          value {
+            at_int32: 1
+          }
+        }
+      }
+    }
+    op_list {
+      name: "Return_17"
+      device_tag: "cpu"
+      scope_symbol_id: 4611686018427502590
+      return_conf {
+        in: "dense2-bias_add/out_0"
+        out: "out"
+      }
+    }
+    signatures {
+      key: "mlp"
+      value {
+        inputs {
+          key: "image"
+          value {
+            lbi {
+              op_name: "Input_14"
+              blob_name: "out"
+            }
+            blob_conf {
+              shape {
+                dim: 1
+                dim: 1
+                dim: 28
+                dim: 28
+              }
+              data_type: kFloat
+              is_dynamic: false
+              parallel_distribution {
+                sbp_parallel {
+                  split_parallel {
+                    axis: 0
+                  }
+                }
+              }
+            }
+          }
+        }
+        inputs {
+          key: "label"
+          value {
+            lbi {
+              op_name: "Input_15"
+              blob_name: "out"
+            }
+            blob_conf {
+              shape {
+                dim: 1
+              }
+              data_type: kInt32
+              is_dynamic: false
+              parallel_distribution {
+                sbp_parallel {
+                  split_parallel {
+                    axis: 0
+                  }
+                }
+              }
+            }
+          }
+        }
+        outputs {
+          key: "output"
+          value {
+            lbi {
+              op_name: "dense2-bias_add"
+              blob_name: "out_0"
+            }
+          }
+        }
+      }
+    }
+    default_signature_name: "mlp"
+  }
+}
+default_graph_name: "mlp_inference"

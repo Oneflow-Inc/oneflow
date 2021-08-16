@@ -74,22 +74,10 @@
     <dependencies>
 
         <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>3.15.3</version>
-        </dependency>
-
-        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.oneflow.proto</groupId>
-            <artifactId>oneflow-proto</artifactId>
-            <version>1.1.0-alpha</version>
         </dependency>
 
     </dependencies>

@@ -21,10 +21,12 @@ inline void InitSession(const std::string& device_tag) {
   resource->set_machine_num(1);
   resource->set_enable_legacy_model_io(true);
   if (device_tag == "gpu") {
+    resource->set_cpu_device_num(0);
     resource->set_gpu_device_num(1);
   }
   else {
     resource->set_cpu_device_num(1);
+    resource->set_gpu_device_num(0);
   }
 
   std::cout << config_proto.DebugString() << std::endl;

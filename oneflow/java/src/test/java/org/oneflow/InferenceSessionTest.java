@@ -1,17 +1,25 @@
 package org.oneflow;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
 import java.io.File;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.*;
 
 public class InferenceSessionTest {
+
+    @BeforeClass
+    public static void downloadModel() {
+        System.out.println("download resources");
+    }
 
     @Test
     public void main() {
@@ -24,21 +32,19 @@ public class InferenceSessionTest {
 
         // Option
         Option option = new Option();
-        option.setDeviceTag("cpu");
+        option.setDeviceTag("gpu")
+                .setControlPort(11245)
+                .setMirroredView(false)
+                .setSavedModelDir(savedModelDir);
 
         InferenceSession inferenceSession = new InferenceSession(option);
         inferenceSession.open();
-        inferenceSession.loadModel(savedModelDir);
-        inferenceSession.launch();
 
         Map<String, Tensor> resultMap = inferenceSession.run(jobName, tensorMap);
         for (Map.Entry<String, Tensor> entry : resultMap.entrySet()) {
             Tensor resTensor = entry.getValue();
             float[] resFloatArray = resTensor.getDataAsFloatArray();
-            for (float v : resFloatArray) {
-                System.out.print(v + " ");
-            }
-            System.out.println();
+            System.out.println(Arrays.toString(resFloatArray));
         }
 
         int forwardTimes = 10;
@@ -65,6 +71,11 @@ public class InferenceSessionTest {
         for (int i = 0; i < 10; i++) {
             assertEquals(expectedVector[i], vector[i], delta);
         }
+    }
+
+    @Test
+    public void reopenTest() {
+
     }
 
     public float[] readImage(String filePath) {
