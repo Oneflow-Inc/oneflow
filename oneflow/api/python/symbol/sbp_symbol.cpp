@@ -38,24 +38,8 @@ std::string SbpParallelSymbolToString(const Symbol<cfg::SbpParallel>& sbp_sym) {
 Maybe<std::vector<Symbol<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {
   std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> ret =
       std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(max_split_axis);
-  for (int i = 0; i < max_split_axis; ++i) {
-    cfg::SbpParallel split_sbp_parallel;
-    split_sbp_parallel.mutable_split_parallel()->set_axis(i);
-    ret->at(i) = SymbolOf(split_sbp_parallel);
-  }
+  for (int i = 0; i < max_split_axis; ++i) { ret->at(i) = JUST(MakeSplitSbpParallel(i)); }
   return ret;
-}
-
-Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel() {
-  cfg::SbpParallel broadcast_sbp;
-  broadcast_sbp.mutable_broadcast_parallel();
-  return SymbolOf(broadcast_sbp);
-}
-
-Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
-  cfg::SbpParallel partial_sum_sbp;
-  partial_sum_sbp.mutable_partial_sum_parallel();
-  return SymbolOf(partial_sum_sbp);
 }
 
 Maybe<Symbol<cfg::SbpParallel>> GetSplitSbpParallel(int axis) {
