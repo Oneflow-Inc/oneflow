@@ -264,7 +264,7 @@ def _gen_tensor_str_template(inp, is_meta):
     elif inp.device.type == "cuda":
         suffixes.append("device='" + str(inp.device) + "'")
     elif inp.device.type != "cpu":
-        raise RunTimeError("unknow device type")
+        raise RuntimeError("unknow device type")
     if inp.is_lazy:
         suffixes.append("is_lazy='True'")
 

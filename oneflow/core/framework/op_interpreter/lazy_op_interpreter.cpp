@@ -61,8 +61,7 @@ bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
   }
 }
 
-Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* nd_sbp,
-                                            const std::shared_ptr<Tensor>& tensor) {
+Maybe<void> GenNdSbpByTensor(NdSbp* nd_sbp, const std::shared_ptr<Tensor>& tensor) {
   nd_sbp->clear_sbp_parallel();
   if (tensor->is_local()) {
     // NOTE(chengcheng):
@@ -75,15 +74,15 @@ Maybe<void> GenParallelDistributionByTensor(ParallelDistribution* nd_sbp,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenVariableOpConfParallelDistributionStringByTensor(
-    VariableOpConf* var_conf, const std::shared_ptr<Tensor>& tensor) {
+Maybe<void> GenVariableOpConfNdSbpStringByTensor(VariableOpConf* var_conf,
+                                                 const std::shared_ptr<Tensor>& tensor) {
   var_conf->clear_nd_sbp();
   if (tensor->is_local()) {
     cfg::SbpParallel broadcast;
     broadcast.mutable_broadcast_parallel();
     var_conf->add_nd_sbp(SbpParallelToString(broadcast));
   } else {
-    const cfg::ParallelDistribution& nd_sbp = *JUST(tensor->nd_sbp());
+    const cfg::NdSbp& nd_sbp = *JUST(tensor->nd_sbp());
     for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
       var_conf->add_nd_sbp(SbpParallelToString(sbp_parallel));
     }
@@ -146,7 +145,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   //     this flag will be removed in the future.
   // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
   blob_conf->set_is_dynamic(false);
-  JUST(GenParallelDistributionByTensor(blob_conf->mutable_nd_sbp(), input_tensor));
+  JUST(GenNdSbpByTensor(blob_conf->mutable_nd_sbp(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
@@ -201,7 +200,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
   //   by EagerTensor.
   var_conf->mutable_initializer()->mutable_empty_conf();
-  JUST(GenVariableOpConfParallelDistributionStringByTensor(var_conf, input_tensor));
+  JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
   if (!input_tensor->requires_grad()) { var_conf->set_trainable(false); }
   if (input_tensor->requires_grad()) {
     double l2 = JUST(ctx.attrs.GetAttr<double>("l2"));
@@ -269,7 +268,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   //     this flag will be removed in the future.
   // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
   blob_conf->set_is_dynamic(false);
-  JUST(GenParallelDistributionByTensor(blob_conf->mutable_nd_sbp(), input_tensor));
+  JUST(GenNdSbpByTensor(blob_conf->mutable_nd_sbp(), input_tensor));
 
   auto infer_ctx = JUST(GetCurInferCtx());
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
@@ -389,7 +388,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
   //   by EagerTensor.
   var_conf->mutable_initializer()->mutable_empty_conf();
-  JUST(GenVariableOpConfParallelDistributionStringByTensor(var_conf, input_tensor));
+  JUST(GenVariableOpConfNdSbpStringByTensor(var_conf, input_tensor));
   // NOTE(chengcheng): Free EagerTensor not trainable
   var_conf->set_trainable(false);
 
@@ -411,7 +410,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   const std::string graph_name = *JUST(JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName());
   const std::string lbn = GenLogicalBlobName(new_op_name, "out");
   Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
-      graph_name, input_tensor, lbn);
+      graph_name, input_tensor, new_op_name);
   // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
   TensorNameScope::Global()->Record(input_tensor, lbn);
 
