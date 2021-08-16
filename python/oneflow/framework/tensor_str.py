@@ -25,7 +25,7 @@ import oneflow as flow
 
 class __PrinterOptions(object):
     precision: int = 4
-    threshold: float = 1000
+    threshold: float = 60
     edgeitems: int = 3
     linewidth: int = 80
     sci_mode: Optional[bool] = None
@@ -151,13 +151,41 @@ def _vector_str(self, indent, summarize, formatter1):
         return formatter1.format(val)
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
-        data = (
-            [_val_formatter(val) for val in self[: PRINT_OPTS.edgeitems].tolist()]
-            + [" ..."]
-            + [_val_formatter(val) for val in self[-PRINT_OPTS.edgeitems :].tolist()]
-        )
+        if not self.is_consistent:
+            data = (
+                [_val_formatter(val) for val in self[: PRINT_OPTS.edgeitems].tolist()]
+                + [" ..."]
+                + [
+                    _val_formatter(val)
+                    for val in self[-PRINT_OPTS.edgeitems :].tolist()
+                ]
+            )
+        else:
+            left_part = (
+                self[: PRINT_OPTS.edgeitems]
+                .to_consistent(sbp=flow.sbp.broadcast)
+                .to_local()
+            )
+            right_part = (
+                self[-PRINT_OPTS.edgeitems :]
+                .to_consistent(sbp=flow.sbp.broadcast)
+                .to_local()
+            )
+            data = (
+                [_val_formatter(val) for val in left_part.tolist()]
+                + [" ..."]
+                + [_val_formatter(val) for val in right_part.tolist()]
+            )
     else:
-        data = [_val_formatter(val) for val in self.tolist()]
+        if not self.is_consistent:
+            data = [_val_formatter(val) for val in self.tolist()]
+        else:
+            data = [
+                _val_formatter(val)
+                for val in self.to_consistent(sbp=flow.sbp.broadcast)
+                .to_local()
+                .to_list()
+            ]
 
     data_lines = [
         data[i : i + elements_per_line] for i in range(0, len(data), elements_per_line)
@@ -202,11 +230,24 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
-    if self.is_consistent:
-        return "[...]"
+    # if self.is_consistent:
+    #     return "[...]"
+    # with flow.no_grad():
+    #     formatter = _Formatter(get_summarized_data(self) if summarize else self)
+    #     return _tensor_str_with_formatter(self, indent, summarize, formatter)
+
+    def _convert_to_local_tensor(self, summarize):
+        if not self.is_consistent:
+            return get_summarized_data(self) if summarize else self
+        else:
+            if not summarize:
+                return self.to_consistent(sbp=flow.sbp.broadcast).to_local()
+            else:
+                return get_summarized_data(self)
 
     with flow.no_grad():
-        formatter = _Formatter(get_summarized_data(self) if summarize else self)
+        local_tensor = _convert_to_local_tensor(self, summarize)
+        formatter = _Formatter(local_tensor)
         return _tensor_str_with_formatter(self, indent, summarize, formatter)
 
 
@@ -226,12 +267,23 @@ def _add_suffixes(tensor_str, suffixes, indent):
 
 
 def cat_data(inp):
-    return flow.cat((inp[: PRINT_OPTS.edgeitems], inp[-PRINT_OPTS.edgeitems :]))
+    if not inp.is_consistent:
+        return flow.cat((inp[: PRINT_OPTS.edgeitems], inp[-PRINT_OPTS.edgeitems :]))
+    else:
+        left_part = (
+            inp[: PRINT_OPTS.edgeitems].to_consistent(sbp=flow.sbp.broadcast).to_local()
+        )
+        right_part = (
+            inp[-PRINT_OPTS.edgeitems :]
+            .to_consistent(sbp=flow.sbp.broadcast)
+            .to_local()
+        )
+        return flow.cat((left_part, right_part))
 
 
 def get_summarized_data(self):
     # TODO: supports consistent slice and delete this assert
-    assert self.is_local
+    # assert self.is_local
 
     dim = self.dim()
     if dim == 0:
@@ -261,7 +313,7 @@ def _gen_tensor_str_template(inp, is_meta):
     if inp.is_consistent:
         suffixes.append(f"placement={str(inp.placement)}")
         suffixes.append(f"sbp={str(inp.sbp)}")
-    elif inp.device.type == "cuda":
+    elif inp.device.type == "cuda" or inp.device.type == "gpu":
         suffixes.append("device='" + str(inp.device) + "'")
     elif inp.device.type != "cpu":
         raise RunTimeError("unknow device type")
