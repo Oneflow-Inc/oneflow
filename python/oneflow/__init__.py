@@ -262,6 +262,7 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.random_ops import bernoulli
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
+from oneflow.nn.modules.random_ops import randperm
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min
@@ -270,7 +271,6 @@ from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.round import round_op as round
-from oneflow.nn.modules.randperm import randperm
 from oneflow.nn.modules.scatter_nd import _scatter_nd_op as scatter_nd
 from oneflow.nn.modules.sign import sign_op as sign
 from oneflow.nn.modules.sinh import sinh_op as sinh

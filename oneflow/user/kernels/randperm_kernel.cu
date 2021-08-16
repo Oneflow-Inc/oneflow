@@ -13,7 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/randperm_kernel.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/framework/random_generator.h"
+#include "oneflow/user/kernels/range_kernel_util.h"
+#include "oneflow/user/kernels/distributions/uniform_kernel.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
 #include <curand.h>
 #include <curand_kernel.h>
@@ -21,8 +27,7 @@ namespace oneflow {
 __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
                                   curandState* state) {
   XPU_1D_KERNEL_LOOP(i, n) {
-    curandState localState = state[i];
-    keys[i] = curand(&localState);
+    keys[i] = curand(state + i);
     values[i] = i;
   }
 }
@@ -35,7 +40,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
-    return std::make_shared<RandpermKernelState>(generator);
+    return std::make_shared<UniformKernelState>(generator);
   }
 
  private:
@@ -45,7 +50,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     const int32_t n = ctx->Attr<int32_t>("n");
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    auto* randperm_kernel_state = dynamic_cast<RandpermKernelState*>(state);
+    auto* randperm_kernel_state = dynamic_cast<UniformKernelState*>(state);
     CHECK_NOTNULL(randperm_kernel_state);
     const auto& generator = randperm_kernel_state->generator();
     const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());

@@ -54,7 +54,6 @@ class Testrandperm(flow.unittest.TestCase):
         arg_dict["N"] = [i for i in range(2, 100, 7)]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["dtype"] = [flow.int32, flow.int64]
-        # @TODO:GPU version test needs context support from backend
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

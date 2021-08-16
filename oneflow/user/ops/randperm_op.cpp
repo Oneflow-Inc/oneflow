@@ -20,8 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 namespace oneflow {
 
-Maybe<void> InferUniformParallelDistribution(user_op::InferParallelDistributionFnContext* ctx);
-
+Maybe<void> InferRandpermNdSbp(user_op::InferNdSbpFnContext* ctx);
 REGISTER_NO_GRAD_USER_OP("randperm")
     .Output("out")
     .Attr<int32_t>("n")
@@ -40,13 +39,13 @@ REGISTER_NO_GRAD_USER_OP("randperm")
       *ctx->OutputDType("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(&InferUniformParallelDistribution);
+    .SetNdSbpInferFn(&InferRandpermNdSbp);
 
-Maybe<void> InferUniformParallelDistribution(user_op::InferParallelDistributionFnContext* ctx) {
-  cfg::ParallelDistribution* out = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+Maybe<void> InferRandpermNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  cfg::NdSbp* out = ctx->NdSbp4ArgNameAndIndex("out", 0);
   if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     const auto& pb_str = ctx->user_op_conf().attr<std::string>("nd_sbp");
-    ParallelDistribution pb;
+    NdSbp pb;
     CHECK_OR_RETURN(TxtString2PbMessage(pb_str, &pb));
     out->InitFromProto(pb);
   } else {
