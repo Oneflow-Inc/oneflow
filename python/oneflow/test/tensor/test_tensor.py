@@ -482,6 +482,20 @@ class TestTensor(flow.unittest.TestCase):
         y = x.acosh()
         return y
 
+    @autotest(auto_backward=False)
+    def test_sort_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.sort(dim=random(low=-4, high=4).to(int), descending=random_bool())
+        return y[0], y[1]
+
+    @autotest(auto_backward=False)
+    def test_argsort_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.argsort(dim=random(low=-4, high=4).to(int), descending=random_bool())
+        return y
+
     def test_mean(test_case):
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
         of_out = input.mean(dim=0)
