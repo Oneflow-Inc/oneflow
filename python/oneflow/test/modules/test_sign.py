@@ -48,7 +48,7 @@ class TestSign(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sign_impl(test_case, *arg)
 
-    @autotest(auto_backward=False)
+    @autotest()
     def test_sign_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 3, 0, 4).to(device)
