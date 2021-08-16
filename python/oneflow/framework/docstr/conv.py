@@ -31,7 +31,7 @@ add_docstr(
     Args:
         input: quantized input tensor of shape :math:`(\text{minibatch} , \text{in_channels} , iW)`
         weight: quantized filters of shape :math:`(\text{out_channels} , \frac{\text{in_channels}}{\text{groups}} , iW)`
-        bias: **non-quantized** bias tensor of shape :math:`(\text{out_channels})`. The tensor type must be `torch.float`.
+        bias: **non-quantized** bias tensor of shape :math:`(\text{out_channels})`. The tensor type must be `flow.float`.
         stride: the stride of the convolving kernel. Can be a single number or a
           tuple `(sW,)`. Default: 1
         padding: implicit paddings on both sides of the input. Can be a
@@ -69,7 +69,7 @@ add_docstr(
     Args:
         input: quantized input tensor of shape :math:`(\text{minibatch} , \text{in_channels} , iH , iW)`
         weight: quantized filters of shape :math:`(\text{out_channels} , \frac{\text{in_channels}}{\text{groups}} , kH , kW)`
-        bias: **non-quantized** bias tensor of shape :math:`(\text{out_channels})`. The tensor type must be `torch.float`.
+        bias: **non-quantized** bias tensor of shape :math:`(\text{out_channels})`. The tensor type must be `flow.float`.
         stride: the stride of the convolving kernel. Can be a single number or a
           tuple `(sH, sW)`. Default: 1
         padding: implicit paddings on both sides of the input. Can be a
@@ -101,7 +101,7 @@ add_docstr(
         weight: quantized filters of shape
           :math:`(\text{out_channels} , \frac{\text{in_channels}}{\text{groups}} , kD , kH , kW)`
         bias: **non-quantized** bias tensor of shape
-          :math:`(\text{out_channels})`. The tensor type must be `torch.float`.
+          :math:`(\text{out_channels})`. The tensor type must be `flow.float`.
         stride: the stride of the convolving kernel. Can be a single number or a
           tuple `(sD, sH, sW)`. Default: 1
         padding: implicit paddings on both sides of the input. Can be a
