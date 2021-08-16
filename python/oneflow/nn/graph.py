@@ -69,6 +69,8 @@ class Graph(object):
     def debug(self, mode: bool = True) -> None:
         if get_rank() != 0:
             return
+        else:
+            print("Note that nn.Graph.debug() only print debug info on rank 0.")
         self._debug = mode
         for name, block in self._blocks.items():
             assert block.type == BlockType.MODULE
