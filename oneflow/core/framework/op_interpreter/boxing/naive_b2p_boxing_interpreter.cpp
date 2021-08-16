@@ -36,7 +36,7 @@ Maybe<one::Tensor> NaiveB2PBoxingInterpreter::InterpretImpl(
     tensor = JUST(one::functional::ZerosLike(tensor));
   }
   return one::functional::ToConsistent(tensor, out_parallel_desc, *JUST(GetSbpList(out_nd_sbp)),
-                                       {});
+                                       GetNoneSbpList());
 }
 
 }  // namespace oneflow
