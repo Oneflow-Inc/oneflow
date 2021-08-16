@@ -26,6 +26,7 @@ class ForEnv {};
 class EagerExecution {};
 
 class EnableDTR {};
+class DTRMemoryThreshold {};
 
 class MultiClient {};
 

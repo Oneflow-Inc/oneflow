@@ -23,7 +23,7 @@ DTRTensorPool::DTRTensorPool() {
     start_time_ = std::chrono::steady_clock::now();
 }
 
-Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
+vm::DTREagerBlobObject* DTRTensorPool::find_best_tensor() {
     double min_cost = -1;
     vm::DTREagerBlobObject* best(nullptr);
     for (auto tensor : candidates_) {
@@ -39,7 +39,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
 }
 
 Maybe<void> DTRTensorPool::find_best_tensor_and_evict() {
-    auto* best = JUST(find_best_tensor());
+    auto* best = find_best_tensor();
     CHECK_NOTNULL_OR_RETURN(best);
     JUST(best->evict());
     return Maybe<void>::Ok();

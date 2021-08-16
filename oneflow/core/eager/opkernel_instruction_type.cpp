@@ -694,9 +694,10 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     }));
 
     // TODO: execute function, update outputs, if execute failure (OOM), evict()
-    while(JUST(object->execute())) {
-      JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict());
-    }
+    // while(!JUST(object->execute())) {
+    //   JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict());
+    // }
+    JUST(object->execute());
 
     // unpin inputs
     JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {

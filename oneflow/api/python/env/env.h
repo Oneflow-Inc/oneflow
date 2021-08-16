@@ -45,9 +45,11 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> EnableDTRStrategy(bool enable_dtr) {
+inline Maybe<void> EnableDTRStrategy(bool enable_dtr, double thres) {
   CHECK_NOTNULL_OR_RETURN((Global<bool, EnableDTR>::Get()));
+  CHECK_NOTNULL_OR_RETURN((Global<double, DTRMemoryThreshold>::Get()));
   *Global<bool, EnableDTR>::Get() = enable_dtr;
+  *Global<double, DTRMemoryThreshold>::Get() = thres;
   return Maybe<void>::Ok();
 }
 

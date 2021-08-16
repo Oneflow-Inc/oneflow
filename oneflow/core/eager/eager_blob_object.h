@@ -166,7 +166,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
     }
   Maybe<bool> execute() {
     evict_flag_ = false;
-    return true;
+    return false;   // return false to enter find_best_and_evict()
   }
   double parent_cost();
   double child_cost();

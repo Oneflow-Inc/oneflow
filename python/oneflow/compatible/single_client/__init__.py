@@ -56,7 +56,7 @@ session_context.OpenDefaultSession(
     session_util.Session(oneflow._oneflow_internal.NewSessionId())
 )
 oneflow._oneflow_internal.EnableEagerEnvironment(False)
-oneflow._oneflow_internal.EnableDTRStrategy(False)
+oneflow._oneflow_internal.EnableDTRStrategy(False, 1)
 del env_util
 del session_util
 del session_context

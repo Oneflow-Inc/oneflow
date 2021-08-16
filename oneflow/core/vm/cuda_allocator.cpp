@@ -18,6 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/vm/cuda_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/framework/tensor_pool.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include <iostream>
 
 namespace oneflow {
@@ -274,6 +277,24 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (piece == nullptr) {
     if (DeallocateFreeBlockForGarbageCollection() && AllocateBlockToExtendTotalMem(aligned_size)) {
       piece = FindPiece(aligned_size);
+    }
+  }
+
+  // test DTRMemoryThreshold
+  // double test_thres = oneflow::GetDTRMemoryThreshold();
+  // std::cout << test_thres << std::endl;
+
+  if (piece == nullptr && oneflow::DTREnabled()) {
+    int it = 0;   // evict iteration times
+    while (piece == nullptr && it < 50) {
+      CHECK_JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict());
+      if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
+      if (piece == nullptr) {
+        if (DeallocateFreeBlockForGarbageCollection() && AllocateBlockToExtendTotalMem(aligned_size)) {
+          piece = FindPiece(aligned_size);
+        }
+      }
+      it++;
     }
   }
 

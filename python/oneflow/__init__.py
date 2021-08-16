@@ -83,7 +83,7 @@ session_ctx.OpenDefaultSession(
 )
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
-oneflow._oneflow_internal.EnableDTRStrategy(False)
+oneflow._oneflow_internal.EnableDTRStrategy(False, 1)
 del env_util
 from oneflow.framework import python_callback, register_python_callback
 
