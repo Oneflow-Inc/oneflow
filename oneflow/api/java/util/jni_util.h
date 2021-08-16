@@ -23,12 +23,12 @@ inline std::string Subreplace(std::string ori_str, std::string sub_str, std::str
   return ori_str;
 }
 
-// 1 for little endian, 0 for big endian
-// take 32bit machine for example
-// lower memory ----> higher memory
-// little endian: 0x01 0x00 0x00 0x00
-// big endian:    0x00 0x00 0x00 0x01
 inline int Endian() {
+  // 1 for little endian, 0 for big endian
+  // take 32bit machine for example
+  // lower memory ----> higher memory
+  // little endian: 0x01 0x00 0x00 0x00
+  // big endian:    0x00 0x00 0x00 0x01
   int x = 1;
   char *y = (char*) &x;
   return *y;

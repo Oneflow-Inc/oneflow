@@ -28,8 +28,6 @@ inline void InitSession(const std::string& device_tag) {
     resource->set_cpu_device_num(1);
     resource->set_gpu_device_num(0);
   }
-
-  std::cout << config_proto.DebugString() << std::endl;
   oneflow::InitLazyGlobalSession(oneflow::PbMessage2TxtString(config_proto));
 }
 

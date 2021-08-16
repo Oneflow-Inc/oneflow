@@ -17,8 +17,6 @@ inline void InitEnv(int ctrl_port) {
   machine->set_id(0);
   machine->set_addr("127.0.0.1");
   env_proto.set_ctrl_port(ctrl_port);
-
-  std::cout << env_proto.DebugString() << std::endl;
   return oneflow::InitEnv(env_proto.DebugString(), false).GetOrThrow();
 }
 

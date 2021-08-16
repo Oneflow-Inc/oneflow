@@ -13,9 +13,11 @@
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
+#include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/serving/saved_model.pb.h"
 
 namespace oneflow {
 
@@ -128,6 +130,45 @@ inline void CurJobAddOp(const std::string& op_conf_proto) {
   oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf.DebugString());
 }
 
+inline oneflow::SavedModel LoadModel(std::string full_path_name) {
+  oneflow::SavedModel saved_model;
+  std::ifstream file;
+  file.open(full_path_name, std::ios::in);
+  std::istream* file_istream = &file;
+  saved_model.ParseFromIstream(file_istream);
+  file.close();
+  return saved_model;
+}
+
+inline void CompileGraph(oneflow::SavedModel saved_model) {
+  // compile
+  std::string graph_name = saved_model.default_graph_name();
+  oneflow::GraphDef graph_def = saved_model.graphs().at(graph_name);
+
+  oneflow::JobBuildAndInferCtx_Open(graph_name);
+  
+  oneflow::JobConfigProto job_config_proto;
+  job_config_proto.set_job_name(graph_name);
+  job_config_proto.mutable_predict_conf();
+  // set signature
+  if (graph_def.has_default_signature_name()) {
+    auto signature_name = graph_def.default_signature_name();
+    auto job_signature_def = graph_def.signatures().at(signature_name);
+    job_config_proto.mutable_signature()->CopyFrom(job_signature_def);
+  }
+  SetJobConfForCurJobBuildAndInferCtx(job_config_proto.DebugString());
+  SetScopeForCurJob(job_config_proto.DebugString(), "0:0", "gpu");
+
+  auto op_list = graph_def.op_list();
+  for (auto op_conf = op_list.begin(); op_conf != op_list.end(); op_conf++) {
+    CurJobAddOp(op_conf->DebugString());
+  }
+  oneflow::CurJobBuildAndInferCtx_Complete();
+  oneflow::CurJobBuildAndInferCtx_Rebuild();
+  oneflow::ThreadLocalScopeStackPop();
+  oneflow::JobBuildAndInferCtx_Close();
+}
+
 inline void LoadCheckPoint(const std::string& load_job_name, signed char* path, int64_t path_length) {
   int64_t *shape = new int64_t[1]{ path_length };  // Todo: is there a better way to allocate memory?
 
@@ -232,6 +273,13 @@ inline void RunPullJobSync(const std::string& job_name,
 
   // we need to wait for the result since LaunchJob is asynchronous
   pull_tensor = tensor_future.get();
+}
+
+inline oneflow::InterUserJobInfo GetInterUserJobInfo() {
+  std::string inter_user_job_info = oneflow::GetSerializedInterUserJobInfo().GetOrThrow();
+  oneflow::InterUserJobInfo info;
+  info.ParseFromString(inter_user_job_info);
+  return info;
 }
 
 #endif  // ONEFLOW_API_JAVA_ENV_JOB_API_H_
