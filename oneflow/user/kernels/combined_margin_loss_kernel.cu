@@ -81,8 +81,7 @@ class CombinedMarginLossOpKernelState final : public user_op::OpKernelState {
 
 std::shared_ptr<user_op::OpKernelState> CreateCombinedMarginLossOpKernelState(
     user_op::KernelInitContext* ctx, const std::string& in_arg_name) {
-  if(ctx->parallel_ctx().parallel_num() == 1)
-  {
+  if (ctx->parallel_ctx().parallel_num() == 1) {
     return std::shared_ptr<user_op::OpKernelState>(nullptr);
   }
 

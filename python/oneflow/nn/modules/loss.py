@@ -1196,6 +1196,7 @@ class CombinedMarginLoss(Module):
                 [-0.4566, -0.0204]], dtype=oneflow.float32)
 
     """
+
     def __init__(self, m1: float = 1.0, m2: float = 0.0, m3: float = 0.0) -> None:
         super().__init__()
         self.m1 = m1
@@ -1204,8 +1205,9 @@ class CombinedMarginLoss(Module):
 
     def forward(self, x, label):
         depth = x.shape[1]
-        (y, _) = flow.F.combined_margin_loss(x, label,
-            m1 = self.m1, m2 = self.m2, m3 = self.m3, depth = depth)
+        (y, _) = flow.F.combined_margin_loss(
+            x, label, m1=self.m1, m2=self.m2, m3=self.m3, depth=depth
+        )
         return y
 
 

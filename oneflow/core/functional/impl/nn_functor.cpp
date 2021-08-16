@@ -395,19 +395,18 @@ class SmoothL1LossFunctor {
 };
 
 class CombinedMarginLossFunctor {
-  public:
+ public:
   CombinedMarginLossFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("combined_margin_loss")
-                          .Input("x")
-                          .Input("label")
-                          .Output("y")
-                          .Output("theta")
-                          .Build());
+                         .Input("x")
+                         .Input("label")
+                         .Output("y")
+                         .Output("theta")
+                         .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const std::shared_ptr<one::Tensor>& label,
-                                const float& m1, const float& m2, const float& m3,
-                                const int64_t& depth) const {
+                                const std::shared_ptr<one::Tensor>& label, const float& m1,
+                                const float& m2, const float& m3, const int64_t& depth) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("m1", m1));
     JUST(attrs.SetAttr<float>("m2", m2));

@@ -43,11 +43,11 @@ class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossInterpSta
   Maybe<void> Capture(CombinedMarginLossInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    ctx->requires_grad = inputs.at(0)->requires_grad();               // x
+    ctx->requires_grad = inputs.at(0)->requires_grad();  // x
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-    ctx->label_index = ctx->SaveTensorForBackward(inputs.at(1));      // label
-    ctx->theta_index = ctx->SaveTensorForBackward(outputs.at(1));     // theta
+    ctx->label_index = ctx->SaveTensorForBackward(inputs.at(1));   // label
+    ctx->theta_index = ctx->SaveTensorForBackward(outputs.at(1));  // theta
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->m1 = JUST(composed_attrs.GetAttr<float>("m1"));
@@ -65,10 +65,8 @@ class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossInterpSta
     if (ctx->requires_grad) {
       const auto& label = ctx->SavedTensors().at(ctx->label_index);
       const auto& theta = ctx->SavedTensors().at(ctx->theta_index);
-      in_grads->at(0) =
-        JUST(functional::CombinedMarginLossGrad(out_grads.at(0), label, theta,
-          ctx->m1, ctx->m2, ctx->m3, ctx->depth)
-      );
+      in_grads->at(0) = JUST(functional::CombinedMarginLossGrad(
+          out_grads.at(0), label, theta, ctx->m1, ctx->m2, ctx->m3, ctx->depth));
     }
     return Maybe<void>::Ok();
   }

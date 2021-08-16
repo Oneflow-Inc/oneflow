@@ -35,8 +35,10 @@ def _scatter_add_numpy(src, dim, index, outshape):
         ]
     return output
 
+
 def _np_one_hot(indices, depth):
     return np.eye(depth)[indices.reshape(-1)]
+
 
 def _np_gather_with_batch_dims(params, indices, axis):
     batch_dims = 1
@@ -46,6 +48,7 @@ def _np_gather_with_batch_dims(params, indices, axis):
         result.append(r)
     return np.stack(result)
 
+
 def _np_gather_with_batch_dims_grad(params, indices, axis, output):
     batch_dims = 1
     result = []
@@ -53,6 +56,7 @@ def _np_gather_with_batch_dims_grad(params, indices, axis, output):
         r = _scatter_add_numpy(np.ones_like(o), axis - batch_dims, i, p.shape)
         result.append(r)
     return np.stack(result)
+
 
 def _np_combined_margin_loss(np_input, np_label, m1, m2, m3):
     class_num = np_input.shape[1]
@@ -91,7 +95,7 @@ def _np_combined_margin_loss_grad(np_input, np_label, m1, m2, m3):
             dzy = _np_gather_with_batch_dims_grad(np_input, np_label_expand, 0, zy)
             cos_t = zy * 1
             t = np.arccos(cos_t)
-            dt = - 1 / np.sqrt((1 - cos_t * cos_t)) * dzy
+            dt = -1 / np.sqrt((1 - cos_t * cos_t)) * dzy
             if m1 != 1.0:
                 t = t * m1
                 dt = dt * m1
@@ -113,12 +117,15 @@ def _np_combined_margin_loss_grad(np_input, np_label, m1, m2, m3):
         result = np.ones(np_input.shape)
     return result
 
+
 def _test_combined_margin_loss(
     test_case, device_type, input_shape, label_shape, data_type, m1, m2, m3
 ):
     assert device_type in ["cpu", "cuda"]
     np_x = np.random.uniform(low=-1, high=1, size=input_shape).astype(np.float32)
-    np_labels = np.random.randint(0, input_shape[1], size=(*label_shape,)).astype(np.int32)
+    np_labels = np.random.randint(0, input_shape[1], size=(*label_shape,)).astype(
+        np.int32
+    )
     x = flow.Tensor(np_x, device=device_type, dtype=data_type, requires_grad=True)
     labels = flow.Tensor(np_labels, device=device_type, dtype=flow.int32)
     loss_func = flow.nn.CombinedMarginLoss(m1, m2, m3).to(flow.device(device_type))
@@ -126,9 +133,7 @@ def _test_combined_margin_loss(
     output.sum().backward()
 
     output_ref = _np_combined_margin_loss(np_x, np_labels, m1, m2, m3)
-    test_case.assertTrue(
-        np.allclose(output.numpy(), output_ref, rtol=1e-5, atol=1e-5)
-    )
+    test_case.assertTrue(np.allclose(output.numpy(), output_ref, rtol=1e-5, atol=1e-5))
     input_grad_ref = _np_combined_margin_loss_grad(np_x, np_labels, m1, m2, m3)
     test_case.assertTrue(
         np.allclose(x.grad.numpy(), input_grad_ref, rtol=1e-4, atol=1e-4)
@@ -140,7 +145,7 @@ class TestCombinedMarginLoss(flow.unittest.TestCase):
     def test_combined_margin_loss(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_combined_margin_loss]
-        arg_dict["device_type"] = [ "cpu", "cuda"]
+        arg_dict["device_type"] = ["cpu", "cuda"]
         arg_dict["input_shape"] = [(64, 1000)]
         arg_dict["label_shape"] = [(64,)]
         arg_dict["data_type"] = [flow.float32]

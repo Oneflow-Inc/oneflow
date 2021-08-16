@@ -262,9 +262,8 @@ class CombinedMarginLossGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& label,
-                           const std::shared_ptr<one::Tensor>& theta, 
-                           const float& m1, const float& m2, const float& m3,
-                           const int64_t& depth) const {
+                           const std::shared_ptr<one::Tensor>& theta, const float& m1,
+                           const float& m2, const float& m3, const int64_t& depth) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("m1", m1));
     JUST(attrs.SetAttr<float>("m2", m2));
