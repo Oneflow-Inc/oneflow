@@ -62,22 +62,6 @@ def where_op(condition, x=None, y=None):
     if x is None and y is None:
         return flow.nonzero(condition, as_tuple=True)
 
-    assert condition.dtype == flow.int32 or condition.dtype == flow.int8
-    if isinstance(x, int) or isinstance(x, float):
-        x = flow.Tensor(
-            [float(x)], dtype=flow.float32, device=flow.device(condition.device.type),
-        )
-    if isinstance(y, int) or isinstance(y, float):
-        y = flow.Tensor(
-            [float(y)], dtype=flow.float32, device=flow.device(condition.device.type),
-        )
-    assert (
-        condition.device.type == x.device.type
-        and condition.device.type == y.device.type
-    )
-    assert len(condition.shape) == len(x.shape) and len(condition.shape) == len(
-        y.shape
-    ), f"The dim of where module's inputs can not match, please check!"
     return flow.F.where(condition, x, y)
 
 

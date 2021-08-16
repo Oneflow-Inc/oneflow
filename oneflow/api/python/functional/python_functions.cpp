@@ -567,6 +567,49 @@ py::object PyLessEqual(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
+py::object PyWhere(py::args py_args, py::kwargs py_kwargs) {
+  // "Where(Tensor condition, Tensor x, Tensor y)"
+  // "WhereScalarX(Tensor condition, Scalar scalar, Tensor y)"
+  // "WhereScalarY(Tensor condition, Tensor x, Scalar scalar)"
+  // "WhereScalarXY(Tensor condition, Scalar x_scalar, Scalar y_scalar)"
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 3) << "3 positional inputs are required.";
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* condition = PyTuple_GetItem(args, 0);
+    PyObject* x = PyTuple_GetItem(args, 1);
+    PyObject* y = PyTuple_GetItem(args, 2);
+
+    CHECK_OR_RETURN(PyTensorCheck(condition)) << "condition should be a Tensor.";
+    auto cond_tensor = JUST(PyUnpackTensor(condition));
+    bool x_is_tensor = PyTensorCheck(x);
+    bool y_is_tensor = PyTensorCheck(y);
+
+    if (x_is_tensor && y_is_tensor) {
+      auto x_tensor = JUST(PyUnpackTensor(x));
+      auto y_tensor = JUST(PyUnpackTensor(y));
+      return functional::Where(cond_tensor, x_tensor, y_tensor);
+    } else if (!x_is_tensor && y_is_tensor) {
+      CHECK_OR_RETURN(PyScalarCheck(x)) << "The x should be a scalar.";
+      auto scalar = *JUST(PyUnpackScalar(x));
+      auto y_tensor = JUST(PyUnpackTensor(y));
+      return functional::WhereScalarX(cond_tensor, scalar, y_tensor);
+    } else if (x_is_tensor && !y_is_tensor) {
+      CHECK_OR_RETURN(PyScalarCheck(y)) << "The y should be a scalar.";
+      auto x_tensor = JUST(PyUnpackTensor(x));
+      auto scalar = *JUST(PyUnpackScalar(y));
+      return functional::WhereScalarY(cond_tensor, x_tensor, scalar);
+    } else {
+      CHECK_OR_RETURN(PyScalarCheck(x) && PyScalarCheck(y))
+          << "The x and y should be both a scalar.";
+      auto x_scalar = *JUST(PyUnpackScalar(x));
+      auto y_scalar = *JUST(PyUnpackScalar(y));
+      return functional::WhereScalarXY(cond_tensor, x_scalar, y_scalar);
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
 }  // namespace functional
 }  // namespace one
 
@@ -586,6 +629,7 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("greater_equal", &functional::PyGreaterEqual);
   m.def("less", &functional::PyLess);
   m.def("less_equal", &functional::PyLessEqual);
+  m.def("where", &functional::PyWhere);
 }
 
 }  // namespace oneflow
