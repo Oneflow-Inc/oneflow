@@ -98,4 +98,17 @@ Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp) {
   return GetNdSbpStrList(JUST(GetDualNdSbp(nd_sbp)));
 }
 
+namespace private_details {
+
+Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::NdSbp> nd_sbp) {
+  const auto& vec = std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>();
+  CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    vec->push_back(SymbolOf(sbp_parallel));
+  }
+  return vec;
+}
+
+}  // namespace private_details
+
 }  // namespace oneflow

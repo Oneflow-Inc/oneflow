@@ -18,6 +18,8 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/optional.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
@@ -155,6 +157,27 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
 };
 
+class ConsistentToConsistentOpExpr : public OpExpr {
+ public:
+  virtual ~ConsistentToConsistentOpExpr() = default;
+
+  static Maybe<ConsistentToConsistentOpExpr> New(const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp);
+
+  const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp() const { return grad_nd_sbp_; }
+  const std::string& op_type_name() const override;
+  int input_size() const override { return 1; }
+  int output_size() const override { return 1; }
+
+  Maybe<bool> IsGradDisabled() const override { return false; }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
+
+ protected:
+  ConsistentToConsistentOpExpr(const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp);
+
+  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp_;  //  Reserved for configuring grad sbp
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
+};
+
 class CastConsistentOpExpr : public OpExpr {
  public:
   virtual ~CastConsistentOpExpr() = default;
@@ -196,25 +219,6 @@ class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
 
  private:
   CastFromConsistentOpExpr(const std::string& op_name);
-};
-
-class ConsistentToConsistentOpExpr final : public CastConsistentOpExpr {
- public:
-  ~ConsistentToConsistentOpExpr() = default;
-
-  static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name);
-
-  const std::string& op_type_name() const override;
-
-  // Note(zwx): ConsistentToConsistentOpExpr is currently only used by lazy,
-  //     there's no need to gen grad through autograd engine
-  Maybe<bool> IsGradDisabled() const override { return true; }
-  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override {
-    UNIMPLEMENTED_THEN_RETURN();
-  }
-
- private:
-  ConsistentToConsistentOpExpr(const std::string& op_name);
 };
 
 // NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
