@@ -37,7 +37,7 @@
   bind_python: False
 
 - name: "broadcast_add"
-  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y, *, Bool inplace=False)"
   bind_python: False
 
 - name: "sub_scalar_by_tensor"
