@@ -164,12 +164,12 @@ def save(
         if consistent_mode:
             assert (
                 var.is_consistent
-            ), "consistent tensor is needed, but {name} is a local tensor"
+            ), f"consistent tensor is needed, but {name} is a local tensor"
             var_dict[name] = var.to_consistent(sbp=flow.sbp.broadcast).to_local()
         else:
             assert (
                 not var.is_consistent
-            ), "local tensor is needed, but {name} is a consistent tensor"
+            ), f"local tensor is needed, but {name} is a consistent tensor"
 
     rank = flow.framework.distribute.get_rank()
     if consistent_mode and rank != consistent_dst_rank:

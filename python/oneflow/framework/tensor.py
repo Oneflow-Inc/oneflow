@@ -331,35 +331,6 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     return tensor
 
 
-def _convert_to_placement_scope(placement_or_device):
-    if isinstance(placement_or_device, flow.placement):
-        placement = placement_or_device
-        return flow.scope.placement(
-            placement.device_type,
-            list(placement.parallel_conf.device_name()),
-            placement.hierarchy,
-        )
-    else:
-        device = placement_or_device
-        # TODO(jianhao): replace 0 with real machine id
-        machine_id = 0
-        # TODO(jianhao): support cuda in of
-        if device.type == "cuda":
-            device_tag = "gpu"
-        else:
-            device_tag = device.type
-        return flow.scope.placement(
-            device_tag, "{}:{}".format(machine_id, device.index), None
-        )
-
-
-def _placement_scope(self):
-    if self.is_consistent:
-        return _convert_to_placement_scope(self.placement)
-    else:
-        return _convert_to_placement_scope(self.device)
-
-
 def _copy(self, other: Union[Tensor, np.ndarray]):
     if self.is_consistent:
         assert isinstance(other, Tensor)
@@ -432,7 +403,6 @@ def RegisterMethods():
     Tensor.xavier_uniform_ = _xavier_uniform
     Tensor.normal_ = _normal
     Tensor.fill_ = _fill
-    Tensor._placement_scope = _placement_scope
     Tensor.copy_ = _copy
     Tensor.get_device = _get_device
     Tensor._meta_repr = _meta_repr
