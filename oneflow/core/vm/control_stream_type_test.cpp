@@ -45,7 +45,7 @@ TEST(ControlStreamType, new_symbol_symbol) {
   int64_t symbol_id = IdUtil::NewLogicalSymbolId();
   list.EmplaceBack(NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   ASSERT_TRUE(vm->pending_msg_list().empty());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   ASSERT_EQ(vm->pending_msg_list().size(), 1 * 2);
   vm->Schedule();
   ASSERT_TRUE(vm->pending_msg_list().empty());

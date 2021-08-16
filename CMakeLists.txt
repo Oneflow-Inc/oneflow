@@ -1,6 +1,11 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.14.0)
 
+if (NOT CMAKE_BUILD_TYPE)
+  message(STATUS "No build type selected, default to Release")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
+endif()
+
 if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
   message(FATAL_ERROR "Expected CMAKE_BUILD_TYPE is Debug, Release, RelWithDebInfo or MinSizeRel, got ${CMAKE_BUILD_TYPE}")
 endif()
@@ -137,6 +142,8 @@ endif()
 include(third_party)
 
 if (BUILD_CUDA)
+  enable_language(CUDA)
+  include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
   message(STATUS "CUDA_VERSION: ${CUDA_VERSION}")
   message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
   set(CUDA_SEPARABLE_COMPILATION OFF)
@@ -177,6 +184,7 @@ if (BUILD_CUDA)
     list(APPEND CUDA_NVCC_FLAGS -gencode ${CUDA_NVCC_GENCODE})
   endforeach()
   message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
+  list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
 endif()
 
 message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})

@@ -32,9 +32,13 @@ limitations under the License.
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/framework/transport_util.h"
+#include "oneflow/core/framework/placement_sbp_util.h"
+#include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/decorator.h"
+#include "oneflow/core/ccl/ccl.h"
 
 namespace oneflow {
 namespace one {
@@ -44,121 +48,210 @@ namespace impl {
 
 namespace {
 
-Maybe<HashMap<int64_t, std::shared_ptr<FlatShape>>> All2AllSyncShape(const Shape& shape) {
+// clang-format off
+FLAT_MSG_BEGIN(FlatShapeAndDataType);
+  // Methods
+  OF_PUBLIC static Maybe<FlatShapeAndDataType> New() {
+    const auto& flat_shape_dtype = std::make_shared<FlatShapeAndDataType>();
+    flat_shape_dtype->clear();
+    return flat_shape_dtype;
+  }
+  OF_PUBLIC static Maybe<FlatShapeAndDataType> New(const Shape& shape, DataType dtype) {
+    const auto& flat_shape_dtype = JUST(New());
+    JUST(flat_shape_dtype->mutable_shape()->Init(shape));
+    flat_shape_dtype->set_dtype(dtype);
+    return flat_shape_dtype;
+  }
+  OF_PUBLIC Maybe<void> Check(const Shape& shape, DataType dtype) const {
+    JUST(this->shape().Check(shape));
+    CHECK_EQ_OR_RETURN(this->dtype(), dtype);
+    return Maybe<void>::Ok();
+  }
+  OF_PUBLIC Maybe<void> ToShape(Shape* shape) const { return this->shape().ToShape(shape); }
+  OF_PUBLIC Maybe<Shape> ToShape() const { return shape().ToShape(); }
+  OF_PUBLIC int64_t At(int i) const { return shape().At(i); }
+  OF_PUBLIC int64_t NumAxes() const { return shape().NumAxes(); }
+
+  // Fields
+  FLAT_MSG_DEFINE_OPTIONAL(FlatShape, shape);
+  FLAT_MSG_DEFINE_OPTIONAL(DataType, dtype);
+FLAT_MSG_END(FlatShapeAndDataType);
+// clang-format on
+
+Maybe<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>> BroadcastGatherShapeAndDataType(
+    const Shape& shape, DataType dtype, Symbol<ParallelDesc> parallel_desc) {
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdAll2AllSyncShape));
-  const auto& send_buffer = JUST(FlatShape::New(shape));
-  const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShape>>>();
+      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncLocalShapeDtype));
+  const auto& send_buffer = JUST(FlatShapeAndDataType::New(shape, dtype));
+  const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>>();
   map->emplace(GlobalProcessCtx::Rank(), send_buffer);
   NaiveAsyncTransportCtx ctx(
       transport_token,
       [send_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = send_buffer.get();
-        *size = sizeof(FlatShape);
+        *size = sizeof(FlatShapeAndDataType);
         *Cb = [send_buffer] {};
         return Maybe<void>::Ok();
       },
       [map](int64_t rank, void** buffer, std::size_t* size,
             std::function<void()>* Cb) -> Maybe<void> {
-        const auto& recv_buffer = std::make_shared<FlatShape>();
+        const auto& recv_buffer = JUST(FlatShapeAndDataType::New());
         recv_buffer->clear();
         *buffer = recv_buffer.get();
-        *size = sizeof(FlatShape);
+        *size = sizeof(FlatShapeAndDataType);
         *Cb = [recv_buffer] {};
         CHECK_OR_RETURN(map->emplace(rank, recv_buffer).second);
         return Maybe<void>::Ok();
       });
-  const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-  JUST(TransportUtil::BroadcastToAllOtherRanks(rank_group, transport_token, &ctx));
-  JUST(TransportUtil::CollectFromAllOtherRanks(rank_group, transport_token, &ctx));
+  const auto& src_ranks = JUST(RankGroup::New(parallel_desc));
+  const auto& dst_ranks = JUST(RankGroupScope::CurrentRankGroup());
+  JUST(TransportUtil::BroadcastToOtherRanks(src_ranks, dst_ranks, transport_token, &ctx));
+  JUST(TransportUtil::CollectFromOtherRanks(src_ranks, dst_ranks, transport_token, &ctx));
   JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
   return map;
 }
 
-Maybe<Shape> GetConcatenatedShape(
-    const HashMap<int64_t, std::shared_ptr<FlatShape>>& rank2flat_shape,
+Maybe<int64_t> FindRoot(Symbol<ParallelDesc> broadcast_parallel_desc,
+                        Symbol<ParallelDesc> src_parallel_desc) {
+  for (int64_t process_id : broadcast_parallel_desc->sorted_machine_ids()) {
+    if (src_parallel_desc->ContainingMachineId(process_id)) { return process_id; }
+  }
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+auto* CachedFindRoot = DECORATE(&FindRoot, ThreadLocal);
+
+Maybe<FlatShapeAndDataType> BroadcastShapeAndDtype(const Shape& shape, DataType dtype,
+                                                   Symbol<ParallelDesc> parallel_desc) {
+  const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+  const auto& rank_group_parallel_desc =
+      JUST(RankGroup::GetDefaultParallelDesc(parallel_desc->device_type(), rank_group));
+  const auto& process_id2broadcast_group =
+      JUST(GetBroadcastGroupWithoutAcrossNode(parallel_desc, rank_group_parallel_desc));
+  const auto& broadcast_parallel_desc =
+      JUST(MapAt(*process_id2broadcast_group, GlobalProcessCtx::Rank()));
+
+  const auto& in_flat_shape_dtype = JUST(FlatShapeAndDataType::New(shape, dtype));
+  const auto& out_flat_shape_dtype = JUST(FlatShapeAndDataType::New());
+  int64_t root = JUST(CachedFindRoot(broadcast_parallel_desc, parallel_desc));
+  const auto& transport_token =
+      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncLocalShapeDtype));
+  JUST(ccl::CpuBroadcast(in_flat_shape_dtype.get(), out_flat_shape_dtype.get(),
+                         sizeof(FlatShapeAndDataType), root, broadcast_parallel_desc,
+                         transport_token));
+  return out_flat_shape_dtype;
+}
+
+Maybe<void> GetConcatenatedShapeAndCheckDtype(
+    Shape* logical_shape, DataType* dtype,
+    const HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>& rank2flat_shape_dtype,
     Symbol<ParallelDesc> parallel_desc, int64_t concat_axis) {
-  const auto& GetRankPhyShapeByParallelId = [&](int64_t parallel_id) -> Maybe<FlatShape> {
+  const auto& GetRankPhyShapeByParallelId =
+      [&](int64_t parallel_id) -> Maybe<FlatShapeAndDataType> {
     int64_t machine_id = JUST(parallel_desc->MachineId4ParallelId(parallel_id));
-    return JUST(MapAt(rank2flat_shape, machine_id));
+    return JUST(MapAt(rank2flat_shape_dtype, machine_id));
   };
-  const auto& first_flat_shape = JUST(GetRankPhyShapeByParallelId(0));
+  const auto& first_flat_shape_dtype = JUST(GetRankPhyShapeByParallelId(0));
   CHECK_GE_OR_RETURN(concat_axis, 0);
-  CHECK_LT_OR_RETURN(concat_axis, first_flat_shape->NumAxes());
-  int64_t logical_concat_dim = first_flat_shape->At(concat_axis);
+  CHECK_LT_OR_RETURN(concat_axis, first_flat_shape_dtype->NumAxes());
+  int64_t logical_concat_dim = first_flat_shape_dtype->At(concat_axis);
   for (int parallel_id = 1; parallel_id < parallel_desc->parallel_num(); ++parallel_id) {
-    const auto& rank_flat_shape = JUST(GetRankPhyShapeByParallelId(parallel_id));
-    CHECK_EQ_OR_RETURN(rank_flat_shape->NumAxes(), first_flat_shape->NumAxes());
-    logical_concat_dim += rank_flat_shape->At(concat_axis);
+    const auto& rank_flat_shape_dtype = JUST(GetRankPhyShapeByParallelId(parallel_id));
+    CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->NumAxes(), first_flat_shape_dtype->NumAxes());
+    logical_concat_dim += rank_flat_shape_dtype->At(concat_axis);
   }
   BalancedSplitter bs(logical_concat_dim, parallel_desc->parallel_num());
-  CHECK_EQ_OR_RETURN(first_flat_shape->At(concat_axis), bs.At(0).size());
-  const auto& shape = JUST(first_flat_shape->ToShape());
-  shape->Set(concat_axis, logical_concat_dim);
+  CHECK_EQ_OR_RETURN(first_flat_shape_dtype->At(concat_axis), bs.At(0).size());
+  JUST(first_flat_shape_dtype->ToShape(logical_shape));
+  logical_shape->Set(concat_axis, logical_concat_dim);
+  *dtype = first_flat_shape_dtype->dtype();
   for (int parallel_id = 1; parallel_id < parallel_desc->parallel_num(); ++parallel_id) {
-    const auto& rank_flat_shape = JUST(GetRankPhyShapeByParallelId(parallel_id));
-    for (int i = 0; i < shape->NumAxes(); ++i) {
+    const auto& rank_flat_shape_dtype = JUST(GetRankPhyShapeByParallelId(parallel_id));
+    for (int i = 0; i < logical_shape->NumAxes(); ++i) {
       if (i == concat_axis) {
-        CHECK_EQ_OR_RETURN(rank_flat_shape->At(i), bs.At(parallel_id).size());
+        CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->At(i), bs.At(parallel_id).size());
       } else {
-        CHECK_EQ_OR_RETURN(rank_flat_shape->At(i), shape->At(i));
+        CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->At(i), logical_shape->At(i));
       }
     }
+    CHECK_EQ_OR_RETURN(*dtype, rank_flat_shape_dtype->dtype());
   }
-  return shape;
+  return Maybe<void>::Ok();
 }
 
-Maybe<Shape> GetConsistentShape(const Shape& physical_shape, Symbol<ParallelDesc> parallel_desc,
-                                Symbol<cfg::ParallelDistribution> parallel_distribution) {
-  if (parallel_distribution->sbp_parallel_size() == 1
-      && parallel_distribution->sbp_parallel(0).has_split_parallel()) {
-    const auto& rank2flat_shape = JUST(All2AllSyncShape(physical_shape));
-    int64_t concat_axis = parallel_distribution->sbp_parallel(0).split_parallel().axis();
-    return GetConcatenatedShape(*rank2flat_shape, parallel_desc, concat_axis);
+Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and out */ dtype,
+                                       std::shared_ptr<const Shape> physical_shape,
+                                       Symbol<ParallelDesc> parallel_desc,
+                                       Symbol<cfg::NdSbp> nd_sbp) {
+  if (nd_sbp->sbp_parallel_size() == 1 && nd_sbp->sbp_parallel(0).has_split_parallel()) {
+    const auto& rank2flat_shape_dtype =
+        JUST(BroadcastGatherShapeAndDataType(*physical_shape, *dtype, parallel_desc));
+    int64_t concat_axis = nd_sbp->sbp_parallel(0).split_parallel().axis();
+    JUST(GetConcatenatedShapeAndCheckDtype(logical_shape, dtype, *rank2flat_shape_dtype,
+                                           parallel_desc, concat_axis));
   } else {
-    // no need to check shape across ranks because we will do it later by checking tensor meta.
-    return GetLogicalShape(physical_shape, *parallel_distribution, *parallel_desc);
+    if (JUST(RankGroup::New(parallel_desc)) != JUST(RankGroupScope::CurrentRankGroup())) {
+      const auto& flat_shape_dtype =
+          JUST(BroadcastShapeAndDtype(*physical_shape, *dtype, parallel_desc));
+      physical_shape = JUST(flat_shape_dtype->ToShape());
+      *dtype = flat_shape_dtype->dtype();
+    }
+    *logical_shape = *JUST(GetLogicalShape(*physical_shape, *nd_sbp, *parallel_desc));
   }
+  return Maybe<void>::Ok();
 }
 
-Maybe<one::UserOpExpr> FindOrCreatParallelDistributionOpExpr(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
-  thread_local HashMap<std::vector<Symbol<cfg::SbpParallel>>, std::shared_ptr<one::UserOpExpr>>
-      sbp_list2hierarchical_parallel_cast_op_expr;
-  auto iter = sbp_list2hierarchical_parallel_cast_op_expr.find(sbp_parallels);
-  if (iter == sbp_list2hierarchical_parallel_cast_op_expr.end()) {
-    const auto& op_expr =
-        JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
-                 .Input("in")
-                 .Output("out")
-                 .Attr<std::vector<std::string>>("parallel_distribution",
-                                                 *JUST(GetNdSbpStrList(sbp_parallels)))
-                 .Attr<std::string>("grad_mode", "restore")
-                 .Attr<std::vector<std::string>>("grad_parallel_distribution",
-                                                 std::vector<std::string>())
-                 .Build());
-    iter = sbp_list2hierarchical_parallel_cast_op_expr.emplace(sbp_parallels, op_expr).first;
-  }
-  return iter->second;
+Maybe<one::UserOpExpr> MakeNdSbpOpExpr(const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
+  return OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(sbp_parallels)))
+      .Attr<std::string>("grad_mode", "restore")
+      .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
+      .Build();
 }
+
+auto* CachedNdSbpOpExpr = DECORATE(&MakeNdSbpOpExpr, ThreadLocalCopiable);
 
 Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      Symbol<ParallelDesc> parallel_desc,
                                      const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
-  const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
+  const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& parallel_distribution_cast_op_expr =
-      JUST(FindOrCreatParallelDistributionOpExpr(sbp_parallels));
-  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(*parallel_distribution_cast_op_expr,
-                                                             {consistent_tensor}));
+  const auto& nd_sbp_cast_op_expr = JUST(CachedNdSbpOpExpr(sbp_parallels));
+
+  const auto& ret =
+      JUST(OpInterpUtil::Dispatch<one::Tensor>(*nd_sbp_cast_op_expr, {consistent_tensor}));
   return ret;
+}
+
+Maybe<Tensor> LazyConsistentToConsistent(
+    const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels, bool identity_grad,
+    const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels,
+    const std::shared_ptr<OpExpr>& op) {
+  CHECK_OR_RETURN(x->is_lazy());
+  CHECK_OR_RETURN(x->is_consistent());
+
+  Symbol<cfg::NdSbp> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
+  std::vector<std::string> grad_parallel_distribution = *JUST(GetNdSbpStrList(grad_sbp_parallels));
+
+  MutableAttrMap attrs;
+  JUST(attrs.SetAttr<bool>("identity_grad", identity_grad));
+  JUST(attrs.SetAttr<std::vector<std::string>>("grad_sbp", grad_parallel_distribution));
+
+  const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {x}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
+  return output;
 }
 
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 Symbol<ParallelDesc> parallel_desc,
                                 const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                                const Optional<Shape>& shape, const std::shared_ptr<OpExpr>& op) {
+                                const std::shared_ptr<OpExpr>& op) {
+  CHECK_OR_RETURN(!x->is_lazy())
+      << "local_tensor.to_consistent() is not supported within nn.Graph for now";
   CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
@@ -181,17 +274,15 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
       << Error::Unimplemented() << "tensor' device type must be same with placement.";
   CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
       << Error::Unimplemented() << "tensor must be on default device of the current rank.";
-  Symbol<cfg::ParallelDistribution> parallel_distribution = JUST(GetNdSbp(sbp_parallels));
-  std::shared_ptr<const Shape> shape_ptr;
-  if (shape.has_value()) {
-    shape_ptr = JUST(shape.value());
-  } else {
-    shape_ptr = JUST(GetConsistentShape(*input->shape(), parallel_desc, parallel_distribution));
-  }
+  Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  const auto& shape = std::make_shared<Shape>();
+  DataType dtype = x->dtype();
+  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));
   MutableAttrMap attrs;
-  JUST(attrs.SetAttr<Shape>("shape", *shape_ptr));
+  JUST(attrs.SetAttr<Shape>("shape", *shape));
+  JUST(attrs.SetAttr<DataType>("dtype", dtype));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {input}, OpExprInterpContext(attrs, parallel_desc, parallel_distribution)));
+      *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
 }
 
@@ -200,33 +291,44 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
 class ToConsistentFunctor {
  public:
   ToConsistentFunctor() {
-    op_ =
+    local_to_consistent_op_ =
         CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+    consistent_to_consistent_op_ = CHECK_JUST(
+        one::ConsistentToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_consistent"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                           const Optional<Shape>& shape) const {
+                           bool identity_grad,
+                           const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) const {
     if (x->is_consistent()) {
-      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels));
+      if (x->is_lazy()) {
+        return JUST(LazyConsistentToConsistent(x, parallel_desc, sbp_parallels, identity_grad,
+                                               grad_sbp_parallels, consistent_to_consistent_op_));
+      } else {
+        return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels));
+      }
     } else {
-      return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, shape, op_));
+      return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
     }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> local_to_consistent_op_;
+  std::shared_ptr<OpExpr> consistent_to_consistent_op_;
 };
 
 class ConsistentToLocalFunctor {
  public:
   ConsistentToLocalFunctor() {
     op_ = CHECK_JUST(
-        one::CastFromConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+        one::CastFromConsistentOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_local"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    CHECK_OR_RETURN(!x->is_lazy())
+        << "consistent_tensor.to_local() is not supported within nn.Graph for now";
     CHECK_OR_RETURN(x->is_consistent()) << "consistent tensors supported only";
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
   }

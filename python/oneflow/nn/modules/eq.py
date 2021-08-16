@@ -46,23 +46,7 @@ def eq_op(input, other):
         tensor([1, 1, 1, 0], dtype=oneflow.int8)
 
     """
-
-    if isinstance(other, flow.Tensor) or isinstance(
-        other, flow._oneflow_internal.Tensor
-    ):
-        for i in range(len(input.size())):
-            assert (
-                input.shape[i] >= other.shape[i]
-            ), "The second tensor's shape should broadcastable with the first argument."
-            if input.dtype != other.dtype:
-                other = other.to(dtype=input.dtype)
-    elif isinstance(other, int) or isinstance(other, float):
-        other = flow.Tensor([other], dtype=input.dtype, device=input.device)
-    else:
-        raise NotImplementedError(
-            "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
-        )
-    return flow.F.broadcast_equal(input, other)
+    return flow.F.equal(input, other)
 
 
 if __name__ == "__main__":
