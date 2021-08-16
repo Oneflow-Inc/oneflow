@@ -25,92 +25,79 @@ template<typename X, typename Y>
 class EitherPtr final {
  public:
   static_assert(!std::is_same<X, Y>::value, "X should not be Y");
-  EitherPtr() : type_(UnionType<Void>::value) {}
-  EitherPtr(const std::shared_ptr<X>& ptr) { Set(ptr); }
-  EitherPtr(const std::shared_ptr<Y>& ptr) { Set(ptr); }
-  EitherPtr(const EitherPtr<X, Y>& either_ptr) { CopyFrom(either_ptr); }
-  ~EitherPtr() { Reset(); }
+
+  using XPtr = std::shared_ptr<X>;
+  using YPtr = std::shared_ptr<Y>;
+
+  // WARNING: we should assume that the structure of shared_ptr<X> and shared_ptr<Y> is same,
+  // and obviously at most time the assumption holds
+  static_assert(sizeof(XPtr) == sizeof(YPtr), "unsupported shared_ptr implementation");
+
+  EitherPtr() : type_(UnionType<X>::value), x_ptr_(nullptr) {}
+  EitherPtr(const XPtr& ptr) : type_(UnionType<X>::value), x_ptr_(ptr) {}
+  EitherPtr(const YPtr& ptr) : type_(UnionType<Y>::value) { new (&x_ptr_) YPtr(ptr); }
+
+  EitherPtr(XPtr&& ptr) : type_(UnionType<X>::value), x_ptr_(std::move(ptr)) {}
+  EitherPtr(YPtr&& ptr) : type_(UnionType<Y>::value) { new (&x_ptr_) YPtr(std::move(ptr)); }
+
+  EitherPtr(const EitherPtr& either_ptr) : type_(either_ptr.type_), x_ptr_(either_ptr.x_ptr_) {}
+  EitherPtr(EitherPtr&& either_ptr)
+      : type_(either_ptr.type_), x_ptr_(std::move(either_ptr.x_ptr_)) {}
+
+  // the destructor of X or Y will be called properly because it will be stored in the deleter of
+  // shared_ptr while constructed
+  ~EitherPtr() = default;
+
+  EitherPtr& operator=(const EitherPtr& either_ptr) {
+    x_ptr_ = either_ptr.x_ptr_;
+    type_ = either_ptr.type_;
+    return *this;
+  }
+
+  EitherPtr& operator=(EitherPtr&& either_ptr) {
+    x_ptr_ = std::move(either_ptr.x_ptr_);
+    type_ = either_ptr.type_;
+    return *this;
+  }
 
   template<typename T>
   bool Has() const {
     return type_ == UnionType<T>::value;
   }
+
   template<typename T>
   const std::shared_ptr<T>& Get() const {
-    CHECK(this->template Has<T>());
-    return Cast<T>();
-  }
-  void Reset(const std::shared_ptr<X>& ptr) {
-    Reset();
-    Set(ptr);
-  }
-  void Reset(const std::shared_ptr<Y>& ptr) {
-    Reset();
-    Set(ptr);
-  }
-
-  void Reset() {
-    if (type_ == UnionType<Void>::value) {
-      union_.reset();
-    } else if (type_ == UnionType<X>::value) {
-      MutCast<X>()->reset();
-    } else if (type_ == UnionType<Y>::value) {
-      MutCast<Y>()->reset();
-    } else {
-      LOG(FATAL) << "UNIMPLEMENTED";
-    }
+    return Get(tag<T>{});
   }
 
  private:
-  struct Void {};
   template<typename T, typename Enable = void>
   struct UnionType;
   template<typename T>
-  struct UnionType<T, typename std::enable_if<std::is_same<Void, T>::value>::type> {
-    static const int8_t value = 0;
-  };
-  template<typename T>
   struct UnionType<T, typename std::enable_if<std::is_same<X, T>::value>::type> {
-    static const int8_t value = 1;
+    static constexpr int8_t value = 0;
   };
   template<typename T>
   struct UnionType<T, typename std::enable_if<std::is_same<Y, T>::value>::type> {
-    static const int8_t value = 2;
+    static constexpr int8_t value = 1;
   };
-  void CopyFrom(const EitherPtr<X, Y>& either_ptr) {
-    if (either_ptr.template Has<X>()) {
-      Set(either_ptr.template Get<X>());
-    } else if (either_ptr.template Has<Y>()) {
-      Set(either_ptr.template Get<Y>());
-    } else {
-      // do nothin
-    }
+
+  template<typename>
+  struct tag {};
+
+  const XPtr& Get(tag<X>) const {
+    CHECK(Has<X>());
+    return x_ptr_;
   }
-  void Set(const std::shared_ptr<X>& ptr) {
-    CHECK(union_.get() == nullptr);
-    *MutCast<X>() = ptr;
-    type_ = UnionType<X>::value;
-  }
-  void Set(const std::shared_ptr<Y>& ptr) {
-    CHECK(union_.get() == nullptr);
-    *MutCast<Y>() = ptr;
-    type_ = UnionType<Y>::value;
-  }
-  template<typename T>
-  std::shared_ptr<T>* MutCast() {
-    std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
-        reinterpret_cast<std::shared_ptr<T>*>(&union_);
-    return ptr;
-  }
-  template<typename T>
-  const std::shared_ptr<T>& Cast() const {
-    const std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
-        reinterpret_cast<const std::shared_ptr<T>*>(&union_);
+
+  const YPtr& Get(tag<Y>) const {
+    CHECK(Has<Y>());
+    const auto* __attribute__((__may_alias__)) ptr = reinterpret_cast<const YPtr*>(&x_ptr_);
     return *ptr;
   }
 
-  std::shared_ptr<Void> union_;
   int8_t type_;
+  std::shared_ptr<X> x_ptr_;
 };
 
 }  // namespace oneflow

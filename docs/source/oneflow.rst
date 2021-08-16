@@ -78,6 +78,7 @@ oneflow
             ones, 
             ones_like, 
             pow, 
+            rand,
             randn,
             repeat, 
             reshape, 
@@ -120,6 +121,7 @@ oneflow
             view, 
             where, 
             zeros, 
-            zeros_like
+            zeros_like,
+            is_nonzero,
 
 .. autofunction:: oneflow.data.load_mnist(train_batch_size=100, test_batch_size=100, data_format='NCHW')
