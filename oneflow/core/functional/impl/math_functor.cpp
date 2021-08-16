@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -25,6 +26,8 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 namespace one {
@@ -199,17 +202,49 @@ class TransposeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class RangeFunctor {
+class ArangeFunctor {
  public:
-  RangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
+  ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
   Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
-                           const DataType& dtype) const {
+                           const DataType& dtype, const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("limit", limit));
     JUST(attrs.SetAttr<int64_t>("delta", delta));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+
+    OpExprInterpContext ctx(attrs);
+    if (device) { ctx.device = JUST(device.value()); }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentArangeFunctor {
+ public:
+  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
+  Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
+                           const DataType& dtype, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("start", start));
+    JUST(attrs.SetAttr<int64_t>("limit", limit));
+    JUST(attrs.SetAttr<int64_t>("delta", delta));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+    }
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp));
   }
 
  private:
@@ -518,7 +553,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReduceSumFunctor>("ReduceSum");
   m.add_functor<impl::ReduceMeanFunctor>("ReduceMean");
   m.add_functor<impl::TransposeFunctor>("Transpose");
-  m.add_functor<impl::RangeFunctor>("Range");
+  m.add_functor<impl::ArangeFunctor>("Arange");
+  m.add_functor<impl::ConsistentArangeFunctor>("ConsistentArange");
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::CastFunctor>("Cast");
   m.add_functor<impl::ClipByScalarFunctor>("ClipByScalar");
