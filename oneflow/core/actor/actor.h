@@ -195,7 +195,7 @@ class Actor {
 
   const JobDesc* job_desc_;
   int64_t actor_id_;
-  int64_t global_work_stream_id_;
+  int64_t thrd_id_;
   int64_t job_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
