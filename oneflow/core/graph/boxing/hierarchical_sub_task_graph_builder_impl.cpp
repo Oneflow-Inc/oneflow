@@ -235,6 +235,8 @@ bool IsDistributionEquals(const ParallelDesc& in_parallel_desc,
       if (in_tensor_slice_view != out_tensor_slice_view) { return false; }
     }
     return true;
+  } else if ((in_parallel_desc == out_parallel_desc) && (in_parallel_distribution == out_parallel_distribution)) {
+    return true;
   }
   return false;
 }
@@ -833,8 +835,9 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
                          &reduced_out_parallel_distribution);
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
-  if (IsDistributionEquals(in_parallel_desc, out_parallel_desc, in_parallel_distribution,
-                           out_parallel_distribution, logical_blob_desc.shape())) {
+  //LOG(INFO)<<"after InOutParallelDimReduce "<<" reduced_in_parallel_distribution "<<reduced_in_parallel_distribution.DebugString()<<" in_hierarchy "<<in_hierarchy->DebugStr()<<" reduced_out_parallel_distribution "<<reduced_out_parallel_distribution.DebugString()<<" in_hierarchy "<<out_hierarchy->DebugStr();
+  if (IsDistributionEquals(reduced_in_parallel_desc, reduced_out_parallel_desc, reduced_in_parallel_distribution,
+                           reduced_out_parallel_distribution, logical_blob_desc.shape())) {
     return impl_->distribution_equals_sub_tsk_gph_builder_->Build(
         ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
         reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
