@@ -52,6 +52,8 @@ function(target_treat_warnings_as_errors target)
 
     # disable for pointer operations of intrusive linked lists
     target_try_compile_options(${target} -Wno-error=array-bounds)
+
+    target_try_compile_options(${target} -Wno-error=comment)
   endif()
 endfunction()
 
@@ -297,6 +299,7 @@ target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_i
 
 target_compile_options(of_ccobj PRIVATE -Werror=return-type)
 target_treat_warnings_as_errors(of_ccobj)
+target_compile_options(of_ccobj PRIVATE -DGOOGLE_LOGGING)
 
 # py ext lib
 add_library(of_pyext_obj ${of_pyext_obj_cc})

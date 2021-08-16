@@ -162,7 +162,7 @@ void XlaGraphCompiler::BuildEntryParameters(const std::vector<Parameter>& entry_
 xla::ShapeIndex MakeShapeIndex(const std::vector<int>& shape) {
   xla::ShapeIndex shape_index;
   for (int i = 0; i < shape.size(); ++i) { shape_index.push_back(shape[i]); }
-  return std::move(shape_index);
+  return shape_index;
 }
 
 std::shared_ptr<Executable> XlaGraphCompiler::Compile(
