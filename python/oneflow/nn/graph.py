@@ -26,7 +26,7 @@ from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph_block import Block, BlockType
-from oneflow.nn.graph_optimizer import OptGroup, OptimizerConfig, VariableConfig
+from oneflow.nn.graph_optimizer import OptDict, VariableConfig
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
@@ -43,8 +43,7 @@ class Graph(object):
         self.config.proto.set_job_name(self._name)
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         self._blocks = OrderedDict()
-        self._optimizers_conf = OrderedDict()
-        self._opt_groups = []
+        self._opts = []
         self._variables_conf = OrderedDict()
         self._is_compiled = False
         self._job_proto = None
@@ -73,32 +72,22 @@ class Graph(object):
     def build(self, *args):
         raise NotImplementedError()
 
-    def add_opt_group(self, opt_group):
-        assert isinstance(opt_group, dict), "opt group must be a dict"
-        assert "optim" in opt_group, "opt group must has an optimizer"
-        assert isinstance(opt_group["optim"], Optimizer)
-        if "lr_sch" in opt_group:
-            assert isinstance(opt_group["lr_sch"], LrScheduler)
-            assert (
-                opt_group["lr_sch"]._optimizer is opt_group["optim"]
-            ), "lr_scheduler's optimizer must be the same optimizer in the opt group."
-        self._opt_groups.append(opt_group)
-
     def add_optimizer(
-        self,
-        name: str,
-        optimizer: Optimizer = None,
-        lr_scheduler: LrScheduler = None,
-        # TODO(): grad cliping
-        # grad_clipping_conf=None,
+        self, optim: Optimizer, *, lr_sch: LrScheduler,
     ):
-        assert name is not None, "name cannot be None"
-        assert type(name) is str, "name must be an instance of str"
-        assert optimizer is not None, "optimizer cannot be None"
+        opt_dict = dict()
+        assert optim is not None, "optimizer cannot be None"
         assert isinstance(
-            optimizer, Optimizer
+            optim, Optimizer
         ), "optimizer must be an instance of Optimizer"
-        self._optimizers_conf[name] = OptimizerConfig(name, optimizer, lr_scheduler,)
+        opt_dict["optim"] = optim
+        if lr_sch is not None:
+            assert isinstance(lr_sch, LrScheduler)
+            assert (
+                lr_sch._optimizer is optim
+            ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
+            opt_dict["lr_sch"] = lr_sch
+        self._opts.append(opt_dict)
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -117,21 +106,17 @@ class Graph(object):
                 yield bu
 
     def _generate_optimizer_and_variable_configs(self):
-        if len(self._optimizers_conf) > 0 or len(self._opt_groups) > 0:
+        if len(self._opts) > 0:
             self.config._train(True)
         for state_block in self._state():
             if state_block.type == BlockType.PARAMETER:
                 self._variables_conf[state_block.origin] = VariableConfig(
                     state_block.name_prefix + state_block.name
                 )
-        for name, opt_config in self._optimizers_conf.items():
-            self.config._generate_optimizer_and_variable_configs_deprecated(
-                opt_config, self._variables_conf
-            )
-        for opt in self._opt_groups:
-            opt_group = OptGroup(opt)
+        for opt in self._opts:
+            opt_dict = OptDict(opt)
             self.config._generate_optimizer_and_variable_configs(
-                opt_group, self._variables_conf
+                opt_dict, self._variables_conf
             )
 
     def _compile(self, *args):
@@ -501,23 +486,14 @@ class GraphConfig(FunctionConfig):
         else:
             self.proto.mutable_predict_conf()
 
-    def _generate_optimizer_and_variable_configs_deprecated(
-        self,
-        optimizer_config: OptimizerConfig = None,
-        variables_conf: OrderedDict = None,
-    ):
-        optimizer_config.generate_optimizer_and_variable_configs(
-            self.proto.mutable_train_conf(), variables_conf
-        )
-
     def _generate_optimizer_and_variable_configs(
-        self, opt_group: OptGroup = None, variables_conf: OrderedDict = None,
+        self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):
-        opt_group.generate_optimizer_and_variable_configs(
+        opt_dict.generate_optimizer_and_variable_configs(
             self.proto.mutable_train_conf(), variables_conf
         )
 
 
 from oneflow.nn.graph import Graph as Graph
 from oneflow.nn.graph_block import Block, BlockConfig
-from oneflow.nn.graph_optimizer import OptimizerConfig
+from oneflow.nn.graph_optimizer import OptDict

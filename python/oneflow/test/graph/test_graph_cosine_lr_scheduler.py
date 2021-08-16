@@ -98,8 +98,7 @@ def _test_linear_graph_train_with_cosine_lr(test_case, iter_num, device):
             def __init__(self):
                 super().__init__()
                 self.linear = linear
-                opt_group = {"optim": of_sgd, "lr_sch": cosine_annealing_lr}
-                self.add_opt_group(opt_group)
+                self.add_optimizer(of_sgd, lr_sch=cosine_annealing_lr)
 
             def build(self, x):
                 out = self.linear(x)

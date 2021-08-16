@@ -58,8 +58,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = m
-                opt0 = {"optim": sgd0, "lr_sch": cosine_lr}
-                self.add_opt_group(opt0)
+                self.add_optimizer(sgd0, lr_sch=cosine_lr)
 
             def build(self, x):
                 out = self.m(x)
@@ -128,15 +127,12 @@ class TestGraphOptimizer(flow.unittest.TestCase):
             sgd1, steps=100, alpha=0.1
         )
 
-        opt0 = {"optim": sgd0, "lr_sch": cosine_lr0}
-        opt1 = {"optim": sgd1, "lr_sch": cosine_lr1}
-
         class CustomGraph0(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.m = m
-                self.add_opt_group(opt0)
-                self.add_opt_group(opt1)
+                self.add_optimizer(sgd0, lr_sch=cosine_lr0)
+                self.add_optimizer(sgd1, lr_sch=cosine_lr1)
 
             def build(self, x, y):
                 out0, out1 = self.m(x, y)
