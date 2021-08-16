@@ -28,7 +28,7 @@ struct NarrowCaptureState : public AutoGradCaptureState {
   int64_t length;
 };
 
-class NarrowOp : public OpExprGradFunction<NarrowCaptureState> {
+class Narrow : public OpExprGradFunction<NarrowCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -67,7 +67,7 @@ class NarrowOp : public OpExprGradFunction<NarrowCaptureState> {
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("narrow", NarrowOp);
+REGISTER_OP_EXPR_GRAD_FUNCTION("narrow", Narrow);
 
 }  // namespace one
 }  // namespace oneflow
