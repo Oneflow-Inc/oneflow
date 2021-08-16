@@ -82,10 +82,10 @@ class InplaceableBroadcastBinaryFunctor {
           int dim_a = x_shape->At(i);
           int dim_b = y_shape->At(index);
           CHECK_OR_RETURN(dim_a == dim_b || (dim_a > 0 && dim_b == 1))
-              << "Can't expand " << y_shape->ToString() << "to" << x_shape->ToString();
+              << "Can't expand " << y_shape->ToString() << " to " << x_shape->ToString();
         } else {
           CHECK_GT_OR_RETURN(x_shape->At(i), 0)
-              << "Can't expand " << y_shape->ToString() << "to" << x_shape->ToString();
+              << "Can't expand " << y_shape->ToString() << " to " << x_shape->ToString();
         }
       }
 
