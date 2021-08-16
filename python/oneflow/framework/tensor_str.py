@@ -33,17 +33,6 @@ class __PrinterOptions(object):
 
 PRINT_OPTS = __PrinterOptions()
 
-
-def _convert_to_local_tensor(self):
-    # consistent to local
-    if self.is_consistent:
-        placement = flow.placement("cpu", {0: [0]})
-        sbp = flow.sbp.broadcast
-        # TODO: delete `to("cuda")` after supporting cpu data broadcast
-        self = self.to("cuda").to_consistent(placement, sbp).to_local()
-    return self
-
-
 class _Formatter(object):
     def __init__(self, tensor):
         self.floating_dtype = tensor.dtype.is_floating_point
@@ -230,12 +219,6 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
-    # if self.is_consistent:
-    #     return "[...]"
-    # with flow.no_grad():
-    #     formatter = _Formatter(get_summarized_data(self) if summarize else self)
-    #     return _tensor_str_with_formatter(self, indent, summarize, formatter)
-
     def _convert_to_local_tensor(self, summarize):
         if not self.is_consistent:
             return get_summarized_data(self) if summarize else self
@@ -282,9 +265,6 @@ def cat_data(inp):
 
 
 def get_summarized_data(self):
-    # TODO: supports consistent slice and delete this assert
-    # assert self.is_local
-
     dim = self.dim()
     if dim == 0:
         return self
