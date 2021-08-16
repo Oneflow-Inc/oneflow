@@ -52,10 +52,6 @@ function(target_treat_warnings_as_errors target)
 
     # disable for pointer operations of intrusive linked lists
     target_try_compile_options(${target} -Wno-error=array-bounds)
-
-    # avoid check of memcpy for non-trivial types in opencv headers
-    target_try_compile_options(${target} -Wno-error=class-memaccess)
-
   endif()
 endfunction()
 
@@ -369,7 +365,7 @@ set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 add_custom_target(of_include_copy
   COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
 add_dependencies(of_include_copy oneflow_internal)
-foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
+foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS} ${CFG_INCLUDE_DIR})
   set(oneflow_all_include_file)
   file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
   copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)

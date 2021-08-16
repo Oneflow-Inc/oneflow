@@ -85,7 +85,7 @@ void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(DeviceCtx* ctx, const
         const T* from = in + outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size;
         std::copy(from, from + inner_dim_size, to);
       } else {
-        std::memset(to, 0, inner_dim_size * sizeof(K));
+        std::memset(reinterpret_cast<void*>(to), 0, inner_dim_size * sizeof(K));
       }
     }
   }
