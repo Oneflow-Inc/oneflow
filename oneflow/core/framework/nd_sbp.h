@@ -24,13 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace private_details {
-
-Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::NdSbp> nd_sbp);
-
-}
-
-static constexpr auto* GetSbpList = DECORATE(&private_details::RawGetSbpList, ThreadLocal);
+Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> nd_sbp);
 
 Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> sbp_list);
 
@@ -42,6 +36,19 @@ Maybe<std::vector<std::string>> GetNdSbpStrList(
 Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
 
 Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
+
+Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
+
+namespace private_details {
+
+Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::NdSbp> nd_sbp);
+
+}
+
+Maybe<std::string> SbpToString(Symbol<cfg::SbpParallel> sbp_sym);
+Maybe<std::string> NdSbpToString(Symbol<cfg::NdSbp> nd_sbp);
+
+static constexpr auto* GetSbpList = DECORATE(&private_details::RawGetSbpList, ThreadLocal);
 
 }  // namespace oneflow
 

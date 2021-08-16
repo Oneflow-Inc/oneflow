@@ -283,11 +283,18 @@ class ToConsistentFunctor {
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) const {
+    std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
-      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
+      tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
-      return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
+      tensor = JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
     }
+    if (x->is_consistent() && tensor != x) {
+      const auto& input_consistent_id = JUST(x->transport_token());
+      const auto& output_consistend_id = JUST(tensor->transport_token());
+      CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);
+    }
+    return tensor;
   }
 
  private:

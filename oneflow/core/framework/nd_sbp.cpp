@@ -111,4 +111,29 @@ Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::NdSbp> nd
 
 }  // namespace private_details
 
+Maybe<std::string> SbpToString(Symbol<cfg::SbpParallel> sbp_sym) {
+  std::string sbp_str = "oneflow.sbp.";
+  if (sbp_sym->has_broadcast_parallel()) {
+    sbp_str += "broadcast";
+  } else if (sbp_sym->has_partial_sum_parallel()) {
+    sbp_str += "partial_sum";
+  } else if (sbp_sym->has_split_parallel()) {
+    sbp_str += "split(axis=" + std::to_string(sbp_sym->split_parallel().axis()) + ")";
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+  return sbp_str;
+}
+
+Maybe<std::string> NdSbpToString(Symbol<cfg::NdSbp> nd_sbp) {
+  std::string str = "(";
+  for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
+    if (i > 0) { str += ", "; }
+    str += *JUST(SbpToString(SymbolOf(nd_sbp->sbp_parallel(i))));
+  }
+  if (nd_sbp->sbp_parallel_size() == 1) { str += ","; }
+  str += ")";
+  return str;
+}
+
 }  // namespace oneflow
