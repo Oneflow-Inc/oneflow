@@ -414,6 +414,10 @@
   signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
   bind_python: True
 
+- name: "arg_sort"
+  signature: "Tensor ArgSort(Tensor in, *, String direction)"
+  bind_python: True
+
 - name: "gather_nd"
   signature: "Tensor GatherNd(Tensor params, Tensor indices, *)"
   bind_python: True

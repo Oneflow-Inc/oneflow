@@ -509,6 +509,22 @@ class DimScatterMulScalarFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ArgSortFunctor {
+ public:
+  ArgSortFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("arg_sort").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::string direction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("direction", direction));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GatherNdFunctor {
  public:
   GatherNdFunctor() {
@@ -1425,6 +1441,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
+  m.add_functor<impl::ArgSortFunctor>("ArgSort");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
   m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
