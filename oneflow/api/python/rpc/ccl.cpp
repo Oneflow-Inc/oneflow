@@ -28,32 +28,45 @@ namespace py = pybind11;
 namespace oneflow {
 
 namespace {
-Maybe<py::bytes> CpuBroadcast(py::bytes* in, size_t elem_cnt, int64_t root) {
+Maybe<py::bytes> CpuBroadcast(py::bytes* in, int64_t root) {
   const auto& rank_group = JUST(RankGroup::DefaultRankGroup());
   const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(DeviceType::kCPU, rank_group));
-  JUST(ccl::Broadcast<DeviceType::kCPU>(&elem_cnt, &elem_cnt, sizeof(size_t), DataType::kChar, root,
-                                        parallel_desc, nullptr));
-
-  auto out = std::make_unique<char[]>(elem_cnt);
+  Py_ssize_t length;
+  char* buffer;
   if (GlobalProcessCtx::Rank() == root) {
     CHECK_NOTNULL_OR_RETURN(in);
-    JUST(ccl::Broadcast<DeviceType::kCPU>(py::cast<std::string>(*in).c_str(), out.get(), elem_cnt,
-                                          DataType::kChar, root, parallel_desc, nullptr));
-  } else {
-    JUST(ccl::Broadcast<DeviceType::kCPU>(nullptr, out.get(), elem_cnt, DataType::kChar, root,
-                                          parallel_desc, nullptr));
+    PyBytes_AsStringAndSize(in->ptr(), &buffer, &length);
   }
-  return py::bytes(out.get(), elem_cnt);
+  JUST(ccl::Broadcast<DeviceType::kCPU>(&length, &length, sizeof(length), DataType::kChar, root,
+                                        parallel_desc, nullptr));
+
+  if (GlobalProcessCtx::Rank() == root) {
+    JUST(ccl::Broadcast<DeviceType::kCPU>(buffer, buffer, length, DataType::kChar, root,
+                                          parallel_desc, nullptr));
+    return *in;
+  } else {
+    // https://github.com/pybind/pybind11/issues/1236#issuecomment-527730864
+    PyBytesObject* bytesObject =
+        static_cast<PyBytesObject*>(PyObject_Malloc(offsetof(PyBytesObject, ob_sval) + length + 1));
+
+    PyObject_INIT_VAR(bytesObject, &PyBytes_Type, length);
+    bytesObject->ob_shash = -1;
+    bytesObject->ob_sval[length] = '\0';
+    buffer = bytesObject->ob_sval;
+    JUST(ccl::Broadcast<DeviceType::kCPU>(nullptr, buffer, length, DataType::kChar, root,
+                                          parallel_desc, nullptr));
+    return py::reinterpret_steal<py::bytes>(reinterpret_cast<PyObject*>(bytesObject));
+  }
 }
 
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("cpu_broadcast", [](py::bytes in, size_t elem_cnt, int64_t root) -> py::bytes {
-    return CpuBroadcast(&in, elem_cnt, root).GetOrThrow();
+  m.def("cpu_broadcast", [](py::bytes in, int64_t root) -> py::bytes {
+    return CpuBroadcast(&in, root).GetOrThrow();
   });
-  m.def("cpu_broadcast", [](py::none in, size_t elem_cnt, int64_t root) -> py::bytes {
-    return CpuBroadcast(nullptr, elem_cnt, root).GetOrThrow();
+  m.def("cpu_broadcast", [](py::none in, int64_t root) -> py::bytes {
+    return CpuBroadcast(nullptr, root).GetOrThrow();
   });
 }
 
