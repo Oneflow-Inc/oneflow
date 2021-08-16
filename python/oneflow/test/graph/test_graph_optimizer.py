@@ -95,7 +95,6 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         momentum = 0.2
         sgd0 = flow.optim.SGD(
             [
-                # 一个param group
                 {
                     "params": [m.para0, m.para1, m.para2],
                     "lr": learning_rate,
