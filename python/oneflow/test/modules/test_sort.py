@@ -24,6 +24,7 @@ import oneflow as flow
 import oneflow.unittest
 from automated_test_util import *
 
+
 def _test_sort(test_case, data_shape, axis, descending, data_type, device):
     input = flow.Tensor(
         np.random.randn(*data_shape),
@@ -81,6 +82,7 @@ class TestSort(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=4).to(device)
         y = torch.sort(x, dim=random(low=-4, high=4).to(int), descending=random_bool())
         return y[0], y[1]
+
 
 if __name__ == "__main__":
     unittest.main()
