@@ -28,8 +28,6 @@ Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> nd_sbp);
 
 Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> sbp_list);
 
-Maybe<Symbol<cfg::NdSbp>> GetNdSbp(const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
-
 Maybe<std::vector<std::string>> GetNdSbpStrList(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
 
@@ -39,9 +37,14 @@ Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
 
 namespace private_details {
 
+Maybe<Symbol<cfg::NdSbp>> RawGetNdSbp(const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
 Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::NdSbp> nd_sbp);
 
-}
+}  // namespace private_details
+
+static constexpr auto* GetNdSbp = DECORATE(&private_details::RawGetNdSbp, ThreadLocal);
+static constexpr auto* GetSbpList = DECORATE(&private_details::RawGetSbpList, ThreadLocal);
+const std::vector<Symbol<cfg::SbpParallel>>& GetNoneSbpList();
 
 static constexpr auto* GetSbpList = DECORATE(&private_details::RawGetSbpList, ThreadLocal);
 
