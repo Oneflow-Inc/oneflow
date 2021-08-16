@@ -178,7 +178,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
             np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32))
         )
 
-    def _test_cuda_consistent_to_consistent_cpu_p2s(test_case):
+    def test_cuda_consistent_to_consistent_cpu_p2s(test_case):
         x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
         placement = flow.placement("cpu", {0: range(2)})
         y = x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
