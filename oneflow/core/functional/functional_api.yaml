@@ -942,6 +942,10 @@
   signature: "Tensor AllReduce(Tensor x)"
   bind_python: True
 
+- name: "broadcast"
+  signature: "Tensor Broadcast(Tensor x)"
+  bind_python: True
+
 - name: "select_first"
   signature: "Tensor SelectFirst(TensorTuple inputs)"
   bind_python: True
