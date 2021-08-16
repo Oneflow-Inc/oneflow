@@ -155,7 +155,7 @@ def cpu_op(input):
     return input.to(device="cpu")
 
 @register_tensor_op("cuda")
-def cpu_op(input):
+def cuda_op(input):
     """Returns a copy of this object in CUDA memory.
     If this object is already in CUDA memory and on the correct device, then no copy is performed and the original object is returned.
 
