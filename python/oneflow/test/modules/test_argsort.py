@@ -24,6 +24,7 @@ import oneflow as flow
 import oneflow.unittest
 from automated_test_util import *
 
+
 def _test_argsort(test_case, data_shape, axis, descending, data_type, device):
     input = flow.Tensor(
         np.random.randn(*data_shape),
@@ -66,8 +67,11 @@ class TestArgsort(flow.unittest.TestCase):
     def test_argsort_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4).to(device)
-        y = torch.argsort(x, dim=random(low=-4, high=4).to(int), descending=random_bool())
+        y = torch.argsort(
+            x, dim=random(low=-4, high=4).to(int), descending=random_bool()
+        )
         return y
+
 
 if __name__ == "__main__":
     unittest.main()
