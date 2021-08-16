@@ -177,7 +177,7 @@ class ConstantPad1d(Module):
     The interface is consistent with PyTorch, and referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad1d.html?highlight=constantpad1d#torch.nn.ConstantPad1d
 
-    For `N`-dimensional padding, use :func:`torch.nn.functional.pad()`.
+    For `N`-dimensional padding, use :func:`flow.nn.functional.pad()`.
 
     Args:
         padding (int, list, tuple): the size of the padding. If is `int`, uses the same
