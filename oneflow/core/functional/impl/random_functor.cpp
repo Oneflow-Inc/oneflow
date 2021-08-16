@@ -37,7 +37,6 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 
-
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -73,7 +72,6 @@ class BernoulliFunctor {
   std::shared_ptr<OpExpr> bernoulli_op_;
 };
 
-
 class RandFunctor {
  public:
   RandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
@@ -94,7 +92,6 @@ class RandFunctor {
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
 
-
     std::shared_ptr<one::Generator> gen;
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
@@ -103,7 +100,6 @@ class RandFunctor {
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
 
     const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
 
@@ -114,12 +110,10 @@ class RandFunctor {
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {},
                                             OpExprInterpContext(attrs, uniform_kernel_state));
-
     }
   }
 
  private:
-
   std::shared_ptr<OpExpr> op_;
 };
 
@@ -152,7 +146,6 @@ class ConsistentRandFunctor {
     }
 
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
 
     const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
 
@@ -258,7 +251,70 @@ class ConsistentRandNFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
+class RandintFunctor {
+ public:
+  RandintFunctor() { randint_op_ = CHECK_JUST(one::OpBuilder("randint").Output("out").Build()); }
 
+  Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<int64_t>("low", low));
+    JUST(attrs.SetAttr<int64_t>("high", high));
+
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+    const auto& randint_kernel_state = std::make_shared<UniformKernelState>(gen);
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(
+          *randint_op_, {}, OpExprInterpContext(attrs, device_symbol, randint_kernel_state));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*randint_op_, {},
+                                            OpExprInterpContext(attrs, randint_kernel_state));
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> randint_op_;
+};
+class ConsistentRandintFunctor {
+ public:
+  ConsistentRandintFunctor() {
+    randint_op_ = CHECK_JUST(one::OpBuilder("randint").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const Optional<one::Generator>& generator) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<int64_t>("low", low));
+    JUST(attrs.SetAttr<int64_t>("high", high));
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+    const auto& randint_kernel_state = std::make_shared<UniformKernelState>(gen);
+
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+      JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(
+        *randint_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, randint_kernel_state));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> randint_op_;
+};
 
 }  // namespace impl
 
@@ -272,7 +328,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentRandFunctor>("ConsistentRand");
   m.add_functor<impl::RandNFunctor>("RandN");
   m.add_functor<impl::ConsistentRandNFunctor>("ConsistentRandN");
-
 };
 
 }  // namespace functional

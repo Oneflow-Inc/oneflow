@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include "oneflow/user/kernels/randint_kernel.h"
+#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ndarray/xpu_util.h"
+#include "oneflow/user/kernels/distributions/uniform_kernel.h"
 #include <curand.h>
 #include <curand_kernel.h>
 namespace oneflow {
@@ -34,14 +35,14 @@ class GpuRandintKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
-    return std::make_shared<RandintKernelState>(generator);
+    return std::make_shared<UniformKernelState>(generator);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t* output = out->mut_dptr<int64_t>();
-    auto* randint_kernel_state = dynamic_cast<RandintKernelState*>(state);
+    auto* randint_kernel_state = dynamic_cast<UniformKernelState*>(state);
     CHECK_NOTNULL(randint_kernel_state);
     const auto& generator = randint_kernel_state->generator();
     const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
@@ -54,14 +55,13 @@ class GpuRandintKernel final : public user_op::OpKernel {
     const int32_t n = out->shape().elem_cnt();
     const int64_t low = ctx->Attr<int64_t>("low");
     const int64_t high = ctx->Attr<int64_t>("high");
-    GenValues<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                ctx->device_ctx()->cuda_stream()>>>(output, low, high, n, curand_states);
+    GenValues<<<block_num, kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+        output, low, high, n, curand_states);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("randint").SetCreateFn<GpuRandintKernel>().SetIsMatchedHob( 
-      (user_op::HobDeviceTag() == "gpu"));
-
+REGISTER_USER_KERNEL("randint").SetCreateFn<GpuRandintKernel>().SetIsMatchedHob(
+    (user_op::HobDeviceTag() == "gpu"));
 
 }  // namespace oneflow

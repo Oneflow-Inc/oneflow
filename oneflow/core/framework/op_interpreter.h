@@ -69,7 +69,6 @@ struct OpExprInterpContext {
                       std::shared_ptr<user_op::OpKernelState> state_arg)
       : attrs(attrs_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg), state(state_arg) {}
 
-
   AttrMap attrs;
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op

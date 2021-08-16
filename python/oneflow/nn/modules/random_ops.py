@@ -264,6 +264,114 @@ def randn_op(
     )()
 
 
+class Randint(flow.nn.Module):
+    def __init__(
+        self,
+        low: flow.int64,
+        high: flow.int64,
+        size: tuple,
+        generator: flow.Generator = None,
+        dtype: flow.dtype = flow.int64,
+        layout=None,
+        device=None,
+        placement=None,
+        sbp=None,
+        requires_grad=False,
+    ) -> None:
+        super().__init__()
+
+        if generator is None:
+            generator = flow.Generator()
+        assert low < high
+        self.requires_grad = requires_grad
+        (
+            self.size,
+            self.device,
+            self.generator,
+            self.placement,
+            self.sbp,
+        ) = _rand_op_common_process(size, device, generator, placement, sbp)
+        self.dtype = dtype
+        self.low = low
+        self.high = high
+
+    def forward(self):
+        if self.placement is not None:
+            res = flow.F.consistent_randint(
+                self.low, self.high, self.size, self.placement, self.sbp, self.generator
+            )
+        else:
+            res = flow.F.randint(
+                self.low, self.high, self.size, self.device, self.generator
+            )
+        res.requires_grad = self.requires_grad
+        return res
+
+
+def randint(
+    low: flow.int64 = 0,
+    high: Union[int, tuple] = None,
+    size: tuple = None,
+    generator: flow.Generator = None,
+    dtype: flow.dtype = flow.int64,
+    layout=None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False,
+) -> flow.Tensor:
+    r"""Returns a tensor filled with random integers generated uniformly from  :math:`[ \text{low},\text{high} )`.
+    
+
+    The shape of the tensor is defined by the variable argument size.
+
+    Args:
+        low (int, optional):Lowest integer to be drawn from the distribution. Default: 0.
+
+        high (int):One above the highest integer to be drawn from the distribution.
+
+        size (tuple):a tuple defining the shape of the output tensor.
+   
+    Keyword args:
+        generator(:class:`oneflow.Generator`, optional):  a pseudorandom number generator for sampling
+        dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
+            Default: ``oneflow.int64``.
+        layout: layout is not supported yet.
+        device: the desired device of returned tensor. Default: cpu.
+        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
+        placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
+          construct local tensor.
+        sbp (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
+          numbers of placement.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    Returns:
+        oneflow.Tensor: The result Tensor of given size.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> generator = flow.Generator()
+        >>> generator.manual_seed(0)
+        >>> flow.randint(10,(1,10),generator=generator)
+        tensor([[5, 5, 7, 8, 6, 8, 5, 8, 4, 6]], dtype=oneflow.int64)
+    """
+    assert layout is None, "layout not supported yet"
+    if type(high) is tuple:
+        size = high
+        low, high = 0, low
+    if len(size) == 0:
+        size = (1,)
+    if generator is None:
+        generator = flow.default_generator()
+    return Randint(
+        low, high, size, generator, dtype, layout, device, placement, sbp, requires_grad
+    )()
+
+
 if __name__ == "__main__":
     import doctest
 

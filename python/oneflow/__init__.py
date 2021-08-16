@@ -262,6 +262,7 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.random_ops import bernoulli
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
+from oneflow.nn.modules.random_ops import randint
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min
@@ -287,7 +288,6 @@ from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
 )
-from oneflow.nn.modules.randint import randint
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to

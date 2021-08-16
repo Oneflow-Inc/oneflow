@@ -21,18 +21,22 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> InferUniformParallelDistribution(user_op::InferParallelDistributionFnContext* ctx);
+Maybe<void> InferRandintNdSbp(user_op::InferNdSbpFnContext* ctx);
 
 REGISTER_NO_GRAD_USER_OP("randint")
     .Output("out")
     .Attr<int64_t>("low")
     .Attr<int64_t>("high")
-    .Attr<int64_t>("seed", -1)
     .Attr<Shape>("shape")
     .Attr<std::string>("nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
-      *ctx->OutputShape("out", 0) = shape;
+      DimVector dim_vec;
+      if (shape.NumAxes() > 0) {
+        dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
+      }
+      *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -43,13 +47,13 @@ REGISTER_NO_GRAD_USER_OP("randint")
       *ctx->OutputDType("out", 0) = DataType::kInt64;
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(&InferUniformParallelDistribution);
+    .SetNdSbpInferFn(&InferRandintNdSbp);
 
-Maybe<void> InferUniformParallelDistribution(user_op::InferParallelDistributionFnContext* ctx) {
-  cfg::ParallelDistribution* out = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+Maybe<void> InferRandintNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  cfg::NdSbp* out = ctx->NdSbp4ArgNameAndIndex("out", 0);
   if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     const auto& pb_str = ctx->user_op_conf().attr<std::string>("nd_sbp");
-    ParallelDistribution pb;
+    NdSbp pb;
     CHECK_OR_RETURN(TxtString2PbMessage(pb_str, &pb));
     out->InitFromProto(pb);
   } else {
