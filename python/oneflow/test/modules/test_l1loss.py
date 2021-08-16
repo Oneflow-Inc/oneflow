@@ -85,17 +85,18 @@ class TestL1LossModule(flow.unittest.TestCase):
         dim3 = random(1, 10).to(int)
         dim4 = random(1, 10).to(int)
         reduction = oneof("none", "sum", "mean")
-        loss = torch.nn.L1Loss(
-            reduction=reduction | nothing()
-        )
+        loss = torch.nn.L1Loss(reduction=reduction | nothing())
         loss.train(random())
         device = random_device()
         loss.to(device)
-        input = random_pytorch_tensor(ndim=k, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4).to(device)
-        target = random_pytorch_tensor(ndim=k, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4).to(device)
+        input = random_pytorch_tensor(
+            ndim=k, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4
+        ).to(device)
+        target = random_pytorch_tensor(
+            ndim=k, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4
+        ).to(device)
         y = loss(input, target)
         return y
-
 
 
 if __name__ == "__main__":
