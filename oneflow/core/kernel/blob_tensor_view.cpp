@@ -36,6 +36,8 @@ void* BlobTensorView::mut_raw_dptr() { return blob_->mut_dptr(); }
 
 void BlobTensorView::Reset(Blob* blob) { blob_ = blob; }
 
+Blob* BlobTensorView::blob() const { return blob_; }
+
 }  // namespace user_op
 
 }  // namespace oneflow

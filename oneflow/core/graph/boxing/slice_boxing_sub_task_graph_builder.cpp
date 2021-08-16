@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
-#include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/cpu_stream_index.h"

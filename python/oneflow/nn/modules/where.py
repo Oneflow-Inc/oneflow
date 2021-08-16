@@ -18,16 +18,17 @@ from oneflow.framework.tensor import register_tensor_op
 
 
 @register_tensor_op("where")
-def where_op(condition, x, y):
+def where_op(condition, x=None, y=None):
     """Return a tensor of elements selected from either :attr:`x` or :attr:`y`, depending on :attr:`condition`.
     If the element in condition is larger than 0,
 
     it will take the `x` element, else it will take the `y` element
 
     .. note::
-
+        If :attr:`x` is None and :attr:`y` is None,  flow.where(condition) is 
+        identical to flow.nonzero(condition, as_tuple=True).
+        
         The tensors :attr:`condition`, :attr:`x`, :attr:`y` must be broadcastable.
-        It will take the `x` element, else it will take the `y` element.
 
     Args:
         condition (IntTensor): When 1 (nonzero), yield x, otherwise yield y
@@ -52,11 +53,14 @@ def where_op(condition, x, y):
         >>> condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
         >>> out = condition.where(x, y)
         >>> out #doctest: +ELLIPSIS
-        tensor([[1.    , 0.3139],
+        tensor([[1.0000, 0.3139],
                 ...
-                [0.0478, 1.    ]], dtype=oneflow.float32)
+                [0.0478, 1.0000]], dtype=oneflow.float32)
 
     """
+
+    if x is None and y is None:
+        return flow.nonzero(condition, as_tuple=True)
 
     assert condition.dtype == flow.int32 or condition.dtype == flow.int8
     if isinstance(x, int) or isinstance(x, float):
