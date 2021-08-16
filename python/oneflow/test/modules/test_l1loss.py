@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _np_l1loss(np_input, np_target):
@@ -74,6 +75,28 @@ class TestL1LossModule(flow.unittest.TestCase):
         arg_dict["reduction"] = ["none", "sum", "mean"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest()
+    def test_l1loss_module_with_random_data(test_case):
+        k = random(1, 6).to(int)
+        dim0 = random(1, 10).to(int)
+        dim1 = random(1, 10).to(int)
+        dim2 = random(1, 10).to(int)
+        dim3 = random(1, 10).to(int)
+        dim4 = random(1, 10).to(int)
+        reduction = oneof("none", "sum", "mean")
+        loss = torch.nn.L1Loss(reduction=reduction | nothing())
+        loss.train(random())
+        device = random_device()
+        loss.to(device)
+        input = random_pytorch_tensor(
+            ndim=k, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4
+        ).to(device)
+        target = random_pytorch_tensor(
+            ndim=k, dim0=dim0, dim1=dim1, dim2=dim2, dim3=dim3, dim4=dim4
+        ).to(device)
+        y = loss(input, target)
+        return y
 
 
 if __name__ == "__main__":
