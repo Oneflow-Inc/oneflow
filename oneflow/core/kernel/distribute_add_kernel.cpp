@@ -35,19 +35,19 @@ class DistributeAddKernel final : public KernelIf<device_type> {
 
  private:
   void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
-  const Blob* GetInBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                          const std::function<Blob*(const std::string&)>&) const override;
+  const Blob* GetInBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 template<DeviceType device_type>
 void DistributeAddKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CheckSizeAndCopyBlob(ctx.device_ctx, BnInOp2Blob("out"), GetInBlob(BnInOp2Blob));
 }
 
 template<DeviceType device_type>
 const Blob* DistributeAddKernel<device_type>::GetInBlob(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* in_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* cur_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(i));

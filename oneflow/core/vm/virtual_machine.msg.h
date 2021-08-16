@@ -32,14 +32,14 @@ namespace oneflow {
 
 namespace vm {
 
-class VmDesc;
+struct VmDesc;
 // clang-format off
 OBJECT_MSG_BEGIN(VirtualMachine);
   // methods
   OF_PUBLIC void __Init__(const VmDesc& vm_desc) { __Init__(vm_desc, mut_allocator()); }
   OF_PUBLIC void __Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocator);
-  OF_PUBLIC void Receive(InstructionMsgList* instr_list);
-  OF_PUBLIC void Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg);
+  OF_PUBLIC Maybe<void> Receive(InstructionMsgList* instr_list);
+  OF_PUBLIC Maybe<void> Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg);
   OF_PUBLIC void Schedule();
   OF_PUBLIC bool Empty() const;
   OF_PUBLIC Maybe<const ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);

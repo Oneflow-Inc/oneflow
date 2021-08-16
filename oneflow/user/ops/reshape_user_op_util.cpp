@@ -124,15 +124,14 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
 
 namespace {
 
-Maybe<void> GetInputParallelDistribution(user_op::InferParallelDistributionFnContext* ctx,
-                                         const user_op::OpArg& in_arg,
-                                         cfg::ParallelDistribution* distribution) {
-  *distribution = ctx->ParallelDistributionHint4InputArgNameAndIndex(in_arg.name(), in_arg.index());
-  const auto& constraints = ctx->parallel_distribution_constraints();
-  if (constraints.bn_in_op2parallel_distribution_size() != 0) {
-    const auto it = constraints.bn_in_op2parallel_distribution().find(
-        GenRepeatedBn(in_arg.name(), in_arg.index()));
-    if (it != constraints.bn_in_op2parallel_distribution().end()) { *distribution = it->second; }
+Maybe<void> GetInputNdSbp(user_op::InferNdSbpFnContext* ctx, const user_op::OpArg& in_arg,
+                          cfg::NdSbp* distribution) {
+  *distribution = ctx->NdSbpHint4InputArgNameAndIndex(in_arg.name(), in_arg.index());
+  const auto& constraints = ctx->nd_sbp_constraints();
+  if (constraints.bn_in_op2nd_sbp_size() != 0) {
+    const auto it =
+        constraints.bn_in_op2nd_sbp().find(GenRepeatedBn(in_arg.name(), in_arg.index()));
+    if (it != constraints.bn_in_op2nd_sbp().end()) { *distribution = it->second; }
   }
   return Maybe<void>::Ok();
 }
@@ -149,25 +148,23 @@ Maybe<void> ApplySbpParallel(const cfg::SbpParallel& sbp, const int64_t parallel
 
 }  // namespace
 
-Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
-    user_op::InferParallelDistributionFnContext* ctx, const Shape& logical_in_shape,
-    const Shape& logical_out_shape) {
+Maybe<void> ReshapeUserOpUtil::InferNdSbp(user_op::InferNdSbpFnContext* ctx,
+                                          const Shape& logical_in_shape,
+                                          const Shape& logical_out_shape) {
   const std::string& op_type_name = ctx->user_op_conf().op_type_name();
   CHECK_OR_RETURN(op_type_name == "reshape" || op_type_name == "reshape_like");
   const bool is_reshape_like = (op_type_name == "reshape_like");
   std::vector<user_op::OpArg> in_args({{"in", 0}});
   if (is_reshape_like) { in_args.push_back(user_op::OpArg("like", 0)); }
-  HashMap<std::string, cfg::ParallelDistribution> ibn2parallel_distribution;
-  ibn2parallel_distribution.reserve(in_args.size());
+  HashMap<std::string, cfg::NdSbp> ibn2nd_sbp;
+  ibn2nd_sbp.reserve(in_args.size());
   for (const auto& arg : in_args) {
-    cfg::ParallelDistribution* in_distribution =
-        ctx->ParallelDistribution4ArgNameAndIndex(arg.name(), arg.index());
-    JUST(GetInputParallelDistribution(ctx, arg, in_distribution));
+    cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex(arg.name(), arg.index());
+    JUST(GetInputNdSbp(ctx, arg, in_distribution));
     CHECK_OR_RETURN(
-        ibn2parallel_distribution.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution)
-            .second);
+        ibn2nd_sbp.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution).second);
   }
-  cfg::ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
 
   Shape in_shape = logical_in_shape;
   Shape out_shape = logical_out_shape;
@@ -198,8 +195,7 @@ Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
       bool all_match = true;
       for (const auto& in_arg : in_args) {
         std::string ibn = GenRepeatedBn(in_arg.name(), in_arg.index());
-        if (sbp_signature.bn_in_op2sbp_parallel().at(ibn)
-            != ibn2parallel_distribution.at(ibn).sbp_parallel(i)) {
+        if (sbp_signature.bn_in_op2sbp_parallel().at(ibn) != ibn2nd_sbp.at(ibn).sbp_parallel(i)) {
           all_match = false;
           break;
         }

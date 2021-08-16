@@ -24,7 +24,6 @@ import oneflow.core.job.env_pb2 as env_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.hob as hob
-import oneflow.framework.placement_context as placement_ctx
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 import oneflow.support.enable_if as enable_if
@@ -76,35 +75,6 @@ def env_init():
         else:
             exit(0)
     return True
-
-
-def api_get_current_resource() -> resource_util.Resource:
-    """Get current resources, such as:machine nums, cpu/gpu device nums,
-            epoch network threed num, rdma params...
-
-    Returns:
-        resource_util.Resource: [description]
-    """
-    return enable_if.unique([get_current_resource])()
-
-
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_current_resource():
-    return c_api_util.CurrentResource()
-
-
-def api_get_current_machine_id():
-    """Get machine id of current machine/node
-
-    Returns:
-        [type]: [description]
-    """
-    return enable_if.unique([get_current_machine_id])()
-
-
-@enable_if.condition(hob.in_normal_mode & hob.env_initialized)
-def get_current_machine_id() -> int:
-    return oneflow._oneflow_internal.CurrentMachineId()
 
 
 def api_machine(*val: list) -> None:
@@ -351,15 +321,6 @@ def _FindFreePort():
         s.bind(("localhost", 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         return s.getsockname()[1]
-
-
-def GetEnvDefaultParallelConf(device_tag):
-    if device_tag not in device_tag2default_parallel_conf:
-        parallel_conf = placement_ctx.MakeParallelConf4Resource(
-            device_tag, c_api_util.EnvResource()
-        )
-        device_tag2default_parallel_conf[device_tag] = parallel_conf
-    return device_tag2default_parallel_conf[device_tag]
 
 
 def HasAllMultiClientEnvVars():

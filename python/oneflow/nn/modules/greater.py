@@ -15,31 +15,14 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
-class Greater(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        if x.dtype != flow.float32:
-            x = flow.cast(x, flow.float32)
-        if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor(
-                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
-            )
-        if y.dtype != flow.float32:
-            y = flow.cast(y, flow.float32)
-        return flow.F.broadcast_greater(x, y)
-
-
-def greater_op(x, y):
-    """Returns the truth value of :math:`x > y` element-wise.
+def greater_op(input, other):
+    """Returns the truth value of :math:`input > other` element-wise.
 
     Args:
-        x (oneflow.Tensor): A Tensor
-        y (oneflow.Tensor): A Tensor
+        input (oneflow.Tensor): A Tensor
+        other (oneflow.Tensor): A Tensor
 
     Returns:
         oneflow.Tensor: A Tensor with int8 type.
@@ -59,11 +42,11 @@ def greater_op(x, y):
         flow.Size([2, 6, 5, 3])
 
     """
-    return Greater()(x, y)
+    return flow.F.greater(input, other)
 
 
 @register_tensor_op("gt")
-def greater_op_tensor(x, y):
+def greater_op_tensor(input, other):
     """
 
     gt() -> Tensor
@@ -71,7 +54,7 @@ def greater_op_tensor(x, y):
     See :func:`oneflow.gt`
 
     """
-    return Greater()(x, y)
+    return greater_op(input, other)
 
 
 if __name__ == "__main__":

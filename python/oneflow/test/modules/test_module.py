@@ -23,7 +23,6 @@ from typing import Tuple, Union
 import numpy as np
 
 import oneflow as flow
-import oneflow.typing as tp
 import oneflow.unittest
 
 
@@ -130,16 +129,22 @@ class TestModule(flow.unittest.TestCase):
         m = CustomModule(param1, param2)
         params = list(m.parameters())
         test_case.assertEqual(len(params), 2)
-        test_case.assertEqual(params[0], param1)
-        test_case.assertEqual(params[1], param0)
+
+        test_case.assertTrue(
+            np.allclose(params[0].numpy(), param1.numpy(), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(params[1].numpy(), param0.numpy(), atol=1e-4, rtol=1e-4)
+        )
         children = list(m.children())
         test_case.assertEqual(len(children), 1)
         child = children[0]
         test_case.assertEqual(child, param2)
         child_params = list(child.parameters())
+
         test_case.assertEqual(len(child_params), 2)
-        test_case.assertEqual(child_params[0], param0)
-        test_case.assertEqual(child_params[1], param1)
+        test_case.assertTrue(np.allclose(child_params[0].numpy(), param0.numpy()))
+        test_case.assertTrue(np.allclose(child_params[1].numpy(), param1.numpy()))
 
     def test_module_apply(test_case):
         class CustomModule(flow.nn.Module):

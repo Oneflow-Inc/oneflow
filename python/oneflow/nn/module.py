@@ -18,10 +18,7 @@ from collections import OrderedDict, namedtuple
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import numpy as np
-
 import oneflow as flow
-from oneflow.framework.check_point_v2 import FeedValueToVariable
-from oneflow.framework.function_util import global_function_or_identity
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
 
@@ -505,6 +502,12 @@ class Module(object):
 
         return self._apply(convert)
 
+    def to_consistent(self, placement=None, sbp=None):
+        def convert(t):
+            return t.to_consistent(placement=placement, sbp=sbp)
+
+        return self._apply(convert)
+
     def _get_name(self):
         return self.__class__.__name__
 
@@ -531,6 +534,21 @@ class Module(object):
         main_str = self._get_name() + "("
         if lines:
             if len(extra_lines) == 1 and (not child_lines):
+                main_str += extra_lines[0]
+            else:
+                main_str += "\n  " + "\n  ".join(lines) + "\n"
+        main_str += ")"
+        return main_str
+
+    def _shallow_repr(self):
+        extra_lines = []
+        extra_repr = self.extra_repr()
+        if extra_repr:
+            extra_lines = extra_repr.split("\n")
+        lines = extra_lines
+        main_str = self._get_name() + "("
+        if lines:
+            if len(extra_lines) == 1:
                 main_str += extra_lines[0]
             else:
                 main_str += "\n  " + "\n  ".join(lines) + "\n"

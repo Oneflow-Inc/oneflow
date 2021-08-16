@@ -66,6 +66,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
     CHECK_LT_OR_RETURN(dim, ndims) << "Invalid index for tensor of dimension " << ndims;
     if (index_item.IsSlice()) {
       const auto& slice = index_item.slice();
+      CHECK_GT_OR_RETURN(slice.step(), 0) << "Step must be greater than zero.";
       int64_t step = std::min(slice.step(), shape.At(dim));
       int64_t end = std::min(slice.end(), shape.At(dim));
       int64_t start = std::min(slice.start(), shape.At(dim));

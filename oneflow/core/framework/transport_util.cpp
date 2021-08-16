@@ -22,23 +22,15 @@ limitations under the License.
 #include "oneflow/core/thread/consistent_unique_id.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
-  const auto& start = std::chrono::steady_clock::now();
-  const auto& cond_cnt = ctx.flying_cnt();
-  while (*cond_cnt > 0) {
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
-        << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
-  }
-  if (ctx.transport_token().type() == kCtrlTransportTokenType) {
-    JUST(ctx.transport_token().ReleaseCtrlTransportToken());
-  }
+  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds));
+  JUST(ctx.transport_token().TryReleaseCtrlTransportTokenLock());
   return Maybe<void>::Ok();
 }
 
@@ -47,12 +39,12 @@ namespace {
 template<Maybe<void> (*SendOrRecv)(const TransportToken&, int64_t, void*, std::size_t,
                                    const std::function<void()>&),
          Maybe<void> (AsyncTransportCtx::*Prepare)(int64_t, void**, std::size_t*,
-                                                   std::function<void()>*)>
-Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const TransportToken& token,
-                                  AsyncTransportCtx* ctx) {
-  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
+                                                   std::function<void()>*),
+         typename ForEachRankT>
+Maybe<void> AccessToOtherRanks(const ForEachRankT& ForEachRank, const TransportToken& token,
+                               AsyncTransportCtx* ctx) {
   const auto& flying_cnt = ctx->flying_cnt();
-  JUST(rank_group->ForEachRank([&](int64_t rank) -> Maybe<void> {
+  JUST(ForEachRank([&](int64_t rank) -> Maybe<void> {
     if (rank == GlobalProcessCtx::Rank()) { return Maybe<void>::Ok(); }
     ++*flying_cnt;
     void* buffer = nullptr;
@@ -68,6 +60,18 @@ Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const TransportT
   return Maybe<void>::Ok();
 }
 
+template<Maybe<void> (*SendOrRecv)(const TransportToken&, int64_t, void*, std::size_t,
+                                   const std::function<void()>&),
+         Maybe<void> (AsyncTransportCtx::*Prepare)(int64_t, void**, std::size_t*,
+                                                   std::function<void()>*)>
+Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const TransportToken& token,
+                                  AsyncTransportCtx* ctx) {
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    return rank_group->ForEachRank(DoEach);
+  };
+  return AccessToOtherRanks<SendOrRecv, Prepare>(ForEachRank, token, ctx);
+}
+
 template<Maybe<int64_t> (RankGroup::*GetPrevOrNext)() const,
          Maybe<void> (*SendOrRecv)(const TransportToken&, int64_t, void*, std::size_t,
                                    const std::function<void()>&),
@@ -75,21 +79,11 @@ template<Maybe<int64_t> (RankGroup::*GetPrevOrNext)() const,
                                                    std::function<void()>*)>
 Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const TransportToken& token,
                                AsyncTransportCtx* ctx) {
-  if (rank_group->size() == 1) { return Maybe<void>::Ok(); }
-  const auto* rank_ranges_ptr = &*rank_group;
-  int64_t rank = JUST((rank_ranges_ptr->*GetPrevOrNext)());
-  CHECK_NE_OR_RETURN(rank, GlobalProcessCtx::Rank());
-  const auto& flying_cnt = ctx->flying_cnt();
-  ++*flying_cnt;
-  void* buffer = nullptr;
-  std::size_t size = 0;
-  std::function<void()> Callback;
-  JUST((ctx->*Prepare)(rank, &buffer, &size, &Callback));
-  JUST(SendOrRecv(token, rank, buffer, size, [flying_cnt, Callback]() {
-    Callback();
-    --*flying_cnt;
-  }));
-  return Maybe<void>::Ok();
+  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    return DoEach(JUST(((*rank_group).*GetPrevOrNext)()));
+  };
+  return AccessToOtherRanks<SendOrRecv, Prepare>(ForEachRank, token, ctx);
 }
 
 Maybe<void> Send(const TransportToken& token, int64_t rank, void* buffer, std::size_t size,
@@ -127,6 +121,7 @@ Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::s
 /*static*/ Maybe<void> TransportUtil::BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group,
                                                                const TransportToken& token,
                                                                AsyncTransportCtx* ctx) {
+  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
   JUST(AccessToAllOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(rank_group,
                                                                                       token, ctx));
   return Maybe<void>::Ok();
@@ -135,8 +130,31 @@ Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::s
 /*static*/ Maybe<void> TransportUtil::CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
                                                                const TransportToken& token,
                                                                AsyncTransportCtx* ctx) {
+  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
   JUST(AccessToAllOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(rank_group,
                                                                                       token, ctx));
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> TransportUtil::BroadcastToOtherRanks(Symbol<RankGroup> src_rank_group,
+                                                            Symbol<RankGroup> dst_rank_group,
+                                                            const TransportToken& token,
+                                                            AsyncTransportCtx* ctx) {
+  if (src_rank_group->ContainingCurrentRank()) {
+    JUST(AccessToAllOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(
+        dst_rank_group, token, ctx));
+  }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> TransportUtil::CollectFromOtherRanks(Symbol<RankGroup> src_rank_group,
+                                                            Symbol<RankGroup> dst_rank_group,
+                                                            const TransportToken& token,
+                                                            AsyncTransportCtx* ctx) {
+  if (dst_rank_group->ContainingCurrentRank()) {
+    JUST(AccessToAllOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(
+        src_rank_group, token, ctx));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -156,6 +174,42 @@ Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::s
       AccessToNearbyRank<&RankGroup::GetPrevRankInRing, &Recv,
                          &AsyncTransportCtx::PrepareRecvBufferAndCallback>(rank_group, token, ctx));
   return Maybe<void>::Ok();
+}
+
+namespace {
+
+Maybe<int64_t> GetCurrentRankIndex(const std::vector<int64_t>& rank_heap) {
+  for (int i = 0; i < rank_heap.size(); ++i) {
+    if (rank_heap.at(i) == GlobalProcessCtx::Rank()) { return i; }
+  }
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+}  // namespace
+
+/*static*/ Maybe<void> TransportUtil::SendDataToChildrenInHeap(
+    const std::vector<int64_t>& rank_heap, const TransportToken& token, AsyncTransportCtx* ctx) {
+  int64_t current_rank_index = JUST(GetCurrentRankIndex(rank_heap));
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    int64_t left_index = current_rank_index * 2 + 1;
+    if (left_index < rank_heap.size()) { JUST(DoEach(rank_heap.at(left_index))); }
+    int64_t right_index = current_rank_index * 2 + 2;
+    if (right_index < rank_heap.size()) { JUST(DoEach(rank_heap.at(right_index))); }
+    return Maybe<void>::Ok();
+  };
+  return AccessToOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(ForEachRank,
+                                                                                     token, ctx);
+}
+
+/*static*/ Maybe<void> TransportUtil::ReceiveDataFromParentInHeap(
+    const std::vector<int64_t>& rank_heap, const TransportToken& token, AsyncTransportCtx* ctx) {
+  int64_t current_rank_index = JUST(GetCurrentRankIndex(rank_heap));
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    if (current_rank_index == 0) { return Maybe<void>::Ok(); }
+    return DoEach(rank_heap.at((current_rank_index - 1) / 2));
+  };
+  return AccessToOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(ForEachRank,
+                                                                                     token, ctx);
 }
 
 }  // namespace oneflow
