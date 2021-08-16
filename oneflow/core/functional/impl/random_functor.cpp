@@ -35,6 +35,9 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/user/kernels/distributions/normal_kernel.h"
+#include "oneflow/user/kernels/distributions/uniform_kernel.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
 namespace one {
@@ -72,6 +75,7 @@ class BernoulliFunctor {
 };
 
 
+
 class RandPermFunctor {
  public:
   RandPermFunctor() { randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build()); }
@@ -79,6 +83,29 @@ class RandPermFunctor {
                            const Optional<one::Generator>& generator) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("n", n));
+    std::shared_ptr<one::Generator> gen;
+
+
+class RandFunctor {
+ public:
+  RandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const Optional<DataType>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator) const {
+    DataType dtype_val = DataType::kFloat;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype.value());
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in rand";
+      }
+    }
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("low", 0));
+    JUST(attrs.SetAttr<double>("high", 1));
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
+
     std::shared_ptr<one::Generator> gen;
 
     if (!generator) {
@@ -90,6 +117,7 @@ class RandPermFunctor {
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
 
+
     const auto& randperm_kernel_state = std::make_shared<RandpermKernelState>(gen);
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
@@ -98,6 +126,69 @@ class RandPermFunctor {
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {},
                                             OpExprInterpContext(attrs, randperm_kernel_state));
+
+    const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
+
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_, {}, OpExprInterpContext(attrs, device_symbol, uniform_kernel_state));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {},
+                                            OpExprInterpContext(attrs, uniform_kernel_state));
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentRandFunctor {
+ public:
+  ConsistentRandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const Optional<DataType>& dtype,
+                           const Optional<one::Generator>& generator) const {
+    DataType dtype_val = DataType::kFloat;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype.value());
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in rand";
+      }
+    }
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("low", 0));
+    JUST(attrs.SetAttr<double>("high", 1));
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
+
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
+
+    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
+    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {},
+        OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+
 class RandNFunctor {
  public:
   RandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
@@ -232,7 +323,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BernoulliFunctor>("Bernoulli");
   m.add_functor<impl::RandPermFunctor>("Randperm");
   m.add_functor<impl::ConsistentRandPermFunctor>("ConsistentRandperm");
-
+  m.add_functor<impl::RandFunctor>("Rand");
+  m.add_functor<impl::ConsistentRandFunctor>("ConsistentRand");
   m.add_functor<impl::RandNFunctor>("RandN");
   m.add_functor<impl::ConsistentRandNFunctor>("ConsistentRandN");
 
