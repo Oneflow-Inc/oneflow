@@ -66,14 +66,14 @@ Maybe<void> Device::Init() {
   return ThreadLocalGetOrNew(type, device_id);
 }
 
-/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
+/* static */ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& device_tag,
                                                                int64_t device_id) {
   CHECK_GE_OR_RETURN(device_id, 0);
   static thread_local HashMap<std::string, HashMap<int64_t, Symbol<Device>>> map;
-  auto* device_id2symbol = &map[type];
+  auto* device_id2symbol = &map[device_tag];
   auto iter = device_id2symbol->find(device_id);
   if (iter == device_id2symbol->end()) {
-    Device device(type, device_id);
+    Device device(Type4DeviceTag(device_tag), device_id);
     JUST(device.Init());
     iter = device_id2symbol->emplace(device_id, SymbolOf(device)).first;
   }
