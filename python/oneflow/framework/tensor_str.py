@@ -146,14 +146,14 @@ def _vector_str(self, indent, summarize, formatter1):
             if not self.is_consistent
             else self[: PRINT_OPTS.edgeitems]
             .to_consistent(sbp=flow.sbp.broadcast)
-            .to_local()
+            .to_local().tolist()
         )
         right_values = (
             self[-PRINT_OPTS.edgeitems :].tolist()
             if not self.is_consistent
             else self[-PRINT_OPTS.edgeitems :]
             .to_consistent(sbp=flow.sbp.broadcast)
-            .to_local()
+            .to_local().tolist()
         )
         data = (
             [_val_formatter(val) for val in left_values]
@@ -297,7 +297,7 @@ def _gen_tensor_str_template(tensor, is_meta):
     if tensor.is_consistent:
         suffixes.append(f"placement={str(tensor.placement)}")
         suffixes.append(f"sbp={str(tensor.sbp)}")
-    elif tensor.device.type == "cuda" or tensor.device.type == "gpu":
+    elif tensor.device.type == "cuda":
         suffixes.append("device='" + str(tensor.device) + "'")
     elif tensor.device.type != "cpu":
         raise RunTimeError("unknow device type")
