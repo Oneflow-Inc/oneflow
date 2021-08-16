@@ -44,7 +44,7 @@ REGISTER_NO_GRAD_USER_OP("uniform")
       *ctx->OutputDType("out", 0) = dtype;
       return Maybe<void>::Ok();
     })
-    .SetNdSbpInferFn([](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
       cfg::SbpParallel default_sbp;
       default_sbp.mutable_broadcast_parallel();
       return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
