@@ -482,6 +482,32 @@ class MaximumFunctor {
   std::shared_ptr<OpExpr> broadcast_maximum_op_;
 };
 
+class ScalarFModFunctor {
+ public:
+  ScalarFModFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("scalar_fmod").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    MutableAttrMap attrs;
+
+    if (IsFloatingDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+    } else if (IsIntegralDataType(x->dtype())) {
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScalarLogicalBaseFunctor {
  public:
   explicit ScalarLogicalBaseFunctor(std::string op_name) {
@@ -566,6 +592,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
   m.add_functor<impl::MinimumFunctor>("Minimum");
   m.add_functor<impl::MaximumFunctor>("Maximum");
+  m.add_functor<impl::ScalarFModFunctor>("ScalarFMod");
   m.add_functor<impl::ScalarLogicalEqualFunctor>("ScalarLogicalEqual");
   m.add_functor<impl::ScalarLogicalNotEqualFunctor>("ScalarLogicalNotEqual");
   m.add_functor<impl::ScalarLogicalGreaterFunctor>("ScalarLogicalGreater");
