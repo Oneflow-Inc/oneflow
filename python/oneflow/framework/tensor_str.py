@@ -41,6 +41,9 @@ class _Formatter(object):
         self.sci_mode = False
         self.max_width = 1
         self.random_sample_num = 50
+        # element count of tensor < threshold
+        if tensor.is_consistent:
+            tensor = tensor.to_consistent(sbp=flow.sbp.broadcast).to_local()
 
         with flow.no_grad():
             tensor_view = tensor.reshape(-1)
@@ -143,14 +146,14 @@ def _vector_str(self, indent, summarize, formatter1):
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
         left_values = (
             self[: PRINT_OPTS.edgeitems].tolist()
-            if not self.is_consistent
+            if self.is_local
             else self[: PRINT_OPTS.edgeitems]
             .to_consistent(sbp=flow.sbp.broadcast)
             .to_local().tolist()
         )
         right_values = (
             self[-PRINT_OPTS.edgeitems :].tolist()
-            if not self.is_consistent
+            if self.is_local
             else self[-PRINT_OPTS.edgeitems :]
             .to_consistent(sbp=flow.sbp.broadcast)
             .to_local().tolist()
@@ -163,7 +166,7 @@ def _vector_str(self, indent, summarize, formatter1):
     else:
         values = (
             self.tolist()
-            if not self.is_consistent
+            if self.is_local
             else self.to_consistent(sbp=flow.sbp.broadcast).to_local().tolist()
         )
         data = [_val_formatter(val) for val in values]
@@ -211,22 +214,8 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
-    def _convert_to_local_tensor(self, summarize):
-        # local tensor
-        if not self.is_consistent:
-            return get_summarized_data(self) if summarize else self
-        # consistent tensor
-        else:
-            return (
-                get_summarized_data(self)
-                if summarize
-                else self.to_consistent(sbp=flow.sbp.broadcast).to_local()
-            )
-
     with flow.no_grad():
-        # get small local tensor for _Formatter
-        local_tensor = _convert_to_local_tensor(self, summarize)
-        formatter = _Formatter(local_tensor)
+        formatter = _Formatter(get_summarized_data(self) if summarize else self)
         return _tensor_str_with_formatter(self, indent, summarize, formatter)
 
 
@@ -245,38 +234,15 @@ def _add_suffixes(tensor_str, suffixes, indent):
     return "".join(tensor_strs)
 
 
-def _cat_data(self):
-    # local tensor slice
-    if not self.is_consistent:
-        return flow.cat((self[: PRINT_OPTS.edgeitems], self[-PRINT_OPTS.edgeitems :]))
-    # consistent tensor slice
-    else:
-        left_part = (
-            self[: PRINT_OPTS.edgeitems]
-            .to_consistent(sbp=flow.sbp.broadcast)
-            .to_local()
-        )
-        right_part = (
-            self[-PRINT_OPTS.edgeitems :]
-            .to_consistent(sbp=flow.sbp.broadcast)
-            .to_local()
-        )
-        return flow.cat((left_part, right_part))
-
-
 def get_summarized_data(self):
     dim = self.dim()
     if dim == 0:
         return self
     if dim == 1:
         if self.size(0) > 2 * PRINT_OPTS.edgeitems:
-            return _cat_data(self)
+            return flow.cat((self[: PRINT_OPTS.edgeitems], self[-PRINT_OPTS.edgeitems :]))
         else:
-            return (
-                self
-                if not self.is_consistent
-                else self.to_consistent(sbp=flow.sbp.broadcast).to_local()
-            )
+            return self
     if self.size(0) > 2 * PRINT_OPTS.edgeitems:
         start = [self[i] for i in range(0, PRINT_OPTS.edgeitems)]
         end = [
