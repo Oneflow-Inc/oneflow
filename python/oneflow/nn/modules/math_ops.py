@@ -530,26 +530,14 @@ def fmod_op(input, other):
     Example::
 
         >>> import oneflow as flow
-        >>> flow.fmod(flow.tensor([-3., -2, -1, 1, 2, 3]), 2)
+        >>> flow.fmod(flow.tensor([-3., -2, -1, 1, 2, 3]), 2.)
         tensor([-1., -0., -1.,  1.,  0.,  1.], dtype=oneflow.float32)
-        >>> flow.fmod(flow.tensor([1, 2, 3, 4, 5]), 1.5)
+        >>> flow.fmod(flow.tensor([1, 2, 3, 4, 5.]), 1.5)
         tensor([1.0000, 0.5000, 0.0000, 1.0000, 0.5000], dtype=oneflow.float32)
-        >>> flow.fmod(flow.tensor([1, 2, 3, 4, -5]), flow.tensor([4, 2, 1, 3., 1]))
+        >>> flow.fmod(flow.tensor([1, 2, 3, 4., -5]), flow.tensor([4, 2, 1, 3., 1]))
         tensor([1., 0., 0., 1., -0.], dtype=oneflow.float32)
 
     """
-
-    if not isinstance(input, (flow.Tensor, flow._oneflow_internal.Tensor)):
-        raise ValueError("Expected type of input is Tensor")
-    if isinstance(other, (int, float)):
-        input = flow.F.cast(input, flow.float32)
-        other = flow.tensor([other], dtype=flow.float32, device=input.device)
-    elif isinstance(other, (flow.Tensor, flow._oneflow_internal.Tensor)):
-        if input.dtype != other.dtype:
-            input = flow.F.cast(input, flow.float32)
-            other = flow.F.cast(other, flow.float32)
-    else:
-        raise ValueError("Expected type of other is Tensor or Scalar")
     return flow.F.fmod(input, other)
 
 
