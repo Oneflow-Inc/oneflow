@@ -466,6 +466,7 @@ class Graph(object):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
 
+
 class GraphConfig(FunctionConfig):
     def __init__(self):
         super().__init__()
