@@ -46,7 +46,7 @@ public class InferenceSession {
      */
     public void loadModel(String path, String signatureName, int batchSize) {
         // Todo: support different version
-        String version = "1";
+        String version = "2";
 
         // Todo: check existence
         String savedModelPath = path + File.separator + version + File.separator;
@@ -59,7 +59,7 @@ public class InferenceSession {
         OneFlow.startLazyGlobalSession();
 
         String path = option.getSavedModelDir() + File.separator +
-                "1" + File.separator +
+                "2" + File.separator +
                 option.getCheckpointDir();
         byte[] checkpointBytes = path.getBytes();
         ByteBuffer checkpointBuffer = ByteBuffer.allocateDirect(checkpointBytes.length);
