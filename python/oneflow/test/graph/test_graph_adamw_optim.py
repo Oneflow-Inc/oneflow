@@ -107,9 +107,15 @@ def compare_with_numpy_adamw(
     )
 
 
-
 def compare_with_numpy_adamw_clip_grad(
-    test_case, device, x_shape, learning_rate, train_iters, betas, weight_decay, eps,
+    test_case,
+    device,
+    x_shape,
+    learning_rate,
+    train_iters,
+    betas,
+    weight_decay,
+    eps,
     clip_grad_max_norm,
     clip_grad_norm_type,
 ):
@@ -226,6 +232,7 @@ class TestAdamW(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = [2.0]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adamw_clip_grad(test_case, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()

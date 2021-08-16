@@ -22,6 +22,7 @@ from optimizer_test_util import clip_grad_norm_np
 
 import oneflow as flow
 
+
 def compare_with_numpy_adam(
     test_case,
     device,
@@ -229,7 +230,6 @@ def compare_with_numpy_adam_clip_grad(
     train_by_numpy()
 
     test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=0.001, atol=0.001))
-
 
 
 @flow.unittest.skip_unless_1n1d()

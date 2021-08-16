@@ -115,7 +115,7 @@ def compare_with_numpy_rmsprop_clip_grad(
     weight_decay,
     centered,
     clip_grad_max_norm,
-    clip_grad_norm_type
+    clip_grad_norm_type,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
