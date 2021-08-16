@@ -84,12 +84,7 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
       if (*a->shape() == *b->shape()) {
         return functional::Add(a, b, inplace);
       } else {
-        if (inplace) {
-          const auto& tmp = functional::Expand(b, *a->shape());
-          CHECK_OR_RETURN(tmp.IsOk()) << "Can not apply inplace on the broadcasting input.";
-          return functional::Add(a, JUST(tmp), inplace);
-        }
-        return functional::BroadcastAdd(a, b);
+        return functional::BroadcastAdd(a, b, inplace);
       }
     }
   }();
