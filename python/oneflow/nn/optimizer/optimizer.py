@@ -36,10 +36,7 @@ class ParamGroup(object):
             if key in parameters:
                 self._options[key] = parameters[key]
         self._enable_clip_grad = False
-        if (
-            "clip_grad_max_norm" in parameters
-            and "clip_grad_norm_type" in parameters
-        ):
+        if "clip_grad_max_norm" in parameters and "clip_grad_norm_type" in parameters:
             self._enable_clip_grad = True
             self._options["clip_grad_max_norm"] = parameters["clip_grad_max_norm"]
             self._options["clip_grad_norm_type"] = parameters["clip_grad_norm_type"]
@@ -82,7 +79,6 @@ class Optimizer(object):
 
     def clip_grad(self):
         r"""Clips the gradient of parameters in param_groups.
-    
         """
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
@@ -91,6 +87,10 @@ class Optimizer(object):
                     param_group["clip_grad_max_norm"],
                     param_group["clip_grad_norm_type"],
                     True,
+                )
+            else:
+                warnings.warn(
+                    "To enable clip_grad, passing the `clip_grad_max_norm` and `clip_grad_norm_type` parameters when instantializing the Optimizer."
                 )
 
     def zero_grad(self, set_to_none: bool = False):

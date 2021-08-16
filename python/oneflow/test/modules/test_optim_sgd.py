@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 from test_util import GenArgDict
+from optimizer_test_util import clip_grad_norm_np
 
 import oneflow as flow
 from oneflow.nn.parameter import Parameter
@@ -81,26 +82,7 @@ def compare_with_numpy_sgd(
     )
 
 
-def _clip_grad_norm_np(np_grad, max_norm, norm_type):
-    max_norm = float(max_norm)
-    norm_type = float(norm_type)
-    if norm_type == float("inf"):
-        total_norm = np.max(np.abs(np_grad))
-    if norm_type == float("-inf"):
-        total_norm = np.min(np.abs(np_grad))
-    elif norm_type == 0:
-        total_norm = np.sum(np.stack([np.sum(np_grad != 0)]) != 0)
-    else:
-        total_norm = np_grad
-        for i in range(np_grad.ndim, 0, -1):
-            total_norm = np.linalg.norm(total_norm, norm_type, axis=i - 1)
-    clip_coef = max_norm / (total_norm + 1e-6)
-    if clip_coef < 1:
-        np_grad = np_grad * clip_coef
-    return total_norm, np_grad
-
-
-def compare_with_numpy_sgd_clip_norm(
+def compare_with_numpy_sgd_clip_grad(
     test_case,
     device,
     x_shape,
@@ -150,7 +132,7 @@ def compare_with_numpy_sgd_clip_norm(
         vt = np.zeros_like(x)
 
         def train_one_iter(grad):
-            total_norm, grad = _clip_grad_norm_np(
+            total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
             grad = grad + weight_decay * x
@@ -196,7 +178,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["train_iters"] = [10]
         for arg in GenArgDict(arg_dict):
-            compare_with_numpy_sgd_clip_norm(test_case, **arg)
+            compare_with_numpy_sgd_clip_grad(test_case, **arg)
 
 
 if __name__ == "__main__":

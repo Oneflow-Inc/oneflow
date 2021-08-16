@@ -131,7 +131,7 @@ class SGD(Optimizer):
             else:
                 optimizer_conf.mutable_momentum_conf().set_beta(beta)
 
-            if param_group.enable_clip_grad:
+            if param_group._enable_clip_grad:
                 if (
                     param_group["clip_grad_max_norm"] == 1.0
                     and param_group["clip_grad_norm_type"] == 2.0
@@ -139,7 +139,10 @@ class SGD(Optimizer):
                     optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm().set_clip_norm(
                         param_group["clip_grad_max_norm"]
                     )
-                # else: print warning for not support clip grad
+                else:
+                    warnings.warn(
+                        "For now, nn.Graph only support clip grad with `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`."
+                    )
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2

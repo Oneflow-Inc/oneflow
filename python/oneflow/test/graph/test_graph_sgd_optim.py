@@ -16,7 +16,10 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 import numpy as np
+
 from test_util import GenArgList
+from optimizer_test_util import clip_grad_norm_np
+
 import oneflow as flow
 
 
@@ -93,25 +96,6 @@ def compare_with_numpy_sgd(
     test_case.assertTrue(np.allclose(np_res_list, of_res_list, rtol=1e-3, atol=1e-3))
 
 
-def _clip_grad_norm_np(np_grad, max_norm, norm_type):
-    max_norm = float(max_norm)
-    norm_type = float(norm_type)
-    if norm_type == float("inf"):
-        total_norm = np.max(np.abs(np_grad))
-    if norm_type == float("-inf"):
-        total_norm = np.min(np.abs(np_grad))
-    elif norm_type == 0:
-        total_norm = np.sum(np.stack([np.sum(np_grad != 0)]) != 0)
-    else:
-        total_norm = np_grad
-        for i in range(np_grad.ndim, 0, -1):
-            total_norm = np.linalg.norm(total_norm, norm_type, axis=i - 1)
-    clip_coef = max_norm / (total_norm + 1e-6)
-    if clip_coef < 1:
-        np_grad = np_grad * clip_coef
-    return total_norm, np_grad
-
-
 def compare_with_numpy_sgd_clip_grad(
     test_case,
     device,
@@ -182,7 +166,7 @@ def compare_with_numpy_sgd_clip_grad(
         vt = np.zeros_like(x)
 
         def np_train_one_iter(grad):
-            norm, grad = _clip_grad_norm_np(
+            norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
             grad = grad + weight_decay * x
