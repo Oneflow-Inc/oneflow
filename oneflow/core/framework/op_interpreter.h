@@ -62,11 +62,7 @@ struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg)
       : attrs(attrs_arg), parallel_desc(parallel_desc_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
-                      Symbol<cfg::ParallelDistribution> parallel_distribution_arg)
-      : attrs(attrs_arg),
-        parallel_desc(parallel_desc_arg),
-        parallel_distribution(parallel_distribution_arg) {}
-  Symbol<cfg::ParallelDistribution> nd_sbp_arg)
+                      Symbol<cfg::ParallelDistribution> nd_sbp_arg)
       : attrs(attrs_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
                       Symbol<cfg::ParallelDistribution> nd_sbp_arg,
