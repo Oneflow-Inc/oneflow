@@ -599,7 +599,6 @@ class Avgpool3DFunctor : public AvgPoolingNDFunctor {
   }
 };
 
-
 class OneHotFunctor {
  public:
   OneHotFunctor() {
@@ -630,7 +629,6 @@ class OneHotFunctor {
  private:
   std::shared_ptr<OpExpr> one_hot_op_;
 };
-
 
 class L2NormalizeFunctor {
  public:
@@ -672,7 +670,6 @@ class L2NormalizeGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-
 };
 
 }  // namespace impl
