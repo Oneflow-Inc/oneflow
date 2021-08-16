@@ -33,10 +33,10 @@ class NdSbp;
 
 namespace one {
 
-class OpExprInterpState {
+class AutoGradCaptureState {
  public:
-  OpExprInterpState() = default;
-  virtual ~OpExprInterpState() = default;
+  AutoGradCaptureState() = default;
+  virtual ~AutoGradCaptureState() = default;
 
   const TensorTuple& SavedTensors() const { return saved_tensors_; }
 

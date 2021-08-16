@@ -22,16 +22,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct ReduceSumOpInterpState : public OpExprInterpState {
+struct ReduceSumCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
 };
 
-class ReduceSumOp : public OpExprGradFunction<ReduceSumOpInterpState> {
+class ReduceSumOp : public OpExprGradFunction<ReduceSumCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(ReduceSumOpInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ReduceSumCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const ReduceSumOpInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ReduceSumCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -45,7 +45,7 @@ Maybe<void> ReduceSumOp::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceSumOp::Capture(ReduceSumOpInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> ReduceSumOp::Capture(ReduceSumCaptureState* ctx, const TensorTuple& inputs,
                                  const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
@@ -53,7 +53,7 @@ Maybe<void> ReduceSumOp::Capture(ReduceSumOpInterpState* ctx, const TensorTuple&
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceSumOp::Apply(const ReduceSumOpInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> ReduceSumOp::Apply(const ReduceSumCaptureState* ctx, const TensorTuple& out_grads,
                                TensorTuple* in_grads) const {
   const auto& input = ctx->SavedTensors().at(0);
   const auto& dy = out_grads.at(0);
@@ -64,17 +64,17 @@ Maybe<void> ReduceSumOp::Apply(const ReduceSumOpInterpState* ctx, const TensorTu
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_sum", ReduceSumOp);
 
-struct ReduceMaxOrMinOpInterpState : public OpExprInterpState {
+struct ReduceMaxOrMinCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
   bool keepdims;
 };
 
-class ReduceMaxOrMinOp : public OpExprGradFunction<ReduceMaxOrMinOpInterpState> {
+class ReduceMaxOrMinOp : public OpExprGradFunction<ReduceMaxOrMinCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(ReduceMaxOrMinOpInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ReduceMaxOrMinCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const ReduceMaxOrMinOpInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ReduceMaxOrMinCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -88,7 +88,7 @@ Maybe<void> ReduceMaxOrMinOp::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceMaxOrMinOp::Capture(ReduceMaxOrMinOpInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> ReduceMaxOrMinOp::Capture(ReduceMaxOrMinCaptureState* ctx, const TensorTuple& inputs,
                                       const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
@@ -98,7 +98,7 @@ Maybe<void> ReduceMaxOrMinOp::Capture(ReduceMaxOrMinOpInterpState* ctx, const Te
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReduceMaxOrMinOp::Apply(const ReduceMaxOrMinOpInterpState* ctx,
+Maybe<void> ReduceMaxOrMinOp::Apply(const ReduceMaxOrMinCaptureState* ctx,
                                     const TensorTuple& out_grads, TensorTuple* in_grads) const {
   const auto& input = ctx->SavedTensors().at(0);
   const auto& output = ctx->SavedTensors().at(1);

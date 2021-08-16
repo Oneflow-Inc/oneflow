@@ -22,17 +22,17 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct WhereInterpState : public OpExprInterpState {
+struct WhereCaptureState : public AutoGradCaptureState {
   bool requires_grad_x;
   bool requires_grad_y;
 };
 
-class Where : public OpExprGradFunction<WhereInterpState> {
+class Where : public OpExprGradFunction<WhereCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(WhereInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(WhereCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override;
-  Maybe<void> Apply(const WhereInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const WhereCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -53,7 +53,7 @@ Maybe<void> Where::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Where::Capture(WhereInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Where::Capture(WhereCaptureState* ctx, const TensorTuple& inputs,
                            const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad_x = inputs.at(1)->requires_grad();
   ctx->requires_grad_y = inputs.at(2)->requires_grad();
@@ -65,7 +65,7 @@ Maybe<void> Where::Capture(WhereInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Where::Apply(const WhereCaptureState* ctx, const TensorTuple& out_grads,
                          TensorTuple* in_grads) const {
   if ((!ctx->requires_grad_x) && (!ctx->requires_grad_y)) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
