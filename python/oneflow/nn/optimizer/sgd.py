@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
-import math
 from typing import Callable, Dict, Iterator, List, Union
 
 import oneflow as flow
@@ -39,7 +38,7 @@ class SGD(Optimizer):
 
         .. math::
 
-            & V_t = \\beta * V_{t-1} - learning\\_rate * (g_t * scale + param_{old} * weight\\_decay)
+            & V_t = \\beta * V_{t-1} - learning\\_rate * (g_t + param_{old} * weight\\_decay)
 
             & param_{new} = param_{old} + V_t
 
@@ -49,7 +48,6 @@ class SGD(Optimizer):
         lr (float, optional): learning rate (default: 1e-3)
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
-
     """
 
     def __init__(
@@ -59,18 +57,15 @@ class SGD(Optimizer):
         momentum: float = 0.0,
         weight_decay: float = 0.0,
     ):
-        super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
         assert weight_decay >= 0.0, f"Invalid weight_decay: {weight_decay}"
-        self._default_options["lr"] = lr
-        self._default_options["momentum"] = momentum
-        self._default_options["weight_decay"] = weight_decay
-        if isinstance(parameters, collections.abc.Iterator):
-            self.param_groups.append(ParamGroup(parameters, self._default_options))
-        else:
-            for param in parameters:
-                self.param_groups.append(ParamGroup(param, self._default_options))
+        options = dict()
+        options["lr"] = lr
+        options["momentum"] = momentum
+        options["weight_decay"] = weight_decay
+        super().__init__(parameters, options)
+
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"

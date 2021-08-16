@@ -18,41 +18,43 @@ limitations under the License.
 
 namespace oneflow {
 
-std::string* MutErrorStr() {
-  thread_local static std::string error_str = "";
-  return &error_str;
-}
-
-const std::string& GetErrorStr() { return *MutErrorStr(); }
-
 namespace {
 
-void StripSpace(std::string& str) {
-  str.erase(0, str.find_first_not_of(" "));
-  str.erase(str.find_last_not_of(" ") + 1);
+std::string StripSpace(std::string str) {
+  if (str.size() == 0) { return ""; }
+  size_t pos = str.find_first_not_of(" ");
+  if (pos != std::string::npos) { str.erase(0, pos); }
+  pos = str.find_last_not_of(" ") + 1;
+  if (pos != std::string::npos) { str.erase(pos); }
+  return str;
 }
 
 bool IsLetterNumberOrUnderline(char c) {
   return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
 }
 
-void EraseErrorMsg(std::string& str) {
-  if (str.size() == 0) { return; }
-  StripSpace(str);
-  // strip bracket
-  if (str.at(0) != '(') { return; }
+std::string StripBrackets(std::string str) {
+  if (str.size() == 0) { return ""; }
+  if (str.at(0) != '(') { return str; }
+  // "()" come from OF_PP_STRINGIZE((__VA_ARGS__)), so size() >= 2
   str = str.substr(1, str.size() - 2);
+  return str;
 }
 
-void ShortenErrorMsg(std::string& str) {
+Maybe<std::string> ShortenErrorMsg(std::string str) {
+  // 150 characters is the threshold
   const int num_displayed_char = 150;
-  if (str.size() == 0) { return; }
-  StripSpace(str);
-  if (str.size() < num_displayed_char) { return; }
+  if (str.size() == 0) { return str; }
+  // strip space when JUST(  xx  );
+  str = StripSpace(str);
+  if (str.size() < num_displayed_char) { return str; }
 
+  // Find first index where the number of characters from the start to the index is less than 50,
+  // last index is the same
   int first_index = -1;
   int last_index = -1;
   int pre_index = 0;
+  CHECK_OR_RETURN(str.size() >= 1);
   for (int i = 1; i < str.size(); i++) {
     if (IsLetterNumberOrUnderline(str.at(i)) && !IsLetterNumberOrUnderline(str.at(i - 1))) {
       if (first_index == -1 && i >= num_displayed_char / 3) { first_index = pre_index; }
@@ -60,12 +62,25 @@ void ShortenErrorMsg(std::string& str) {
       pre_index = i;
     }
   }
+  // A string of more than 150 characters
+  if (first_index == -1 && last_index == -1) { return str; }
+  CHECK_OR_RETURN(first_index <= str.size());
+  CHECK_OR_RETURN(last_index <= str.size());
   std::stringstream ss;
-  ss << str.substr(0, first_index) << " ... " << str.substr(last_index);
-  str = ss.str();
+  // The number of characters before the first word exceeds 50
+  if (first_index == -1) {
+    ss << " ... " << str.substr(last_index);
+  }
+  // The number of characters after the last word exceeds 50
+  else if (last_index == -1) {
+    ss << str.substr(0, first_index) << " ... ";
+  } else {
+    ss << str.substr(0, first_index) << " ... " << str.substr(last_index);
+  }
+  return ss.str();
 }
 
-std::string FormatFile(std::string file) {
+std::string FormatFile(const std::string& file) {
   std::stringstream ss;
   ss << "\n  File \"" << file << "\", ";
   return ss.str();
@@ -77,15 +92,17 @@ std::string FormatLine(const int64_t& line) {
   return ss.str();
 }
 
-std::string FormatFunction(std::string function) {
+std::string FormatFunction(const std::string& function) {
   std::stringstream ss;
   ss << " in " << function;
   return ss.str();
 }
 
-std::string FormatErrorMsg(std::string error_msg, bool has_error_hint) {
-  EraseErrorMsg(error_msg);
-  if (!has_error_hint) { ShortenErrorMsg(error_msg); }
+Maybe<std::string> FormatErrorMsg(std::string error_msg, bool is_last_stack_frame) {
+  error_msg = StripBrackets(error_msg);
+  if (!is_last_stack_frame) { error_msg = *JUST(ShortenErrorMsg(error_msg)); }
+  // error_msg of last stack frame come from "<<"
+  if (is_last_stack_frame) { error_msg = StripSpace(error_msg); }
   std::stringstream ss;
   ss << "\n    " << error_msg;
   return ss.str();
@@ -100,17 +117,17 @@ std::string FormatErrorSummaryAndMsg(const std::shared_ptr<cfg::ErrorProto>& err
 
 }  // namespace
 
-void FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error) {
+Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error) {
   std::stringstream ss;
   for (auto stack_frame = error->mutable_stack_frame()->rbegin();
        stack_frame < error->mutable_stack_frame()->rend(); stack_frame++) {
     ss << FormatFile(*stack_frame->mutable_file()) << FormatLine(*stack_frame->mutable_line())
        << FormatFunction(*stack_frame->mutable_function())
-       << FormatErrorMsg(*stack_frame->mutable_error_msg(),
-                         stack_frame == error->mutable_stack_frame()->rend() - 1);
+       << *JUST(FormatErrorMsg(*stack_frame->mutable_error_msg(),
+                               stack_frame == error->mutable_stack_frame()->rend() - 1));
   }
   ss << "\n" << FormatErrorSummaryAndMsg(error);
-  *MutErrorStr() = ss.str();
+  return ss.str();
 }
 
 }  // namespace oneflow

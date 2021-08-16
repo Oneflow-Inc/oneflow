@@ -103,7 +103,10 @@ class _BatchNorm(_NormBase):
 
     def forward(self, x):
         self._check_input_dim(x)
-        if x.device == flow.device("cpu"):
+        # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
+        # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
+        # no device, however using `x.is_cuda` is not a good choice.
+        if not x.is_cuda:
             reduce_axis = []
             for dim in range(len(x.shape)):
                 if dim != 1:
@@ -129,12 +132,15 @@ class _BatchNorm(_NormBase):
             if len(mean.shape) == 1:
                 nd_params_shape = [1] * len(x.shape)
                 nd_params_shape[axis] = params_shape[0]
-                mean = mean.reshape(shape=nd_params_shape)
-                variance = variance.reshape(shape=nd_params_shape)
-                if self.weight and params_shape[0] == self.weight.nelement():
-                    weight = self.weight.reshape(shape=nd_params_shape)
-                if self.bias and params_shape[0] == self.bias.nelement():
-                    bias = self.bias.reshape(shape=nd_params_shape)
+                mean = flow.reshape(mean, shape=nd_params_shape)
+                variance = flow.reshape(variance, shape=nd_params_shape)
+                if (
+                    self.weight is not None
+                    and params_shape[0] == self.weight.nelement()
+                ):
+                    weight = flow.reshape(self.weight, shape=nd_params_shape)
+                if self.bias is not None and params_shape[0] == self.bias.nelement():
+                    bias = flow.reshape(self.bias, shape=nd_params_shape)
             elif len(mean.shape) == len(x.shape):
                 pass
             else:
@@ -144,9 +150,9 @@ class _BatchNorm(_NormBase):
             variance += self.eps
             normalized = (x - mean) * variance.rsqrt()
             affined = normalized
-            if self.weight:
+            if self.weight is not None:
                 affined = affined * weight
-            if self.bias:
+            if self.bias is not None:
                 affined = affined + bias
             return affined
         else:

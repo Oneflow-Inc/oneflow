@@ -27,9 +27,22 @@ class EagerBoxingInterpreterManager final {
   virtual ~EagerBoxingInterpreterManager() = default;
 
   Maybe<EagerBoxingInterpreter> GetEagerBoxingInterpreter(
-      Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-      Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+      Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
       Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const;
+};
+
+template<typename RetT, typename... Args>
+struct DisableRecusiveBoxingCall {
+  static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
+  template<RetT (*func)(Args...)>
+  static RetT Call(Args... arg) {
+    static thread_local bool disable_boxing = false;
+    CHECK_OR_RETURN(!disable_boxing);
+    disable_boxing = true;
+    RetT&& ret = func(arg...);
+    disable_boxing = false;
+    return ret;
+  }
 };
 
 }  // namespace oneflow

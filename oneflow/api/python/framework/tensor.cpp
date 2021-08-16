@@ -34,10 +34,12 @@ limitations under the License.
 #include "oneflow/core/functional/value_types.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/extension/python/numpy.h"
 
 namespace py = pybind11;
@@ -75,27 +77,18 @@ void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
 template<typename T>
 Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
                                               py::array_t<T> array,
-                                              void (*Copy)(uint64_t, py::array_t<T>),
+                                              Maybe<void> (*Copy)(uint64_t, py::array_t<T>),
                                               const std::string& modifier) {
   auto tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
-  std::atomic<bool> synced(false);
 
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        tensor,
-        [&array, &synced, &Copy](uint64_t ofblob_ptr) {
-          Copy(ofblob_ptr, array);
-          synced = true;
-        },
-        modifier));
-    return Maybe<void>::Ok();
+  const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
+      [&array, &Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array)); });
+  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
+    });
   }));
-
-  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
-                                                                    while (!synced) {}
-  });
-
   return Maybe<void>::Ok();
 }
 
@@ -190,17 +183,13 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
   std::vector<Shape> shapes;
   std::vector<const DType*> dtypes;
-  std::atomic<bool> synced(false);
 
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        tensor, [&synced](uint64_t of_blob_ptr) { synced = true; }, "const"));
-    return Maybe<void>::Ok();
+  const auto& Callback = std::make_shared<std::function<void(uint64_t)>>([](uint64_t) {});
+  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(tensor, sc, Callback, "const");
+    });
   }));
-
-  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
-    while (!synced) {}
-  });
 
   const Blob& blob = JUST(tensor->eager_blob_object())->blob();
   const Shape& blob_shape = blob.static_shape();
@@ -228,19 +217,19 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
-Maybe<void> CheckConsistentTensorMeta(const one::Tensor& tensor, int64_t seconds) {
-  const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(tensor));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
-  JUST(ctx->Check());
+Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
+  CHECK_OR_RETURN(tensor->is_consistent());
   return Maybe<void>::Ok();
 }
+
+auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
 
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
 }
 
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
-  const auto& nd_sbp = JUST(tensor.parallel_distribution());
+  const auto& nd_sbp = JUST(tensor.nd_sbp());
   const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());
   for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
     (*tuple)[i] = SymbolOf(nd_sbp->sbp_parallel(i));
@@ -263,6 +252,10 @@ py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
 // 8. ndarray           -> ConsistentTensor  // TODO
 Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype,
                         bool treat_single_int_as_size) {
+  // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
+  //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
+  //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
+  auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
   Symbol<Device> device;
   Symbol<ParallelDesc> placement;
   std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;
@@ -273,7 +266,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
                     || py::isinstance<py::str>(device_kwarg));
 
     if (py::isinstance<py::str>(device_kwarg)) {
-      device = DeviceExportUtil::New(py::cast<std::string>(device_kwarg));
+      device = DeviceExportUtil::ParseAndNew(py::cast<std::string>(device_kwarg));
     } else {
       device = py::cast<Symbol<Device>>(device_kwarg);
     }
@@ -307,8 +300,9 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
       if (other_tensor->is_local()) {
         if (placement) {
           // LocalTensor -> ConsistentTensor
-          tensor =
-              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple, Optional<Shape>()));
+          tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple,
+                                                 /* identity_grad */ false,
+                                                 /* grad_sbp_parallels */ {}));
         } else {
           // LocalTensor -> LocalTensor
           if (!device) { device = JUST(Device::New("cpu")); }
@@ -317,8 +311,9 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_d
       } else {
         if (placement) {
           // ConsistentTensor -> ConsistentTensor
-          tensor =
-              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple, Optional<Shape>()));
+          tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple,
+                                                 /* identity_grad */ false,
+                                                 /* grad_sbp_parallels */ {}));
         } else {
           // ConsistentTensor -> LocalTensor
           tensor = JUST(functional::ConsistentToLocal(other_tensor));
@@ -459,12 +454,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());
            })
       .def("check_meta_consistency",
-           [](const one::Tensor& tensor) {
-             return CheckConsistentTensorMeta(tensor, 60 * 5).GetOrThrow();
-           })
-      .def("check_meta_consistency",
-           [](const one::Tensor& tensor, int64_t seconds) {
-             return CheckConsistentTensorMeta(tensor, seconds).GetOrThrow();
+           [](const std::shared_ptr<one::Tensor>& tensor) {
+             return CheckMetaConsistency(tensor).GetOrThrow();
            })
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \

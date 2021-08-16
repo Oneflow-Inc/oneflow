@@ -63,7 +63,7 @@ bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
 
 bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
 
-bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
+bool operator==(const NdSbp& lhs, const NdSbp& rhs) {
   if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
   for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
     if (lhs.sbp_parallel().Get(i) != rhs.sbp_parallel().Get(i)) { return false; }
@@ -71,14 +71,11 @@ bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs
   return true;
 }
 
-bool operator!=(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
-  return !(lhs == rhs);
-}
+bool operator!=(const NdSbp& lhs, const NdSbp& rhs) { return !(lhs == rhs); }
 
 bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
   return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())
-         && lhs.parallel_conf() == rhs.parallel_conf()
-         && lhs.parallel_distribution() == rhs.parallel_distribution();
+         && lhs.parallel_conf() == rhs.parallel_conf() && lhs.nd_sbp() == rhs.nd_sbp();
 }
 
 namespace {
@@ -392,11 +389,9 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   ParallelBlobConf ret;
   *blob_conf->mutable_parallel_conf() = job_builder.ParallelConf4OpName(op_name);
   *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
-  *blob_conf->mutable_parallel_distribution() = job.job_parallel_view_conf()
-                                                    .op_name2parallel_distribution_signature_conf()
-                                                    .at(op_name)
-                                                    .bn_in_op2parallel_distribution()
-                                                    .at(obn);
+  *blob_conf->mutable_nd_sbp() =
+      job.job_parallel_view_conf().op_name2nd_sbp_signature_conf().at(op_name).bn_in_op2nd_sbp().at(
+          obn);
 }
 
 void FilterOpName2ParallelBlobConf(

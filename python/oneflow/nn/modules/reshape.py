@@ -29,7 +29,6 @@ def _input_args_is_flow_size(args):
     return all((isinstance(x, flow.Size) for x in args)) and len(args) == 1
 
 
-@register_tensor_op("reshape")
 def reshape_op(input, shape: Sequence[int] = None):
     """This operator reshapes a Tensor.
 
@@ -58,6 +57,41 @@ def reshape_op(input, shape: Sequence[int] = None):
 
     """
     return flow.F.reshape(input, shape)
+
+
+@register_tensor_op("reshape")
+def reshape_tensor_op(input, *shape):
+    """This operator reshapes a Tensor.
+
+    We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
+
+    Args:
+        x: A Tensor.
+        *shape: tuple of python::ints or int...
+    Returns:
+        A Tensor has the same type as `x`.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = np.array(
+        ...    [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+        ... ).astype(np.float32)
+        >>> input = flow.Tensor(x)
+
+        >>> y = input.reshape(2, 2, 2, -1).shape
+        >>> y
+        flow.Size([2, 2, 2, 2])
+
+    """
+    if _input_args_is_int(shape):
+        new_shape = _single(shape)
+    else:
+        raise ValueError("the input shape parameter of reshape is not illegal!")
+    return flow.F.reshape(input, new_shape)
 
 
 @register_tensor_op("view")

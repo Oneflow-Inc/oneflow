@@ -302,7 +302,6 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
     const auto& dy = out_grads.at(0);
     const auto& x = ctx->SavedTensors().at(0);
     const auto& alpha = ctx->SavedTensors().at(1);
-
     in_grads->resize(2);
     if (ctx->input_requires_grad || ctx->alpha_requires_grad) {
       const auto& grads = JUST(functional::PReluGrad(dy, x, alpha));

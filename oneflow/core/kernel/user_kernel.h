@@ -32,21 +32,22 @@ class UserKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UserKernel);
   UserKernel() = default;
-  ~UserKernel() override = default;
+  ~UserKernel() override;
 
   void InitUserKernel(DeviceCtx* device_ctx);
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx);
   const std::shared_ptr<user_op::OpKernelState>& GetOpKernelState() const;
-  void ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
+  void ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                          user_op::OpKernelState* opkernel_state) const;
 
  private:
   void VirtualKernelInit(DeviceCtx* device_ctx) override;
 
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
   void ForwardShape(const KernelCtx& ctx,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
 
   bool IsStateless() const override;
 
@@ -55,6 +56,8 @@ class UserKernel final : public Kernel {
   std::unique_ptr<UserKernelComputeContext> ctx_;
   std::unique_ptr<UserKernelInferContext> infer_ctx_;
   std::unique_ptr<user_op::OpKernelInferCache> infer_cache_;
+  class CudaGraphContext;
+  std::unique_ptr<CudaGraphContext> cuda_graph_ctx_;
 };
 
 }  // namespace oneflow
