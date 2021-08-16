@@ -168,102 +168,17 @@ class TestSigmoidModule(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = x.sigmoid()
         return y
-
-def numpy_softmax(x, axis):
-    x = x - x.max(axis=axis, keepdims=True)
-    y = np.exp(x)
-    return y / y.sum(axis=axis, keepdims=True)
-
-def _test_softmax(test_case, device):
-    axis = 0
-    m = flow.nn.Softmax(dim=axis)
-    arr = np.random.randn(2, 3, 4, 5)
-    x = flow.Tensor(arr, device=flow.device(device))
-    y = m(x)
-    output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
-
-
-def _test_softmax_dim_1(test_case, device):
-    axis = 1
-    m = flow.nn.Softmax(dim=axis)
-    arr = np.random.randn(9, 7, 8, 16)
-    x = flow.Tensor(arr, device=flow.device(device))
-    y = m(x)
-    output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
-
-
-def _test_softmax_dim_2(test_case, device):
-    axis = 2
-    m = flow.nn.Softmax(dim=axis)
-    arr = np.random.randn(2, 5, 6, 3)
-    x = flow.Tensor(arr, device=flow.device(device))
-    y = m(x)
-    output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
-
-
-def _test_softmax_dim_3(test_case, device):
-    axis = 3
-    m = flow.nn.Softmax(dim=axis)
-    arr = np.random.randn(1, 3, 4, 7)
-    x = flow.Tensor(arr, device=flow.device(device))
-    y = m(x)
-    output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
-    axis2 = -1
-    m2 = flow.nn.Softmax(dim=axis)
-    y2 = m(x)
-    output2 = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y2.numpy(), output2, 1e-05, 1e-05))
-
-
-def _test_softmax_backward_normal(test_case, device):
-    x_grad = np.zeros((2, 3, 4, 5))
-    axis = 0
-    m = flow.nn.Softmax(dim=axis)
-    x = flow.Tensor(
-        np.random.randn(2, 3, 4, 5),
-        requires_grad=True,
-        device=flow.device(device),
-        dtype=flow.float64,
-    )
-    y = m(x).sum()
-    y.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-05, 1e-05))
-
-
-def _test_softmax_backward_1_dim(test_case, device):
-    a = flow.tensor(
-        [1, 2], dtype=flow.float64, device=flow.device(device), requires_grad=True
-    )
-    b = flow.tensor(
-        [3, 4], dtype=flow.float64, device=flow.device(device), requires_grad=True
-    )
-    c = a * b
-    m = flow.nn.Softmax(dim=None)
-    d = m(c)
-    d[0].backward()
-    a_grad = np.array([0.01994417, -0.0265922267])
-    test_case.assertTrue(np.allclose(a.grad.numpy(), a_grad, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSoftmax(flow.unittest.TestCase):
-    def test_softmax(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["fun"] = [
-            _test_softmax,
-            _test_softmax_dim_1,
-            _test_softmax_dim_2,
-            _test_softmax_dim_3,
-            _test_softmax_backward_normal,
-            _test_softmax_backward_1_dim,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_softmax_module_with_random_data(test_case):
+        m = torch.nn.Softmax(dim = random(low=1, high=4).to(int) | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = m(x)
+        return y
 
 @flow.unittest.skip_unless_1n1d()
 class TestHardsigmoidModule(flow.unittest.TestCase):
