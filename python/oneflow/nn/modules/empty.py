@@ -40,7 +40,7 @@ def empty_op(
         size (int... or flow.Size): Defining the shape of the output tensor.
           Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
-        device (torch.device, optional): The desired device of returned local tensor. If None, uses the
+        device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
         placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
           construct local tensor.

@@ -72,7 +72,7 @@ class Optimizer(object):
         raise NotImplementedError()
 
     def zero_grad(self, set_to_none: bool = False):
-        """Sets the gradients of all optimized torch.Tensor s to zero.
+        """Sets the gradients of all optimized flow.Tensor s to zero.
 
         Args:
             set_to_none (bool): instead of setting to zero, set the grads to None.

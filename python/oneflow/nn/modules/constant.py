@@ -319,7 +319,7 @@ def new_ones_op(
 ):
     """
 
-    Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
+    Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same flow.dtype and flow.device as this tensor.
 
     Args:
         size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
