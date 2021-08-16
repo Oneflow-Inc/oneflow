@@ -206,11 +206,7 @@ class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
   Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
-<<<<<<< HEAD
-                           const Symbol<DType>& dtype) const {
-=======
-                           const DataType& dtype, const Optional<Symbol<Device>>& device) const {
->>>>>>> master
+                           const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("limit", limit));
