@@ -28,12 +28,9 @@ class MyModuleWithEagerTensorForward(flow.nn.Module):
 
     def forward(self, x):
         y0 = self.linear(x)
-        y1 = y0 > 0.5
-        eager_t = flow.tensor([0.5], dtype=y0.dtype, device=y0.device)
-        assert eager_t.is_eager
-        y2 = y0 > eager_t
-        z = flow.eq(y1, y2)
-        return z
+        eager_t = flow.tensor([1.0], dtype=y0.dtype, device=y0.device)
+        out = y0 + eager_t
+        return out
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -56,8 +53,9 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
         my_g = GraphEagerTensorCaught()
         graph_out = my_g(x)
         eager_out = my_net_module(x)
-
-        test_case.assertTrue(np.array_equal(graph_out.numpy(), eager_out.numpy()))
+        test_case.assertTrue(
+            np.allclose(graph_out.numpy(), eager_out.numpy(), atol=1e-4, rtol=1e-4)
+        )
 
 
 if __name__ == "__main__":

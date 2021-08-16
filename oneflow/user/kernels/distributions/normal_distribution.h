@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_USER_KERNELS_DISTRIBUTION_NORMAL_DISTRIBUTION_H_
-#define ONEFLOW_USER_KERNELS_DISTRIBUTION_NORMAL_DISTRIBUTION_H_
+#ifndef ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_DISTRIBUTION_H_
+#define ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_DISTRIBUTION_H_
 
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/framework/random_generator.h"
@@ -59,8 +59,8 @@ class NormalDistribution<DeviceType::kGPU, T> final {
   const T mean_;
   const T std_;
 };
-#endif
+#endif  // WITH_CUDA
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_DISTRIBUTION_NORMAL_DISTRIBUTION_H_
+#endif  // ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_DISTRIBUTION_H_

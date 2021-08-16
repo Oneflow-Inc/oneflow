@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.modules.interpolate import interpolate
+from oneflow.nn.modules.norm import l2_normalize
 from oneflow.F import conv1d
 from oneflow.F import conv2d
 from oneflow.F import conv3d
