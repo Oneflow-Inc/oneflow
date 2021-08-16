@@ -31,10 +31,8 @@ limitations under the License.
 namespace oneflow {
 
 NNGraph::~NNGraph() {
-  if (!is_closed_) {
-    VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
-    Close();
-  }
+  VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
+  Close();
 }
 
 Maybe<void> NNGraph::Close() {

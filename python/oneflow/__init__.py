@@ -83,6 +83,7 @@ session_ctx.OpenDefaultSession(
 )
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
+del env_util
 from oneflow.framework import python_callback, register_python_callback
 
 oneflow._oneflow_internal.RegisterGlobalForeignCallback(
@@ -101,14 +102,10 @@ def _SyncOnMasterFn():
         oneflow._oneflow_internal.eager.single_client.Sync()
 
 
-def _ExitOneFlow():
-    _SyncOnMasterFn()
-    session_ctx.TryCloseDefaultSession()
-    oneflow._oneflow_internal.DestroyEnv()
-    oneflow._oneflow_internal.SetShuttingDown
-
-
-atexit.register(_ExitOneFlow)
+atexit.register(oneflow._oneflow_internal.SetShuttingDown)
+atexit.register(oneflow._oneflow_internal.DestroyEnv)
+atexit.register(oneflow.framework.session_context.TryCloseDefaultSession)
+atexit.register(_SyncOnMasterFn)
 
 del atexit
 del oneflow
