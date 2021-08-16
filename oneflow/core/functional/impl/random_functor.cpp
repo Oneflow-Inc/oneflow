@@ -31,7 +31,6 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/user/kernels/bernoulli_kernel.h"
-
 #include "oneflow/user/kernels/distributions/normal_kernel.h"
 #include "oneflow/user/kernels/distributions/uniform_kernel.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -320,14 +319,12 @@ class ConsistentRandintFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BernoulliFunctor>("Bernoulli");
-
-  m.add_functor<impl::RandintFunctor>("Randint");
-  m.add_functor<impl::ConsistentRandintFunctor>("ConsistentRandint");
-
   m.add_functor<impl::RandFunctor>("Rand");
   m.add_functor<impl::ConsistentRandFunctor>("ConsistentRand");
   m.add_functor<impl::RandNFunctor>("RandN");
   m.add_functor<impl::ConsistentRandNFunctor>("ConsistentRandN");
+  m.add_functor<impl::RandintFunctor>("Randint");
+  m.add_functor<impl::ConsistentRandintFunctor>("ConsistentRandint");
 };
 
 }  // namespace functional
