@@ -135,6 +135,48 @@ def double_op(input):
     return input.to(dtype=flow.float64)
 
 
+@register_tensor_op("cpu")
+def cpu_op(input):
+    """Returns a copy of this object in CPU memory.
+    If this object is already in CPU memory and on the correct device, then no copy is performed and the original object is returned.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor([1, 2, 3, 4, 5], device=flow.device("cuda"))
+        >>> output = input.cpu()
+        >>> output.device
+        device(type='cpu', index=0)
+
+    """
+    return input.to(device="cpu")
+
+@register_tensor_op("cuda")
+def cpu_op(input):
+    """Returns a copy of this object in CUDA memory.
+    If this object is already in CUDA memory and on the correct device, then no copy is performed and the original object is returned.
+
+    Args:
+        device  (flow.device): The destination GPU device. Defaults to the current CUDA device.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor([1, 2, 3, 4, 5])
+        >>> output = input.cuda()
+        >>> output.device
+        device(type='cuda', index=0)
+
+    """
+    return input.to(device="cuda")
+
+
 if __name__ == "__main__":
     import doctest
 

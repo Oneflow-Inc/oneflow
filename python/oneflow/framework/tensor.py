@@ -85,20 +85,6 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
-def _cpu(self):
-    assert not self.is_consistent, "Tensor.cpu() do not support consistent tensor for now!"
-    if (self.is_cuda):
-        device = flow.device("cpu")
-        return flow.F.copy(self, device_type=device.type, device_id=device.index)
-    return self
-
-def _cuda(self, device=None):
-    assert not self.is_consistent, "Tensor.cuda() do not support consistent tensor for now!"
-    if device is None:
-        device = flow.device("cuda")
-    if (device != self.device):
-        return flow.F.copy(self, device_type=device.type, device_id=device.index)
-    return self
 
 def _getitem(self, key):
     try:
@@ -406,8 +392,6 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
-    Tensor.cpu = _cpu
-    Tensor.cuda = _cuda
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__eq__ = _eq
