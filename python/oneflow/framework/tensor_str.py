@@ -33,6 +33,7 @@ class __PrinterOptions(object):
 
 PRINT_OPTS = __PrinterOptions()
 
+
 class _Formatter(object):
     def __init__(self, tensor):
         self.floating_dtype = tensor.dtype.is_floating_point
@@ -223,10 +224,11 @@ def _tensor_str(self, indent):
         if not self.is_consistent:
             return get_summarized_data(self) if summarize else self
         else:
-            if not summarize:
-                return self.to_consistent(sbp=flow.sbp.broadcast).to_local()
-            else:
-                return get_summarized_data(self)
+            return (
+                get_summarized_data(self)
+                if summarize
+                else self.to_consistent(sbp=flow.sbp.broadcast).to_local()
+            )
 
     with flow.no_grad():
         local_tensor = _convert_to_local_tensor(self, summarize)
