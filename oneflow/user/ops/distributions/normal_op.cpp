@@ -44,7 +44,7 @@ REGISTER_NO_GRAD_USER_OP("normal")
     .SetParallelDistributionInferFn(
         [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
           cfg::SbpParallel default_sbp;
-          default_sbp.mutable_split_parallel()->set_axis(0);
+          default_sbp.mutable_broadcast_parallel();
           return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
         });
 
