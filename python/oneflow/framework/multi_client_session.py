@@ -29,8 +29,7 @@ class MultiClientSession(object):
         INITED = 2
         CLOSED = 3
 
-    def __init__(self, sess_id, env_holder):
-        self._env_holder = env_holder
+    def __init__(self, sess_id):
         self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
         oneflow._oneflow_internal.CreateMultiClientSessionContext()
         self.config_proto_ = self._make_config_proto()
@@ -40,6 +39,9 @@ class MultiClientSession(object):
         self._update_scope_attr_name2defaultVal()
         self.status_ = self.Status.CREATED
 
+    def __del__(self):
+        self.TryClose()
+
     def TryInit(self):
         self._check_status(self.Status.CREATED, self.Status.INITED)
         if self.status_ == self.Status.CREATED:
@@ -47,18 +49,15 @@ class MultiClientSession(object):
             oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
             self.status_ = self.Status.INITED
 
-    def AddCGraph(self, graph):
-        self._check_status(self.Status.INITED)
-        oneflow._oneflow_internal.MultiClientSessionContextAddCGraph(graph)
-
-    def _try_close(self):
+    def TryClose(self):
         if self.status_ != self.Status.CLOSED:
             oneflow._oneflow_internal.TryDestroyMultiClientSessionContext()
             oneflow._oneflow_internal.ClearSessionById(self.id)
         self.status_ = self.Status.CLOSED
 
-    def __del__(self):
-        self._try_close()
+    def AddCGraph(self, graph):
+        self._check_status(self.Status.INITED)
+        oneflow._oneflow_internal.MultiClientSessionContextAddCGraph(graph)
 
     @property
     def status(self):

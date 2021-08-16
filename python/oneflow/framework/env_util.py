@@ -365,33 +365,6 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
 
 
-class EnvHolder(object):
-    def __init__(self):
-        if not HasAllMultiClientEnvVars():
-            SetDefaultMultiClientEnvVars()
-        oneflow._oneflow_internal.SetIsMultiClient(True)
-        api_env_init()
-
-    def __del__(self):
-        oneflow._oneflow_internal.DestroyEnv()
-        oneflow._oneflow_internal.SetShuttingDown()
-
-
-def GetEnvHolder():
-    global _env_holder
-    if _env_holder is not None:
-        return _env_holder
-    else:
-        _env_holder = EnvHolder()
-        return _env_holder
-
-
-def DelEnvHolder():
-    global _env_holder
-    del _env_holder
-
-
-_env_holder = None
 device_tag2default_parallel_conf = {}
 default_env_proto = _DefaultEnvProto()
 config_master_addr = ctrl_bootstrap_pb.Address()

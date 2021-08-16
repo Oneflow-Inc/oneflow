@@ -73,13 +73,13 @@ import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
 
-env_util.GetEnvHolder()
-
+if not env_util.HasAllMultiClientEnvVars():
+    env_util.SetDefaultMultiClientEnvVars()
+oneflow._oneflow_internal.SetIsMultiClient(True)
+env_util.api_env_init()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
-    MultiClientSession(
-        oneflow._oneflow_internal.NewSessionId(), env_util.GetEnvHolder()
-    )
+    MultiClientSession(oneflow._oneflow_internal.NewSessionId())
 )
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
@@ -102,7 +102,8 @@ def _SyncOnMasterFn():
 def _ExitOneFlow():
     _SyncOnMasterFn()
     session_ctx.TryCloseDefaultSession()
-    env_util.DelEnvHolder()
+    oneflow._oneflow_internal.DestroyEnv()
+    oneflow._oneflow_internal.SetShuttingDown
 
 
 atexit.register(_ExitOneFlow)
