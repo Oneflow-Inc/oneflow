@@ -37,7 +37,7 @@ class TestMaxPooling(flow.unittest.TestCase):
             padding=random(1, 3).to(_size_1_t) | nothing(),
             dilation=random(2, 4).to(_size_1_t) | nothing(),
             ceil_mode=random(),
-            return_indices=return_indices
+            return_indices=return_indices,
         )
         m.train(random())
         device = random_device()
@@ -59,12 +59,14 @@ class TestMaxPooling(flow.unittest.TestCase):
             padding=random(1, 3).to(_size_2_t) | nothing(),
             dilation=random(2, 4).to(_size_2_t) | nothing(),
             ceil_mode=random(),
-            return_indices=return_indices
+            return_indices=return_indices,
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
+        x = random_pytorch_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(
+            device
+        )
         y = m(x)
 
         if return_indices:
@@ -81,12 +83,14 @@ class TestMaxPooling(flow.unittest.TestCase):
             padding=random(1, 3).to(_size_3_t) | nothing(),
             dilation=random(2, 4).to(_size_3_t) | nothing(),
             ceil_mode=random(),
-            return_indices=return_indices
+            return_indices=return_indices,
         )
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)).to(device)
+        x = random_pytorch_tensor(
+            ndim=5, dim2=random(20, 22), dim3=random(20, 22), dim4=random(20, 22)
+        ).to(device)
         y = m(x)
 
         if return_indices:
