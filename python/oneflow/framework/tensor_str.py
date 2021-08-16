@@ -293,7 +293,7 @@ def _gen_tensor_str_template(tensor, is_meta):
     indent = len(prefix)
     suffixes = []
 
-    # Inp is local or consistent
+    # tensor is local or consistent
     if tensor.is_consistent:
         suffixes.append(f"placement={str(tensor.placement)}")
         suffixes.append(f"sbp={str(tensor.sbp)}")
