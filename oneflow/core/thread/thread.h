@@ -35,7 +35,7 @@ class Thread {
   Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
 
   inline void EnqueueActorMsg(const ActorMsg& msg) {
-    if (local_msg_queue_enabled_ && std::this_thread::get_id() == actor_thread_.get_id()) {
+    if (UseLocalMsgQueue()) {
       local_msg_queue_.push(msg);
     } else {
       msg_channel_.Send(msg);
@@ -44,7 +44,7 @@ class Thread {
 
   template<typename InputIt>
   inline void EnqueueActorMsg(InputIt first, InputIt last) {
-    if (local_msg_queue_enabled_ && std::this_thread::get_id() == actor_thread_.get_id()) {
+    if (UseLocalMsgQueue()) {
       for (auto it = first; it != last; ++it) { local_msg_queue_.push(*it); }
     } else {
       for (auto it = first; it != last; ++it) { msg_channel_.Send(*it); }
@@ -61,6 +61,10 @@ class Thread {
 
  private:
   void ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx);
+
+  inline bool UseLocalMsgQueue() const {
+    return local_msg_queue_enabled_ && std::this_thread::get_id() == actor_thread_.get_id();
+  }
 
   HashMap<int64_t, TaskProto> id2task_;
   std::mutex id2task_mtx_;
