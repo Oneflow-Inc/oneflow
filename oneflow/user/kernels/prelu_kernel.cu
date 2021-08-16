@@ -96,6 +96,11 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     const int channels = x->shape().At(1);
     const int32_t inner_size = elem_cnt / batch / channels;
 
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx->mut_dptr<T>(), 0,
+                             dx->shape().elem_cnt() * sizeof(T));
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), alpha_diff->mut_dptr<T>(), 0,
+                             alpha_diff->shape().elem_cnt() * sizeof(T));
+
     PReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx->device_ctx()->cuda_stream()>>>(
         elem_cnt, alpha_size, inner_size, x->dptr<T>(), alpha->dptr<T>(), dy->dptr<T>(),

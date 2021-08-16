@@ -24,7 +24,6 @@ from test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestPReLU(flow.unittest.TestCase):
     @autotest()
@@ -34,8 +33,8 @@ class TestPReLU(flow.unittest.TestCase):
         m = torch.nn.PReLU(
             num_parameters=3 | nothing(), init=random().to(float) | nothing(),
         )
-        m.train(random())
         m.to(device)
+        m.train(random())
         y = m(x)
         return y
 
@@ -46,8 +45,8 @@ class TestPReLU(flow.unittest.TestCase):
         m = torch.nn.PReLU(
             num_parameters=3 | nothing(), init=random().to(float) | nothing(),
         )
-        m.train(random())
         m.to(device)
+        m.train(random())
         y = m(x)
         return y
 
