@@ -339,6 +339,43 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
+py::object PyFmod(py::args py_args, py::kwargs py_kwargs) {
+  // "broadcast_fmod(Tensor x, Tensor y)"
+  // "scalar_fmod(Tensor in, Scalar scalar)"
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor) << "Inputs must have one tensor at least.";
+    CHECK_OR_RETURN(PyTensorCheck(input) || PyScalarCheck(input))
+        << "The first input should be a tensor or scalar.";
+    CHECK_OR_RETURN(PyTensorCheck(other) || PyScalarCheck(other))
+        << "The second input should be a tensor or scalar.";
+    if (PyTensorCheck(input) && PyTensorCheck(other)) {
+      auto a = JUST(PyUnpackTensor(input));
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::BroadcastFMod(a, b);
+    } else {
+      if (PyTensorCheck(input)) {
+        CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar.";
+        auto a = JUST(PyUnpackTensor(input));
+        auto b = *JUST(PyUnpackScalar(other));
+        return functional::ScalarFMod(a, b);
+      } else {
+        CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar.";
+        auto a = *JUST(PyUnpackScalar(input));
+        auto b = JUST(PyUnpackTensor(other));
+        return functional::ScalarFMod(b, a);
+      }
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
 py::object PyEqual(py::args py_args, py::kwargs py_kwargs) {
   // "broadcast_equal(Tensor x, Tensor y)"
   // "scalar_logical_equal(Tensor in, Scalar scalar)"
@@ -580,6 +617,7 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("pow", &functional::PyPow);
   m.def("clamp", &functional::PyClamp);
   m.def("scatter", &functional::PyScatter);
+  m.def("fmod", &functional::PyFmod);
   m.def("equal", &functional::PyEqual);
   m.def("not_equal", &functional::PyNotEqual);
   m.def("greater", &functional::PyGreater);
