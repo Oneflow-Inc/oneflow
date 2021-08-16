@@ -180,7 +180,7 @@ size_t GetRegstDescCount(const TaskProto& task) {
 }
 
 size_t GetConsumerCount(const TaskProto& task) {
-  size_t consumer_cnt = task.produced_regst_desc().size();
+  size_t consumer_cnt = 0;
   for (const auto& pair : task.produced_regst_desc()) {
     consumer_cnt += pair.second.consumer_task_id_size();
   }
@@ -570,8 +570,15 @@ ActorBase* DispatchNewLightActorIndexType(const TaskProto& task_proto, const Thr
 template<int kernel_exec>
 ActorBase* DispatchNewLightActorInplace(const TaskProto& task_proto, const ThreadCtx& thread_ctx,
                                         std::unique_ptr<DeviceCtx> device_ctx) {
+  const auto& produced_regst_desc = task_proto.produced_regst_desc();
+  const size_t inplace_produced_regst_cnt =
+      std::count_if(produced_regst_desc.cbegin(), produced_regst_desc.cend(),
+                    [](const PbMapPair<std::string, RegstDescProto>& pair) {
+                      return pair.second.has_inplace_consumed_regst_desc_id();
+                    });
+  if (inplace_produced_regst_cnt > 1) { return nullptr; }
   bool inplace = false;
-  for (const auto& pair : task_proto.produced_regst_desc()) {
+  for (const auto& pair : produced_regst_desc) {
     const RegstDescProto& regst_desc = pair.second;
     if (IsInplaceRegstDesc(regst_desc)) {
       CHECK_EQ(inplace, false);
