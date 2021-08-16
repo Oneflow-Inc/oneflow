@@ -780,6 +780,10 @@
   signature: "Tensor Softplus(Tensor x)"
   bind_python: True
 
+- name: "one_hot"
+  signature: "Tensor OneHot(Tensor x, *, Int64 num_classes=-1, Scalar on_value=1, Scalar off_value=0)"
+  bind_python: True
+
 - name: "unsorted_segment_sum_like"
   signature:
     "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
