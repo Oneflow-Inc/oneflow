@@ -65,7 +65,6 @@ REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, int32_t)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, int64_t)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, double)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, float)
-REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kCPU, double)
 
 #ifdef WITH_CUDA
 
@@ -74,8 +73,6 @@ REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, int32_t)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, int64_t)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, double)
 REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, float)
-REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, double)
-REGISTER_SCALAR_FMOD_KERNEL(DeviceType::kGPU, float16)
 #endif
 
 }  // namespace oneflow
