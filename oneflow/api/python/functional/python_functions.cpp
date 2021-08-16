@@ -84,26 +84,6 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
       if (*a->shape() == *b->shape()) {
         return functional::Add(a, b, inplace);
       } else {
-        if (inplace) {
-          // Check whether b can expand to a
-          const auto& a_shape = a->shape();
-          const auto& b_shape = b->shape();
-          CHECK_GE_OR_RETURN(a_shape->NumAxes(), b_shape->NumAxes())
-              << "Invalid shape to do inplace BroadcastAdd.";
-          int shift = a_shape->NumAxes() - b_shape->NumAxes();
-          for (int i = a_shape->NumAxes() - 1; i >= 0; --i) {
-            int index = i - shift;
-            if (index >= 0) {
-              int dim_a = a_shape->At(i);
-              int dim_b = b_shape->At(index);
-              CHECK_OR_RETURN(dim_a == dim_b || (dim_a > 0 && dim_b == 1))
-                  << "Invalid expand shape " << a_shape->ToString();
-            } else {
-              CHECK_GT_OR_RETURN(a_shape->At(i), 0)
-                  << "Invalid expand shape " << a_shape->ToString();
-            }
-          }
-        }
         return functional::BroadcastAdd(a, b, inplace);
       }
     }

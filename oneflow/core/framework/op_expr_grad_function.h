@@ -56,7 +56,7 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
                         const OpExprInterpContext& interp_ctx) const override {
     StateT* state = dynamic_cast<StateT*>(ctx);
     CHECK_NOTNULL_OR_RETURN(state);
-    // Only catures detach tensor for calculating grad and set right requires_grad
+    // Only captures detached tensor for calculating grad and set right requires_grad
     // for higher order derivative
     TensorTuple detach_inputs(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
