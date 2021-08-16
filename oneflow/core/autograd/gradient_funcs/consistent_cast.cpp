@@ -18,9 +18,34 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/common/decorator.h"
 
 namespace oneflow {
 namespace one {
+
+namespace {
+
+Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
+                               bool current_rank_local_is_valid) {
+  if (!current_rank_local_is_valid) { return input; }
+  const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
+  // Eager boxing
+  const auto& in_nd_sbp = JUST(input->nd_sbp());
+  const auto& in_parallel_desc = JUST(input->parallel_desc());
+  const auto& out_parallel_desc = in_parallel_desc;
+  const auto& boxing_interpreter = JUST(
+      mgr->GetEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+  const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
+                                                          in_parallel_desc, out_parallel_desc));
+  return output;
+}
+
+auto* GetBoxingOutput =
+    DECORATE(DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta), DisableRecusiveBoxingCall);
+
+}  // namespace
 
 struct CastConsistentOpExprInterpState : public OpExprInterpState {
   Symbol<ParallelDesc> parallel_desc;
@@ -42,18 +67,24 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpSta
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
     ctx->parallel_desc = JUST(interp_ctx.parallel_desc.value());
-    ctx->nd_sbp = JUST(interp_ctx.nd_sbp.value());
+    ctx->nd_sbp = JUST(GetDualNdSbp(JUST(interp_ctx.nd_sbp.value())));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const CastConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& out_grad = out_grads.at(0);
+    std::shared_ptr<Tensor> out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent());
-    const auto& bw_nd_sbp = JUST(out_grad->nd_sbp());
-    const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
-    CHECK_OR_RETURN(bw_nd_sbp == dual_nd_sbp);
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}));
+    {
+      Symbol<cfg::NdSbp> nd_sbp_constraint = ctx->nd_sbp;
+      Symbol<ParallelDesc> parallel_desc;
+      if (nd_sbp_constraint != JUST(out_grad->nd_sbp())) {
+        Optional<int64_t> parallel_id;
+        const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+        out_grad = JUST(GetBoxingOutput(out_grad, nd_sbp_constraint, parallel_id.has_value()));
+      }
+    }
+    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grad}));
     return Maybe<void>::Ok();
   }
 
