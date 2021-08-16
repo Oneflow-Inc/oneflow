@@ -128,14 +128,10 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce_scatter")
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
-                                        -> Maybe<void> {
-      const cfg::ParallelDistribution& in_dis_hint =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-      cfg::ParallelDistribution* in_distribution =
-          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-      cfg::ParallelDistribution* out_distribution =
-          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
       CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
       for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
         CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel() || sbp_hint.has_broadcast_parallel());
@@ -171,31 +167,27 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_gather")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-          CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
-          for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
-            CHECK_OR_RETURN(sbp_hint.has_split_parallel());
-            CHECK_EQ_OR_RETURN(sbp_hint.split_parallel().axis(), 0);
-          }
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
+      for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
+        CHECK_OR_RETURN(sbp_hint.has_split_parallel());
+        CHECK_EQ_OR_RETURN(sbp_hint.split_parallel().axis(), 0);
+      }
 
-          in_distribution->clear_sbp_parallel();
-          out_distribution->clear_sbp_parallel();
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
 
-          // S(0)->B
-          const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-          CHECK_GE_OR_RETURN(parallel_hierarchy.NumAxes(), 1);
-          for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
-            in_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
-            out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
-          }
-          return Maybe<void>::Ok();
-        })
+      // S(0)->B
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      CHECK_GE_OR_RETURN(parallel_hierarchy.NumAxes(), 1);
+      for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+        in_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
+        out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+      }
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 }  // namespace oneflow

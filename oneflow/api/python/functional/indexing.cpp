@@ -152,15 +152,16 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
   auto handle = std::shared_ptr<PyObject>(PyObjectPtr(object));
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        std::dynamic_pointer_cast<MirroredTensor>(tensor),
-        [handle](uint64_t of_blob_ptr) {
-          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
-        },
-        "mut"));
-    return Maybe<void>::Ok();
+  const auto& callback =
+      std::make_shared<std::function<void(uint64_t)>>([handle](uint64_t of_blob_ptr) {
+        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
+      });
+  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
+                                               "mut");
+    });
   }));
   return tensor;
 }
