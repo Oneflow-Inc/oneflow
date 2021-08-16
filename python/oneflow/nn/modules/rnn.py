@@ -104,12 +104,14 @@ class RNN(Module):
 
     # .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow as flow
+        >>> import numpy as np
         >>> rnn = flow.nn.RNN(10, 20, 2)
         >>> input = flow.Tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
         >>> h0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> output, hn = rnn(input, h0)
+        >>> print(output.size(), hn.size())
+        flow.Size([5, 3, 20]) flow.Size([2, 3, 20])
 
     """
 
@@ -370,6 +372,8 @@ class GRU(Module):
         >>> input = flow.Tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
         >>> h0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> output, hn = rnn(input, h0)
+        >>> print(output.size(), hn.size())
+        flow.Size([5, 3, 20]) flow.Size([2, 3, 20])
     
     """
 
@@ -660,7 +664,8 @@ class LSTM(nn.Module):
         >>> h0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> c0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> output, (hn, cn) = rnn(input, (h0, c0))
-
+        >>> print(output.size(), hn.size(), cn.size())
+        flow.Size([5, 3, 20]) flow.Size([2, 3, 20]) flow.Size([2, 3, 20])
     """
 
     def __init__(
