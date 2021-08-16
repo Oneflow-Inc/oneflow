@@ -141,41 +141,32 @@ def _vector_str(self, indent, summarize, formatter1):
         return formatter1.format(val)
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
-        if not self.is_consistent:
-            data = (
-                [_val_formatter(val) for val in self[: PRINT_OPTS.edgeitems].tolist()]
-                + [" ..."]
-                + [
-                    _val_formatter(val)
-                    for val in self[-PRINT_OPTS.edgeitems :].tolist()
-                ]
-            )
-        else:
-            left_part = (
-                self[: PRINT_OPTS.edgeitems]
-                .to_consistent(sbp=flow.sbp.broadcast)
-                .to_local()
-            )
-            right_part = (
-                self[-PRINT_OPTS.edgeitems :]
-                .to_consistent(sbp=flow.sbp.broadcast)
-                .to_local()
-            )
-            data = (
-                [_val_formatter(val) for val in left_part.tolist()]
-                + [" ..."]
-                + [_val_formatter(val) for val in right_part.tolist()]
-            )
+        left_values = (
+            self[: PRINT_OPTS.edgeitems].tolist()
+            if not self.is_consistent
+            else self[: PRINT_OPTS.edgeitems]
+            .to_consistent(sbp=flow.sbp.broadcast)
+            .to_local()
+        )
+        right_values = (
+            self[-PRINT_OPTS.edgeitems :].tolist()
+            if not self.is_consistent
+            else self[-PRINT_OPTS.edgeitems :]
+            .to_consistent(sbp=flow.sbp.broadcast)
+            .to_local()
+        )
+        data = (
+            [_val_formatter(val) for val in left_values]
+            + [" ..."]
+            + [_val_formatter(val) for val in right_values]
+        )
     else:
-        if not self.is_consistent:
-            data = [_val_formatter(val) for val in self.tolist()]
-        else:
-            data = [
-                _val_formatter(val)
-                for val in self.to_consistent(sbp=flow.sbp.broadcast)
-                .to_local()
-                .to_list()
-            ]
+        values = (
+            self.tolist()
+            if not self.is_consistent
+            else self.to_consistent(sbp=flow.sbp.broadcast).to_local().tolist()
+        )
+        data = [_val_formatter(val) for val in values]
 
     data_lines = [
         data[i : i + elements_per_line] for i in range(0, len(data), elements_per_line)
@@ -221,8 +212,10 @@ def _tensor_str(self, indent):
         self = self.float()
 
     def _convert_to_local_tensor(self, summarize):
+        # local tensor
         if not self.is_consistent:
             return get_summarized_data(self) if summarize else self
+        # consistent tensor
         else:
             return (
                 get_summarized_data(self)
@@ -231,6 +224,7 @@ def _tensor_str(self, indent):
             )
 
     with flow.no_grad():
+        # get small local tensor for _Formatter
         local_tensor = _convert_to_local_tensor(self, summarize)
         formatter = _Formatter(local_tensor)
         return _tensor_str_with_formatter(self, indent, summarize, formatter)
@@ -251,15 +245,19 @@ def _add_suffixes(tensor_str, suffixes, indent):
     return "".join(tensor_strs)
 
 
-def cat_data(inp):
-    if not inp.is_consistent:
-        return flow.cat((inp[: PRINT_OPTS.edgeitems], inp[-PRINT_OPTS.edgeitems :]))
+def _cat_data(self):
+    # local tensor slice
+    if not self.is_consistent:
+        return flow.cat((self[: PRINT_OPTS.edgeitems], self[-PRINT_OPTS.edgeitems :]))
+    # consistent tensor slice
     else:
         left_part = (
-            inp[: PRINT_OPTS.edgeitems].to_consistent(sbp=flow.sbp.broadcast).to_local()
+            self[: PRINT_OPTS.edgeitems]
+            .to_consistent(sbp=flow.sbp.broadcast)
+            .to_local()
         )
         right_part = (
-            inp[-PRINT_OPTS.edgeitems :]
+            self[-PRINT_OPTS.edgeitems :]
             .to_consistent(sbp=flow.sbp.broadcast)
             .to_local()
         )
@@ -272,9 +270,13 @@ def get_summarized_data(self):
         return self
     if dim == 1:
         if self.size(0) > 2 * PRINT_OPTS.edgeitems:
-            return cat_data(self)
+            return _cat_data(self)
         else:
-            return self
+            return (
+                self
+                if not self.is_consistent
+                else self.to_consistent(sbp=flow.sbp.broadcast).to_local()
+            )
     if self.size(0) > 2 * PRINT_OPTS.edgeitems:
         start = [self[i] for i in range(0, PRINT_OPTS.edgeitems)]
         end = [
@@ -285,40 +287,40 @@ def get_summarized_data(self):
         return flow.stack([get_summarized_data(x) for x in self])
 
 
-def _gen_tensor_str_template(inp, is_meta):
-    is_meta = is_meta or inp.is_lazy
+def _gen_tensor_str_template(tensor, is_meta):
+    is_meta = is_meta or tensor.is_lazy
     prefix = "tensor("
     indent = len(prefix)
     suffixes = []
 
     # Inp is local or consistent
-    if inp.is_consistent:
-        suffixes.append(f"placement={str(inp.placement)}")
-        suffixes.append(f"sbp={str(inp.sbp)}")
-    elif inp.device.type == "cuda" or inp.device.type == "gpu":
-        suffixes.append("device='" + str(inp.device) + "'")
-    elif inp.device.type != "cpu":
+    if tensor.is_consistent:
+        suffixes.append(f"placement={str(tensor.placement)}")
+        suffixes.append(f"sbp={str(tensor.sbp)}")
+    elif tensor.device.type == "cuda" or tensor.device.type == "gpu":
+        suffixes.append("device='" + str(tensor.device) + "'")
+    elif tensor.device.type != "cpu":
         raise RunTimeError("unknow device type")
-    if inp.is_lazy:
+    if tensor.is_lazy:
         suffixes.append("is_lazy='True'")
 
-    # Inp is empty, meta or normal
-    if inp.numel() == 0:
+    # tensor is empty, meta or normal
+    if tensor.numel() == 0:
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
-        if inp.dim() != 1:
-            suffixes.append("size=" + str(tuple(inp.shape)))
+        if tensor.dim() != 1:
+            suffixes.append("size=" + str(tuple(tensor.shape)))
         tensor_str = "[]"
     elif is_meta:
         tensor_str = "..."
-        suffixes.append("size=" + str(tuple(inp.shape)))
+        suffixes.append("size=" + str(tuple(tensor.shape)))
     else:
-        tensor_str = _tensor_str(inp, indent)
+        tensor_str = _tensor_str(tensor, indent)
 
-    suffixes.append("dtype=" + str(inp.dtype))
-    if inp.grad_fn is not None:
-        name = inp.grad_fn.name()
+    suffixes.append("dtype=" + str(tensor.dtype))
+    if tensor.grad_fn is not None:
+        name = tensor.grad_fn.name()
         suffixes.append("grad_fn=<{}>".format(name))
-    elif inp.requires_grad:
+    elif tensor.requires_grad:
         suffixes.append("requires_grad=True")
 
     return _add_suffixes(prefix + tensor_str, suffixes, indent)
