@@ -266,7 +266,7 @@ class WhereScalarXYFunctor {
       JUST(attrs.SetAttr<bool>("has_y_int_operand", false));
     } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
       JUST(attrs.SetAttr<int64_t>("x_int_operand", JUST(x_scalar.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("x_int_operand", JUST(y_scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("y_int_operand", JUST(y_scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_int_operand", true));

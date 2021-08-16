@@ -445,19 +445,19 @@
 
 - name: "where"
   signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "where_scalar_x"
   signature: "Tensor WhereScalarX(Tensor condition, Scalar scalar, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "where_scalar_y"
   signature: "Tensor WhereScalarY(Tensor condition, Tensor x, Scalar scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "where_scalar_xy"
   signature: "Tensor WhereScalarXY(Tensor condition, Scalar x_scalar, Scalar y_scalar)"
-  bind_python: True
+  bind_python: False
 
 - name: "negative"
   signature: "Tensor Negative(Tensor x)"

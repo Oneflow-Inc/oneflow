@@ -72,7 +72,7 @@ struct WhereKernelUtil<DeviceType::kGPU, T, CondT> {
   }
   static void WhereYScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
                            const T y_scalar, T* out) {
-    cuda::elementwise::Binary(WhereScalarXFunctor<T, CondT>(y_scalar), elem_cnt, out, cond, lhs,
+    cuda::elementwise::Binary(WhereScalarYFunctor<T, CondT>(y_scalar), elem_cnt, out, cond, lhs,
                               ctx->cuda_stream());
   }
   static void WhereXYScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond,

@@ -317,7 +317,7 @@ REGISTER_USER_OP("where_scalar_y")
     })
     .SetGetSbpFn(GetWhereYScalarSbpSignatures);
 
-REGISTER_USER_OP("where_scalar_xy")
+REGISTER_NO_GRAD_USER_OP("where_scalar_xy")
     .Input("condition")
     .Output("out")
     .Attr<bool>("has_x_int_operand")
