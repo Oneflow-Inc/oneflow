@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
@@ -103,6 +104,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
       Global<RuntimeCtx>::New();
       Global<MemoryAllocator>::New();
+      Global<ChunkMgr>::New();
       Global<RegstMgr>::New();
       Global<ActorMsgBus>::New();
       Global<ThreadMgr>::New();
@@ -131,6 +133,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
       Global<ThreadMgr>::Delete();
       Global<ActorMsgBus>::Delete();
       Global<RegstMgr>::Delete();
+      Global<ChunkMgr>::Delete();
       Global<MemoryAllocator>::Delete();
       Global<RuntimeCtx>::Delete();
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
@@ -146,6 +149,35 @@ Maybe<void> MultiClientSessionContext::TryClose() {
                                           GlobalProcessCtx::NumOfProcessPerNode());
   }
   return Maybe<void>::Ok();
+}
+
+void MultiClientSessionContext::StoreFreeEagerTensorWithNameByGraphName(
+    const std::string& graph_name, const std::shared_ptr<one::Tensor>& tensor,
+    const std::string& tensor_name) {
+  auto it = graph_name2free_eager_tensors_.find(graph_name);
+  if (it == graph_name2free_eager_tensors_.end()) {
+    it = graph_name2free_eager_tensors_
+             .emplace(graph_name,
+                      std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>())
+             .first;
+  }
+  it->second.push_back(std::make_pair(tensor_name, tensor));
+}
+
+const std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>&
+MultiClientSessionContext::GetFreeEagerTensorNamePairByGraphName(const std::string& graph_name) {
+  auto it = graph_name2free_eager_tensors_.find(graph_name);
+  if (it == graph_name2free_eager_tensors_.end()) {
+    it = graph_name2free_eager_tensors_
+             .emplace(graph_name,
+                      std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>())
+             .first;
+  }
+  return it->second;
+}
+
+void MultiClientSessionContext::RemoveGraphFreeEagerTensors(const std::string& graph_name) {
+  graph_name2free_eager_tensors_.erase(graph_name);
 }
 
 }  // namespace oneflow

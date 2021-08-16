@@ -23,10 +23,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class Stream;
-class InstructionStatusBuffer;
-class Instruction;
-class StreamDesc;
+struct Stream;
+struct InstructionStatusBuffer;
+struct Instruction;
+struct StreamDesc;
 
 class HostStreamType final : public StreamType {
  public:
