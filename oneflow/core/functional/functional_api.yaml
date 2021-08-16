@@ -265,8 +265,16 @@
                                    Tensor gamma, Float epsilon, Int32 axis)"
   bind_python: False
 
-- name: "range"
-  signature: "Tensor Range(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64)"
+- name: "arange"
+  signature:
+    "Tensor Arange(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64,
+                   Device device=None)"
+  bind_python: True
+
+- name: "consistent_arange"
+  signature:
+    "Tensor ConsistentArange(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64,
+                             Placement placement, SbpList sbp_tuple)"
   bind_python: True
 
 - name: "flatten"
