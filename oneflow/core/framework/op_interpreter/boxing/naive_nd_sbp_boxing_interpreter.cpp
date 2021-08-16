@@ -37,7 +37,7 @@ static constexpr auto* GetLocalToConsistentOpExpr = DECORATE(&MakeToConsistentOp
 Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor>& tensor,
                                                const Shape& shape,
                                                Symbol<ParallelDesc> parallel_desc,
-                                               Symbol<cfg::ParallelDistribution> nd_sbp) {
+                                               Symbol<cfg::NdSbp> nd_sbp) {
   const auto& op = JUST(GetLocalToConsistentOpExpr());
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", shape));
@@ -48,8 +48,7 @@ Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor
 }
 
 Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
-                                 Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                                 Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                                 Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                  Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc) {
   const auto& boxing_interpreter =
@@ -62,8 +61,8 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
 }  // namespace
 
 Maybe<one::Tensor> NaiveNdSbpBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   const auto& tensor_meta = JUST(input->consistent_tensor_meta());

@@ -138,16 +138,16 @@ void InitSbpParallel(cfg::SbpParallel* sbp_parallel, const std::string& sbp_tag)
 }
 
 template<typename... Args>
-Symbol<cfg::ParallelDistribution> GetNdSbp(Args... sbps) {
-  cfg::ParallelDistribution nd_sbp;
+Symbol<cfg::NdSbp> GetNdSbp(Args... sbps) {
+  cfg::NdSbp nd_sbp;
   for (const auto& sbp : std::vector<std::string>{sbps...}) {
     InitSbpParallel(nd_sbp.mutable_sbp_parallel()->Add(), sbp);
   }
   return SymbolOf(nd_sbp);
 }
 
-Symbol<one::ConsistentTensorMeta> MakeConsistentTensorMeta(
-    Symbol<ParallelDesc> parallel_desc, Symbol<cfg::ParallelDistribution> nd_sbp) {
+Symbol<one::ConsistentTensorMeta> MakeConsistentTensorMeta(Symbol<ParallelDesc> parallel_desc,
+                                                           Symbol<cfg::NdSbp> nd_sbp) {
   const auto& shape = std::make_shared<const Shape>(DimVector{256, 256});
   one::ConsistentTensorMeta tensor_meta(shape, DataType::kInt32, nd_sbp, parallel_desc);
   return SymbolOf(tensor_meta);

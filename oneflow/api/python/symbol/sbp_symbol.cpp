@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -31,7 +32,7 @@ namespace oneflow {
 namespace {
 
 std::string SbpParallelSymbolToString(const Symbol<cfg::SbpParallel>& sbp_sym) {
-  return *ToString(sbp_sym).GetPtrOrThrow();
+  return *SbpToString(sbp_sym).GetPtrOrThrow();
 }
 
 Maybe<std::vector<Symbol<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {

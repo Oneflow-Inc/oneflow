@@ -19,24 +19,34 @@ limitations under the License.
 #include <vector>
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
 
-Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(Symbol<cfg::ParallelDistribution> sbp_list);
+Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> nd_sbp);
 
-Maybe<Symbol<cfg::ParallelDistribution>> GetNdSbp(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
+Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> sbp_list);
+
+Maybe<Symbol<cfg::NdSbp>> GetNdSbp(const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
 
 Maybe<std::vector<std::string>> GetNdSbpStrList(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
 
-Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<cfg::ParallelDistribution> nd_sbp);
+Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
 
-Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::ParallelDistribution> nd_sbp);
+Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
 
-Maybe<std::string> ToString(Symbol<cfg::SbpParallel> sbp_sym);
-Maybe<std::string> ToString(Symbol<cfg::ParallelDistribution> nd_sbp);
+namespace private_details {
+
+Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::NdSbp> nd_sbp);
+
+}
+
+static constexpr auto* GetSbpList = DECORATE(&private_details::RawGetSbpList, ThreadLocal);
+
+Maybe<std::string> SbpToString(Symbol<cfg::SbpParallel> sbp_sym);
+Maybe<std::string> NdSbpToString(Symbol<cfg::NdSbp> nd_sbp);
 
 }  // namespace oneflow
 

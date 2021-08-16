@@ -382,10 +382,15 @@ if __name__ == "__main__":
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
     parser.add_argument("--bash", default=False, action="store_true", required=False)
     parser.add_argument("--inplace", default=False, action="store_true", required=False)
+    parser.add_argument(
+        "--shared_lib", default=False, action="store_true", required=False
+    )
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     if args.skip_img:
         "Arg skip_img is deprecated. Setting it has no effect. If you want to build image, use --build_img"
+    if args.skip_wheel:
+        args.skip_audit = True
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
     assert args.package_name
     extra_oneflow_cmake_args = " ".join(
@@ -396,6 +401,8 @@ if __name__ == "__main__":
     cuda_versions = []
     if args.use_aliyun_mirror:
         extra_oneflow_cmake_args += " -DTHIRD_PARTY_MIRROR=aliyun"
+    if args.shared_lib:
+        extra_oneflow_cmake_args += " -DBUILD_SHARED_LIBS=ON"
     if args.cpu:
         extra_oneflow_cmake_args += " -DBUILD_CUDA=OFF"
         cuda_versions = ["10.2"]
@@ -499,6 +506,8 @@ gcc --version
                 if args.cpu:
                     assert len(cuda_versions) == 1
                     sub_dir += "-cpu"
+                if args.shared_lib:
+                    sub_dir += "-shared"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.build_img:
                 return

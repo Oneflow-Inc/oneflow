@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/ccl/ccl.h"
 
 namespace oneflow {
@@ -182,7 +183,7 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
 Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and out */ dtype,
                                        std::shared_ptr<const Shape> physical_shape,
                                        Symbol<ParallelDesc> parallel_desc,
-                                       Symbol<cfg::ParallelDistribution> nd_sbp) {
+                                       Symbol<cfg::NdSbp> nd_sbp) {
   if (nd_sbp->sbp_parallel_size() == 1 && nd_sbp->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape_dtype =
         JUST(BroadcastGatherShapeAndDataType(*physical_shape, *dtype, parallel_desc));
@@ -201,30 +202,31 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
   return Maybe<void>::Ok();
 }
 
-Maybe<one::UserOpExpr> MakeParallelDistributionOpExpr(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
-  return OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(sbp_parallels)))
-      .Attr<std::string>("grad_mode", "restore")
-      .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
-      .Build();
+namespace {
+
+Maybe<one::OpExpr> RawGetConsistentToConsistentOpExpr(
+    const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) {
+  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp;
+  if (!grad_sbp_parallels.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_parallels)); }
+  std::shared_ptr<one::OpExpr> op_expr = JUST(one::ConsistentToConsistentOpExpr::New(grad_nd_sbp));
+  return op_expr;
 }
 
-auto* CachedParallelDistributionOpExpr =
-    DECORATE(&MakeParallelDistributionOpExpr, ThreadLocalCopiable);
+}  // namespace
 
-Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
-                                     Symbol<ParallelDesc> parallel_desc,
-                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
-  const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(x);
+static constexpr auto* GetConsistentToConsistentOpExpr =
+    DECORATE(&RawGetConsistentToConsistentOpExpr, ThreadLocal);
+
+Maybe<Tensor> ConsistentToConsistent(
+    const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+    const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) {
+  const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
-  CHECK_OR_RETURN(consistent_tensor->is_eager()) << "eager tensors supported only";
-  const auto& nd_sbp_cast_op_expr = JUST(CachedParallelDistributionOpExpr(sbp_parallels));
-
-  const auto& ret =
-      JUST(OpInterpUtil::Dispatch<one::Tensor>(*nd_sbp_cast_op_expr, {consistent_tensor}));
+  const auto& op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
+  const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
   return ret;
 }
 
@@ -232,6 +234,8 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 Symbol<ParallelDesc> parallel_desc,
                                 const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                                 const std::shared_ptr<OpExpr>& op) {
+  CHECK_OR_RETURN(!x->is_lazy())
+      << "local_tensor.to_consistent() is not supported within nn.Graph for now";
   CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
@@ -254,7 +258,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
       << Error::Unimplemented() << "tensor' device type must be same with placement.";
   CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
       << Error::Unimplemented() << "tensor must be on default device of the current rank.";
-  Symbol<cfg::ParallelDistribution> nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype();
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));
@@ -271,32 +275,42 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
 class ToConsistentFunctor {
  public:
   ToConsistentFunctor() {
-    op_ =
+    local_to_consistent_op_ =
         CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) const {
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                           const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) const {
+    std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
-      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels));
+      tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
-      return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, op_));
+      tensor = JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
     }
+    if (x->is_consistent() && tensor != x) {
+      const auto& input_consistent_id = JUST(x->transport_token());
+      const auto& output_consistend_id = JUST(tensor->transport_token());
+      CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);
+    }
+    return tensor;
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> local_to_consistent_op_;
 };
 
 class ConsistentToLocalFunctor {
  public:
   ConsistentToLocalFunctor() {
     op_ = CHECK_JUST(
-        one::CastFromConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+        one::CastFromConsistentOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_local"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    CHECK_OR_RETURN(!x->is_lazy())
+        << "consistent_tensor.to_local() is not supported within nn.Graph for now";
     CHECK_OR_RETURN(x->is_consistent()) << "consistent tensors supported only";
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
   }
