@@ -18,6 +18,25 @@ limitations under the License.
 
 namespace oneflow {
 
+Maybe<Symbol<cfg::SbpParallel>> MakeSplitSbpParallel(int axis) {
+  CHECK_LT_OR_RETURN(axis, kMaxSplitAxis);
+  cfg::SbpParallel split_sbp_parallel;
+  split_sbp_parallel.mutable_split_parallel()->set_axis(axis);
+  return SymbolOf(split_sbp_parallel);
+}
+
+Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel() {
+  cfg::SbpParallel broadcast_sbp;
+  broadcast_sbp.mutable_broadcast_parallel();
+  return SymbolOf(broadcast_sbp);
+}
+
+Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
+  cfg::SbpParallel partial_sum_sbp;
+  partial_sum_sbp.mutable_partial_sum_parallel();
+  return SymbolOf(partial_sum_sbp);
+}
+
 //  S -> S
 //  P -> B
 //  B -> P
