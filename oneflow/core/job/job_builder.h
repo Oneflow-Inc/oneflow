@@ -30,8 +30,8 @@ std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4Op
 namespace cfg {
 class SbpParallel;
 class SbpSignature;
-class ParallelDistribution;
-class ParallelDistributionSignature;
+class NdSbp;
+class NdSbpSignature;
 }  // namespace cfg
 
 class SbpParallel;
@@ -68,8 +68,7 @@ class JobBuilder final {
 
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
   void SetSbpParallel4Oba(const OpBlobArg& oba, const cfg::SbpParallel& sbp_parallel);
-  void SetParallelDistribution4Oba(const OpBlobArg& oba,
-                                   const cfg::ParallelDistribution& parallel_distribution);
+  void SetNdSbp4Oba(const OpBlobArg& oba, const cfg::NdSbp& nd_sbp);
   Maybe<void> ForEachOperator(const std::function<Maybe<void>(const Operator&)>& Handler) const;
 
   const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
@@ -78,11 +77,9 @@ class JobBuilder final {
   const cfg::SbpSignature SbpSignature4OpName(const std::string& op_name) const;
   void AddSbpSignature4OpName(const std::string& op_name, const cfg::SbpSignature& sbp_signature);
 
-  const ParallelDistributionSignature& ParallelDistributionSignature4OpName(
-      const std::string& op_name) const;
-  void AddParallelDistributionSignature4OpName(
-      const std::string& op_name,
-      const cfg::ParallelDistributionSignature& parallel_distribution_signature);
+  const NdSbpSignature& NdSbpSignature4OpName(const std::string& op_name) const;
+  void AddNdSbpSignature4OpName(const std::string& op_name,
+                                const cfg::NdSbpSignature& nd_sbp_signature);
 
  private:
   void AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
@@ -95,8 +92,7 @@ class JobBuilder final {
   HashSet<std::string> modified_op_conf_op_names_;
   HashSet<std::string> modified_parallel_conf_op_names_;
 
-  HashMap<std::string, ParallelDistributionSignature*>
-      op_name2parallel_distribution_signature_conf_;
+  HashMap<std::string, NdSbpSignature*> op_name2nd_sbp_signature_conf_;
   HashMap<ParallelConf, PlacementGroup*> parallel_conf2placement_group_;
 };
 

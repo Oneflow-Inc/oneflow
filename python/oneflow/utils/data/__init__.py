@@ -35,6 +35,7 @@ from oneflow.utils.data.decorator import (
     guaranteed_datapipes_determinism,
     non_deterministic,
 )
+from oneflow.utils.data.distributed import DistributedSampler
 
 
 __all__ = [
@@ -55,4 +56,5 @@ __all__ = [
     "functional_datapipe",
     "guaranteed_datapipes_determinism",
     "non_deterministic",
+    "DistributedSampler",
 ]

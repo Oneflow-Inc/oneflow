@@ -22,23 +22,15 @@ limitations under the License.
 #include "oneflow/core/thread/consistent_unique_id.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
-  const auto& start = std::chrono::steady_clock::now();
-  const auto& cond_cnt = ctx.flying_cnt();
-  while (*cond_cnt > 0) {
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
-        << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
-  }
-  if (ctx.transport_token().type() == kCtrlTransportTokenType) {
-    JUST(ctx.transport_token().ReleaseCtrlTransportToken());
-  }
+  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds));
+  JUST(ctx.transport_token().TryReleaseCtrlTransportTokenLock());
   return Maybe<void>::Ok();
 }
 
@@ -74,7 +66,6 @@ template<Maybe<void> (*SendOrRecv)(const TransportToken&, int64_t, void*, std::s
                                                    std::function<void()>*)>
 Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const TransportToken& token,
                                   AsyncTransportCtx* ctx) {
-  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
   const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
     return rank_group->ForEachRank(DoEach);
   };
@@ -130,6 +121,7 @@ Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::s
 /*static*/ Maybe<void> TransportUtil::BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group,
                                                                const TransportToken& token,
                                                                AsyncTransportCtx* ctx) {
+  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
   JUST(AccessToAllOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(rank_group,
                                                                                       token, ctx));
   return Maybe<void>::Ok();
@@ -138,8 +130,31 @@ Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::s
 /*static*/ Maybe<void> TransportUtil::CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
                                                                const TransportToken& token,
                                                                AsyncTransportCtx* ctx) {
+  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
   JUST(AccessToAllOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(rank_group,
                                                                                       token, ctx));
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> TransportUtil::BroadcastToOtherRanks(Symbol<RankGroup> src_rank_group,
+                                                            Symbol<RankGroup> dst_rank_group,
+                                                            const TransportToken& token,
+                                                            AsyncTransportCtx* ctx) {
+  if (src_rank_group->ContainingCurrentRank()) {
+    JUST(AccessToAllOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(
+        dst_rank_group, token, ctx));
+  }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> TransportUtil::CollectFromOtherRanks(Symbol<RankGroup> src_rank_group,
+                                                            Symbol<RankGroup> dst_rank_group,
+                                                            const TransportToken& token,
+                                                            AsyncTransportCtx* ctx) {
+  if (dst_rank_group->ContainingCurrentRank()) {
+    JUST(AccessToAllOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(
+        src_rank_group, token, ctx));
+  }
   return Maybe<void>::Ok();
 }
 
