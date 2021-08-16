@@ -276,7 +276,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
       << Error::Unimplemented() << "tensor must be on default device of the current rank.";
   Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
-  DataType dtype = x->dtype();
+  DataType dtype = x->dtype()->data_type();
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape));
