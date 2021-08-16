@@ -42,16 +42,7 @@ def greater_op(input, other):
         flow.Size([2, 6, 5, 3])
 
     """
-
-    if input.dtype != flow.float32:
-        input = flow.cast(input, flow.float32)
-    if isinstance(other, int) or isinstance(other, float):
-        other = flow.Tensor(
-            [float(other)], dtype=flow.float32, device=flow.device(input.device.type)
-        )
-    if other.dtype != flow.float32:
-        other = flow.cast(other, flow.float32)
-    return flow.F.broadcast_greater(input, other)
+    return flow.F.greater(input, other)
 
 
 @register_tensor_op("gt")

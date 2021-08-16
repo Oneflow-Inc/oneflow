@@ -26,12 +26,12 @@ class DynamicReshapeLikeKernel final : public KernelIf<device_type> {
 
  private:
   void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+                          const std::function<Blob*(const std::string&)>&) const override;
 };
 
 template<DeviceType device_type>
 void DynamicReshapeLikeKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("x");
   Blob* out_blob = BnInOp2Blob("y");
   out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob);

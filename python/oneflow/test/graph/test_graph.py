@@ -88,8 +88,6 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
     def test_graph_config(test_case):
-        print("cclog: CustomGraphConfig begin")
-
         class CustomGraphConfig(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -107,11 +105,8 @@ class TestGraph(flow.unittest.TestCase):
         for s in g._state():
             print("g state: ", repr(s))
         print(repr(g))
-        print("cclog: CustomGraphConfig done")
 
     def test_graph_name(test_case):
-        print("cclog: GraphName begin")
-
         class ACustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -144,13 +139,12 @@ class TestGraph(flow.unittest.TestCase):
         flow.nn.Graph._child_init_cnt.clear()
         for i in range(0, 3):
             create_graph(i)
-        print("cclog: GraphName done")
 
     def test_graph_build_ctx(test_case):
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
-        with graph_build_util.lazy_mode.gard(True):
+        with graph_build_util.lazy_mode.guard(True):
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
-            with graph_build_util.lazy_mode.gard(False):
+            with graph_build_util.lazy_mode.guard(False):
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
             test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)

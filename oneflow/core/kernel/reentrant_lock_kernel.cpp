@@ -82,7 +82,7 @@ void ReentrantLockStatus::ReleaseLock(int64_t lock_id, std::queue<int64_t>* unlo
 
 template<typename T>
 void ReentrantLockKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   auto* const status = static_cast<ReentrantLockStatus*>(ctx.other);
   if (status->cur_ibn() == "start") {
     T lock_id = *BnInOp2Blob("start")->dptr<T>();

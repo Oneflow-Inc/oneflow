@@ -64,13 +64,6 @@ inline Maybe<void> RegisterGlobalWatcher(const std::shared_ptr<ForeignWatcher>& 
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> DestroyGlobalWatcher() {
-  if (Global<std::shared_ptr<ForeignWatcher>>::Get()) {
-    Global<std::shared_ptr<ForeignWatcher>>::Delete();
-  }
-  return Maybe<void>::Ok();
-}
-
 inline Maybe<void> LaunchJob(const std::shared_ptr<oneflow::JobInstance>& cb) {
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
