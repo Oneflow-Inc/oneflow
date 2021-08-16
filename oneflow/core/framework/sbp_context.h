@@ -95,7 +95,7 @@ struct GetSbpFnUtil {
   static Maybe<void> SplitForEachAxis(SbpContext*);
 };
 
-Maybe<void> InferNdSbp4SrcOp(user_op::InferParallelDistributionFnContext* ctx,
+Maybe<void> InferNdSbp4SrcOp(user_op::InferNdSbpFnContext* ctx,
                              const cfg::SbpParallel& default_sbp);
 
 }  // namespace user_op
