@@ -25,6 +25,7 @@ import oneflow.unittest
 from oneflow import tensor
 import oneflow
 
+
 @flow.unittest.skip_unless_1n1d()
 def _test_local_tensor_str(test_case, device):
     # int dtype
@@ -148,11 +149,12 @@ class TestTensorStrModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_local_tensor_str,
             _test_consistent_tensor_str,
-            _test_consistent_tensor_str_2d
+            _test_consistent_tensor_str_2d,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])    
+            arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()
