@@ -94,6 +94,7 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
 }
 
 void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
+  std::cout << " IBVerbsCommNet::RecvActorMsg, the msg.comm_net_sequence_number:" << msg.comm_net_sequence_number() << std::endl;
   ActorMsg new_msg = msg;
   if (msg.IsDataRegstMsgToConsumer()) {
     std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
@@ -202,7 +203,7 @@ void IBVerbsCommNet::PollCQ() {
     CHECK_GE(found_wc_num, 0);
     FOR_RANGE(int32_t, i, 0, found_wc_num) {
       const ibv_wc& wc = wc_vec.at(i);
-      std::cout<<"In PollCQ,the wc.wr_id:"<< wc.wr_id << std::endl;
+    //  std::cout<<"In PollCQ,the wc.wr_id:"<< wc.wr_id << std::endl;
       WorkRequestId* wr_id = reinterpret_cast<WorkRequestId*>(wc.wr_id);
       CHECK_EQ(wc.status, IBV_WC_SUCCESS) << wc.opcode << "wc.wr_id" << wc.wr_id;
       IBVerbsQP* qp = wr_id->qp;

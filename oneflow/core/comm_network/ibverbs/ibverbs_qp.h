@@ -34,26 +34,26 @@ class ActorMsgMR final {
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
   ActorMsgMR(ibv_mr *   mr, char * addr, size_t  size):size_(size){
-    msg_.reset(reinterpret_cast<ActorMsg*>(addr));
+    msg_ = reinterpret_cast<ActorMsg*>(addr);
     mr_.reset(mr);
   }
   ~ActorMsgMR() {
     mr_.reset();
-    msg_.reset();
   }
 
-  char * addr() { return reinterpret_cast<char *>(msg_.get()) ; } //这个是没错的
+  char * addr() { return reinterpret_cast<char *>(msg_) ; } //这个是没错的
   uint32_t size() {return size_ ;}
   uint32_t lkey() { return mr_->lkey ; }
   ActorMsg  msg()  { return *msg_;}
   void set_msg(const ActorMsg& val) {
+    std::cout<<"in set_msg of ActorMsgMR, the val comm_net_sequence_number:" << val.comm_net_sequence_number() << std::endl;
     *msg_ = val ;
   }
 
  private:
     size_t size_;
     std::shared_ptr<ibv_mr> mr_;
-    std::unique_ptr<ActorMsg> msg_;
+    ActorMsg *  msg_;
 };
 
 class IBVerbsQP;
