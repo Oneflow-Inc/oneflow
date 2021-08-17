@@ -1013,6 +1013,13 @@
                             Int32List strides)"
   bind_python: True
   
+- name: "fold"
+  signature: "Tensor Fold(Tensor x, String data_format=\"channels_first\", 
+                          Int32List output_size, Int32List kernel_size, 
+                          Int32List dilation_rate, Int32List padding, 
+                          Int32List strides)"
+  bind_python: True
+
 - name: "split"
   signature: "TensorTuple Split(Tensor x, *, Int64 split_size, Int64 dim=0)"
   bind_python: True
