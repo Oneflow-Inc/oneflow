@@ -56,11 +56,19 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
                         const OpExprInterpContext& interp_ctx) const override {
     StateT* state = dynamic_cast<StateT*>(ctx);
     CHECK_NOTNULL_OR_RETURN(state);
+    // Only captures detached tensor for calculating grad and set right requires_grad
+    // for higher order derivative
+    TensorTuple detach_inputs(inputs.size());
+    for (int i = 0; i < inputs.size(); ++i) {
+      detach_inputs.at(i) = JUST(inputs.at(i)->detach());
+      detach_inputs.at(i)->set_requires_grad(inputs.at(i)->requires_grad());
+    }
     TensorTuple detach_outputs(outputs.size());
     for (int i = 0; i < outputs.size(); ++i) {
       detach_outputs.at(i) = JUST(outputs.at(i)->detach());
+      detach_outputs.at(i)->set_requires_grad(outputs.at(i)->requires_grad());
     }
-    return Capture(state, inputs, detach_outputs, interp_ctx);
+    return Capture(state, detach_inputs, detach_outputs, interp_ctx);
   }
 
   Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,

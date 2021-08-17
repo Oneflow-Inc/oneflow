@@ -93,20 +93,6 @@ class Softsign : public BaseActivation {
   }
 };
 
-class ReLU : public BaseActivation {
- public:
-  Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    in_grads->resize(1);
-    if (ctx->requires_grad) {
-      const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::ReluGrad(out_grads.at(0), x));
-    }
-    return Maybe<void>::Ok();
-  }
-};
-
 class GeLU : public BaseActivation {
  public:
   Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
@@ -144,6 +130,36 @@ class HardSwish : public BaseActivation {
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
       in_grads->at(0) = JUST(functional::HardSwishGrad(out_grads.at(0), x));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+// ===== Activation with parms ====
+struct ReLUCaptureState : public AutoGradCaptureState {
+  bool requires_grad;
+};
+
+class ReLU : public OpExprGradFunction<ReLUCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(ReLUCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (ctx->requires_grad) { ctx->SaveTensorForBackward(outputs.at(0)); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const ReLUCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      const auto& y = ctx->SavedTensors().at(0);
+      in_grads->at(0) = JUST(functional::ReluGrad(out_grads.at(0), y));
     }
     return Maybe<void>::Ok();
   }
