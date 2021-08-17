@@ -35,11 +35,9 @@ PRINT_OPTS = __PrinterOptions()
 
 
 def _try_convert_to_local_tensor(tensor):
-    return (
-        tensor
-        if tensor.is_local
-        else tensor.to_consistent(sbp=flow.sbp.broadcast).to_local()
-    )
+    if tensor.is_consistent:
+        tensor = tensor.to_consistent(sbp=flow.sbp.broadcast).to_local()
+    return tensor
 
 
 class _Formatter(object):
