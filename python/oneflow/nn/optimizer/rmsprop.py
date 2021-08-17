@@ -183,6 +183,8 @@ class RMSprop(Optimizer):
             optimizer_conf.mutable_rmsprop_conf().set_centered(centered)
             optimizer_conf.mutable_rmsprop_conf().set_epsilon(epslion)
 
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+
             # Set l2 penalty as weight decay
             for param in param_group.parameters:
                 vars_conf[param].l2 = weight_decay
