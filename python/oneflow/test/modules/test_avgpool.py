@@ -36,7 +36,6 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
             padding=random(1, 3) | nothing(),
             ceil_mode=random(),
             count_include_pad=random(),
-            # divisor_override=random().to(int),
         )
         m.train(random())
         device = random_device()
