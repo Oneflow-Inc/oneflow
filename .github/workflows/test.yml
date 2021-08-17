@@ -718,7 +718,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build
+          sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build ccache
       - name: Download OneFlow custom clang-tidy
         run: |
           wget https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage
