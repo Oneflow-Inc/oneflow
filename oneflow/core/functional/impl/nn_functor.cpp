@@ -598,6 +598,7 @@ class Avgpool3DFunctor : public AvgPoolingNDFunctor {
     op_ = CHECK_JUST(one::OpBuilder("avgpool_3d").Input("x").Output("y").Build());
   }
 };
+
 class UnfoldFunctor {
  public:
   UnfoldFunctor() {
@@ -643,7 +644,7 @@ class FoldFunctor {
     CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 3) << "Input Tensor dim should == 3";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("output_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("output_size", output_size));
     JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
     JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));

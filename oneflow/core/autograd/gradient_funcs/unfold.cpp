@@ -62,8 +62,10 @@ Maybe<void> Unfold::Capture(UnfoldInterpState* ctx, const TensorTuple& inputs,
   ctx->padding = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding"));
   ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
   for(int i = 0; i < 2; i++){
-    out_shape.at(i) = (x->shape()->At(i+2)+ 2*ctx->padding[i]
-                    - ctx->dilation_rate[i] * (ctx->kernel_size[i] - 1) - 1) / ctx->strides[i]+ 1;
+    // out_shape.at(i) = (x->shape()->At(i+2)+ 2*ctx->padding[i]
+    //                 - ctx->dilation_rate[i] * (ctx->kernel_size[i] - 1) - 1) / ctx->strides[i]+ 1;
+    out_shape.at(i) = (x->shape()->At(i+2));
+    printf("out shape here is: %d", out_shape.at(i));
   }
   ctx->output_size = out_shape;
   return Maybe<void>::Ok();
