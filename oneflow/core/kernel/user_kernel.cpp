@@ -609,10 +609,13 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
     UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
     CudaDeviceCtx* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx);
     const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
-    if (cuda_device_ctx && cuda_graph_support
-        && cuda_graph_support->IsCudaGraphSupported(&init_ctx)) {
-      cuda_graph_ctx_.reset(new CudaGraphContext(cuda_device_ctx->cuda_stream()));
-      LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name();
+    if (cuda_device_ctx != nullptr) {
+      if (cuda_graph_support != nullptr && cuda_graph_support->IsCudaGraphSupported(&init_ctx)) {
+        cuda_graph_ctx_.reset(new CudaGraphContext(cuda_device_ctx->cuda_stream()));
+        LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name();
+      } else {
+        LOG(INFO) << "CUDA Graphs not supported: " << op_conf().name();
+      }
     }
   }
 #endif  // WITH_CUDA_GRAPHS
