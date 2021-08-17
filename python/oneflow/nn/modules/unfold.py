@@ -34,7 +34,6 @@ class Unfold(Module):
         self.dilation = _pair(dilation)
         self.padding = _pair(padding)
         self.stride = _pair(stride)
-        print("self stride is: ", self.stride)
         
     def forward(self, input): 
         return flow.F.unfold(input, "channels_first", self.kernel_size, self.dilation, self.padding, self.stride)
