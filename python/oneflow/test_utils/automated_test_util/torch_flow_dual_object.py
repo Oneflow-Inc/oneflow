@@ -33,6 +33,9 @@ testing = False
 def torch_tensor_to_flow(x):
     return flow.tensor(x.cpu().numpy())
 
+note_pytorch_method_names = []
+note_pytorch_args = []
+note_pytorch_kwags = []
 
 class PyTorchDoesNotSupportError(Exception):
     def __init__(self, exc):
@@ -100,11 +103,25 @@ def get_args(callable, *args, **kwargs):
             continue
         pytorch_kwargs[key] = get_pytorch_value(value)
         oneflow_kwargs[key] = get_oneflow_value(value)
+    if not isinstance(callable, (torch_original.nn.Module)):
+        new_pytorch_args = []
+        new_pytorch_kwargs = {}
+        for x in pytorch_args:
+            if type(x) is torch_original.Tensor:
+                continue
+            new_pytorch_args.append(x)
+        for key, value in pytorch_kwargs.items():
+            if type(value) is torch_original.Tensor:
+                continue
+            new_pytorch_kwargs[key] = value
+        note_pytorch_method_names.append(callable.__name__)
+        note_pytorch_args.append(new_pytorch_args)
+        note_pytorch_kwags.append(new_pytorch_kwargs)
+
     return (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs)
 
 
 counter = 0
-
 
 def GetDualObject(name, pytorch, oneflow):
     global counter
@@ -178,6 +195,16 @@ def GetDualObject(name, pytorch, oneflow):
     Cls = type(f"{name}_{counter}", (DualObject,), magic_methods_for_new_cls)
     return Cls(name, pytorch, oneflow)
 
+def print_note_fake_program():
+    code_len = len(note_pytorch_method_names)
+    for i in range(code_len):
+        print(note_pytorch_method_names[i], end='')
+        print('(', end='')
+        if note_pytorch_args[i]:
+            print(note_pytorch_args[i], end=',')
+        if note_pytorch_kwags[i]:
+            print(note_pytorch_kwags[i], end=',')
+        print(')')
 
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
@@ -310,6 +337,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
                 if verbose:
                     print("test passed")
+                print_note_fake_program()
                 n -= 1
                 loop += 1
 
