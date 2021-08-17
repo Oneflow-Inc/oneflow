@@ -83,6 +83,7 @@ oneflow
             repeat, 
             reshape, 
             randint,
+            randperm,
             reciprocal,
             round,  
             save, 
