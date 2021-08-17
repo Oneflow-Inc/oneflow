@@ -58,12 +58,15 @@ class Testrandperm(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @autotest(auto_backward=False)
-    def test_ones_auto(test_case):
-        torch.manual_seed(0)
-        generator = flow.Generator()
-        generator.manual_seed(0)
-        x = 1
-        y = torch.randperm(x)
+    def test_auto_1(test_case):
+        device = random_device()
+        y = torch.randperm(1, device=device)
+        return y
+
+    @autotest(n=5, auto_backward=False)
+    def test_auto_0(test_case):
+        device = random_device()
+        y = torch.randperm(0, device=device)
         return y
 
     def test_randperm_randomness(test_case):

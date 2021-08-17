@@ -278,7 +278,7 @@ class Randperm(Module):
         pin_memory: bool = False,
     ) -> None:
         super().__init__()
-        assert n > 0
+        assert n >= 0
         self.n = n
         self.requires_grad = requires_grad
         (
