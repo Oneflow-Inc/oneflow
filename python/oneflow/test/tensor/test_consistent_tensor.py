@@ -48,6 +48,7 @@ class TestTensor(flow.unittest.TestCase):
 
         # TODO: ndarray -> ConsistentTensor
 
+    
     def test_construct_local_from_consistent_tensor(test_case):
         placement = flow.placement("cuda", {0: 0})
         sbp = flow.sbp.broadcast
@@ -60,7 +61,59 @@ class TestTensor(flow.unittest.TestCase):
         y = flow.Tensor(x, device="cuda")
         test_case.assertTrue(y.is_local)
 
-        print("test---------->")
+
+    def test_tensor_autograd_related_methods(test_case):
+        placement = flow.placement("cuda", {0: 0})
+        sbp = flow.sbp.split(0)
+        shape = (2, 3, 4, 5)
+        l_x = flow.Tensor(*shape)
+        l_y = flow.Tensor(*shape, requires_grad=True)
+        l_x.fill_(1.0)
+        l_y.fill_(2.0)
+
+        x = l_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        y = l_y.to_consistent( placement=placement, sbp=flow.sbp.split(0))
+
+        z = x + y
+
+        test_case.assertFalse(l_x.requires_grad)
+        test_case.assertTrue(l_x.is_leaf)
+        test_case.assertTrue(l_y.requires_grad)
+        test_case.assertTrue(l_y.is_leaf)
+        test_case.assertTrue(z.requires_grad)
+        test_case.assertFalse(z.is_leaf)
+
+        with flow.no_grad():
+            m = x + y
+
+        test_case.assertTrue(m.is_leaf)
+        test_case.assertFalse(m.requires_grad)
+        m.requires_grad = True
+
+        l_v = flow.Tensor(*shape, requires_grad=True)
+        l_v.fill_(3.0)
+        v = l_v.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        
+        z.retain_grad()
+        w = v + z
+
+        l_grad = flow.Tensor(*shape)
+        l_grad.fill_(1.0)
+        grad = l_grad.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        w.backward(gradient=grad, retain_graph=True)
+
+        test_case.assertTrue(
+            np.allclose(l_v.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(l_y.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
+        # test_case.assertTrue(
+        #     np.allclose(z.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        # )
+        test_case.assertIsNone(l_x.grad)
+        w.backward(gradient=grad, retain_graph=True)
+        
 
 if __name__ == "__main__":
     unittest.main()
