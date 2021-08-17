@@ -16,6 +16,25 @@ limitations under the License.
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 
+class LrWarmUpDict(object):
+    def __init__(self, config_dict,):
+        assert isinstance(config_dict, dict)
+        assert "type" in config_dict
+        self._dict = config_dict
+        assert self._dict["type"] in ["constent", "linear"]
+    
+    def generate_conf_for_graph(self, opt_confs):
+        if self._dict["type"] == "constent":
+            for opt_conf in opt_confs:
+                warmup_conf = opt_conf.mutable_warmup_conf()
+                warmup_conf.mutable_constant_conf().set_warmup_batches(self._dict["steps"])
+                warmup_conf.mutable_constant_conf().set_multiplier(self._dict["multiplier"])
+        if self._dict["type"] == "linear":
+            for opt_conf in opt_confs:
+                warmup_conf = opt_conf.mutable_warmup_conf()
+                warmup_conf.mutable_linear_conf().set_warmup_batches(self._dict["steps"])
+                warmup_conf.mutable_linear_conf().set_start_multiplier(self._dict["start_multiplier"])
+
 
 class OptDict(object):
     def __init__(
@@ -33,12 +52,17 @@ class OptDict(object):
             assert (
                 self._lr_scheduler._optimizer is self._optimizer
             ), "lr_scheduler's optimizer must be the same optimizer in the opt dict."
+        self._lr_warmup = None
+        if "lr_warmup" in opt_dict:
+            self._lr_warmup = LrWarmUpDict(opt_dict["lr_warmup"])
 
     def generate_optimizer_and_variable_configs(self, train_conf, vars_conf):
         if self._optimizer is not None:
             opt_confs = self._optimizer.generate_conf_for_graph(train_conf, vars_conf)
         if self._lr_scheduler is not None:
             self._lr_scheduler.generate_conf_for_graph(opt_confs)
+        if self._lr_warmup is not None:
+            self._lr_warmup.generate_conf_for_graph(opt_confs)
 
 
 class VariableConfig(object):

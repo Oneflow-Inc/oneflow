@@ -65,8 +65,19 @@ class Graph(object):
         return self.config.training
 
     @property
+    def _graph_conf_proto(self):
+        return self.config.proto
+
+    @property
+    def _backends_conf_proto(self):
+        session = session_ctx.GetDefaultSession()
+        assert type(session) is MultiClientSession
+        return session.resource
+
+    @property
     def _graph_proto(self):
         return self._job_proto
+    
 
     def debug(self, mode: bool = True) -> None:
         if get_rank() != 0:
@@ -82,7 +93,9 @@ class Graph(object):
         raise NotImplementedError()
 
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LrScheduler = None,
+        self, optim: Optimizer, *,
+        lr_sch: LrScheduler = None,
+        lr_warmup: Dict = None,
     ):
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
@@ -96,6 +109,9 @@ class Graph(object):
                 lr_sch._optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
+        if lr_warmup is not None:
+            assert isinstance(lr_warmup, dict)
+            opt_dict["lr_warmup"] = lr_warmup
         self._opts.append(opt_dict)
 
     def _generate_name(self):

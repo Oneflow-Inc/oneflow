@@ -122,16 +122,18 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         cosine_lr0 = flow.optim.lr_scheduler.CosineAnnealingLR(
             sgd0, steps=10, alpha=0.01
         )
+        lr_warmup_constent = {"type":"constent", "steps":7, "multiplier":0.4}
         cosine_lr1 = flow.optim.lr_scheduler.CosineAnnealingLR(
             sgd1, steps=100, alpha=0.1
         )
+        lr_warmup_linear = {"type":"linear", "steps":17, "start_multiplier":0.6}
 
         class CustomGraph0(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.m = m
-                self.add_optimizer(sgd0, lr_sch=cosine_lr0)
-                self.add_optimizer(sgd1, lr_sch=cosine_lr1)
+                self.add_optimizer(sgd0, lr_sch=cosine_lr0, lr_warmup=lr_warmup_constent)
+                self.add_optimizer(sgd1, lr_sch=cosine_lr1, lr_warmup=lr_warmup_linear)
 
             def build(self, x, y):
                 out0, out1 = self.m(x, y)
