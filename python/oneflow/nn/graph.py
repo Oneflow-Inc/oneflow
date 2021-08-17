@@ -73,7 +73,7 @@ class Graph(object):
         raise NotImplementedError()
 
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LrScheduler,
+        self, optim: Optimizer, *, lr_sch: LrScheduler = None,
     ):
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
