@@ -60,7 +60,7 @@ def compare_with_numpy_adamw(
         def __init__(self):
             super().__init__()
             self.m = simp_module
-            self.add_optimizer("adamw", adamw0)
+            self.add_optimizer(adamw0)
 
         def build(self, mask_tensor):
             loss = flow.sum(self.m(mask_tensor))

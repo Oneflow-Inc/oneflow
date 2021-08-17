@@ -178,7 +178,7 @@ class MyGraph(flow.nn.Graph):
         super().__init__()
         self.module = module
         if optimizer is not None:
-            self.add_optimizer("sgd", optimizer)
+            self.add_optimizer(optimizer)
 
     def build(self, *arg):
         y = self.module(*arg)
