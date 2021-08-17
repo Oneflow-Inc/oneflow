@@ -198,34 +198,34 @@ def GetDualObject(name, pytorch, oneflow):
 def note_print_args(x, end=True):
     if(end==True):
         if(type(x) is str):
-            print("'{}'".format(x), end=', ')
+            print("\033[32m'{}'\033[0m".format(x), end=', ')
         else:
-            print(x, end=', ')
+            print("\033[32m{}\033[0m".format(x), end=', ')
     else:
         if(type(x) is str):
-             print("'{}'".format(x), end='')
+             print("\033[32m'{}'\033[0m".format(x), end='')
         else:
-            print(x, end='')
+            print("\033[32m{}\033[0m".format(x), end='')
 
 def note_print_kwargs(x, y, end=True):
     if(end==True):
         if(type(y) is str):
-            print("{}='{}'".format(x, y), end=', ')
+            print("\033[32m{}='{}'\033[0m".format(x, y), end=', ')
         else:
-            print("{}={}".format(x, y), end=', ')
+            print("\033[32m{}={}\033[0m".format(x, y), end=', ')
     else:
         if(type(y) is str):
-            print("{}='{}'".format(x, y), end='')
+            print("\033[32m{}='{}'\033[0m".format(x, y), end='')
         else:
-            print("{}={}".format(x, y), end='')
+            print("\033[32m{}={}\033[0m".format(x, y), end='')
 
 def print_note_fake_program():
     code_len = len(note_pytorch_method_names)
     for i in range(code_len):
         note_pytorch_args_len = len(note_pytorch_args[i])
         note_pytorch_kwargs_len = len(note_pytorch_kwargs[i])
-        print(note_pytorch_method_names[i], end='')
-        print('(', end='')
+        print("\033[32m{}\033[0m".format(note_pytorch_method_names[i]), end='')
+        print('\033[32m(\033[0m', end='')
         if note_pytorch_args[i]:
             index = 0
             for x in note_pytorch_args[i]:
@@ -237,7 +237,7 @@ def print_note_fake_program():
             for x in note_pytorch_kwargs[i].keys():
                 index += 1
                 note_print_kwargs(x, note_pytorch_kwargs[i][x], index < note_pytorch_kwargs_len)
-        print(')')
+        print('\033[32m)\033[0m')
 
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
@@ -311,13 +311,16 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
                 "Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
             return False
-    return np.allclose(
+    equality_res = np.allclose(
         torch_tensor.detach().cpu().numpy(),
         flow_tensor.numpy(),
         rtol=rtol,
         atol=atol,
         equal_nan=True,
     )
+    if equality_res == False:
+        print_note_fake_program()
+    return equality_res
 
 
 @equality_checker(type(None), type(None))
@@ -367,8 +370,6 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                             )
                         )
                 for x in dual_objects_to_test:
-                    if check_equality(x, rtol=rtol, atol=atol) == False:
-                        print_note_fake_program()
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
                 if verbose:
                     print("test passed")
