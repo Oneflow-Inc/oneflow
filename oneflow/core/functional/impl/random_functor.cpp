@@ -33,9 +33,8 @@ limitations under the License.
 #include "oneflow/user/kernels/bernoulli_kernel.h"
 #include "oneflow/user/kernels/distributions/normal_kernel.h"
 #include "oneflow/user/kernels/distributions/uniform_kernel.h"
-#include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/global_for.h"
-
+#include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/lazy_mode.h"
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -289,8 +288,7 @@ class ConsistentRandPermFunctor {
   ConsistentRandPermFunctor() {
     randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const int32_t n, const Optional<Symbol<Device>>& device,
-                           const Symbol<ParallelDesc>& placement,
+  Maybe<Tensor> operator()(const int32_t n, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                            const Optional<one::Generator>& generator) const {
     MutableAttrMap attrs;
@@ -307,13 +305,18 @@ class ConsistentRandPermFunctor {
 
     const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
 
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
     }
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     return OpInterpUtil::Dispatch<Tensor>(
-        *randperm_op_, {},
-        OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
+        *randperm_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, uniform_kernel_state));
   }
 
  private:

@@ -28,13 +28,11 @@ REGISTER_NO_GRAD_USER_OP("randperm")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->OutputShape("out", 0);
       int32_t n = ctx->Attr<int32_t>("n");
+      CHECK_GT_OR_RETURN(n, 0);
       *out_shape = Shape({n});
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
