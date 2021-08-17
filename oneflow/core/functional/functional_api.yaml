@@ -469,7 +469,19 @@
 
 - name: "where"
   signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
+
+- name: "where_scalar_x"
+  signature: "Tensor WhereScalarX(Tensor condition, Scalar scalar, Tensor y)"
+  bind_python: False
+
+- name: "where_scalar_y"
+  signature: "Tensor WhereScalarY(Tensor condition, Tensor x, Scalar scalar)"
+  bind_python: False
+
+- name: "where_scalar_xy"
+  signature: "Tensor WhereScalarXY(Tensor condition, Scalar x_scalar, Scalar y_scalar)"
+  bind_python: False
 
 - name: "negative"
   signature: "Tensor Negative(Tensor x)"
@@ -977,6 +989,10 @@
 - name: "reduce_sum_like"
   signature: "Tensor ReduceSumLike(Tensor in, Tensor like, *,Int32List axis)"
   bind_python: True
+
+- name: "broadcast_reduce_sum_like"
+  signature: "Tensor BroadcastReduceSumLike(Tensor in, Tensor like)"
+  bind_python: False
 
 - name: "scalar_logical_equal"
   signature: "Tensor ScalarLogicalEqual(Tensor in, Scalar scalar)"
