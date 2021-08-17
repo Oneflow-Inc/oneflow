@@ -91,22 +91,19 @@ class RMSprop(Optimizer):
         momentum: float = 0.0,
         centered: bool = False,
     ):
-        super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert alpha >= 0.0, f"Invalid alpha value: {alpha}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert momentum == 0.0, "Not support momentum greater than zeros now!"
-        self._default_options["lr"] = lr
-        self._default_options["alpha"] = alpha
-        self._default_options["eps"] = eps
-        self._default_options["weight_decay"] = weight_decay
-        self._default_options["centered"] = centered
-        if isinstance(parameters, collections.abc.Iterator):
-            self.param_groups.append(ParamGroup(parameters, self._default_options))
-        else:
-            for param in parameters:
-                self.param_groups.append(ParamGroup(param, self._default_options))
+        options = dict()
+        options["lr"] = lr
+        options["alpha"] = alpha
+        options["eps"] = eps
+        options["weight_decay"] = weight_decay
+        options["centered"] = centered
+        super().__init__(parameters, options)
+
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
@@ -169,6 +166,7 @@ class RMSprop(Optimizer):
             return loss
 
     def generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
 
@@ -190,3 +188,6 @@ class RMSprop(Optimizer):
                 vars_conf[param].l2 = weight_decay
                 if param.requires_grad:
                     optimizer_conf.add_variable_op_names(vars_conf[param].name)
+
+            new_opt_confs.append(optimizer_conf)
+        return new_opt_confs
