@@ -327,12 +327,10 @@ class LightActor : public ActorBase {
     const bool is_kernel_launch_synchronized =
         (!exec_kernel) || kernel_info_[0]->kernel->IsKernelLaunchSynchronized();
     const int64_t actor_id = task_proto_->task_id();
-    const int64_t global_work_stream_id =
-        Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id);
+    const int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(actor_id);
     auto IsSyncMsg = [&](const ActorMsg& msg) {
       return is_kernel_launch_synchronized
-             && global_work_stream_id
-                    == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id());
+             && thrd_id == Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id());
     };
     auto EnqueueActorMsg = [&](const ActorMsg& msg) {
       if (IsSyncMsg(msg)) {
