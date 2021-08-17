@@ -31,25 +31,6 @@ namespace {
 using SbpPair2EagerBoxingInterpreter =
     HashMap<std::pair<cfg::SbpParallel, cfg::SbpParallel>, std::shared_ptr<EagerBoxingInterpreter>>;
 
-Maybe<Symbol<cfg::SbpParallel>> GetSplitSbpParallel(int axis) {
-  CHECK_LT_OR_RETURN(axis, kMaxSplitAxis);
-  cfg::SbpParallel split_sbp_parallel;
-  split_sbp_parallel.mutable_split_parallel()->set_axis(axis);
-  return SymbolOf(split_sbp_parallel);
-}
-
-Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel() {
-  cfg::SbpParallel broadcast_sbp;
-  broadcast_sbp.mutable_broadcast_parallel();
-  return SymbolOf(broadcast_sbp);
-}
-
-Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
-  cfg::SbpParallel partial_sum_sbp;
-  partial_sum_sbp.mutable_partial_sum_parallel();
-  return SymbolOf(partial_sum_sbp);
-}
-
 std::string GetSupportedBoxingTypeInfo() {
   static std::string supported_boxing_type_info =
       "============ Supported eager boxing type============\n"
@@ -64,32 +45,32 @@ std::string GetSupportedBoxingTypeInfo() {
 }
 
 Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
-    Symbol<cfg::ParallelDistribution> in_nd_sbp, Symbol<cfg::ParallelDistribution> out_nd_sbp) {
+    Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp) {
   static SbpPair2EagerBoxingInterpreter sbp_pair2eager_boxing_interpreter = {
-      {{*JUST(GetSplitSbpParallel(0)), *JUST(MakeBroadcastSbpParallel())},  // S(0) -> B
+      {{*JUST(MakeSplitSbpParallel(0)), *JUST(MakeBroadcastSbpParallel())},  // S(0) -> B
        std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>()},
-      {{*JUST(MakeBroadcastSbpParallel()), *JUST(GetSplitSbpParallel(0))},  // B -> S(0)
+      {{*JUST(MakeBroadcastSbpParallel()), *JUST(MakeSplitSbpParallel(0))},  // B -> S(0)
        std::make_shared<NcclCollectiveReduceScatterBoxingInterpreter>("max")},
       {{*JUST(MakePartialSumSbpParallel()), *JUST(MakeBroadcastSbpParallel())},  // P -> B
        std::make_shared<NcclCollectiveAllReduceBoxingInterpreter>()},
-      {{*JUST(MakePartialSumSbpParallel()), *JUST(GetSplitSbpParallel(0))},  // P -> S(0)
+      {{*JUST(MakePartialSumSbpParallel()), *JUST(MakeSplitSbpParallel(0))},  // P -> S(0)
        std::make_shared<NcclCollectiveReduceScatterBoxingInterpreter>("sum")},
-      {{*JUST(GetSplitSbpParallel(0)), *JUST(MakePartialSumSbpParallel())},  // S(0) -> P
+      {{*JUST(MakeSplitSbpParallel(0)), *JUST(MakePartialSumSbpParallel())},  // S(0) -> P
        std::make_shared<NcclS2PBoxingInterpreter>()},
   };
   const auto& key = std::make_pair(in_nd_sbp->sbp_parallel(0), out_nd_sbp->sbp_parallel(0));
   CHECK_OR_RETURN(sbp_pair2eager_boxing_interpreter.find(key)
                   != sbp_pair2eager_boxing_interpreter.end())
-      << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
-      << ParallelDistributionToString(out_nd_sbp) << "\'"
+      << "Eager boxing type \'" << NdSbpToString(in_nd_sbp) << " -> " << NdSbpToString(out_nd_sbp)
+      << "\'"
       << " not support yet\n"
       << GetSupportedBoxingTypeInfo();
 
   return JUST(MapAt(sbp_pair2eager_boxing_interpreter, key));
 }
 
-Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                                                   Symbol<cfg::ParallelDistribution> out_nd_sbp,
+Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
+                                                   Symbol<cfg::NdSbp> out_nd_sbp,
                                                    Symbol<ParallelDesc> in_parallel_desc,
                                                    Symbol<ParallelDesc> out_parallel_desc) {
   if (in_parallel_desc == out_parallel_desc
@@ -114,20 +95,18 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::ParallelDistribut
         }
         return GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp);
       } else {
-        UNIMPLEMENTED_THEN_RETURN()
-            << "Eager boxing type \'" << ParallelDistributionToString(in_nd_sbp) << " -> "
-            << ParallelDistributionToString(out_nd_sbp) << "\'"
-            << " not support yet\n"
-            << GetSupportedBoxingTypeInfo();
+        UNIMPLEMENTED_THEN_RETURN() << "Eager boxing type \'" << NdSbpToString(in_nd_sbp) << " -> "
+                                    << NdSbpToString(out_nd_sbp) << "\'"
+                                    << " not support yet\n"
+                                    << GetSupportedBoxingTypeInfo();
       }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Eager boxing with different placement not support yet\n"
                                   << GetSupportedBoxingTypeInfo();
     }
   } else {
-    UNIMPLEMENTED_THEN_RETURN() << "N-dim eager boxing type \'"
-                                << ParallelDistributionToString(in_nd_sbp) << " -> "
-                                << ParallelDistributionToString(out_nd_sbp) << "\'"
+    UNIMPLEMENTED_THEN_RETURN() << "N-dim eager boxing type \'" << NdSbpToString(in_nd_sbp)
+                                << " -> " << NdSbpToString(out_nd_sbp) << "\'"
                                 << " not support yet\n"
                                 << GetSupportedBoxingTypeInfo();
   }
@@ -138,7 +117,7 @@ auto* CachedGetBoxingInterpreter = DECORATE(&GetBoxingInterpreter, ThreadLocal);
 }  // namespace
 
 Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInterpreter(
-    Symbol<cfg::ParallelDistribution> in_nd_sbp, Symbol<cfg::ParallelDistribution> out_nd_sbp,
+    Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
     Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const {
   return CachedGetBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc);
 }

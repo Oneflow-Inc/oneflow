@@ -160,6 +160,19 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(*shape, device=flow.device("cpu"))
         test_case.assertTrue(not x.is_cuda)
 
+    def test_tensor_to_bool(test_case):
+        x = flow.tensor([0.0])
+        test_case.assertFalse(bool(x))
+        x = flow.tensor([0.0]).to("cuda")
+        test_case.assertFalse(bool(x))
+        x = flow.tensor([1.5])
+        test_case.assertTrue(bool(x))
+        x = flow.tensor([3])
+        test_case.assertTrue(bool(x))
+        with test_case.assertRaises(RuntimeError):
+            bool(flow.tensor([1, 3, 5]))
+            bool(flow.tensor([]))
+
     def test_tensor_autograd_related_methods(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(*shape)
@@ -184,9 +197,15 @@ class TestTensor(flow.unittest.TestCase):
         grad = flow.Tensor(*shape)
         grad.fill_(1.0)
         w.backward(gradient=grad, retain_graph=True)
-        test_case.assertNotEqual(v.grad, None)
-        test_case.assertNotEqual(y.grad, None)
-        test_case.assertNotEqual(z.grad, None)
+        test_case.assertTrue(
+            np.allclose(v.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(y.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(z.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
         test_case.assertIsNone(x.grad)
         w.backward(gradient=grad, retain_graph=True)
 
@@ -196,7 +215,9 @@ class TestTensor(flow.unittest.TestCase):
         x.register_hook(lambda grad: grad * 2 + 1)
         y = x.sum() + (x * 2).sum()
         y.backward()
-        test_case.assertTrue(np.array_equal(x.grad.numpy(), np.ones(shape) * 7))
+        test_case.assertTrue(
+            np.allclose(x.grad.numpy(), np.ones(shape) * 7, atol=1e-4, rtol=1e-4)
+        )
         x = flow.Tensor(*shape, requires_grad=True)
         new_grad = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         x.register_hook(lambda _: new_grad)
@@ -459,6 +480,20 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(low=2, high=3).to(device)
         y = x.acosh()
+        return y
+
+    @autotest(auto_backward=False)
+    def test_sort_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.sort(dim=random(low=-4, high=4).to(int), descending=random_bool())
+        return y[0], y[1]
+
+    @autotest(auto_backward=False)
+    def test_argsort_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.argsort(dim=random(low=-4, high=4).to(int), descending=random_bool())
         return y
 
     def test_mean(test_case):

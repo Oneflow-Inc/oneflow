@@ -41,7 +41,6 @@ class OneflowVM final {
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;
   std::atomic<bool> exiting_;
-  std::atomic<bool> scheduler_exited_;
 };
 
 }  // namespace oneflow

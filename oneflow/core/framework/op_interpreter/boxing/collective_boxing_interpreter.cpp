@@ -73,8 +73,8 @@ auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
 }  // namespace
 
 Maybe<one::Tensor> NcclCollectiveAllGatherBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2B(in_nd_sbp->sbp_parallel(0),
                                                           out_nd_sbp->sbp_parallel(0)));
@@ -84,8 +84,8 @@ Maybe<one::Tensor> NcclCollectiveAllGatherBoxingInterpreter::InterpretImpl(
 }
 
 Maybe<one::Tensor> NcclCollectiveAllReduceBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingP2B(in_nd_sbp->sbp_parallel(0),
                                                           out_nd_sbp->sbp_parallel(0)));
@@ -95,8 +95,8 @@ Maybe<one::Tensor> NcclCollectiveAllReduceBoxingInterpreter::InterpretImpl(
 }
 
 Maybe<one::Tensor> NcclCollectiveReduceScatterBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN((EagerBoxingInterpreterUtil::IsBoxingP2S(in_nd_sbp->sbp_parallel(0),
                                                            out_nd_sbp->sbp_parallel(0))

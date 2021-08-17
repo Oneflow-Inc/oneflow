@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
+from oneflow.framework.tensor import register_tensor_op, Tensor
 from oneflow.nn.module import Module
 
 
@@ -35,7 +35,9 @@ class ToConsistent(Module):
 
 
 @register_tensor_op("to_consistent")
-def to_consistent_op(input, placement=None, sbp=None):
+def to_consistent_op(
+    input, placement=None, sbp=None, identity_grad=False, grad_sbp=None
+):
     """Cast a local tensor to consistent tensor or cast a
     consistent tensor to another consistent tensor with 
     different sbp or placement
@@ -59,18 +61,52 @@ def to_consistent_op(input, placement=None, sbp=None):
         >>> output_tensor.is_consistent
         True
     """
-    if isinstance(sbp, flow.sbp.sbp):
-        sbp = (sbp,)
-    if placement is None or sbp is None:
-        assert (
-            input.is_consistent
-        ), "Converting a local tensor to consistent tensor must have placement and sbp parameters!"
-        assert (
-            placement is not None or sbp is not None
-        ), "Converting a consistent tensor to consistent tensor must have at least one of placement and sbp parameters!"
-        placement = input.placement if placement is None else placement
-        sbp = input.sbp if sbp is None else sbp
-    return flow.F.to_consistent(input, placement, sbp)
+    assert isinstance(input, Tensor)
+
+    def _check_sbp(sbp):
+        if sbp is None:
+            pass
+        elif isinstance(sbp, (tuple, list)):
+            if not all(isinstance(sbp_item, flow.sbp.sbp) for sbp_item in sbp):
+                raise TypeError(
+                    "sbp parameter must be type of flow.sbp.sbp or list/tuple of flow.sbp.sbp"
+                )
+        elif isinstance(sbp, flow.sbp.sbp):
+            sbp = (sbp,)
+        else:
+            raise TypeError(f"Invalid parameter sbp with type {type(sbp)}")
+
+        return sbp
+
+    sbp = _check_sbp(sbp)
+
+    if input.is_consistent:
+        # convert consistent tensor to another consistent tensor with different placement or sbp
+        if placement is None:
+            placement = input.placement
+
+        if sbp is None:
+            sbp = input.sbp
+
+        grad_sbp = _check_sbp(grad_sbp)
+
+        if identity_grad is True and grad_sbp is not None:
+            raise ValueError("If identity_grad is True, grad_sbp should not be set.")
+
+    else:
+        # local tensor to consistent tensor
+        if placement is None or sbp is None:
+            raise ValueError(
+                "Converting a local tensor to consistent tensor must have placement and sbp parameters."
+            )
+
+        if not isinstance(placement, flow.placement):
+            raise ValueError(f"Invalid parameter placement with type {type(placement)}")
+
+    if grad_sbp is None:
+        grad_sbp = tuple()
+
+    return flow.F.to_consistent(input, placement, sbp, identity_grad, grad_sbp)
 
 
 class ToLocal(Module):
