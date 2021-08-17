@@ -69,8 +69,8 @@ class TestTensor(flow.unittest.TestCase):
         l_x.fill_(1.0)
         l_y.fill_(2.0)
 
-        x = l_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
-        y = l_y.to_consistent( placement=placement, sbp=flow.sbp.split(0))
+        x = l_x.to_consistent(placement=placement, sbp=sbp)
+        y = l_y.to_consistent( placement=placement, sbp=sbp)
 
         z = x + y
 
@@ -90,14 +90,14 @@ class TestTensor(flow.unittest.TestCase):
 
         l_v = flow.Tensor(*shape, requires_grad=True)
         l_v.fill_(3.0)
-        v = l_v.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        v = l_v.to_consistent(placement=placement, sbp=sbp)
         
         z.retain_grad()
         w = v + z
 
         l_grad = flow.Tensor(*shape)
         l_grad.fill_(1.0)
-        grad = l_grad.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        grad = l_grad.to_consistent(placement=placement, sbp=sbp)
         w.backward(gradient=grad, retain_graph=True)
 
         test_case.assertTrue(
