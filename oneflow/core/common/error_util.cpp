@@ -44,40 +44,29 @@ std::string StripBrackets(std::string str) {
 
 Maybe<std::string> ShortenMsg(std::string str) {
   // 150 characters is the threshold
-  const int character_num_threshold = 150;
-  const int displayed_char_num = 50;
+  const int num_character_threshold = 150;
+  const int num_displayed_character = 50;
   if (str.size() == 0) { return str; }
   // strip space when JUST(  xx  );
   str = StripSpace(str);
-  if (str.size() < character_num_threshold) { return str; }
+  if (str.size() < num_character_threshold) { return str; }
 
   // left part whose number of characters is just over 50
-  int left_index = displayed_char_num;
-  if (IsLetterNumberOrUnderline(str.at(left_index))) {
-    for (; left_index < str.size(); left_index++) {
-      if (!IsLetterNumberOrUnderline(str.at(left_index))) { break; }
-    }
-  } else {
-    for (; left_index < str.size(); left_index++) {
-      if (IsLetterNumberOrUnderline(str.at(left_index))) { break; }
-    }
+  int left_index = num_displayed_character;
+  bool pre_condition = IsLetterNumberOrUnderline(str.at(left_index));
+  for (; left_index < str.size(); left_index++) {
+    bool cur_condition = IsLetterNumberOrUnderline(str.at(left_index));
+    if ((pre_condition && !cur_condition) || (!pre_condition && cur_condition)) { break; }
   }
 
   // right part whose number of characters is just over 50
-  int right_index = str.size() - displayed_char_num;
-  if (IsLetterNumberOrUnderline(str.at(right_index))) {
-    for (; right_index >= 0; right_index--) {
-      if (!IsLetterNumberOrUnderline(str.at(right_index))) {
-        right_index++;
-        break;
-      }
-    }
-  } else {
-    for (; right_index >= 0; right_index--) {
-      if (IsLetterNumberOrUnderline(str.at(right_index))) {
-        right_index++;
-        break;
-      }
+  int right_index = str.size() - num_displayed_character;
+  pre_condition = IsLetterNumberOrUnderline(str.at(right_index));
+  for (; right_index >= 0; right_index--) {
+    bool cur_condition = IsLetterNumberOrUnderline(str.at(right_index));
+    if ((pre_condition && cur_condition) || (!pre_condition && cur_condition)) {
+      right_index++;
+      break;
     }
   }
   // a long word of more than 150
