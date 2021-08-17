@@ -44,7 +44,7 @@ class Actor : public ActorBase {
   int ProcessMsg(const ActorMsg& msg) override { return (this->*msg_handler_)(msg); }
 
   int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
-  int64_t thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
+  int64_t thrd_id() const { return thrd_id_; }
   int64_t actor_id() const { return actor_id_; }
   int64_t job_id() const { return job_id_; }
 
@@ -196,7 +196,7 @@ class Actor : public ActorBase {
 
   const JobDesc* job_desc_;
   int64_t actor_id_;
-  int64_t global_work_stream_id_;
+  int64_t thrd_id_;
   int64_t job_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;

@@ -41,7 +41,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
                  const ThreadCtx& thread_ctx) {
   job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
-  global_work_stream_id_ = Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id_);
+  thrd_id_ = Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
   InitDeviceCtx(thread_ctx);
   if (task_proto.has_parallel_ctx()) {
@@ -587,8 +587,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 
 void Actor::EnqueueAsyncMsg(const ActorMsg& msg) {
   if (is_kernel_launch_synchronized_
-      && global_work_stream_id_
-             == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
+      && thrd_id_ == Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id())) {
     Global<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
     async_msg_queue_.push_back(msg);

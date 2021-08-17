@@ -146,6 +146,57 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         print("repr(g): \n", repr(g))
         print("g.config.proto: \n", g.config.proto)
 
+    def test_optimizer_with_clip_grad(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.para0 = flow.nn.Parameter(flow.Tensor(10, 4))
+
+            def forward(self, x):
+                x = flow.F.matmul(x, self.para0)
+                return x
+
+        m = CustomModule()
+        learning_rate = 0.1
+        momentum = 0.2
+        scale = 0.3
+        weight_decay = 0.7
+        clip_grad_max_norm = 1.0
+        clip_grad_norm_type = 2.0
+
+        sgd0 = flow.optim.SGD(
+            [
+                {
+                    "params": [m.para0],
+                    "lr": learning_rate,
+                    "momentum": momentum,
+                    "scale": scale,
+                    "weight_decay": weight_decay,
+                    "clip_grad_max_norm": clip_grad_max_norm,
+                    "clip_grad_norm_type": clip_grad_norm_type,
+                }
+            ]
+        )
+
+        class CustomGraph0(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = m
+                self.add_optimizer(sgd0)
+
+            def build(self, x):
+                out = self.m(x)
+                out.backward()
+                return out
+
+        g = CustomGraph0()
+        x = flow.Tensor(4, 10)
+        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
+        z = g._compile(x)
+        print("repr(g): \n", repr(g))
+        print("g.config.proto: \n", g.config.proto)
+        print("graph proto: \n", g._graph_proto)
+
 
 if __name__ == "__main__":
     unittest.main()
