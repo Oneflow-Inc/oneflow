@@ -118,9 +118,16 @@ class SharedOrScalar final {
     alignas(Shared) char shared_mem_[sizeof(Shared)];
   };
 
-  const Shared& GetShared() const { return reinterpret_cast<const Shared&>(shared_mem_); }
+  const Shared& GetShared() const {
+    const auto* __attribute__((__may_alias__)) shared =
+        reinterpret_cast<const Shared*>(&shared_mem_);
+    return *shared;
+  }
 
-  Shared* MutableShared() { return reinterpret_cast<Shared*>(&shared_mem_); }
+  Shared* MutableShared() {
+    auto* __attribute__((__may_alias__)) shared = reinterpret_cast<Shared*>(&shared_mem_);
+    return shared;
+  }
 };
 
 }  // namespace oneflow

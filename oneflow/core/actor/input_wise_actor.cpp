@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/input_wise_compute_actor.h"
+#include "oneflow/core/actor/input_wise_actor.h"
 
 namespace oneflow {
 
-void InputWiseCompActor::Init(const TaskProto& task_proto) {
+void InputWiseActor::Init(const TaskProto& task_proto) {
   CHECK_EQ(1, exec_kernel_vec().size());
   const auto& input_bns =
       task_proto.exec_sequence().exec_node().Get(0).kernel_conf().op_attribute().input_bns();
@@ -41,23 +41,21 @@ void InputWiseCompActor::Init(const TaskProto& task_proto) {
   consumed_rs_.InitedDone();
   cur_processed_regst_desc_id_ = -1;
   processed_regst_desc_id_cnt_ = 0;
-  OF_SET_MSG_HANDLER(&InputWiseCompActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&InputWiseActor::HandlerNormal);
 }
 
-void InputWiseCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
+void InputWiseActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(0, consumed_rs_.TryPushBackRegst(msg.regst()));
 }
 
-bool InputWiseCompActor::IsCustomizedReadReady() const {
-  return -1 != GetCurProcessedRegstDescId();
-}
+bool InputWiseActor::IsCustomizedReadReady() const { return -1 != GetCurProcessedRegstDescId(); }
 
-void InputWiseCompActor::ForEachCurCustomizedReadableRegst(
+void InputWiseActor::ForEachCurCustomizedReadableRegst(
     std::function<void(const Regst*)> handler) const {
   handler(consumed_rs_.Front(cur_processed_regst_desc_id_));
 }
 
-void InputWiseCompActor::Act() {
+void InputWiseActor::Act() {
   cur_processed_regst_desc_id_ = GetCurProcessedRegstDescId();
   Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   CHECK(cur_regst);
@@ -72,7 +70,7 @@ void InputWiseCompActor::Act() {
   regst_desc_id2is_processed_.at(cur_processed_regst_desc_id_) = true;
 }
 
-void InputWiseCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+void InputWiseActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (processed_regst_desc_id_cnt_ == regst_desc_id2is_processed_.size()) {
     HandleProducedNaiveDataRegstToConsumer();
     for (auto& pair : regst_desc_id2is_processed_) {
@@ -83,7 +81,7 @@ void InputWiseCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   }
 }
 
-void InputWiseCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
+void InputWiseActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   CHECK(cur_regst);
   AsyncSendRegstMsgToProducer(cur_regst);
@@ -91,15 +89,15 @@ void InputWiseCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   cur_processed_regst_desc_id_ = -1;
 }
 
-void InputWiseCompActor::AsyncReturnAllCustomizedReadableRegst() {
+void InputWiseActor::AsyncReturnAllCustomizedReadableRegst() {
   CHECK_EQ(-1, cur_processed_regst_desc_id_);
   CHECK_EQ(0, processed_regst_desc_id_cnt_);
   CHECK_EQ(0, consumed_rs_.available_regst_desc_cnt());
 }
 
-bool InputWiseCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+bool InputWiseActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
 
-int64_t InputWiseCompActor::GetCurProcessedRegstDescId() const {
+int64_t InputWiseActor::GetCurProcessedRegstDescId() const {
   int64_t cur_processed_regst_desc_id = -1;
   consumed_rs_.ForChosenRegstDeq(
       [cur_processed_regst_desc_id](int64_t) { return cur_processed_regst_desc_id == -1; },
