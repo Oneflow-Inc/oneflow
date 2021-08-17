@@ -131,7 +131,7 @@ class SGD(Optimizer):
             else:
                 optimizer_conf.mutable_momentum_conf().set_beta(beta)
 
-            self.generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2

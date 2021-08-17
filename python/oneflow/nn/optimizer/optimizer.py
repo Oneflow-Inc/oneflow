@@ -159,7 +159,7 @@ class Optimizer(object):
                 f"params argument given to the optimizer should be an iterable of Tensors or dicts, but got {type(parameters)}"
             )
 
-    def generate_grad_clip_conf_for_optim_conf(self, param_group, optimizer_conf):
+    def _generate_grad_clip_conf_for_optim_conf(self, param_group, optimizer_conf):
         if param_group._enable_clip_grad:
             if (
                 param_group["clip_grad_max_norm"] == 1.0

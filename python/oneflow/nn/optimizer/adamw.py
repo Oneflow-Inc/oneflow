@@ -158,7 +158,7 @@ class AdamW(Optimizer):
                 weight_decay
             )
 
-            self.generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 if param.requires_grad:
