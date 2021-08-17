@@ -32,7 +32,7 @@ namespace oneflow {
 
 NNGraph::~NNGraph() {
   VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
-  Close();
+  CHECK_JUST(Close());
 }
 
 Maybe<void> NNGraph::Close() {
