@@ -206,12 +206,13 @@ class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
   Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
-                           const DataType& dtype, const Optional<Symbol<Device>>& device) const {
+                           const Symbol<DType>& dtype,
+                           const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("limit", limit));
     JUST(attrs.SetAttr<int64_t>("delta", delta));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
 
     OpExprInterpContext ctx(attrs);
     if (device) { ctx.device = JUST(device.value()); }
@@ -226,13 +227,13 @@ class ConsistentArangeFunctor {
  public:
   ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
   Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
-                           const DataType& dtype, const Symbol<ParallelDesc>& placement,
+                           const Symbol<DType>& dtype, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("start", start));
     JUST(attrs.SetAttr<int64_t>("limit", limit));
     JUST(attrs.SetAttr<int64_t>("delta", delta));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
 
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
@@ -259,9 +260,10 @@ class ArgMaxFunctor : public UnaryFunctor {
 class CastFunctor {
  public:
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const DataType& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -277,12 +279,12 @@ class ClipByScalarFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& min,
                            const Scalar& max) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
       JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       JUST(attrs.SetAttr<int64_t>("integral_max", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", 0));
       JUST(attrs.SetAttr<double>("floating_max", 0));
       JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
@@ -307,12 +309,12 @@ class ClipByScalarGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const Scalar& min,
                            const Scalar& max) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
       JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       JUST(attrs.SetAttr<int64_t>("integral_max", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", 0));
       JUST(attrs.SetAttr<double>("floating_max", 0));
       JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
@@ -334,10 +336,10 @@ class ClipByScalarMinFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_min", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", 0));
       JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
     } else {
@@ -359,10 +361,10 @@ class ClipByScalarMinGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_min", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_min", 0));
       JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
     } else {
@@ -382,10 +384,10 @@ class ClipByScalarMaxFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& max) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_max", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_max", 0));
       JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max.As<int64_t>())));
     } else {
@@ -407,10 +409,10 @@ class ClipByScalarMaxGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const Scalar& max) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
       JUST(attrs.SetAttr<int64_t>("integral_max", 0));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_max", 0));
       JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max.As<int64_t>())));
     } else {
@@ -482,6 +484,32 @@ class MaximumFunctor {
   std::shared_ptr<OpExpr> broadcast_maximum_op_;
 };
 
+class ScalarFModFunctor {
+ public:
+  ScalarFModFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("scalar_fmod").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    MutableAttrMap attrs;
+
+    if (IsFloatingDataType(x->dtype()->data_type())) {
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScalarLogicalBaseFunctor {
  public:
   explicit ScalarLogicalBaseFunctor(std::string op_name) {
@@ -491,11 +519,11 @@ class ScalarLogicalBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
 
-    if (IsFloatingDataType(x->dtype())) {
+    if (IsFloatingDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-    } else if (IsIntegralDataType(x->dtype())) {
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
       JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
@@ -566,6 +594,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
   m.add_functor<impl::MinimumFunctor>("Minimum");
   m.add_functor<impl::MaximumFunctor>("Maximum");
+  m.add_functor<impl::ScalarFModFunctor>("ScalarFMod");
   m.add_functor<impl::ScalarLogicalEqualFunctor>("ScalarLogicalEqual");
   m.add_functor<impl::ScalarLogicalNotEqualFunctor>("ScalarLogicalNotEqual");
   m.add_functor<impl::ScalarLogicalGreaterFunctor>("ScalarLogicalGreater");
