@@ -74,7 +74,12 @@ FoldParams<INDEX_T, NDIM, SDIM>::FoldParams(const int64_t batch_size, const int6
     this->padding[d] = padding[d];
     this->stride[d] = stride[d];
     this->dilation[d] = dilation[d];
-    input_dims[SDIM + NDIM + d] = (output_size[d] - 1)*stride[d] + dilation[d]*(kernel_size[d]-1) + 1 - 2*padding[d]; 
+    // input_dims[SDIM + NDIM + d] = (output_size[d] - 1)*stride[d] + dilation[d]*(kernel_size[d]-1) + 1 - 2*padding[d]; 
+    input_dims[SDIM + NDIM + d] = (output_size[d] + 2*padding[d] 
+                                    - dilation[d] * (kernel_size[d] - 1) - 1)
+                                       / stride[d]
+                                   + 1;
+    printf("input dims[sdim+ndim+d] is %d", input_dims[SDIM + NDIM + d]);
     input_dims[SDIM + d] = kernel_size[d];
     this->in_elem_cnt *= input_dims[SDIM + d] * input_dims[SDIM + NDIM + d]; // N,C*Kh*Kw, H*W
     output_dims[SDIM + d] = output_size[d];
