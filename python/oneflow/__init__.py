@@ -94,17 +94,12 @@ del register_python_callback
 
 
 def _SyncOnMasterFn():
-    import oneflow
-
-    def Sync():
-        if not oneflow._oneflow_internal.IsEnvInited():
-            return
-        if oneflow.framework.distribute.is_multi_client():
-            oneflow._oneflow_internal.eager.multi_client.Sync()
-        elif oneflow.framework.distribute.get_rank() == 0:
-            oneflow._oneflow_internal.eager.single_client.Sync()
-
-    return Sync
+    if not oneflow._oneflow_internal.IsEnvInited():
+        return
+    if oneflow.framework.distribute.is_multi_client():
+        oneflow._oneflow_internal.eager.multi_client.Sync()
+    elif oneflow.framework.distribute.get_rank() == 0:
+        oneflow._oneflow_internal.eager.single_client.Sync()
 
 
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)

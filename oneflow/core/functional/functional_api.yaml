@@ -37,7 +37,7 @@
   bind_python: False
 
 - name: "broadcast_add"
-  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y, *, Bool inplace=False)"
   bind_python: False
 
 - name: "sub_scalar_by_tensor"
@@ -412,6 +412,10 @@
 
 - name: "dim_gather"
   signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
+  bind_python: True
+
+- name: "arg_sort"
+  signature: "Tensor ArgSort(Tensor in, *, String direction)"
   bind_python: True
 
 - name: "gather_nd"
