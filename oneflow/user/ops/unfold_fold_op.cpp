@@ -123,15 +123,10 @@ Maybe<void> FoldDTypeFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> GetFoldSbpFn(user_op::SbpContext* ctx) {
-  // ctx->NewBuilder()
-  //      .Split(user_op::OpArg("x", 0), 0)
-  //      .Split(user_op::OpArg("y", 0), 0)
-  //      .Build();
-  
-  // ctx->NewBuilder()
-  //      .Split(user_op::OpArg("x", 0), 1)
-  //      .Split(user_op::OpArg("y", 0), 1)
-  //      .Build();
+  ctx->NewBuilder()
+       .Split(user_op::OpArg("x", 0), 0)
+       .Split(user_op::OpArg("y", 0), 0)
+       .Build();
   return Maybe<void>::Ok();
 }
 
