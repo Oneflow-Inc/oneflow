@@ -15,92 +15,45 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
 import numpy as np
 from automated_test_util import *
-from test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
 
 
-def _test_mul_impl(test_case, device):
-    x = flow.Tensor(
-        np.random.randn(2, 3), device=flow.device(device), requires_grad=True
-    )
-    y = flow.Tensor(
-        np.random.randn(2, 3), device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.mul(x, y)
-    np_out = np.multiply(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad_x = y.numpy()
-    np_grad_y = x.numpy()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad_x, 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(y.grad.numpy(), np_grad_y, 1e-05, 1e-05))
-    x = 5
-    y = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
-    of_out = flow.mul(x, y)
-    np_out = np.multiply(x, y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    x = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
-    y = 5
-    of_out = flow.mul(x, y)
-    np_out = np.multiply(x.numpy(), y)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    x = flow.Tensor(
-        np.random.randn(1, 1), device=flow.device(device), requires_grad=True
-    )
-    y = flow.Tensor(
-        np.random.randn(2, 3), device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.mul(x, y)
-    np_out = np.multiply(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np.sum(y.numpy()), 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-05, 1e-05))
-    x = flow.Tensor(
-        np.random.randn(1, 1), device=flow.device(device), requires_grad=True
-    )
-    y = flow.Tensor(
-        np.random.randn(2, 3, 4), device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.mul(x, y)
-    np_out = np.multiply(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np.sum(y.numpy()), 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-05, 1e-05))
-    x = flow.Tensor(
-        np.random.randn(1, 1), device=flow.device(device), requires_grad=True
-    )
-    y = flow.Tensor(
-        np.random.randn(2, 3, 4, 5), device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.mul(x, y)
-    np_out = np.multiply(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np.sum(y.numpy()), 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestMulModule(flow.unittest.TestCase):
-    def test_mul(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_mul_impl]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest()
+    def test_mul_with_random_data_integer(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
+        k = random(10,100).to(int)
+        y = torch.mul(x, k)
+        return y
 
+    @autotest()
+    def test_mul_with_random_data_broadcast(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
+        y = random_pytorch_tensor(ndim=1, dim0=4).to(device)
+        z = torch.mul(x, y)
+        return z
+    
+    @autotest()
+    def test_tensor_mul_with_random_data_integer(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
+        k = random(10,100).to(int)
+        y = x.mul(k)
+        return y
+
+    @autotest()
+    def test_tensor_mul_with_random_data_broadcast(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
+        y = random_pytorch_tensor(ndim=1, dim0=4).to(device)
+        z = y.mul(x)
+        return z
 
 if __name__ == "__main__":
     unittest.main()
