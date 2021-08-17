@@ -91,7 +91,7 @@ class TestGraphBlock(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = CustomModule()
-                self.add_optimizer("sgd", of_sgd)
+                self.add_optimizer(of_sgd)
 
             def build(self, x):
                 out = self.m(x)
