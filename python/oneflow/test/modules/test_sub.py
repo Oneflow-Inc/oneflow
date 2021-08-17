@@ -62,7 +62,7 @@ class TestSub(flow.unittest.TestCase):
         return x.sub(y)
 
     @autotest()
-    def test_tensor__sub_with_broadcast_data(test_case):
+    def test_tensor_sub_with_broadcast_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=5, dim0=1, dim1=4, dim2=1).to(device)
         y = random_pytorch_tensor(ndim=3, dim0=1, dim1=1).to(device)
