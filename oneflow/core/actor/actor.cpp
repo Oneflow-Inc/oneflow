@@ -331,7 +331,9 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
           const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(msg.regst_desc_id());
           CHECK(rdeq.empty() == false);
         } else {
-          CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
+          CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0)
+              << "src_actor_id: " << msg.src_actor_id() << "dst_actor_id: " << msg.dst_actor_id()
+              << "regst_desc_id: " << msg.regst_desc_id();
         }
       }
     }

@@ -235,7 +235,8 @@ bool IsDistributionEquals(const ParallelDesc& in_parallel_desc,
       if (in_tensor_slice_view != out_tensor_slice_view) { return false; }
     }
     return true;
-  } else if ((in_parallel_desc == out_parallel_desc) && (in_parallel_distribution == out_parallel_distribution)) {
+  } else if ((in_parallel_desc == out_parallel_desc)
+             && (in_parallel_distribution == out_parallel_distribution)) {
     return true;
   }
   return false;
@@ -330,6 +331,15 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
               + std::to_string(JUST(
                   out_parallel_desc.DeviceId4ParallelId(out_map_id2parallel_id.at(parallel_id)))));
         }
+        std::vector<TaskNode*> in_group_sorted_in_tasks;
+        std::vector<TaskNode*> in_group_sorted_out_tasks;
+        HashMap<int64_t, int64_t> in_group_parallel_id2map_id;
+        HashMap<int64_t, int64_t> in_group_map_id2parallel_id;
+        CHECK_JUST(GetIdMap(ParallelDesc(in_parallel_conf), &in_group_parallel_id2map_id,
+                            &in_group_map_id2parallel_id));
+        FOR_RANGE(int64_t, j, 0, group_size) {
+          in_group_sorted_in_tasks.push_back(in_tasks.at(in_group_parallel_id2map_id.at(j)));
+        }
         DimVector dim_vec = logical_blob_desc.shape().dim_vec();
         if (in_parallel_distribution.sbp_parallel(0).has_split_parallel()) {
           const int64_t axis = in_parallel_distribution.sbp_parallel(0).split_parallel().axis();
@@ -338,11 +348,15 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
         BlobDesc new_blob_desc(Shape(dim_vec), logical_blob_desc.data_type());
         std::shared_ptr<SubTskGphBuilderStatus> boxing_builder_status =
             JUST(sub_tsk_gph_builder_->Build(
-                ctx, in_tasks, &out_tasks, &ctrl_tasks, ParallelDesc(in_parallel_conf),
-                ParallelDesc(out_parallel_conf), lbi, new_blob_desc,
+                ctx, in_group_sorted_in_tasks, &in_group_sorted_out_tasks, &ctrl_tasks,
+                ParallelDesc(in_parallel_conf), ParallelDesc(out_parallel_conf), lbi, new_blob_desc,
                 in_parallel_distribution.sbp_parallel(1), out_parallel_distribution.sbp_parallel(1),
                 time_shape));
         status.push_back(*boxing_builder_status);
+        FOR_RANGE(int64_t, j, 0, group_size) {
+          out_tasks.push_back(in_group_sorted_out_tasks.at(in_group_map_id2parallel_id.at(j)));
+          // TODO: process ctrl
+        }
         CHECK_EQ_OR_RETURN(out_tasks.size(), group_size);
         FOR_RANGE(int64_t, j, 0, group_size) {
           const int64_t parallel_id = i * group_size + j;
@@ -678,7 +692,6 @@ class Same3DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
 
         HashMap<int64_t, int64_t> map_id2parallel_id;
         CHECK_JUST(GetIdMap(in_parallel_desc, nullptr, &map_id2parallel_id));
-
         FOR_RANGE(int64_t, i, 0, num_groups) {
           std::vector<TaskNode*> in_tasks;
           std::vector<TaskNode*> out_tasks;
@@ -835,9 +848,13 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
                          &reduced_out_parallel_distribution);
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
-  //LOG(INFO)<<"after InOutParallelDimReduce "<<" reduced_in_parallel_distribution "<<reduced_in_parallel_distribution.DebugString()<<" in_hierarchy "<<in_hierarchy->DebugStr()<<" reduced_out_parallel_distribution "<<reduced_out_parallel_distribution.DebugString()<<" in_hierarchy "<<out_hierarchy->DebugStr();
-  if (IsDistributionEquals(reduced_in_parallel_desc, reduced_out_parallel_desc, reduced_in_parallel_distribution,
-                           reduced_out_parallel_distribution, logical_blob_desc.shape())) {
+  // LOG(INFO)<<"after InOutParallelDimReduce "<<" reduced_in_parallel_distribution
+  // "<<reduced_in_parallel_distribution.DebugString()<<" in_hierarchy "<<in_hierarchy->DebugStr()<<"
+  // reduced_out_parallel_distribution "<<reduced_out_parallel_distribution.DebugString()<<"
+  // in_hierarchy "<<out_hierarchy->DebugStr();
+  if (IsDistributionEquals(reduced_in_parallel_desc, reduced_out_parallel_desc,
+                           reduced_in_parallel_distribution, reduced_out_parallel_distribution,
+                           logical_blob_desc.shape())) {
     return impl_->distribution_equals_sub_tsk_gph_builder_->Build(
         ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
         reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
