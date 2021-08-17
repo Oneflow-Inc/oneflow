@@ -144,7 +144,7 @@ class IBVerbsQP final {
   IBVerbsQP() = delete;
   IBVerbsQP(ibv_context*, ibv_pd*, uint8_t port_num, ibv_cq* send_cq, ibv_cq* recv_cq);
   IBVerbsQP(ibv_context *, ibv_pd*, uint8_t port_num, ibv_cq * send_cq, ibv_cq* recv_cq,
-            MessagePool * recv_msg_buf, MessagePool * send_msg_buf);
+            std::shared_ptr<MessagePool> recv_msg_buf, std::shared_ptr<MessagePool> send_msg_buf);
   ~IBVerbsQP();
 
   uint32_t qp_num() const { return qp_->qp_num; }
@@ -176,9 +176,9 @@ class IBVerbsQP final {
   uint32_t num_outstanding_send_wr_;
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
-  
-  MessagePool *  recv_msg_buf_;
-  MessagePool * send_msg_buf_;
+ 
+  std::shared_ptr<MessagePool> recv_msg_buf_;
+  std::shared_ptr<MessagePool> send_msg_buf_;
  };
 
 }  // namespace oneflow

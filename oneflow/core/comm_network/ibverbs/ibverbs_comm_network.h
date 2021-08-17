@@ -66,8 +66,9 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
       remote_regst2rma_desc_;
   std::mutex remote_regst2rma_desc_mutex_;
 
- MessagePool * recv_msg_buf_;
- MessagePool *  send_msg_buf_;
+ //MessagePool * recv_msg_buf_;
+ std::shared_ptr<MessagePool> recv_msg_buf_;
+ std::shared_ptr<MessagePool> send_msg_buf_;
 }; 
 
 }  // namespace oneflow
