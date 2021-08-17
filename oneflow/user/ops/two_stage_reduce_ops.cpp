@@ -37,11 +37,10 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
     *output_shape = Shape::Ones(num_axes);
   } else {
     const ParallelDesc& parallel_desc = ctx->parallel_desc();
-    const cfg::ParallelDistribution& in_parallel_distribution =
-        ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+    const cfg::NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
     DimVector dim_vec = input_shape.dim_vec();
     if (parallel_desc.hierarchy()->NumAxes() == 1) {
-      const auto& input_sbp = in_parallel_distribution.sbp_parallel(0);
+      const auto& input_sbp = in_nd_sbp.sbp_parallel(0);
       for (auto i : axis) {
         const int64_t regular_axis = ShiftNegativeAxis(i, num_axes);
         dim_vec.at(regular_axis) =
@@ -54,7 +53,7 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
       const int64_t regular_axis = ShiftNegativeAxis(axis.at(0), num_axes);
       dim_vec.at(regular_axis) = 1;
       for (int64_t i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
-        const auto& input_sbp = in_parallel_distribution.sbp_parallel(i);
+        const auto& input_sbp = in_nd_sbp.sbp_parallel(i);
         if (input_sbp.has_split_parallel() && input_sbp.split_parallel().axis() == regular_axis) {
           dim_vec.at(regular_axis) *= parallel_desc.hierarchy()->At(i);
         }

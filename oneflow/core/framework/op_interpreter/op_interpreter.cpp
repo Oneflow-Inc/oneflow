@@ -38,6 +38,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
   APPLY_IF(FeedVariableOp);
   APPLY_IF(FetchOutputOp);
   APPLY_IF(UserOp);
+  APPLY_IF(ConsistentToConsistentOp);
   APPLY_IF(FunctionOp);
 #undef APPLY_IF
 

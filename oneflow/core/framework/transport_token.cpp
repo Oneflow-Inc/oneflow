@@ -205,11 +205,26 @@ Maybe<bool*> ThreadLocalMutLock4CtrlTransportToken(int32_t thread_consistent_uni
   return **current_transport_token;
 }
 
-Maybe<void> TransportToken::ReleaseCtrlTransportToken() const {
-  auto* lock = JUST(ThreadLocalMutLock4CtrlTransportToken(JUST(thread_consistent_unique_id()),
-                                                          JUST(rank_group_level()), JUST(cmd())));
-  CHECK_OR_RETURN(*lock);
-  *lock = false;
+Maybe<void> TransportToken::TryAcquireCtrlTransportTokenLock() const {
+  if (type() == kCtrlTransportTokenType) {
+    auto* lock = JUST(ThreadLocalMutLock4CtrlTransportToken(JUST(thread_consistent_unique_id()),
+                                                            JUST(rank_group_level()), JUST(cmd())));
+    CHECK_OR_RETURN(!*lock);
+    *lock = true;
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> TransportToken::TryReleaseCtrlTransportTokenLock() const {
+  if (type() == kCtrlTransportTokenType) {
+    const auto& thread_consistent_unique_id = JUST(this->thread_consistent_unique_id());
+    const auto& rank_group_level = JUST(this->rank_group_level());
+    const auto& cmd = JUST(this->cmd());
+    auto* lock = JUST(
+        ThreadLocalMutLock4CtrlTransportToken(thread_consistent_unique_id, rank_group_level, cmd));
+    CHECK_OR_RETURN(*lock);
+    *lock = false;
+  }
   return Maybe<void>::Ok();
 }
 
