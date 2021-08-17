@@ -302,7 +302,9 @@ class Block(object):
             if hasattr(self._origin, name):
                 return partial(getattr(self._origin.__class__, name), self)
         raise AttributeError(
-            "'{}' object has no attribute '{}'".format(type(self).__name__, name)
+            "'{}' '{}' object '{}' in nn.Graph has no attribute '{}'".format(
+                self._type, type(self).__name__, self._name_prefix + self.name, name
+            )
         )
 
     def _get_in_states(self, name, states_name):

@@ -28,9 +28,9 @@ from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 
+import oneflow as flow
 import oneflow._oneflow_internal
 import oneflow.framework.dtype as dtype_util
-from oneflow.framework.check_point_v2 import GetCheckpoint, SaveVarDict
 from oneflow.framework.function_util import FunctionConfig as ExecutionConfig
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.module import Module
@@ -573,12 +573,14 @@ class CheckpointModel(SubModel):
     def _load_checkpoint(self, dirpath: str):
         """Load model states from a checkpoint.
         """
-        LoadVariables(GetCheckpoint(path=dirpath))
+        stat_dict = flow.load(path=dirpath)
+        self._model.load_state_dict(stat_dict)
 
     def _save_checkpoint(self, dirpath: str):
         """Save model states as a checkpoint.
         """
-        SaveVarDict(path=dirpath)
+        stat_dict = self._model.state_dict()
+        flow.save(stat_dict, dirpath)
 
 
 class TrainModelOOPStyle(SubModel):
@@ -703,14 +705,14 @@ class CheckpointModelOOPStyle(SubModel):
     def _load_checkpoint(self, dirpath: str):
         """Load model states from a checkpoint.
         """
-        stat_dict = GetCheckpoint(path=dirpath)
+        stat_dict = flow.load(path=dirpath)
         self._model.load_state_dict(stat_dict)
 
     def _save_checkpoint(self, dirpath: str):
         """Save model states as a checkpoint.
         """
         stat_dict = self._model.state_dict()
-        SaveVarDict(path=dirpath, var_dict=stat_dict)
+        flow.save(stat_dict, dirpath)
 
 
 def _infer_job_signature(data_module, batch, optimizer_idx, job):

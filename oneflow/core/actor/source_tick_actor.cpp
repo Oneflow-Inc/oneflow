@@ -13,36 +13,48 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ACTOR_WAIT_AND_SEND_IDS_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_WAIT_AND_SEND_IDS_COMPUTE_ACTOR_H_
-
-#include "oneflow/core/actor/compute_actor.h"
-#include "oneflow/core/kernel/wait_and_send_ids_kernel.h"
+#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
 
-class WaitAndSendIdsCompActor final : public CompActor {
+class SourceTickActor final : public Actor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(WaitAndSendIdsCompActor);
-  WaitAndSendIdsCompActor() = default;
-  ~WaitAndSendIdsCompActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(SourceTickActor);
+  SourceTickActor() = default;
+  ~SourceTickActor() = default;
 
  private:
-  void VirtualCompActorInit(const TaskProto&) override;
+  void VirtualActorInit(const TaskProto&) override;
   void Act() override;
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
-  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   bool IsCustomizedReadReady() const override;
   bool IsCustomizedReadAlwaysUnReadyFromNow() const override { return !IsCustomizedReadReady(); }
 
   int HandlerWaitToStart(const ActorMsg&);
-
-  WaitAndSendIdsStatus wait_and_send_ids_status_;
 };
 
-}  // namespace oneflow
+void SourceTickActor::VirtualActorInit(const TaskProto& task_proto) {
+  OF_SET_MSG_HANDLER(&SourceTickActor::HandlerWaitToStart);
+}
 
-#endif  // ONEFLOW_CORE_ACTOR_WAIT_AND_SEND_IDS_COMPUTE_ACTOR_H_
+void SourceTickActor::Act() {}
+
+bool SourceTickActor::IsCustomizedReadReady() const {
+  // NOTE(chengcheng): SourceTickActor CANNOT be used and need delete in the future
+  return true;
+}
+
+int SourceTickActor::HandlerWaitToStart(const ActorMsg& msg) {
+  CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
+  OF_SET_MSG_HANDLER(&SourceTickActor::HandlerNormal);
+  return ProcessMsg(msg);
+}
+
+REGISTER_ACTOR(kSourceTick, SourceTickActor);
+
+}  // namespace oneflow

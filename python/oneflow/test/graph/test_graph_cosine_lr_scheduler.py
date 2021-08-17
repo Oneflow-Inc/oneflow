@@ -13,21 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import math
 import unittest
 import os
 import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.nn.parameter import Parameter
 
 
-def _test_linear_train_graph(test_case, device):
+def _test_linear_graph_train_with_cosine_lr(test_case, iter_num, device):
     def train_with_module(iter_num=3):
         linear = flow.nn.Linear(3, 8)
         linear = linear.to(device)
-        flow.nn.init.constant_(linear.weight, 2.068758)
+        flow.nn.init.constant_(linear.weight, -0.68758)
         flow.nn.init.constant_(linear.bias, 0.23)
-        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
+        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001)
+        alpha = 0.0005
+        steps = 10
+        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
+            of_sgd, steps=steps, alpha=alpha
+        )
 
         x = flow.Tensor(
             [
@@ -50,6 +57,7 @@ def _test_linear_train_graph(test_case, device):
 
             of_out.backward()
             of_sgd.step()
+            cosine_annealing_lr.step()
             of_sgd.zero_grad()
 
             return of_out.numpy(), linear.weight.numpy()
@@ -62,9 +70,14 @@ def _test_linear_train_graph(test_case, device):
     def train_with_graph(iter_num=3):
         linear = flow.nn.Linear(3, 8)
         linear = linear.to(device)
-        flow.nn.init.constant_(linear.weight, 2.068758)
+        flow.nn.init.constant_(linear.weight, -0.68758)
         flow.nn.init.constant_(linear.bias, 0.23)
-        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
+        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001)
+        alpha = 0.0005
+        steps = 10
+        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
+            of_sgd, steps=steps, alpha=alpha
+        )
 
         x = flow.Tensor(
             [
@@ -85,7 +98,7 @@ def _test_linear_train_graph(test_case, device):
             def __init__(self):
                 super().__init__()
                 self.linear = linear
-                self.add_optimizer(of_sgd)
+                self.add_optimizer(of_sgd, lr_sch=cosine_annealing_lr)
 
             def build(self, x):
                 out = self.linear(x)
@@ -104,28 +117,37 @@ def _test_linear_train_graph(test_case, device):
             check_list.append(one_iter())
         return check_list
 
-    iter_num = 3
-    module_check_list = train_with_module()
-    graph_check_list = train_with_graph()
+    module_check_list = train_with_module(iter_num)
+    graph_check_list = train_with_graph(iter_num)
     for i in range(iter_num):
         # check equal on loss
         test_case.assertTrue(
-            np.array_equal(module_check_list[i][0], graph_check_list[i][0])
+            np.allclose(
+                module_check_list[i][0],
+                graph_check_list[i][0],
+                rtol=0.00001,
+                atol=0.00001,
+            )
         )
         # check equal on weight
         test_case.assertTrue(
-            np.array_equal(module_check_list[i][1], graph_check_list[i][1])
+            np.allclose(
+                module_check_list[i][1],
+                graph_check_list[i][1],
+                rtol=0.00001,
+                atol=0.00001,
+            )
         )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-class TestLinearTrainGraph(oneflow.unittest.TestCase):
-    def test_linear_train_graph_gpu(test_case):
-        _test_linear_train_graph(test_case, flow.device("cuda"))
+class TestLinearGraphTrainWithCosineLrScheduler(flow.unittest.TestCase):
+    def test_graph_gpu(test_case):
+        _test_linear_graph_train_with_cosine_lr(test_case, 21, flow.device("cuda"))
 
-    def test_linear_train_graph_cpu(test_case):
-        _test_linear_train_graph(test_case, flow.device("cpu"))
+    def test_graph_cpu(test_case):
+        _test_linear_graph_train_with_cosine_lr(test_case, 21, flow.device("cpu"))
 
 
 if __name__ == "__main__":
