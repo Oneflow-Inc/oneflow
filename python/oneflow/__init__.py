@@ -94,17 +94,12 @@ del register_python_callback
 
 
 def _SyncOnMasterFn():
-    import oneflow
-
-    def Sync():
-        if not oneflow._oneflow_internal.IsEnvInited():
-            return
-        if oneflow.framework.distribute.is_multi_client():
-            oneflow._oneflow_internal.eager.multi_client.Sync()
-        elif oneflow.framework.distribute.get_rank() == 0:
-            oneflow._oneflow_internal.eager.single_client.Sync()
-
-    return Sync
+    if not oneflow._oneflow_internal.IsEnvInited():
+        return
+    if oneflow.framework.distribute.is_multi_client():
+        oneflow._oneflow_internal.eager.multi_client.Sync()
+    elif oneflow.framework.distribute.get_rank() == 0:
+        oneflow._oneflow_internal.eager.single_client.Sync()
 
 
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
@@ -260,6 +255,7 @@ from oneflow.nn.modules.negative import negative_op as neg
 from oneflow.nn.modules.negative import negative_op as negative
 from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.random_ops import bernoulli
+from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean

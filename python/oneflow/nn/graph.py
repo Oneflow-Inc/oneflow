@@ -21,6 +21,7 @@ import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
+from oneflow.framework.distribute import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
@@ -39,7 +40,6 @@ class Graph(object):
         self.config = GraphConfig()
         self._generate_name()
         self.config.proto.set_job_name(self._name)
-        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         self._blocks = OrderedDict()
         self._optimizers_conf = OrderedDict()
         self._variables_conf = OrderedDict()
@@ -48,6 +48,11 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
+        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
+        session = session_ctx.GetDefaultSession()
+        assert type(session) is MultiClientSession
+        session.TryInit()
+        session.AddCGraph(self._c_nn_graph)
 
     @property
     def name(self):
@@ -62,6 +67,10 @@ class Graph(object):
         return self._job_proto
 
     def debug(self, mode: bool = True) -> None:
+        if get_rank() != 0:
+            return
+        else:
+            print("Note that nn.Graph.debug() only print debug info on rank 0.")
         self._debug = mode
         for name, block in self._blocks.items():
             assert block.type == BlockType.MODULE
@@ -165,8 +174,6 @@ class Graph(object):
 
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
-        session.TryInit()
-
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             arg_op_names, lazy_args, self._args_repr = self._build_io(

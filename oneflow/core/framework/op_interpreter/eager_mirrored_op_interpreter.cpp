@@ -251,7 +251,7 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
 
 Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
                                          Symbol<ParallelDesc> parallel_desc,
-                                         Symbol<cfg::ParallelDistribution> nd_sbp) {
+                                         Symbol<cfg::NdSbp> nd_sbp) {
   Optional<int64_t> parallel_id;
   JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
@@ -330,7 +330,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
       const auto& reshaped_tensor = JUST(TryReshapeTensor(input_mirrored_tensor, tensor_meta));
       const auto& synced_tensor =
           JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
-      CHECK_EQ_OR_RETURN(dtype, input_mirrored_tensor->dtype());
+      CHECK_EQ_OR_RETURN(dtype, input_mirrored_tensor->dtype()->data_type());
       consistent_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsMirroredTensor()));
       return Maybe<void>::Ok();
     }));
