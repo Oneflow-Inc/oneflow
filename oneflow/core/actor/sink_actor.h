@@ -13,24 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/copy_hd_actor.h"
+#ifndef ONEFLOW_CORE_ACTOR_SINK_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_SINK_ACTOR_H_
+
+#include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+class SinkActor : public Actor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SinkActor);
+  SinkActor() = default;
+  virtual ~SinkActor() = default;
 
-void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
-  OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
-}
+ protected:
+  virtual void VirtualSinkActorInit(const TaskProto&) {}
+  virtual void* NewOther() { return nullptr; }
+  virtual void DeleteOther(void*) {}
 
-void CopyHdActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
-
-void CopyHdActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedNaiveDataRegstToConsumer();
-}
-
-REGISTER_ACTOR(TaskType::kCopyHd, CopyHdActor);
-
-#endif
+ private:
+  void VirtualActorInit(const TaskProto&) override;
+  void Act() override;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_ACTOR_SINK_ACTOR_H_
