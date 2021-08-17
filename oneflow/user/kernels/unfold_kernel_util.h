@@ -110,7 +110,7 @@ struct UnfoldKernelUtil {
 
 #define INSTANTIATE_UNFOLD_KERNEL_UTIL_FOR_DEVICE(device)                                   \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNFOLD_KERNEL_UTIL_WITH_TYPE_PAIR, (device), \
-                                   ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ,           \
+                                   FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ,           \
                                    SPATIAL_NDIM_SEQ, SPATIAL_DIM_SEQ)
 
 }  // namespace user_op

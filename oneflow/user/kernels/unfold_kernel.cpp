@@ -61,13 +61,13 @@ class UnfoldKernel final : public OpKernel {
   std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const override {
     const TensorDesc* input_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
     if (input_desc->is_dynamic()) { return std::shared_ptr<OpKernelState>(nullptr); }
-    const auto& data_format = ctx->Attr<std::string>("data_format");
-    const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    const auto& padding = ctx->Attr<std::vector<int32_t>>("padding");
-    const auto& stride = ctx->Attr<std::vector<int32_t>>("strides");
-    const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+    const std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
+    const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
+    const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     int spatial_ndim = input_desc->shape().NumAxes() - 2;
-    int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format"));
+    int spatial_dim = GetSpatialDim(data_format);
     DataType index_dtype = input_desc->shape().elem_cnt() < std::numeric_limits<int32_t>::max()
                                ? DataType::kInt32
                                : DataType::kInt64;
@@ -108,10 +108,10 @@ class UnfoldKernel final : public OpKernel {
     auto switch_case = SwitchCase(index_dtype, spatial_ndim, spatial_dim);
     std::shared_ptr<OpKernelState> state_ptr(nullptr);
     if (state == nullptr) {
-      const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-      const auto& padding = ctx->Attr<std::vector<int32_t>>("padding");
-      const auto& stride = ctx->Attr<std::vector<int32_t>>("strides");
-      const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+      const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+      const std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
+      const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
+      const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
       state_ptr = SwitchCreateUnfoldOpKernelState(switch_case, input->shape(), kernel_size,
                                                   padding, stride, dilation);
       state = state_ptr.get();
