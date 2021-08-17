@@ -310,7 +310,7 @@ Error&& maybe_error_add_message(Error&& err, T&&... msg) {
 
 #define JUST_MSG(value, ...)                                                    \
   ({                                                                            \
-    auto&& maybe = value;                                                       \
+    auto&& maybe = (value);                                                     \
     if (!maybe.IsOk()) {                                                        \
       return maybe_error_add_message(                                           \
           Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__), \
@@ -319,17 +319,18 @@ Error&& maybe_error_add_message(Error&& err, T&&... msg) {
     std::move(maybe);                                                           \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define CHECK_JUST_MSG(value, ...)                                                            \
-  ({                                                                                          \
-    auto&& maybe = value;                                                                     \
-    if (!maybe.IsOk()) {                                                                      \
-      LOG(FATAL) << maybe_error_add_message(                                                  \
-                        Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__), \
-                        OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                          \
-                        ->DebugString();                                                      \
-    }                                                                                         \
-    std::move(maybe);                                                                         \
-  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+#define CHECK_JUST_MSG(value, ...)                                                         \
+  ([&](const char* func_name) {                                                            \
+    auto&& maybe = (value);                                                                \
+    if (!maybe.IsOk()) {                                                                   \
+      LOG(FATAL) << maybe_error_add_message(                                               \
+                        Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, func_name), \
+                        OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                       \
+                        ->DebugString();                                                   \
+    }                                                                                      \
+    return std::move(maybe);                                                               \
+  })(__FUNCTION__)                                                                         \
+      .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
 
