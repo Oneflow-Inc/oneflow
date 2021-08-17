@@ -1448,6 +1448,29 @@ class ReduceSumLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BroadcastReduceSumLikeFunctor {
+ public:
+  BroadcastReduceSumLikeFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const std::shared_ptr<Tensor>& like) const {
+    const auto& in_shape = *(input->shape());
+    const auto& like_shape = *(like->shape());
+    if (in_shape != like_shape) {
+      const Shape& left_extended_shape =
+          CreateLeftExtendedShape(ShapeView(like_shape), in_shape.NumAxes());
+      if (in_shape == left_extended_shape) {
+        return JUST(ReshapeLike(input, like));
+      } else {
+        const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(in_shape);
+        return JUST(ReduceSumLike(
+            input, like,
+            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()}));
+      }
+    }
+    return JUST(Identity(input));
+  }
+};
+
 class SplitFunctor {
  public:
   SplitFunctor() {}
@@ -1562,6 +1585,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
+  m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
 };

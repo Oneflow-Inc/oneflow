@@ -21,35 +21,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-namespace {
-
-class ReduceSumLikeModule {
- public:
-  ReduceSumLikeModule() = default;
-  ~ReduceSumLikeModule() = default;
-
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
-                           const std::shared_ptr<Tensor>& like) const {
-    const auto& in_shape = *(input->shape());
-    const auto& like_shape = *(like->shape());
-    if (in_shape != like_shape) {
-      const Shape& left_extended_shape =
-          CreateLeftExtendedShape(ShapeView(like_shape), in_shape.NumAxes());
-      if (in_shape == left_extended_shape) {
-        return JUST(functional::ReshapeLike(input, like));
-      } else {
-        const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(in_shape);
-        return JUST(functional::ReduceSumLike(
-            input, like,
-            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()}));
-      }
-    }
-    return JUST(functional::Identity(input));
-  }
-};
-
-}  // namespace
-
 struct WhereInterpState : public OpExprInterpState {
   bool requires_grad_x;
   bool requires_grad_y;
@@ -94,11 +65,11 @@ Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_gra
   in_grads->resize(3);
   if (ctx->requires_grad_x) {
     auto broad_x_grad = JUST(functional::Where(condition, out_grads.at(0), zero_out));
-    in_grads->at(1) = JUST(ReduceSumLikeModule()(broad_x_grad, x));
+    in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(broad_x_grad, x));
   }
   if (ctx->requires_grad_y) {
     auto broad_y_grad = JUST(functional::Where(condition, zero_out, out_grads.at(0)));
-    in_grads->at(2) = JUST(ReduceSumLikeModule()(broad_y_grad, y));
+    in_grads->at(2) = JUST(functional::BroadcastReduceSumLike(broad_y_grad, y));
   }
   return Maybe<void>::Ok();
 }
@@ -129,7 +100,7 @@ class WhereScalarX : public WhereScalar {
     std::shared_ptr<oneflow::one::Tensor> zero_out = JUST(functional::ZerosLike(y));
     in_grads->resize(2);
     auto broad_y_grad = JUST(functional::Where(condition, zero_out, out_grads.at(0)));
-    in_grads->at(1) = JUST(ReduceSumLikeModule()(broad_y_grad, y));
+    in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(broad_y_grad, y));
     return Maybe<void>::Ok();
   }
 };
@@ -146,7 +117,7 @@ class WhereScalarY : public WhereScalar {
     std::shared_ptr<oneflow::one::Tensor> zero_out = JUST(functional::ZerosLike(x));
     in_grads->resize(2);
     auto broad_x_grad = JUST(functional::Where(condition, out_grads.at(0), zero_out));
-    in_grads->at(1) = JUST(ReduceSumLikeModule()(broad_x_grad, x));
+    in_grads->at(1) = JUST(functional::BroadcastReduceSumLike(broad_x_grad, x));
     return Maybe<void>::Ok();
   }
 };

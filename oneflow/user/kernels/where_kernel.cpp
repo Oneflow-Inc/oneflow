@@ -79,7 +79,7 @@ class WhereScalarXKernel final : public user_op::OpKernel {
     } else if (ctx->Attr<bool>("has_float_operand")) {
       scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED() << "The scalar in Where should be float or int.";
     }
     if (!(y->shape() == cond->shape())) {
       size_t num_axes = out->shape().NumAxes();
@@ -122,7 +122,7 @@ class WhereScalarYKernel final : public user_op::OpKernel {
     } else if (ctx->Attr<bool>("has_float_operand")) {
       scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED() << "The scalar in Where should be float or int";
     }
     if (!(x->shape() == cond->shape())) {
       size_t num_axes = out->shape().NumAxes();
@@ -157,6 +157,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* cond = ctx->Tensor4ArgNameAndIndex("condition", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    if (out->shape().elem_cnt() == 0) { return; }
     T x_scalar_operand = static_cast<T>(0);
     T y_scalar_operand = static_cast<T>(0);
     if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
@@ -166,7 +167,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
       x_scalar_operand = static_cast<T>(ctx->Attr<double>("x_float_operand"));
       y_scalar_operand = static_cast<T>(ctx->Attr<double>("y_float_operand"));
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED() << "The scalar in Where should be float or int";
     }
     WhereKernelUtil<device_type, T, CondT>::WhereXYScalar(
         ctx->device_ctx(), out->shape().elem_cnt(), cond->dptr<CondT>(), x_scalar_operand,
