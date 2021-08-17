@@ -16,24 +16,35 @@ limitations under the License.
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 
+
 class LrWarmUpDict(object):
-    def __init__(self, config_dict,):
+    def __init__(
+        self, config_dict,
+    ):
         assert isinstance(config_dict, dict)
         assert "type" in config_dict
         self._dict = config_dict
         assert self._dict["type"] in ["constent", "linear"]
-    
+
     def generate_conf_for_graph(self, opt_confs):
         if self._dict["type"] == "constent":
             for opt_conf in opt_confs:
                 warmup_conf = opt_conf.mutable_warmup_conf()
-                warmup_conf.mutable_constant_conf().set_warmup_batches(self._dict["steps"])
-                warmup_conf.mutable_constant_conf().set_multiplier(self._dict["multiplier"])
+                warmup_conf.mutable_constant_conf().set_warmup_batches(
+                    self._dict["steps"]
+                )
+                warmup_conf.mutable_constant_conf().set_multiplier(
+                    self._dict["multiplier"]
+                )
         if self._dict["type"] == "linear":
             for opt_conf in opt_confs:
                 warmup_conf = opt_conf.mutable_warmup_conf()
-                warmup_conf.mutable_linear_conf().set_warmup_batches(self._dict["steps"])
-                warmup_conf.mutable_linear_conf().set_start_multiplier(self._dict["start_multiplier"])
+                warmup_conf.mutable_linear_conf().set_warmup_batches(
+                    self._dict["steps"]
+                )
+                warmup_conf.mutable_linear_conf().set_start_multiplier(
+                    self._dict["start_multiplier"]
+                )
 
 
 class OptDict(object):

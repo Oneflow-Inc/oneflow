@@ -77,7 +77,6 @@ class Graph(object):
     @property
     def _graph_proto(self):
         return self._job_proto
-    
 
     def debug(self, mode: bool = True) -> None:
         if get_rank() != 0:
@@ -93,9 +92,7 @@ class Graph(object):
         raise NotImplementedError()
 
     def add_optimizer(
-        self, optim: Optimizer, *,
-        lr_sch: LrScheduler = None,
-        lr_warmup: Dict = None,
+        self, optim: Optimizer, *, lr_sch: LrScheduler = None, lr_warmup: Dict = None,
     ):
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
