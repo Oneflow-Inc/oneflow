@@ -34,6 +34,14 @@ class __PrinterOptions(object):
 PRINT_OPTS = __PrinterOptions()
 
 
+def _try_convert_to_local_tensor(tensor):
+    return (
+        tensor
+        if tensor.is_local
+        else tensor.to_consistent(sbp=flow.sbp.broadcast).to_local()
+    )
+
+
 class _Formatter(object):
     def __init__(self, tensor):
         self.floating_dtype = tensor.dtype.is_floating_point
@@ -42,8 +50,7 @@ class _Formatter(object):
         self.max_width = 1
         self.random_sample_num = 50
         # element count of tensor < threshold
-        if tensor.is_consistent:
-            tensor = tensor.to_consistent(sbp=flow.sbp.broadcast).to_local()
+        tensor = _try_convert_to_local_tensor(tensor)
 
         with flow.no_grad():
             tensor_view = tensor.reshape(-1)
@@ -144,33 +151,19 @@ def _vector_str(self, indent, summarize, formatter1):
         return formatter1.format(val)
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
-        left_values = (
-            self[: PRINT_OPTS.edgeitems].tolist()
-            if self.is_local
-            else self[: PRINT_OPTS.edgeitems]
-            .to_consistent(sbp=flow.sbp.broadcast)
-            .to_local()
-            .tolist()
-        )
-        right_values = (
-            self[-PRINT_OPTS.edgeitems :].tolist()
-            if self.is_local
-            else self[-PRINT_OPTS.edgeitems :]
-            .to_consistent(sbp=flow.sbp.broadcast)
-            .to_local()
-            .tolist()
-        )
+        left_values = _try_convert_to_local_tensor(
+            self[: PRINT_OPTS.edgeitems]
+        ).tolist()
+        right_values = _try_convert_to_local_tensor(
+            self[-PRINT_OPTS.edgeitems :]
+        ).tolist()
         data = (
             [_val_formatter(val) for val in left_values]
             + [" ..."]
             + [_val_formatter(val) for val in right_values]
         )
     else:
-        values = (
-            self.tolist()
-            if self.is_local
-            else self.to_consistent(sbp=flow.sbp.broadcast).to_local().tolist()
-        )
+        values = _try_convert_to_local_tensor(self).tolist()
         data = [_val_formatter(val) for val in values]
 
     data_lines = [
@@ -215,6 +208,7 @@ def _tensor_str(self, indent):
     summarize = self.numel() > PRINT_OPTS.threshold
     if self.dtype is flow.float16:
         self = self.float()
+        
     # not support flow.sbp.split(x) but flow.sbp.split(0)
     def _cannot_print(sbp):
         return (
