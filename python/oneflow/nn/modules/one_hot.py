@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, Union
+from typing import Union
 import oneflow as flow
 
 
 def one_hot(
     input,
-    num_classes: Optional[int] = None,
+    num_classes: int = -1,
     on_value: Union[int, float] = 1,
     off_value: Union[int, float] = 0,
 ):
@@ -63,7 +63,7 @@ def one_hot(
             "A consistent tensor can not be applied to onehot, and use tensor.to_local() to convert it to local tensor first."
         )
 
-    if num_classes is None:
+    if num_classes == -1:
         if input.is_lazy:
             raise ValueError(
                 "The parameter num_classes must be specified when one_hot using in nn.Graph."

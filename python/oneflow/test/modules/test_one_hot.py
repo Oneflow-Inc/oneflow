@@ -43,7 +43,7 @@ class TestOnehot(flow.unittest.TestCase):
             _test_onehot,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["num_classes"] = [None, 10, 11]
+        arg_dict["num_classes"] = [-1, 10, 11]
         arg_dict["size"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["on_value"] = [-1, -0.9, 0, 0.9, 1]
         arg_dict["off_value"] = [-2, -0.5, 0, 0.5, 2]
