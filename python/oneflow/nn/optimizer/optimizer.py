@@ -158,3 +158,17 @@ class Optimizer(object):
             raise TypeError(
                 f"params argument given to the optimizer should be an iterable of Tensors or dicts, but got {type(parameters)}"
             )
+
+    def generate_grad_clip_conf_for_optim_conf(self, param_group, optimizer_conf):
+        if param_group._enable_clip_grad:
+            if (
+                param_group["clip_grad_max_norm"] == 1.0
+                and param_group["clip_grad_norm_type"] == 2.0
+            ):
+                optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm().set_clip_norm(
+                    param_group["clip_grad_max_norm"]
+                )
+            else:
+                warnings.warn(
+                    "For now, nn.Graph only support clip grad with `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`."
+                )

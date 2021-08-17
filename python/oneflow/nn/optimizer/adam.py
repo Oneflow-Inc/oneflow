@@ -162,18 +162,7 @@ class Adam(Optimizer):
                 param_group["do_bias_correction"]
             )  # TODO(zzk): Check this option
 
-            if param_group._enable_clip_grad:
-                if (
-                    param_group["clip_grad_max_norm"] == 1.0
-                    and param_group["clip_grad_norm_type"] == 2.0
-                ):
-                    optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm().set_clip_norm(
-                        param_group["clip_grad_max_norm"]
-                    )
-                else:
-                    warnings.warn(
-                        "For now, nn.Graph only support clip grad with `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`."
-                    )
+            self.generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2

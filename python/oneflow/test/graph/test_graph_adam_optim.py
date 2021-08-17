@@ -175,7 +175,7 @@ def compare_with_numpy_adam_clip_grad(
         def __init__(self):
             super().__init__()
             self.m = simp_module
-            self.add_optimizer("adam", adam0)
+            self.add_optimizer(adam0)
 
         def build(self, mask_tensor):
             loss = flow.sum(self.m(mask_tensor))

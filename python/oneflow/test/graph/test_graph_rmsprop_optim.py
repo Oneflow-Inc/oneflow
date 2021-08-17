@@ -179,7 +179,7 @@ def compare_with_numpy_rmsprop_clip_grad(
         def __init__(self):
             super().__init__()
             self.m = simp_module
-            self.add_optimizer("rmsprop", rmsprop0)
+            self.add_optimizer(rmsprop0)
 
         def build(self, mask_tensor):
             loss = flow.sum(self.m(mask_tensor))
