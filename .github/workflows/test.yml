@@ -727,16 +727,13 @@ jobs:
       - name: Cache third party dir
         uses: actions/cache@v2
         with:
-          path: |
-            .ccache
+          path: ~/.ccache
           key: clang-tidy-diff-third-party-ccache-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}
           restore-keys: |
             clang-tidy-diff-third-party-ccache-${{ hashFiles('**/CMakeLists.txt') }}-
             clang-tidy-diff-third-party-ccache-
       - name: Build third party libs and generate files
         run: |
-          export CCACHE_BASEDIR=$GITHUB_WORKSPACE
-          export CCACHE_DIR=$CCACHE_BASEDIR/.ccache
           export CCACHE_COMPRESS=true
           export CCACHE_MAXSIZE=500M
           mkdir build
