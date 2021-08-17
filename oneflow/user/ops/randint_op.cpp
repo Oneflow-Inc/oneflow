@@ -39,10 +39,7 @@ REGISTER_NO_GRAD_USER_OP("randint")
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = DataType::kInt64;
       return Maybe<void>::Ok();

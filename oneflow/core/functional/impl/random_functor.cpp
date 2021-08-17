@@ -35,6 +35,8 @@ limitations under the License.
 #include "oneflow/user/kernels/distributions/uniform_kernel.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -303,10 +305,17 @@ class ConsistentRandintFunctor {
     }
     const auto& randint_kernel_state = std::make_shared<UniformKernelState>(gen);
 
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
     }
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+
     return OpInterpUtil::Dispatch<Tensor>(
         *randint_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, randint_kernel_state));
   }
