@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
@@ -49,7 +50,7 @@ class Tensor {
   int64_t ndim() const { return shape()->NumAxes(); }
 
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
-  virtual DataType dtype() const = 0;
+  virtual Symbol<DType> dtype() const = 0;
   virtual Maybe<TransportToken> transport_token() const = 0;
   virtual Maybe<Symbol<cfg::NdSbp>> nd_sbp() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
@@ -119,7 +120,7 @@ class StaticZerosTensor final : public Tensor {
   }
   // Getters
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
-  DataType dtype() const { return dtype_; }
+  Symbol<DType> dtype() const { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const { OF_UNIMPLEMENTED(); }
@@ -256,7 +257,7 @@ class Parameter final : public TensorIf<Parameter> {
   }
 
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
-  DataType dtype() const override { return tensor_->dtype(); }
+  Symbol<DType> dtype() const override { return tensor_->dtype(); }
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return tensor_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override { return tensor_->device(); }
@@ -354,7 +355,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  DataType dtype() const override { return impl_->dtype(); }
+  Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { OF_UNIMPLEMENTED(); }
@@ -435,7 +436,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  DataType dtype() const override { return impl_->dtype(); }
+  Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
