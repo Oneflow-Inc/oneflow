@@ -68,7 +68,7 @@ add_docstr(
 
         >>> out = flow.F.gelu(input)
         >>> out
-        tensor([-0.1543,  0.    ,  0.3457], dtype=oneflow.float32)
+        tensor([-0.1543,  0.0000,  0.3457], dtype=oneflow.float32)
 
     See    
     :class:`~oneflow.nn.GELU` for more details.
@@ -170,7 +170,7 @@ add_docstr(
         >>> input = flow.Tensor(x) 
         >>> out = flow.F.softsign(input)
         >>> out
-        tensor([0.5   , 0.6667, 0.75  ], dtype=oneflow.float32)
+        tensor([0.5000, 0.6667, 0.7500], dtype=oneflow.float32)
  
     See :class:`~oneflow.nn.Softsign` for more details.
     
@@ -186,16 +186,15 @@ add_docstr(
     The formula is: 
 
     .. math::
-    
-        \text{silu}(x) = x * sigmoid(x)
 
-   For example:
-    
+        \text{silu}(x) = x * sigmoid(x)
+        
+    For example:
+
     .. code-block:: python
-    
+
         >>> import numpy as np
         >>> import oneflow as flow
-
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)       
@@ -204,7 +203,7 @@ add_docstr(
         tensor([0.7311, 1.7616, 2.8577], dtype=oneflow.float32)
 
     See :class:`~oneflow.nn.SiLU` for more details.
-    
+
     """,
 )
 
@@ -232,10 +231,9 @@ add_docstr(
 
         >>> out = flow.F.mish(input)
         >>> out
-        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+        tensor([0.8651, 1.9440, 2.9865], dtype=oneflow.float32)
 
-    See :
-    class:`~oneflow.nn.Mish` for more details.
+    See :class:`~oneflow.nn.Mish` for more details.
     
     """,
 )
@@ -248,6 +246,10 @@ add_docstr(
 
     Applies the rectified linear unit function element-wise. See
     :class:`~oneflow.nn.ReLU` for more details.
+
+    Args:
+        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
+
 
     """,
 )
@@ -265,9 +267,7 @@ add_docstr(
             x / 6 + 1 / 2 & \text{otherwise}
         \end{cases}
 
-    Args:
-        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
-
+    
     See :class:`~oneflow.nn.Hardsigmoid` for more details.
     """,
 )
@@ -334,7 +334,7 @@ add_docstr(
     leaky_relu(x: Tensor,  alpha :Float) -> Tensor
 
     Applies element-wise,
-    :math:`\text{LeakyReLU}(x) = \max(0, x) + \text{negative\_slope} * \min(0, x)`
+    :math:`\text{LeakyReLU}(x) = \max(0, x) + \text{negative_slope} * \min(0, x)`
 
     See :class:`~oneflow.nn.LeakyReLU` for more details.
 
@@ -361,7 +361,7 @@ add_docstr(
         >>> input = flow.Tensor(x)
         >>> out = flow.nn.functional.elu(input, alpha=1.0)
         >>> out
-        tensor([-0.3935,  0.    ,  0.5   ], dtype=oneflow.float32)
+        tensor([-0.3935,  0.0000,  0.5000], dtype=oneflow.float32)
     """,
 )
 add_docstr(
@@ -369,10 +369,7 @@ add_docstr(
     r"""
     selu(x: Tensor) -> Tensor
 
-    Applies element-wise,
-        :math:`\text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`,
-        with :math:`\alpha=1.6732632423543772848170429916717` and
-        :math:`scale=1.0507009873554804934193349852946`.
+    Applies element-wise function :math:`\text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`, with :math:`\alpha=1.6732632423543772848170429916717` and  :math:`scale=1.0507009873554804934193349852946`.
 
     See :class:`~oneflow.nn.SELU` for more details.
 

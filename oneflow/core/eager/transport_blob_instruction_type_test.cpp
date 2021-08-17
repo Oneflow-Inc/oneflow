@@ -265,14 +265,14 @@ TEST(SendReceiveInstructionType, naive) {
   {
     InstructionMsgList list;
     src_blob_id = MakeTestBlob(&list, "0:0");
-    vm0->Receive(&list);
+    CHECK_JUST(vm0->Receive(&list));
   }
   auto vm1 = MakeVM(1);
   int64_t dst_blob_id = 0;
   {
     InstructionMsgList list;
     dst_blob_id = MakeTestBlob(&list, "1:0");
-    vm1->Receive(&list);
+    CHECK_JUST(vm1->Receive(&list));
   }
   uint64_t header_token = 7777;
   uint64_t body_token = 8888;
@@ -281,13 +281,13 @@ TEST(SendReceiveInstructionType, naive) {
     InstructionMsgList list;
     send_recv_util.MakeTestInstructions(&list, header_token, body_token, "0:0", src_blob_id, "1:0",
                                         dst_blob_id);
-    vm0->Receive(&list);
+    CHECK_JUST(vm0->Receive(&list));
   }
   {
     InstructionMsgList list;
     send_recv_util.MakeTestInstructions(&list, header_token, body_token, "0:0", src_blob_id, "1:0",
                                         dst_blob_id);
-    vm1->Receive(&list);
+    CHECK_JUST(vm1->Receive(&list));
   }
   while (!(vm0->Empty() && vm1->Empty())) {
     vm0->Schedule();

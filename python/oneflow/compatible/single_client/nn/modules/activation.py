@@ -881,7 +881,7 @@ class Mish(Module):
 
         >>> out = mish(input)
         >>> out
-        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+        tensor([0.8651, 1.9440, 2.9865], dtype=oneflow.float32)
     """
 
     def __init__(self, inplace: bool = False):

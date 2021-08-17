@@ -72,7 +72,7 @@ def compare_with_numpy_rmsprop(
         def __init__(self):
             super().__init__()
             self.m = simp_module
-            self.add_optimizer("rmsprop", rmsprop0)
+            self.add_optimizer(rmsprop0)
 
         def build(self, mask_tensor):
             loss = flow.sum(self.m(mask_tensor))
@@ -99,7 +99,7 @@ def compare_with_numpy_rmsprop(
         g = np.zeros_like(x)
 
         def np_train_one_iter(grad):
-            # ref to: https://github.com/Oneflow-Inc/oneflow/blob/master/python/oneflow/test/modules/test_optim_rmsprop.py#L78-L99
+            # ref to: ../modules/test_optim_rmsprop.py -> train_by_numpy()
 
             # weight decay is equivalent to l2 penalty
             grad = grad + weight_decay * x
@@ -120,7 +120,7 @@ def compare_with_numpy_rmsprop(
 
     train_by_numpy()
 
-    test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-4, atol=1e-4))
+    test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=1e-3, atol=1e-3))
 
 
 @flow.unittest.skip_unless_1n1d()

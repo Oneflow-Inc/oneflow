@@ -29,7 +29,7 @@ def allreduce_fn(ddp_state_for_reversed_params, param):
                 continue
             if ready:
                 ddp_state_for_reversed_params[cur_param][1] = True
-                if cur_param == param:
+                if cur_param is param:
                     ret = flow.F.all_reduce(grad)
                 else:
                     cur_param.grad = flow.F.all_reduce(cur_param.grad)
@@ -41,7 +41,7 @@ def allreduce_fn(ddp_state_for_reversed_params, param):
 
 
 def DistributedDataParallel(module: "flow.nn.Module"):
-    world_size = flow.framework.distribute.get_world_size()
+    world_size = flow.distributed.get_world_size()
     # TODO(jianhao): broadcast parameters and buffers
     ddp_state_for_reversed_params = OrderedDict(
         reversed([(x, [False, False]) for x in module.parameters()])

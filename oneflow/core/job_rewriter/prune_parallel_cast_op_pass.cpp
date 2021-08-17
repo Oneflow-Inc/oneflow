@@ -39,7 +39,7 @@ class PruneParallelCastOpsPass final : public JobPass {
 Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
                                             JobBuilder* job_builder) const {
   HashMap<std::string, OperatorConf> op_name2op_conf;
-  HashMap<std::string, cfg::ParallelDistributionSignature> op_name2nd_sbp_signature;
+  HashMap<std::string, cfg::NdSbpSignature> op_name2nd_sbp_signature;
   HashSet<std::string> ctrl_in_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
@@ -63,19 +63,15 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
     const LogicalBlobId& parallel_cast_in_lbi = GenLogicalBlobId(conf_wrapper.input("in", 0));
     const LogicalBlobId& parallel_cast_out_lbi = GenLogicalBlobId(conf_wrapper.output("out", 0));
     const OpNode* producer = op_graph.OpNode4OpName(parallel_cast_in_lbi.op_name());
-    const cfg::ParallelDistribution& parallel_cast_nd_sbp =
-        op_node->ParallelDistribution4Lbi(parallel_cast_in_lbi);
-    const cfg::ParallelDistribution& producer_nd_sbp =
-        producer->ParallelDistribution4Lbi(parallel_cast_in_lbi);
+    const cfg::NdSbp& parallel_cast_nd_sbp = op_node->NdSbp4Lbi(parallel_cast_in_lbi);
+    const cfg::NdSbp& producer_nd_sbp = producer->NdSbp4Lbi(parallel_cast_in_lbi);
     if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
     if (parallel_cast_nd_sbp != producer_nd_sbp && op_node->out_edges().size() > 1) { return; }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       if (IsParallelCastOp(consumer->op().op_conf())) { return; }
       if (consumer->parallel_desc() != op_node->parallel_desc()) { return; }
-      if (consumer->ParallelDistribution4Lbi(parallel_cast_out_lbi) != parallel_cast_nd_sbp) {
-        return;
-      }
+      if (consumer->NdSbp4Lbi(parallel_cast_out_lbi) != parallel_cast_nd_sbp) { return; }
     }
     op_name2nd_sbp_signature[producer->op().op_name()] = producer->nd_sbp_signature();
     for (const OpEdge* out_edge : op_node->out_edges()) {
@@ -98,7 +94,7 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
   });
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
   for (const auto& pair : op_name2nd_sbp_signature) {
-    job_builder->AddParallelDistributionSignature4OpName(pair.first, pair.second);
+    job_builder->AddNdSbpSignature4OpName(pair.first, pair.second);
   }
   job_builder->DelOps(del_op_names);
   return Maybe<void>::Ok();
