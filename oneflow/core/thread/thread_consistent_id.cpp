@@ -22,13 +22,13 @@ namespace oneflow {
 
 namespace {
 
-class UniqueConsistentIdStorage final {
+class ConsistentIdStorage final {
  public:
-  UniqueConsistentIdStorage() = default;
-  ~UniqueConsistentIdStorage() = default;
+  ConsistentIdStorage() = default;
+  ~ConsistentIdStorage() = default;
 
-  static UniqueConsistentIdStorage* Singleton() {
-    static auto* storage = new UniqueConsistentIdStorage();
+  static ConsistentIdStorage* Singleton() {
+    static auto* storage = new ConsistentIdStorage();
     return storage;
   }
 
@@ -67,7 +67,7 @@ std::unique_ptr<int64_t>* MutThreadLocalUniqueConsistentId() {
 }  // namespace
 
 Maybe<void> InitThisThreadUniqueConsistentId(int64_t id, const std::string& debug_string) {
-  JUST(UniqueConsistentIdStorage::Singleton()->Emplace(id, debug_string));
+  JUST(ConsistentIdStorage::Singleton()->Emplace(id, debug_string));
   auto* ptr = MutThreadLocalUniqueConsistentId();
   CHECK_ISNULL_OR_RETURN(ptr->get());
   ptr->reset(new int64_t(id));
@@ -75,7 +75,7 @@ Maybe<void> InitThisThreadUniqueConsistentId(int64_t id, const std::string& debu
 }
 
 Maybe<void> InitThisThreadConsistentId(int64_t id, const std::string& debug_string) {
-  JUST(UniqueConsistentIdStorage::Singleton()->TryEmplace(id, debug_string));
+  JUST(ConsistentIdStorage::Singleton()->TryEmplace(id, debug_string));
   auto* ptr = MutThreadLocalUniqueConsistentId();
   CHECK_ISNULL_OR_RETURN(ptr->get());
   ptr->reset(new int64_t(id));
