@@ -242,9 +242,9 @@ def print_note_fake_program():
         print('\033[32m)\033[0m')
 
 def clear_note_fake_program():
-    note_pytorch_method_names = []
-    note_pytorch_args = []
-    note_pytorch_kwargs = []
+    note_pytorch_method_names.clear()
+    note_pytorch_args.clear()
+    note_pytorch_kwargs.clear()
 
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
