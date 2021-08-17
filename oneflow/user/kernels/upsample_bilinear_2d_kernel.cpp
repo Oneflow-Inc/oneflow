@@ -31,8 +31,8 @@ static void UpsampleBilinear2DForward(const int64_t elem_cnt, const T* in_dptr,
                                       const T scale_h, const T scale_w, const bool align_corners,
                                       T* out_dptr) {
   oneflow::parallel_for(0, elem_cnt, 0, [&](int64_t start, int64_t end) {
-    for (int64_t index = start; index < end; ++index){
-  // for (int64_t index = 0; index < elem_cnt; ++index) {
+    for (int64_t index = start; index < end; ++index) {
+      // for (int64_t index = 0; index < elem_cnt; ++index) {
       int64_t n, c, h, w;
       out_helper.OffsetToNdIndex(index, n, c, h, w);
       BilinearParam<T> params;

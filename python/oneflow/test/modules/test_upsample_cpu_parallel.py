@@ -25,18 +25,13 @@ import oneflow.unittest
 
 
 def _test_upsample2d(test_case, device):
-    arr = np.random.randn(1,2,3,3)
-    input = flow.Tensor(
-        arr,
-        device=flow.device(device),
-        dtype=flow.float32,
-    )
+    arr = np.random.randn(1, 2, 3, 3)
+    input = flow.Tensor(arr, device=flow.device(device), dtype=flow.float32,)
     m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
     output = m(input)
     print("output.sum >>>>>>>>>>", output.sum())
     print("output.shape >>>>>>>>> ", output.shape)
     test_case.assertTrue(True)
-
 
 
 @flow.unittest.skip_unless_1n1d()

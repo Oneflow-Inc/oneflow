@@ -1,13 +1,25 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/kernel/util/thread_pool.h"
 #include "oneflow/core/framework/framework.h"
 
-namespace oneflow{
-namespace internal{
+namespace oneflow {
+namespace internal {
 
-  ThreadPool::ThreadPool(
-    int pool_size,
-    int numa_node_id,
-    std::function<void()> init_thread)
+ThreadPool::ThreadPool(int pool_size, int numa_node_id, std::function<void()> init_thread)
     : threads_(pool_size < 0 ? defaultNumThreads() : pool_size),
       running_(true),
       complete_(true),
@@ -16,9 +28,7 @@ namespace internal{
       numa_node_id_(numa_node_id) {
   for (std::size_t i = 0; i < threads_.size(); ++i) {
     threads_[i] = std::thread([this, i, init_thread]() {
-      if (init_thread) {
-        init_thread();
-      }
+      if (init_thread) { init_thread(); }
       this->main_loop(i);
     });
   }
@@ -35,32 +45,23 @@ ThreadPool::~ThreadPool() {
   for (auto& t : threads_) {
     try {
       t.join();
-    } catch (const std::exception&) {
-    }
+    } catch (const std::exception&) {}
   }
 }
 
-size_t ThreadPool::size() const {
-  return threads_.size();
-}
+size_t ThreadPool::size() const { return threads_.size(); }
 
-size_t ThreadPool::numAvailable() const {
-  return available_;
-}
+size_t ThreadPool::numAvailable() const { return available_; }
 
 bool ThreadPool::inThreadPool() const {
   for (auto& thread : threads_) {
-    if (thread.get_id() == std::this_thread::get_id()) {
-      return true;
-    }
+    if (thread.get_id() == std::this_thread::get_id()) { return true; }
   }
   return false;
 }
 
 void ThreadPool::run(std::function<void()> func) {
-  if (threads_.size() == 0) {
-    throw std::runtime_error("No threads to run a task");
-  }
+  if (threads_.size() == 0) { throw std::runtime_error("No threads to run a task"); }
   std::unique_lock<std::mutex> lock(mutex_);
 
   // Set task and signal condition variable so that a worker thread will
@@ -72,9 +73,7 @@ void ThreadPool::run(std::function<void()> func) {
 
 void ThreadPool::waitWorkComplete() {
   std::unique_lock<std::mutex> lock(mutex_);
-  while (!complete_) {
-    completed_.wait(lock);
-  }
+  while (!complete_) { completed_.wait(lock); }
 }
 
 void ThreadPool::main_loop(std::size_t index) {
@@ -82,13 +81,9 @@ void ThreadPool::main_loop(std::size_t index) {
   while (running_) {
     // Wait on condition variable while the task is empty and
     // the pool is still running.
-    while (tasks_.empty() && running_) {
-      condition_.wait(lock);
-    }
+    while (tasks_.empty() && running_) { condition_.wait(lock); }
     // If pool is no longer running, break out of loop.
-    if (!running_) {
-      break;
-    }
+    if (!running_) { break; }
 
     // Copy task locally and remove from the queue.  This is
     // done within its own scope so that the task object is
@@ -112,9 +107,7 @@ void ThreadPool::main_loop(std::size_t index) {
         }
       } catch (const std::exception& e) {
         LOG(ERROR) << "Exception in thread pool task: " << e.what();
-      } catch (...) {
-        LOG(ERROR) << "Exception in thread pool task: unknown";
-      }
+      } catch (...) { LOG(ERROR) << "Exception in thread pool task: unknown"; }
 
       // Destruct tasks before taking the lock.  As tasks
       // are user provided std::function, they can run
@@ -137,16 +130,11 @@ void ThreadPool::main_loop(std::size_t index) {
     // Deliberately hold the lock on the backedge, so this thread has an
     // opportunity to acquire a new task before another thread acquires
     // the lock.
-  } // while running_
+  }  // while running_
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-ONEFLOW_DEFINE_SHARED_REGISTRY(
-    ThreadPoolRegistry,
-    TaskThreadPoolBase,
-    int,
-    int,
-    bool);
+ONEFLOW_DEFINE_SHARED_REGISTRY(ThreadPoolRegistry, TaskThreadPoolBase, int, int, bool);
 
-} // namespace internal
-} // namespace oneflow
+}  // namespace internal
+}  // namespace oneflow

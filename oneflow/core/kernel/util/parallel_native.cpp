@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include <atomic>
 #ifdef _OPENMP
 #include <omp.h>
@@ -46,11 +61,9 @@ size_t get_env_num_threads(const char* var_name, size_t def_value = 0) {
 }
 
 int intraop_default_num_threads() {
-size_t nthreads = get_env_num_threads("OMP_NUM_THREADS", 0);
+  size_t nthreads = get_env_num_threads("OMP_NUM_THREADS", 0);
   nthreads = get_env_num_threads("MKL_NUM_THREADS", nthreads);
-  if (nthreads == 0) {
-    nthreads = oneflow::internal::TaskThreadPoolBase::defaultNumThreads();
-  }
+  if (nthreads == 0) { nthreads = oneflow::internal::TaskThreadPoolBase::defaultNumThreads(); }
   return nthreads;
 }
 
@@ -63,17 +76,11 @@ thread_local bool in_parallel_region_ = false;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 thread_local size_t thread_num_ = 0;
 
-void _set_in_parallel_region(bool in_region) {
-  in_parallel_region_ = in_region;
-}
+void _set_in_parallel_region(bool in_region) { in_parallel_region_ = in_region; }
 
-void _set_thread_num(size_t thread_num) {
-  thread_num_ = thread_num;
-}
+void _set_thread_num(size_t thread_num) { thread_num_ = thread_num; }
 
-void _unset_thread_num() {
-  thread_num_ = 0;
-}
+void _unset_thread_num() { thread_num_ = 0; }
 
 const int NOT_SET = -1;
 const int CONSUMED = -2;
@@ -93,13 +100,11 @@ int _num_pool_threads(int nthreads) {
   if (nthreads == NOT_SET) {
     nthreads = intraop_default_num_threads();
   } else {
-      CHECK_GT(nthreads, 0);
+    CHECK_GT(nthreads, 0);
   }
   // minus one because of the master thread
   return nthreads - 1;
 }
-
-
 
 oneflow::internal::TaskThreadPoolBase& _get_intraop_pool() {
   static std::shared_ptr<oneflow::internal::TaskThreadPoolBase> pool =
@@ -107,20 +112,18 @@ oneflow::internal::TaskThreadPoolBase& _get_intraop_pool() {
           "OneFlow",
           /* device_id */ 0,
           /* pool_size */ _num_pool_threads(num_intraop_threads.exchange(CONSUMED)),
-          /* create_new */ true); // create a separate thread pool for intra-op
+          /* create_new */ true);  // create a separate thread pool for intra-op
   return *pool;
 }
-
 
 // Run lambda function `fn` over `task_id` in [0, `range`) with threadpool.
 // `fn` will be called with params: (thread_pool_task_id, task_id).
 void _run_with_pool(const std::function<void(int, size_t)>& fn, size_t range) {
-    for (size_t i = 1; i < range; ++i) {
-        _get_intraop_pool().run([fn, i]() { fn((int)i, i); });
-    }
-    // Run the first task on the current thread directly.
-    fn(0, 0);
-
+  for (size_t i = 1; i < range; ++i) {
+    _get_intraop_pool().run([fn, i]() { fn((int)i, i); });
+  }
+  // Run the first task on the current thread directly.
+  fn(0, 0);
 }
 
 // RAII guard helps to support in_parallel_region() and get_thread_num() API.
@@ -136,21 +139,16 @@ struct ParallelRegionGuard {
   }
 };
 
-
-} //namespace
+}  // namespace
 namespace internal {
 
-void _parallel_run(
-  const int64_t begin,
-  const int64_t end,
-  const int64_t grain_size,
-  const std::function<void(int64_t, int64_t, size_t)>& f) {
+void _parallel_run(const int64_t begin, const int64_t end, const int64_t grain_size,
+                   const std::function<void(int64_t, int64_t, size_t)>& f) {
   oneflow::internal::lazy_init_num_threads();
   printf("\n================_parallel_run================\n");
   // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
   size_t num_tasks, chunk_size;
-  std::tie(num_tasks, chunk_size) =
-      internal::calc_num_tasks_and_chunk_size(begin, end, grain_size);
+  std::tie(num_tasks, chunk_size) = internal::calc_num_tasks_and_chunk_size(begin, end, grain_size);
 
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
   struct {
@@ -161,8 +159,7 @@ void _parallel_run(
     std::condition_variable cv;
   } state;
 
-  auto task = [f, &state, begin, end, chunk_size]
-      (int /* unused */, size_t task_id) {
+  auto task = [f, &state, begin, end, chunk_size](int /* unused */, size_t task_id) {
     int64_t local_start = begin + task_id * chunk_size;
     if (local_start < end) {
       int64_t local_end = std::min(end, (int64_t)(chunk_size + local_start));
@@ -170,16 +167,12 @@ void _parallel_run(
         ParallelRegionGuard guard(task_id);
         f(local_start, local_end, task_id);
       } catch (...) {
-        if (!state.err_flag.test_and_set()) {
-          state.eptr = std::current_exception();
-        }
+        if (!state.err_flag.test_and_set()) { state.eptr = std::current_exception(); }
       }
     }
     {
       std::unique_lock<std::mutex> lk(state.mutex);
-      if (--state.remaining == 0) {
-        state.cv.notify_one();
-      }
+      if (--state.remaining == 0) { state.cv.notify_one(); }
     }
   };
   state.remaining = num_tasks;
@@ -188,16 +181,12 @@ void _parallel_run(
   // Wait for all tasks to finish.
   {
     std::unique_lock<std::mutex> lk(state.mutex);
-    if (state.remaining != 0) {
-      state.cv.wait(lk);
-    }
+    if (state.remaining != 0) { state.cv.wait(lk); }
   }
-  if (state.eptr) {
-    std::rethrow_exception(state.eptr);
-  }
+  if (state.eptr) { std::rethrow_exception(state.eptr); }
 }
 
-} //namespace internal
+}  // namespace internal
 
 void init_num_threads() {
 #ifdef _OPENMP
@@ -221,8 +210,8 @@ void set_num_threads(int nthreads) {
     if (stored_nthreads != nthreads) {
       // TORCH_WARN(
       LOG(WARNING) << "Cannot set number of intraop threads "
-        << "after parallel work has started or after set_num_threads call "
-        << "when using native parallel backend";
+                   << "after parallel work has started or after set_num_threads call "
+                   << "when using native parallel backend";
     }
   }
 }
@@ -244,26 +233,22 @@ int get_num_threads() {
   }
 }
 
-int get_thread_num() {
-  return thread_num_;
-}
+int get_thread_num() { return thread_num_; }
 
 bool in_parallel_region() {
-    return in_parallel_region_ || (
-        num_intraop_threads.load() == CONSUMED &&
-        // Needed as intraop_launch() doesn't set in_parallel_region().
-        _get_intraop_pool().inThreadPool()
-    );
+  return in_parallel_region_
+         || (num_intraop_threads.load() == CONSUMED &&
+             // Needed as intraop_launch() doesn't set in_parallel_region().
+             _get_intraop_pool().inThreadPool());
 }
 
 void intraop_launch(std::function<void()> func) {
-    if (!in_parallel_region() && get_num_threads() > 1) {
-        _get_intraop_pool().run(func);
-    } else {
-        // execute inline if we're in parallel region
-        func();
-    }
+  if (!in_parallel_region() && get_num_threads() > 1) {
+    _get_intraop_pool().run(func);
+  } else {
+    // execute inline if we're in parallel region
+    func();
+  }
 }
 
-
-} //namespace oneflow
+}  // namespace oneflow

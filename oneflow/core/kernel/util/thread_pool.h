@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -8,10 +23,8 @@
 #include "oneflow/core/kernel/util/registry.h"
 #include "oneflow/core/kernel/util/thread_name.h"
 
-
 namespace oneflow {
 namespace internal {
-
 
 class TaskThreadPoolBase {
  public:
@@ -33,14 +46,14 @@ class TaskThreadPoolBase {
 
   static size_t defaultNumThreads() {
     auto num_threads = std::thread::hardware_concurrency();
-    #if defined(_M_X64) || defined(__x86_64__)
-        num_threads /= 2;
-    #endif
-        return num_threads;
+#if defined(_M_X64) || defined(__x86_64__)
+    num_threads /= 2;
+#endif
+    return num_threads;
   }
 };
 
-class  ThreadPool : public TaskThreadPoolBase {
+class ThreadPool : public TaskThreadPoolBase {
  protected:
   struct task_element_t {
     bool run_with_id;
@@ -67,10 +80,8 @@ class  ThreadPool : public TaskThreadPoolBase {
  public:
   ThreadPool() = delete;
 
-  explicit ThreadPool(
-      int pool_size,
-      int numa_node_id = -1,
-      std::function<void()> init_thread = nullptr);
+  explicit ThreadPool(int pool_size, int numa_node_id = -1,
+                      std::function<void()> init_thread = nullptr);
 
   ~ThreadPool();
 
@@ -82,7 +93,7 @@ class  ThreadPool : public TaskThreadPoolBase {
 
   void run(std::function<void()> func) override;
 
-  template <typename Task>
+  template<typename Task>
   void runTaskWithID(Task task) {
     std::unique_lock<std::mutex> lock(mutex_);
 
@@ -96,10 +107,9 @@ class  ThreadPool : public TaskThreadPoolBase {
   /// @brief Wait for queue to be empty
   void waitWorkComplete();
 
-  private:
+ private:
   // @brief Entry point for pool threads.
   void main_loop(std::size_t index);
-
 };
 
 class TaskThreadPool : public ThreadPool {
@@ -111,13 +121,7 @@ class TaskThreadPool : public ThreadPool {
         }) {}
 };
 
+ONEFLOW_DECLARE_SHARED_REGISTRY(ThreadPoolRegistry, TaskThreadPoolBase, int, int, bool);
 
-ONEFLOW_DECLARE_SHARED_REGISTRY(
-    ThreadPoolRegistry,
-    TaskThreadPoolBase,
-    int,
-    int,
-    bool);
-
-} // namespace internal
-} // namespace oneflow
+}  // namespace internal
+}  // namespace oneflow

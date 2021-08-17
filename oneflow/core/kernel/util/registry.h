@@ -1,5 +1,20 @@
-#ifndef ONEFLOW_UTIL_REGISTRY_H_
-#define ONEFLOW_UTIL_REGISTRY_H_
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#ifndef ONEFLOW_KERNEL_UTIL_REGISTRY_H_
+#define ONEFLOW_KERNEL_UTIL_REGISTRY_H_
 
 /**
  * Simple registry implementation that uses static variables to
@@ -19,23 +34,21 @@
 #include <unordered_map>
 #include <vector>
 
-
 namespace oneflow {
-namespace internal{
+namespace internal {
 
 // Disable the copy and assignment operator for a class. Note that this will
 // disable the usage of the class in std containers.
 #define ONEFLOW_DISABLE_COPY_AND_ASSIGN(classname) \
-  classname(const classname&) = delete;        \
+  classname(const classname&) = delete;            \
   classname& operator=(const classname&) = delete
 
-
-template <typename KeyType>
+template<typename KeyType>
 inline std::string KeyStrRepr(const KeyType& /*key*/) {
   return "[key type printing not supported]";
 }
 
-template <>
+template<>
 inline std::string KeyStrRepr(const std::string& key) {
   return key;
 }
@@ -56,18 +69,15 @@ enum RegistryPriority {
  * helper macros below to declare specific registries as well as registering
  * objects.
  */
-template <class SrcType, class ObjectPtrType, class... Args>
+template<class SrcType, class ObjectPtrType, class... Args>
 class Registry {
  public:
   typedef std::function<ObjectPtrType(Args...)> Creator;
 
-  Registry(bool warning = true)
-      : registry_(), priority_(), terminate_(true), warning_(warning) {}
+  Registry(bool warning = true) : registry_(), priority_(), terminate_(true), warning_(warning) {}
 
-  void Register(
-      const SrcType& key,
-      Creator creator,
-      const RegistryPriority priority = REGISTRY_DEFAULT) {
+  void Register(const SrcType& key, Creator creator,
+                const RegistryPriority priority = REGISTRY_DEFAULT) {
     std::lock_guard<std::mutex> lock(register_mutex_);
     // The if statement below is essentially the same as the following line:
     // CHECK_EQ(registry_.count(key), 0) << "Key " << key
@@ -79,15 +89,13 @@ class Registry {
       auto cur_priority = priority_[key];
       if (priority > cur_priority) {
 #ifdef DEBUG
-        std::string warn_msg =
-            "Overwriting already registered item for key " + KeyStrRepr(key);
+        std::string warn_msg = "Overwriting already registered item for key " + KeyStrRepr(key);
         fprintf(stderr, "%s\n", warn_msg.c_str());
 #endif
         registry_[key] = creator;
         priority_[key] = priority;
       } else if (priority == cur_priority) {
-        std::string err_msg =
-            "Key already registered with the same priority: " + KeyStrRepr(key);
+        std::string err_msg = "Key already registered with the same priority: " + KeyStrRepr(key);
         fprintf(stderr, "%s\n", err_msg.c_str());
         if (terminate_) {
           std::exit(1);
@@ -96,8 +104,7 @@ class Registry {
         }
       } else if (warning_) {
         std::string warn_msg =
-            "Higher priority item already registered, skipping registration of " +
-            KeyStrRepr(key);
+            "Higher priority item already registered, skipping registration of " + KeyStrRepr(key);
         fprintf(stderr, "%s\n", warn_msg.c_str());
       }
     } else {
@@ -106,18 +113,13 @@ class Registry {
     }
   }
 
-  void Register(
-      const SrcType& key,
-      Creator creator,
-      const std::string& help_msg,
-      const RegistryPriority priority = REGISTRY_DEFAULT) {
+  void Register(const SrcType& key, Creator creator, const std::string& help_msg,
+                const RegistryPriority priority = REGISTRY_DEFAULT) {
     Register(key, creator, priority);
     help_message_[key] = help_msg;
   }
 
-  inline bool Has(const SrcType& key) {
-    return (registry_.count(key) != 0);
-  }
+  inline bool Has(const SrcType& key) { return (registry_.count(key) != 0); }
 
   ObjectPtrType Create(const SrcType& key, Args... args) {
     if (registry_.count(key) == 0) {
@@ -132,9 +134,7 @@ class Registry {
    */
   std::vector<SrcType> Keys() const {
     std::vector<SrcType> keys;
-    for (const auto& it : registry_) {
-      keys.push_back(it.first);
-    }
+    for (const auto& it : registry_) { keys.push_back(it.first); }
     return keys;
   }
 
@@ -144,17 +144,13 @@ class Registry {
 
   const char* HelpMessage(const SrcType& key) const {
     auto it = help_message_.find(key);
-    if (it == help_message_.end()) {
-      return nullptr;
-    }
+    if (it == help_message_.end()) { return nullptr; }
     return it->second.c_str();
   }
 
   // Used for testing, if terminate is unset, Registry throws instead of
   // calling std::exit
-  void SetTerminate(bool terminate) {
-    terminate_ = terminate;
-  }
+  void SetTerminate(bool terminate) { terminate_ = terminate; }
 
  private:
   std::unordered_map<SrcType, Creator> registry_;
@@ -167,27 +163,23 @@ class Registry {
   ONEFLOW_DISABLE_COPY_AND_ASSIGN(Registry);
 };
 
-template <class SrcType, class ObjectPtrType, class... Args>
+template<class SrcType, class ObjectPtrType, class... Args>
 class Registerer {
  public:
-  explicit Registerer(
-      const SrcType& key,
-      Registry<SrcType, ObjectPtrType, Args...>* registry,
-      typename Registry<SrcType, ObjectPtrType, Args...>::Creator creator,
-      const std::string& help_msg = "") {
+  explicit Registerer(const SrcType& key, Registry<SrcType, ObjectPtrType, Args...>* registry,
+                      typename Registry<SrcType, ObjectPtrType, Args...>::Creator creator,
+                      const std::string& help_msg = "") {
     registry->Register(key, creator, help_msg);
   }
 
-  explicit Registerer(
-      const SrcType& key,
-      const RegistryPriority priority,
-      Registry<SrcType, ObjectPtrType, Args...>* registry,
-      typename Registry<SrcType, ObjectPtrType, Args...>::Creator creator,
-      const std::string& help_msg = "") {
+  explicit Registerer(const SrcType& key, const RegistryPriority priority,
+                      Registry<SrcType, ObjectPtrType, Args...>* registry,
+                      typename Registry<SrcType, ObjectPtrType, Args...>::Creator creator,
+                      const std::string& help_msg = "") {
     registry->Register(key, creator, help_msg, priority);
   }
 
-  template <class DerivedType>
+  template<class DerivedType>
   static ObjectPtrType DefaultCreator(Args... args) {
     return ObjectPtrType(new DerivedType(args...));
   }
@@ -211,32 +203,23 @@ class Registerer {
 // dllexport are mixed, but the warning is fine and linker will be properly
 // exporting the symbol. Same thing happens in the gflags flag declaration and
 // definition caes.
-#define ONEFLOW_DECLARE_TYPED_REGISTRY(                                        \
-    RegistryName, SrcType, ObjectType, PtrType, ...)                       \
-  Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>* \
-  RegistryName();                                                          \
-  typedef Registerer<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>   \
-      Registerer##RegistryName
+#define ONEFLOW_DECLARE_TYPED_REGISTRY(RegistryName, SrcType, ObjectType, PtrType, ...) \
+  Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>* RegistryName();                \
+  typedef Registerer<SrcType, PtrType<ObjectType>, ##__VA_ARGS__> Registerer##RegistryName
 
-#define ONEFLOW_DEFINE_TYPED_REGISTRY(                                         \
-    RegistryName, SrcType, ObjectType, PtrType, ...)                       \
-  Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>* \
-  RegistryName() {                                                         \
-    static Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>*   \
-        registry = new                                              \
-            Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>();       \
-    return registry;                                                       \
+#define ONEFLOW_DEFINE_TYPED_REGISTRY(RegistryName, SrcType, ObjectType, PtrType, ...) \
+  Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>* RegistryName() {              \
+    static Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>* registry =           \
+        new Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>();                   \
+    return registry;                                                                   \
   }
 
-#define ONEFLOW_DEFINE_TYPED_REGISTRY_WITHOUT_WARNING(                            \
-    RegistryName, SrcType, ObjectType, PtrType, ...)                          \
-  Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>*    \
-  RegistryName() {                                                            \
-    static Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>*      \
-        registry =                                                            \
-            new Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>( \
-                false);                                                       \
-    return registry;                                                          \
+#define ONEFLOW_DEFINE_TYPED_REGISTRY_WITHOUT_WARNING(RegistryName, SrcType, ObjectType, PtrType, \
+                                                      ...)                                        \
+  Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>* RegistryName() {                         \
+    static Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>* registry =                      \
+        new Registry<SrcType, PtrType<ObjectType>, ##__VA_ARGS__>(false);                         \
+    return registry;                                                                              \
   }
 
 // Note(Yangqing): The __VA_ARGS__ below allows one to specify a templated
@@ -245,34 +228,31 @@ class Registerer {
   static Registerer##RegistryName ONEFLOW_ANONYMOUS_VARIABLE(g_##RegistryName)( \
       key, RegistryName(), ##__VA_ARGS__);
 
-#define ONEFLOW_REGISTER_TYPED_CREATOR_WITH_PRIORITY(                           \
-    RegistryName, key, priority, ...)                                       \
-  static Registerer##RegistryName ONEFLOW_ANONYMOUS_VARIABLE(g_##RegistryName)( \
+#define ONEFLOW_REGISTER_TYPED_CREATOR_WITH_PRIORITY(RegistryName, key, priority, ...) \
+  static Registerer##RegistryName ONEFLOW_ANONYMOUS_VARIABLE(g_##RegistryName)(        \
       key, priority, RegistryName(), ##__VA_ARGS__);
-
 
 // ONEFLOW_DECLARE_REGISTRY and ONEFLOW_DEFINE_REGISTRY are hard-wired to use
 // std::string as the key type, because that is the most commonly used cases.
-#define ONEFLOW_DECLARE_REGISTRY(RegistryName, ObjectType, ...) \
-  ONEFLOW_DECLARE_TYPED_REGISTRY(                               \
-      RegistryName, std::string, ObjectType, std::unique_ptr, ##__VA_ARGS__)
+#define ONEFLOW_DECLARE_REGISTRY(RegistryName, ObjectType, ...)                          \
+  ONEFLOW_DECLARE_TYPED_REGISTRY(RegistryName, std::string, ObjectType, std::unique_ptr, \
+                                 ##__VA_ARGS__)
 
-#define ONEFLOW_DEFINE_REGISTRY(RegistryName, ObjectType, ...) \
-  ONEFLOW_DEFINE_TYPED_REGISTRY(                               \
-      RegistryName, std::string, ObjectType, std::unique_ptr, ##__VA_ARGS__)
+#define ONEFLOW_DEFINE_REGISTRY(RegistryName, ObjectType, ...)                          \
+  ONEFLOW_DEFINE_TYPED_REGISTRY(RegistryName, std::string, ObjectType, std::unique_ptr, \
+                                ##__VA_ARGS__)
 
-#define ONEFLOW_DECLARE_SHARED_REGISTRY(RegistryName, ObjectType, ...) \
-  ONEFLOW_DECLARE_TYPED_REGISTRY(                                      \
-      RegistryName, std::string, ObjectType, std::shared_ptr, ##__VA_ARGS__)
+#define ONEFLOW_DECLARE_SHARED_REGISTRY(RegistryName, ObjectType, ...)                   \
+  ONEFLOW_DECLARE_TYPED_REGISTRY(RegistryName, std::string, ObjectType, std::shared_ptr, \
+                                 ##__VA_ARGS__)
 
-#define ONEFLOW_DEFINE_SHARED_REGISTRY(RegistryName, ObjectType, ...) \
-  ONEFLOW_DEFINE_TYPED_REGISTRY(                                      \
-      RegistryName, std::string, ObjectType, std::shared_ptr, ##__VA_ARGS__)
+#define ONEFLOW_DEFINE_SHARED_REGISTRY(RegistryName, ObjectType, ...)                   \
+  ONEFLOW_DEFINE_TYPED_REGISTRY(RegistryName, std::string, ObjectType, std::shared_ptr, \
+                                ##__VA_ARGS__)
 
-#define ONEFLOW_DEFINE_SHARED_REGISTRY_WITHOUT_WARNING( \
-    RegistryName, ObjectType, ...)                  \
-  ONEFLOW_DEFINE_TYPED_REGISTRY_WITHOUT_WARNING(        \
-      RegistryName, std::string, ObjectType, std::shared_ptr, ##__VA_ARGS__)
+#define ONEFLOW_DEFINE_SHARED_REGISTRY_WITHOUT_WARNING(RegistryName, ObjectType, ...)  \
+  ONEFLOW_DEFINE_TYPED_REGISTRY_WITHOUT_WARNING(RegistryName, std::string, ObjectType, \
+                                                std::shared_ptr, ##__VA_ARGS__)
 
 // ONEFLOW_REGISTER_CREATOR and ONEFLOW_REGISTER_CLASS are hard-wired to use std::string
 // as the key
@@ -281,18 +261,15 @@ class Registerer {
   ONEFLOW_REGISTER_TYPED_CREATOR(RegistryName, #key, __VA_ARGS__)
 
 #define ONEFLOW_REGISTER_CREATOR_WITH_PRIORITY(RegistryName, key, priority, ...) \
-  ONEFLOW_REGISTER_TYPED_CREATOR_WITH_PRIORITY(                                  \
-      RegistryName, #key, priority, __VA_ARGS__)
+  ONEFLOW_REGISTER_TYPED_CREATOR_WITH_PRIORITY(RegistryName, #key, priority, __VA_ARGS__)
 
 #define ONEFLOW_REGISTER_CLASS(RegistryName, key, ...) \
   ONEFLOW_REGISTER_TYPED_CLASS(RegistryName, #key, __VA_ARGS__)
 
 #define ONEFLOW_REGISTER_CLASS_WITH_PRIORITY(RegistryName, key, priority, ...) \
-  ONEFLOW_REGISTER_TYPED_CLASS_WITH_PRIORITY(                                  \
-      RegistryName, #key, priority, __VA_ARGS__)
+  ONEFLOW_REGISTER_TYPED_CLASS_WITH_PRIORITY(RegistryName, #key, priority, __VA_ARGS__)
 
+}  // namespace internal
+}  // namespace oneflow
 
-} // namespace internal
-} // namespace oneflow
-
-#endif // ONEFLOW_UTIL_REGISTRY_H_
+#endif  // ONEFLOW_KERNEL_UTIL_REGISTRY_H_
