@@ -112,39 +112,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
         test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
 
-    def test_creating_consistent_tensor(test_case):
-        placement = flow.placement("cuda", {0: 0})
-        sbp = flow.sbp.broadcast
-        shape = (2, 3)
-
-        # Shape -> ConsistentTensor
-        x = flow.Tensor(*shape, placement=placement, sbp=sbp)
-        test_case.assertTrue(x.is_consistent)
-
-        # LocalTensor -> ConsistentTensor
-        x = flow.Tensor(*shape, device="cpu")
-        test_case.assertTrue(x.is_local)
-        y = flow.Tensor(x, placement=placement, sbp=sbp)
-        test_case.assertTrue(y.is_consistent)
-
-        # ConsistentTensor -> ConsistentTensor
-        z = flow.Tensor(y, placement=placement, sbp=sbp)
-        test_case.assertTrue(z.is_consistent)
-
-        # TODO: ndarray -> ConsistentTensor
-
-    def test_construct_local_from_consistent_tensor(test_case):
-        placement = flow.placement("cuda", {0: 0})
-        sbp = flow.sbp.broadcast
-        shape = (2, 3)
-        x = flow.Tensor(*shape, placement=placement, sbp=sbp)
-        test_case.assertTrue(x.is_consistent)
-        # ConsistentTensor -> LocalTensor
-        y = flow.Tensor(x)
-        test_case.assertTrue(y.is_local)
-        y = flow.Tensor(x, device="cuda")
-        test_case.assertTrue(y.is_local)
-
     def test_tensor_with_single_int(test_case):
         x = flow.Tensor(5)
         test_case.assertEqual(x.shape, flow.Size([5]))
@@ -832,8 +799,8 @@ class TestTensor(flow.unittest.TestCase):
         input = random_pytorch_tensor().to(device)
         y = input.clip(min=random().to(float), max=random().to(float))
         return y
-
-    @autotest()
+e
+    @autotst()
     def test_clip_minnone_tensor_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
