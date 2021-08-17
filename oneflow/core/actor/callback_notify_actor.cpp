@@ -13,29 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ACTOR_PACK_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_PACK_COMPUTE_ACTOR_H_
-
-#include "oneflow/core/actor/compute_actor.h"
+#include "oneflow/core/actor/sink_actor.h"
 
 namespace oneflow {
 
-class PackCompActor final : public CompActor {
+class CallbackNotifyActor final : public SinkActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PackCompActor);
-  PackCompActor() = default;
-  ~PackCompActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CallbackNotifyActor);
+  CallbackNotifyActor() = default;
+  ~CallbackNotifyActor() = default;
 
  private:
-  void VirtualCompActorInit(const TaskProto& proto) override;
-  void Act() override;
-  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
-  void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
-
-  size_t total_pack_num_;
-  size_t act_num_cnt_;
 };
 
+REGISTER_ACTOR(TaskType::kCallbackNotify, CallbackNotifyActor);
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_ACTOR_PACK_COMPUTE_ACTOR_H_
