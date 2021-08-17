@@ -502,6 +502,19 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.mean(input.numpy(), axis=0)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
 
+    @autotest()
+    def test_log_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.log()
+
+    @autotest()
+    def test_log1p_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.log1p()
+
+
     def test_neg(test_case):
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
         of_out = -input
