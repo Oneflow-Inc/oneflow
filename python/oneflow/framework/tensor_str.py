@@ -205,7 +205,7 @@ def _tensor_str(self, indent):
     summarize = self.numel() > PRINT_OPTS.threshold
     if self.dtype is flow.float16:
         self = self.float()
-        
+
     # TODO: not support flow.sbp.split(x) but flow.sbp.split(0).
     def _cannot_print(sbp):
         return (
@@ -213,6 +213,7 @@ def _tensor_str(self, indent):
             and sbp != flow.sbp.broadcast
             and sbp != flow.sbp.split(0)
         )
+
     # TODO: delete it when s1->b is ready
     if self.is_consistent:
         if all(_cannot_print(sbp) for sbp in self.sbp):
