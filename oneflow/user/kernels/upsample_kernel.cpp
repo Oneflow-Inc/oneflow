@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/user/kernels/upsample_kernel.h"
+#include "oneflow/core/kernel/util/parallel_native.h"
 
 namespace oneflow {
 
@@ -28,13 +29,16 @@ static void UpsampleNearestForward(const int64_t elem_cnt, const T* in_dptr,
                                    NdIndexOffsetHelper<int64_t, 4> out_helper,
                                    const int64_t in_height, const int64_t in_width,
                                    const float scale_h, const float scale_w, T* out_dptr) {
-  for (int64_t index = 0; index < elem_cnt; ++index) {
-    int64_t n, c, h, w;
-    out_helper.OffsetToNdIndex(index, n, c, h, w);
-    const int64_t in_h = GetNearestInputIndex(h, scale_h, in_height);
-    const int64_t in_w = GetNearestInputIndex(w, scale_w, in_width);
-    out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, in_h, in_w)];
-  }
+  oneflow::parallel_for(0, elem_cnt, 0, [&](int64_t start, int64_t end) {
+    for (int64_t index = start; index < end; ++index){
+    // for (int64_t index = 0; index < elem_cnt; ++index) {
+      int64_t n, c, h, w;
+      out_helper.OffsetToNdIndex(index, n, c, h, w);
+      const int64_t in_h = GetNearestInputIndex(h, scale_h, in_height);
+      const int64_t in_w = GetNearestInputIndex(w, scale_w, in_width);
+      out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, in_h, in_w)];
+    }
+  });
 }
 
 template<typename T>
@@ -59,21 +63,24 @@ static void UpsampleBilinearForward(const int64_t elem_cnt, const T* in_dptr,
                                     const int64_t in_height, const int64_t in_width,
                                     const T scale_h, const T scale_w, const bool align_corners,
                                     T* out_dptr) {
-  for (int64_t index = 0; index < elem_cnt; ++index) {
-    int64_t n, c, h, w;
-    out_helper.OffsetToNdIndex(index, n, c, h, w);
-    BilinearParam<T> params;
-    GetBilinearParam(align_corners, h, w, in_height, in_width, scale_h, scale_w, &params);
-    const int64_t top_offset = in_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
-    const int64_t bottom_offset = in_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
-    const T top_left = in_dptr[top_offset + params.left_w_index];
-    const T top_right = in_dptr[top_offset + params.right_w_index];
-    const T bottom_left = in_dptr[bottom_offset + params.left_w_index];
-    const T bottom_right = in_dptr[bottom_offset + params.right_w_index];
-    const T top = top_left + (top_right - top_left) * params.w_lerp;
-    const T bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
-    out_dptr[index] = top + (bottom - top) * params.h_lerp;
-  }
+  oneflow::parallel_for(0, elem_cnt, 0, [&](int64_t start, int64_t end) {
+    for (int64_t index = start; index < end; ++index){
+    // for (int64_t index = 0; index < elem_cnt; ++index) {
+      int64_t n, c, h, w;
+      out_helper.OffsetToNdIndex(index, n, c, h, w);
+      BilinearParam<T> params;
+      GetBilinearParam(align_corners, h, w, in_height, in_width, scale_h, scale_w, &params);
+      const int64_t top_offset = in_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
+      const int64_t bottom_offset = in_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
+      const T top_left = in_dptr[top_offset + params.left_w_index];
+      const T top_right = in_dptr[top_offset + params.right_w_index];
+      const T bottom_left = in_dptr[bottom_offset + params.left_w_index];
+      const T bottom_right = in_dptr[bottom_offset + params.right_w_index];
+      const T top = top_left + (top_right - top_left) * params.w_lerp;
+      const T bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
+      out_dptr[index] = top + (bottom - top) * params.h_lerp;
+    }
+  });
 }
 
 template<typename T>

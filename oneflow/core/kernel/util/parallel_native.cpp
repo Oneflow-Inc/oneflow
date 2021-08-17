@@ -103,8 +103,8 @@ int _num_pool_threads(int nthreads) {
 
 oneflow::internal::TaskThreadPoolBase& _get_intraop_pool() {
   static std::shared_ptr<oneflow::internal::TaskThreadPoolBase> pool =
-      ThreadPoolRegistry()->Create(
-          "OneFlowThread",
+      oneflow::internal::ThreadPoolRegistry()->Create(
+          "OneFlow",
           /* device_id */ 0,
           /* pool_size */ _num_pool_threads(num_intraop_threads.exchange(CONSUMED)),
           /* create_new */ true); // create a separate thread pool for intra-op
@@ -146,7 +146,7 @@ void _parallel_run(
   const int64_t grain_size,
   const std::function<void(int64_t, int64_t, size_t)>& f) {
   oneflow::internal::lazy_init_num_threads();
-
+  printf("\n================_parallel_run================\n");
   // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
   size_t num_tasks, chunk_size;
   std::tie(num_tasks, chunk_size) =
@@ -206,6 +206,7 @@ void init_num_threads() {
 }
 
 void set_num_threads(int nthreads) {
+  printf("\n=======================parallel_native.cpp >>> set_num_threads() >>> %d\n", nthreads);
   // TORCH_CHECK(nthreads > 0, "Expected positive number of threads");
   int no_value = NOT_SET;
   if (!num_intraop_threads.compare_exchange_strong(no_value, nthreads)) {
@@ -227,9 +228,11 @@ void set_num_threads(int nthreads) {
 }
 
 int get_num_threads() {
+  printf("\n=======================parallel_native.cpp >>> get_num_threads()\n");
   // not initializing pool unnecessarily,
   // because pool cannot be resized after initialization
   int nthreads = num_intraop_threads.load();
+  printf("\nnthreads >>> %d", nthreads);
   if (nthreads > 0) {
     return nthreads;
   } else if (nthreads == NOT_SET) {

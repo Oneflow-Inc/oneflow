@@ -140,6 +140,13 @@ void ThreadPool::main_loop(std::size_t index) {
   } // while running_
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+ONEFLOW_DEFINE_SHARED_REGISTRY(
+    ThreadPoolRegistry,
+    TaskThreadPoolBase,
+    int,
+    int,
+    bool);
 
 } // namespace internal
 } // namespace oneflow

@@ -34,7 +34,8 @@ inline void parallel_for(
     const int64_t end,
     const int64_t grain_size,
     const F& f) {
-  // TORCH_CHECK(grain_size >= 0);
+  CHECK_GE(grain_size, 0);
+  printf("\n================parallel_for================\n");
   if (begin >= end) {
     return;
   }

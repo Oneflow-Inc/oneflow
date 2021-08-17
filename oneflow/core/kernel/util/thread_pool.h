@@ -5,28 +5,13 @@
 #include <thread>
 #include <atomic>
 #include <utility>
+#include "oneflow/core/kernel/util/registry.h"
+#include "oneflow/core/kernel/util/thread_name.h"
 
-#if defined(__GLIBC__) && !defined(__APPLE__) && !defined(__ANDROID__)
-#define HAS_PTHREAD_SETNAME_NP
-#endif
-
-#ifdef HAS_PTHREAD_SETNAME_NP
-#include <pthread.h>
-#endif
 
 namespace oneflow {
 namespace internal {
 
-void setThreadName(std::string name) {
-#ifdef HAS_PTHREAD_SETNAME_NP
-  constexpr size_t kMaxThreadName = 15;
-  name.resize(std::min(name.size(), kMaxThreadName));
-
-  pthread_setname_np(pthread_self(), name.c_str());
-#endif
-}
-
-void NUMABind(int numa_node_id) {} // not enable numa by default
 
 class TaskThreadPoolBase {
  public:
@@ -127,12 +112,12 @@ class TaskThreadPool : public ThreadPool {
 };
 
 
-// ONEFLOW_DECLARE_SHARED_REGISTRY(
-//     ThreadPoolRegistry,
-//     TaskThreadPoolBase,
-//     int,
-//     int,
-//     bool);
+ONEFLOW_DECLARE_SHARED_REGISTRY(
+    ThreadPoolRegistry,
+    TaskThreadPoolBase,
+    int,
+    int,
+    bool);
 
 } // namespace internal
 } // namespace oneflow
