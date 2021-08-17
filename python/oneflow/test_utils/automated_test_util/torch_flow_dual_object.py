@@ -162,6 +162,7 @@ def GetDualObject(name, pytorch, oneflow):
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
                         except Exception as e:
+                            clear_note_fake_program()
                             raise PyTorchDoesNotSupportError(e)
                         if name in postulate:
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
@@ -185,6 +186,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 *pytorch_args, **pytorch_kwargs
                             )
                         except Exception as e:
+                            clear_note_fake_program()
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         return GetDualObject("unused", pytorch_res, oneflow_res)
@@ -238,6 +240,11 @@ def print_note_fake_program():
                 index += 1
                 note_print_kwargs(x, note_pytorch_kwargs[i][x], index < note_pytorch_kwargs_len)
         print('\033[32m)\033[0m')
+
+def clear_note_fake_program():
+    note_pytorch_method_names = []
+    note_pytorch_args = []
+    note_pytorch_kwargs = []
 
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
@@ -338,6 +345,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
             loop_limit = n * 20
             loop = 0
             while n > 0:
+                clear_note_fake_program()
                 if loop > loop_limit:
                     raise ValueError("autotest stuck in an endless loop!")
                 dual_modules_to_test.clear()
@@ -351,6 +359,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                     if verbose:
                         print(e)
                     loop += 1
+                    clear_note_fake_program()
                     continue
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
