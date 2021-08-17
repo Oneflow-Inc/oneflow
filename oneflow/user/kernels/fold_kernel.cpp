@@ -62,12 +62,12 @@ class FoldKernel final : public OpKernel {
   std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const override {
     const TensorDesc* input_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
     if (input_desc->is_dynamic()) { return std::shared_ptr<OpKernelState>(nullptr); }
-    const auto& data_format = ctx->Attr<std::string>("data_format");
-    const auto& output_size = ctx->Attr<std::vector<int32_t>>("output_size");
-    const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    const auto& padding = ctx->Attr<std::vector<int32_t>>("padding");
-    const auto& stride = ctx->Attr<std::vector<int32_t>>("strides");
-    const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const std::string data_format = ctx->Attr<std::string>("data_format");
+    const std::vector<int32_t> output_size = ctx->Attr<std::vector<int32_t>>("output_size");
+    const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+    const std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
+    const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
+    const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     int spatial_ndim = 2; // Currently only support 4-d Tensor. 
     int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format"));
     DataType index_dtype = input_desc->shape().elem_cnt() < std::numeric_limits<int32_t>::max()
@@ -110,12 +110,11 @@ class FoldKernel final : public OpKernel {
     auto switch_case = SwitchCase(index_dtype, spatial_ndim, spatial_dim);
     std::shared_ptr<OpKernelState> state_ptr(nullptr);
     if (state == nullptr) {
-      // todo: optimize the order of attr. ZZK!!!!!
-      const auto& output_size = ctx->Attr<std::vector<int32_t>>("output_size");
-      const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-      const auto& padding = ctx->Attr<std::vector<int32_t>>("padding");
-      const auto& stride = ctx->Attr<std::vector<int32_t>>("strides");
-      const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+      const std::vector<int32_t> output_size = ctx->Attr<std::vector<int32_t>>("output_size");
+      const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+      const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+      const std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
+      const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
       state_ptr = SwitchCreateFoldOpKernelState(switch_case, input->shape(), 
                                                 output_size, kernel_size,
                                                 padding, stride, dilation);
@@ -142,10 +141,10 @@ class FoldKernel final : public OpKernel {
 REGISTER_FOLD_KERNEL(DeviceType::kCPU, float)
 REGISTER_FOLD_KERNEL(DeviceType::kCPU, double)
 
-// #ifdef WITH_CUDA
-// REGISTER_UNFOLD_KERNEL(DeviceType::kGPU, float)
-// REGISTER_UNFOLD_KERNEL(DeviceType::kGPU, double)
-// #endif  // WITH_CUDA
+#ifdef WITH_CUDA
+REGISTER_FOLD_KERNEL(DeviceType::kGPU, float)
+REGISTER_FOLD_KERNEL(DeviceType::kGPU, double)
+#endif  // WITH_CUDA
 
 }  // namespace user_op
 

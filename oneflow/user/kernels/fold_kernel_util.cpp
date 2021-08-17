@@ -1,5 +1,4 @@
-#include "oneflow/user/kernels/fold_kernel_util.h"
-
+#include "oneflow/user/kernels/fold_kernel_util.h" 
 namespace oneflow {
 
 namespace user_op {
@@ -13,12 +12,12 @@ struct FoldKernelUtil<DeviceType::kCPU, T, INDEX_T, NDIM, SDIM> {
       using ParamType = FoldParams<INDEX_T, NDIM, SDIM>;
       INDEX_T in_index[ParamType::kInputNDim] = {0};
       INDEX_T out_index[ParamType::kOutputNDim] = {0};
-      params->out_index_helper.OffsetToNdIndex(in_offset, in_index);
+      params->in_index_helper.OffsetToNdIndex(in_offset, in_index);
       if (!FoldIndexTransform<INDEX_T, NDIM, SDIM>(*params, in_index, out_index)) {
         INDEX_T out_offset = params->out_index_helper.NdIndexToOffset(out_index);
-        output_ptr[out_offset] += input_ptr[in_offset]; // need atomic add
-      } else {
-        continue; // may wrong?
+        XPUAdd<T>::Invoke(&input_ptr[in_offset], &output_ptr[out_offset]);
+      } else{
+        continue; 
       }
     }
   }

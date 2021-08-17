@@ -6,12 +6,29 @@
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/ndarray/xpu_util.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/cuda/atomic.cuh"
+#endif  // WITH_CUDA
+
 
 namespace oneflow {
 
 namespace user_op {
 
-// constexpr int kUnfoldPaddingValue = 0;
+namespace{
+
+template<typename T>
+struct XPUAdd{
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y){
+  #if defined(__CUDA_ARCH__)
+    cuda::atomic::Add(y, *x);
+  #else
+    *y += *x;
+  #endif
+  }; 
+}; 
+
+} // namespace
 
 // NDIM range: (1, 2, 3)
 // SDIM range: (1, 2), 1 indicates channels_last, 2 indicates channels_first
@@ -36,7 +53,7 @@ struct FoldParams {
 };
 
 template<typename INDEX_T, int NDIM, int SDIM>
-FoldParams<INDEX_T, NDIM, SDIM>::FoldParams(const int64_t batch_size, const int64_t channels, 
+FoldParams<INDEX_T, NDIM, SDIM>::FoldParams(const int64_t batch_size, const int64_t channels_columns, 
                                             const int32_t* output_size, 
                                             const int64_t* spatial_dims,
                                             const int32_t* kernel_size,
@@ -45,6 +62,7 @@ FoldParams<INDEX_T, NDIM, SDIM>::FoldParams(const int64_t batch_size, const int6
     : in_elem_cnt(0), out_elem_cnt(0), in_index_helper(0), out_index_helper(0) {
   INDEX_T input_dims[kInputNDim] = {0};
   INDEX_T output_dims[kOutputNDim] = {0};
+  const int32_t channels = channels_columns / (kernel_size[0]*kernel_size[1]); // channels_columns = C*K*K
   this->in_elem_cnt = batch_size * channels;
   this->out_elem_cnt = batch_size * channels;
   input_dims[0] = batch_size;
@@ -71,7 +89,7 @@ FoldParams<INDEX_T, NDIM, SDIM>::FoldParams(const int64_t batch_size, const int6
 // return: true indicates out-of-bound, otherwise in-bound
 template<typename INDEX_T, int NDIM, int SDIM>
 OF_DEVICE_FUNC bool FoldIndexTransform(const FoldParams<INDEX_T, NDIM, SDIM>& params,
-                                         const INDEX_T* index_a, INDEX_T* index_b) {
+                                       const INDEX_T* index_a, INDEX_T* index_b) {
   // batch dim index transform
   index_b[0] = index_a[0];
   // channel dim index transform
@@ -108,7 +126,7 @@ struct FoldKernelUtil {
 
 #define INSTANTIATE_FOLD_KERNEL_UTIL_FOR_DEVICE(device)                                   \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_FOLD_KERNEL_UTIL_WITH_TYPE_PAIR, (device), \
-                                   ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ,           \
+                                   FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ,           \
                                    SPATIAL_NDIM_SEQ, SPATIAL_DIM_SEQ)
 
 }  // namespace user_op
