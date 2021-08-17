@@ -213,7 +213,12 @@ def _tensor_str(self, indent):
     summarize = self.numel() > PRINT_OPTS.threshold
     if self.dtype is flow.float16:
         self = self.float()
-
+    # not support flow.sbp.split(x) but flow.sbp.split(0)
+    def _cannot_print(sbp):
+        return sbp != flow.sbp.partial_sum and sbp != flow.sbp.broadcast and sbp != flow.sbp.split(0)
+    if self.is_consistent:
+        if all(_cannot_print(sbp) for sbp in self.sbp):
+            return "..."
     with flow.no_grad():
         formatter = _Formatter(get_summarized_data(self) if summarize else self)
         return _tensor_str_with_formatter(self, indent, summarize, formatter)
