@@ -24,14 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-inline Maybe<void> CheckEagerBoxingDataType(DataType val) {
-  CHECK_OR_RETURN(val != DataType::kTensorBuffer && val != DataType::kOFRecord)
-      << "EagerBoxing only support POD data type.";
-  return Maybe<void>::Ok();
-}
-}  // namespace
-
 class EagerBoxingInterpreter {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerBoxingInterpreter);

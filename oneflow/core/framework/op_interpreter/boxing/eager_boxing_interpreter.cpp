@@ -19,12 +19,20 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+Maybe<void> CheckEagerBoxingDataType(DataType val) {
+  CHECK_OR_RETURN(val != DataType::kTensorBuffer && val != DataType::kOFRecord)
+      << "EagerBoxing only support POD data type.";
+  return Maybe<void>::Ok();
+}
+}  // namespace
+
 Maybe<one::Tensor> EagerBoxingInterpreter::Interpret(const std::shared_ptr<one::Tensor>& input,
                                                      Symbol<cfg::NdSbp> in_nd_sbp,
                                                      Symbol<cfg::NdSbp> out_nd_sbp,
                                                      Symbol<ParallelDesc> in_parallel_desc,
                                                      Symbol<ParallelDesc> out_parallel_desc) const {
-  JUST(CheckEagerBoxingDataType(input->dtype()));
+  JUST(CheckEagerBoxingDataType(input->dtype()->data_type()));
   const auto& tensor =
       JUST(InterpretImpl(input, in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
