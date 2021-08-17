@@ -13,18 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/compute_actor.h"
+#include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 
-class RepeatCompActor final : public CompActor {
+class RepeatActor final : public Actor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RepeatCompActor);
-  RepeatCompActor() = default;
-  ~RepeatCompActor() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(RepeatActor);
+  RepeatActor() = default;
+  ~RepeatActor() override = default;
 
  private:
-  void VirtualCompActorInit(const TaskProto& proto) override;
+  void VirtualActorInit(const TaskProto& proto) override;
   void Act() override;
   void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
@@ -35,7 +35,7 @@ class RepeatCompActor final : public CompActor {
   int64_t repeat_count_;
 };
 
-void RepeatCompActor::VirtualCompActorInit(const TaskProto& proto) {
+void RepeatActor::VirtualActorInit(const TaskProto& proto) {
   const Shape& in_time_shape = Global<RegstMgr>::Get()
                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in"))
                                    .data_regst_time_shape();
@@ -56,7 +56,7 @@ void RepeatCompActor::VirtualCompActorInit(const TaskProto& proto) {
   // Regst number hacking
   if (naive_consumed_rs_.total_regst_desc_cnt() != 1) {
     LOG(WARNING)
-        << "RepeatCompActor has more than one consumed register. This will impact performance.";
+        << "RepeatActor has more than one consumed register. This will impact performance.";
   }
   const int64_t out_regst_desc_id = out_regst_desc.regst_desc_id();
   for (int64_t i = 1; i < repeat_num_; ++i) {
@@ -66,10 +66,10 @@ void RepeatCompActor::VirtualCompActorInit(const TaskProto& proto) {
       naive_produced_rs_.TryPushBackRegst(regst);
     });
   }
-  OF_SET_MSG_HANDLER(&RepeatCompActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&RepeatActor::HandlerNormal);
 }
 
-void RepeatCompActor::Act() {
+void RepeatActor::Act() {
   // reset repeat_count if need
   if (repeat_count_ == repeat_num_) { repeat_count_ = 0; }
 
@@ -81,19 +81,19 @@ void RepeatCompActor::Act() {
   repeat_count_ += 1;
 }
 
-void RepeatCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
+void RepeatActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
   if (repeat_count_ == repeat_num_) { HandleConsumedNaiveDataRegstToProducer(); }
 }
 
-void RepeatCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+void RepeatActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   HandleProducedNaiveDataRegstToConsumer();
 }
 
-bool RepeatCompActor::ConsumedCtrlRegstValid(int64_t regst_desc_id) const {
+bool RepeatActor::ConsumedCtrlRegstValid(int64_t regst_desc_id) const {
   return repeat_count_ == repeat_num_;
 }
 
-bool RepeatCompActor::IsCustomizedWriteReady() const {
+bool RepeatActor::IsCustomizedWriteReady() const {
   if (repeat_count_ % repeat_num_ == 0) {
     return total_reading_cnt_ == 0;
   } else {
@@ -101,6 +101,6 @@ bool RepeatCompActor::IsCustomizedWriteReady() const {
   }
 }
 
-REGISTER_ACTOR(TaskType::kRepeat, RepeatCompActor);
+REGISTER_ACTOR(TaskType::kRepeat, RepeatActor);
 
 }  // namespace oneflow

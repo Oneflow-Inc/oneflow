@@ -13,21 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/compute_actor.h"
+#include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 
-class AccCompActor final : public CompActor {
+class AccActor final : public Actor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AccCompActor);
-  AccCompActor() = default;
-  ~AccCompActor() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(AccActor);
+  AccActor() = default;
+  ~AccActor() override = default;
 
  private:
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 
-  void VirtualCompActorInit(const TaskProto& proto) override;
+  void VirtualActorInit(const TaskProto& proto) override;
   void Init(const TaskProto&, int32_t max_acc_cnt);
 
   std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;
@@ -35,7 +35,7 @@ class AccCompActor final : public CompActor {
   int32_t max_acc_cnt_;
 };
 
-void AccCompActor::VirtualCompActorInit(const TaskProto& proto) {
+void AccActor::VirtualActorInit(const TaskProto& proto) {
   const Shape& in_time_shape = Global<RegstMgr>::Get()
                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in"))
                                    .data_regst_time_shape();
@@ -46,7 +46,7 @@ void AccCompActor::VirtualCompActorInit(const TaskProto& proto) {
   Init(proto, in_time_shape.elem_cnt() / out_time_shape.elem_cnt());
 }
 
-void AccCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
+void AccActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
   using namespace std::placeholders;
   if (GetDeviceType() == DeviceType::kCPU) {
     cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4);
@@ -57,12 +57,12 @@ void AccCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt) {
     UNIMPLEMENTED();
 #endif
   }
-  OF_SET_MSG_HANDLER(&AccCompActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&AccActor::HandlerNormal);
   acc_cnt_ = 0;
   max_acc_cnt_ = max_acc_cnt;
 }
 
-void AccCompActor::Act() {
+void AccActor::Act() {
   Regst* out_regst = GetNaiveCurWriteable("out");
   Regst* in_regst = GetNaiveCurReadable("in");
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
@@ -88,13 +88,13 @@ void AccCompActor::Act() {
   acc_cnt_ += 1;
 }
 
-void AccCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+void AccActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (acc_cnt_ == max_acc_cnt_) {
     HandleProducedNaiveDataRegstToConsumer();
     acc_cnt_ = 0;
   }
 }
 
-REGISTER_ACTOR(TaskType::kAcc, AccCompActor);
+REGISTER_ACTOR(TaskType::kAcc, AccActor);
 
 }  // namespace oneflow
