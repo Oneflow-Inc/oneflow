@@ -42,7 +42,8 @@ class TestLogicalNotModule(flow.unittest.TestCase):
 
     @autotest(n=10, auto_backward=False)
     def test_logical_not_with_random_data(test_case):
-        device = random_device()
+        # device = random_device()
+        device = 'cpu'
         shape = random_tensor().value().shape
         x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
         y = torch.logical_not(x)
