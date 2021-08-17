@@ -70,8 +70,9 @@ bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMs
   regst_ctx.producer = msg.src_actor_id();
   regst_ctx.act_id = msg.act_id();
   regst_ctx.has_sole_empty_blob = msg.has_sole_empty_blob();
-  //std::cout<< "the sequence:"<<sequence_number2regst_ctx_.emplace(msg.comm_net_sequence_number(), regst_ctx).second << std::endl;
-  CHECK(sequence_number2regst_ctx_.emplace(msg.comm_net_sequence_number(), regst_ctx).second);
+  auto value = sequence_number2regst_ctx_.emplace(msg.comm_net_sequence_number(), regst_ctx).second;
+  std::cout<<"CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine, msg.comm_net_sequsnce_number:" << msg.comm_net_sequence_number() << std::endl;
+  CHECK(value);
   return true;
 }
 
