@@ -14,25 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 
 
-class OptimizerConfig(object):
+class OptDict(object):
     def __init__(
-        self,
-        name: str,
-        optimizer: Optimizer = None,
-        lr_scheduler=None,
-        grad_clipping_conf=None,
-        weight_decay_conf=None,
+        self, opt_dict,
     ):
-        self.name = name
-        self.optimizer = optimizer
-        self.lr_scheduler = lr_scheduler
-        self.grad_clipping_conf = grad_clipping_conf
-        self.weight_decay_conf = weight_decay_conf
+        assert isinstance(opt_dict, dict), "opt dict must be a dict"
+        assert "optim" in opt_dict, "opt dict must has an optimizer"
+        self._optimizer = opt_dict["optim"]
+        assert isinstance(opt_dict["optim"], Optimizer)
+
+        self._lr_scheduler = None
+        if "lr_sch" in opt_dict:
+            assert isinstance(opt_dict["lr_sch"], LrScheduler)
+            self._lr_scheduler = opt_dict["lr_sch"]
+            assert (
+                self._lr_scheduler._optimizer is self._optimizer
+            ), "lr_scheduler's optimizer must be the same optimizer in the opt dict."
 
     def generate_optimizer_and_variable_configs(self, train_conf, vars_conf):
-        self.optimizer.generate_conf_for_graph(train_conf, vars_conf)
+        if self._optimizer is not None:
+            opt_confs = self._optimizer.generate_conf_for_graph(train_conf, vars_conf)
+        if self._lr_scheduler is not None:
+            self._lr_scheduler.generate_conf_for_graph(opt_confs)
 
 
 class VariableConfig(object):
