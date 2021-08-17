@@ -100,11 +100,35 @@ void JNICALL Java_org_oneflow_OneFlow_initSession(JNIEnv* env, jobject obj, jstr
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_OneFlow_loadModel(JNIEnv* env, jobject obj, jobject option) {
-  jstring full_path_name = (jstring) GetOptionField(env, option, "fullPathName", "Ljava/lang/String;");
+  jstring full_path_name = (jstring) GetOptionField(env, option, "modelProtoPath", "Ljava/lang/String;");
   std::string full_path_name_ = ConvertToString(env, full_path_name);
 
+  jstring signature_name = (jstring) GetOptionField(env, option, "signatureName", "Ljava/lang/String;");
+  std::string signature_name_ = "";
+  if (signature_name != nullptr) {
+    signature_name_ = ConvertToString(env, signature_name);
+  }
+
+  jstring device_tag = (jstring) GetOptionField(env, option, "deviceTag", "Ljava/lang/String;");
+  std::string device_tag_ = "";
+  if (device_tag != nullptr) {
+    device_tag_ = ConvertToString(env, device_tag);
+  }
+
+  jstring machine_device_ids = (jstring) GetOptionField(env, option, "machineDeviceIds", "Ljava/lang/String;");
+  std::string machine_device_ids_ = "";
+  if (machine_device_ids != nullptr) {
+    machine_device_ids_ = ConvertToString(env, machine_device_ids);
+  }
+
+  jobject batch_size_obj = GetOptionField(env, option, "batchSize", "Ljava/lang/Integer;");
+  int batch_size = 0;
+  if (batch_size_obj != nullptr) {
+    batch_size = GetIntFromField(env, batch_size_obj);
+  }
+
   oneflow::SavedModel saved_model = LoadModel(full_path_name_);
-  CompileGraph(saved_model);
+  CompileGraph(saved_model, signature_name_, machine_device_ids_, device_tag_, batch_size);
 
   std::string checkpoint_dir = saved_model.checkpoint_dir();
   jstring checkpoint_dir_ = ConvertToJString(env, checkpoint_dir);

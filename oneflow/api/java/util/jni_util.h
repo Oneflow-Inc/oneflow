@@ -45,7 +45,7 @@ inline jobject GetOptionField(JNIEnv* env, jobject obj, const char* field_name,
 inline int GetIntFromField(JNIEnv* env, jobject obj) {
   jclass integer_class = (*env).FindClass("java/lang/Integer");
   jmethodID mid = (*env).GetMethodID(integer_class, "intValue", "()I");
-  int value = (*env).CallIntMethod(integer_class, mid);
+  int value = (*env).CallIntMethod(obj, mid);
   return value;
 }
 

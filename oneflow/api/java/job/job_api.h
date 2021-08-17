@@ -86,23 +86,12 @@ inline void SetJobConfForCurJobBuildAndInferCtx(const std::string& job_conf_prot
   oneflow::cfg::JobConfigProto job_conf_cfg;
   job_conf_cfg.InitFromProto(job_conf);
 
-  // if (batch_size > 0) {
-  //   oneflow::cfg::JobSignatureDef* signature = job_conf_cfg.mutable_signature();
-  //   if (signature != nullptr) {
-  //     for (auto iter = signature->mutable_inputs()->begin(); iter != signature->mutable_inputs()->end(); iter++) {
-  //       iter->second.mutable_blob_conf()->mutable_shape()->set_dim(0, batch_size);
-  //     } 
-  //   }
-  // }
-  // std::cout << job_conf_cfg.DebugString() << std::endl;
-
   oneflow::CurJobBuildAndInferCtx_SetJobConf(job_conf_cfg).GetOrThrow();
 }
 
 inline void SetScopeForCurJob(const std::string& job_conf_proto,
                               const std::string& ids,
                               const std::string& device) {
-  // Todo: user configuration
   oneflow::JobConfigProto job_conf;
   oneflow::TxtString2PbMessage(job_conf_proto, &job_conf);
 
@@ -140,7 +129,11 @@ inline oneflow::SavedModel LoadModel(std::string full_path_name) {
   return saved_model;
 }
 
-inline void CompileGraph(oneflow::SavedModel saved_model) {
+inline void CompileGraph(oneflow::SavedModel saved_model,
+                         std::string signature_name,
+                         std::string device_ids,
+                         std::string device_tag,
+                         int batch_size) {
   // compile
   std::string graph_name = saved_model.default_graph_name();
   oneflow::GraphDef graph_def = saved_model.graphs().at(graph_name);
@@ -150,14 +143,23 @@ inline void CompileGraph(oneflow::SavedModel saved_model) {
   oneflow::JobConfigProto job_config_proto;
   job_config_proto.set_job_name(graph_name);
   job_config_proto.mutable_predict_conf();
-  // set signature
-  if (graph_def.has_default_signature_name()) {
-    auto signature_name = graph_def.default_signature_name();
+  if (signature_name == "" && graph_def.has_default_signature_name()) {
+    signature_name = graph_def.default_signature_name();
+  }
+  if (signature_name != "") {
     auto job_signature_def = graph_def.signatures().at(signature_name);
     job_config_proto.mutable_signature()->CopyFrom(job_signature_def);
+  
+    if (batch_size > 0) {
+      for (auto iter = job_config_proto.mutable_signature()->mutable_inputs()->begin(); 
+           iter != job_config_proto.mutable_signature()->mutable_inputs()->end(); iter++) {
+        iter->second.mutable_blob_conf()->mutable_shape()->set_dim(0, batch_size);
+      }
+    }
   }
+
   SetJobConfForCurJobBuildAndInferCtx(job_config_proto.DebugString());
-  SetScopeForCurJob(job_config_proto.DebugString(), "0:0", "gpu");
+  SetScopeForCurJob(job_config_proto.DebugString(), device_ids, device_tag);
 
   auto op_list = graph_def.op_list();
   for (auto op_conf = op_list.begin(); op_conf != op_list.end(); op_conf++) {
