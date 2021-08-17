@@ -149,14 +149,16 @@ def _vector_str(self, indent, summarize, formatter1):
             if self.is_local
             else self[: PRINT_OPTS.edgeitems]
             .to_consistent(sbp=flow.sbp.broadcast)
-            .to_local().tolist()
+            .to_local()
+            .tolist()
         )
         right_values = (
             self[-PRINT_OPTS.edgeitems :].tolist()
             if self.is_local
             else self[-PRINT_OPTS.edgeitems :]
             .to_consistent(sbp=flow.sbp.broadcast)
-            .to_local().tolist()
+            .to_local()
+            .tolist()
         )
         data = (
             [_val_formatter(val) for val in left_values]
@@ -215,7 +217,12 @@ def _tensor_str(self, indent):
         self = self.float()
     # not support flow.sbp.split(x) but flow.sbp.split(0)
     def _cannot_print(sbp):
-        return sbp != flow.sbp.partial_sum and sbp != flow.sbp.broadcast and sbp != flow.sbp.split(0)
+        return (
+            sbp != flow.sbp.partial_sum
+            and sbp != flow.sbp.broadcast
+            and sbp != flow.sbp.split(0)
+        )
+
     if self.is_consistent:
         if all(_cannot_print(sbp) for sbp in self.sbp):
             return "..."
@@ -245,7 +252,9 @@ def get_summarized_data(self):
         return self
     if dim == 1:
         if self.size(0) > 2 * PRINT_OPTS.edgeitems:
-            return flow.cat((self[: PRINT_OPTS.edgeitems], self[-PRINT_OPTS.edgeitems :]))
+            return flow.cat(
+                (self[: PRINT_OPTS.edgeitems], self[-PRINT_OPTS.edgeitems :])
+            )
         else:
             return self
     if self.size(0) > 2 * PRINT_OPTS.edgeitems:
