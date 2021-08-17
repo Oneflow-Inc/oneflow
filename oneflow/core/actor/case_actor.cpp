@@ -13,11 +13,53 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/case_compute_actor.h"
+#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/kernel/case_kernel.h"
 
 namespace oneflow {
 
-void CaseCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+class CaseActor final : public Actor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CaseActor);
+  CaseActor() = default;
+  ~CaseActor() override = default;
+
+ protected:
+  bool IsCustomizedReadReady() const override;
+  bool IsCustomizedWriteReady() const override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override;
+  void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
+  void AsyncSendCustomizedProducedRegstMsgToConsumer() override;
+  void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
+  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
+  void VirtualActorInit(const TaskProto&) override;
+  bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
+  void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
+  void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
+  }
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName()
+      override {
+    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
+  }
+
+ private:
+  void Act() override;
+  void TakeOverConsumedRegst(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
+  void TakeOverProducedRegst(const PbMap<std::string, RegstDescProto>& produced_ids);
+  bool IsInputOrOutputReady() const;
+  int64_t GetCurSelectId() const;
+
+  HashMap<int64_t, int64_t> out_bn_id2regst_desc_id_;
+  int64_t consumed_regst_desc_id_;
+  RegstSlot consumed_rs_;
+  HashMap<int64_t, RegstSlot> regst_desc_id2produced_rs_;
+  CaseStatus case_status_;
+};
+
+void CaseActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_EQ(1, exec_kernel_vec().size());
   const int32_t output_bns_size =
       task_proto.exec_sequence().exec_node().Get(0).kernel_conf().op_attribute().output_bns_size();
@@ -28,10 +70,10 @@ void CaseCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
   TakeOverConsumedRegst(task_proto.consumed_regst_desc_id());
   TakeOverProducedRegst(task_proto.produced_regst_desc());
-  OF_SET_MSG_HANDLER(&CaseCompActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&CaseActor::HandlerNormal);
 }
 
-void CaseCompActor::TakeOverConsumedRegst(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
+void CaseActor::TakeOverConsumedRegst(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
   CHECK_EQ(consumed_ids.size(), 1);
   const auto& pair = *consumed_ids.begin();
   CHECK_EQ(pair.second.regst_desc_id_size(), 1);
@@ -40,7 +82,7 @@ void CaseCompActor::TakeOverConsumedRegst(const PbMap<std::string, RegstDescIdSe
   consumed_rs_.InitedDone();
 }
 
-void CaseCompActor::TakeOverProducedRegst(const PbMap<std::string, RegstDescProto>& produced_ids) {
+void CaseActor::TakeOverProducedRegst(const PbMap<std::string, RegstDescProto>& produced_ids) {
   for (const auto& pair : produced_ids) {
     CHECK(pair.second.regst_desc_type().has_data_regst_desc());
     CHECK_EQ(pair.second.has_inplace_consumed_regst_desc_id(), false);
@@ -57,7 +99,7 @@ void CaseCompActor::TakeOverProducedRegst(const PbMap<std::string, RegstDescProt
 // twice called for each output
 // first called: set cur_selected_id
 // second called: output cur_selected_id
-void CaseCompActor::Act() {
+void CaseActor::Act() {
   Regst* const consumed_regst = consumed_rs_.Front(consumed_regst_desc_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   case_status_.cur_selected_id = GetCurSelectId();
@@ -70,25 +112,25 @@ void CaseCompActor::Act() {
   });
 }
 
-void CaseCompActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
+void CaseActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
   const int64_t regst_desc_id = regst->regst_desc_id();
   CHECK_EQ(0, regst_desc_id2produced_rs_.at(regst_desc_id).TryPushBackRegst(regst));
 }
 
-bool CaseCompActor::IsCustomizedReadReady() const { return IsInputOrOutputReady(); }
+bool CaseActor::IsCustomizedReadReady() const { return IsInputOrOutputReady(); }
 
-bool CaseCompActor::IsCustomizedWriteReady() const { return IsInputOrOutputReady(); }
+bool CaseActor::IsCustomizedWriteReady() const { return IsInputOrOutputReady(); }
 
-bool CaseCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
+bool CaseActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
   return ReceiveEordMsg(consumed_regst_desc_id_) && case_status_.select_id2request_cnt.size() == 0;
 }
 
-bool CaseCompActor::IsInputOrOutputReady() const {
+bool CaseActor::IsInputOrOutputReady() const {
   if (GetCurSelectId() != -1) { return true; }
   return consumed_rs_.IsCurSlotReady();
 }
 
-int64_t CaseCompActor::GetCurSelectId() const {
+int64_t CaseActor::GetCurSelectId() const {
   for (const auto& pair : case_status_.select_id2request_cnt) {
     CHECK_GT(pair.second, 0);
     const int64_t regst_desc_id = out_bn_id2regst_desc_id_.at(pair.first);
@@ -97,12 +139,11 @@ int64_t CaseCompActor::GetCurSelectId() const {
   return -1;
 }
 
-void CaseCompActor::ForEachCurCustomizedReadableRegst(
-    std::function<void(const Regst*)> Handler) const {
+void CaseActor::ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)> Handler) const {
   Handler(consumed_rs_.Front(consumed_regst_desc_id_));
 }
 
-void CaseCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
+void CaseActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   if (case_status_.cmd != kCaseCmdHandleInput) { return; }
   Regst* const cur_regst = consumed_rs_.Front(consumed_regst_desc_id_);
   CHECK_NOTNULL(cur_regst);
@@ -110,11 +151,11 @@ void CaseCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   CHECK_EQ(0, consumed_rs_.TryPopFrontRegst(consumed_regst_desc_id_));
 }
 
-void CaseCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
+void CaseActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(0, consumed_rs_.TryPushBackRegst(msg.regst()));
 }
 
-void CaseCompActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
+void CaseActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
   if (case_status_.cmd != kCaseCmdHandleOutput) { return; }
   const int64_t regst_desc_id = out_bn_id2regst_desc_id_.at(case_status_.cur_selected_id);
   Regst* const regst = regst_desc_id2produced_rs_.at(regst_desc_id).Front(regst_desc_id);
@@ -122,8 +163,8 @@ void CaseCompActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
   regst_desc_id2produced_rs_.at(regst_desc_id).PopFrontRegsts({regst_desc_id});
 }
 
-bool CaseCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+bool CaseActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
 
-REGISTER_ACTOR(kCase, CaseCompActor);
+REGISTER_ACTOR(kCase, CaseActor);
 
 }  // namespace oneflow
