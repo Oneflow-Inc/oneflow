@@ -148,19 +148,20 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   const DataType dtype = JUST(InferScalarType(object));
   const auto& sizes = JUST(InferArraySizes(object));
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor = JUST(functional::Empty(*sizes, dtype, device));
+  const auto& tensor = JUST(functional::Empty(*sizes, CHECK_JUST(DType::Get(dtype)), device));
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
   auto handle = std::shared_ptr<PyObject>(PyObjectPtr(object));
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        JUST(tensor->AsMirroredTensor()),
-        [handle](uint64_t of_blob_ptr) {
-          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
-        },
-        "mut"));
-    return Maybe<void>::Ok();
+  const auto& callback =
+      std::make_shared<std::function<void(uint64_t)>>([handle](uint64_t of_blob_ptr) {
+        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
+      });
+  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
+                                               "mut");
+    });
   }));
   return tensor;
 }
