@@ -45,13 +45,13 @@ class ConsistentConstantFunctor {
   ConsistentConstantFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    if (IsIntegralDataType(dtype)) {
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
       JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
     } else {
@@ -78,12 +78,12 @@ class ConsistentConstantFunctor {
 class ConstantFunctor {
  public:
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    if (IsIntegralDataType(dtype)) {
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
       JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
     } else {
@@ -105,11 +105,11 @@ class ConstantFunctor {
 class EmptyFunctor {
  public:
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
@@ -125,12 +125,12 @@ class EmptyFunctor {
 class ConsistentEmptyFunctor {
  public:
   ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
@@ -202,9 +202,9 @@ class ArgWhereFunctor {
         one::OpBuilder("argwhere").Input("input").Output("output").Output("output_size").Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const DataType& dtype) const {
+                                const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
