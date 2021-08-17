@@ -182,7 +182,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = m
-                self.add_optimizer("sgd0", sgd0)
+                self.add_optimizer(sgd0)
 
             def build(self, x):
                 out = self.m(x)
