@@ -35,7 +35,7 @@ def torch_tensor_to_flow(x):
 
 note_pytorch_method_names = []
 note_pytorch_args = []
-note_pytorch_kwags = []
+note_pytorch_kwargs = []
 
 class PyTorchDoesNotSupportError(Exception):
     def __init__(self, exc):
@@ -116,7 +116,7 @@ def get_args(callable, *args, **kwargs):
             new_pytorch_kwargs[key] = value
         note_pytorch_method_names.append(callable.__name__)
         note_pytorch_args.append(new_pytorch_args)
-        note_pytorch_kwags.append(new_pytorch_kwargs)
+        note_pytorch_kwargs.append(new_pytorch_kwargs)
 
     return (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs)
 
@@ -195,15 +195,48 @@ def GetDualObject(name, pytorch, oneflow):
     Cls = type(f"{name}_{counter}", (DualObject,), magic_methods_for_new_cls)
     return Cls(name, pytorch, oneflow)
 
+def note_print_args(x, end=True):
+    if(end==True):
+        if(type(x) is str):
+            print("'{}'".format(x), end=', ')
+        else:
+            print(x, end=', ')
+    else:
+        if(type(x) is str):
+             print("'{}'".format(x), end='')
+        else:
+            print(x, end='')
+
+def note_print_kwargs(x, y, end=True):
+    if(end==True):
+        if(type(y) is str):
+            print("{}='{}'".format(x, y), end=', ')
+        else:
+            print("{}={}".format(x, y), end=', ')
+    else:
+        if(type(y) is str):
+            print("{}='{}'".format(x, y), end='')
+        else:
+            print("{}={}".format(x, y), end='')
+
 def print_note_fake_program():
     code_len = len(note_pytorch_method_names)
     for i in range(code_len):
+        note_pytorch_args_len = len(note_pytorch_args[i])
+        note_pytorch_kwargs_len = len(note_pytorch_kwargs[i])
         print(note_pytorch_method_names[i], end='')
         print('(', end='')
         if note_pytorch_args[i]:
-            print(note_pytorch_args[i], end=',')
-        if note_pytorch_kwags[i]:
-            print(note_pytorch_kwags[i], end=',')
+            index = 0
+            for x in note_pytorch_args[i]:
+                index += 1
+                note_print_args(x, index < note_pytorch_args_len)
+            
+        if note_pytorch_kwargs[i]:
+            index = 0
+            for x in note_pytorch_kwargs[i].keys():
+                index += 1
+                note_print_kwargs(x, note_pytorch_kwargs[i][x], index < note_pytorch_kwargs_len)
         print(')')
 
 class DualObject:
@@ -334,10 +367,11 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                             )
                         )
                 for x in dual_objects_to_test:
+                    if check_equality(x, rtol=rtol, atol=atol) == False:
+                        print_note_fake_program()
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
                 if verbose:
                     print("test passed")
-                print_note_fake_program()
                 n -= 1
                 loop += 1
 
