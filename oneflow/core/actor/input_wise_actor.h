@@ -13,22 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ACTOR_REENTRANT_LOCK_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_REENTRANT_LOCK_COMPUTE_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_INPUT_WISE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_INPUT_WISE_ACTOR_H_
 
-#include "oneflow/core/actor/compute_actor.h"
-#include "oneflow/core/kernel/reentrant_lock_kernel.h"
+#include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 
-class ReentrantLockCompActor final : public CompActor {
+class InputWiseActor : public Actor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReentrantLockCompActor);
-  ReentrantLockCompActor() = default;
-  ~ReentrantLockCompActor() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(InputWiseActor);
+  InputWiseActor() = default;
+  ~InputWiseActor() = default;
 
  protected:
-  void VirtualCompActorInit(const TaskProto&) override;
+  void Init(const TaskProto&);
+  int64_t cur_processed_regst_desc_id() const { return cur_processed_regst_desc_id_; }
+  int64_t processed_regst_desc_id_cnt() const { return processed_regst_desc_id_cnt_; }
+  int64_t RegstDescNum() const { return consumed_rs_.total_regst_desc_cnt(); }
+  int64_t InBnId4RegstDescId(int64_t id) const { return regst_desc_id2in_bn_id_.at(id); }
+
+  bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
 
  private:
   void Act() override;
@@ -36,7 +41,9 @@ class ReentrantLockCompActor final : public CompActor {
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
   bool IsCustomizedReadReady() const override;
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
-  bool IsCustomizedReadAlwaysUnReadyFromNow() const override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override {
+    return ReceiveAllEordMsg() && consumed_rs_.available_regst_desc_cnt() == 0;
+  }
   void AsyncReturnAllCustomizedReadableRegst() override;
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
@@ -44,18 +51,18 @@ class ReentrantLockCompActor final : public CompActor {
   }
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
+
+  virtual void SetKernelCtxOther(void** other) { *other = nullptr; }
   int64_t GetCurProcessedRegstDescId() const;
 
-  const std::string& Ibn4RegstDescId(int64_t id) const;
-
   RegstSlot consumed_rs_;
+  HashMap<int64_t, bool> regst_desc_id2is_processed_;
+  int64_t processed_regst_desc_id_cnt_;
   int64_t cur_processed_regst_desc_id_;
-  HashMap<int64_t, std::string> regst_desc_id2ibn_;
-  ReentrantLockStatus reentrant_lock_status_;
-  int64_t eord_regst_desc_id_;
-  int64_t act_id_;
+
+  HashMap<int64_t, int64_t> regst_desc_id2in_bn_id_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_REENTRANT_LOCK_COMPUTE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_INPUT_WISE_ACTOR_H_
