@@ -612,9 +612,11 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
     if (cuda_device_ctx != nullptr) {
       if (cuda_graph_support != nullptr && cuda_graph_support->IsCudaGraphSupported(&init_ctx)) {
         cuda_graph_ctx_.reset(new CudaGraphContext(cuda_device_ctx->cuda_stream()));
-        LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name();
+        LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
+                  << op_conf().user_conf().op_type_name() << ")";
       } else {
-        LOG(INFO) << "CUDA Graphs not supported: " << op_conf().name();
+        LOG(INFO) << "CUDA Graphs not supported: " << op_conf().name() << " ("
+                  << op_conf().user_conf().op_type_name() << ")";
       }
     }
   }
