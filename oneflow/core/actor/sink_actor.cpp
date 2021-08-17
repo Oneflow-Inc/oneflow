@@ -13,22 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ACTOR_CALLBACK_NOTIFY_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_CALLBACK_NOTIFY_COMPUTE_ACTOR_H_
-
-#include "oneflow/core/actor/sink_compute_actor.h"
+#include "oneflow/core/actor/sink_actor.h"
 
 namespace oneflow {
 
-class CallbackNotifyCompActor final : public SinkCompActor {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CallbackNotifyCompActor);
-  CallbackNotifyCompActor() = default;
-  ~CallbackNotifyCompActor() = default;
+void SinkActor::VirtualActorInit(const TaskProto& proto) {
+  OF_SET_MSG_HANDLER(&SinkActor::HandlerNormal);
+  VirtualSinkActorInit(proto);
+}
 
- private:
-};
+void SinkActor::Act() {
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  kernel_ctx.other = NewOther();
+  AsyncLaunchKernel(kernel_ctx);
+  DeleteOther(kernel_ctx.other);
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_ACTOR_CALLBACK_NOTIFY_COMPUTE_ACTOR_H_
