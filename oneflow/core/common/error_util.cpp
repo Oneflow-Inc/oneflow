@@ -64,7 +64,7 @@ Maybe<std::string> ShortenMsg(std::string str) {
   pre_condition = IsLetterNumberOrUnderline(str.at(right_index));
   for (; right_index >= 0; right_index--) {
     bool cur_condition = IsLetterNumberOrUnderline(str.at(right_index));
-    if ((pre_condition && cur_condition) || (!pre_condition && cur_condition)) {
+    if ((pre_condition && !cur_condition) || (!pre_condition && cur_condition)) {
       right_index++;
       break;
     }
