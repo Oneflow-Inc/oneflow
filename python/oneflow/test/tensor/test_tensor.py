@@ -799,8 +799,8 @@ class TestTensor(flow.unittest.TestCase):
         input = random_pytorch_tensor().to(device)
         y = input.clip(min=random().to(float), max=random().to(float))
         return y
-e
-    @autotst()
+
+    @autotest()
     def test_clip_minnone_tensor_with_random_data(test_case):
         device = random_device()
         input = random_pytorch_tensor().to(device)
