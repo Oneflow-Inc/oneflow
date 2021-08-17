@@ -45,13 +45,13 @@ class ConsistentConstantFunctor {
   ConsistentConstantFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    if (IsIntegralDataType(dtype)) {
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
       JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
     } else {
@@ -78,12 +78,12 @@ class ConsistentConstantFunctor {
 class ConstantFunctor {
  public:
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    if (IsIntegralDataType(dtype)) {
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
       JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
     } else {
@@ -105,11 +105,11 @@ class ConstantFunctor {
 class EmptyFunctor {
  public:
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
@@ -125,12 +125,12 @@ class EmptyFunctor {
 class ConsistentEmptyFunctor {
  public:
   ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
@@ -202,9 +202,9 @@ class ArgWhereFunctor {
         one::OpBuilder("argwhere").Input("input").Output("output").Output("output_size").Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const DataType& dtype) const {
+                                const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
@@ -509,6 +509,22 @@ class DimScatterMulScalarFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ArgSortFunctor {
+ public:
+  ArgSortFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("arg_sort").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::string direction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("direction", direction));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GatherNdFunctor {
  public:
   GatherNdFunctor() {
@@ -645,6 +661,41 @@ class SliceGradFunctor : public SliceGradBaseFunctor {
   SliceGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Input("like").Output("dx").Build());
   }
+};
+
+class NarrowFunctor {
+ public:
+  NarrowFunctor() { op_ = CHECK_JUST(one::OpBuilder("narrow").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const int64_t& dim,
+                           const int64_t& start, const int64_t& length) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    JUST(attrs.SetAttr<int64_t>("start", start));
+    JUST(attrs.SetAttr<int64_t>("length", length));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class NarrowGradFunctor {
+ public:
+  NarrowGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("narrow_grad").Input("dy").Input("like").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& like, const int64_t& dim,
+                           const int64_t& start, const int64_t& length) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", dim));
+    JUST(attrs.SetAttr<int64_t>("start", start));
+    JUST(attrs.SetAttr<int64_t>("length", length));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class LogicalSliceFunctor : public SliceBaseFunctor {
@@ -1142,6 +1193,7 @@ class TensorGetItemFunctor {
       step[i] = slice.step();
     }
     bool is_identity = [&]() {
+      if (target_shape.NumAxes() == 0) { return false; }
       for (int i = 0; i < ndims; ++i) {
         if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
       }
@@ -1326,6 +1378,50 @@ class ReduceSumLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SplitFunctor {
+ public:
+  SplitFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& split_size,
+                                const int64_t& dim) const {
+    CHECK_GE_OR_RETURN(split_size, 0)
+        << "split expects split_size be non-negative, but got split_size=" << split_size;
+    int64_t dim_size = x->shape()->At(dim);
+    int64_t num_splits = std::max<int64_t>((dim_size + split_size - 1) / split_size, 1);
+    TensorTuple splits(num_splits);
+    int64_t last_split_size = split_size - (split_size * num_splits - dim_size);
+    for (int i = 0; i < num_splits; ++i) {
+      int64_t length = i < num_splits - 1 ? split_size : last_split_size;
+      splits[i] = JUST(Narrow(x, dim, i * split_size, length));
+    }
+    return splits;
+  }
+};
+
+class SplitWithSizeFunctor {
+ public:
+  SplitWithSizeFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::vector<int64_t>& split_sizes, const int64_t& dim) const {
+    int64_t dim_size = x->shape()->At(dim);
+    int64_t num_splits = split_sizes.size();
+    TensorTuple splits(num_splits);
+    int64_t start_idx = 0;
+    for (int i = 0; i < num_splits; ++i) {
+      int64_t length = split_sizes[i];
+      CHECK_GE_OR_RETURN(length, 0) << "split_with_sizes expects split_sizes have only "
+                                       "non-negative entries, but split_sizes["
+                                    << i << "] = " << length;
+      splits[i] = JUST(Narrow(x, dim, start_idx, length));
+      start_idx += length;
+    }
+    CHECK_EQ_OR_RETURN(start_idx, dim_size)
+        << "split_with_sizes expects split_sizes to sum exactly to " << dim_size
+        << " (input tensor's size at dimension " << dim << "), "
+        << "but got sum(split_sizes)=" << start_idx;
+    return splits;
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1345,12 +1441,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
+  m.add_functor<impl::ArgSortFunctor>("ArgSort");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
   m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
+  m.add_functor<impl::NarrowFunctor>("Narrow");
+  m.add_functor<impl::NarrowGradFunctor>("NarrowGrad");
   m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
@@ -1391,6 +1490,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
+  m.add_functor<impl::SplitFunctor>("Split");
+  m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
 };
 
 }  // namespace functional

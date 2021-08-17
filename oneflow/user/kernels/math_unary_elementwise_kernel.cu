@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -33,7 +34,8 @@ __global__ void MathUnaryElementwiseBackwardGpu(const int n, const T* x, const T
 }  // namespace
 
 template<template<typename> class UnaryFunctor, typename T>
-class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
+class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel,
+                                            public user_op::CudaGraphSupport {
  public:
   MathUnaryElementwiseGpuKernel() = default;
   ~MathUnaryElementwiseGpuKernel() = default;
@@ -55,7 +57,8 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel {
 };
 
 template<template<typename> class UnaryFunctor, typename T>
-class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel {
+class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel,
+                                                public user_op::CudaGraphSupport {
  public:
   MathUnaryElementwiseGradGpuKernel() = default;
   ~MathUnaryElementwiseGradGpuKernel() = default;
@@ -99,7 +102,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_
                                  MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 
 template<template<typename> class UnaryFunctor>
-class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
+class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel,
+                                                public user_op::CudaGraphSupport {
  public:
   MathUnaryElementwiseGpuHalfKernel() = default;
   ~MathUnaryElementwiseGpuHalfKernel() = default;
@@ -121,7 +125,8 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
 };
 
 template<template<typename> class UnaryFunctor>
-class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel {
+class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel,
+                                                    public user_op::CudaGraphSupport {
  public:
   MathUnaryElementwiseGradGpuHalfKernel() = default;
   ~MathUnaryElementwiseGradGpuHalfKernel() = default;

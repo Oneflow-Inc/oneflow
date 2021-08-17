@@ -171,7 +171,7 @@ class ReLU6(Module):
 
         >>> out = relu6(input)
         >>> out
-        tensor([0. , 0. , 0.5], dtype=oneflow.float32)
+        tensor([0.0000, 0.0000, 0.5000], dtype=oneflow.float32)
 
     """
 
@@ -216,7 +216,7 @@ class Tanh(Module):
         >>> tanh = flow.nn.Tanh()
         >>> out = tanh(input)
         >>> out
-        tensor([-0.7616,  0.    ,  0.7616], dtype=oneflow.float32)
+        tensor([-0.7616,  0.0000,  0.7616], dtype=oneflow.float32)
 
     """
 
@@ -255,7 +255,7 @@ def tanh_op(input):
         >>> tanh = flow.nn.Tanh()
         >>> out = tanh(input)
         >>> out
-        tensor([-0.7616,  0.    ,  0.7616], dtype=oneflow.float32)
+        tensor([-0.7616,  0.0000,  0.7616], dtype=oneflow.float32)
 
     """
     return Tanh()(input)
@@ -294,7 +294,7 @@ class ELU(Module):
 
         >>> out = elu(input)
         >>> out
-        tensor([-0.3935,  0.    ,  0.5   ], dtype=oneflow.float32)
+        tensor([-0.3935,  0.0000,  0.5000], dtype=oneflow.float32)
 
     """
 
@@ -341,7 +341,7 @@ class GELU(Module):
 
         >>> out = gelu(input)
         >>> out
-        tensor([-0.1543,  0.    ,  0.3457], dtype=oneflow.float32)
+        tensor([-0.1543,  0.0000,  0.3457], dtype=oneflow.float32)
 
     """
 
@@ -380,7 +380,7 @@ def gelu_op(x):
 
         >>> out = gelu(input)
         >>> out
-        tensor([-0.1543,  0.    ,  0.3457], dtype=oneflow.float32)
+        tensor([-0.1543,  0.0000,  0.3457], dtype=oneflow.float32)
 
     """
     return GELU()(x)
@@ -477,7 +477,7 @@ class Hardsigmoid(Module):
 
         >>> out = hardsigmoid(input)
         >>> out
-        tensor([0.4167, 0.5   , 0.5833], dtype=oneflow.float32)
+        tensor([0.4167, 0.5000, 0.5833], dtype=oneflow.float32)
 
 
     """
@@ -499,7 +499,7 @@ class Hardsigmoid(Module):
 class Softmax(Module):
     def __init__(self, dim: Optional[int] = None):
         super().__init__()
-        self.axis = -1 if dim is None else dim
+        self.axis = 1 if dim is None else dim
 
     def forward(self, x):
         (need_transpose, permute) = _softmax_need_transpose(x, self.axis)
@@ -558,18 +558,18 @@ def softmax_op(tensor, dim=None):
         >>> out = m(x)
         >>> out
         tensor([[[0.1575, 0.3754, 0.4671],
-                 [0.0507, 0.123 , 0.8263]]], dtype=oneflow.float32)
+                 [0.0507, 0.1230, 0.8263]]], dtype=oneflow.float32)
     """
     return Softmax(dim)(tensor)
 
 
 class LogSoftmax(Module):
-    """Applies the :math:`\\log(\\text{Softmax}(x))` function to an n-dimensional
+    r"""Applies the LogSoftmax function to an n-dimensional
     input Tensor.
     The LogSoftmax formulation can be simplified as:
 
     .. math::
-        \\text{LogSoftmax}(x_{i}) = \\log\\left(\\frac{\\exp(x_i) }{ \\sum_j \\exp(x_j)} \\right)
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right) = x_i - \log({ \sum_j \exp(x_j)})
 
     Args:
         dim (int): A dimension along which LogSoftmax will be computed.
@@ -612,11 +612,10 @@ class LogSoftmax(Module):
         (need_transpose, permute) = _softmax_need_transpose(x, self.dim)
         if need_transpose:
             x = flow.F.transpose(x, perm=permute)
-        x = x.softmax()
-        res = x.log()
+        x = flow.F.logsoftmax(x)
         if need_transpose:
-            res = flow.F.transpose(res, perm=permute)
-        return res
+            x = flow.F.transpose(x, perm=permute)
+        return x
 
     def extra_repr(self):
         return f"dim={self.dim}"
@@ -743,7 +742,7 @@ class Hardswish(Module):
 
         >>> out = hardswish(input)
         >>> out
-        tensor([-0.2083,  0.    ,  0.2917], dtype=oneflow.float32)
+        tensor([-0.2083,  0.0000,  0.2917], dtype=oneflow.float32)
 
     .. _`Searching for MobileNetV3`:
         https://arxiv.org/abs/1905.02244
@@ -805,7 +804,7 @@ class Hardtanh(Module):
         >>> x = flow.Tensor(arr)
         >>> out = m(x)
         >>> out
-        tensor([0.2, 0.3, 1. , 1. ], dtype=oneflow.float32)
+        tensor([0.2000, 0.3000, 1.0000, 1.0000], dtype=oneflow.float32)
 
     """
 
@@ -873,7 +872,7 @@ class LeakyReLU(Module):
         >>> x = flow.Tensor(arr)
         >>> out = m(x)
         >>> out
-        tensor([0.2, 0.3, 3. , 4. ], dtype=oneflow.float32)
+        tensor([0.2000, 0.3000, 3.0000, 4.0000], dtype=oneflow.float32)
     """
 
     def __init__(self, negative_slope: float = 0.01, inplace: bool = False):
@@ -919,7 +918,7 @@ class Mish(Module):
 
         >>> out = mish(input)
         >>> out
-        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+        tensor([0.8651, 1.9440, 2.9865], dtype=oneflow.float32)
     """
 
     def __init__(self, inplace: bool = False):
@@ -1129,7 +1128,7 @@ class Softsign(Module):
         >>> softsign = flow.nn.Softsign()
         >>> out = softsign(input)
         >>> out
-        tensor([0.5   , 0.6667, 0.75  ], dtype=oneflow.float32)
+        tensor([0.5000, 0.6667, 0.7500], dtype=oneflow.float32)
     """
 
     def __init__(self, inplace: bool = False):

@@ -51,7 +51,7 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
   CHECK_JUST(Global<symbol::Storage<T>>::Get()->Add(symbol_id, SerializedT()));
   list.EmplaceBack(vm::NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   list.EmplaceBack(vm::NewInstruction(instr_type_name)->add_init_symbol_operand(symbol_id));
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
