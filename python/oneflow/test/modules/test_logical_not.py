@@ -21,17 +21,17 @@ import oneflow as flow
 from automated_test_util import *
 
 
-def _test_logical_not(test_case, shape, device):
+def _test_logical_not(test_case, shape, dtype,device):
     np_input = np.random.randint(3, size=shape)
-    input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
+    input = flow.tensor(np_input, dtype=type, device=flow.device(device))
     of_out = flow.logical_not(input)
     np_out = np.logical_not(np_input)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
-def _test_tensor_logical_not(test_case, shape, device):
+def _test_tensor_logical_not(test_case, shape, dtype, device):
     np_input = np.random.randint(3, size=shape)
-    input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(np_input, dtype=dtype, device=flow.device(device))
     of_out = input.logical_not(input)
     np_out = np.logical_not(np_input)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
@@ -42,11 +42,12 @@ class TestLogicalNotModule(flow.unittest.TestCase):
 
     @autotest(n=10, auto_backward=False)
     def test_logical_not_with_random_data(test_case):
-        device = random_device()
-        #device = 'cpu'
+        #device = random_device()
+        device = 'cpu'
         shape = random_tensor().value().shape
         x = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(device)
-        y = torch.logical_not(x)
+        with torch.no_grad():
+            y = torch.logical_not(x)
         return y
 
 

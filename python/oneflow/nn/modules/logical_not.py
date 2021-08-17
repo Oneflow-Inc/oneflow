@@ -15,14 +15,6 @@ from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
 
 
-class LogicalNot():
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input):
-        return flow.F.logical_not(input)
-
-
 def logical_not_op(input):
     """
     Computes the element-wise logical NOT of the given input tensors. 
@@ -41,7 +33,7 @@ def logical_not_op(input):
         >>> out
         tensor([0,1,0], dtype=oneflow.int8)
     """
-    return LogicalNot()(input)
+    return flow.F.logical_not(input)
 
 
 @register_tensor_op("logical_not")
@@ -50,7 +42,7 @@ def logical_not_op_tensor(input):
     logical_not() -> Tensor
     See :func:`oneflow.logical_not`
     """
-    return LogicalNot()(input)
+    return flow.F.logical_not(input)
 
 
 if __name__ == "__main__":
