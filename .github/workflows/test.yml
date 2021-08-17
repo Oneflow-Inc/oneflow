@@ -741,6 +741,7 @@ jobs:
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build . -j$(nproc) --target of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
       - name: Fetch upstream
