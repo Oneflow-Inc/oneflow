@@ -25,6 +25,23 @@ namespace one {
 
 static constexpr char kGradientOpSuffix[] = ".grad";
 
+class AutoGradCaptureState {
+ public:
+  AutoGradCaptureState() = default;
+  virtual ~AutoGradCaptureState() = default;
+
+  const TensorTuple& SavedTensors() const { return saved_tensors_; }
+
+  size_t SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
+    size_t offset = saved_tensors_.size();
+    saved_tensors_.push_back(tensor);
+    return offset;
+  }
+
+ private:
+  TensorTuple saved_tensors_;
+};
+
 // Stateless container base of the backward op exprs.
 // The backward op exprs should be contained in the derived class.
 class OpExprGradFunctionIf {
