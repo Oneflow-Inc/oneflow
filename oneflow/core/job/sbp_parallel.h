@@ -22,6 +22,10 @@ limitations under the License.
 
 namespace oneflow {
 
+Maybe<Symbol<cfg::SbpParallel>> MakeSplitSbpParallel(int axis);
+Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel();
+Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel();
+
 inline bool operator!=(const cfg::SbpParallel& lhs, const cfg::SbpParallel& rhs) {
   return !(lhs == rhs);
 }
@@ -58,6 +62,7 @@ void NdSbpSignatureToSbpSignature(const NdSbpSignatureT& nd_sbp_signature,
                                   cfg::SbpSignature* sbp_signature);
 void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
                                      const cfg::NdSbpSignature& nd_sbp_sig);
+
 }  // namespace oneflow
 
 namespace std {
