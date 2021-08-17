@@ -48,7 +48,6 @@ class TestTensor(flow.unittest.TestCase):
 
         # TODO: ndarray -> ConsistentTensor
 
-    
     def test_construct_local_from_consistent_tensor(test_case):
         placement = flow.placement("cuda", {0: 0})
         sbp = flow.sbp.broadcast
@@ -60,7 +59,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(y.is_local)
         y = flow.Tensor(x, device="cuda")
         test_case.assertTrue(y.is_local)
-
 
     def test_tensor_autograd_related_methods(test_case):
         placement = flow.placement("cuda", {0: 0})
