@@ -21,17 +21,19 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/thread/consistent_unqiue_id.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/framework/transport_token.h"
 
 namespace oneflow {
 
 namespace {
 
-static constexpr int kSchedulerThreadConsistentUniqueId = (1 << kCtrlTransportTokenThreadConsistentUIdBit);
+static constexpr int kSchedulerThreadUniqueConsistentId =
+    (1 << kCtrlTransportTokenThreadConsistentUIdBit);
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = [](){
-    SetThisThreadConsistentUniqueId(kSchedulerThreadConsistentUniqueId, "scheduler");
+  *Initializer = []() {
+    CHECK_JUST(InitThisThreadUniqueConsistentId(kSchedulerThreadUniqueConsistentId, "scheduler"));
   };
 }
 
@@ -49,31 +51,33 @@ std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
 //   thread #1 is active in process #1, while others are not.
 //   ...
 //   thread #7 is active in process #7, while others are not.
-//   to make them communicate with each other, we can allocate thread_consistent_id 1 to all those gpu threads in all processes.
+//   to make them communicate with each other, we can allocate thread_consistent_id 1 to all those
+//   gpu threads in all processes.
 void GetWorkerThreadInitializer(ObjectMsgPtr<vm::VirtualMachine> vm,
                                 std::function<void(vm::ThreadCtx*)>* Initializer) {
-  int64_t thread_consistent_id = kSchedulerThreadConsistentUniqueId + 1;
+  int64_t thread_consistent_id = kSchedulerThreadUniqueConsistentId + 1;
   HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
-    const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);  
+    const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
     if (stream_type_index2consistent_id.count(stream_type_index) > 0) { continue; }
     stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
   }
-  *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx){
-    const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);  
+  *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
+    const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
     int64_t thread_consistent_id = stream_type_index2consistent_id.at(stream_type_index);
-    SetThisThreadConsistentUniqueId(thread_consistent_id, stream_type_index.name());
+    CHECK_JUST(InitThisThreadConsistentId(thread_consistent_id, stream_type_index.name()));
   };
 }
 
-}
+}  // namespace
 
 OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     : vm_(ObjectMsgPtr<vm::VirtualMachine>::New(vm::MakeVmDesc(resource, this_machine_id).Get())) {
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
   GetWorkerThreadInitializer(vm_, &WorkerInitializer);
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_->mut_thread_ctx_list(), thread_ctx) {
-    auto thread = std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx, WorkerInitializer);
+    auto thread =
+        std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx, WorkerInitializer);
     worker_threads_.push_back(std::move(thread));
   }
   exiting_ = false;
