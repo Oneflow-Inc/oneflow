@@ -724,14 +724,34 @@ jobs:
           wget https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage
           wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
           chmod +x clang-tidy-489012f-x86_64.AppImage clang-tidy-diff.py
+      - name: Cache third party dir
+        uses: actions/cache@v2
+        with:
+          path: |
+            .ccache
+          key: clang-tidy-diff-third-party-ccache-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}
+          restore-keys: |
+            clang-tidy-diff-third-party-ccache-${{ hashFiles('**/CMakeLists.txt') }}-
+            clang-tidy-diff-third-party-ccache-
       - name: Build third party libs and generate files
         run: |
+          export CCACHE_BASEDIR=$GITHUB_WORKSPACE
+          export CCACHE_DIR=$CCACHE_BASEDIR/.ccache
+          export CCACHE_COMPRESS=true
+          export CCACHE_MAXSIZE=500M
           mkdir build
           cd build
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TESTING=ON
+            -DBUILD_TESTING=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build . -j$(nproc) --target of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
+      - name: Fetch upstream
+        if: github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+        run: |
+          git remote add upstream https://github.com/Oneflow-Inc/oneflow
+          git fetch upstream
       - name: Run Maybe-related checks by clang-tidy
         # use clang as compiler for correct compiler flags
         run: |
