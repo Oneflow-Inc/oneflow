@@ -112,6 +112,12 @@ Error&& operator<<(Error&& error, const T& x) {
   return std::move(error);
 }
 
+template <>
+inline Error&& operator<<(Error&& error, const std::ostream& x) {
+  error << x.rdbuf();
+  return std::move(error);
+}
+
 template<>
 inline Error&& operator<<(Error&& error, const Error& other) {
   error.Assign(other);

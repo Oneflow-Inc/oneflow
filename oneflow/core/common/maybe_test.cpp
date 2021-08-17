@@ -33,13 +33,18 @@ TEST(Maybe, JUST_MSG) {
     return JUST_MSG(f(y), "input value g(", x, ")");
   };
 
-  auto data = std::mem_fn(&Maybe<int>::Data_YouAreNotAllowedToCallThisFuncOutsideThisFile);
+  auto i = [&](float x) -> Maybe<int> {
+    int y = x;
+    return JUST_MSG(h(y), std::stringstream() << "input value int(" << x << ")");
+  };
 
-  EXPECT_EQ(data(h(1)), 233);
+  auto data = CHECK_JUST(i(1));
+  ASSERT_EQ(data, 233);
 
-  auto err = h(10).error();
-  EXPECT_EQ(err->msg(), "input value 53");
-  EXPECT_EQ(err->stack_frame(0).error_msg(), "(f(y)): input value g(10)");
+  auto err = i(10.123).error();
+  ASSERT_EQ(err->msg(), "input value 53");
+  ASSERT_EQ(err->stack_frame(0).error_msg(), "(f(y)): input value g(10)");
+  ASSERT_EQ(err->stack_frame(1).error_msg(), "(h(y)): input value int(10.123)");
 }
 
 }  // namespace test
