@@ -12,6 +12,12 @@ class OneFlow {
         if (getEndian() == 0) {
             Tensor.endian = ByteOrder.BIG_ENDIAN;
         }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("shutting down OneFlow");
+            OneFlow.destroyEnv();
+            OneFlow.setShuttingDown();
+        }));
     }
 
     // 0 for big endian, 1 for little endian

@@ -33,12 +33,9 @@ public class InferenceSession {
     }
 
     private void loadModel(String path) {
-        // Todo: support different version
         String version = option.getModelVersion();
-
-        // Todo: check existence
         String savedModelPath = path + File.separator + version + File.separator;
-        option.setFullPathName(savedModelPath + File.separator + "saved_model.pb");
+        option.setModelProtoPath(savedModelPath + File.separator + option.getMetaFileBaseName());
 
         OneFlow.loadModel(option);
     }
@@ -82,8 +79,6 @@ public class InferenceSession {
     public void close() {
         OneFlow.stopLazyGlobalSession();
         OneFlow.destroyLazyGlobalSession();
-        OneFlow.destroyEnv();
-        OneFlow.setShuttingDown();
     }
 
 }
