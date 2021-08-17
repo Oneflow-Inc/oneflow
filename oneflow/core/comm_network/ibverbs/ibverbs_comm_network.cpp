@@ -135,8 +135,8 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   ibv_device_attr device_attr{};
   CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  recv_msg_buf_ =std::make_shared<MessagePool>( new MessagePool(pd_,1024));
-  send_msg_buf_ =std::make_shared<MessagePool>(new MessagePool(pd_, 1024));
+  recv_msg_buf_.reset(new MessagePool(pd_,1024));
+  send_msg_buf_.reset(new MessagePool(pd_, 1024));
   std::cout<<"messagePool";
   CHECK(cq_);
   ibv_port_attr port_attr{};
