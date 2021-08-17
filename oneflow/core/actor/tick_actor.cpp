@@ -13,25 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_ACTOR_TICK_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_TICK_COMPUTE_ACTOR_H_
-
-#include "oneflow/core/actor/compute_actor.h"
+#include "oneflow/core/actor/naive_actor.h"
 
 namespace oneflow {
 
-class TickComputeActor final : public CompActor {
+class TickActor final : public NaiveActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TickComputeActor);
-  TickComputeActor() = default;
-  ~TickComputeActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(TickActor);
+  TickActor() = default;
+  ~TickActor() = default;
 
  private:
-  void VirtualCompActorInit(const TaskProto&) override;
   void Act() override {}
-  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
-}  // namespace oneflow
+REGISTER_ACTOR(kTick, TickActor);
+REGISTER_ACTOR(kDeviceTick, TickActor);
+REGISTER_ACTOR(kSrcSubsetTick, TickActor);
+REGISTER_ACTOR(kDstSubsetTick, TickActor);
 
-#endif  // ONEFLOW_CORE_ACTOR_TICK_COMPUTE_ACTOR_H_
+}  // namespace oneflow

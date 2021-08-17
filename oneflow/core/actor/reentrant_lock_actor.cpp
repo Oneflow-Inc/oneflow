@@ -13,11 +13,47 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/reentrant_lock_compute_actor.h"
+#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/kernel/reentrant_lock_kernel.h"
 
 namespace oneflow {
 
-void ReentrantLockCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+class ReentrantLockActor final : public Actor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ReentrantLockActor);
+  ReentrantLockActor() = default;
+  ~ReentrantLockActor() override = default;
+
+ protected:
+  void VirtualActorInit(const TaskProto&) override;
+
+ private:
+  void Act() override;
+  void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
+  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
+  bool IsCustomizedReadReady() const override;
+  void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override;
+  void AsyncReturnAllCustomizedReadableRegst() override;
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
+  }
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
+  int64_t GetCurProcessedRegstDescId() const;
+
+  const std::string& Ibn4RegstDescId(int64_t id) const;
+
+  RegstSlot consumed_rs_;
+  int64_t cur_processed_regst_desc_id_;
+  HashMap<int64_t, std::string> regst_desc_id2ibn_;
+  ReentrantLockStatus reentrant_lock_status_;
+  int64_t eord_regst_desc_id_;
+  int64_t act_id_;
+};
+
+void ReentrantLockActor::VirtualActorInit(const TaskProto& task_proto) {
   act_id_ = 0;
   CHECK_EQ(1, exec_kernel_vec().size());
   const auto& kernel_conf = task_proto.exec_sequence().exec_node().Get(0).kernel_conf();
@@ -35,29 +71,29 @@ void ReentrantLockCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   consumed_rs_.InitedDone();
   cur_processed_regst_desc_id_ = -1;
   reentrant_lock_status_.Init(kernel_conf);
-  OF_SET_MSG_HANDLER(&ReentrantLockCompActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&ReentrantLockActor::HandlerNormal);
 }
 
-void ReentrantLockCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
+void ReentrantLockActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(0, consumed_rs_.TryPushBackRegst(msg.regst()));
 }
 
-bool ReentrantLockCompActor::IsCustomizedReadReady() const {
+bool ReentrantLockActor::IsCustomizedReadReady() const {
   return reentrant_lock_status_.cur_unlocked_ids().size() > 0 || -1 != GetCurProcessedRegstDescId();
 }
 
-void ReentrantLockCompActor::ForEachCurCustomizedReadableRegst(
+void ReentrantLockActor::ForEachCurCustomizedReadableRegst(
     std::function<void(const Regst*)> handler) const {
   handler(consumed_rs_.Front(cur_processed_regst_desc_id_));
 }
 
-const std::string& ReentrantLockCompActor::Ibn4RegstDescId(int64_t id) const {
+const std::string& ReentrantLockActor::Ibn4RegstDescId(int64_t id) const {
   const auto& iter = regst_desc_id2ibn_.find(id);
   if (iter == regst_desc_id2ibn_.end()) { return ReentrantLockStatus::kEmptyIbn; }
   return regst_desc_id2ibn_.at(id);
 }
 
-void ReentrantLockCompActor::Act() {
+void ReentrantLockActor::Act() {
   cur_processed_regst_desc_id_ = GetCurProcessedRegstDescId();
   Regst* const cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   reentrant_lock_status_.set_cur_ibn(Ibn4RegstDescId(cur_processed_regst_desc_id_));
@@ -71,18 +107,18 @@ void ReentrantLockCompActor::Act() {
   });
 }
 
-bool ReentrantLockCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
+bool ReentrantLockActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
   return ReceiveEordMsg(eord_regst_desc_id_)
          && reentrant_lock_status_.total_queued_request_lock_num() == 0
          && reentrant_lock_status_.total_acquired_lock_num() == 0;
 }
 
-void ReentrantLockCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+void ReentrantLockActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (reentrant_lock_status_.acquired_lock_to_be_sent() == false) { return; }
   HandleProducedNaiveDataRegstToConsumer();
 }
 
-void ReentrantLockCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
+void ReentrantLockActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   Regst* const cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   if (cur_regst == nullptr) { return; }
   AsyncSendRegstMsgToProducer(cur_regst);
@@ -90,12 +126,12 @@ void ReentrantLockCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   cur_processed_regst_desc_id_ = -1;
 }
 
-void ReentrantLockCompActor::AsyncReturnAllCustomizedReadableRegst() {
+void ReentrantLockActor::AsyncReturnAllCustomizedReadableRegst() {
   CHECK_EQ(-1, cur_processed_regst_desc_id_);
   CHECK_EQ(0, consumed_rs_.available_regst_desc_cnt());
 }
 
-int64_t ReentrantLockCompActor::GetCurProcessedRegstDescId() const {
+int64_t ReentrantLockActor::GetCurProcessedRegstDescId() const {
   int64_t cur_processed_regst_desc_id = -1;
   consumed_rs_.ForChosenRegstDeq(
       [&cur_processed_regst_desc_id](int64_t) { return cur_processed_regst_desc_id == -1; },
@@ -106,6 +142,6 @@ int64_t ReentrantLockCompActor::GetCurProcessedRegstDescId() const {
   return cur_processed_regst_desc_id;
 }
 
-REGISTER_ACTOR(kReentrantLock, ReentrantLockCompActor);
+REGISTER_ACTOR(kReentrantLock, ReentrantLockActor);
 
 }  // namespace oneflow
