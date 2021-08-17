@@ -20,6 +20,8 @@ OneFlow API Reference
     linalg
     image
     optim
+    utils
+
 
 
 Indices and tables

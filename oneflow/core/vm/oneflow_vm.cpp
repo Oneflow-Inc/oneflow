@@ -30,7 +30,6 @@ OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     worker_threads_.push_back(std::move(thread));
   }
   exiting_ = false;
-  scheduler_exited_ = false;
   schedule_thread_ = std::thread(&OneflowVM::Loop, this);
 }
 
@@ -49,7 +48,7 @@ void ControlSync(vm::VirtualMachine* vm) {
   BlockingCounter bc(1);
   vm::InstructionMsgList list;
   MakeCtrlSeqInstructions(&list, [&] { bc.Decrease(); });
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   bc.WaitUntilCntEqualZero();
 }
 
@@ -58,19 +57,19 @@ void ControlSync(vm::VirtualMachine* vm) {
 OneflowVM::~OneflowVM() {
   ControlSync(mut_vm());
   exiting_ = true;
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_->mut_thread_ctx_list(), thread_ctx) {
-    thread_ctx->mut_pending_instruction_list()->Close();
-  }
-  for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
   schedule_thread_.join();
-  CHECK(scheduler_exited_);
-  CHECK(mut_vm()->Empty());
+  CHECK(!vm_);
 }
 
 void OneflowVM::Loop() {
   auto* vm = mut_vm();
   while (!exiting_) { vm->Schedule(); }
-  scheduler_exited_ = true;
+  while (!mut_vm()->Empty()) { vm->Schedule(); }
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_->mut_thread_ctx_list(), thread_ctx) {
+    thread_ctx->mut_pending_instruction_list()->Close();
+  }
+  for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
+  vm_.Reset();
 }
 
 }  // namespace oneflow
