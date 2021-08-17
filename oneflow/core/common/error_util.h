@@ -18,14 +18,13 @@ limitations under the License.
 
 #include <string>
 #include "oneflow/core/common/error.cfg.h"
+#include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 namespace cfg {
 class ErrorProto;
 }
-std::string* MutErrorStr();
-const std::string& GetErrorStr();
 Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error);
 }  // namespace oneflow
 
