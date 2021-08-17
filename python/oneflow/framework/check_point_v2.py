@@ -127,9 +127,7 @@ def _broadcast_py_object(obj, src: int = 0):
     rank = flow.framework.distribute.get_rank()
     if src == rank:
         obj_bytes = pickle.dumps(obj)
-        return pickle.loads(
-            flow._oneflow_internal.cpu_broadcast(obj_bytes, src)
-        )
+        return pickle.loads(flow._oneflow_internal.cpu_broadcast(obj_bytes, src))
     else:
         return pickle.loads(flow._oneflow_internal.cpu_broadcast(None, src))
 
