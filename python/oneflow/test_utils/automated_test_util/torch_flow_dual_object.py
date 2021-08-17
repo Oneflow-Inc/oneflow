@@ -103,6 +103,7 @@ def get_args(callable, *args, **kwargs):
             continue
         pytorch_kwargs[key] = get_pytorch_value(value)
         oneflow_kwargs[key] = get_oneflow_value(value)
+    
     if not isinstance(callable, (torch_original.nn.Module)):
         new_pytorch_args = []
         new_pytorch_kwargs = {}
@@ -192,7 +193,6 @@ def GetDualObject(name, pytorch, oneflow):
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 return dual_method
-
             magic_methods_for_new_cls[method_name] = get_dual_method(method_name)
     Cls = type(f"{name}_{counter}", (DualObject,), magic_methods_for_new_cls)
     return Cls(name, pytorch, oneflow)
