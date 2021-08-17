@@ -13,44 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-struct SelectFirstExprInterpState : public OpExprInterpState {
-  TensorTuple inputs;
+struct ScalarFModGradInterpState : public OpExprInterpState {
   bool requires_grad;
 };
 
-class SelectFirst : public OpExprGradFunction<SelectFirstExprInterpState> {
+class ScalarFModGrad : public OpExprGradFunction<ScalarFModGradInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(SelectFirstExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ScalarFModGradInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->inputs = inputs;
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const SelectFirstExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ScalarFModGradInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    in_grads->at(0) = out_grads.at(0);
-    for (int i = 1; i < ctx->inputs.size(); i++) {
-      const auto& tensor = ctx->inputs.at(i);
-      in_grads->at(i) = JUST(StaticZerosTensor::MakeTensor(
-          tensor->shape(), tensor->dtype()->data_type(), JUST(tensor->device())));
-    }
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) { in_grads->at(0) = out_grads.at(0); }
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("select_first", SelectFirst);
+REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_fmod", ScalarFModGrad);
 
 }  // namespace one
 }  // namespace oneflow
