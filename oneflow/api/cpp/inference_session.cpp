@@ -20,11 +20,12 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/register/ofblob.h"
-#include "oneflow/api/python/env/env_api.h"
-#include "oneflow/api/python/session/session_api.h"
+#include "oneflow/api/python/env/env.h"
+#include "oneflow/api/python/session/session.h"
 #include "oneflow/api/python/job_build/job_build_and_infer_api.h"
 #include "oneflow/api/cpp/env/env_util.h"
 #include "oneflow/api/cpp/session/session_util.h"
+#include "oneflow/api/cpp/framework/framework_util.h"
 #include "oneflow/api/cpp/job_instance.h"
 #include "oneflow/api/cpp/inference_session.h"
 
@@ -51,62 +52,60 @@ bool NeedCheckDeviceTag(OpConf& op_conf) {
 InferenceSession::InferenceSession(const SessionOption& option)
   : option_(option), is_mirrored_(option.is_mirrored_view)
     checkpoint_path_(""), cur_job_name_("") {
-  Init();
+  Init().GetOrThrow();
 }
 
 InferenceSession::~InferenceSession() {
   if(this->status_ != SessionStatus::CLOSED) {
-    Close();
+    Close().GetOrThrow();
   }
 }
 
 Maybe<void> InferenceSession::Init() {
   // env init
-  if(!IsEnvInited()) {
-    EnvProto env_proto;
+  if(!IsEnvInited().GetOrThrow()) {
     // TODO: set env - machine id, ctrl port, data port
-    std::string env_proto_str = PbMessage2TxtString(env_proto);
+    EnvProto env_proto;
     // FIXME: multi-client should be true or false?
-    InitEnv(env_proto_str, false);
+    JUST(InitEnv(env_proto, false));
 
     // scope init
-    InitScopeStack();
+    JUST(InitScopeStack());
   }
 
-  if (!IsEnvInited()) {
+  if (!IsEnvInited().GetOrThrow()) {
     LOG(ERROR) << "Env is not inited correctly";
   }
 
   // session init
-  if(!IsSessionInited()) {
+  if(!IsSessionInited().GetOrThrow()) {
     JUST(this->MakeConfigProto());
-    TryCompleteConfigProto(this->config_proto_);
-    InitLazyGlobalSession(this->config_proto_);
+    JUST(InitLazyGlobalSession(this->config_proto_));
   }
 
-  if (!IsSessionInited()) {
+  if (!IsSessionInited().GetOrThrow()) {
     LOG(ERROR) << "Session is not inited correctly";
   }
 
   this->status_ = SessionStatus::OPEN;
 }
 
-void InferenceSession::Close() {
+Maybe<void> InferenceSession::Close() {
   WaitForAllJobsFinished();
 
   if(this->status_ == SessionStatus::RUNNING) {
-    StopLazyGlobalSession();
-    DestroyLazyGlobalSession();
+    JUST(StopLazyGlobalSession());
+    JUST(DestroyLazyGlobalSession());
   } else if(this->status_ == SessionStatus::OPEN) {
-    DestroyLazyGlobalSession();
+    JUST(DestroyLazyGlobalSession());
   }
 
   this->status_ = SessionStatus::CLOSED;
 }
 
-void InferenceSession::OpenCtx(std::string job_name, JobSignatureDef signature, int batch_size = 0) {
+Maybe<void> InferenceSession::OpenCtx(std::string job_name, JobSignatureDef& signature, int batch_size = 0) {
   JUST(this->CheckStatus(SessionStatus::OPEN));
-  JobBuildAndInferCtx_Open(job_name);
+  JUST(JobBuildAndInferCtx_Open(job_name));
 
   if (!signature.empty()) {
     this->SetJobSignature(job_name, signature);
@@ -116,8 +115,8 @@ void InferenceSession::OpenCtx(std::string job_name, JobSignatureDef signature, 
     this->SetJobBatchSize(job_name, batch_size);
   }
 
-  cfg::JobConfigProto& job_conf = this->GetJobConf(job_name);
-  CurJobBuildAndInferCtx_SetJobConf(job_conf);
+  JobConfigProto& job_conf = this->GetJobConf(job_name);
+  JUST(CurJobBuildAndInferCtx_SetJobConf(job_conf));
 
   std::string device_tag;
   std::vector<std::string> device_ids;
@@ -143,15 +142,17 @@ void InferenceSession::OpenCtx(std::string job_name, JobSignatureDef signature, 
 
   JUST(ThreadLocalScopeStackPush(scope));
   this->cur_job_name_ = job_name;
+  return Maybe<void>::Ok();
 }
 
-void InferenceSession::CloseCtx() {
+Maybe<void> InferenceSession::CloseCtx() {
   this->cur_job_name_.clear();
   JUST(ThreadLocalScopeStackPop());
-  JobBuildAndInferCtx_Close();
+  JUST(JobBuildAndInferCtx_Close());
+  return Maybe<void>::Ok();
 }
 
-void InferenceSession::Compile(std::vector<OperatorConf>& op_list) {
+Maybe<void> InferenceSession::Compile(std::vector<OperatorConf>& op_list) {
   JUST(this->CheckStatus(SessionStatus::OPEN));
 
   std::shared_ptr<Scope> scope = GetCurrentScope().GetPtrOrThrow();
@@ -160,29 +161,40 @@ void InferenceSession::Compile(std::vector<OperatorConf>& op_list) {
       if(!op_conf.has_device_tag()) {
         op_conf.set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
       }
-      std::string op_conf_str = PbMessage2TxtString(op_conf);
-      CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_str);
+      JUST(CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf));
     }
   }
 
-  CurJobBuildAndInferCtx_Complete();
-  CurJobBuildAndInferCtx_Rebuild();
+  JUST(CurJobBuildAndInferCtx_Complete());
+  JUST(CurJobBuildAndInferCtx_Rebuild());
+  return Maybe<void>::Ok();
 }
 
 void InferenceSession::Launch() {
-  JUST(this->CheckStatus(SessionStatus::OPEN));
-  StartLazyGlobalSession();
-  this->inter_user_job_info_.ParseFromString(GetSerializedInterUserJobInfo());
-  JUST(this->RunLoadCheckpointJob());
+  this->CheckStatus(SessionStatus::OPEN).GetOrThrow();
+  StartLazyGlobalSession().GetOrThrow();
+  this->inter_user_job_info_ = GetInterUserJobInfo();
+  this->RunLoadCheckpointJob().GetOrThrow();
   this->status_ = SessionStatus::RUNNING;
 }
 
-Maybe<void> InferenceSession::LoadModel(std::string saved_model_dir,
-                                             ModelVersionPolicy model_version_policy,
-                                             std::string saved_model_meta_file_basename,
-                                             std::string graph_name = "",
-                                             std::string signature_name = "") {
+void InferenceSession::LoadModel(std::string saved_model_dir,
+                                 ModelVersionPolicy model_version_policy,
+                                 std::string saved_model_meta_file_basename,
+                                 std::string graph_name = "",
+                                 std::string signature_name = "") {
+  return this->LoadModel_(saved_model_dir,
+                          model_version_policy, 
+                          saved_model_meta_file_basename,
+                          graph_name,
+                          signature_name).GetOrThrow();
+}
 
+Maybe<void> InferenceSession::LoadModel_(std::string saved_model_dir,
+                                         ModelVersionPolicy model_version_policy,
+                                         std::string saved_model_meta_file_basename,
+                                         std::string graph_name = "",
+                                         std::string signature_name = "") {
   CHECK_OR_RETURN(LocalFS()->IsDirectory(saved_model_dir))
     << Error::ValueError(saved_model_dir + std::string(" is not a valid directory"));
 
@@ -238,21 +250,22 @@ Maybe<void> InferenceSession::LoadModel(std::string saved_model_dir,
   }
 
   // compile job
-  this->OpenCtx(graph_name, signature);
-  this->Compile(graph_def.op_list());
-  this->CloseCtx();
+  JUST(this->OpenCtx(graph_name, signature));
+  JUST(this->Compile(graph_def.op_list()));
+  JUST(this->CloseCtx());
 
   return Maybe<void>::Ok();
 }
 
-std::map<std::string, Tensor> 
-InferenceSession::Run(std::string job_name,
-                      std::map<std::string, Tensor> args) {
-  JUST(this->CheckStatus(SessionStatus::RUNNING));
-  JUST(this->RunPushJobs(args));
+std::map<std::string, Tensor> InferenceSession::Run(std::string job_name,
+                                                    std::map<std::string, Tensor>& input_tensors) {
+  this->CheckStatus(SessionStatus::RUNNING).GetOrThrow();
+  this->RunPushJobs(input_tensors).GetOrThrow();
   auto job_inst = MakeUserJobInstance(job_name);
-  this->RunJob(job_inst);
-  return this->RunPullJobs(job_name);
+  this->RunJob(job_inst).GetOrThrow();
+  std::map<std::string, Tensor>> output_tensors;
+  this->RunPullJobs(output_tensors).GetOrThrow();
+  return output_tensors;
 }
 
 void InferenceSession::WaitForAllJobsFinished() {
@@ -263,11 +276,11 @@ void InferenceSession::WaitForAllJobsFinished() {
 }
 
 void InferenceSession::SetCheckpointPath(std::string checkpoint_path) {
-  JUST(this->CheckStatus(SessionStatus::OPEN));
+  this->CheckStatus(SessionStatus::OPEN).GetOrThrow();
   this->checkpoint_path_ = checkpoint_path;
 }
 
-void InferenceSession::SetJobSignature(std::string job_name, JobSignatureDef signature) {
+void InferenceSession::SetJobSignature(std::string job_name, JobSignatureDef& signature) {
   std::shared_ptr<JobConfigProto> job_conf = this->GetJobConf(job_name);
   job_conf->set_signature(signature);
 }
@@ -312,6 +325,9 @@ Maybe<void> InferenceSession::MakeConfigProto() {
   }
 
   this->config_proto_.mut_resource()->set_enable_legacy_model_io(true);
+  if (this->config_proto_.resource().machine_num() == 0) {
+    this->config_proto_.mut_resource()->set_machine_num(GetNodeSize());
+  }
   return Maybe<void>::Ok();
 }
 
@@ -328,37 +344,37 @@ std::shared_ptr<JobConfigProto>& InferenceSession::GetJobConf(std::string job_na
   }
 }
 
-void InferenceSession::RunJob(std::shared_ptr<CPPJobInstance> job_inst) {
+Maybe<void> InferenceSession::RunJob(std::shared_ptr<CPPJobInstance> job_inst) {
   std::shared_ptr<std::promise<void>> job_promise = std::make_shared_ptr<std::promise<void>>();
   auto job_finish_cb = [&job_promise](){ job_promise->set_value(); };
   job_inst->AddPostFinishCallback(job_finish_cb);
-  LaunchJob(job_inst);
+  JUST(LaunchJob(job_inst));
   this->job_promises_.append(job_promise);
+  return Maybe<void>::Ok();
 }
 
-Maybe<void> InferenceSession::RunPushJobs(std::map<std::string, Tensor> args) {
-  for (auto& pair : this->inter_user_job_info_.input_or_var_op_name2push_job_name()) {
+Maybe<void> InferenceSession::RunPushJobs(std::map<std::string, Tensor>& input_tensors) {
+  for (auto& pair : this->inter_user_job_info_->input_or_var_op_name2push_job_name()) {
     std::string input_name = pair.first;
     std::string push_job_name = pair.second;
-    if(!args.count(input_name)) {
+    if(!input_tensors.count(input_name)) {
       CHECK_OR_RETURN(false) 
         << Error::ValueError("input \"" + input_name + "\" is absent");
     }
 
-    Tensor input_tensor = args[input_name];
+    Tensor input_tensor = input_tensors[input_name];
 
     auto push_fn = [&input_tensor](OfBlob*){
       // TODO
     };
     auto push_job_inst = MakePushJobInstance(push_job_name, input_name, push_fn);
-    this->RunJob(push_job_inst);
+    JUST(this->RunJob(push_job_inst));
   }
   return Maybe<void>::Ok();
 }
 
-std::map<std::string, Tensor> InferenceSession::RunPullJobs() {
-  std::map<std::string, Tensor>> output_tensors;
-  for (auto& pair : this->inter_user_job_info_.output_or_var_op_name2pull_job_name()) {
+Maybe<void> InferenceSession::RunPullJobs(std::map<std::string, Tensor>& output_tensors) {
+  for (auto& pair : this->inter_user_job_info_->output_or_var_op_name2pull_job_name()) {
       std::string output_name = pair.first;
       std::string pull_job_name = pair.second;
       std::promise<Tensor> pull_job_promise;
@@ -366,10 +382,10 @@ std::map<std::string, Tensor> InferenceSession::RunPullJobs() {
         // TODO
       };
       auto pull_job_inst = MakePullJobInstance(pull_job_name, output_name, pull_fn);
-      this->RunJob(pull_job_inst);
+      JUST(this->RunJob(pull_job_inst));
       output_tensors[output_name] = pull_job_promise.get_future().get();
   }
-  return output_tensors;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferenceSession::RunLoadCheckpointJob() {
@@ -380,16 +396,16 @@ Maybe<void> InferenceSession::RunLoadCheckpointJob() {
     // TODO
   };
 
-  auto load_checkpoint_job_inst = MakeUserJobInstance(
-      this->inter_user_job_info_.global_model_load_job_name());
+  std::string load_job_name = this->inter_user_job_info_->global_model_load_job_name();
+  auto load_checkpoint_job_inst = MakeUserJobInstance(load_job_name);
   load_checkpoint_job_inst->SetPushCb(copy_model_load_path);
-  this->RunJob(load_checkpoint_job_inst);
+  JUST(this->RunJob(load_checkpoint_job_inst));
   return Maybe<void>::Ok();
 }
 
 void InferenceSession::PrintJobSet() {
-  JUST(this->CheckStatus({SessionStatus::OPEN, SessionStatus::RUNNING}));
-  const JobSet& job_set = JUST(GetJobSet());
+  this->CheckStatus({SessionStatus::OPEN, SessionStatus::RUNNING}).GetOrThrow();
+  const JobSet& job_set = GetJobSet().GetOrThrow();
   for (const auto& job : job_set.job()) {
       LOG(INFO) << "job_name:", job.job_conf().job_name();
       for (const auto& op_conf : job.net().op()) {
@@ -399,7 +415,7 @@ void InferenceSession::PrintJobSet() {
 }
 
 std::vector<std::string> InferenceSession::ListJobs() {
-  JUST(this->CheckStatus(SessionStatus::RUNNING));
+  this->CheckStatus(SessionStatus::RUNNING).GetOrThrow();
   std::vector<std::string> job_names;
   for(auto& pair : this->job_name2job_conf_) {
     job_names.push_back(pair.first);
@@ -408,18 +424,18 @@ std::vector<std::string> InferenceSession::ListJobs() {
 }
 
 std::vector<std::string> InferenceSession::ListInputs() {
-  JUST(this->CheckStatus(SessionStatus::RUNNING));
+  this->CheckStatus(SessionStatus::RUNNING).GetOrThrow();
   std::vector<std::string> input_names;
-  for (auto& pair : this->inter_user_job_info_.input_or_var_op_name2push_job_name()) {
+  for (auto& pair : this->inter_user_job_info_->input_or_var_op_name2push_job_name()) {
     input_names.push_back(pair.first);
   }
   return input_names;
 }
 
 std::vector<std::string> InferenceSession::ListOutputs() {
-  JUST(this->CheckStatus(SessionStatus::RUNNING));
+  this->CheckStatus(SessionStatus::RUNNING).GetOrThrow();
   std::vector<std::string> output_names;
-  for (auto& pair : this->inter_user_job_info_.output_or_var_op_name2pull_job_name()) {
+  for (auto& pair : this->inter_user_job_info_->output_or_var_op_name2pull_job_name()) {
     output_names.push_back(pair.first);
   }
   return output_names;

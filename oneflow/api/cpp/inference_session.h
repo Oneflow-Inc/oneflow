@@ -45,25 +45,33 @@ class InferenceSession {
   void Launch();
   void Close();
   void LoadModel(std::string saved_model_dir,
-                      int model_version,
-                      std::string saved_model_meta_file_basename,
-                      std::string graph_name = "",
-                      std::string signature_name = "");
-  std::map<std::string, Tensor> Run(std::string job_name, std::map<std::string, Tensor> args);
+                 ModelVersionPolicy model_version_policy,
+                 std::string saved_model_meta_file_basename,
+                 std::string graph_name = "",
+                 std::string signature_name = "");
+
+  std::map<std::string, Tensor> Run(std::string job_name, 
+                                    std::map<std::string, Tensor>& input_tensors);
 
  private:
   enum class SessionStatus { OPEN = 1, RUNNING = 2, CLOSED = 3 };
 
   Maybe<void> Init();
-  void OpenCtx(std::string job_name, JobSignatureDef signature, int batch_size);
-  void CloseCtx();
-  void Compile(std::vector<OperatorConf> op_list);
+  Maybe<void> OpenCtx(std::string job_name, JobSignatureDef signature, int batch_size);
+  Maybe<void> CloseCtx();
+  Maybe<void> Compile(std::vector<OperatorConf> op_list);
 
-  std::shared_ptr<cfg::JobConfProto> GetJobConf(std::string job_name);
+  Maybe<void> LoadModel_(std::string saved_model_dir,
+                         ModelVersionPolicy model_version_policy,
+                         std::string saved_model_meta_file_basename,
+                         std::string graph_name = "",
+                         std::string signature_name = "");
+
+  std::shared_ptr<JobConfProto> GetJobConf(std::string job_name);
   
-  void RunJob();
-  Maybe<void> RunPushJobs(std::map<std::string, Tensor> args);
-  void RunPullJobs();
+  Maybe<void> RunJob(std::shared_ptr<CPPJobInstance> job_inst);
+  Maybe<void> RunPushJobs(std::map<std::string, Tensor>& input_tensors);
+  Maybe<void> RunPullJobs(std::map<std::string, Tensor>& output_tensors);
   Maybe<void> RunLoadCheckpointJob();
 
   void WaitForAllJobsFinished();
@@ -77,15 +85,15 @@ class InferenceSession {
   Maybe<void> MakeConfigProto();
 
   void PrintJobSet();
-  std::vector<JobConfigProto> ListJobs();
+  std::vector<std::string> ListJobs();
   std::vector<std::string> ListInputs();
   std::vector<std::string> ListOutputs();
 
   SessionOption option_;
   bool is_mirrored_;
   std::string checkpoint_path_;
-  std::map<std::string, std::shared_ptr<cfg::JobConfigProto>> job_name2job_conf_;
-  InterUserJobInfo inter_user_job_info_;
+  std::map<std::string, std::shared_ptr<JobConfigProto>> job_name2job_conf_;
+  InterUserJobInfo* inter_user_job_info_;
   std::string cur_job_name_;
   std::vector<std::shared_ptr<std::promise<void>>> job_promises_;
   SessionStatus status_;
