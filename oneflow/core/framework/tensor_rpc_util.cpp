@@ -88,7 +88,7 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
     if (this->has_consumer_nd_sbp_constraint_symbol_id()) {
       const auto& that_rank_constaint =
           JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
-            this->consumer_nd_sbp_constraint_symbol_id()));
+            this->consumer_nd_sbp_constraint_symbol_id()))->nd_sbp();
       const auto& this_rank_constaint = JUST(consumer_nd_sbp_constraint.value());
       CHECK_OR_RETURN(this_rank_constaint == that_rank_constaint);
     }
