@@ -46,7 +46,7 @@ class MeshGrid(Module):
         return outputs
 
 
-def meshgrid_op(*inputs):
+def meshgrid_op(*tensors):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/_modules/torch/functional.html#meshgrid
@@ -83,7 +83,7 @@ def meshgrid_op(*inputs):
                 [4., 5., 6.],
                 [4., 5., 6.]], dtype=oneflow.float32)
     """
-    return MeshGrid()(inputs)
+    return MeshGrid()(tensors)
 
 
 if __name__ == "__main__":

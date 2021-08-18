@@ -32,8 +32,8 @@ namespace one {
 
 Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
-  return std::dynamic_pointer_cast<MirroredTensor>(
-      JUST(functional::Constant(*shape_, functional::Scalar(0), dtype_, device_)));
+  return std::dynamic_pointer_cast<MirroredTensor>(JUST(functional::Constant(
+      *shape_, functional::Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
 }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
@@ -84,8 +84,7 @@ Maybe<Tensor> MirroredTensor::clone() const {
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                     DataType dtype,
-                                                     Symbol<cfg::ParallelDistribution> nd_sbp,
+                                                     DataType dtype, Symbol<cfg::NdSbp> nd_sbp,
                                                      Symbol<ParallelDesc> parallel_desc,
                                                      bool is_lazy, bool requires_grad,
                                                      bool is_leaf) {

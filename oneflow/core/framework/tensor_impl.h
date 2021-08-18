@@ -36,7 +36,7 @@ class VmLocalDepObject;
 
 namespace cfg {
 
-class ParallelDistribution;
+class NdSbp;
 }
 
 class Shape;
@@ -78,7 +78,7 @@ class TensorImpl {
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad);
   Maybe<Tensor> mut_acc_grad();
-  void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
+  void set_requires_grad(bool requires_grad);
   Maybe<void> set_retain_grad(bool retain_grad);
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
@@ -132,9 +132,9 @@ class ConsistentTensorImpl : public TensorImpl {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape_ptr(); }
   DataType dtype() const override { return tensor_meta_->dtype(); }
-  Symbol<cfg::ParallelDistribution> nd_sbp() const { return tensor_meta_->nd_sbp(); }
+  Symbol<cfg::NdSbp> nd_sbp() const { return tensor_meta_->nd_sbp(); }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
-  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint() const {
+  const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint() const {
     return consumer_nd_sbp_constraint_;
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
@@ -146,9 +146,7 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
-  void set_consumer_nd_sbp_constraint(Symbol<cfg::ParallelDistribution> val) {
-    consumer_nd_sbp_constraint_ = val;
-  }
+  void set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
 
   ConsistentTensorMeta* mut_tensor_meta() {
     UNIMPLEMENTED();
@@ -171,7 +169,7 @@ class ConsistentTensorImpl : public TensorImpl {
         transport_token_() {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Optional<Symbol<cfg::ParallelDistribution>> consumer_nd_sbp_constraint_;
+  Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint_;
   Optional<TransportToken> transport_token_;
 };
 

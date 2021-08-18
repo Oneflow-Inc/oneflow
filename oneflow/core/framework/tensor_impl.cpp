@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <type_traits>
-#include "oneflow/api/foreign_lock_helper.h"
-#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/tensor.h"
@@ -33,6 +32,11 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
+
+void TensorImpl::set_requires_grad(bool requires_grad) {
+  requires_grad_ = requires_grad;
+  if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+}
 
 Maybe<Tensor> TensorImpl::acc_grad() const {
   CHECK_NOTNULL_OR_RETURN(autograd_meta_);
@@ -132,26 +136,17 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   if (!eager_blob_object_) { return tensor_meta()->shape_ptr(); }
   if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }
 
-  std::atomic<bool> synced(false);
-
   const auto& shape_ptr = eager_blob_object_->blob_desc().shape_ptr();
-  CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        this,
-        [&synced, &shape_ptr](uint64_t of_blob_ptr) {
-          const auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          of_blob->blob().shape_view().ToShape(const_cast<Shape*>(shape_ptr.get()));
-          synced = true;
-        },
-        "const"));
-    return Maybe<void>::Ok();
+  const auto& Callback =
+      std::make_shared<std::function<void(uint64_t)>>([&shape_ptr](uint64_t of_blob_ptr) {
+        const auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        of_blob->blob().shape_view().ToShape(const_cast<Shape*>(shape_ptr.get()));
+      });
+  CHECK_JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(this, sc, Callback, "const");
+    });
   }));
-
-  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
-    // spin wait
-    while (!synced) {}
-  });
-
   eager_blob_object_->set_is_shape_synced(true);
   return shape_ptr;
 }
@@ -196,7 +191,7 @@ bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
 
 size_t ConsistentTensorMeta::CalcHashValue() const {
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Symbol<cfg::ParallelDistribution>>()(nd_sbp())
+         ^ std::hash<Symbol<cfg::NdSbp>>()(nd_sbp())
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
 }
 
@@ -218,7 +213,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
 
 namespace {
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::ParallelDistribution& nd_sbp,
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {
