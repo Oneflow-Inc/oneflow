@@ -24,10 +24,10 @@ class LrWarmUpDict(object):
         assert isinstance(config_dict, dict)
         assert "type" in config_dict
         self._dict = config_dict
-        assert self._dict["type"] in ["constent", "linear"]
+        assert self._dict["type"] in ["mul_constant", "mul_linear"]
 
     def generate_conf_for_graph(self, opt_confs):
-        if self._dict["type"] == "constent":
+        if self._dict["type"] == "mul_constant":
             for opt_conf in opt_confs:
                 warmup_conf = opt_conf.mutable_warmup_conf()
                 warmup_conf.mutable_constant_conf().set_warmup_batches(
@@ -36,7 +36,7 @@ class LrWarmUpDict(object):
                 warmup_conf.mutable_constant_conf().set_multiplier(
                     self._dict["multiplier"]
                 )
-        if self._dict["type"] == "linear":
+        if self._dict["type"] == "mul_linear":
             for opt_conf in opt_confs:
                 warmup_conf = opt_conf.mutable_warmup_conf()
                 warmup_conf.mutable_linear_conf().set_warmup_batches(
