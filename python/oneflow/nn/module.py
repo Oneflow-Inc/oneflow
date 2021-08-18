@@ -18,10 +18,7 @@ from collections import OrderedDict, namedtuple
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import numpy as np
-
 import oneflow as flow
-from oneflow.framework.check_point_v2 import FeedValueToVariable
-from oneflow.framework.function_util import global_function_or_identity
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
 
@@ -376,7 +373,8 @@ class Module(object):
                     )
                     continue
                 try:
-                    param.copy_(input_param)
+                    with flow.no_grad():
+                        param.copy_(input_param)
                 except Exception as ex:
                     error_msgs.append(
                         'While copying the parameter named "{}", whose dimensions in the model are {} and whose dimensions in the checkpoint are {}, an exception occurred : {}.'.format(
@@ -502,6 +500,12 @@ class Module(object):
     def to(self, device: Optional[Union[str, flow.device]] = None):
         def convert(t):
             return t.to(device)
+
+        return self._apply(convert)
+
+    def to_consistent(self, placement=None, sbp=None):
+        def convert(t):
+            return t.to_consistent(placement=placement, sbp=sbp)
 
         return self._apply(convert)
 

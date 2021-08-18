@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 #include "oneflow/core/cuda/elementwise.cuh"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -58,7 +59,7 @@ struct GeluGradFunctor<half> {
 }  // namespace
 
 template<typename T>
-class GpuGeluKernel final : public user_op::OpKernel {
+class GpuGeluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuGeluKernel() = default;
   ~GpuGeluKernel() override = default;
@@ -85,7 +86,7 @@ REGISTER_GPU_GELU_KERNEL(double)
 REGISTER_GPU_GELU_KERNEL(half)
 
 template<typename T>
-class GpuGeluGradKernel final : public user_op::OpKernel {
+class GpuGeluGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuGeluGradKernel() = default;
   ~GpuGeluGradKernel() override = default;

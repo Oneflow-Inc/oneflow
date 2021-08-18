@@ -123,10 +123,10 @@ int32_t GetOuterSize(const ShapeView& alpha_shape, const ShapeView& x_shape) {
 }  // namespace
 
 template<typename T>
-class GpuPReluKernel final : public user_op::OpKernel {
+class TfGpuPReluKernel final : public user_op::OpKernel {
  public:
-  GpuPReluKernel() = default;
-  ~GpuPReluKernel() = default;
+  TfGpuPReluKernel() = default;
+  ~TfGpuPReluKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -156,9 +156,9 @@ class GpuPReluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_PRELU_KERNEL(dtype)                                              \
+#define REGISTER_TF_GPU_PRELU_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("tf_prelu")                                                    \
-      .SetCreateFn<GpuPReluKernel<dtype>>()                                           \
+      .SetCreateFn<TfGpuPReluKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
@@ -171,14 +171,14 @@ class GpuPReluKernel final : public user_op::OpKernel {
         return tmp_buffer_size;                                                       \
       });
 
-REGISTER_GPU_PRELU_KERNEL(float)
-REGISTER_GPU_PRELU_KERNEL(double)
+REGISTER_TF_GPU_PRELU_KERNEL(float)
+REGISTER_TF_GPU_PRELU_KERNEL(double)
 
 template<typename T>
-class GpuPReluGradKernel final : public user_op::OpKernel {
+class TfGpuPReluGradKernel final : public user_op::OpKernel {
  public:
-  GpuPReluGradKernel() = default;
-  ~GpuPReluGradKernel() = default;
+  TfGpuPReluGradKernel() = default;
+  ~TfGpuPReluGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -223,9 +223,9 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_PRELU_GRAD_KERNEL(dtype)                                          \
+#define REGISTER_TF_GPU_PRELU_GRAD_KERNEL(dtype)                                       \
   REGISTER_USER_KERNEL("tf_prelu_grad")                                                \
-      .SetCreateFn<GpuPReluGradKernel<dtype>>()                                        \
+      .SetCreateFn<TfGpuPReluGradKernel<dtype>>()                                      \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
@@ -238,7 +238,7 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
         return tmp_buffer_size;                                                        \
       });
 
-REGISTER_GPU_PRELU_GRAD_KERNEL(float)
-REGISTER_GPU_PRELU_GRAD_KERNEL(double)
+REGISTER_TF_GPU_PRELU_GRAD_KERNEL(float)
+REGISTER_TF_GPU_PRELU_GRAD_KERNEL(double)
 
 }  // namespace oneflow

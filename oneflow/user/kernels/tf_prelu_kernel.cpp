@@ -19,10 +19,10 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-class CpuPReluKernel final : public user_op::OpKernel {
+class TfCpuPReluKernel final : public user_op::OpKernel {
  public:
-  CpuPReluKernel() = default;
-  ~CpuPReluKernel() = default;
+  TfCpuPReluKernel() = default;
+  ~TfCpuPReluKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -46,9 +46,9 @@ class CpuPReluKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_PRELU_KERNEL(dtype)                                              \
+#define REGISTER_TF_CPU_PRELU_KERNEL(dtype)                                           \
   REGISTER_USER_KERNEL("tf_prelu")                                                    \
-      .SetCreateFn<CpuPReluKernel<dtype>>()                                           \
+      .SetCreateFn<TfCpuPReluKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                             \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
@@ -56,14 +56,14 @@ class CpuPReluKernel final : public user_op::OpKernel {
         return GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));               \
       });
 
-REGISTER_CPU_PRELU_KERNEL(float)
-REGISTER_CPU_PRELU_KERNEL(double)
+REGISTER_TF_CPU_PRELU_KERNEL(float)
+REGISTER_TF_CPU_PRELU_KERNEL(double)
 
 template<typename T>
-class CpuPReluGradKernel final : public user_op::OpKernel {
+class TfCpuPReluGradKernel final : public user_op::OpKernel {
  public:
-  CpuPReluGradKernel() = default;
-  ~CpuPReluGradKernel() = default;
+  TfCpuPReluGradKernel() = default;
+  ~TfCpuPReluGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -99,9 +99,9 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_PRELU_GRAD_KERNEL(dtype)                                          \
+#define REGISTER_TF_CPU_PRELU_GRAD_KERNEL(dtype)                                       \
   REGISTER_USER_KERNEL("tf_prelu_grad")                                                \
-      .SetCreateFn<CpuPReluGradKernel<dtype>>()                                        \
+      .SetCreateFn<TfCpuPReluGradKernel<dtype>>()                                      \
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
@@ -109,7 +109,7 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
         return 3 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));            \
       });
 
-REGISTER_CPU_PRELU_GRAD_KERNEL(float)
-REGISTER_CPU_PRELU_GRAD_KERNEL(double)
+REGISTER_TF_CPU_PRELU_GRAD_KERNEL(float)
+REGISTER_TF_CPU_PRELU_GRAD_KERNEL(double)
 
 }  // namespace oneflow
