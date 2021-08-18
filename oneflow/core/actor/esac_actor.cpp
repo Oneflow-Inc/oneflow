@@ -13,11 +13,46 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/esac_compute_actor.h"
+#include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 
-void EsacCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+class EsacActor final : public Actor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EsacActor);
+  EsacActor() = default;
+  ~EsacActor() override = default;
+
+ protected:
+  void VirtualActorInit(const TaskProto&) override;
+  int64_t InBnId4RegstDescId(int64_t id) const { return regst_desc_id2in_bn_id_.at(id); }
+
+  bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
+
+ private:
+  void Act() override;
+  void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
+  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
+  bool IsCustomizedReadReady() const override;
+  void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override {
+    return ReceiveAllEordMsg() && consumed_rs_.available_regst_desc_cnt() == 0;
+  }
+  void AsyncReturnAllCustomizedReadableRegst() override;
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
+  }
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
+  int64_t GetCurProcessedRegstDescId() const;
+
+  RegstSlot consumed_rs_;
+  int64_t cur_processed_regst_desc_id_;
+  HashMap<int64_t, int64_t> regst_desc_id2in_bn_id_;
+};
+
+void EsacActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_EQ(1, exec_kernel_vec().size());
   const int32_t input_bns_size =
       task_proto.exec_sequence().exec_node().Get(0).kernel_conf().op_attribute().input_bns_size();
@@ -33,21 +68,20 @@ void EsacCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
   consumed_rs_.InitedDone();
   cur_processed_regst_desc_id_ = -1;
-  OF_SET_MSG_HANDLER(&EsacCompActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&EsacActor::HandlerNormal);
 }
 
-void EsacCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
+void EsacActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
   CHECK_EQ(0, consumed_rs_.TryPushBackRegst(msg.regst()));
 }
 
-bool EsacCompActor::IsCustomizedReadReady() const { return -1 != GetCurProcessedRegstDescId(); }
+bool EsacActor::IsCustomizedReadReady() const { return -1 != GetCurProcessedRegstDescId(); }
 
-void EsacCompActor::ForEachCurCustomizedReadableRegst(
-    std::function<void(const Regst*)> handler) const {
+void EsacActor::ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)> handler) const {
   handler(consumed_rs_.Front(cur_processed_regst_desc_id_));
 }
 
-void EsacCompActor::Act() {
+void EsacActor::Act() {
   cur_processed_regst_desc_id_ = GetCurProcessedRegstDescId();
   Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   CHECK(cur_regst);
@@ -60,11 +94,11 @@ void EsacCompActor::Act() {
   });
 }
 
-void EsacCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+void EsacActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   HandleProducedNaiveDataRegstToConsumer();
 }
 
-void EsacCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
+void EsacActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   CHECK(cur_regst);
   AsyncSendRegstMsgToProducer(cur_regst);
@@ -72,14 +106,14 @@ void EsacCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   cur_processed_regst_desc_id_ = -1;
 }
 
-void EsacCompActor::AsyncReturnAllCustomizedReadableRegst() {
+void EsacActor::AsyncReturnAllCustomizedReadableRegst() {
   CHECK_EQ(-1, cur_processed_regst_desc_id_);
   CHECK_EQ(0, consumed_rs_.available_regst_desc_cnt());
 }
 
-bool EsacCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+bool EsacActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
 
-int64_t EsacCompActor::GetCurProcessedRegstDescId() const {
+int64_t EsacActor::GetCurProcessedRegstDescId() const {
   int64_t cur_processed_regst_desc_id = -1;
   consumed_rs_.ForChosenRegstDeq(
       [&cur_processed_regst_desc_id](int64_t) { return cur_processed_regst_desc_id == -1; },
@@ -90,6 +124,6 @@ int64_t EsacCompActor::GetCurProcessedRegstDescId() const {
   return cur_processed_regst_desc_id;
 }
 
-REGISTER_ACTOR(kEsac, EsacCompActor);
+REGISTER_ACTOR(kEsac, EsacActor);
 
 }  // namespace oneflow
