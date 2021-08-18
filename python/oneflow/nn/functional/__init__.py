@@ -45,3 +45,4 @@ from oneflow.F import smooth_l1_loss
 from oneflow.F import pad
 from oneflow.F import upsample
 from oneflow.nn.modules.one_hot import one_hot
+from oneflow.nn.modules.loss import distributed_sparse_softmax_cross_entropy

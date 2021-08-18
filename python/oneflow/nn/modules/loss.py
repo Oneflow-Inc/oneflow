@@ -219,26 +219,6 @@ class CrossEntropyLoss(Module):
                 out = out.reshape((b, h, w))
             return out
 
-def distributed_sparse_softmax_cross_entropy(
-    logits, labels 
-):
-    """
-
-    import oneflow as flow
-    batch_size = 10
-    x = flow.randn(batch_size, 1000)
-    labels = flow.ones((batch_size,), dtype=flow.int32)
-    l = flow.nn.distributed_sparse_softmax_cross_entropy(x, labels)
-    """
-    assert labels is not None
-    assert logits is not None
-    if len(labels.shape) == len(logits.shape):
-        assert labels.shape[-1] == 1
-        labels = flow.squeeze(labels, axis=[-1])
-    else:
-        assert len(labels.shape) == len(logits.shape) - 1
-    _, out = flow.F.sparse_softmax_cross_entropy_ms(logits, labels,  int(logits.shape[-1]))
-    return out
 
 class BCELoss(Module):
     """This operator computes the binary cross entropy loss.
@@ -1229,6 +1209,27 @@ class CombinedMarginLoss(Module):
             x, label, m1=self.m1, m2=self.m2, m3=self.m3, depth=depth
         )
         return y
+
+
+def distributed_sparse_softmax_cross_entropy(logits, labels):
+    r"""
+    import oneflow as flow
+    batch_size = 10
+    x = flow.randn(batch_size, 1000)
+    labels = flow.ones((batch_size,), dtype=flow.int32)
+    l = flow.nn.distributed_sparse_softmax_cross_entropy(x, labels)
+    """
+    assert labels is not None
+    assert logits is not None
+    if len(labels.shape) == len(logits.shape):
+        assert labels.shape[-1] == 1
+        labels = flow.squeeze(labels, axis=[-1])
+    else:
+        assert len(labels.shape) == len(logits.shape) - 1
+    _, out = flow.F.sparse_softmax_cross_entropy_ms(
+        logits, labels, int(logits.shape[-1])
+    )
+    return out
 
 
 if __name__ == "__main__":
