@@ -18,7 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_FUNCTION_H_
 
 #include "oneflow/core/common/auto_registration_factory.h"
-#include "oneflow/core/framework/op_interpreter.h"  // AutoGradCaptureState
+#include "oneflow/core/framework/op_interpreter.h"
 
 namespace oneflow {
 namespace one {
