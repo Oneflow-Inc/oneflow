@@ -66,8 +66,6 @@ class TestTensor(flow.unittest.TestCase):
         shape = (2, 3, 4, 5)
         l_x = flow.Tensor(*shape)
         l_y = flow.Tensor(*shape, requires_grad=True)
-        l_x.fill_(1.0)
-        l_y.fill_(2.0)
 
         x = l_x.to_consistent(placement=placement, sbp=sbp)
         y = l_y.to_consistent( placement=placement, sbp=sbp)
@@ -86,19 +84,16 @@ class TestTensor(flow.unittest.TestCase):
 
         test_case.assertTrue(m.is_leaf)
         test_case.assertFalse(m.requires_grad)
-        m.requires_grad = True
 
         l_v = flow.Tensor(*shape, requires_grad=True)
-        l_v.fill_(3.0)
         v = l_v.to_consistent(placement=placement, sbp=sbp)
         
         z.retain_grad()
         w = v + z
 
-        l_grad = flow.Tensor(*shape)
-        l_grad.fill_(1.0)
+        l_grad = flow.ones(*shape)
         grad = l_grad.to_consistent(placement=placement, sbp=sbp)
-        w.backward(gradient=grad, retain_graph=True)
+        w.backward(gradient=grad)
 
         test_case.assertTrue(
             np.allclose(l_v.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
@@ -110,7 +105,6 @@ class TestTensor(flow.unittest.TestCase):
         #     np.allclose(z.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
         # )
         test_case.assertIsNone(l_x.grad)
-        w.backward(gradient=grad, retain_graph=True)
         
 
 if __name__ == "__main__":
