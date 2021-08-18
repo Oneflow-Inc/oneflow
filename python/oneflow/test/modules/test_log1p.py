@@ -23,6 +23,7 @@ import oneflow as flow
 import oneflow.unittest
 from automated_test_util import *
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestLog1pModule(flow.unittest.TestCase):
     @autotest()
@@ -30,6 +31,7 @@ class TestLog1pModule(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         return torch.log1p(x)
+
 
 if __name__ == "__main__":
     unittest.main()

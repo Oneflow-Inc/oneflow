@@ -558,7 +558,6 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.mean(input.numpy(), axis=0)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
 
-
     @autotest()
     def test_log_tensor_with_random_data(test_case):
         device = random_device()
@@ -571,21 +570,17 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         return x.log1p()
 
+    @autotest()
+    def test_neg_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return -x
 
-
-    @flow.unittest.skip_unless_1n1d()
-    def test_neg(test_case):
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = -input
-        np_out = -input.numpy()
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-
-    @flow.unittest.skip_unless_1n1d()
-    def test_negative(test_case):
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = input.negative()
-        np_out = -input.numpy()
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
+    @autotest()
+    def test_negative_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        return x.negative()
 
     @flow.unittest.skip_unless_1n1d()
     def test_greater(test_case):

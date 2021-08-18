@@ -33,9 +33,11 @@ testing = False
 def torch_tensor_to_flow(x):
     return flow.tensor(x.cpu().numpy())
 
+
 note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
+
 
 class PyTorchDoesNotSupportError(Exception):
     def __init__(self, exc):
@@ -103,7 +105,7 @@ def get_args(callable, *args, **kwargs):
             continue
         pytorch_kwargs[key] = get_pytorch_value(value)
         oneflow_kwargs[key] = get_oneflow_value(value)
-    
+
     if not isinstance(callable, (torch_original.nn.Module)):
         new_pytorch_args = []
         new_pytorch_kwargs = {}
@@ -123,6 +125,7 @@ def get_args(callable, *args, **kwargs):
 
 
 counter = 0
+
 
 def GetDualObject(name, pytorch, oneflow):
     global counter
@@ -193,58 +196,66 @@ def GetDualObject(name, pytorch, oneflow):
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 return dual_method
+
             magic_methods_for_new_cls[method_name] = get_dual_method(method_name)
     Cls = type(f"{name}_{counter}", (DualObject,), magic_methods_for_new_cls)
     return Cls(name, pytorch, oneflow)
 
+
 def note_print_args(x, end=True):
-    if(end==True):
-        if(type(x) is str):
-            print("\033[32m'{}'\033[0m".format(x), end=', ')
+    if end == True:
+        if type(x) is str:
+            print("\033[32m'{}'\033[0m".format(x), end=", ")
         else:
-            print("\033[32m{}\033[0m".format(x), end=', ')
+            print("\033[32m{}\033[0m".format(x), end=", ")
     else:
-        if(type(x) is str):
-             print("\033[32m'{}'\033[0m".format(x), end='')
+        if type(x) is str:
+            print("\033[32m'{}'\033[0m".format(x), end="")
         else:
-            print("\033[32m{}\033[0m".format(x), end='')
+            print("\033[32m{}\033[0m".format(x), end="")
+
 
 def note_print_kwargs(x, y, end=True):
-    if(end==True):
-        if(type(y) is str):
-            print("\033[32m{}='{}'\033[0m".format(x, y), end=', ')
+    if end == True:
+        if type(y) is str:
+            print("\033[32m{}='{}'\033[0m".format(x, y), end=", ")
         else:
-            print("\033[32m{}={}\033[0m".format(x, y), end=', ')
+            print("\033[32m{}={}\033[0m".format(x, y), end=", ")
     else:
-        if(type(y) is str):
-            print("\033[32m{}='{}'\033[0m".format(x, y), end='')
+        if type(y) is str:
+            print("\033[32m{}='{}'\033[0m".format(x, y), end="")
         else:
-            print("\033[32m{}={}\033[0m".format(x, y), end='')
+            print("\033[32m{}={}\033[0m".format(x, y), end="")
+
 
 def print_note_fake_program():
     code_len = len(note_pytorch_method_names)
     for i in range(code_len):
         note_pytorch_args_len = len(note_pytorch_args[i])
         note_pytorch_kwargs_len = len(note_pytorch_kwargs[i])
-        print("\033[32m{}\033[0m".format(note_pytorch_method_names[i]), end='')
-        print('\033[32m(\033[0m', end='')
+        print("\033[32m{}\033[0m".format(note_pytorch_method_names[i]), end="")
+        print("\033[32m(\033[0m", end="")
         if note_pytorch_args[i]:
             index = 0
             for x in note_pytorch_args[i]:
                 index += 1
                 note_print_args(x, index < note_pytorch_args_len)
-            
+
         if note_pytorch_kwargs[i]:
             index = 0
             for x in note_pytorch_kwargs[i].keys():
                 index += 1
-                note_print_kwargs(x, note_pytorch_kwargs[i][x], index < note_pytorch_kwargs_len)
-        print('\033[32m)\033[0m')
+                note_print_kwargs(
+                    x, note_pytorch_kwargs[i][x], index < note_pytorch_kwargs_len
+                )
+        print("\033[32m)\033[0m")
+
 
 def clear_note_fake_program():
     note_pytorch_method_names.clear()
     note_pytorch_args.clear()
     note_pytorch_kwargs.clear()
+
 
 class DualObject:
     def __init__(self, name, pytorch, oneflow):

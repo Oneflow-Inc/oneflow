@@ -126,6 +126,7 @@ class TestCos(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestLogModule(flow.unittest.TestCase):
     @autotest()
@@ -133,6 +134,7 @@ class TestLogModule(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         return torch.log(x)
+
 
 def _test_std(test_case, shape, device):
     np_arr = np.random.randn(*shape)
