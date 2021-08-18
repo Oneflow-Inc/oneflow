@@ -200,8 +200,6 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
     sge.length = std::min(block_size, local_mem.mem_size() - i * block_size);
     sge.lkey = local_mem.mr()->lkey;
     wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
-    // std::cout<<"In PostReadRequest,the lkey:"<<sge.lkey << std::endl;
-    std::cout<<"In PostReadRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
     wr.next = nullptr;
     wr.sg_list = &sge;
     wr.num_sge = 1;
@@ -223,14 +221,9 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   ibv_send_wr wr{};
   ibv_sge sge{};
   sge.addr = reinterpret_cast<uint64_t>(reinterpret_cast<void*>(msg_mr->addr()));
- // sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
-  //sge.length = msg_mr->mem_desc().mem_size();
- // sge.lkey = msg_mr->mem_desc().mr()->lkey;
   sge.length = msg_mr->size();
   sge.lkey = msg_mr->lkey();
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
-  // std::cout<<"In PostSendRequest,the lkey:"<<sge.lkey << std::endl;
-  //std::cout<<"In PostSendRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
   wr.next = nullptr;
   wr.sg_list = &sge;
   wr.num_sge = 1;
@@ -300,30 +293,15 @@ void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
   ibv_recv_wr wr{};
   ibv_sge sge{};
   sge.addr = reinterpret_cast<uint64_t>(reinterpret_cast<void*>(msg_mr->addr()));
-  //sge.length = msg_mr->mem_desc().mem_size();
- // sge.lkey = msg_mr->mem_desc().mr()->lkey;
   sge.length = msg_mr->size();
   sge.lkey = msg_mr->lkey();
-  // sge.addr = reinterpret_cast<uint64_t>(msg_mr->mem_desc().mem_ptr());
-  // sge.length = msg_mr->mem_desc().mem_size();
-  // sge.lkey = msg_mr->mem_desc().mr()->lkey;
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
-  // std::cout<<"In PostRecvRequest,the lkey:"<<sge.lkey << std::endl;
- // std::cout<<"In PostRecvRequest,the wr.wr_id:"<<wr.wr_id << std::endl;
   wr.next = nullptr;
   wr.sg_list = &sge;
   wr.num_sge = 1;
   ibv_recv_wr* bad_wr = nullptr;
   CHECK_EQ(ibv_post_recv(qp_, &wr, &bad_wr), 0);
 }
-
-/*ActorMsgMR* IBVerbsQP::GetOneSendMsgMRFromBuf() {
-  std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
-  if (send_msg_buf_.empty()) { send_msg_buf_.push(new ActorMsgMR(pd_)); }
-  ActorMsgMR* msg_mr = send_msg_buf_.front();
-  send_msg_buf_.pop();
-  return msg_mr;
-}*/
 
 WorkRequestId* IBVerbsQP::NewWorkRequestId() {
   WorkRequestId* wr_id = new WorkRequestId;
