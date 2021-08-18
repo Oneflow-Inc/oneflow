@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_THREAD_MSG_H_
 #define ONEFLOW_CORE_VM_THREAD_MSG_H_
 
+#include <functional>
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/stream_runtime_desc.msg.h"
 
@@ -28,7 +29,7 @@ OBJECT_MSG_BEGIN(ThreadCtx);
   OF_PUBLIC void __Init__(const StreamRtDesc& stream_rt_desc) {
     set_stream_rt_desc(&stream_rt_desc);
   }
-  OF_PUBLIC void LoopRun();
+  OF_PUBLIC void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
   // fields
   OBJECT_MSG_DEFINE_PTR(const StreamRtDesc, stream_rt_desc); 
 

@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/thread/consistent_unique_id.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 
 namespace oneflow {
@@ -31,19 +31,26 @@ class DataTransportTokenView final {
     return reinterpret_cast<DataTransportTokenView*>(transport_token);
   }
 
+  Maybe<void> set_thread_consistent_id(int32_t val) {
+    CHECK_LT_OR_RETURN(val, (1 << kDataTransportTokenThreadConsistentUIdBit));
+    thread_consistent_id_ = val;
+    return Maybe<void>::Ok();
+  }
+
   void set_data_seq_id(int64_t seq_id) { data_seq_id_ = seq_id; }
 
  private:
   uint16_t src_rank_;
   uint16_t dst_rank_;
-  uint32_t type_ : 2;  // TransportTokenType
-  uint32_t data_seq_id_ : 30;
+  uint8_t type_ : kTransportTokenTypeBit;  // TransportTokenType
+  uint8_t thread_consistent_id_;
+  uint16_t data_seq_id_;
 };
 static_assert(sizeof(DataTransportTokenView) == sizeof(uint64_t), "");
 
 class MetaTransportTokenView final {
  public:
-  int64_t thread_consistent_unique_id() const { return thread_consistent_unique_id_; }
+  int64_t thread_consistent_id() const { return thread_consistent_id_; }
   int64_t rank_group_level() const { return rank_group_level_; }
 
   static Maybe<MetaTransportTokenView*> MutCast(TransportToken* transport_token) {
@@ -56,10 +63,10 @@ class MetaTransportTokenView final {
     return reinterpret_cast<const MetaTransportTokenView*>(transport_token);
   }
 
-  Maybe<void> set_thread_consistent_unique_id(int8_t val) {
+  Maybe<void> set_thread_consistent_id(int8_t val) {
     CHECK_GE_OR_RETURN(val, 0);
-    CHECK_LT_OR_RETURN(val, 1 << kTransportTokenThreadConsistentUIdBit);
-    thread_consistent_unique_id_ = val;
+    CHECK_LT_OR_RETURN(val, 1 << kCtrlTransportTokenThreadConsistentUIdBit);
+    thread_consistent_id_ = val;
     return Maybe<void>::Ok();
   }
 
@@ -80,7 +87,7 @@ class MetaTransportTokenView final {
   uint16_t src_rank_;
   uint16_t dst_rank_;
   uint8_t type_ : 2;  // TransportTokenType
-  uint8_t thread_consistent_unique_id_ : kTransportTokenThreadConsistentUIdBit;
+  uint8_t thread_consistent_id_ : kCtrlTransportTokenThreadConsistentUIdBit;
   uint8_t rank_group_level_ : kTransportTokenRankGroupLevelBit;
   uint8_t high_meta_seq_id_;
   uint16_t low_meta_seq_id_;
@@ -89,7 +96,7 @@ static_assert(sizeof(MetaTransportTokenView) == sizeof(uint64_t), "");
 
 class CtrlTransportTokenView final {
  public:
-  int64_t thread_consistent_unique_id() const { return thread_consistent_unique_id_; }
+  int64_t thread_consistent_id() const { return thread_consistent_id_; }
   int64_t rank_group_level() const { return rank_group_level_; }
 
   static Maybe<CtrlTransportTokenView*> MutCast(TransportToken* transport_token) {
@@ -102,10 +109,10 @@ class CtrlTransportTokenView final {
     return reinterpret_cast<const CtrlTransportTokenView*>(transport_token);
   }
 
-  Maybe<void> set_thread_consistent_unique_id(int8_t val) {
+  Maybe<void> set_thread_consistent_id(int8_t val) {
     CHECK_GE_OR_RETURN(val, 0);
-    CHECK_LT_OR_RETURN(val, 1 << kTransportTokenThreadConsistentUIdBit);
-    thread_consistent_unique_id_ = val;
+    CHECK_LT_OR_RETURN(val, 1 << kCtrlTransportTokenThreadConsistentUIdBit);
+    thread_consistent_id_ = val;
     return Maybe<void>::Ok();
   }
   Maybe<void> set_rank_group_level(int32_t val) {
@@ -128,7 +135,7 @@ class CtrlTransportTokenView final {
   uint16_t src_rank_;
   uint16_t dst_rank_;
   uint8_t type_ : 2;  // TransportTokenType
-  uint8_t thread_consistent_unique_id_ : kTransportTokenThreadConsistentUIdBit;
+  uint8_t thread_consistent_id_ : kCtrlTransportTokenThreadConsistentUIdBit;
   uint8_t rank_group_level_ : kTransportTokenRankGroupLevelBit;
   uint8_t cmd_;
   uint16_t ctrl_seq_id_;
@@ -143,15 +150,20 @@ TransportToken::TransportToken(TransportTokenType type) {
   type_ = type;
 }
 
-/*static*/ TransportToken TransportToken::NewDataTransportToken() {
-  static auto* seq_id = new std::atomic<int64_t>();
+/*static*/ Maybe<TransportToken> TransportToken::NewDataTransportToken(
+    Symbol<ParallelDesc> parallel_desc) {
+  int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
+  static thread_local HashMap<Symbol<ParallelDesc>, int64_t> parallel_desc2seq_id;
+  auto* seq_id = &parallel_desc2seq_id[parallel_desc];
   TransportToken transport_token(kDataTransportTokenType);
-  CHECK_JUST(DataTransportTokenView::MutCast(&transport_token))->set_data_seq_id(++*seq_id);
+  auto* data_token_view = JUST(DataTransportTokenView::MutCast(&transport_token));
+  JUST(data_token_view->set_thread_consistent_id(thread_consistent_id));
+  data_token_view->set_data_seq_id(++*seq_id);
   return transport_token;
 }
 
 /*static*/ Maybe<TransportToken> TransportToken::NewMetaTransportToken() {
-  int32_t thread_consistent_unique_id = JUST(GetThisThreadConsistentUniqueId());
+  int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
   int32_t rank_group_level = JUST(GetCurrentRankGroupLevel());
   static const int kLimit = 128;
   CHECK_GE_OR_RETURN(rank_group_level, 0);
@@ -159,7 +171,7 @@ TransportToken::TransportToken(TransportTokenType type) {
   static thread_local std::array<std::unique_ptr<TransportToken>, kLimit> transport_token_stack;
   auto* current_transport_token = &transport_token_stack[rank_group_level];
   if (!*current_transport_token) {
-    const auto& init = JUST(NewMetaTransportToken(thread_consistent_unique_id, rank_group_level));
+    const auto& init = JUST(NewMetaTransportToken(thread_consistent_id, rank_group_level));
     current_transport_token->reset(new TransportToken(init));
   }
   return ++**current_transport_token;
@@ -167,9 +179,9 @@ TransportToken::TransportToken(TransportTokenType type) {
 
 namespace {
 
-Maybe<bool*> ThreadLocalMutLock4CtrlTransportToken(int32_t thread_consistent_unique_id,
+Maybe<bool*> ThreadLocalMutLock4CtrlTransportToken(int32_t thread_consistent_id,
                                                    int32_t rank_group_level, RankGroupCtrlCmd cmd) {
-  CHECK_EQ_OR_RETURN(thread_consistent_unique_id, JUST(GetThisThreadConsistentUniqueId()));
+  CHECK_EQ_OR_RETURN(thread_consistent_id, JUST(GetThisThreadConsistentId()));
   static const int kTransportTokenRankGroupLevelLimit = (1 << kTransportTokenRankGroupLevelBit);
   CHECK_LT_OR_RETURN(rank_group_level, kTransportTokenRankGroupLevelLimit);
   static thread_local std::array<std::array<bool, kSizeOfRankGroupCtrlCmd>,
@@ -181,10 +193,10 @@ Maybe<bool*> ThreadLocalMutLock4CtrlTransportToken(int32_t thread_consistent_uni
 }  // namespace
 
 /*static*/ Maybe<TransportToken> TransportToken::AcquireCtrlTransportToken(RankGroupCtrlCmd cmd) {
-  int32_t thread_consistent_unique_id = JUST(GetThisThreadConsistentUniqueId());
+  int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
   int32_t rank_group_level = JUST(GetCurrentRankGroupLevel());
-  auto* lock = JUST(
-      ThreadLocalMutLock4CtrlTransportToken(thread_consistent_unique_id, rank_group_level, cmd));
+  auto* lock =
+      JUST(ThreadLocalMutLock4CtrlTransportToken(thread_consistent_id, rank_group_level, cmd));
   CHECK_OR_RETURN(!*lock);
   static const int kTransportTokenRankGroupLevelLimit = (1 << kTransportTokenRankGroupLevelBit);
   static thread_local std::array<
@@ -197,8 +209,7 @@ Maybe<bool*> ThreadLocalMutLock4CtrlTransportToken(int32_t thread_consistent_uni
   CHECK_LT_OR_RETURN(static_cast<int>(cmd), kSizeOfRankGroupCtrlCmd);
   auto* current_transport_token = &transport_token_stack[rank_group_level][cmd];
   if (!*current_transport_token) {
-    const auto& init =
-        JUST(NewCtrlTransportToken(cmd, thread_consistent_unique_id, rank_group_level));
+    const auto& init = JUST(NewCtrlTransportToken(cmd, thread_consistent_id, rank_group_level));
     current_transport_token->reset(new TransportToken(init));
   }
   *lock = true;
@@ -207,7 +218,7 @@ Maybe<bool*> ThreadLocalMutLock4CtrlTransportToken(int32_t thread_consistent_uni
 
 Maybe<void> TransportToken::TryAcquireCtrlTransportTokenLock() const {
   if (type() == kCtrlTransportTokenType) {
-    auto* lock = JUST(ThreadLocalMutLock4CtrlTransportToken(JUST(thread_consistent_unique_id()),
+    auto* lock = JUST(ThreadLocalMutLock4CtrlTransportToken(JUST(thread_consistent_id()),
                                                             JUST(rank_group_level()), JUST(cmd())));
     CHECK_OR_RETURN(!*lock);
     *lock = true;
@@ -217,22 +228,22 @@ Maybe<void> TransportToken::TryAcquireCtrlTransportTokenLock() const {
 
 Maybe<void> TransportToken::TryReleaseCtrlTransportTokenLock() const {
   if (type() == kCtrlTransportTokenType) {
-    const auto& thread_consistent_unique_id = JUST(this->thread_consistent_unique_id());
+    const auto& thread_consistent_id = JUST(this->thread_consistent_id());
     const auto& rank_group_level = JUST(this->rank_group_level());
     const auto& cmd = JUST(this->cmd());
-    auto* lock = JUST(
-        ThreadLocalMutLock4CtrlTransportToken(thread_consistent_unique_id, rank_group_level, cmd));
+    auto* lock =
+        JUST(ThreadLocalMutLock4CtrlTransportToken(thread_consistent_id, rank_group_level, cmd));
     CHECK_OR_RETURN(*lock);
     *lock = false;
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<int64_t> TransportToken::thread_consistent_unique_id() const {
+Maybe<int64_t> TransportToken::thread_consistent_id() const {
   if (type() == kMetaTransportTokenType) {
-    return JUST(MetaTransportTokenView::Cast(this))->thread_consistent_unique_id();
+    return JUST(MetaTransportTokenView::Cast(this))->thread_consistent_id();
   } else if (type() == kCtrlTransportTokenType) {
-    return JUST(CtrlTransportTokenView::Cast(this))->thread_consistent_unique_id();
+    return JUST(CtrlTransportTokenView::Cast(this))->thread_consistent_id();
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }
@@ -287,20 +298,21 @@ TransportToken& TransportToken::operator++() {
   return *this;
 }
 
-/*static*/ Maybe<TransportToken> TransportToken::NewMetaTransportToken(
-    int32_t thread_consistent_unique_id, int32_t rank_group_level) {
+/*static*/ Maybe<TransportToken> TransportToken::NewMetaTransportToken(int32_t thread_consistent_id,
+                                                                       int32_t rank_group_level) {
   TransportToken transport_token(kMetaTransportTokenType);
   auto* view = JUST(MetaTransportTokenView::MutCast(&transport_token));
-  JUST(view->set_thread_consistent_unique_id(thread_consistent_unique_id));
+  JUST(view->set_thread_consistent_id(thread_consistent_id));
   JUST(view->set_rank_group_level(rank_group_level));
   return transport_token;
 }
 
-/*static*/ Maybe<TransportToken> TransportToken::NewCtrlTransportToken(
-    RankGroupCtrlCmd cmd, int32_t thread_consistent_unique_id, int32_t rank_group_level) {
+/*static*/ Maybe<TransportToken> TransportToken::NewCtrlTransportToken(RankGroupCtrlCmd cmd,
+                                                                       int32_t thread_consistent_id,
+                                                                       int32_t rank_group_level) {
   TransportToken transport_token(kCtrlTransportTokenType);
   auto* view = JUST(CtrlTransportTokenView::MutCast(&transport_token));
-  JUST(view->set_thread_consistent_unique_id(thread_consistent_unique_id));
+  JUST(view->set_thread_consistent_id(thread_consistent_id));
   JUST(view->set_rank_group_level(rank_group_level));
   view->set_cmd(cmd);
   view->set_ctrl_seq_id(0);
