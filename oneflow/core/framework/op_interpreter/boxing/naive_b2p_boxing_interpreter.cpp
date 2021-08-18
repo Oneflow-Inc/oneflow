@@ -27,7 +27,7 @@ Maybe<one::Tensor> NaiveB2PBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
     Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
-  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   int64_t root = JUST(in_parallel_desc->MachineId4ParallelId(0));
   std::shared_ptr<one::Tensor> tensor = JUST(input->cur_rank_phy_tensor());
   if (root == GlobalProcessCtx::Rank()) {
