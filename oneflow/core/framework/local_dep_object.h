@@ -13,15 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_VM_LOCAL_DEP_OBJECT_H_
-#define ONEFLOW_CORE_FRAMEWORK_VM_LOCAL_DEP_OBJECT_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_LOCAL_DEP_OBJECT_H_
+#define ONEFLOW_CORE_FRAMEWORK_LOCAL_DEP_OBJECT_H_
 
 #include "oneflow/core/object_msg/object_msg_core.h"
 #include "oneflow/core/vm/vm_object.msg.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
-class ParallelDesc;
+class Device;
 
 namespace vm {
 
@@ -30,7 +32,7 @@ namespace vm {
 // Helps VirtualMachine building instruction edges
 OBJECT_MSG_BEGIN(LocalDepObject);
   // methods
-  OF_PUBLIC void __Init__(const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  OF_PUBLIC Maybe<void> Init(Symbol<Device> device);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(LogicalObject, logical_object);
@@ -44,17 +46,8 @@ OBJECT_MSG_END(LocalDepObject);
 
 }  // namespace vm
 
-class VmLocalDepObject final {
- public:
-  explicit VmLocalDepObject(const std::shared_ptr<const ParallelDesc>& parallel_desc);
-  ~VmLocalDepObject();
+Maybe<LocalDepObject*> GetLocalDepObject(Symbol<Device> device);
 
-  const ObjectMsgPtr<vm::LocalDepObject>& local_dep_object() const { return local_dep_object_; }
-  vm::LocalDepObject* mut_local_dep_object() { return local_dep_object_.Mutable(); }
-
- private:
-  ObjectMsgPtr<vm::LocalDepObject> local_dep_object_;
-};
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_VM_LOCAL_DEP_OBJECT_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_LOCAL_DEP_OBJECT_H_
