@@ -37,7 +37,7 @@
   bind_python: False
 
 - name: "broadcast_add"
-  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y, *, Bool inplace=False)"
   bind_python: False
 
 - name: "sub_scalar_by_tensor"
@@ -158,7 +158,7 @@
 
 - name: "fmod"
   signature: "Tensor BroadcastFMod(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "log"
   signature: "Tensor Log(Tensor x)"
@@ -265,8 +265,16 @@
                                    Tensor gamma, Float epsilon, Int32 axis)"
   bind_python: False
 
-- name: "range"
-  signature: "Tensor Range(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64)"
+- name: "arange"
+  signature:
+    "Tensor Arange(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64,
+                   Device device=None)"
+  bind_python: True
+
+- name: "consistent_arange"
+  signature:
+    "Tensor ConsistentArange(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64,
+                             Placement placement, SbpList sbp_tuple)"
   bind_python: True
 
 - name: "flatten"
@@ -406,6 +414,10 @@
   signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
   bind_python: True
 
+- name: "arg_sort"
+  signature: "Tensor ArgSort(Tensor in, *, String direction)"
+  bind_python: True
+
 - name: "gather_nd"
   signature: "Tensor GatherNd(Tensor params, Tensor indices, *)"
   bind_python: True
@@ -443,9 +455,33 @@
     "Tensor SmoothL1LossGrad(Tensor loss_grad, Tensor prediction, Tensor label, *, Float beta)"
   bind_python: False
 
+- name: "combined_margin_loss"
+  signature:
+    "TensorTuple CombinedMarginLoss(Tensor x, Tensor label, *,
+                                    Float m1, Float m2, Float m3, Int64 depth)"
+  bind_python: True
+
+- name: "combined_margin_loss_grad"
+  signature:
+    "Tensor CombinedMarginLossGrad(Tensor dy, Tensor label, Tensor theta, *,
+                                   Float m1, Float m2, Float m3, Int64 depth)"
+  bind_python: False
+
 - name: "where"
   signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
+
+- name: "where_scalar_x"
+  signature: "Tensor WhereScalarX(Tensor condition, Scalar scalar, Tensor y)"
+  bind_python: False
+
+- name: "where_scalar_y"
+  signature: "Tensor WhereScalarY(Tensor condition, Tensor x, Scalar scalar)"
+  bind_python: False
+
+- name: "where_scalar_xy"
+  signature: "Tensor WhereScalarXY(Tensor condition, Scalar x_scalar, Scalar y_scalar)"
+  bind_python: False
 
 - name: "negative"
   signature: "Tensor Negative(Tensor x)"
@@ -760,6 +796,10 @@
   signature: "Tensor Softplus(Tensor x)"
   bind_python: True
 
+- name: "one_hot"
+  signature: "Tensor OneHot(Tensor x, *, Int64 num_classes=-1, Scalar on_value=1, Scalar off_value=0)"
+  bind_python: True
+
 - name: "unsorted_segment_sum_like"
   signature:
     "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
@@ -919,7 +959,7 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp)"
+  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, Bool identity_grad=False, SbpList grad_sbp)"
   bind_python: True
 
 - name: "to_local"
@@ -950,12 +990,41 @@
   signature: "Tensor ReduceSumLike(Tensor in, Tensor like, *,Int32List axis)"
   bind_python: True
 
-- name: "split"
-  signature: "TensorTuple Split(Tensor x, *, Int64 split_size, Int64 dim=0)"
+- name: "broadcast_reduce_sum_like"
+  signature: "Tensor BroadcastReduceSumLike(Tensor in, Tensor like)"
+  bind_python: False
+
+- name: "scalar_logical_equal"
+  signature: "Tensor ScalarLogicalEqual(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "scalar_logical_not_equal"
+  signature: "Tensor ScalarLogicalNotEqual(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "scalar_logical_greater"
+  signature: "Tensor ScalarLogicalGreater(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "scalar_logical_greater_equal"
+  signature: "Tensor ScalarLogicalGreaterEqual(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "scalar_logical_less"
+  signature: "Tensor ScalarLogicalLess(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "scalar_logical_less_equal"
+  signature: "Tensor ScalarLogicalLessEqual(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "rand"
+  signature: "Tensor Rand(*, Shape shape, DataType dtype=None, Device device=None, Generator generator=None)"
   bind_python: True
 
-- name: "split_with_size"
-  signature: "TensorTuple SplitWithSize(Tensor x, *, Int64List split_sizes, Int64 dim=0)"
+- name: "consistent_rand"
+  signature: "Tensor ConsistentRand(*, Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None,
+              Generator generator=None)"
   bind_python: True
 
 - name: "randn"
@@ -966,4 +1035,32 @@
 - name: "consistent_randn"
   signature: "Tensor ConsistentRandN(*, Shape shape, Placement placement, 
                                      SbpList sbp_tuple, DataType dtype=None, Generator generator=None)"
+  bind_python: True
+
+- name: "scalar_fmod"
+  signature: "Tensor ScalarFMod(Tensor in, Scalar scalar)"
+  bind_python: False
+
+- name: "split"
+  signature: "TensorTuple Split(Tensor x, *, Int64 split_size, Int64 dim=0)"
+  bind_python: True
+  
+- name: "split_with_size"
+  signature: "TensorTuple SplitWithSize(Tensor x, *, Int64List split_sizes, Int64 dim=0)"
+  bind_python: True
+
+- name: "l2_normalize"
+  signature: "TensorTuple L2Normalize(Tensor input, Int32 axis, Float epsilon, *)"
+  bind_python: True
+
+- name: "l2_normalize_grad"
+  signature: "Tensor L2NormalizeGrad(Tensor dy, Tensor y, Tensor square_x_sum, Int32 axis, Float epsilon, *)"
+  bind_python: False
+  
+- name: "randperm"
+  signature: "Tensor Randperm(Int32 n,*,Device device=None, Generator generator=None)"
+  bind_python: True
+
+- name: "consistent_randperm"
+  signature: "Tensor ConsistentRandperm(Int32 n,*, Placement placement, SbpList sbp_tuple, Generator generator=None)"
   bind_python: True

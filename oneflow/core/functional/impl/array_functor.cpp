@@ -45,13 +45,13 @@ class ConsistentConstantFunctor {
   ConsistentConstantFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    if (IsIntegralDataType(dtype)) {
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
       JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
     } else {
@@ -78,12 +78,12 @@ class ConsistentConstantFunctor {
 class ConstantFunctor {
  public:
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    if (IsIntegralDataType(dtype)) {
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
       JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
     } else {
@@ -105,11 +105,11 @@ class ConstantFunctor {
 class EmptyFunctor {
  public:
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
@@ -125,12 +125,12 @@ class EmptyFunctor {
 class ConsistentEmptyFunctor {
  public:
   ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
-  Maybe<Tensor> operator()(const Shape& shape, const DataType& dtype,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
@@ -195,6 +195,92 @@ class WhereFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class WhereScalarXFunctor {
+ public:
+  WhereScalarXFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("where_scalar_x").Input("condition").Input("y").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& scalar,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    MutableAttrMap attrs;
+    if (scalar.IsFloatingPoint()) {
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+    } else if (scalar.IsIntegral()) {
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, y}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class WhereScalarYFunctor {
+ public:
+  WhereScalarYFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("where_scalar_y").Input("condition").Input("x").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition,
+                           const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    MutableAttrMap attrs;
+    if (scalar.IsFloatingPoint()) {
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+    } else if (scalar.IsIntegral()) {
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class WhereScalarXYFunctor {
+ public:
+  WhereScalarXYFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("where_scalar_xy").Input("condition").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition, const Scalar& x_scalar,
+                           const Scalar& y_scalar) const {
+    MutableAttrMap attrs;
+    if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
+      JUST(attrs.SetAttr<double>("x_float_operand", JUST(x_scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("y_float_operand", JUST(y_scalar.As<double>())));
+      JUST(attrs.SetAttr<bool>("has_x_float_operand", true));
+      JUST(attrs.SetAttr<bool>("has_y_float_operand", true));
+      JUST(attrs.SetAttr<bool>("has_x_int_operand", false));
+      JUST(attrs.SetAttr<bool>("has_y_int_operand", false));
+    } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
+      JUST(attrs.SetAttr<int64_t>("x_int_operand", JUST(x_scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("y_int_operand", JUST(y_scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("has_x_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_y_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_x_int_operand", true));
+      JUST(attrs.SetAttr<bool>("has_y_int_operand", true));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in Where shoule be float or int.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ArgWhereFunctor {
  public:
   ArgWhereFunctor() {
@@ -202,9 +288,9 @@ class ArgWhereFunctor {
         one::OpBuilder("argwhere").Input("input").Output("output").Output("output_size").Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const DataType& dtype) const {
+                                const Symbol<DType>& dtype) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
@@ -503,6 +589,22 @@ class DimScatterMulScalarFunctor {
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     JUST(attrs.SetAttr<float>("src_scalar", src));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ArgSortFunctor {
+ public:
+  ArgSortFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("arg_sort").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::string direction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("direction", direction));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
  private:
@@ -1177,6 +1279,7 @@ class TensorGetItemFunctor {
       step[i] = slice.step();
     }
     bool is_identity = [&]() {
+      if (target_shape.NumAxes() == 0) { return false; }
       for (int i = 0; i < ndims; ++i) {
         if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
       }
@@ -1361,6 +1464,29 @@ class ReduceSumLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BroadcastReduceSumLikeFunctor {
+ public:
+  BroadcastReduceSumLikeFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
+                           const std::shared_ptr<Tensor>& like) const {
+    const auto& in_shape = *(input->shape());
+    const auto& like_shape = *(like->shape());
+    if (in_shape != like_shape) {
+      const Shape& left_extended_shape =
+          CreateLeftExtendedShape(ShapeView(like_shape), in_shape.NumAxes());
+      if (in_shape == left_extended_shape) {
+        return JUST(ReshapeLike(input, like));
+      } else {
+        const AxisVector& broadcast_axis_vec = left_extended_shape.Axes4BroadcastTo(in_shape);
+        return JUST(ReduceSumLike(
+            input, like,
+            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()}));
+      }
+    }
+    return JUST(Identity(input));
+  }
+};
+
 class SplitFunctor {
  public:
   SplitFunctor() {}
@@ -1416,6 +1542,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
   m.add_functor<impl::WhereFunctor>("Where");
+  m.add_functor<impl::WhereScalarXFunctor>("WhereScalarX");
+  m.add_functor<impl::WhereScalarYFunctor>("WhereScalarY");
+  m.add_functor<impl::WhereScalarXYFunctor>("WhereScalarXY");
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
@@ -1424,6 +1553,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
+  m.add_functor<impl::ArgSortFunctor>("ArgSort");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
   m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
@@ -1472,6 +1602,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
+  m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
 };

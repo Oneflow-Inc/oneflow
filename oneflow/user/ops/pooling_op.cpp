@@ -63,13 +63,11 @@ Maybe<void> ForwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
-    if (padding[i] == 0) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), i)
-          .Split(user_op::OpArg("y", 0), i)
-          .Split(user_op::OpArg("indice", 0), i)
-          .Build();
-    }
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y", 0), i)
+        .Split(user_op::OpArg("indice", 0), i)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
@@ -83,15 +81,13 @@ Maybe<void> BackwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
-    if (padding[i] == 0) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), i)
-          .Split(user_op::OpArg("y", 0), i)
-          .Split(user_op::OpArg("indice", 0), i)
-          .Split(user_op::OpArg("dy", 0), i)
-          .Split(user_op::OpArg("dx", 0), i)
-          .Build();
-    }
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y", 0), i)
+        .Split(user_op::OpArg("indice", 0), i)
+        .Split(user_op::OpArg("dy", 0), i)
+        .Split(user_op::OpArg("dx", 0), i)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
