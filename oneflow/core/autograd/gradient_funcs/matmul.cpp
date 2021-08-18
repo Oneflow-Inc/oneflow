@@ -180,13 +180,13 @@ Maybe<void> BroadcastMatmul::Apply(const MatmulCaptureState* ctx, const TensorTu
   JUST(attrs_b.SetAttr<double>("alpha", ctx->alpha));
 
   in_grads->resize(2);
-  if (ctx->requires_grad_b) {
+  if (ctx->requires_grad_a) {
     const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
     in_grads->at(0) =
         JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {out_grads.at(0), input_b}, attrs_a));
   }
 
-  if (ctx->requires_grad_a) {
+  if (ctx->requires_grad_b) {
     const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
     if (!ctx->transpose_b) {
       in_grads->at(1) =
