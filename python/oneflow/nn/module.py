@@ -373,7 +373,8 @@ class Module(object):
                     )
                     continue
                 try:
-                    param.copy_(input_param)
+                    with flow.no_grad():
+                        param.copy_(input_param)
                 except Exception as ex:
                     error_msgs.append(
                         'While copying the parameter named "{}", whose dimensions in the model are {} and whose dimensions in the checkpoint are {}, an exception occurred : {}.'.format(
@@ -499,6 +500,12 @@ class Module(object):
     def to(self, device: Optional[Union[str, flow.device]] = None):
         def convert(t):
             return t.to(device)
+
+        return self._apply(convert)
+
+    def to_consistent(self, placement=None, sbp=None):
+        def convert(t):
+            return t.to_consistent(placement=placement, sbp=sbp)
 
         return self._apply(convert)
 
