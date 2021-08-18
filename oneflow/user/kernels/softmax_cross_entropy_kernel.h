@@ -44,7 +44,7 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const auto num_axes = label->shape().NumAxes();
     const int64_t num_instances = label->shape().Count(0, num_axes - 1);
     const int64_t num_classes = label->shape().At(num_axes - 1);
-    SoftmaxKernelUtil<device_type, T>::ComputeProb(
+    SoftmaxKernelUtil<device_type, SoftmaxType::kSoftmax, T>::ComputeProb(
         ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), prob->mut_dptr<T>(),
         tmp_buffer->mut_dptr(), tmp_buffer->shape().elem_cnt());
     CrossEntropyKernelUtil<device_type, T>::ComputeEntropy(ctx->device_ctx(), num_instances,
@@ -64,8 +64,9 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
         const Shape& prediction_shape = ctx->InputShape("prediction", 0);                        \
         const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
         const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
-        return SoftmaxKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>::                  \
-            GetComputeProbTempStorageSizeInBytes(num_instances, num_classes);                    \
+        return SoftmaxComputeProbTempStorageSize<OF_PP_PAIR_FIRST(dtype_pair),                   \
+                                                 SoftmaxType::kSoftmax>(num_instances,           \
+                                                                        num_classes);            \
       });
 
 template<DeviceType device_type, typename T>
