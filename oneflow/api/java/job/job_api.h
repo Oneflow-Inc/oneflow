@@ -80,21 +80,15 @@ struct PullTensor {
 
 
 
-inline void SetJobConfForCurJobBuildAndInferCtx(const std::string& job_conf_proto) {
-  oneflow::JobConfigProto job_conf;
-  oneflow::TxtString2PbMessage(job_conf_proto, &job_conf);
+inline void SetJobConfForCurJobBuildAndInferCtx(const oneflow::JobConfigProto& job_conf) {
   oneflow::cfg::JobConfigProto job_conf_cfg;
   job_conf_cfg.InitFromProto(job_conf);
-
   oneflow::CurJobBuildAndInferCtx_SetJobConf(job_conf_cfg).GetOrThrow();
 }
 
-inline void SetScopeForCurJob(const std::string& job_conf_proto,
+inline void SetScopeForCurJob(const oneflow::JobConfigProto& job_conf,
                               const std::string& ids,
                               const std::string& device) {
-  oneflow::JobConfigProto job_conf;
-  oneflow::TxtString2PbMessage(job_conf_proto, &job_conf);
-
   std::shared_ptr<oneflow::cfg::JobConfigProto> job_conf_cfg = std::make_shared<oneflow::cfg::JobConfigProto>();
   job_conf_cfg->InitFromProto(job_conf);
 
@@ -110,9 +104,7 @@ inline void SetScopeForCurJob(const std::string& job_conf_proto,
   oneflow::ThreadLocalScopeStackPush(scope).GetOrThrow();  // fixme: bug?
 }
 
-inline void CurJobAddOp(const std::string& op_conf_proto) {
-  oneflow::OperatorConf op_conf;
-  oneflow::TxtString2PbMessage(op_conf_proto, &op_conf);
+inline void CurJobAddOp(oneflow::OperatorConf& op_conf) {
   auto scope = oneflow::GetCurrentScope().GetPtrOrThrow();
   op_conf.set_scope_symbol_id(scope->symbol_id().GetOrThrow());
   op_conf.set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
@@ -158,12 +150,12 @@ inline void CompileGraph(oneflow::SavedModel saved_model,
     }
   }
 
-  SetJobConfForCurJobBuildAndInferCtx(job_config_proto.DebugString());
-  SetScopeForCurJob(job_config_proto.DebugString(), device_ids, device_tag);
+  SetJobConfForCurJobBuildAndInferCtx(job_config_proto);
+  SetScopeForCurJob(job_config_proto, device_ids, device_tag);
 
   auto op_list = graph_def.op_list();
   for (auto op_conf = op_list.begin(); op_conf != op_list.end(); op_conf++) {
-    CurJobAddOp(op_conf->DebugString());
+    CurJobAddOp(*op_conf);
   }
   oneflow::CurJobBuildAndInferCtx_Complete();
   oneflow::CurJobBuildAndInferCtx_Rebuild();
