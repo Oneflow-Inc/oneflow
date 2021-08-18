@@ -34,27 +34,9 @@ Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp() {
   return SymbolOf(broadcast_nd_sbp);
 }
 
-}  // namespace
+auto* CachedGetPartialSumNdSbp = DECORATE(&GetPartialSumNdSbp, ThreadLocal);
 
-Maybe<one::Tensor> Nccl1ToBBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
-    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
-    Symbol<ParallelDesc> out_parallel_desc) const {
-  CHECK_EQ_OR_RETURN(in_parallel_desc->parallel_num(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp));
-  Symbol<cfg::NdSbp> partial_sum_nd_sbp = JUST(GetPartialSumNdSbp());
-  static std::shared_ptr<EagerBoxingInterpreter> nccl_1top_boxing_interpreter =
-      std::make_shared<Nccl1ToPBoxingInterpreter>();
-  const auto& partial_sum_input = JUST(nccl_1top_boxing_interpreter->Interpret(
-      input, in_nd_sbp, partial_sum_nd_sbp, in_parallel_desc, out_parallel_desc));
-  const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
-  const auto& output_tensor = JUST(one::functional::ToConsistent(
-      partial_sum_input, out_parallel_desc, *sbp_list, GetNoneSbpList()));
-  CHECK_OR_RETURN(output_tensor->is_consistent());
-  const auto& tensor_placement = JUST(output_tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == out_parallel_desc);
-  return output_tensor;
-}
+}  // namespace
 
 Maybe<one::Tensor> Nccl1ToPBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
@@ -79,13 +61,33 @@ Maybe<one::Tensor> Nccl1ToPBoxingInterpreter::InterpretImpl(
   return output_tensor;
 }
 
+Maybe<one::Tensor> Nccl1ToBBoxingInterpreter::InterpretImpl(
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    Symbol<ParallelDesc> out_parallel_desc) const {
+  CHECK_EQ_OR_RETURN(in_parallel_desc->parallel_num(), 1);
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp));
+  Symbol<cfg::NdSbp> partial_sum_nd_sbp = JUST(CachedGetPartialSumNdSbp());
+  static std::shared_ptr<EagerBoxingInterpreter> nccl_1top_boxing_interpreter =
+      std::make_shared<Nccl1ToPBoxingInterpreter>();
+  const auto& partial_sum_input = JUST(nccl_1top_boxing_interpreter->Interpret(
+      input, in_nd_sbp, partial_sum_nd_sbp, in_parallel_desc, out_parallel_desc));
+  const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
+  const auto& output_tensor = JUST(one::functional::ToConsistent(
+      partial_sum_input, out_parallel_desc, *sbp_list, GetNoneSbpList()));
+  CHECK_OR_RETURN(output_tensor->is_consistent());
+  const auto& tensor_placement = JUST(output_tensor->parallel_desc());
+  CHECK_OR_RETURN(tensor_placement == out_parallel_desc);
+  return output_tensor;
+}
+
 Maybe<one::Tensor> Nccl1ToSBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
     Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_EQ_OR_RETURN(in_parallel_desc->parallel_num(), 1);
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsSplitNdSbp(out_nd_sbp, 0));
-  Symbol<cfg::NdSbp> partial_sum_nd_sbp = JUST(GetPartialSumNdSbp());
+  Symbol<cfg::NdSbp> partial_sum_nd_sbp = JUST(CachedGetPartialSumNdSbp());
   static std::shared_ptr<EagerBoxingInterpreter> nccl_1top_boxing_interpreter =
       std::make_shared<Nccl1ToPBoxingInterpreter>();
   const auto& partial_sum_input = JUST(nccl_1top_boxing_interpreter->Interpret(

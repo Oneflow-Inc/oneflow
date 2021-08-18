@@ -20,11 +20,11 @@ limitations under the License.
 
 namespace oneflow {
 
-class Nccl1ToBBoxingInterpreter final : public EagerBoxingInterpreter {
+class Nccl1ToPBoxingInterpreter final : public EagerBoxingInterpreter {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Nccl1ToBBoxingInterpreter);
-  Nccl1ToBBoxingInterpreter() = default;
-  ~Nccl1ToBBoxingInterpreter() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Nccl1ToPBoxingInterpreter);
+  Nccl1ToPBoxingInterpreter() = default;
+  ~Nccl1ToPBoxingInterpreter() override = default;
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
@@ -33,11 +33,11 @@ class Nccl1ToBBoxingInterpreter final : public EagerBoxingInterpreter {
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
 };
 
-class Nccl1ToPBoxingInterpreter final : public EagerBoxingInterpreter {
+class Nccl1ToBBoxingInterpreter final : public EagerBoxingInterpreter {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Nccl1ToPBoxingInterpreter);
-  Nccl1ToPBoxingInterpreter() = default;
-  ~Nccl1ToPBoxingInterpreter() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Nccl1ToBBoxingInterpreter);
+  Nccl1ToBBoxingInterpreter() = default;
+  ~Nccl1ToBBoxingInterpreter() override = default;
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
