@@ -23,9 +23,9 @@ from automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensor(flow.unittest.TestCase):
-
     @flow.unittest.skip_unless_1n1d()
     def test_creating_consistent_tensor(test_case):
         placement = flow.placement("cuda", {0: 0})
@@ -76,7 +76,7 @@ class TestTensor(flow.unittest.TestCase):
 
         x = l_x.to_consistent(placement=placement, sbp=sbp)
         test_case.assertTrue(x.is_leaf)
-        y = l_y.to_consistent( placement=placement, sbp=sbp)
+        y = l_y.to_consistent(placement=placement, sbp=sbp)
         test_case.assertFalse(y.is_leaf)
 
         z = x + y
@@ -91,7 +91,7 @@ class TestTensor(flow.unittest.TestCase):
 
         l_v = flow.Tensor(*shape, requires_grad=True)
         v = l_v.to_consistent(placement=placement, sbp=sbp)
-        
+
         z.retain_grad()
         w = v + z
 
@@ -110,7 +110,7 @@ class TestTensor(flow.unittest.TestCase):
         #     np.allclose(z.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
         # )
         test_case.assertIsNone(l_x.grad)
-        
+
 
 if __name__ == "__main__":
     unittest.main()
