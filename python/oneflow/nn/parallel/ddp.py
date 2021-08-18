@@ -40,7 +40,9 @@ def allreduce_fn(ddp_state_for_reversed_params, param):
     return allreduce
 
 
-def DistributedDataParallel(module: "flow.nn.Module", *, broadcast_buffers: bool=True):
+def DistributedDataParallel(
+    module: "flow.nn.Module", *, broadcast_buffers: bool = True
+):
     world_size = flow.distributed.get_world_size()
     with flow.no_grad():
         for x in module.parameters():
@@ -66,13 +68,16 @@ def DistributedDataParallel(module: "flow.nn.Module", *, broadcast_buffers: bool
             convert_to_tensor_tuple([output, *ddp_state_for_reversed_params.keys()])
         )
         return output
+
     module.register_forward_hook(post_forward_hook)
 
     if broadcast_buffers:
+
         def pre_forward_hook(module, input):
             with flow.no_grad():
                 for x in module.buffers():
                     x.copy_(flow.F.broadcast(x))
+
         module.register_forward_pre_hook(pre_forward_hook)
 
     return module
