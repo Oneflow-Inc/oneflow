@@ -27,9 +27,9 @@ namespace oneflow {
 namespace {
 
 Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp() {
-  cfg::NdSbp broadcast_nd_sbp;
-  broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
-  return SymbolOf(broadcast_nd_sbp);
+  cfg::NdSbp partial_sum_nd_sbp;
+  partial_sum_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
+  return SymbolOf(partial_sum_nd_sbp);
 }
 
 auto* CachedGetPartialSumNdSbp = DECORATE(&GetPartialSumNdSbp, ThreadLocal);
@@ -42,7 +42,7 @@ Maybe<one::Tensor> Nccl1ToPBoxingInterpreter::InterpretImpl(
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_EQ_OR_RETURN(in_parallel_desc->parallel_num(), 1);
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsPartialSumNdSbp(out_nd_sbp));
-  int64_t root = JUST(out_parallel_desc->MachineId4ParallelId(0));
+  int64_t root = JUST(in_parallel_desc->MachineId4ParallelId(0));
   std::shared_ptr<one::Tensor> local_tensor = JUST(input->cur_rank_phy_tensor());
   if (root == GlobalProcessCtx::Rank()) {
     // do nothing
