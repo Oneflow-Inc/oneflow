@@ -46,6 +46,7 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     if (new_grad) { current_grad = new_grad; }
   }
   if (autograd_meta->acc_grad()) {
+    DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
     const auto& output =
         JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*inplace=*/true));
     JUST(autograd_meta->set_acc_grad(output));
@@ -61,14 +62,12 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple
                                                                const TensorTuple& out_grads,
                                                                bool retain_graph,
                                                                bool create_graph) {
-  DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
   return RunBackwardAndSaveGrads4LeafTensorIf(outputs, out_grads, retain_graph, create_graph);
 }
 
 Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
-  DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
   return RunBackwardAndReturnInputsTensorGradIf(outputs, inputs, out_grads, retain_graph,
                                                 create_graph);
 }
