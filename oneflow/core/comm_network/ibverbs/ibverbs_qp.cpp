@@ -84,7 +84,8 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
                      std::shared_ptr<MessagePool> send_msg_buf) {
   // ctx_, pd_
   ctx_ = ctx;
-  pd_.reset(pd);
+ // pd_.reset(pd);
+ pd_ = pd ;
   port_num_ = port_num;
   // qp_
   ibv_device_attr device_attr{};
@@ -116,7 +117,8 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
                      ibv_cq* recv_cq) {
   // ctx_, pd_
   ctx_ = ctx;
-  pd_.reset(pd);
+ // pd_.reset(pd);
+  pd_ = pd; 
   port_num_ = port_num;
   // qp_
   ibv_device_attr device_attr{};

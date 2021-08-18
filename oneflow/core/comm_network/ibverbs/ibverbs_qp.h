@@ -36,10 +36,11 @@ class ActorMsgMR final {
   ActorMsgMR() = delete;
   ActorMsgMR(ibv_mr *   mr, char * addr, size_t  size):size_(size){
     msg_ = reinterpret_cast<ActorMsg*>(addr); //这里没有问题
-    mr_.reset(mr);
+   // mr_.reset(mr);
+    mr_ = mr;
   }
   ~ActorMsgMR() {
-    mr_.reset();
+ //   mr_.reset();
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; } //这个是没错的
@@ -54,7 +55,8 @@ class ActorMsgMR final {
 
  private:
     size_t size_;
-    std::shared_ptr<ibv_mr> mr_;
+   // std::shared_ptr<ibv_mr> mr_;
+    ibv_mr * mr_;
     ActorMsg *  msg_;
 };
 
@@ -79,8 +81,8 @@ class MessagePool final {
       // }
     }//todo:这里可能要修改
 
-    MessagePool(ibv_pd* pd, uint32_t number_of_message):num_of_message_(number_of_message) {
-      pd_.reset(pd);
+    MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
+   //   pd_.reset(pd);
       RegisterMessagePool();
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
@@ -120,7 +122,8 @@ class MessagePool final {
     }
 
   private:
-    std::shared_ptr<ibv_pd> pd_;
+  //  std::shared_ptr<ibv_pd> pd_;
+    ibv_pd * pd_;
     size_t  num_of_message_;
     std::mutex message_buf_mutex_;
     std::deque<ActorMsgMR*> message_buf_;
@@ -158,8 +161,8 @@ class IBVerbsQP final {
   void PostRecvRequest(ActorMsgMR*);
 
   ibv_context* ctx_;
-  //ibv_pd* pd_;
-  std::shared_ptr<ibv_pd> pd_;
+  ibv_pd* pd_;
+ // std::shared_ptr<ibv_pd> pd_;
   uint8_t port_num_;
   ibv_qp* qp_;
 
