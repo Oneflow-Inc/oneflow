@@ -90,12 +90,12 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
     static_assert(sizeof(IBVerbsCommNetRMADesc) <= kActorMsgUserDataMaxSize, "");
     new_msg.AddUserData(sizeof(IBVerbsCommNetRMADesc), &rma_desc);
   }
-  std::cout<<"In IBVerbsCommNet::SendActorMsg,the msg.commnet_sequence_number:" << msg.comm_net_sequence_number() << std::endl;
+ // std::cout<<"In IBVerbsCommNet::SendActorMsg,the msg.commnet_sequence_number:" << msg.comm_net_sequence_number() << std::endl;
   qp_vec_.at(dst_machine_id)->PostSendRequest(new_msg);
 }
 
 void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
-  std::cout << " IBVerbsCommNet::RecvActorMsg, the msg.comm_net_sequence_number:" << msg.comm_net_sequence_number() << std::endl;
+//  std::cout << " IBVerbsCommNet::RecvActorMsg, the msg.comm_net_sequence_number:" << msg.comm_net_sequence_number() << std::endl;
   ActorMsg new_msg = msg;
   if (msg.IsDataRegstMsgToConsumer()) {
     std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);

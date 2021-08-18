@@ -265,7 +265,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 }
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
-  std::cout<<"In PostSendRequest,the msg.comm_net_sequence_token:" << msg.comm_net_sequence_number() << std::endl;
+ // std::cout<<"In PostSendRequest,the msg.comm_net_sequence_token:" << msg.comm_net_sequence_number() << std::endl;
   ActorMsgMR * msg_mr = send_msg_buf_->GetMessage();
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();

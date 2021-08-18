@@ -48,7 +48,7 @@ class ActorMsgMR final {
   ActorMsg  msg()  { return *msg_;} //这个函数也没问题
   //这个函数也没问题
   void set_msg(const ActorMsg& val) {
-    std::cout<<"in set_msg of ActorMsgMR, the val comm_net_sequence_number:" << val.comm_net_sequence_number() << std::endl;
+  //  std::cout<<"in set_msg of ActorMsgMR, the val comm_net_sequence_number:" << val.comm_net_sequence_number() << std::endl;
     *msg_ = val ;
   }
 
