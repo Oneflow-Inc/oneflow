@@ -312,28 +312,29 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
   })(__FUNCTION__)                                                                       \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define JUST_MSG(value, ...)                                                    \
-  ({                                                                            \
-    auto&& maybe = (value);                                                     \
-    if (!maybe.IsOk()) {                                                        \
-      return ::oneflow::private_details::MaybeErrorAddMessage(                  \
-          Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__), \
-          OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__);                         \
-    }                                                                           \
-    std::move(maybe);                                                           \
-  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
-
-#define CHECK_JUST_MSG(value, ...)                                                         \
-  ([&](const char* func_name) {                                                            \
+#define JUST_MSG(value, ...)                                                               \
+  ({                                                                                       \
     auto&& maybe = (value);                                                                \
     if (!maybe.IsOk()) {                                                                   \
-      LOG(FATAL) << ::oneflow::private_details::MaybeErrorAddMessage(                      \
-                        Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, func_name), \
-                        OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                       \
-                        ->DebugString();                                                   \
+      return ::oneflow::private_details::MaybeErrorAddMessage(                             \
+          ::oneflow::Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__), \
+          OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__);                                    \
     }                                                                                      \
-    return std::move(maybe);                                                               \
-  })(__FUNCTION__)                                                                         \
+    std::move(maybe);                                                                      \
+  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+
+#define CHECK_JUST_MSG(value, ...)                                                             \
+  ([&](const char* func_name) {                                                                \
+    auto&& maybe = (value);                                                                    \
+    if (!maybe.IsOk()) {                                                                       \
+      LOG(FATAL)                                                                               \
+          << ::oneflow::private_details::MaybeErrorAddMessage(                                 \
+                 ::oneflow::Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, func_name), \
+                 OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                                  \
+                 ->DebugString();                                                              \
+    }                                                                                          \
+    return std::move(maybe);                                                                   \
+  })(__FUNCTION__)                                                                             \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
