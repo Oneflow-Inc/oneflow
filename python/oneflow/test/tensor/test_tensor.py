@@ -99,6 +99,7 @@ class TestTensor(flow.unittest.TestCase):
         z = tensor_creator(5, 4, 3, 2)
         flow.nn.init.kaiming_normal_(z, a=0.1, mode="fan_out", nonlinearity="relu")
         flow.nn.init.kaiming_uniform_(z)
+        z.requires_grad_()
         flow.nn.init.xavier_normal_(z)
         flow.nn.init.xavier_uniform_(z)
         x = tensor_creator(*shape, dtype=flow.int32)
