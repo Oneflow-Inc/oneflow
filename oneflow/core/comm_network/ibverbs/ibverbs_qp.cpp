@@ -217,12 +217,18 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-  std::deque<ActorMsgMR *> messageBuf = recv_msg_buf_->GetMessageBuf();
-  while(messageBuf.empty() == false) {
-      ActorMsgMR * msg_mr = messageBuf.front();
-      messageBuf.pop_front();
-      PostRecvRequest(msg_mr);
-    } 
+    if(recv_msg_buf_->isEmpty()) {
+      recv_msg_buf_->RegisterMessagePool();
+      while(recv_msg_buf_->isEmpty() == false) {
+        ActorMsgMR * msg_mr = recv_msg_buf_->GetMessage();
+        PostRecvRequest(msg_mr);
+      }
+    } else {
+        while(recv_msg_buf_->isEmpty() == false) {
+        ActorMsgMR * msg_mr = recv_msg_buf_->GetMessage();
+        PostRecvRequest(msg_mr);
+      }
+    }
 }
 
 void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
