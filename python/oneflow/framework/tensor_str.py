@@ -270,7 +270,7 @@ def _gen_tensor_str_template(tensor, is_meta):
     if tensor.is_consistent:
         suffixes.append(f"placement={str(tensor.placement)}")
         suffixes.append(f"sbp={str(tensor.sbp)}")
-    elif tensor.device.type == "cuda":
+    elif tensor.device.type == "cuda" or tensor.device.type == "gpu":
         suffixes.append("device='" + str(tensor.device) + "'")
     elif tensor.device.type != "cpu":
         raise RunTimeError("unknow device type")
