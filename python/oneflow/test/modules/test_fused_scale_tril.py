@@ -43,12 +43,7 @@ def _test_fused_scale_tril(
     device_type="cuda",
 ):
     if dtype is flow.int32 and not isinstance(scale, int):
-        # skip
         return
-
-    # print(
-    #     f"test with shape: {shape}, diagonal: {diagonal}, fill_value: {fill_value}, scale: {scale}, dtype: {dtype}"
-    # )
 
     if dtype is flow.int32:
         x = np.random.randint(0, 10, shape)
@@ -85,7 +80,6 @@ class FusedScaleTrilTestCase(flow.unittest.TestCase):
         arg_dict["fill_value"] = [-1, 0, -1]
         arg_dict["scale"] = [-2.3, 0.7, 2]
         arg_dict["dtype"] = [flow.int32, flow.float32]
-        # arg_dict["dtype"] = [flow.int32, flow.float32, flow.float16]
         for kwargs in GenArgDict(arg_dict):
             _test_fused_scale_tril(test_case, **kwargs)
 
