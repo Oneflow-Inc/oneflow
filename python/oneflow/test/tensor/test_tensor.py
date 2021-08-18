@@ -123,53 +123,6 @@ class TestTensor(flow.unittest.TestCase):
             lambda *args, **kwargs: flow.Tensor(*args, **kwargs), lambda x: x.numpy()
         )
 
-    @flow.unittest.skip_unless_1n2d()
-    def test_consistent_tensor_init_methods(test_case):
-        test_case._test_tensor_init_methods(
-            lambda *args, **kwargs: flow.Tensor(
-                *args,
-                **kwargs,
-                sbp=flow.sbp.broadcast,
-                placement=flow.placement("cuda", {0: range(2)})
-            ),
-            lambda x: x.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
-        )
-
-    @flow.unittest.skip_unless_1n1d()
-    def test_creating_consistent_tensor(test_case):
-        placement = flow.placement("cuda", {0: 0})
-        sbp = flow.sbp.broadcast
-        shape = (2, 3)
-
-        # Shape -> ConsistentTensor
-        x = flow.Tensor(*shape, placement=placement, sbp=sbp)
-        test_case.assertTrue(x.is_consistent)
-
-        # LocalTensor -> ConsistentTensor
-        x = flow.Tensor(*shape, device="cpu")
-        test_case.assertTrue(x.is_local)
-        y = flow.Tensor(x, placement=placement, sbp=sbp)
-        test_case.assertTrue(y.is_consistent)
-
-        # ConsistentTensor -> ConsistentTensor
-        z = flow.Tensor(y, placement=placement, sbp=sbp)
-        test_case.assertTrue(z.is_consistent)
-
-        # TODO: ndarray -> ConsistentTensor
-
-    @flow.unittest.skip_unless_1n1d()
-    def test_construct_local_from_consistent_tensor(test_case):
-        placement = flow.placement("cuda", {0: 0})
-        sbp = flow.sbp.broadcast
-        shape = (2, 3)
-        x = flow.Tensor(*shape, placement=placement, sbp=sbp)
-        test_case.assertTrue(x.is_consistent)
-        # ConsistentTensor -> LocalTensor
-        y = flow.Tensor(x)
-        test_case.assertTrue(y.is_local)
-        y = flow.Tensor(x, device="cuda")
-        test_case.assertTrue(y.is_local)
-
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_with_single_int(test_case):
         x = flow.Tensor(5)
