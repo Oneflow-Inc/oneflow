@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_12B_BOXING_INTERPRETER_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_12B_BOXING_INTERPRETER_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_12N_BOXING_INTERPRETER_H_
+#define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_12N_BOXING_INTERPRETER_H_
 
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
 
@@ -61,4 +61,4 @@ class Nccl1ToSBoxingInterpreter final : public EagerBoxingInterpreter {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_12B_BOXING_INTERPRETER_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_12N_BOXING_INTERPRETER_H_
