@@ -108,6 +108,12 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
     OF_NCCL_CHECK(ncclBroadcast(in_ptr, out->mut_dptr(), out->shape().elem_cnt(),
                                 GetNcclDataType(out->data_type()), root, kernel_state->comm(),
                                 ctx->device_ctx()->cuda_stream()));
+    int nBytes = out->shape().elem_cnt() * sizeof(float);
+    float* A_host = (float*)malloc(nBytes);
+    cudaMemcpy(A_host, out->dptr(), nBytes, cudaMemcpyDeviceToHost);
+    LOG(ERROR) << kernel_state->parallel_desc()->parallel_conf().DebugString();
+    for (int i = 0; i < out->shape().elem_cnt(); ++i) { LOG(ERROR) << *(A_host + i); }
+    free(A_host);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

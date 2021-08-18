@@ -227,11 +227,6 @@ Maybe<Tensor> ConsistentToConsistent(
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
-  if (tensor != x) {
-    const auto& input_consistent_id = JUST(x->transport_token());
-    const auto& output_consistend_id = JUST(tensor->transport_token());
-    CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);
-  }
   return tensor;
 }
 

@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/boxing/identity_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_b2p_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_s2p_boxing_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/boxing/naive_1ton_boxing_interpreter.h"
 
 namespace oneflow {
 
@@ -39,7 +40,10 @@ std::string GetSupportedBoxingTypeInfo() {
       "\'[P] -> [B]\' on GPU\n"
       "\'[P] -> [S(0)]\' on GPU\n"
       "\'[B] -> [S(0)]\' on GPU\n"
-      "\'[B] -> [P]\' on GPU or CPU";
+      "\'[B] -> [P]\' on GPU or CPU"
+      "\'[S/B/P] -> [B](1 to n)\' on GPU\n"
+      "\'[S/B/P] -> [S(0)](1 to n)\' on GPU\n"
+      "\'[S/B/P] -> [P](1 to n)\' on GPU or CPU\n";
   return supported_boxing_type_info;
 }
 
@@ -77,8 +81,27 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
     static std::shared_ptr<EagerBoxingInterpreter> identity_boxing_interpreter =
         std::make_shared<IdentityBoxingInterpreter>();
     return identity_boxing_interpreter;
-  }
-  if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1) {
+  } else if (in_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1) {
+    if (EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)) {
+      static std::shared_ptr<EagerBoxingInterpreter> nccl_1tob_boxing_interpreter =
+          std::make_shared<Nccl1ToBBoxingInterpreter>();
+      return nccl_1tob_boxing_interpreter;
+    } else if (EagerBoxingInterpreterUtil::IsPartialSumNdSbp(out_nd_sbp)) {
+      static std::shared_ptr<EagerBoxingInterpreter> nccl_1top_boxing_interpreter =
+          std::make_shared<Nccl1ToPBoxingInterpreter>();
+      return nccl_1top_boxing_interpreter;
+    } else if (EagerBoxingInterpreterUtil::IsSplitNdSbp(out_nd_sbp, 0)) {
+      static std::shared_ptr<EagerBoxingInterpreter> nccl_1tos_boxing_interpreter =
+          std::make_shared<Nccl1ToSBoxingInterpreter>();
+      return nccl_1tos_boxing_interpreter;
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Eager boxing type(1 to n) \'"
+                                  << *JUST(NdSbpToString(in_nd_sbp)) << " -> "
+                                  << *JUST(NdSbpToString(out_nd_sbp)) << "\'"
+                                  << " not support yet\n"
+                                  << GetSupportedBoxingTypeInfo();
+    }
+  } else if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1) {
     if (in_parallel_desc == out_parallel_desc) {
       if (EagerBoxingInterpreterUtil::IsBoxingB2P(in_nd_sbp->sbp_parallel(0),
                                                   out_nd_sbp->sbp_parallel(0))) {
