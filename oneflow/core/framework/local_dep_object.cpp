@@ -41,26 +41,28 @@ Maybe<void> LocalDepObject::Init(const Device& device) {
   mutable_logical_object()->__Init__(object_id,
                                      std::const_pointer_cast<ParallelDesc>(parallel_desc));
   mutable_mirrored_object()->__Init__(mutable_logical_object(), global_device_id);
+  return Maybe<void>::Ok();
 }
 
 namespace {
 
 Maybe<std::vector<ObjectMsgPtr<LocalDepObject>>> RawGetLocalDepObjectPool(Symbol<Device> device) {
   const auto pool = std::make_shared<std::vector<ObjectMsgPtr<LocalDepObject>>>();
-  pool->reserve(device->local_dep_object_pool_size());
-  for (int64_t i = 0; i < device->instr_local_dep_object_pool_size(); ++i) {
-    const auto local_dep_object = ObjectMsgPtr::New<LocalDepObject>();
+  size_t pool_size = JUST(device->instr_local_dep_object_pool_size());
+  pool->reserve(pool_size);
+  for (int64_t i = 0; i < pool_size; ++i) {
+    auto local_dep_object = ObjectMsgPtr<LocalDepObject>::New();
     JUST(local_dep_object->Init(*device));
     pool->push_back(local_dep_object);
   }
   return pool;
 }
 
-}
+}  // namespace
 
 static constexpr auto* GetLocalDepObjectPool = DECORATE(&RawGetLocalDepObjectPool, ThreadLocal);
 
-LocalDepObject* GetLocalDepObject(Symbol<Device> device) {
+Maybe<LocalDepObject*> GetLocalDepObject(Symbol<Device> device) {
   const auto& local_dep_object_pool = JUST(GetLocalDepObjectPool(device));
   CHECK_OR_RETURN(!local_dep_object_pool->empty());
   size_t pool_size = local_dep_object_pool->size();

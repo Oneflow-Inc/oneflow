@@ -589,7 +589,7 @@ Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
   const int64_t kHighWaterMark = GetInstructionHighWaterMark();
   const int64_t kLowWaterMark = GetInstructionLowWaterMark();
   if (*mut_flying_instruction_cnt() > kHighWaterMark) {
-    JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([this]() -> Maybe<void> {
+    JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
       const auto& NeedSpin = [&] { return *mut_flying_instruction_cnt() > kLowWaterMark; };
       while (true) {
         int64_t last_cnt = *mut_flying_instruction_cnt();

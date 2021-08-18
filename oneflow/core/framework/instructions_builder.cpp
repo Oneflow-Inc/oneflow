@@ -908,8 +908,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-  LocalDepObject* compute_local_dep_object =
-      JUST(eager_blob_object->compute_local_dep_object());
+  LocalDepObject* compute_local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object);
   *instruction->mut_parallel_desc() = parallel_desc;
@@ -975,8 +974,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   std::string instr_name = parallel_desc->device_tag() + ".AccessBlobByCallback";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
-  LocalDepObject* compute_local_dep_object =
-      JUST(tensor->compute_local_dep_object());
+  LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object, callback, modifier);
   *instruction->mut_parallel_desc() = parallel_desc;

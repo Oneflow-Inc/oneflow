@@ -25,26 +25,22 @@ namespace oneflow {
 
 class Device;
 
-namespace vm {
-
 // clang-format off
 
 // Helps VirtualMachine building instruction edges
 OBJECT_MSG_BEGIN(LocalDepObject);
   // methods
-  OF_PUBLIC Maybe<void> Init(Symbol<Device> device);
+  OF_PUBLIC Maybe<void> Init(const Device& device);
 
   // fields
-  OBJECT_MSG_DEFINE_OPTIONAL(LogicalObject, logical_object);
-  OBJECT_MSG_DEFINE_OPTIONAL(MirroredObject, mirrored_object);
+  OBJECT_MSG_DEFINE_OPTIONAL(vm::LogicalObject, logical_object);
+  OBJECT_MSG_DEFINE_OPTIONAL(vm::MirroredObject, mirrored_object);
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(free_link);
   OBJECT_MSG_DEFINE_LIST_LINK(zombie_link);
 OBJECT_MSG_END(LocalDepObject);
 // clang-format on
-
-}  // namespace vm
 
 Maybe<LocalDepObject*> GetLocalDepObject(Symbol<Device> device);
 

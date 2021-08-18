@@ -50,7 +50,8 @@ class EagerBlobObject final : public BlobObject {
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
                   LocalDepObject* dep_object)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, Optional<LocalDepObject*>(dep_object)) {}
+      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer,
+                        Optional<LocalDepObject*>(dep_object)) {}
 
   ~EagerBlobObject() override {
     non_pod_initer_.reset();
@@ -73,7 +74,9 @@ class EagerBlobObject final : public BlobObject {
     return Maybe<void>::Ok();
   }
 
-  Maybe<LocalDepObject*> compute_local_dep_object() const { return compute_local_dep_object_.value(); }
+  Maybe<LocalDepObject*> compute_local_dep_object() const {
+    return compute_local_dep_object_.value();
+  }
 
   std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
 

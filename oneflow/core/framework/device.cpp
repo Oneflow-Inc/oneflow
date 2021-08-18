@@ -43,8 +43,8 @@ Maybe<LocalDepObject*> FindOrCreateComputeLocalDepObject(const Device& device) {
     const auto& iter = device2dep_object.find(device);
     if (iter != device2dep_object.end()) { return iter->second.Mutable(); }
   }
-  const auto dep_object = ObjectMsgPtr<LocalDepObject>::New();
-  JUST(dep_object->Init(device));
+  auto dep_object = ObjectMsgPtr<LocalDepObject>::New();
+  JUST(dep_object.Mutable()->Init(device));
   {
     std::unique_lock<std::mutex> lock(mutex);
     return device2dep_object.emplace(device, dep_object).first->second.Mutable();
@@ -109,9 +109,9 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
 Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
   static const size_t kDoubleBufferPoolSize = 2;
   static const HashMap<std::string, size_t> type2pool_size{
-      {"cpu", GetInstructionHighWaterMark()},           {"cuda", GetInstructionHighWaterMark()},
-      {"gpu", GetInstructionHighWaterMark()},           {"cuda_h2d", kDoubleBufferPoolSize},
-      {"cuda_d2h", kDoubleBufferPoolSize}, {"nccl", kDoubleBufferPoolSize},
+      {"cpu", GetInstructionHighWaterMark()}, {"cuda", GetInstructionHighWaterMark()},
+      {"gpu", GetInstructionHighWaterMark()}, {"cuda_h2d", kDoubleBufferPoolSize},
+      {"cuda_d2h", kDoubleBufferPoolSize},    {"nccl", kDoubleBufferPoolSize},
   };
   return MapAt(type2pool_size, type());
 }

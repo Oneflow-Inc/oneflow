@@ -24,26 +24,17 @@ namespace vm {
 
 void AccessBlobArgCbPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  if (modifier_ == "const") {
-    auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
-    DoEach(nullptr, compute_local_dep_object->mut_mirrored_object());
-  }
+  if (modifier_ == "const") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
 }
 
 void AccessBlobArgCbPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  if (modifier_ == "mut") {
-    auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
-    DoEach(nullptr, compute_local_dep_object->mut_mirrored_object());
-  }
+  if (modifier_ == "mut") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
 }
 
 void AccessBlobArgCbPhyInstrOperand::ForEachMut2MirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  if (modifier_ == "mut2") {
-    auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
-    DoEach(nullptr, compute_local_dep_object->mut_mirrored_object());
-  }
+  if (modifier_ == "mut2") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
 }
 
 }  // namespace vm
