@@ -58,7 +58,7 @@ Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyInterpSt
   ctx->depth = JUST(composed_attrs.GetAttr<int64_t>("depth"));
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   CHECK_EQ_OR_RETURN(outputs.size(), 2);
-  ctx->SaveTensorForBackward(outputs.at(0));  // prob
+  ctx->SaveTensorForBackward(outputs.at(1));  // prob
   ctx->SaveTensorForBackward(inputs.at(1));   // label
   return Maybe<void>::Ok();
 }
