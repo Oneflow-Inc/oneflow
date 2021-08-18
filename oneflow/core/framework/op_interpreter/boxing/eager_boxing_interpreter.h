@@ -42,7 +42,7 @@ class EagerBoxingInterpreter {
                                Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> in_parallel_desc,
                                Symbol<ParallelDesc> out_parallel_desc) {
-    JUST(CheckEagerBoxingDataType(input->dtype()));
+    JUST(CheckEagerBoxingDataType(input->dtype()->data_type()));
     return InterpretImpl(input, in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc);
   }
 

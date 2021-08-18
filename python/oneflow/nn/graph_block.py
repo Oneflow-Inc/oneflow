@@ -19,6 +19,7 @@ from typing import Iterator, Optional, Set, Union
 
 import oneflow._oneflow_internal
 import oneflow.framework.graph_build_util as graph_build_util
+from oneflow.framework.distribute import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
 from oneflow.nn.parameter import Parameter
@@ -121,6 +122,8 @@ class Block(object):
         return self._scope
 
     def debug(self, mode: bool = True) -> None:
+        if get_rank() != 0:
+            return
         self._debug = mode
         if self._type == BlockType.MODULE:
 
@@ -299,7 +302,9 @@ class Block(object):
             if hasattr(self._origin, name):
                 return partial(getattr(self._origin.__class__, name), self)
         raise AttributeError(
-            "'{}' object has no attribute '{}'".format(type(self).__name__, name)
+            "'{}' '{}' object '{}' in nn.Graph has no attribute '{}'".format(
+                self._type, type(self).__name__, self._name_prefix + self.name, name
+            )
         )
 
     def _get_in_states(self, name, states_name):
