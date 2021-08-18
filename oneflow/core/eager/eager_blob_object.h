@@ -79,7 +79,7 @@ class EagerBlobObject final : public BlobObject {
 
  private:
   std::unique_ptr<Blob> blob_;
-  std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
+  std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   std::unique_ptr<MemoryAllocator> non_pod_initer_;
