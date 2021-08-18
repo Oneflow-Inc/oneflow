@@ -167,7 +167,7 @@ void StackAutogradEngine::ClearReleasedFunctionNodes() {
                    node_list_.end());
 }
 
-Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTuple& outputs,
+Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
                                                                       const TensorTuple& out_grads,
                                                                       bool retain_graph,
                                                                       bool create_graph) {
@@ -190,7 +190,7 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const Tens
   return Maybe<void>::Ok();
 }
 
-Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGradIf(
+Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
   ClearReleasedFunctionNodes();
@@ -396,7 +396,7 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTuple& outputs,
+Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
                                                                       const TensorTuple& out_grads,
                                                                       bool retain_graph,
                                                                       bool create_graph) {
@@ -409,7 +409,7 @@ Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const Tens
   return Maybe<void>::Ok();
 }
 
-Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGradIf(
+Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
   std::shared_ptr<TensorTuple> input_current_grad = std::make_shared<TensorTuple>(inputs.size());
