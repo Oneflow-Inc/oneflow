@@ -65,8 +65,11 @@ struct StaticAny {
 
 template<typename T>
 struct IsOutArg {
-  static constexpr bool value = !std::is_const<typename std::remove_reference<T>::type>::value
-                                && (std::is_pointer<T>::value || std::is_reference<T>::value);
+  static constexpr bool value =
+      (std::is_reference<T>::value
+       && !std::is_const<typename std::remove_reference<T>::type>::value)
+      || (std::is_pointer<T>::value
+          && !std::is_const<typename std::remove_pointer<T>::type>::value);
 };
 
 template<typename T>
