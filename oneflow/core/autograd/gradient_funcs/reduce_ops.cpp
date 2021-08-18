@@ -64,6 +64,48 @@ Maybe<void> ReduceSumOp::Apply(const ReduceSumOpInterpState* ctx, const TensorTu
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_sum", ReduceSumOp);
 
+struct ReduceProdOpInterpState : public OpExprInterpState {
+  std::vector<int32_t> axis;
+};
+
+class ReduceProdOp : public OpExprGradFunction<ReduceProdOpInterpState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Capture(ReduceProdOpInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Apply(const ReduceProdOpInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
+
+ private:
+  AttrMap base_attrs_;
+};
+
+Maybe<void> ReduceProdOp::Init(const OpExpr& op) {
+  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReduceProdOp::Capture(ReduceProdOpInterpState* ctx, const TensorTuple& inputs,
+                                 const TensorTuple& outputs, const AttrMap& attrs) const {
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+  ctx->SaveTensorForBackward(inputs.at(0));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* ctx, const TensorTuple& out_grads,
+                               TensorTuple* in_grads) const {
+  const auto& input = ctx->SavedTensors().at(0);
+  const auto& dy = out_grads.at(0);
+  in_grads->resize(1);
+  in_grads->at(0) = JUST(functional::BroadcastLike(dy, input, ctx->axis));
+  return Maybe<void>::Ok();
+}
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_prod", ReduceProdOp);
+
 struct ReduceMaxOrMinOpInterpState : public OpExprInterpState {
   std::vector<int32_t> axis;
   bool keepdims;

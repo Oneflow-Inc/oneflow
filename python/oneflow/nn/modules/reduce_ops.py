@@ -161,7 +161,7 @@ def _max(input, dim=None, keepdim=False):
     return Max(dim, keepdim)(input)
 
 
-def prod_op(input, dim=None):
+def prod_op(input, dim=None, keepdim=False):
     r"""Computes the product of row of elements in a tensor in the given axis, if the axis is None, \
     product of all elements will be caculated.
     
@@ -186,17 +186,17 @@ def prod_op(input, dim=None):
     axis_checked = _check_axis(dim, input.shape)
     if len(axis_checked) == 0:
         return input
-    return flow.F.reduce_prod(input, axis_checked, False)
+    return flow.F.reduce_prod(input, axis_checked, keepdim)
 
 
 @register_tensor_op("prod")
-def prod_tensor_op(input, dim=None):
+def prod_tensor_op(input, dim=None, keepdim=False):
     """
     input.prod(dim, index) -> Tensor
     See :func:`oneflow.prod`
     """
 
-    return prod_op(input, dim)
+    return prod_op(input, dim, keepdim)
 
 
 if __name__ == "__main__":
