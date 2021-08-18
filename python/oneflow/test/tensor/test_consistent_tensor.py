@@ -105,10 +105,14 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(l_y.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
         )
-        # TODO：Uncomment it after implementing `AsMirroredTensor()`
-        # test_case.assertTrue(
-        #     np.allclose(z.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
-        # )
+        test_case.assertTrue(
+            np.allclose(
+                z.grad.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+                np.ones(shape),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
         test_case.assertIsNone(l_x.grad)
 
 
