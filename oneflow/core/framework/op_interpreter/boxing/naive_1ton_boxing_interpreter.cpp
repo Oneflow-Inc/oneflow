@@ -29,9 +29,9 @@ namespace oneflow {
 namespace {
 
 Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp() {
-  cfg::NdSbp broadcast_nd_sbp;
-  broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
-  return SymbolOf(broadcast_nd_sbp);
+  cfg::NdSbp partial_sum_nd_sbp;
+  partial_sum_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
+  return SymbolOf(partial_sum_nd_sbp);
 }
 
 auto* CachedGetPartialSumNdSbp = DECORATE(&GetPartialSumNdSbp, ThreadLocal);
