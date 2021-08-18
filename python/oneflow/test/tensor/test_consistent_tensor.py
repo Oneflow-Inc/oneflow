@@ -27,6 +27,19 @@ import oneflow.unittest
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensor(flow.unittest.TestCase):
 
+    @flow.unittest.skip_unless_1n2d()
+    def test_consistent_tensor_init_methods(test_case):
+        test_case._test_tensor_init_methods(
+            lambda *args, **kwargs: flow.Tensor(
+                *args,
+                **kwargs,
+                sbp=flow.sbp.broadcast,
+                placement=flow.placement("cuda", {0: range(2)})
+            ),
+            lambda x: x.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+        )
+
+    @flow.unittest.skip_unless_1n1d()
     def test_creating_consistent_tensor(test_case):
         placement = flow.placement("cuda", {0: 0})
         sbp = flow.sbp.broadcast
@@ -48,6 +61,7 @@ class TestTensor(flow.unittest.TestCase):
 
         # TODO: ndarray -> ConsistentTensor
 
+    @flow.unittest.skip_unless_1n1d()
     def test_construct_local_from_consistent_tensor(test_case):
         placement = flow.placement("cuda", {0: 0})
         sbp = flow.sbp.broadcast
