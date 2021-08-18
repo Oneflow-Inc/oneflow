@@ -52,10 +52,11 @@ void MessagePool::RegisterMessagePool(){
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
           message_buf_.push_front(msg_mr);
       }
+       std::cout<<"In RegisterMessagePoo, the size of message_buf_:" << message_buf_.size() << std::endl;
     }
 
 void MessagePool::PutMessage(ActorMsgMR *msg_mr) {
-      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
       message_buf_.push_front(msg_mr);
       std::cout<<"In PutMessage, the size of message_buf_:" << message_buf_.size() << std::endl;
 }
@@ -65,15 +66,16 @@ ActorMsgMR *  MessagePool::GetMessage(){
     return GetMessageFromBuf();
   } else {
       RegisterMessagePool();
-        return GetMessageFromBuf();
+      return GetMessageFromBuf();
   }
 }
 
 ActorMsgMR * MessagePool::GetMessageFromBuf() {
-  std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+  std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
   std::deque<ActorMsgMR*> buf = GetMessageBuf();
   ActorMsgMR * msg_mr = buf.front();
   buf.pop_front();
+  std::cout<<"In GetMessageFromBuf, the size of message_buf_:" << message_buf_.size() << std::endl;
   return msg_mr;
 }
 

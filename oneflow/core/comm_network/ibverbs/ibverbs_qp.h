@@ -19,6 +19,7 @@ limitations under the License.
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <mutex>
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/platform/include/ibv.h"
@@ -103,18 +104,17 @@ class MessagePool final {
     ActorMsgMR *  GetMessage();
     ActorMsgMR * GetMessageFromBuf();
     void PutMessage(ActorMsgMR * msg_mr);
-    
+
     std::deque<ActorMsgMR*> GetMessageBuf() {
       return message_buf_;
     }
 
     bool isEmpty() {
-      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      return message_buf_.empty();
+      std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      return message_buf_.empty() == true ;
     }
 
   private:
-//    ibv_pd* pd_;
     std::shared_ptr<ibv_pd> pd_;
     size_t  num_of_message_;
     std::mutex message_buf_mutex_;
