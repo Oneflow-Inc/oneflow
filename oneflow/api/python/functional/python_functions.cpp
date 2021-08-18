@@ -84,12 +84,7 @@ py::object PyAdd(py::args py_args, py::kwargs py_kwargs) {
       if (*a->shape() == *b->shape()) {
         return functional::Add(a, b, inplace);
       } else {
-        if (inplace) {
-          const auto& tmp = functional::Expand(b, *a->shape());
-          CHECK_OR_RETURN(tmp.IsOk()) << "Can not apply inplace on the broadcasting input.";
-          return functional::Add(a, JUST(tmp), inplace);
-        }
-        return functional::BroadcastAdd(a, b);
+        return functional::BroadcastAdd(a, b, inplace);
       }
     }
   }();
@@ -339,6 +334,43 @@ py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
+py::object PyFmod(py::args py_args, py::kwargs py_kwargs) {
+  // "broadcast_fmod(Tensor x, Tensor y)"
+  // "scalar_fmod(Tensor in, Scalar scalar)"
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 2) << "2 positional inputs are required.";
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* input = PyTuple_GetItem(args, 0);
+    PyObject* other = PyTuple_GetItem(args, 1);
+    bool input_is_tensor = PyTensorCheck(input);
+    bool other_is_tensor = PyTensorCheck(other);
+    CHECK_OR_RETURN(input_is_tensor || other_is_tensor) << "Inputs must have one tensor at least.";
+    CHECK_OR_RETURN(PyTensorCheck(input) || PyScalarCheck(input))
+        << "The first input should be a tensor or scalar.";
+    CHECK_OR_RETURN(PyTensorCheck(other) || PyScalarCheck(other))
+        << "The second input should be a tensor or scalar.";
+    if (PyTensorCheck(input) && PyTensorCheck(other)) {
+      auto a = JUST(PyUnpackTensor(input));
+      auto b = JUST(PyUnpackTensor(other));
+      return functional::BroadcastFMod(a, b);
+    } else {
+      if (PyTensorCheck(input)) {
+        CHECK_OR_RETURN(PyScalarCheck(other)) << "The second input should be a scalar.";
+        auto a = JUST(PyUnpackTensor(input));
+        auto b = *JUST(PyUnpackScalar(other));
+        return functional::ScalarFMod(a, b);
+      } else {
+        CHECK_OR_RETURN(PyScalarCheck(input)) << "The first input should be a scalar.";
+        auto a = *JUST(PyUnpackScalar(input));
+        auto b = JUST(PyUnpackTensor(other));
+        return functional::ScalarFMod(b, a);
+      }
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
 py::object PyEqual(py::args py_args, py::kwargs py_kwargs) {
   // "broadcast_equal(Tensor x, Tensor y)"
   // "scalar_logical_equal(Tensor in, Scalar scalar)"
@@ -567,6 +599,49 @@ py::object PyLessEqual(py::args py_args, py::kwargs py_kwargs) {
   return py::cast(result.GetPtrOrThrow());
 }
 
+py::object PyWhere(py::args py_args, py::kwargs py_kwargs) {
+  // "Where(Tensor condition, Tensor x, Tensor y)"
+  // "WhereScalarX(Tensor condition, Scalar scalar, Tensor y)"
+  // "WhereScalarY(Tensor condition, Tensor x, Scalar scalar)"
+  // "WhereScalarXY(Tensor condition, Scalar x_scalar, Scalar y_scalar)"
+  PyObject* args = py_args.ptr();
+  size_t nargs = PyTuple_Size(args);
+  CHECK_EQ_OR_THROW(nargs, 3) << "3 positional inputs are required.";
+  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
+    PyObject* condition = PyTuple_GetItem(args, 0);
+    PyObject* x = PyTuple_GetItem(args, 1);
+    PyObject* y = PyTuple_GetItem(args, 2);
+
+    CHECK_OR_RETURN(PyTensorCheck(condition)) << "condition should be a Tensor.";
+    auto cond_tensor = JUST(PyUnpackTensor(condition));
+    bool x_is_tensor = PyTensorCheck(x);
+    bool y_is_tensor = PyTensorCheck(y);
+
+    if (x_is_tensor && y_is_tensor) {
+      auto x_tensor = JUST(PyUnpackTensor(x));
+      auto y_tensor = JUST(PyUnpackTensor(y));
+      return functional::Where(cond_tensor, x_tensor, y_tensor);
+    } else if (!x_is_tensor && y_is_tensor) {
+      CHECK_OR_RETURN(PyScalarCheck(x)) << "The x should be a scalar.";
+      auto scalar = *JUST(PyUnpackScalar(x));
+      auto y_tensor = JUST(PyUnpackTensor(y));
+      return functional::WhereScalarX(cond_tensor, scalar, y_tensor);
+    } else if (x_is_tensor && !y_is_tensor) {
+      CHECK_OR_RETURN(PyScalarCheck(y)) << "The y should be a scalar.";
+      auto x_tensor = JUST(PyUnpackTensor(x));
+      auto scalar = *JUST(PyUnpackScalar(y));
+      return functional::WhereScalarY(cond_tensor, x_tensor, scalar);
+    } else {
+      CHECK_OR_RETURN(PyScalarCheck(x) && PyScalarCheck(y))
+          << "The x and y should be both a scalar.";
+      auto x_scalar = *JUST(PyUnpackScalar(x));
+      auto y_scalar = *JUST(PyUnpackScalar(y));
+      return functional::WhereScalarXY(cond_tensor, x_scalar, y_scalar);
+    }
+  }();
+  return py::cast(result.GetPtrOrThrow());
+}
+
 }  // namespace functional
 }  // namespace one
 
@@ -580,12 +655,14 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("pow", &functional::PyPow);
   m.def("clamp", &functional::PyClamp);
   m.def("scatter", &functional::PyScatter);
+  m.def("fmod", &functional::PyFmod);
   m.def("equal", &functional::PyEqual);
   m.def("not_equal", &functional::PyNotEqual);
   m.def("greater", &functional::PyGreater);
   m.def("greater_equal", &functional::PyGreaterEqual);
   m.def("less", &functional::PyLess);
   m.def("less_equal", &functional::PyLessEqual);
+  m.def("where", &functional::PyWhere);
 }
 
 }  // namespace oneflow

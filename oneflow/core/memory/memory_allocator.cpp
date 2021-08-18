@@ -29,7 +29,12 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
 #ifdef WITH_CUDA
-      NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
+      // NOTE(chengcheng):
+      //   All cudaMallocHost MUST set the correct device id to avoid creating CUDA context
+      //   on other GPU which will occopy 500MiB device memory.
+      int64_t device_id = mem_case.host_mem().cuda_pinned_mem().device_id();
+      CudaCurrentDeviceGuard guard(device_id);
+      NumaAwareCudaMallocHost(device_id, &ptr, size);
 #else
       UNIMPLEMENTED();
 #endif

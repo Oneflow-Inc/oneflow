@@ -33,6 +33,11 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+void TensorImpl::set_requires_grad(bool requires_grad) {
+  requires_grad_ = requires_grad;
+  if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+}
+
 Maybe<Tensor> TensorImpl::acc_grad() const {
   CHECK_NOTNULL_OR_RETURN(autograd_meta_);
   return autograd_meta_->acc_grad();
