@@ -57,8 +57,8 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
 auto* CachedNcclReduceScatterOpExpr = DECORATE(&EagerNcclReduceScatter, ThreadLocalCopiable);
 
 Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc,
-                                    const cfg::SbpParallel& src_sbp,
-                                    const cfg::SbpParallel& dst_sbp) {
+                                    Symbol<cfg::SbpParallel> src_sbp,
+                                    Symbol<cfg::SbpParallel> dst_sbp) {
   return one::OpBuilder("eager_nccl_s2s", *JUST(UniqueStr("eager_nccl_s2s")))
       .Input("in")
       .Output("out")
@@ -111,8 +111,8 @@ Maybe<one::Tensor> NcclCollectiveS2SBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
     Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2S(in_nd_sbp->sbp_parallel(0),
-                                                          out_nd_sbp->sbp_parallel(0)));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2S(SymbolOf(in_nd_sbp->sbp_parallel(0)),
+                                                          SymbolOf(out_nd_sbp->sbp_parallel(0))));
   CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
   const auto& op_expr = JUST(CachedEagerNcclS2SOpExpr(in_parallel_desc, in_nd_sbp->sbp_parallel(0),
                                                       out_nd_sbp->sbp_parallel(0)));
