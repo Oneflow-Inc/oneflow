@@ -13,18 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_12N_BOXING_INTERPRETER_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_12N_BOXING_INTERPRETER_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_1_TO_N_BOXING_INTERPRETER_H_
+#define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_1_TO_N_BOXING_INTERPRETER_H_
 
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
 
 namespace oneflow {
 
-class Nccl1ToBBoxingInterpreter final : public EagerBoxingInterpreter {
+class Nccl1ToPBoxingInterpreter final : public EagerBoxingInterpreter {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Nccl1ToBBoxingInterpreter);
-  Nccl1ToBBoxingInterpreter() = default;
-  ~Nccl1ToBBoxingInterpreter() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Nccl1ToPBoxingInterpreter);
+  Nccl1ToPBoxingInterpreter() = default;
+  ~Nccl1ToPBoxingInterpreter() override = default;
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
@@ -33,11 +33,11 @@ class Nccl1ToBBoxingInterpreter final : public EagerBoxingInterpreter {
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
 };
 
-class Nccl1ToPBoxingInterpreter final : public EagerBoxingInterpreter {
+class Nccl1ToBBoxingInterpreter final : public EagerBoxingInterpreter {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Nccl1ToPBoxingInterpreter);
-  Nccl1ToPBoxingInterpreter() = default;
-  ~Nccl1ToPBoxingInterpreter() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Nccl1ToBBoxingInterpreter);
+  Nccl1ToBBoxingInterpreter() = default;
+  ~Nccl1ToBBoxingInterpreter() override = default;
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
@@ -61,4 +61,4 @@ class Nccl1ToSBoxingInterpreter final : public EagerBoxingInterpreter {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_12N_BOXING_INTERPRETER_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_NAIVE_1_TO_N_BOXING_INTERPRETER_H_
