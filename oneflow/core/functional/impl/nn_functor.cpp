@@ -721,13 +721,12 @@ class FusedBiasAddGeluGradFunctor {
                          .Input("a")
                          .Input("b")
                          .Input("dy")
-                         .Output("out")
+                         .Output("dx")
                          .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b,
-                           const std::shared_ptr<one::Tensor>& dy, const int32_t& axis,
-                           const float& epsilon) const {
+                           const std::shared_ptr<one::Tensor>& dy, const int32_t& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b, dy}, attrs);
@@ -735,6 +734,43 @@ class FusedBiasAddGeluGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class FusedBiasAddDropoutFunctor {
+ public:
+  FusedBiasAddDropoutFunctor() {
+    random_mask_like_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    fused_bias_add_mask_scale_op_ =
+        CHECK_JUST(one::OpBuilder("fused_bias_add_mask_scale").Input("a").Input("b").Input("mask").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a, const std::shared_ptr<one::Tensor>& b, 
+                           const float& p, const int32_t& axis, 
+                           const Optional<one::Generator>& generator) const {
+    MutableAttrMap random_mask_like_attrs;
+    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {a},
+        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+    float scale = 1.0;
+    if (p != 1.0) { scale = 1.0 / (1.0 - p); }
+    MutableAttrMap fused_bias_add_mask_attrs;
+    JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
+    JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, mask}, fused_bias_add_mask_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> random_mask_like_op_;
+  std::shared_ptr<OpExpr> fused_bias_add_mask_scale_op_;
 };
 
 }  // namespace impl
@@ -770,6 +806,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
+  m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
 };
 
 }  // namespace functional

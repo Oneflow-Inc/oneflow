@@ -30,14 +30,30 @@ def _test_fused_bias_add_gelu(test_case):
     x = np.random.randn(4, channel, 8, 10)
     bias = np.random.randn(channel)
     # fused version only support in GPU
-    x_tensor = flow.Tensor(x).to("cuda")
-    bias_tensor = flow.Tensor(bias).to("cuda")
-    fused_out = flow.F.fused_bias_add_gelu(x_tensor, bias_tensor, axis=axis)
-    original_out = flow.gelu(flow.F.bias_add(x_tensor, bias_tensor, axis=axis))
-    test_case.assertTrue(
-        np.allclose(fused_out.numpy(), original_out.numpy(), atol=1e-4, rtol=1e-4)
-    )
+    fused_x_tensor = flow.Tensor(x).to("cuda")
+    fused_x_tensor.requires_grad = True 
+    fused_bias_tensor = flow.Tensor(bias).to("cuda")
+    fused_bias_tensor.requires_grad = True 
+    fused_out = flow.F.fused_bias_add_gelu(fused_x_tensor, fused_bias_tensor, axis=axis)
+    
+    origin_x_tensor = flow.Tensor(x).to("cuda")
+    origin_x_tensor.requires_grad = True 
+    origin_bias_tensor = flow.Tensor(bias).to("cuda")
+    origin_bias_tensor.requires_grad = True 
+    origin_out = flow.gelu(flow.F.bias_add(origin_x_tensor, origin_bias_tensor, axis=axis))
 
+    total_out = fused_out.sum() + origin_out.sum()
+    total_out.backward()
+     
+    test_case.assertTrue(
+        np.allclose(fused_out.numpy(), origin_out.numpy(), atol=1e-4, rtol=1e-4)
+    )
+    test_case.assertTrue(
+        np.allclose(fused_x_tensor.grad.numpy(), origin_x_tensor.grad.numpy(), atol=1e-4, rtol=1e-4)
+    )
+    test_case.assertTrue(
+        np.allclose(fused_bias_tensor.grad.numpy(), origin_bias_tensor.grad.numpy(), atol=1e-4, rtol=1e-4)
+    )
 
 @flow.unittest.skip_unless_1n1d()
 class TestFusedBiasAddGelu(flow.unittest.TestCase):

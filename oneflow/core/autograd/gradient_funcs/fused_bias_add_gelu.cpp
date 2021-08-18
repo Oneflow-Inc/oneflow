@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-// #include "oneflow/core/framework/op_builder.h"
-// #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -43,32 +41,37 @@ class FusedBiasAddGelu : public OpExprGradFunction<FusedBiasAddGeluInterpState> 
     ctx->bias_requires_grad = inputs.at(1)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->axis = JUST(composed_attrs.GetAttr<int32_t>("axis"));
-    ctx->SaveTensorForBackward(inputs.at(0));
-    ctx->SaveTensorForBackward(inputs.at(1));
+    if(ctx->input_requires_grad || ctx->bias_requires_grad){
+      ctx->SaveTensorForBackward(inputs.at(0));
+      ctx->SaveTensorForBackward(inputs.at(1));
+    }
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const FusedBiasAddGeluInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
+  
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    MutableAttrMap attrs;
     const int64_t num_axes = out_grads.at(0)->shape()->NumAxes();
     in_grads->resize(2);
     const auto& a = ctx->SavedTensors().at(0);
     const auto& b = ctx->SavedTensors().at(1);
-
+    const std::shared_ptr<oneflow::one::Tensor>& fused_bias_add_gelu_grad = JUST(functional::FusedBiasAddGeluGrad(a, b, out_grads.at(0), ctx->axis));
     if (ctx->bias_requires_grad) {
       std::vector<int32_t> reduce_axes_vec;
       reduce_axes_vec.reserve(num_axes);
       for (int i = 0; i < num_axes; ++i) {
         if (i != ctx->axis) { reduce_axes_vec.push_back(i); }
       }
-      in_grads->at(1) = JUST(functional::ReduceSum(out_grads.at(0), reduce_axes_vec, false));
+      in_grads->at(1) = JUST(functional::ReduceSum(fused_bias_add_gelu_grad, reduce_axes_vec, false));
     }
     if (ctx->input_requires_grad) {
-      in_grads->at(0) = JUST(functional::FusedBiasAddGeluGrad(a, b, out_grads.at(0), ctx->axis));
+      in_grads->at(0) = fused_bias_add_gelu_grad;
     }
     return Maybe<void>::Ok();
   }
-
  private:
   AttrMap base_attrs_;
 };
