@@ -85,7 +85,7 @@ def _test_linear_train_graph(test_case, device):
             def __init__(self):
                 super().__init__()
                 self.linear = linear
-                self.add_optimizer("sgd", of_sgd)
+                self.add_optimizer(of_sgd)
 
             def build(self, x):
                 out = self.linear(x)
