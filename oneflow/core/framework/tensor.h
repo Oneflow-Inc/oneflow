@@ -121,11 +121,19 @@ class StaticZerosTensor final : public Tensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
   Symbol<DType> dtype() const { return CHECK_JUST(DType::Get(dtype_)); }
-  Maybe<TransportToken> transport_token() const { OF_UNIMPLEMENTED(); }
-  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const { OF_UNIMPLEMENTED(); }
-  Maybe<Symbol<ParallelDesc>> parallel_desc() const { OF_UNIMPLEMENTED(); }
+  Maybe<TransportToken> transport_token() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no transport_token property";
+  }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no nd_sbp property";
+  }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no parallel_desc property";
+  }
   Maybe<Symbol<Device>> device() const { return device_; }
-  Maybe<Symbol<Device>*> mut_device() { OF_UNIMPLEMENTED(); }
+  Maybe<Symbol<Device>*> mut_device() {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no mut_device property";
+  }
   bool is_cuda() const {
     UNIMPLEMENTED();
     return false;
@@ -141,23 +149,43 @@ class StaticZerosTensor final : public Tensor {
     UNIMPLEMENTED();
     return *(TensorMeta*)nullptr;
   }
-  Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
+  Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no consistent_tensor_meta property";
+  }
 
   // Getters valid only for EagerMirroredTensor
-  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
-  Maybe<vm::EagerBlobObject> eager_blob_object() const { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const { OF_UNIMPLEMENTED(); }
-  Maybe<bool> has_eager_blob_object() const { OF_UNIMPLEMENTED(); }
-  Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
-  Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
-  Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
+  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no mut_eager_mirrored_tensor_impl property";
+  }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no eager_blob_object property";
+  }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no compute_local_dep_object property";
+  }
+  Maybe<bool> has_eager_blob_object() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no has_eager_blob_object property";
+  }
+  Maybe<TensorStorage> tensor_storage() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no tensor_storage property";
+  }
+  Maybe<const Stride> stride() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no stride property";
+  }
+  Maybe<int64_t> storage_offset() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no storage_offset property";
+  }
 
   // Getters/Setters valid only for EagerConsistentTensor
   Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const {
-    OF_UNIMPLEMENTED();
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no consumer_nd_sbp_constraint property";
   }
-  Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { OF_UNIMPLEMENTED(); }
+  Maybe<MirroredTensor> cur_rank_phy_tensor() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no cur_rank_phy_tensor property";
+  }
+  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no set_consumer_nd_sbp_constraint property";
+  }
 
   // Getters for autograd
   bool requires_grad() const {
@@ -176,10 +204,14 @@ class StaticZerosTensor final : public Tensor {
     UNIMPLEMENTED();
     return nullptr;
   }
-  Maybe<Tensor> acc_grad() const { OF_UNIMPLEMENTED(); }
-  Maybe<TensorArg> current_grad() const { OF_UNIMPLEMENTED(); }
-  Maybe<Tensor> detach() const { OF_UNIMPLEMENTED(); }
-  Maybe<Tensor> clone() const { OF_UNIMPLEMENTED(); }
+  Maybe<Tensor> acc_grad() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no acc_grad property";
+  }
+  Maybe<TensorArg> current_grad() const {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no current_grad property";
+  }
+  Maybe<Tensor> detach() const { OF_RUNTIMEERROR() << "StaticZerosTensor has no detach property"; }
+  Maybe<Tensor> clone() const { OF_RUNTIMEERROR() << "StaticZerosTensor has no clone property"; }
   std::shared_ptr<Tensor> data() const {
     UNIMPLEMENTED();
     return nullptr;
@@ -187,14 +219,20 @@ class StaticZerosTensor final : public Tensor {
 
   // Setters for autograd
   void set_requires_grad(bool requires_grad) { UNIMPLEMENTED(); }
-  Maybe<void> set_retain_grad(bool retain_grad) { OF_UNIMPLEMENTED(); }
+  Maybe<void> set_retain_grad(bool retain_grad) {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no retain_grad property";
+  }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) { UNIMPLEMENTED(); }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() {
     UNIMPLEMENTED();
     return *(std::shared_ptr<FunctionNode>*)nullptr;
   }
-  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) { OF_UNIMPLEMENTED(); }
-  Maybe<Tensor> mut_acc_grad() { OF_UNIMPLEMENTED(); }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no set_acc_grad property";
+  }
+  Maybe<Tensor> mut_acc_grad() {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no mut_acc_grad property";
+  }
   void set_is_leaf(bool is_leaf) { UNIMPLEMENTED(); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() {
     UNIMPLEMENTED();
@@ -356,9 +394,15 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
-  Maybe<TransportToken> transport_token() const override { OF_UNIMPLEMENTED(); }
-  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { OF_UNIMPLEMENTED(); }
-  Maybe<Symbol<ParallelDesc>> parallel_desc() const override { OF_UNIMPLEMENTED(); }
+  Maybe<TransportToken> transport_token() const override {
+    OF_RUNTIMEERROR() << "MirroredTensor Tensor has no transport_token property";
+  }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override {
+    OF_RUNTIMEERROR() << "MirroredTensor has no nd_sbp property";
+  }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
+    OF_RUNTIMEERROR() << "MirroredTensor has no parallel_desc property";
+  }
   Maybe<Symbol<Device>> device() const override { return impl_->device(); }
   Maybe<Symbol<Device>*> mut_device() override { return impl_->mut_device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
@@ -440,8 +484,12 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
-  Maybe<Symbol<Device>> device() const override { OF_UNIMPLEMENTED(); }
-  Maybe<Symbol<Device>*> mut_device() override { OF_UNIMPLEMENTED(); }
+  Maybe<Symbol<Device>> device() const override {
+    OF_RUNTIMEERROR() << "ConsistentTensor has no device property";
+  }
+  Maybe<Symbol<Device>*> mut_device() override {
+    OF_RUNTIMEERROR() << "ConsistentTensor has no mut_device property";
+  }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
   Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const override {

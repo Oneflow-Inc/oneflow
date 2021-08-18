@@ -137,13 +137,21 @@ class ConsistentTensorImpl : public TensorImpl {
   const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint() const {
     return consumer_nd_sbp_constraint_;
   }
-  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const {
+    OF_RUNTIMEERROR() << "ConsistentTensorImpl has no cur_rank_phy_tensor property";
+  }
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
 
   // Getters valid only for EagerMirroredTensorImpl
-  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override {
+    OF_RUNTIMEERROR() << "ConsistentTensorImpl has no eager_blob_object property";
+  }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
+    OF_RUNTIMEERROR() << "ConsistentTensorImpl has no compute_local_dep_object property";
+  }
+  Maybe<bool> has_eager_blob_object() const override {
+    OF_RUNTIMEERROR() << "ConsistentTensorImpl has no has_eager_blob_object property";
+  }
 
   // Setters
   void set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
@@ -186,10 +194,18 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   bool is_lazy() const override { return true; }
 
   // Getters valid only for EagerMirroredTensorImpl
-  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<TensorStorage> tensor_storage() const override { OF_UNIMPLEMENTED(); }
-  Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override {
+    OF_RUNTIMEERROR() << "LazyMirroredTensorImpl has no eager_blob_object property";
+  }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
+    OF_RUNTIMEERROR() << "LazyMirroredTensorImpl has no compute_local_dep_object property";
+  }
+  Maybe<TensorStorage> tensor_storage() const override {
+    OF_RUNTIMEERROR() << "LazyMirroredTensorImpl has no tensor_storage property";
+  }
+  Maybe<bool> has_eager_blob_object() const override {
+    OF_RUNTIMEERROR() << "LazyMirroredTensorImpl has no has_eager_blob_object property";
+  }
   Maybe<MirroredTensorImpl> detach() const override;
 };
 
