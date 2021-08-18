@@ -328,6 +328,7 @@ from typing import Any
 class no_grad(object):
     def __init__(self):
         self.entered = False
+        self.no_grad_guard = oneflow._oneflow_internal.autograd.no_grad
  
     def __call__(self, func):
         @wraps(func)
@@ -338,11 +339,11 @@ class no_grad(object):
 
     def __enter__(self):
         self.entered = True
-        oneflow._oneflow_internal.autograd._set_grad_enabled(False)
+        self.no_grad_guard.__enter__
         return self
 
     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any):
         self.entered = False
-        oneflow._oneflow_internal.autograd._set_grad_enabled(True)
+        self.no_grad_guard.__exit__
         return self
 

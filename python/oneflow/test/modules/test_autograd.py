@@ -106,7 +106,12 @@ def _test_no_grad_annotation(test_case, shape, device):
 class TestAutograd(flow.unittest.TestCase):
     def test_autograd_interface(test_case):
         arg_dict = OrderedDict()
-        arg_dict["case"] = [_test_autograd_backward, _test_autograd_grad, _test_no_grad_with, _test_no_grad_annotation]
+        arg_dict["case"] = [
+            _test_autograd_backward, 
+            _test_autograd_grad, 
+            _test_no_grad_with, 
+            _test_no_grad_annotation
+        ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
