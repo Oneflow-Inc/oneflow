@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import os
 import numpy as np
 from collections import OrderedDict
 
@@ -71,13 +72,14 @@ def _test_fused_scale_tril(
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class FusedScaleTrilTestCase(flow.unittest.TestCase):
     def test_fused_scale_tril(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(5, 5), (4, 6)]
         arg_dict["diagonal"] = [-1, 0, 1]
-        arg_dict["fill_value"] = [-1, 0, -1]
+        arg_dict["fill_value"] = [-1, 0, 1]
         arg_dict["scale"] = [-2.3, 0.7, 2]
         arg_dict["dtype"] = [flow.int32, flow.float32]
         for kwargs in GenArgDict(arg_dict):
