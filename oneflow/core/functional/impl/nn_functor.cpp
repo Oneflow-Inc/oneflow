@@ -700,7 +700,7 @@ class L2NormalizeGradFunctor {
 class FusedScaleTrilFunctor {
  public:
   FusedScaleTrilFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_scale_tril").Input("in").Input("out").Build());
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_tril").Input("in").Output("out").Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal,

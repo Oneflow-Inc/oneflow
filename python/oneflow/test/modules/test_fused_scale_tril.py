@@ -26,9 +26,9 @@ def _np_tril(x, diagonal, fill_value, scale):
     if int(fill_value) == 0:
         return np.tril(x, diagonal) * scale
 
-    upper = np.empty(*x.shape)
+    upper = np.empty(x.shape)
     upper.fill(fill_value)
-    upper = np.triu(upper, -diagonal)
+    upper = np.triu(upper, diagonal + 1)
 
     return np.tril(x, diagonal) * scale + upper
 
@@ -42,9 +42,22 @@ def _test_fused_scale_tril(
     dtype=flow.float32,
     device_type="cuda",
 ):
-    x = np.random.rand(*shape)
+    if dtype is flow.int32 and not isinstance(scale, int):
+        # skip
+        return
+
+    # print(
+    #     f"test with shape: {shape}, diagonal: {diagonal}, fill_value: {fill_value}, scale: {scale}, dtype: {dtype}"
+    # )
+
+    if dtype is flow.int32:
+        x = np.random.randint(0, 10, shape)
+        y_grad = np.random.randint(0, 10, shape)
+    else:
+        x = np.random.rand(*shape)
+        y_grad = np.random.rand(*shape)
+
     y = _np_tril(x, diagonal, fill_value, scale)
-    y_grad = np.random.rand(*y.shape)
     x_grad = _np_tril(y_grad, diagonal, 0, scale)
 
     flow_x = flow.Tensor(
@@ -70,7 +83,9 @@ class FusedScaleTrilTestCase(flow.unittest.TestCase):
         arg_dict["shape"] = [(5, 5), (4, 6)]
         arg_dict["diagonal"] = [-1, 0, 1]
         arg_dict["fill_value"] = [-1, 0, -1]
-        arg_dict["scale"] = [-2.3, 0.7]
+        arg_dict["scale"] = [-2.3, 0.7, 2]
+        arg_dict["dtype"] = [flow.int32, flow.float32]
+        # arg_dict["dtype"] = [flow.int32, flow.float32, flow.float16]
         for kwargs in GenArgDict(arg_dict):
             _test_fused_scale_tril(test_case, **kwargs)
 
