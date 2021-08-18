@@ -35,7 +35,10 @@ class Unfold(Module):
         self.padding = _pair(padding)
         self.stride = _pair(stride)
         
+        print("Python attr here!: ", self.kernel_size, self.dilation, self.padding, self.stride)
+
     def forward(self, input): 
+        print("Python input here!: ", input.shape)
         return flow.F.unfold(input, "channels_first", self.kernel_size, self.dilation, self.padding, self.stride)
 
     def extra_repr(self) -> str:
