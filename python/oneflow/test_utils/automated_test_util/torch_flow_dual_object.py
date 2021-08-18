@@ -166,7 +166,6 @@ def GetDualObject(name, pytorch, oneflow):
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
                         except Exception as e:
-                            clear_note_fake_program()
                             raise PyTorchDoesNotSupportError(e)
                         if name in postulate:
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
@@ -190,7 +189,6 @@ def GetDualObject(name, pytorch, oneflow):
                                 *pytorch_args, **pytorch_kwargs
                             )
                         except Exception as e:
-                            clear_note_fake_program()
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         return GetDualObject("unused", pytorch_res, oneflow_res)
@@ -203,29 +201,29 @@ def GetDualObject(name, pytorch, oneflow):
 
 
 def note_print_args(x, end=True):
-    if end == True:
-        if type(x) is str:
-            print("\033[32m'{}'\033[0m".format(x), end=", ")
+    if end:
+        if isinstance(x, str):
+            print(f"\033[32m'{x}, '\033[0m", end="")
         else:
-            print("\033[32m{}\033[0m".format(x), end=", ")
+            print(f"\033[32m{x}, \033[0m", end="")
     else:
-        if type(x) is str:
-            print("\033[32m'{}'\033[0m".format(x), end="")
+        if isinstance(x, str):
+            print(f"\033[32m'{x}'\033[0m", end="")
         else:
-            print("\033[32m{}\033[0m".format(x), end="")
+            print(f"\033[32m{x}\033[0m", end="")
 
 
 def note_print_kwargs(x, y, end=True):
-    if end == True:
-        if type(y) is str:
-            print("\033[32m{}='{}'\033[0m".format(x, y), end=", ")
+    if end:
+        if isinstance(y, str):
+            print(f"\033[32m{x}='{y}, '\033[0m", end="")
         else:
-            print("\033[32m{}={}\033[0m".format(x, y), end=", ")
+            print(f"\033[32m{x}={y}, \033[0m", end="")
     else:
-        if type(y) is str:
-            print("\033[32m{}='{}'\033[0m".format(x, y), end="")
+        if isinstance(y, str):
+            print(f"\033[32m{x}='{y}'\033[0m", end="")
         else:
-            print("\033[32m{}={}\033[0m".format(x, y), end="")
+            print(f"\033[32m{x}={y}\033[0m", end="")
 
 
 def print_note_fake_program():
@@ -233,8 +231,8 @@ def print_note_fake_program():
     for i in range(code_len):
         note_pytorch_args_len = len(note_pytorch_args[i])
         note_pytorch_kwargs_len = len(note_pytorch_kwargs[i])
-        print("\033[32m{}\033[0m".format(note_pytorch_method_names[i]), end="")
-        print("\033[32m(\033[0m", end="")
+        print(f"\033[32m{note_pytorch_method_names[i]}\033[0m", end="")
+        print(f"\033[32m(\033[0m", end="")
         if note_pytorch_args[i]:
             index = 0
             for x in note_pytorch_args[i]:
@@ -248,7 +246,7 @@ def print_note_fake_program():
                 note_print_kwargs(
                     x, note_pytorch_kwargs[i][x], index < note_pytorch_kwargs_len
                 )
-        print("\033[32m)\033[0m")
+        print(f"\033[32m)\033[0m")
 
 
 def clear_note_fake_program():
@@ -370,7 +368,6 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                     if verbose:
                         print(e)
                     loop += 1
-                    clear_note_fake_program()
                     continue
                 if res is not None:
                     if not isinstance(res, collections.abc.Sequence):
