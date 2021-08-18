@@ -48,7 +48,7 @@ Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
   CHECK_EQ_OR_RETURN(parallel_desc->device_type(), DeviceType::kCPU);
   CHECK_OR_RETURN(IsPODDataType(dtype));
   size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-  TransportToken transport_token = TransportToken::NewDataTransportToken();
+  TransportToken transport_token = JUST(TransportToken::NewDataTransportToken(parallel_desc));
   return CpuBroadcast(in, out, buffer_size, root, parallel_desc, transport_token);
 }
 

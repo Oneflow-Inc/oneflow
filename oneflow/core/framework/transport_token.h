@@ -25,8 +25,10 @@ namespace oneflow {
 class ParallelDesc;
 
 const static int kTransportTokenTypeBit = 2;
-const static int kTransportTokenThreadConsistentUIdBit = 3;
+const static int kCtrlTransportTokenThreadConsistentUIdBit = 3;
 const static int kTransportTokenRankGroupLevelBit = 3;
+
+const static int kDataTransportTokenThreadConsistentUIdBit = 8;
 
 enum TransportTokenType {
   // Begin
@@ -67,21 +69,17 @@ class TransportToken final {
   TransportToken(TransportToken&) = default;
   ~TransportToken() = default;
 
-  static TransportToken NewDataTransportToken(Symbol<ParallelDesc> parallel_desc);
+  static Maybe<TransportToken> NewDataTransportToken(Symbol<ParallelDesc> parallel_desc);
   static Maybe<TransportToken> NewMetaTransportToken();
   static Maybe<TransportToken> AcquireCtrlTransportToken(RankGroupCtrlCmd cmd);
   Maybe<void> TryAcquireCtrlTransportTokenLock() const;
   Maybe<void> TryReleaseCtrlTransportTokenLock() const;
 
-  static constexpr size_t MaxNumberOfThreadConsistentUId() {
-    return (1 << kTransportTokenThreadConsistentUIdBit);
-  }
-
   // Getters
   int64_t src_rank() const { return src_rank_; }
   int64_t dst_rank() const { return dst_rank_; }
   TransportTokenType type() const { return static_cast<TransportTokenType>(type_); }
-  Maybe<int64_t> thread_consistent_unique_id() const;
+  Maybe<int64_t> thread_consistent_id() const;
   Maybe<int64_t> rank_group_level() const;
   Maybe<RankGroupCtrlCmd> cmd() const;
 
@@ -95,10 +93,10 @@ class TransportToken final {
  private:
   explicit TransportToken(TransportTokenType type);
 
-  static Maybe<TransportToken> NewMetaTransportToken(int32_t thread_consistent_unique_id,
+  static Maybe<TransportToken> NewMetaTransportToken(int32_t thread_consistent_id,
                                                      int32_t rank_group_level);
   static Maybe<TransportToken> NewCtrlTransportToken(RankGroupCtrlCmd cmd,
-                                                     int32_t thread_consistent_unique_id,
+                                                     int32_t thread_consistent_id,
                                                      int32_t rank_group_level);
 
   uint16_t src_rank_;
