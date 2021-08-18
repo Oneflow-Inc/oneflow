@@ -107,7 +107,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     } else if (work_type == CudaWorkType::kCopyD2H) {
       stream_index = generator->GenerateD2HStreamIndex();
     } else if (work_type == CudaWorkType::kMix) {
-      stream_index = generator->GenerateMixStreamIndex();
+      stream_index = generator->GenerateNamedStreamIndex("MIX");
     } else {
       UNIMPLEMENTED();
     }
