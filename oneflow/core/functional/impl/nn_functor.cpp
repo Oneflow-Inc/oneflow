@@ -697,6 +697,46 @@ class L2NormalizeGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedBiasAddGeluFunctor {
+ public:
+  FusedBiasAddGeluFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("fused_bias_add_gelu").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, const int32_t& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedBiasAddGeluGradFunctor {
+ public:
+  FusedBiasAddGeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_bias_add_gelu_grad")
+                         .Input("a")
+                         .Input("b")
+                         .Input("dy")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b,
+                           const std::shared_ptr<one::Tensor>& dy, const int32_t& axis,
+                           const float& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -728,6 +768,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
+  m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
+  m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
 };
 
 }  // namespace functional
