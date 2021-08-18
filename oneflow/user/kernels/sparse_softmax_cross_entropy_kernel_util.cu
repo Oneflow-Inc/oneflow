@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.cuh"
+#include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.h"
+#include "oneflow/core/cuda/softmax.cuh"
 
 namespace oneflow {
 namespace user_op {
@@ -30,9 +31,9 @@ __global__ void ComputeDiffGpu(const int64_t num_instances, const int64_t num_cl
     assert(labels[row_id] < depth);
     K label = labels[row_id] - lower_bound;
     if (label == col_id) {
-      dx[i] = dy[row_id] * (prob[i] - 1);
+      dx[i] = dy[row_id] * (cuda::softmax::Exp(prob[i]) - 1);
     } else {
-      dx[i] = dy[row_id] * prob[i];
+      dx[i] = dy[row_id] * cuda::softmax::Exp(prob[i]);
     }
   }
 }
@@ -48,58 +49,17 @@ __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t nu
     assert(labels[row_id] < depth);
     K label = labels[row_id] - lower_bound;
     if (label == col_id) {
-      dx[i] = __hmul(dy[row_id], __hsub(prob[i], __float2half(1.0)));
+      dx[i] = __hmul(dy[row_id], __hsub(cuda::softmax::Exp(prob[i]), __float2half(1.0)));
     } else {
-      dx[i] = __hmul(dy[row_id], prob[i]);
+      dx[i] = __hmul(dy[row_id], cuda::softmax::Exp(prob[i]));
     }
   }
 }
 
-template<typename T, typename K>
-void ComputeFront(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                  const T* in, T* prob, T* y, void* temp_storage, const size_t temp_storage_bytes,
-                  const MemoryCase& prob_mem_case, const MemoryCase& tmp_buffer_mem_case) {
-  const size_t min_temp_storage_bytes =
-      SparseSoftmaxCrossEntropyTempStorageSize<T>(num_instances, num_classes);
-  assert(temp_storage_bytes >= min_temp_storage_bytes);
-
-  const size_t reduce_operation_size =
-      SparseSoftmaxCrossEntropyReduceOperationSize<T>(num_instances, num_classes);
-  const size_t sum_result_size = SparseSoftmaxCrossEntropySumResultSize<T>(num_instances);
-
-  T* sum_result =
-      reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage) + reduce_operation_size);
-  T* sub_result = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
-                                       + reduce_operation_size + sum_result_size);
-
-  SparseSoftmaxCrossEntropyComputePart<DeviceType::kGPU, T, K>(
-      ctx, num_instances, num_classes, in, prob, temp_storage, reduce_operation_size, sum_result,
-      sub_result, prob_mem_case, tmp_buffer_mem_case);
-}
 }  // namespace
 
 template<typename T, typename K>
 struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
-  static void Compute(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                      const int64_t depth, const int64_t lower_bound, const T* in, T* prob,
-                      const K* labels, T* y, void* temp_storage, const size_t temp_storage_bytes,
-                      const MemoryCase& prob_mem_case, const MemoryCase& tmp_buffer_mem_case) {
-    ComputeFront<T, K>(ctx, num_instances, num_classes, in, prob, y, temp_storage,
-                       temp_storage_bytes, prob_mem_case, tmp_buffer_mem_case);
-
-    const size_t reduce_operation_size =
-        SparseSoftmaxCrossEntropyReduceOperationSize<T>(num_instances, num_classes);
-    const size_t sum_result_size = SparseSoftmaxCrossEntropySumResultSize<T>(num_instances);
-
-    T* sum_result = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
-                                         + reduce_operation_size);
-    T* sub_result = reinterpret_cast<T*>(reinterpret_cast<unsigned char*>(temp_storage)
-                                         + reduce_operation_size + sum_result_size);
-
-    ComputeSparseSoftmaxCrossEntropyResultGpu<T, K>
-        <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            num_instances, num_classes, depth, lower_bound, labels, sum_result, sub_result, y);
-  }
 
   static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                           const int64_t depth, const int64_t lower_bound, const T* prob,
@@ -112,28 +72,6 @@ struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
 
 template<typename K>
 struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
-  static void Compute(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                      const int64_t depth, const int64_t lower_bound, const float16* in,
-                      float16* prob, const K* labels, float16* y, void* temp_storage,
-                      const size_t temp_storage_bytes, const MemoryCase& prob_mem_case,
-                      const MemoryCase& tmp_buffer_mem_case) {
-    ComputeFront<float16, K>(ctx, num_instances, num_classes, in, prob, y, temp_storage,
-                             temp_storage_bytes, prob_mem_case, tmp_buffer_mem_case);
-
-    const size_t reduce_operation_size =
-        SparseSoftmaxCrossEntropyReduceOperationSize<float16>(num_instances, num_classes);
-    const size_t sum_result_size = SparseSoftmaxCrossEntropySumResultSize<float16>(num_instances);
-    float16* sum_result = reinterpret_cast<float16*>(reinterpret_cast<unsigned char*>(temp_storage)
-                                                     + reduce_operation_size);
-    float16* sub_result = reinterpret_cast<float16*>(reinterpret_cast<unsigned char*>(temp_storage)
-                                                     + reduce_operation_size + sum_result_size);
-
-    ComputeSparseSoftmaxCrossEntropyResultGpuHalf<K>
-        <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            num_instances, num_classes, depth, lower_bound, labels,
-            reinterpret_cast<half*>(sum_result), reinterpret_cast<half*>(sub_result),
-            reinterpret_cast<half*>(y));
-  }
 
   static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                           const int64_t depth, const int64_t lower_bound, const float16* prob,

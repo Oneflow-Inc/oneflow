@@ -15,9 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
-#include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.h"
 #include "oneflow/user/kernels/softmax_kernel_util.h"
+#include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 
@@ -55,16 +54,30 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t num_instances = label->shape().elem_cnt();
     CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
     const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
-    SparseSoftmaxCrossEntropyKernelUtil<device_type, T, K>::Compute(
-        ctx->device_ctx(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
-        prob->mut_dptr<T>(), label->dptr<K>(), out->mut_dptr<T>(), tmp_buffer->mut_dptr(),
-        tmp_buffer->shape().elem_cnt(), prob->mem_case(), tmp_buffer->mem_case());
+
+    SoftmaxKernelUtil<device_type, SoftmaxType::kLogSoftmax, T>::ComputeProb(
+        ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), prob->mut_dptr<T>(),
+        tmp_buffer->mut_dptr(), temp_storage_bytes);
+    
+    const K* labels = label->dptr<K>();
+    const T* prob_ptr = prob->dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
+
+    FOR_RANGE(int64_t, i, 0, num_instances) {
+      CHECK_GE(labels[i], 0);
+      CHECK_LT(labels[i], depth);
+      K _label = labels[i] - lower_bound;
+      if (_label >= 0 && _label < num_classes) {
+        out_ptr[i] = -prob_ptr[i * num_classes + _label];
+      }
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -94,8 +107,7 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
         const Shape& prediction_shape = ctx->InputShape("prediction", 0);                        \
         const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
         const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
-        return SparseSoftmaxCrossEntropyTempStorageSize<OF_PP_PAIR_FIRST(dtype_pair)>(           \
-            num_instances, num_classes);                                                         \
+        return SoftmaxComputeDiffTempStorageSize<OF_PP_PAIR_FIRST(dtype_pair),SoftmaxType::kLogSoftmax>(num_instances, num_classes); \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
@@ -109,13 +121,6 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU), FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
-// low-performance implementation
-// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
-//                                  (SparseSoftmaxCrossEntropyKernel),
-//                                  ("sparse_softmax_cross_entropy"),
-//                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
-//                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ,
-//                                  INDEX_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  (SparseSoftmaxCrossEntropyMsKernel),
                                  ("sparse_softmax_cross_entropy_ms"),
