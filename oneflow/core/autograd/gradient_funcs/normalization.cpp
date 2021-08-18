@@ -128,13 +128,13 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     const auto& reshaped_inv_variance = JUST(functional::Reshape(inv_variance, shape));
 
     std::shared_ptr<Tensor> y_grad_fp32 = y_grad;
-    bool is_fp16 = y_grad->dtype() == DataType::kFloat16;
-    if (is_fp16) { y_grad_fp32 = JUST(functional::Cast(y_grad, DataType::kFloat)); }
+    bool is_fp16 = y_grad->dtype()->data_type() == DataType::kFloat16;
+    if (is_fp16) { y_grad_fp32 = JUST(functional::Cast(y_grad, DType::Float())); }
     const auto& dy_mul_gamma = JUST(functional::BroadcastMul(reshaped_gamma, y_grad_fp32));
     const auto& dy_mul_inv_var =
         JUST(functional::BroadcastMul(dy_mul_gamma, reshaped_inv_variance));
     if (is_fp16) {
-      in_grads->at(0) = JUST(functional::Cast(dy_mul_inv_var, DataType::kFloat16));
+      in_grads->at(0) = JUST(functional::Cast(dy_mul_inv_var, DType::Float16()));
     } else {
       in_grads->at(0) = dy_mul_inv_var;
     }
