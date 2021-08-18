@@ -1,5 +1,6 @@
 # Nodes represent a definition of a value in oneflow graph of operators.
 from typing import TYPE_CHECKING, Union, Callable, Any, Tuple, List, Optional, Dict, Set
+from .immutable_collections import immutable_dict, immutable_list
 import oneflow as flow
 import types
 import builtins
@@ -19,6 +20,8 @@ Argument = Optional[Union[
     'Node',
     BaseArgumentTypes
 ]]
+
+_side_effectful_functions: Set[Callable] = {flow._oneflow_internal.F}
 
 def _find_module_of_method(orig_method: Callable[..., Any]) -> str:
     name = orig_method.__name__
@@ -417,6 +420,103 @@ class Node:
             return f'%{self.name} : {maybe_typename}[#users={len(self.users)}] = ' \
                    f'{self.op}[target={self._pretty_print_target(self.target)}](' \
                    f'args = {_format_arg(self.args)}, kwargs = {_format_arg(self.kwargs)})'
+
+    def replace_all_uses_with(self, replace_with : 'Node') -> List['Node']:
+        """
+        Replace all uses of ``self`` in the Graph with the Node ``replace_with``.
+
+        Args:
+
+            replace_with (Node): The node to replace all uses of ``self`` with.
+
+        Returns:
+
+            The list of Nodes on which this change was made.
+        """
+        to_process = list(self.users)
+        for use_node in to_process:
+            def maybe_replace_node(n : Node) -> Node:
+                if n == self:
+                    return replace_with
+                else:
+                    return n
+
+            new_args = map_arg(use_node.args, maybe_replace_node)
+            new_kwargs = map_arg(use_node.kwargs, maybe_replace_node)
+            assert isinstance(new_args, tuple)
+            assert isinstance(new_kwargs, dict)
+            use_node.__update_args_kwargs(new_args, new_kwargs)
+
+        assert len(self.users) == 0
+        return to_process
+
+    def is_impure(self):
+        """
+        Returns whether this op is impure, i.e. if its op is a placeholder or
+        output, or if a call_function or call_module which is impure.
+
+        Returns:
+
+            bool: If the op is impure or not.
+        """
+        if self.op in {"placeholder", "output"}:
+            return True
+
+        # Check if an impure function.
+        if self.op == "call_function":
+            return self.target in _side_effectful_functions
+
+        # Check if an impure module.
+        if self.op == "call_module":
+            assert (
+                self.graph.owning_module is not None
+            ), "self.graph.owning_module not set for purity check"
+            target_mod = self.graph.owning_module.get_submodule(self.target)
+            assert (
+                target_mod is not None
+            ), f"Did not find expected submodule target {self.target}"
+            return getattr(target_mod, "_is_impure", False)
+
+        return False
+
+    def replace_input_with(self, old_input: 'Node', new_input: 'Node'):
+        """
+        Loop through input nodes of ``self``, and replace all instances of
+        ``old_input`` with ``new_input``.
+
+        Args:
+
+            old_input (Node): The old input node to be replaced.
+            new_input (Node): The new input node to replace ``old_input``.
+
+        """
+        def maybe_replace_node(n : Node) -> Node:
+            return new_input if n == old_input else n
+
+        new_args = map_arg(self.args, maybe_replace_node)
+        new_kwargs = map_arg(self.kwargs, maybe_replace_node)
+        assert isinstance(new_args, tuple)
+        assert isinstance(new_kwargs, dict)
+        self.__update_args_kwargs(new_args, new_kwargs)
+    
+def map_arg(a: Argument, fn: Callable[[Node], Argument]) -> Argument:
+    """ Apply fn to each Node appearing arg. arg may be a list, tuple, slice, or dict with string keys. """
+    assert callable(fn), "flow.fx.map_arg(a, fn): fn must be a callable"
+    return map_aggregate(a, lambda x: fn(x) if isinstance(x, Node) else x)
+
+def map_aggregate(a: Argument, fn: Callable[[Argument], Argument]) -> Argument:
+    """ Apply fn to each Node appearing arg. arg may be a list, tuple, slice, or dict with string keys. """
+    if isinstance(a, tuple):
+        return tuple(map_aggregate(elem, fn) for elem in a)
+    elif isinstance(a, list):
+        return immutable_list(map_aggregate(elem, fn) for elem in a)
+    elif isinstance(a, dict):
+        return immutable_dict((k, map_aggregate(v, fn)) for k, v in a.items())
+    elif isinstance(a, slice):
+        return slice(map_aggregate(a.start, fn), map_aggregate(a.stop, fn), map_aggregate(a.step, fn))
+    else:
+        return fn(a)
+
 
 
 # _get_qualified_name(flow._oneflow_internal.F.exp)
