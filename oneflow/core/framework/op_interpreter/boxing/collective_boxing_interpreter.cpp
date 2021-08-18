@@ -64,7 +64,7 @@ Maybe<one::Tensor> NcclCollectiveAllGatherBoxingInterpreter::InterpretImpl(
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2B(in_nd_sbp->sbp_parallel(0),
                                                           out_nd_sbp->sbp_parallel(0)));
-  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   const auto& op_expr = JUST(CachedEagerNcclAllGatherOpExpr(in_parallel_desc));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
@@ -75,7 +75,7 @@ Maybe<one::Tensor> NcclCollectiveAllReduceBoxingInterpreter::InterpretImpl(
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingP2B(in_nd_sbp->sbp_parallel(0),
                                                           out_nd_sbp->sbp_parallel(0)));
-  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   const auto& op_expr = JUST(CachedEagerNcclAllReduceOpExpr(in_parallel_desc));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
@@ -88,7 +88,7 @@ Maybe<one::Tensor> NcclCollectiveReduceScatterBoxingInterpreter::InterpretImpl(
                                                            out_nd_sbp->sbp_parallel(0))
                    || EagerBoxingInterpreterUtil::IsBoxingB2S(in_nd_sbp->sbp_parallel(0),
                                                               out_nd_sbp->sbp_parallel(0))));
-  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   const auto& op_expr = JUST(CachedNcclReduceScatterOpExpr(in_parallel_desc, op_type_));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
