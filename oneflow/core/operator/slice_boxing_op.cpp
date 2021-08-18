@@ -25,7 +25,7 @@ class SliceBoxingOp : public Operator {
   SliceBoxingOp() = default;
   ~SliceBoxingOp() override = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override {
@@ -74,10 +74,11 @@ class SliceBoxingAddOp final : public SliceBoxingOp {
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
 };
 
-void SliceBoxingOp::InitFromOpConf() {
+Maybe<void> SliceBoxingOp::InitFromOpConf() {
   EnrollRepeatedInputBn("in", GetCustomizedBoxingConf().in_slice_size(), false);
   EnrollOutputBn("out");
   VirtualInitFromOpConf();
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId SliceBoxingOp::lbi4ibn(const std::string& input_bn) const {

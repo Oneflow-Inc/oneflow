@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/model_update_kernel_util.h"
 #include "oneflow/user/kernels/indexed_slices_reduce_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -168,10 +169,10 @@ REGISTER_SGD_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 template<DeviceType device_type, typename T, typename K>
 user_op::InferTmpSizeFn GenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
-    const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-    const user_op::TensorDesc* values = ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-    const int64_t num_indices = indices->shape().elem_cnt();
-    const int64_t num_values = values->shape().elem_cnt();
+    const user_op::TensorDesc& indices = ctx->InputTensorDesc("model_diff_indices", 0);
+    const user_op::TensorDesc& values = ctx->InputTensorDesc("model_diff_values", 0);
+    const int64_t num_indices = indices.shape().elem_cnt();
+    const int64_t num_values = values.shape().elem_cnt();
     TmpBufferManager<device_type, T, K> buffer_manager(nullptr, num_indices, num_values);
     return buffer_manager.GetTotalBufferSize();
   };
@@ -390,7 +391,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_MOMENTUM_UPDATE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 template<DeviceType device_type, typename T, typename G>
-class AdamUpdateKernel final : public user_op::OpKernel {
+class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AdamUpdateKernel() = default;
   ~AdamUpdateKernel() override = default;
@@ -609,8 +610,8 @@ class LambUpdateKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T>
 user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
-    const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-    LambTmpBufferManager<device_type, T> tbm(nullptr, model->shape().elem_cnt());
+    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+    LambTmpBufferManager<device_type, T> tbm(nullptr, model.shape().elem_cnt());
     return tbm.GetTotalBufferSize();
   };
 }
@@ -807,8 +808,8 @@ class LarsUpdateKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T>
 user_op::InferTmpSizeFn LarsGenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
-    const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-    LarsTmpBufferManager<device_type, T> tlm(nullptr, model->shape().elem_cnt());
+    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+    LarsTmpBufferManager<device_type, T> tlm(nullptr, model.shape().elem_cnt());
     return tlm.GetTotalBufferSize();
   };
 }

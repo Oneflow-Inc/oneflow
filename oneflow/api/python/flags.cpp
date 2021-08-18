@@ -53,6 +53,14 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
 #endif  // WITH_XLA
   });
 
+  m.def("with_rdma", []() {
+#ifdef WITH_RDMA
+    return true;
+#else
+    return false;
+#endif  // WITH_RDMA
+  });
+
   m.def("has_rpc_backend_grpc", []() {
 #ifdef RPC_BACKEND_GRPC
     return true;
@@ -68,6 +76,18 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
     return false;
 #endif  // RPC_BACKEND_LOCAL
   });
+
+#define STRINGIFY(x) STRINGIFY_(x)
+#define STRINGIFY_(x) #x
+  m.def("cmake_build_type", []() {
+#ifdef ONEFLOW_CMAKE_BUILD_TYPE
+    return std::string(STRINGIFY(ONEFLOW_CMAKE_BUILD_TYPE));
+#else
+    return std::string("Undefined");
+#endif  // ONEFLOW_CMAKE_BUILD_TYPE
+  });
+#undef STRINGIFY
+#undef STRINGIFY_
 }
 
 }  // namespace oneflow

@@ -22,11 +22,15 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
@@ -103,6 +107,41 @@ inline Maybe<void> StopLazyGlobalSession() {
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
   Global<const InterJobReuseMemStrategy>::Delete();
+  return Maybe<void>::Ok();
+}
+
+inline Maybe<void> CreateMultiClientSessionContext() {
+  CHECK_ISNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
+  Global<MultiClientSessionContext>::New();
+  return Maybe<void>::Ok();
+}
+
+inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto_str) {
+  CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
+  CHECK_NOTNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
+  CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
+
+  ConfigProto config_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
+      << "failed to parse config_proto: " << config_proto_str;
+  JUST(Global<MultiClientSessionContext>::Get()->TryInit(config_proto));
+  return Maybe<void>::Ok();
+}
+
+inline Maybe<void> MultiClientSessionContextAddCGraph(
+    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+  JUST(Global<MultiClientSessionContext>::Get()->AddCGraph(c_graph_ptr));
+  return Maybe<void>::Ok();
+}
+
+inline Maybe<void> TryDestroyMultiClientSessionContext() {
+  // Global<T>::Delete is not allowed to be called here
+  // because glog is not constructed yet and LOG(INFO) has bad bahavior
+  if (Global<MultiClientSessionContext>::Get() != nullptr) {
+    JUST(Global<MultiClientSessionContext>::Get()->TryClose());
+    delete Global<MultiClientSessionContext>::Get();
+    Global<MultiClientSessionContext>::SetAllocated(nullptr);
+  }
   return Maybe<void>::Ok();
 }
 

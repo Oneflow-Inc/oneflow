@@ -26,7 +26,7 @@ class InputOp final : public Operator {
   InputOp() : Operator() {}
   ~InputOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
@@ -43,12 +43,11 @@ class InputOp final : public Operator {
 
   Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
-  Maybe<void> InferParallelDistributionSignature(
-      cfg::ParallelDistributionSignature* parallel_distribution_signature,
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
-      const ParallelDesc& parallel_desc,
-      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn) const override;
+  Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
+                                  const cfg::NdSbpSignature& nd_sbp_constraints,
+                                  const ParallelDesc& parallel_desc,
+                                  std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+                                      NdSbpInferHint4Ibn) const override;
 };
 
 }  // namespace oneflow

@@ -331,9 +331,9 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
 
 size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
   size_t ret = 0;
-  const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   size_t tensor_byte_size =
-      GetCudaAlignedSize(in_tensor->shape().elem_cnt() * GetSizeOfDataType(in_tensor->data_type()));
+      GetCudaAlignedSize(in_tensor.shape().elem_cnt() * GetSizeOfDataType(in_tensor.data_type()));
   const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("in", 0);
   const cfg::SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
   CHECK(in_sbp.has_split_parallel() && out_sbp.has_split_parallel());

@@ -27,7 +27,7 @@ class DistributeConcatOp final : public Operator {
   DistributeConcatOp() = default;
   ~DistributeConcatOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
@@ -51,11 +51,12 @@ class DistributeConcatOp final : public Operator {
   int32_t FixAxis(const int32_t axis, const int64_t num_axes) const;
 };
 
-void DistributeConcatOp::InitFromOpConf() {
+Maybe<void> DistributeConcatOp::InitFromOpConf() {
   CHECK(op_conf().has_distribute_concat_conf());
 
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> DistributeConcatOp::InferLogicalOutBlobDescs(

@@ -36,15 +36,19 @@ namespace test {
 
 namespace {
 
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
-}
-
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+struct GlobaProcessCtxScope final {
+  GlobaProcessCtxScope(int64_t node_size, int64_t world_size) {
+    Global<ProcessCtx>::New();
+    auto* ctx = Global<ProcessCtx>::Get();
+    for (int i = 0; i < world_size; ++i) { ctx->mutable_ctrl_addr()->Add(); }
+    ctx->set_rank(0);
+    ctx->set_node_size(node_size);
+  }
+  ~GlobaProcessCtxScope() { Global<ProcessCtx>::Delete(); }
+};
 
 TEST(ControlStreamType, new_object) {
-  InitNumProcessPerNode();
+  GlobaProcessCtxScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   CachedObjectMsgAllocator allocator(20, 100);
@@ -52,16 +56,15 @@ TEST(ControlStreamType, new_object) {
   InstructionMsgList list;
   TestUtil::NewObject(&list, "cpu", "0:0");
   ASSERT_TRUE(vm->pending_msg_list().empty());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 
 TEST(ControlStreamType, delete_object) {
-  InitNumProcessPerNode();
+  GlobaProcessCtxScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   CachedObjectMsgAllocator allocator(20, 100);
@@ -70,12 +73,11 @@ TEST(ControlStreamType, delete_object) {
   int64_t logical_object_id = TestUtil::NewObject(&list, "cpu", "0:0");
   list.EmplaceBack(NewInstruction("DeleteObject")->add_del_operand(logical_object_id));
   ASSERT_TRUE(vm->pending_msg_list().empty());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 
 }  // namespace

@@ -24,7 +24,7 @@ namespace oneflow {
 namespace one {
 
 struct ConcatInterpState : public OpExprInterpState {
-  bool requires_grad;
+  std::vector<bool> requires_grad;
   int64_t axis;
   int64_t input_num;
 };
@@ -57,14 +57,8 @@ Maybe<void> Concat::Init(const OpExpr& op) {
 
 Maybe<void> Concat::Capture(ConcatInterpState* ctx, const TensorTuple& inputs,
                             const TensorTuple& outputs, const AttrMap& attrs) const {
-  ctx->requires_grad = false;
-  for (const auto& input : inputs) {
-    if (input->requires_grad()) {
-      ctx->requires_grad = true;
-      break;
-    }
-  }
-  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  ctx->requires_grad.resize(inputs.size());
+  for (int i = 0; i < inputs.size(); ++i) { ctx->requires_grad[i] = inputs.at(i)->requires_grad(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
@@ -75,7 +69,6 @@ Maybe<void> Concat::Capture(ConcatInterpState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Concat::Apply(const ConcatInterpState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
-  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(ctx->input_num);
   TensorTuple inputs(ctx->input_num + 1);
@@ -86,7 +79,8 @@ Maybe<void> Concat::Apply(const ConcatInterpState* ctx, const TensorTuple& out_g
   const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(*grad_op_, inputs, concat_attrs));
   CHECK_EQ_OR_RETURN(results->size(), ctx->input_num);
 
-  for (int i = 0; i < ctx->input_num; ++i) { in_grads->at(i) = results->at(i); }
+  for (int i = 0; i < ctx->input_num; ++i)
+    if (ctx->requires_grad.at(i)) { in_grads->at(i) = results->at(i); }
   return Maybe<void>::Ok();
 }
 

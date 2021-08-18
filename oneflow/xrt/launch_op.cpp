@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-void XrtLaunchOp::InitFromOpConf() {
+Maybe<void> XrtLaunchOp::InitFromOpConf() {
   CHECK(op_conf().has_xrt_launch_conf());
   const auto& launch_conf = op_conf().xrt_launch_conf();
   int inputs_num = launch_conf.in().size();
@@ -38,6 +38,7 @@ void XrtLaunchOp::InitFromOpConf() {
     EnrollInputBn(absl::StrCat("in_", i))->set_is_mutable(mutability);
   }
   if (outputs_num > 0) { EnrollRepeatedOutputBn("out"); }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> XrtLaunchOp::InferLogicalOutBlobDescs(

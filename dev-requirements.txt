@@ -5,6 +5,7 @@ wheel
 tqdm
 requests
 jinja2
-opencv-python; python_version >= "3.9" and sys_platform != 'darwin'
-opencv-python==4.2.0.34; python_version < '3.9' and sys_platform != 'darwin'
-PyYAML
+opencv-python; python_version >= "3.9" and sys_platform != 'darwin' and platform_machine != 'aarch64'
+opencv-python==4.2.0.34; python_version < '3.9' and sys_platform != 'darwin' and platform_machine != 'aarch64'
+PyYAML>=5.1
+pillow

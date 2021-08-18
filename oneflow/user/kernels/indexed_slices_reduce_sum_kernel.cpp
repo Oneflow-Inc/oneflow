@@ -49,10 +49,10 @@ class IndexedSlicesReduceSumKernel final : public user_op::OpKernel {
 template<DeviceType device_type, typename T, typename K>
 user_op::InferTmpSizeFn GenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
-    const auto* x_indices = ctx->TensorDesc4ArgNameAndIndex("x_indices", 0);
-    const auto* x_values = ctx->TensorDesc4ArgNameAndIndex("x_values", 0);
-    const int64_t n = x_indices->shape().elem_cnt();
-    const int64_t m = x_values->shape().elem_cnt() / n;
+    const auto& x_indices = ctx->InputTensorDesc("x_indices", 0);
+    const auto& x_values = ctx->InputTensorDesc("x_values", 0);
+    const int64_t n = x_indices.shape().elem_cnt();
+    const int64_t m = x_values.shape().elem_cnt() / n;
     int64_t workspace_size_in_bytes;
     IndexedSlicesReduceSumKernelUtil<device_type, K, T, int64_t>::GetReduceSumWorkspaceSizeInBytes(
         nullptr, n, m, &workspace_size_in_bytes);

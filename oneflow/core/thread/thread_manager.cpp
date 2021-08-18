@@ -42,7 +42,7 @@ Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
   return iter->second.get();
 }
 
-ThreadMgr::ThreadMgr(const Plan& plan) {
+void ThreadMgr::AddPlan(const Plan& plan) {
   const int64_t this_rank = GlobalProcessCtx::Rank();
   for (const TaskProto& task : plan.task()) {
     TaskId task_id = DeserializeTaskIdFromInt64(task.task_id());

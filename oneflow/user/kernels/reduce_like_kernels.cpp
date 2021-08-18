@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -22,14 +25,14 @@ namespace {
 
 size_t ReduceSumLikeInferTmpSize(user_op::InferContext* ctx) {
   if (ctx->Attr<std::vector<int32_t>>("axis").empty()) { return 0; }
-  const user_op::TensorDesc* tensor_desc_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  return tensor_desc_x->shape().elem_cnt() * GetSizeOfDataType(tensor_desc_x->data_type());
+  const user_op::TensorDesc& tensor_desc_x = ctx->InputTensorDesc("x", 0);
+  return tensor_desc_x.shape().elem_cnt() * GetSizeOfDataType(tensor_desc_x.data_type());
 }
 
 }  // namespace
 
 template<DeviceType device_type, typename T>
-class ReduceSumLikeOpKernel final : public user_op::OpKernel {
+class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ReduceSumLikeOpKernel() = default;
   ~ReduceSumLikeOpKernel() = default;
@@ -39,6 +42,14 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+    if (tensor_x->shape().elem_cnt() == 0) {
+      if (tensor_y->shape().elem_cnt() != 0) {
+        AutoMemset(ctx->device_ctx(), tensor_y->mut_dptr<T>(), 0,
+                   tensor_y->shape().elem_cnt() * GetSizeOfDataType(tensor_y->data_type()),
+                   tensor_y->mem_case());
+      }
+      return;
+    }
     if (axis.empty()) {
       CHECK_EQ(tensor_x->shape(), tensor_y->shape());
       Memcpy<device_type>(ctx->device_ctx(), tensor_y->mut_dptr(), tensor_x->dptr(),
@@ -89,7 +100,7 @@ void GetReduceSumLayout(const std::vector<int32_t>& axis, const ShapeView& in_sh
 
 }  // namespace
 
-class ReduceSumLikeHalfKernel final : public user_op::OpKernel {
+class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   explicit ReduceSumLikeHalfKernel(user_op::KernelCreateContext* ctx) {
     axis_ = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
@@ -163,7 +174,7 @@ REGISTER_USER_KERNEL("reduce_sum_like")
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
                      & (user_op::HobDataType("y", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
-      const Shape& in_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+      const Shape& in_shape = ctx->InputTensorDesc("x", 0).shape();
       const Shape& out_shape = ctx->OutputTensorDesc("y", 0)->shape();
       const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
       if (axis.empty()) {

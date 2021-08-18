@@ -19,9 +19,11 @@ limitations under the License.
 #include "oneflow/api/python/functional/python_arg.h"
 
 #include <tuple>
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/common/function_traits.h"
+#include "oneflow/core/common/cplusplus_14.h"
 
 namespace oneflow {
 namespace one {
@@ -29,22 +31,13 @@ namespace functional {
 
 namespace detail {
 
-template<typename F, typename R, int nleft, int index>
+template<typename F, typename R>
 struct unpack_call_dispatcher {
-  template<typename... Args>
-  static R apply(const F& f, const std::vector<PythonArg>& args, Args&&... unpacked_args) {
-    using type = typename std::tuple_element<index, typename function_traits<F>::args_type>::type;
-    return unpack_call_dispatcher<F, R, nleft - 1, index + 1>::apply(
-        f, args, std::forward<Args>(unpacked_args)...,
-        args[index].As<oneflow::detail::remove_cvref_t<type>>());
-  }
-};
-
-template<typename F, typename R, int index>
-struct unpack_call_dispatcher<F, R, 0, index> {
-  template<typename... Args>
-  static R apply(const F& f, const std::vector<PythonArg>& args, Args&&... unpacked_args) {
-    return f(std::forward<Args>(unpacked_args)...);
+  template<size_t... I>
+  static R apply(const F& f, const std::vector<PythonArg>& args, std::index_sequence<I...>) {
+    return f(args[I]
+                 .As<oneflow::detail::remove_cvref_t<typename std::tuple_element<
+                     I, typename function_traits<F>::args_type>::type>>()...);
   }
 };
 
@@ -52,21 +45,22 @@ template<typename F, typename R>
 struct unpack_call {
   static R apply(const F& f, const std::vector<PythonArg>& args) {
     constexpr size_t nargs = function_traits<F>::nargs;
-    CHECK_EQ(nargs, args.size()) << "Requires " << nargs << " arguments, but " << args.size()
-                                 << " is given.";
-    return unpack_call_dispatcher<F, R, nargs, 0>::apply(f, args);
+    CHECK_EQ_OR_THROW(nargs, args.size())
+        << "Requires " << nargs << " arguments, but " << args.size() << " is given.";
+    return unpack_call_dispatcher<F, R>::apply(f, args, std::make_index_sequence<nargs>{});
   }
 };
 
-#define INSTANCE_MAYBE_UNPACK_CALL(K, R, return_fn)                                     \
-  template<typename F>                                                                  \
-  struct unpack_call<F, K> {                                                            \
-    static R apply(const F& f, const std::vector<PythonArg>& args) {                    \
-      constexpr size_t nargs = function_traits<F>::nargs;                               \
-      CHECK_EQ(nargs, args.size())                                                      \
-          << "Requires " << nargs << " arguments, but " << args.size() << " is given."; \
-      return (return_fn)(unpack_call_dispatcher<F, K, nargs, 0>::apply(f, args));       \
-    }                                                                                   \
+#define INSTANCE_MAYBE_UNPACK_CALL(K, R, return_fn)                                         \
+  template<typename F>                                                                      \
+  struct unpack_call<F, K> {                                                                \
+    static R apply(const F& f, const std::vector<PythonArg>& args) {                        \
+      constexpr size_t nargs = function_traits<F>::nargs;                                   \
+      CHECK_EQ_OR_THROW(nargs, args.size())                                                 \
+          << "Requires " << nargs << " arguments, but " << args.size() << " is given.";     \
+      return (return_fn)(                                                                   \
+          unpack_call_dispatcher<F, K>::apply(f, args, std::make_index_sequence<nargs>{})); \
+    }                                                                                       \
   };
 
 INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::Tensor>, std::shared_ptr<one::Tensor>,

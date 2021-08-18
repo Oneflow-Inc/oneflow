@@ -40,9 +40,10 @@ class ReluFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, bool inplace) const {
     if (inplace) {
+      JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get(), AttrMap{}));
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), AttrMap{}));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
@@ -65,6 +66,26 @@ class PReluFunctor : public BinaryFunctor {
   PReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("prelu").Input("x").Input("alpha").Output("y").Build());
   }
+};
+
+class PReluGradFunctor {
+ public:
+  PReluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("prelu_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("alpha")
+                         .Output("dx")
+                         .Output("alpha_diff")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& x,
+                                const std::shared_ptr<Tensor>& alpha) const {
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class HardTanhFunctor {
@@ -165,6 +186,19 @@ class SoftmaxFunctor : public UnaryFunctor {
   }
 };
 
+class LogSoftmaxFunctor : public UnaryFunctor {
+ public:
+  LogSoftmaxFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("logsoftmax").Input("in").Output("out").Output("prob").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class HardSwishFunctor : public UnaryFunctor {
  public:
   HardSwishFunctor() {
@@ -210,12 +244,63 @@ class LeakyReluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SiluFunctor : public UnaryFunctor {
+ public:
+  SiluFunctor() { op_ = CHECK_JUST(one::OpBuilder("silu").Input("in").Output("out").Build()); }
+};
+
+class SiluGradFunctor : public BinaryFunctor {
+ public:
+  SiluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("silu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
+class MishFunctor : public UnaryFunctor {
+ public:
+  MishFunctor() { op_ = CHECK_JUST(one::OpBuilder("mish").Input("in").Output("out").Build()); }
+};
+
+class MishGradFunctor : public BinaryFunctor {
+ public:
+  MishGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("mish_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
+class SeluFunctor : public UnaryFunctor {
+ public:
+  SeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("selu").Input("in").Output("out").Build()); }
+};
+
+class SeluGradFunctor : public BinaryFunctor {
+ public:
+  SeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("selu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
+class SoftSignFunctor : public UnaryFunctor {
+ public:
+  SoftSignFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softsign").Input("in").Output("out").Build());
+  }
+};
+
+class SoftSignGradFunctor : public BinaryFunctor {
+ public:
+  SoftSignGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softsign_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReluFunctor>("Relu");
   m.add_functor<impl::ReluGradFunctor>("ReluGrad");
   m.add_functor<impl::PReluFunctor>("PRelu");
+  m.add_functor<impl::PReluGradFunctor>("PReluGrad");
   m.add_functor<impl::HardTanhFunctor>("HardTanh");
   m.add_functor<impl::HardTanhGradFunctor>("HardTanhGrad");
   m.add_functor<impl::EluFunctor>("Elu");
@@ -225,10 +310,19 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");
+  m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
   m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
+  m.add_functor<impl::SiluFunctor>("Silu");
+  m.add_functor<impl::SiluGradFunctor>("SiluGrad");
+  m.add_functor<impl::MishFunctor>("Mish");
+  m.add_functor<impl::MishGradFunctor>("MishGrad");
+  m.add_functor<impl::SeluFunctor>("Selu");
+  m.add_functor<impl::SeluGradFunctor>("SeluGrad");
+  m.add_functor<impl::SoftSignFunctor>("SoftSign");
+  m.add_functor<impl::SoftSignGradFunctor>("SoftSignGrad");
 };
 
 }  // namespace functional

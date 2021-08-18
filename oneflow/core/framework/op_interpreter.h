@@ -21,8 +21,16 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
+
+class Device;
+class ParallelDesc;
+namespace cfg {
+class NdSbp;
+}
+
 namespace one {
 
 class OpExprInterpState {
@@ -43,7 +51,28 @@ class OpExprInterpState {
 };
 
 struct OpExprInterpContext {
+  OpExprInterpContext(const AttrMap& attrs_arg) : attrs(attrs_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg)
+      : attrs(attrs_arg), device(device_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, std::shared_ptr<user_op::OpKernelState> state_arg)
+      : attrs(attrs_arg), state(state_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg,
+                      std::shared_ptr<user_op::OpKernelState> state_arg)
+      : attrs(attrs_arg), device(device_arg), state(state_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg)
+      : attrs(attrs_arg), parallel_desc(parallel_desc_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
+                      Symbol<cfg::NdSbp> nd_sbp_arg)
+      : attrs(attrs_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
+                      Symbol<cfg::NdSbp> nd_sbp_arg,
+                      std::shared_ptr<user_op::OpKernelState> state_arg)
+      : attrs(attrs_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg), state(state_arg) {}
+
   AttrMap attrs;
+  Optional<Symbol<Device>> device;               // for local op
+  Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
+  Optional<Symbol<cfg::NdSbp>> nd_sbp;           // for consistent op
   std::shared_ptr<user_op::OpKernelState> state;
 };
 
@@ -54,7 +83,7 @@ class OpExprInterpreter {
 
   Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
-    return Apply(op, inputs, outputs, OpExprInterpContext{attrs, nullptr});
+    return Apply(op, inputs, outputs, OpExprInterpContext(attrs));
   }
 
   Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) const {
@@ -67,9 +96,12 @@ class OpExprInterpreter {
 
 #define FOR_EACH_BUILTIN_OPS(_macro) \
   _macro(UserOp);                    \
+  _macro(SelectFirstOp);             \
   _macro(VariableOp);                \
   _macro(CastToMirroredOp);          \
   _macro(CastFromMirroredOp);        \
+  _macro(CastToConsistentOp);        \
+  _macro(CastFromConsistentOp);      \
   _macro(DistributeSplitOp);         \
   _macro(DistributeCloneOp);         \
   _macro(DistributeConcatOp);        \
@@ -92,15 +124,19 @@ class LazyInterpreter : public OpExprInterpreter {
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext{attrs, nullptr});
+    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const OpExprInterpContext& ctx) const override;
 
  private:
-  DECLARE_NORMAL_APPLY_FUNC(BuiltinOp);
+  DECLARE_NORMAL_APPLY_FUNC(UserOp);
+  DECLARE_NORMAL_APPLY_FUNC(FeedInputOp);
+  DECLARE_NORMAL_APPLY_FUNC(FeedVariableOp);
+  DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
+  DECLARE_NORMAL_APPLY_FUNC(ConsistentToConsistentOp);
 };
 
 class EagerInterpreter : public OpExprInterpreter {
@@ -110,7 +146,7 @@ class EagerInterpreter : public OpExprInterpreter {
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext{attrs, nullptr});
+    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
@@ -153,11 +189,11 @@ class AutogradInterpreter {
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext{attrs, nullptr});
+    return Apply(op_expr, inputs, outputs, OpExprInterpContext(attrs));
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs) const {
-    return Apply(op_expr, inputs, outputs, OpExprInterpContext{});
+    return Apply(op_expr, inputs, outputs, OpExprInterpContext(AttrMap{}));
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,

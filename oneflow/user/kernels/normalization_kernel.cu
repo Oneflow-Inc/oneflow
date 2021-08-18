@@ -141,9 +141,9 @@ size_t InferTrainWorkspaceSize(const ShapeView& x_shape, const DataType data_typ
 }
 
 size_t InferTrainTmpSize(user_op::InferContext* ctx) {
-  const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const auto& x = ctx->InputTensorDesc("x", 0);
   const auto axis = ctx->Attr<int32_t>("axis");
-  return InferTrainWorkspaceSize(x->shape(), x->data_type(), axis);
+  return InferTrainWorkspaceSize(x.shape(), x.data_type(), axis);
 }
 
 size_t InferGradWorkspaceSize(const ShapeView& x_shape, const DataType data_type,
@@ -164,13 +164,13 @@ size_t InferGradWorkspaceSize(const ShapeView& x_shape, const DataType data_type
 }
 
 size_t InferGradTmpSize(user_op::InferContext* ctx) {
-  const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+  const auto& dy = ctx->InputTensorDesc("dy", 0);
   const auto axis = ctx->Attr<int32_t>("axis");
   size_t tmp_size = 0;
   if (ctx->op_type_name() == "normalization_add_relu_grad" && !ctx->has_output("addend_diff", 0)) {
-    tmp_size += GetCudaAlignedSize(dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
+    tmp_size += GetCudaAlignedSize(dy.shape().elem_cnt() * GetSizeOfDataType(dy.data_type()));
   }
-  tmp_size += GetCudaAlignedSize(InferGradWorkspaceSize(dy->shape(), dy->data_type(), axis));
+  tmp_size += GetCudaAlignedSize(InferGradWorkspaceSize(dy.shape(), dy.data_type(), axis));
   return tmp_size;
 }
 
@@ -417,32 +417,39 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
     if (ctx->op_type_name() == "normalization") { CHECK(ctx->Attr<bool>("training")); }
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
-    const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
-    auto* moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
-    auto* moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
+
     const auto axis = ctx->Attr<int32_t>("axis");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto momentum = ctx->Attr<float>("momentum");
-    auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
-    auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
 
     const DataType data_type = x->data_type();
     CHECK_EQ(x->shape(), y->shape());
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape().NumAxes());
-
     const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis,
                                             CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
+
+    const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+    const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
+    auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
+    auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     desc_helper.CheckParamTensor(gamma);
     desc_helper.CheckParamTensor(beta);
-    desc_helper.CheckParamTensor(moving_mean);
-    desc_helper.CheckParamTensor(moving_variance);
     desc_helper.CheckParamTensor(mean);
     desc_helper.CheckParamTensor(inv_variance);
 
-    const void* sp_alpha = CudnnSPOnePtr(data_type);
+    user_op::Tensor* moving_mean = nullptr;
+    user_op::Tensor* moving_variance = nullptr;
+    if (ctx->has_input("moving_mean", 0)) {
+      CHECK(ctx->has_input("moving_variance", 0));
+      moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
+      moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
+      desc_helper.CheckParamTensor(moving_mean);
+      desc_helper.CheckParamTensor(moving_variance);
+    }
+
+    const void* sp_alpha = CudnnSPOnePtr<T>();
     const void* sp_beta;
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
@@ -472,15 +479,17 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
           ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
           CUDNN_BATCHNORM_OPS_BN, sp_alpha, sp_beta, desc_helper.xy_desc(), x->dptr(), nullptr,
           nullptr, desc_helper.xy_desc(), y->mut_dptr(), desc_helper.param_desc(), gamma->dptr(),
-          beta->dptr(), 1.0 - momentum, moving_mean->mut_dptr(), moving_variance->mut_dptr(),
-          epsilon, mean->mut_dptr(), inv_variance->mut_dptr(), nullptr, workspace->mut_dptr(),
-          workspace->shape().elem_cnt(), nullptr, 0));
+          beta->dptr(), 1.0 - momentum, moving_mean ? moving_mean->mut_dptr() : NULL,
+          moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
+          inv_variance->mut_dptr(), nullptr, workspace->mut_dptr(), workspace->shape().elem_cnt(),
+          nullptr, 0));
     } else {
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
           ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, sp_alpha, sp_beta,
           desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
           desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
-          moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
+          moving_mean ? moving_mean->mut_dptr() : NULL,
+          moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
           inv_variance->mut_dptr()));
     }
 #else
@@ -488,7 +497,8 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
         ctx->device_ctx()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, sp_alpha, sp_beta,
         desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(), y->mut_dptr(),
         desc_helper.param_desc(), gamma->dptr(), beta->dptr(), 1.0 - momentum,
-        moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon, mean->mut_dptr(),
+        moving_mean ? moving_mean->mut_dptr() : NULL,
+        moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
         inv_variance->mut_dptr()));
 #endif
 
@@ -652,9 +662,9 @@ REGISTER_USER_KERNEL("normalization_add_relu_grad")
 #if (CUDNN_VERSION >= 7401)
 
 size_t InferFusedNormalizationAddReluTmpSize(user_op::InferContext* ctx) {
-  const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const auto& x = ctx->InputTensorDesc("x", 0);
   const auto axis = ctx->Attr<int32_t>("axis");
-  const CudnnTensorDescHelper desc_helper(x->shape(), x->data_type(), axis,
+  const CudnnTensorDescHelper desc_helper(x.shape(), x.data_type(), axis,
                                           CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
   size_t size_in_bytes;
   cudnnHandle_t handle = GetOrCreateCudnnHandle();
@@ -675,9 +685,9 @@ size_t InferFusedNormalizationAddReluTmpSize(user_op::InferContext* ctx) {
 }
 
 size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
-  const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const auto& x = ctx->InputTensorDesc("x", 0);
   const auto axis = ctx->Attr<int32_t>("axis");
-  const CudnnTensorDescHelper desc_helper(x->shape(), x->data_type(), axis,
+  const CudnnTensorDescHelper desc_helper(x.shape(), x.data_type(), axis,
                                           CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
   size_t size_in_bytes;
   cudnnHandle_t handle = GetOrCreateCudnnHandle();

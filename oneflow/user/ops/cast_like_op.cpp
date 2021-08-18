@@ -27,10 +27,11 @@ REGISTER_NO_GRAD_USER_OP("cast_like")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* dtype_like_modifier = GetInputArgModifierFn("dtype_like", 0);
-      CHECK_NOTNULL(dtype_like_modifier);
+      CHECK_NOTNULL_OR_RETURN(dtype_like_modifier);
       dtype_like_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
@@ -59,10 +60,9 @@ REGISTER_NO_GRAD_USER_OP("cast_like")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* dtype_like_tensor_desc =
-          ctx->TensorDesc4ArgNameAndIndex("dtype_like", 0);
+      const user_op::TensorDesc& dtype_like_tensor_desc = ctx->InputTensorDesc("dtype_like", 0);
       user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
-      *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc->data_type();
+      *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc.data_type();
       return Maybe<void>::Ok();
     });
 

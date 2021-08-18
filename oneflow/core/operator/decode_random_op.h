@@ -26,7 +26,7 @@ class DecodeRandomOp final : public Operator {
   DecodeRandomOp() = default;
   ~DecodeRandomOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,

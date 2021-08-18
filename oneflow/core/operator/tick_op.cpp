@@ -23,16 +23,17 @@ namespace {
 Maybe<void> InferBlobDescs(const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   BlobDesc* blob_desc = BlobDesc4BnInOp("out");
   blob_desc->mut_shape() = Shape({1});
-  blob_desc->set_data_type(DataType::kUInt8);
+  blob_desc->set_data_type(DataType::kInt8);
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-void TickOp::InitFromOpConf() {
+Maybe<void> TickOp::InitFromOpConf() {
   CHECK(op_conf().has_tick_conf());
   EnrollRepeatedInputBn("tick", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> TickOp::InferLogicalOutBlobDescs(

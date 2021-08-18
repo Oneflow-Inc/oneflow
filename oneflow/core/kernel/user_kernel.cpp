@@ -26,6 +26,18 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_helper.h"
 
+#ifdef WITH_CUDA
+#include <cuda.h>
+
+#if CUDA_VERSION >= 11000
+#define WITH_USER_KERNEL_CUDA_GRAPH
+#include <cuda_runtime.h>
+#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#endif  // CUDA_VERSION >= 11000
+
+#endif  // WITH_CUDA
+
 namespace oneflow {
 
 using Arg2Tensor =
@@ -44,6 +56,44 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_d
 }
 
 }  // namespace
+
+#ifdef WITH_USER_KERNEL_CUDA_GRAPH
+class UserKernel::CudaGraphContext {
+ public:
+  CudaGraphContext(cudaStream_t stream) : stream_(stream), graph_exec_(nullptr) {}
+  ~CudaGraphContext() {
+    if (graph_exec_ != nullptr) { OF_CUDA_CHECK(cudaGraphExecDestroy(graph_exec_)); }
+  }
+  bool IsCaptured() const { return graph_exec_ != nullptr; }
+
+  void BeginCapture() {
+    OF_CUDA_CHECK(cudaStreamBeginCapture(stream_, cudaStreamCaptureModeThreadLocal));
+  }
+
+  void EndCapture() {
+    cudaGraph_t graph;
+    OF_CUDA_CHECK(cudaStreamEndCapture(stream_, &graph));
+    cudaGraphExecUpdateResult update_result;
+    cudaGraphNode_t error_node;
+    if (graph_exec_ != nullptr) {
+      OF_CUDA_CHECK(cudaGraphExecUpdate(graph_exec_, graph, &error_node, &update_result));
+    }
+    if (graph_exec_ == nullptr || update_result != cudaGraphExecUpdateSuccess) {
+      if (graph_exec_ != nullptr) { OF_CUDA_CHECK(cudaGraphExecDestroy(graph_exec_)); }
+      OF_CUDA_CHECK(cudaGraphInstantiate(&graph_exec_, graph, NULL, NULL, 0));
+    }
+    OF_CUDA_CHECK(cudaGraphDestroy(graph));
+  }
+
+  void Launch() { OF_CUDA_CHECK(cudaGraphLaunch(graph_exec_, stream_)); }
+
+ private:
+  cudaStream_t stream_;
+  cudaGraphExec_t graph_exec_;
+};
+#else
+class UserKernel::CudaGraphContext {};
+#endif  // WITH_USER_KERNEL_CUDA_GRAPH
 
 class UserKernelBaseContext {
  public:
@@ -118,8 +168,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
-    parallel_distribution_signature_ = new cfg::ParallelDistributionSignature(
-        kernel_conf.op_attribute().parallel_distribution_signature());
+    nd_sbp_signature_ = new cfg::NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = new cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
@@ -158,13 +207,12 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
     return it->second;
   }
 
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const override {
-    const auto& bn2parallel_distribution =
-        parallel_distribution_signature_->bn_in_op2parallel_distribution();
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
+    const auto& bn2nd_sbp = nd_sbp_signature_->bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
-    auto it = bn2parallel_distribution.find(bn);
-    CHECK(it != bn2parallel_distribution.end());
+    auto it = bn2nd_sbp.find(bn);
+    CHECK(it != bn2nd_sbp.end());
     return it->second;
   }
 
@@ -186,7 +234,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const cfg::SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
-  const cfg::ParallelDistributionSignature* parallel_distribution_signature_;
+  const cfg::NdSbpSignature* nd_sbp_signature_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
@@ -195,8 +243,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         job_desc_(job_desc),
         parallel_ctx_(kernel_conf.parallel_ctx()),
-        parallel_distribution_signature_(
-            kernel_conf.op_attribute().parallel_distribution_signature()),
+        nd_sbp_signature_(kernel_conf.op_attribute().nd_sbp_signature()),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
@@ -228,6 +275,12 @@ class UserKernelOpInferContext : public user_op::InferContext {
     CHECK(it != arg2logical_tensor_desc_.end())
         << "Arg (" << arg_name << "," << index << ") is not found";
     return &(it->second);
+  }
+
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name,
+                                                                                    index);
   }
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index);
@@ -283,13 +336,12 @@ class UserKernelOpInferContext : public user_op::InferContext {
     CHECK(it != bn2sbp.end());
     return it->second;
   }
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const override {
-    const auto& bn2parallel_distribution =
-        parallel_distribution_signature_.bn_in_op2parallel_distribution();
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
+    const auto& bn2nd_sbp = nd_sbp_signature_.bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
-    auto it = bn2parallel_distribution.find(bn);
-    CHECK(it != bn2parallel_distribution.end());
+    auto it = bn2nd_sbp.find(bn);
+    CHECK(it != bn2nd_sbp.end());
     return it->second;
   }
   void UpdateArg2TensorDesc(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
@@ -344,7 +396,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
   cfg::SbpSignature sbp_signature_;
-  cfg::ParallelDistributionSignature parallel_distribution_signature_;
+  cfg::NdSbpSignature nd_sbp_signature_;
   ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;
@@ -501,17 +553,31 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
-  void UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  bool UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+    bool updated = false;
     for (auto& pair : arg2bn_tensor_pair_) {
       std::unique_ptr<user_op::BlobTensorView>* arg_tensor_ptr = &pair.second.tensor;
       Blob* blob = BnInOp2Blob(pair.second.bn);
-      if (blob == nullptr) { continue; }
-      if (*arg_tensor_ptr) {
-        arg_tensor_ptr->get()->Reset(blob);
+      if (blob == nullptr) {
+        if (*arg_tensor_ptr) {
+          arg_tensor_ptr->reset(nullptr);
+          updated = true;
+        }
       } else {
-        arg_tensor_ptr->reset(new user_op::BlobTensorView(blob));
+        if (*arg_tensor_ptr) {
+          if (arg_tensor_ptr->get()->blob() != blob) {
+            arg_tensor_ptr->get()->Reset(blob);
+            updated = true;
+          } else {
+            if (blob->blob_desc().is_dynamic()) { updated = true; }
+          }
+        } else {
+          arg_tensor_ptr->reset(new user_op::BlobTensorView(blob));
+          updated = true;
+        }
       }
     }
+    return updated;
   }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -564,6 +630,8 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   UserKernelBaseContext base_ctx_;
 };
 
+UserKernel::~UserKernel() = default;
+
 void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
   ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf(), job_desc()));
   infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf(), job_desc()));
@@ -578,6 +646,19 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
     KernelCreateContext create_ctx(kernel_conf());
     kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
   }
+
+#ifdef WITH_USER_KERNEL_CUDA_GRAPH
+  if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
+    CudaDeviceCtx* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx);
+    const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
+    if (cuda_device_ctx && cuda_graph_support
+        && cuda_graph_support->IsCudaGraphSupported(&init_ctx)) {
+      cuda_graph_ctx_.reset(new CudaGraphContext(cuda_device_ctx->cuda_stream()));
+      LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name();
+    }
+  }
+#endif  // WITH_USER_KERNEL_CUDA_GRAPH
 }
 
 std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(DeviceCtx* device_ctx) {
@@ -589,10 +670,28 @@ const std::shared_ptr<user_op::OpKernelState>& UserKernel::GetOpKernelState() co
   return opkernel_state_;
 }
 
-void UserKernel::ForwardUserKernel(std::function<Blob*(const std::string&)> BnInOp2Blob,
+void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                    user_op::OpKernelState* opkernel_state) const {
-  ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+  const bool updated = ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+
+#ifdef WITH_USER_KERNEL_CUDA_GRAPH
+  if (cuda_graph_ctx_) {
+    if (cuda_graph_ctx_->IsCaptured() && (!updated)) {
+      cuda_graph_ctx_->Launch();
+      return;
+    }
+    cuda_graph_ctx_->BeginCapture();
+  }
+#endif  // WITH_USER_KERNEL_CUDA_GRAPH
+
   kernel_->Compute(ctx_.get(), opkernel_state);
+
+#ifdef WITH_USER_KERNEL_CUDA_GRAPH
+  if (cuda_graph_ctx_) {
+    cuda_graph_ctx_->EndCapture();
+    cuda_graph_ctx_->Launch();
+  }
+#endif  // WITH_USER_KERNEL_CUDA_GRAPH
 }
 
 void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {
@@ -601,13 +700,13 @@ void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {
   opkernel_state_ = CreateOpKernelState(device_ctx);
 }
 
-void UserKernel::ForwardDataContent(const KernelCtx& ctx,
-                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void UserKernel::ForwardDataContent(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
 }
 
 void UserKernel::ForwardShape(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
   infer_cache_->UpdateCacheKey(infer_ctx_.get());
   if (!infer_cache_->IsCacheHit()) {

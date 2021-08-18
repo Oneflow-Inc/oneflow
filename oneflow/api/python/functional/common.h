@@ -20,11 +20,13 @@ limitations under the License.
 #include <vector>
 #include <pybind11/pybind11.h>
 
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/functional/scalar.h"
 
 namespace py = pybind11;
 
@@ -33,6 +35,15 @@ namespace one {
 namespace functional {
 
 namespace detail {
+
+struct PyObjectPtrDeleter {
+  inline void operator()(PyObject* obj) {
+    if (obj) { Py_DECREF(obj); }
+    obj = NULL;
+  }
+};
+
+using PyObjectPtr = std::unique_ptr<PyObject, PyObjectPtrDeleter>;
 
 #define ARITHMETIC_TYPE_SEQ      \
   OF_PP_MAKE_TUPLE_SEQ(int32_t)  \
@@ -114,7 +125,7 @@ T&& dereference(std::shared_ptr<T>&& val) {
 }
 
 template<typename T>
-/*static*/ Maybe<std::vector<T>> type_caster<std::vector<T>>::cast(py::handle src) {
+/* static */ Maybe<std::vector<T>> type_caster<std::vector<T>>::cast(py::handle src) {
   PyObject* obj = src.ptr();
   bool is_tuple = PyTuple_Check(obj);
   CHECK_OR_RETURN(is_tuple || PyList_Check(obj))
@@ -131,6 +142,14 @@ template<typename T>
 }
 
 }  // namespace detail
+
+bool PyTensorCheck(PyObject* object);
+Maybe<Tensor> PyUnpackTensor(PyObject* object);
+
+bool PyScalarCheck(PyObject* object);
+Maybe<Scalar> PyUnpackScalar(PyObject* object);
+
+const char* PyStringAsString(PyObject* object);
 
 }  // namespace functional
 }  // namespace one

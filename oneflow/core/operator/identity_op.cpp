@@ -36,9 +36,10 @@ class IdentityOpTpl final : public Operator {
   IdentityOpTpl() = default;
   ~IdentityOpTpl() override = default;
 
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
+    return Maybe<void>::Ok();
   }
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
@@ -75,9 +76,10 @@ class MirroredCastOp : public Operator {
   MirroredCastOp() = default;
   virtual ~MirroredCastOp() override = default;
 
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
+    return Maybe<void>::Ok();
   }
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,

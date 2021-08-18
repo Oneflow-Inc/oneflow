@@ -42,7 +42,7 @@ void BoxingOp::VirtualGenKernelConf(
   EraseEmptyBnInVec(GetBlobDesc4BnInOp, op_attribute->mutable_output_bns());
 }
 
-void BoxingOp::InitFromOpConf() {
+Maybe<void> BoxingOp::InitFromOpConf() {
   CHECK(op_conf().has_boxing_conf());
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
 
@@ -56,6 +56,7 @@ void BoxingOp::InitFromOpConf() {
   for (int32_t i = 0; i < boxing_conf.out_num(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId BoxingOp::lbi4ibn(const std::string& input_bn) const {

@@ -3,7 +3,7 @@
 **OneFlow is a performance-centered and open-source deep learning framework.**
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
-
+[![Documentation Status](https://readthedocs.org/projects/oneflow/badge/?version=master)](https://oneflow.readthedocs.io/en/master/?badge=master)
 ## Latest News
 - Version 0.4.0 is out!
   - New Pytorch flavored APIs (`import oneflow.experimental as flow`)

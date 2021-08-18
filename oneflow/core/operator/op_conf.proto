@@ -104,6 +104,22 @@ message DynamicReshapeLikeOpConf {
   required string like = 3;
 }
 
+message FeedInputOpConf {
+  // NOTE(chengcheng): define in/out key as UserOp ibn/obn.
+  required string in_0 = 1;
+  required string out_0 = 2;
+}
+
+message FeedVariableOpConf {
+  required string in_0 = 1;
+  required string out_0 = 2;
+}
+
+message FetchOutputOpConf {
+  required string in_0 = 1;
+  required string out_0 = 2;
+}
+
 message InputOpConf {
   optional string tick = 1;
   required string out = 2;
@@ -151,7 +167,7 @@ message VariableOpConf {
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
   optional bool trainable = 11 [default = true];
-  repeated string parallel_distribution = 12;
+  repeated string nd_sbp = 12;
 }
 
 message DecodeRandomOpConf {
@@ -514,6 +530,13 @@ message OperatorConf {
     // math op
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
 
+    // NOTE(chengcheng): Lazy 1.0 system ops.
+    //   Feed EagerTensor to interface op. 
+    //   Note that FeedxxOp just for build CustomOpExpr, and has NO operator impl.
+    FeedInputOpConf feed_input_conf = 600;
+    FeedVariableOpConf feed_variable_conf = 601;
+    //   Fetch EagerTensor from output op
+    FetchOutputOpConf fetch_output_conf = 602;
   }
 }
 

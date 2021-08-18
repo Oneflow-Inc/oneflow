@@ -162,7 +162,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
           GetBiasCudnnTensorDesc<NDims>(data_format, filters, bias->data_type()));
     }
 
-    return std::move(state);
+    return state;
   }
 
  private:
@@ -201,12 +201,12 @@ class ConvGpuKernel final : public user_op::OpKernel {
       .SetCreateFn<ConvGpuKernel<ndims>>()                                                         \
       .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")                                           \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
-        const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);                                 \
-        const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);                         \
+        const auto& in = ctx->InputTensorDesc("in", 0);                                            \
+        const auto& weight = ctx->InputTensorDesc("weight", 0);                                    \
         const auto* out = ctx->OutputTensorDesc("out", 0);                                         \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
         return InferTmpSizeWithCudnn<cudnnConvolutionFwdAlgoPerf_t>(                               \
-            in, weight, out, *ctx, cudnn_conf.has_cudnn_conv_force_fwd_algo(),                     \
+            &in, &weight, out, *ctx, cudnn_conf.has_cudnn_conv_force_fwd_algo(),                   \
             cudnn_conf.cudnn_conv_force_fwd_algo());                                               \
       })
 
@@ -352,7 +352,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
           new CudnnTensorDesc(CUDNN_TENSOR_NHWC, bias_diff->data_type(), 1,
                               static_cast<int32_t>(bias_diff->shape().At(0)), 1, 1));
     }
-    return std::move(state);
+    return state;
   }
 
  private:

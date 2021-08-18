@@ -27,7 +27,7 @@ class DistributeCloneOp final : public Operator {
   DistributeCloneOp() = default;
   ~DistributeCloneOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
  private:
   Maybe<void> InferBlobParallelDesc() override;
@@ -44,13 +44,14 @@ class DistributeCloneOp final : public Operator {
       const ParallelContext* parallel_ctx) const override;
 };
 
-void DistributeCloneOp::InitFromOpConf() {
+Maybe<void> DistributeCloneOp::InitFromOpConf() {
   CHECK(op_conf().has_distribute_clone_conf());
 
   EnrollInputBn("in");
   EnrollRepeatedOutputBnWithSetter("out", [&](OutputBlobModifier* ob_modifier) {
     ob_modifier->set_is_mutable(op_conf().distribute_clone_conf().is_variable_ref());
   });
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> DistributeCloneOp::InferLogicalOutBlobDescs(

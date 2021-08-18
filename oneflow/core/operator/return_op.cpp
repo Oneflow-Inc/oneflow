@@ -19,10 +19,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void ReturnOp::InitFromOpConf() {
+Maybe<void> ReturnOp::InitFromOpConf() {
   CHECK(op_conf().has_return_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out")->set_is_mutable(true);
+  return Maybe<void>::Ok();
 }
 
 namespace {

@@ -25,7 +25,7 @@ class BoxingIdentityOp : public Operator {
   BoxingIdentityOp() = default;
   ~BoxingIdentityOp() override = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override {
@@ -40,9 +40,10 @@ class BoxingIdentityOp : public Operator {
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
 };
 
-void BoxingIdentityOp::InitFromOpConf() {
+Maybe<void> BoxingIdentityOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId BoxingIdentityOp::lbi4ibn(const std::string& input_bn) const {

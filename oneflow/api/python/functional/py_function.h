@@ -17,6 +17,7 @@ limitations under the License.
 
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/unpack_call.h"
+#include "oneflow/api/python/framework/throw.h"
 
 namespace py = pybind11;
 
@@ -27,9 +28,9 @@ namespace functional {
 template<typename SchemaT>
 inline py::object PyFunction(py::args args, py::kwargs kwargs) {
   // TODO(): Support multiple function signatures.
-  CHECK_LE(args.size(), SchemaT::max_positionals)
+  CHECK_LE_OR_THROW(args.size(), SchemaT::max_positionals)
       << "The maximum count of positional arguments is " << SchemaT::max_positionals;
-  CHECK_LE(kwargs.size(), SchemaT::max_keywords)
+  CHECK_LE_OR_THROW(kwargs.size(), SchemaT::max_keywords)
       << "The maximum count of keyword arguments is " << SchemaT::max_keywords;
 
   // TODO(): Check argument types.
@@ -40,7 +41,7 @@ inline py::object PyFunction(py::args args, py::kwargs kwargs) {
     if (kwargs.contains(arg.name.c_str())) {
       _args[i] = PythonArg(kwargs[arg.name.c_str()]);
     } else {
-      CHECK(arg.has_default_value)
+      CHECK_OR_THROW(arg.has_default_value)
           << "Argument " << arg.name << " is required, and the function def is \""
           << SchemaT::signature << "\".";
       _args[i] = PythonArg(arg.default_value);

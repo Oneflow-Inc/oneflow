@@ -88,6 +88,7 @@ def common_cmake_args(cache_dir=None, extra_oneflow_cmake_args=None):
 
 
 def get_build_dir_arg(cache_dir, oneflow_src_dir):
+    return ""
     build_dir_real = os.path.join(cache_dir, "build")
     build_dir_mount = os.path.join(oneflow_src_dir, "build")
     return f"-v {build_dir_real}:{build_dir_mount}"
@@ -138,6 +139,7 @@ def get_common_docker_args(
     current_dir=None,
     house_dir=None,
     use_system_proxy=True,
+    inplace=False,
 ):
     root = Path(cache_dir)
     child = Path(current_dir)
@@ -150,7 +152,10 @@ def get_common_docker_args(
         house_dir_arg = f"-v {house_dir}:{house_dir}"
     build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
     proxy_env_arg = get_proxy_env_args() if use_system_proxy else ""
-    return f"-v {oneflow_src_dir}:{oneflow_src_dir} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir} --shm-size=8g"
+    inplace_attr = ""
+    if inplace == False:
+        inplace_attr = ":ro"
+    return f"-v {oneflow_src_dir}:{oneflow_src_dir}{inplace_attr} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir} --shm-size=8g"
 
 
 def build_third_party(
@@ -221,9 +226,23 @@ def build_oneflow(
     use_system_proxy,
     enter_bash,
     skip_audit,
+    inplace,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
+    oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
+    inplace_arg = ""
+    oneflow_python_dir_cmd = ""
+    if inplace == False:
+        oneflow_python_dir = "/tmp/oneflow_python"
+        inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
+        oneflow_python_dir_cmd = f"""
+        cp -r {oneflow_src_dir}/python {oneflow_python_dir}
+        cd {oneflow_python_dir}
+        git init
+        git clean -fXd
+        cd -
+        """
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -235,6 +254,7 @@ def build_oneflow(
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
             f"-DPython3_EXECUTABLE={python_bin}",
             oneflow_src_dir,
+            inplace_arg,
         ]
     )
     common_docker_args = get_common_docker_args(
@@ -243,6 +263,7 @@ def build_oneflow(
         current_dir=oneflow_build_dir,
         house_dir=house_dir,
         use_system_proxy=use_system_proxy,
+        inplace=inplace,
     )
     docker_cmd = (
         f"docker run --network=host --rm {common_docker_args} {extra_docker_args}"
@@ -254,6 +275,8 @@ export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64:$LD_LIBRARY_PATH
 export ONEFLOW_SRC_DIR={oneflow_src_dir}
+export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
+{oneflow_python_dir_cmd}
 export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
 """
     if enter_bash:
@@ -267,10 +290,9 @@ cmake --build . -j `nproc`
         pass
     else:
         bash_cmd += f"""
-rm -rf {oneflow_build_dir}/python_scripts/*.egg-info
-cd {oneflow_src_dir}
-rm -rf build/*
-{python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --build_dir {oneflow_build_dir} --package_name {package_name}
+cd {oneflow_python_dir}
+{python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --package_name {package_name}
+cd -
 """
     if skip_audit:
         bash_cmd += f"""
@@ -351,6 +373,7 @@ if __name__ == "__main__":
         "--use_system_proxy", default=False, action="store_true", required=False
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc4", default=False, action="store_true", required=False)
     parser.add_argument("--gcc7", default=False, action="store_true", required=False)
     parser.add_argument("--gcc9", default=False, action="store_true", required=False)
     parser.add_argument(
@@ -358,19 +381,28 @@ if __name__ == "__main__":
     )
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
     parser.add_argument("--bash", default=False, action="store_true", required=False)
+    parser.add_argument("--inplace", default=False, action="store_true", required=False)
+    parser.add_argument(
+        "--shared_lib", default=False, action="store_true", required=False
+    )
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     if args.skip_img:
         "Arg skip_img is deprecated. Setting it has no effect. If you want to build image, use --build_img"
+    if args.skip_wheel:
+        args.skip_audit = True
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
     assert args.package_name
     extra_oneflow_cmake_args = " ".join(
         [" ".join(l) for l in args.extra_oneflow_cmake_args]
     )
-
+    if (not args.gcc4) and (not args.gcc7) and (not args.gcc9):
+        args.gcc7 = True
     cuda_versions = []
     if args.use_aliyun_mirror:
         extra_oneflow_cmake_args += " -DTHIRD_PARTY_MIRROR=aliyun"
+    if args.shared_lib:
+        extra_oneflow_cmake_args += " -DBUILD_SHARED_LIBS=ON"
     if args.cpu:
         extra_oneflow_cmake_args += " -DBUILD_CUDA=OFF"
         cuda_versions = ["10.2"]
@@ -442,7 +474,9 @@ if __name__ == "__main__":
             if args.xla:
                 bash_args = "-l"
             bash_wrap = ""
-            if args.xla or args.gcc7:
+            if args.gcc4:
+                bash_wrap = "gcc --version"
+            elif args.gcc7:
                 bash_wrap = """
 source scl_source enable devtoolset-7
 gcc --version
@@ -453,7 +487,7 @@ source scl_source enable devtoolset-9
 gcc --version
 """
             else:
-                bash_wrap = "gcc --version"
+                raise ValueError("either one in gcc4, gcc7, gcc9 must be enabled")
 
             global cache_dir
             if args.cache_dir:
@@ -463,6 +497,8 @@ gcc --version
                 sub_dir = cuda_version
                 if args.xla:
                     sub_dir += "-xla"
+                if args.gcc4:
+                    sub_dir += "-gcc4"
                 if args.gcc7:
                     sub_dir += "-gcc7"
                 if args.gcc9:
@@ -470,6 +506,8 @@ gcc --version
                 if args.cpu:
                     assert len(cuda_versions) == 1
                     sub_dir += "-cpu"
+                if args.shared_lib:
+                    sub_dir += "-shared"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.build_img:
                 return
@@ -508,6 +546,7 @@ gcc --version
                     args.use_system_proxy,
                     args.bash,
                     args.skip_audit,
+                    args.inplace,
                 )
 
         try:

@@ -27,11 +27,12 @@ class CollectiveBoxingGenericOp : public Operator {
   ~CollectiveBoxingGenericOp() override = default;
 
  private:
-  void InitFromOpConf() override {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_collective_boxing_generic_conf());
     const RankDesc& rank_desc = op_conf().collective_boxing_generic_conf().rank_desc();
     if (GenericOpHasInput(rank_desc)) { EnrollInputBn("in", false); }
     if (GenericOpHasOutput(rank_desc)) { EnrollOutputBn("out", false); }
+    return Maybe<void>::Ok();
   }
 
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override {

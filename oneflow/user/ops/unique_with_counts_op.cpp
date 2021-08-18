@@ -25,31 +25,31 @@ REGISTER_NO_GRAD_USER_OP("unique_with_counts")
     .Output("num_unique")
     .Attr<DataType>("out_idx", DataType::kInt32)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      CHECK_EQ_OR_RETURN(x->shape().NumAxes(), 1);
+      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+      CHECK_EQ_OR_RETURN(x.shape().NumAxes(), 1);
 
       user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-      *y->mut_shape() = x->shape();
-      *y->mut_is_dynamic() = x->is_dynamic();
+      *y->mut_shape() = x.shape();
+      *y->mut_is_dynamic() = x.is_dynamic();
 
       user_op::TensorDesc* idx = ctx->OutputTensorDesc("idx", 0);
-      *idx->mut_shape() = x->shape();
-      *idx->mut_is_dynamic() = x->is_dynamic();
+      *idx->mut_shape() = x.shape();
+      *idx->mut_is_dynamic() = x.is_dynamic();
 
       user_op::TensorDesc* count = ctx->OutputTensorDesc("count", 0);
-      *count->mut_shape() = x->shape();
-      *count->mut_is_dynamic() = x->is_dynamic();
+      *count->mut_shape() = x.shape();
+      *count->mut_is_dynamic() = x.is_dynamic();
 
       user_op::TensorDesc* num_unique = ctx->OutputTensorDesc("num_unique", 0);
       *num_unique->mut_shape() = Shape({1});
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
       auto out_idx = ctx->Attr<DataType>("out_idx");
       CHECK_OR_RETURN(IsIndexDataType(out_idx));
       user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-      *y->mut_data_type() = x->data_type();
+      *y->mut_data_type() = x.data_type();
 
       user_op::TensorDesc* idx = ctx->OutputTensorDesc("idx", 0);
       *idx->mut_data_type() = out_idx;

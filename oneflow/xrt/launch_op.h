@@ -24,7 +24,7 @@ namespace oneflow {
 
 class XrtLaunchOp : public Operator {
  public:
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,

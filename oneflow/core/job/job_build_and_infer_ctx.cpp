@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
@@ -99,7 +100,8 @@ void UpdateOpName2AncestorsNeedNoGrad(
 
 }  // namespace
 
-JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id) : job_(job), job_id_(job_id) {
+JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id)
+    : job_(job), job_id_(job_id), unique_op_name_index_(0) {
   is_job_conf_frozen_ = false;
   has_job_conf_ = false;
 }
@@ -173,19 +175,16 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
 
 void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(
     const OperatorConf& operator_conf, const ParallelDesc& parallel_desc,
-    const cfg::ParallelDistributionSignature& parallel_distribution_signature,
-    bool is_mirrored_parallel_view) const {
+    const cfg::NdSbpSignature& nd_sbp_signature, bool is_mirrored_parallel_view) const {
   auto* op_name2sbp_sig =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
-  auto* op_name2parallel_distribution_sig =
-      job_->mutable_job_parallel_view_conf()
-          ->mutable_op_name2parallel_distribution_signature_conf();
-  if (parallel_distribution_signature.bn_in_op2parallel_distribution().size() > 0) {
-    parallel_distribution_signature.ToProto(
-        &(*op_name2parallel_distribution_sig)[operator_conf.name()]);
+  auto* op_name2nd_sbp_sig =
+      job_->mutable_job_parallel_view_conf()->mutable_op_name2nd_sbp_signature_conf();
+  if (nd_sbp_signature.bn_in_op2nd_sbp().size() > 0) {
+    nd_sbp_signature.ToProto(&(*op_name2nd_sbp_sig)[operator_conf.name()]);
     if (parallel_desc.hierarchy()->NumAxes() == 1) {
       cfg::SbpSignature sbp_signature;
-      ParallelDistributionSignatureToSbpSignature(parallel_distribution_signature, &sbp_signature);
+      NdSbpSignatureToSbpSignature(nd_sbp_signature, &sbp_signature);
       sbp_signature.ToProto(&(*op_name2sbp_sig)[operator_conf.name()]);
     }
   }
@@ -227,10 +226,10 @@ Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> JobBuildAndInferCtx::InferOpOutParallelDistribution(
-    Operator* op, const cfg::ParallelDistributionSignature& parallel_distribution_sig_conf,
-    const ParallelDesc& parallel_desc) {
-  HashMap<std::string, ParallelDistributionInferHint> ibn2parallel_distribution_infer_hint;
+Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(Operator* op,
+                                                 const cfg::NdSbpSignature& nd_sbp_sig_conf,
+                                                 const ParallelDesc& parallel_desc) {
+  HashMap<std::string, NdSbpInferHint> ibn2nd_sbp_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
     auto logical_blob_desc_it = lbi2logical_blob_desc_.find(lbi);
@@ -240,34 +239,28 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutParallelDistribution(
         << "\", consumed op_name: \"" << lbi.op_name() << "\", blob_name: \"" << lbi.blob_name();
     const BlobDesc* logical_blob_desc = logical_blob_desc_it->second.get();
     const ParallelDesc* pd = &lbi2parallel_desc_from_producer_view_.at(lbi);
-    auto parallel_distribution_it = lbi2parallel_distribution_from_producer_view_.find(lbi);
-    CHECK_OR_RETURN(parallel_distribution_it != lbi2parallel_distribution_from_producer_view_.end())
+    auto nd_sbp_it = lbi2nd_sbp_from_producer_view_.find(lbi);
+    CHECK_OR_RETURN(nd_sbp_it != lbi2nd_sbp_from_producer_view_.end())
         << Error::LogicalBlobNameNotExistError() << "when infer op_name: " << op->op_name()
         << " consumed op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
         << " not infer parallel distribution";
-    const cfg::ParallelDistribution* parallel_distribution = &parallel_distribution_it->second;
-    ibn2parallel_distribution_infer_hint.emplace(
-        ibn, ParallelDistributionInferHint(pd, logical_blob_desc, parallel_distribution));
+    const cfg::NdSbp* nd_sbp = &nd_sbp_it->second;
+    ibn2nd_sbp_infer_hint.emplace(ibn, NdSbpInferHint(pd, logical_blob_desc, nd_sbp));
   }
 
-  const auto ParallelDistributionInferHint4Ibn =
-      [&](const std::string& bn) -> Maybe<const ParallelDistributionInferHint*> {
-    return &ibn2parallel_distribution_infer_hint.at(bn);
+  const auto NdSbpInferHint4Ibn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
+    return &ibn2nd_sbp_infer_hint.at(bn);
   };
 
-  JUST(op->InferParallelDistributionSignatureIf(parallel_distribution_sig_conf, parallel_desc,
-                                                ParallelDistributionInferHint4Ibn));
+  JUST(op->InferNdSbpSignatureIf(nd_sbp_sig_conf, parallel_desc, NdSbpInferHint4Ibn));
 
-  const auto& bn2parallel_distribution =
-      JUST(op->parallel_distribution_signature())->bn_in_op2parallel_distribution();
+  const auto& bn2nd_sbp = JUST(op->nd_sbp_signature())->bn_in_op2nd_sbp();
   for (const auto& obn : op->output_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(obn);
-    CHECK_OR_RETURN(bn2parallel_distribution.find(obn) != bn2parallel_distribution.end())
+    CHECK_OR_RETURN(bn2nd_sbp.find(obn) != bn2nd_sbp.end())
         << Error::BlobSplitAxisInferError() << "op_name: " << lbi.op_name()
         << " blob_name: " << lbi.blob_name() << " not infer split axis";
-    CHECK_OR_RETURN(
-        lbi2parallel_distribution_from_producer_view_.emplace(lbi, bn2parallel_distribution.at(obn))
-            .second)
+    CHECK_OR_RETURN(lbi2nd_sbp_from_producer_view_.emplace(lbi, bn2nd_sbp.at(obn)).second)
         << Error::BlobSplitAxisInferError() << "op_name: " << lbi.op_name()
         << " blob_name: " << lbi.blob_name() << " infer split axis repeated";
     CHECK_OR_RETURN(lbi2parallel_desc_from_producer_view_.emplace(lbi, parallel_desc).second)
@@ -320,16 +313,17 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
       int64_t num_axes = logical_blob_desc.shape().NumAxes();
       if (axis < 0) { axis += num_axes; }
       CHECK_GE_OR_RETURN(axis, 0);
-      CHECK_LT_OR_RETURN(axis, num_axes)
+      CHECK_LE_OR_RETURN(axis, num_axes)
           << "op: " << op->op_name() << ", blob: " << pair.first << ", axis: " << axis
           << ", shape: " << logical_blob_desc.shape();
-      CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
-          << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
-          << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
+      if (logical_blob_desc.shape().NumAxes() > 0) {
+        CHECK_GE_OR_RETURN(logical_blob_desc.shape().At(axis), blob_parallel_num)
+            << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
+            << " cannot split blob by parallel_num: " << std::to_string(blob_parallel_num);
+      }
     }
   } else {
-    for (const auto& pair :
-         JUST(op->parallel_distribution_signature())->bn_in_op2parallel_distribution()) {
+    for (const auto& pair : JUST(op->nd_sbp_signature())->bn_in_op2nd_sbp()) {
       if (JUST(op->OptMirroredParallel4BnInOp(pair.first))->has_mirrored_parallel()) { continue; }
       const LogicalBlobId& lbi = op->BnInOp2Lbi(pair.first);
       const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
@@ -401,8 +395,8 @@ bool JobBuildAndInferCtx::HasAnyMirroredBlobInput(const Operator& op) const {
 
 Maybe<const cfg::SbpParallel*> JobBuildAndInferCtx::SbpParallel4Lbi(
     const LogicalBlobId& lbi) const {
-  const auto& iter = lbi2parallel_distribution_from_producer_view_.find(lbi);
-  CHECK_OR_RETURN(iter != lbi2parallel_distribution_from_producer_view_.end())
+  const auto& iter = lbi2nd_sbp_from_producer_view_.find(lbi);
+  CHECK_OR_RETURN(iter != lbi2nd_sbp_from_producer_view_.end())
       << "lbn: " << GenLogicalBlobName(lbi) << " undefined";
   CHECK_EQ_OR_RETURN(iter->second.sbp_parallel_size(), 1);
   return &(iter->second.sbp_parallel(0));
@@ -500,7 +494,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferMirroredOp(const OperatorConf
   const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   const auto* job_desc = JUST(scope.job_desc());
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
-  auto op = ConstructOp(op_conf, parallel_desc.device_type());
+  auto op = JUST(ConstructOp(op_conf, parallel_desc.device_type()));
   JUST(CheckAllInputsConvertableToMirroredBlob(*op));
   int32_t parallel_num = parallel_desc.parallel_num();
   JUST(CheckAllInputsWithSameParallelNum(*op, parallel_num));
@@ -571,7 +565,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   CHECK_NE_OR_RETURN(op_conf.device_tag(), "invalid_device")
       << Error::OpConfDeviceTagNoSetError() << "op_name: " << op_name << " not set device tag";
 
-  op_name2op_.emplace(op_name, ConstructOp(op_conf));
+  op_name2op_.emplace(op_name, JUST(ConstructOp(op_conf)));
   Operator* op = op_name2op_.at(op_name).get();
 
   cfg::SbpSignature sbp_sig_conf;
@@ -596,12 +590,12 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   // infer mirrored signature
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
 
-  // infer parallel_distribution signature
-  cfg::ParallelDistributionSignature parallel_distribution_sig_conf;
-  SbpSignatureToParallelDistributionSignature(sbp_sig_conf, &parallel_distribution_sig_conf);
-  AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_desc, parallel_distribution_sig_conf,
+  // infer nd_sbp signature
+  cfg::NdSbpSignature nd_sbp_sig_conf;
+  SbpSignatureToNdSbpSignature(sbp_sig_conf, &nd_sbp_sig_conf);
+  AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_desc, nd_sbp_sig_conf,
                                     is_mirrored_parallel_view);
-  JUST(InferOpOutParallelDistribution(op, parallel_distribution_sig_conf, parallel_desc));
+  JUST(InferOpOutNdSbp(op, nd_sbp_sig_conf, parallel_desc));
 
   // infer logical blob desc
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));
@@ -625,7 +619,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   }
   JUST(AddLbiParallelConf2BlobPlacement(op, ParallelDesc4Obn));
   // Infer whether input/output blobs are backward used
-  InferBlobBackwardSignature(op);
+  JUST(InferBlobBackwardSignature(op));
   // Check splitability
   JUST(CheckOpBlobSplitability(op, parallel_desc.parallel_num()));
 
@@ -687,10 +681,9 @@ Maybe<Operator*> JobBuildAndInferCtx::Op4OpName(const std::string& op_name) cons
 Maybe<OptInt64> JobBuildAndInferCtx::GetSplitAxisFromProducerView(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   OptInt64 ret;
-  const auto& parallel_distribution =
-      lbi2parallel_distribution_from_producer_view_.at(GenLogicalBlobId(lbn));
-  CHECK_EQ_OR_RETURN(parallel_distribution.sbp_parallel_size(), 1);
-  const auto& sbp = parallel_distribution.sbp_parallel(0);
+  const auto& nd_sbp = lbi2nd_sbp_from_producer_view_.at(GenLogicalBlobId(lbn));
+  CHECK_EQ_OR_RETURN(nd_sbp.sbp_parallel_size(), 1);
+  const auto& sbp = nd_sbp.sbp_parallel(0);
   if (sbp.has_split_parallel()) { ret.set_value(sbp.split_parallel().axis()); }
   return ret;
 }
@@ -761,9 +754,9 @@ Maybe<OptInt64> JobBuildAndInferCtx::MirroredBlobGetSplitAxisFromProducerView(
     const std::string& lbn_with_hint) const {
   const auto& lbi = *JUST(MirroredBlobGetSubLbi(lbn_with_hint, 0));
   OptInt64 ret;
-  const auto& parallel_distribution = lbi2parallel_distribution_from_producer_view_.at(lbi);
-  CHECK_EQ_OR_RETURN(parallel_distribution.sbp_parallel_size(), 1);
-  const auto& sbp = parallel_distribution.sbp_parallel(0);
+  const auto& nd_sbp = lbi2nd_sbp_from_producer_view_.at(lbi);
+  CHECK_EQ_OR_RETURN(nd_sbp.sbp_parallel_size(), 1);
+  const auto& sbp = nd_sbp.sbp_parallel(0);
   if (sbp.has_split_parallel()) { ret.set_value(sbp.split_parallel().axis()); }
   return ret;
 }
@@ -836,7 +829,7 @@ Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) c
       << Error::LogicalBlobNameNotExistError() << "lbn:" << lbn;
 
   CHECK_HAS_LBI_KEY(lbi2logical_blob_desc_);
-  CHECK_HAS_LBI_KEY(lbi2parallel_distribution_from_producer_view_);
+  CHECK_HAS_LBI_KEY(lbi2nd_sbp_from_producer_view_);
   CHECK_HAS_LBI_KEY(lbi2parallel_desc_from_producer_view_);
 #undef CHECK_HAS_LBI_KEY
 
@@ -965,6 +958,8 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+  CHECK_GT_OR_RETURN(job().net().op_size(), 0)
+      << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
   CHECK_NOTNULL(Global<JobDesc>::Get());
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
@@ -1028,30 +1023,31 @@ Maybe<void> EagerJobBuildAndInferCtx::Complete() {
   return Maybe<void>::Ok();
 }
 
-void JobBuildAndInferCtx::InferBlobBackwardSignature(Operator* op) {
+Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(Operator* op) {
   std::function<bool(const LogicalBlobId&)> IsLbiBackwardUsed;
-  InferBlobBackwardSignature(*op, &IsLbiBackwardUsed);
+  JUST(InferBlobBackwardSignature(*op, &IsLbiBackwardUsed));
   auto* map = op->mut_blob_backward_used_signature()->mutable_bn_in_op2blob_backward_used();
   const auto& SetIsBlobBackwardUsed = [&](const std::string& bn_in_op) {
     (*map)[bn_in_op] = IsLbiBackwardUsed(op->BnInOp2Lbi(bn_in_op));
   };
   for (const auto& ibn : op->input_bns()) { SetIsBlobBackwardUsed(ibn); }
   for (const auto& obn : op->output_bns()) { SetIsBlobBackwardUsed(obn); }
+  return Maybe<void>::Ok();
 }
 
-void JobBuildAndInferCtx::InferBlobBackwardSignature(
+Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(
     const Operator& op, std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed) {
   const bool is_train = job().job_conf().has_train_conf();
   if (!is_train) {
     *IsLbiBackwardUsed = [](const LogicalBlobId&) { return false; };
-    return;
+    return Maybe<void>::Ok();
   }
   const auto& Op4Name = [&](const std::string& op_name) { return CHECK_JUST(Op4OpName(op_name)); };
   UpdateOpName2AncestorsNeedNoGrad(op, Op4Name, is_train, &op_name2ancestors_need_no_grad_);
   // always return true if output_size > 1
   if (op.output_bns().size() > 1) {
     *IsLbiBackwardUsed = [](const LogicalBlobId&) { return true; };
-    return;
+    return Maybe<void>::Ok();
   }
   std::vector<OperatorConf> bw_op_confs;
   LogicalBlobId fake_diff_lbi;
@@ -1090,7 +1086,7 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   // find backward used logical blob ids
   auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();
   for (const auto& bw_op_conf : bw_op_confs) {
-    const auto& bw_op = ConstructOp(bw_op_conf, op.device_type());
+    const auto& bw_op = JUST(ConstructOp(bw_op_conf, op.device_type()));
     for (const auto& ibn : bw_op->input_bns()) {
       const auto& lbi = bw_op->BnInOp2Lbi(ibn);
       if (FwLogicalBlobDescPtr4Lbi(lbi) != nullptr) { backward_used_lbis->insert(lbi); }
@@ -1099,6 +1095,7 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(
   *IsLbiBackwardUsed = [backward_used_lbis](const LogicalBlobId& lbi) {
     return backward_used_lbis->find(lbi) != backward_used_lbis->end();
   };
+  return Maybe<void>::Ok();
 }
 
 namespace {
@@ -1234,7 +1231,7 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
 Maybe<void> JobBuildAndInferCtx::Rebuild() {
   // clear old state
   lbi2logical_blob_desc_.clear();
-  lbi2parallel_distribution_from_producer_view_.clear();
+  lbi2nd_sbp_from_producer_view_.clear();
   lbi2parallel_desc_from_producer_view_.clear();
   lbi2disable_boxing_.clear();
   op_name2op_.clear();
@@ -1285,7 +1282,7 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   });
   // updata job_helper
   op_graph.DumpLogicalBlobDesc(job_);
-  op_graph.DumpParallelDistributionSignature(job_);
+  op_graph.DumpNdSbpSignature(job_);
   return Maybe<void>::Ok();
 }
 
@@ -1293,6 +1290,35 @@ Maybe<std::string> JobBuildAndInferCtx::GetOpBlobLbn(const std::string& op_name,
                                                      const std::string& bn_in_op) const {
   const auto& lbi = JUST(Op4OpName(op_name))->BnInOp2Lbi(bn_in_op);
   return GenLogicalBlobName(lbi);
+}
+
+Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
+    const OperatorConf& op_conf) {
+  // NOTE(chengcheng): arg op_conf has a default global op_name because it is created by
+  //  static functional op expr, so we need reset a unique op name for each functional op.
+  //  This op_conf can NOT be a input/output/variable op which has set correct name in nn.Graph.
+  //  But free eager tensor is treated as a special variable which needs to create name here.
+  CHECK_OR_RETURN(!(op_conf.has_input_conf() || op_conf.has_output_conf()));
+
+  const auto& scope = JUST(GetCurrentScope());
+
+  std::string op_name_prefix;
+  for (const std::string& prefix : scope->scope_proto().scope_op_name_prefixes()) {
+    op_name_prefix += (prefix + "-");
+  }
+  std::string op_type_name;
+  if (op_conf.has_user_conf()) {
+    op_type_name = op_conf.user_conf().op_type_name();
+  } else if (op_conf.has_variable_conf()) {
+    // NOTE(chengcheng): To support Free Eager Tensor caught by nn.Graph
+    op_type_name = "FreeEagerTensor";
+  } else {
+    op_type_name = "SystemOp";
+  }
+  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
+  ++unique_op_name_index_;
+
+  return op_name;
 }
 
 }  // namespace oneflow

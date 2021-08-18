@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
-
 namespace internal {
 
 template<typename T, typename U = void>
@@ -30,7 +29,7 @@ class Storage;
 template<typename T>
 class Storage<T, typename std::enable_if<IsScalarType<T>::value>::type> {
  public:
-  Storage() = default;
+  Storage() : value_() {}
 
   template<typename... Args,
            typename std::enable_if<std::is_constructible<T, Args...>::value, int>::type = 0>
@@ -108,14 +107,19 @@ class Storage<T, typename std::enable_if<!IsScalarType<T>::value>::type> {
 }  // namespace internal
 
 template<typename T>
-class Optional {
+class Optional final {
+ private:
+  template<typename U>
+  using is_self = std::is_same<Optional, typename std::decay<U>::type>;
+
  public:
   Optional() : init_(false) {}
 
-  template<typename... Args,
-           typename std::enable_if<std::is_constructible<internal::Storage<T>, Args...>::value,
+  template<typename U,
+           typename std::enable_if<!is_self<U>::value
+                                       && std::is_constructible<internal::Storage<T>, U>::value,
                                    int>::type = 0>
-  Optional(Args&&... args) : init_(true), storage_(std::forward<Args>(args)...) {}
+  Optional(U&& val) : init_(true), storage_(std::forward<U>(val)) {}
 
   ~Optional() = default;
 
@@ -165,18 +169,13 @@ class Optional {
 };
 
 template<typename T>
-class Optional<T&> {
+class Optional<T&> final {
  public:
   Optional() : value_ptr_(nullptr) {}
 
   Optional(T& val) : value_ptr_(&val) {}
 
   ~Optional() = default;
-
-  Optional& operator=(T& val) {
-    value_ptr_ = &val;
-    return *this;
-  }
 
   Optional& operator=(const Optional<T&>& rhs) {
     value_ptr_ = rhs.value_ptr_;
@@ -187,8 +186,6 @@ class Optional<T&> {
     CHECK_OR_RETURN(has_value()) << "Optional has no value.";
     return *value_ptr_;
   }
-
-  void Clear() { value_ptr_ = nullptr; }
 
   bool has_value() const { return value_ptr_ != nullptr; }
   operator bool() const { return has_value(); }

@@ -27,7 +27,7 @@ class DistributeAddOp final : public Operator {
   DistributeAddOp() = default;
   ~DistributeAddOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
@@ -45,11 +45,12 @@ class DistributeAddOp final : public Operator {
       const ParallelDesc& parallel_desc) const override;
 };
 
-void DistributeAddOp::InitFromOpConf() {
+Maybe<void> DistributeAddOp::InitFromOpConf() {
   CHECK(op_conf().has_distribute_add_conf());
 
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> DistributeAddOp::InferBlobParallelDesc() {

@@ -23,10 +23,10 @@ class LearningRateScheduleOp final : public Operator {
   LearningRateScheduleOp() = default;
   ~LearningRateScheduleOp() override = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   virtual Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const ParallelDesc& parallel_desc) const;
+      const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
@@ -37,10 +37,11 @@ class LearningRateScheduleOp final : public Operator {
       cfg::SbpSignatureList* sbp_sig_list) const override;
 };
 
-void LearningRateScheduleOp::InitFromOpConf() {
+Maybe<void> LearningRateScheduleOp::InitFromOpConf() {
   CHECK(op_conf().has_learning_rate_schedule_conf());
   EnrollInputBn("train_step");
   EnrollOutputBn("out");
+  return Maybe<void>::Ok();
 }
 
 namespace {

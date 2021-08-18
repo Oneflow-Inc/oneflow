@@ -31,7 +31,9 @@ class BufferMgr final {
     CHECK(name2buffer_.emplace(buffer_name, std::make_unique<Buffer<T>>(buffer_size)).second);
   }
   Buffer<T>* Get(const std::string& buffer_name) const {
-    return name2buffer_.at(buffer_name).get();
+    const auto& iter = name2buffer_.find(buffer_name);
+    CHECK(iter != name2buffer_.end()) << "buffer_name: " << buffer_name;
+    return iter->second.get();
   }
 
  private:
@@ -55,6 +57,21 @@ inline std::string GetForeignInputBufferName(const std::string& job_name) {
 
 inline std::string GetForeignOutputBufferName(const std::string& job_name) {
   static const std::string prefix = "ForeignOutput-";
+  return prefix + job_name;
+}
+
+inline std::string GetInputBufferName(const std::string& job_name, const std::string& op_name) {
+  static const std::string prefix = "ForeignInput-";
+  return prefix + job_name + "-" + op_name;
+}
+
+inline std::string GetOutputBufferName(const std::string& job_name, const std::string& op_name) {
+  static const std::string prefix = "ForeignOutput-";
+  return prefix + job_name + "-" + op_name;
+}
+
+inline std::string GetSourceTickBufferName(const std::string& job_name) {
+  static const std::string prefix = "SourceTick-";
   return prefix + job_name;
 }
 

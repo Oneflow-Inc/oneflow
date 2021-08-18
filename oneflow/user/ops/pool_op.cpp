@@ -21,7 +21,7 @@ namespace oneflow {
 namespace {
 
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
+typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
 
 TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
@@ -87,7 +87,7 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 }
 
 GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32_t dim) {
-  return [mode, dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+  return [mode, dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       user_op::UserOpConfWrapper grad_op =
@@ -107,6 +107,7 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
       op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
       AddOp(grad_op);
     }
+    return Maybe<void>::Ok();
   };
 }
 

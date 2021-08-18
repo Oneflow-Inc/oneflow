@@ -41,6 +41,10 @@ EnvProto GetEnvProto(int64_t machine_num) {
 
 TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu_device_num,
                                              int64_t machine_num) {
+  Global<ProcessCtx>::New();
+  Global<ProcessCtx>::Get()->mutable_ctrl_addr()->Add();
+  Global<ProcessCtx>::Get()->set_rank(0);
+  Global<ProcessCtx>::Get()->set_node_size(1);
   EnvProto env_proto = GetEnvProto(machine_num);
   Global<EnvDesc>::New(env_proto);
   Resource resource;
@@ -52,8 +56,8 @@ TestResourceDescScope::TestResourceDescScope(int64_t gpu_device_num, int64_t cpu
 
 TestResourceDescScope::~TestResourceDescScope() {
   Global<ResourceDesc, ForSession>::Delete();
-  Global<NumProcessPerNode>::Delete();
   Global<EnvDesc>::Delete();
+  Global<ProcessCtx>::Delete();
 }
 
 ObjectMsgPtr<VmResourceDesc> TestUtil::NewVmResourceDesc(int64_t device_num, int64_t machine_num) {

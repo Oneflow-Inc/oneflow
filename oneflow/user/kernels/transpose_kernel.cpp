@@ -16,13 +16,14 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 template<DeviceType device_type, typename T>
-class TransposeKernel final : public OpKernel {
+class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport {
  public:
   TransposeKernel() = default;
   ~TransposeKernel() override = default;

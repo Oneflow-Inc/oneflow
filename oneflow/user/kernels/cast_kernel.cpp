@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -68,7 +69,7 @@ struct CastUtil final {
 };
 
 template<DeviceType device_type>
-class CastKernel final : public OpKernel {
+class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
  public:
   CastKernel() = default;
   ~CastKernel() = default;
