@@ -65,17 +65,19 @@ class TestTensor(flow.unittest.TestCase):
         sbp = flow.sbp.split(0)
         shape = (2, 3, 4, 5)
         l_x = flow.Tensor(*shape)
-        l_y = flow.Tensor(*shape, requires_grad=True)
-
-        x = l_x.to_consistent(placement=placement, sbp=sbp)
-        y = l_y.to_consistent( placement=placement, sbp=sbp)
-
-        z = x + y
-
         test_case.assertFalse(l_x.requires_grad)
         test_case.assertTrue(l_x.is_leaf)
+
+        l_y = flow.Tensor(*shape, requires_grad=True)
         test_case.assertTrue(l_y.requires_grad)
         test_case.assertTrue(l_y.is_leaf)
+
+        x = l_x.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertTrue(x.is_leaf)
+        y = l_y.to_consistent( placement=placement, sbp=sbp)
+        test_case.assertFalse(y.is_leaf)
+
+        z = x + y
         test_case.assertTrue(z.requires_grad)
         test_case.assertFalse(z.is_leaf)
 
@@ -101,6 +103,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(l_y.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
         )
+        # TODO 
         # test_case.assertTrue(
         #     np.allclose(z.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
         # )
