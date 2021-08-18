@@ -15,3 +15,4 @@ limitations under the License.
 """
 
 from oneflow.autograd.autograd import backward, grad
+from oneflow.autograd.autograd_mode import no_grad
