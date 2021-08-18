@@ -39,13 +39,22 @@ private:
         const user_op::TensorDesc* in_shape = ctx->TensorDesc4ArgNameAndIndex("in", 0);
         const oneflow::fixed_vector<long int, 20> in_dim_vec = in_shape->shape().dim_vec();
         const std::vector<int32_t> move = ctx->Attr<std::vector<int32_t>>("shifts");
+        const std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
+        
         int32_t len = in_dim_vec[0];
-        int32_t width = in_dim_vec[1];
-        int32_t shift = move[0]%len;
-        bool isPositive = (shift>=0)?1:0;
-        int32_t cpyFirst, cpySec;
-        cpyFirst = width*(len-shift);
-        cpySec = width*shift;  
+        int32_t width = in_dim_vec[1]; 
+        int32_t shift, cpyFirst, cpySec;      
+        if(dims.empty()) {
+            len = width*len;
+            shift = move[0]%len;
+            cpySec = len-shift;
+            cpyFirst = shift;
+        } else {
+            shift = move[0]%len;
+            cpyFirst = width*(len-shift);
+            cpySec = width*shift;  
+        }
+        bool isPositive = (shift>=0)?1:0; 
         RollChange<device_type, T>::Invoke(ctx->device_ctx(),
            isPositive,
            cpyFirst, 

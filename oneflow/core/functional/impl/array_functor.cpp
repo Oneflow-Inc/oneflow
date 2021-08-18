@@ -57,7 +57,7 @@ class ConsistentConstantFunctor {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
-    if (LazyMode::is_enabled()) {
+    if (LazyMode::is_enabled()) { 
       std::vector<std::string> parallel_distribution(sbp_tuple.size());
       {
         for (int i = 0; i < sbp_tuple.size(); ++i) {
@@ -80,12 +80,23 @@ class RollFunctor : public UnaryFunctor {
   RollFunctor() { op_ = CHECK_JUST(one::OpBuilder("roll").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, 
                            const std::vector<int32_t>& shifts,
-                           const std::vector<int32_t>& dims) const {
+                           const Optional<std::vector<int32_t>>& dims) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("shifts", shifts));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dims", dims));
+    if(in->shape()->NumAxes() != 2) { UNIMPLEMENTED_THEN_RETURN(); }
+    if(dims.has_value()) {
+      std::shared_ptr<std::vector<int32_t>> dims_tmp = JUST(dims.value());
+      if(dims_tmp->empty()) { 
+        JUST(attrs.SetAttr<std::vector<int32_t>>("dims", *dims_tmp));
+      } else {
+        JUST(attrs.SetAttr<std::vector<int32_t>>("dims", *dims_tmp));
+        if(dims_tmp->at(0) != 0) { UNIMPLEMENTED_THEN_RETURN(); }
+      }      
+    } else {
+      std::vector<int32_t> tmp;
+      JUST(attrs.SetAttr<std::vector<int32_t>>("dims", tmp));
+    }
 
-    if(dims[0]) { UNIMPLEMENTED_THEN_RETURN(); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs); 
   }
 
@@ -280,6 +291,7 @@ class ConcatFunctor {
 
 class StackFunctor {
  public:
+  
   StackFunctor() = default;
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
     CHECK_GE_OR_RETURN(inputs.size(), 1) << "Needs one input at least.";

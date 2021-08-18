@@ -14,10 +14,12 @@ class TestRoll(flow.unittest.TestCase):
     def test_roll_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=2).to(device)
+        print(x)
         shifts = random(1, 6).to(Union[Tuple[int]])
+        print(shifts.value())
         dims = random(0, 1).to(Union[Tuple[int]])
+        print(dims.value())
         # print(shifts.value())
-        # print(dims.value())
         return torch.roll(
                 x, 
                 shifts=shifts, 
