@@ -312,18 +312,80 @@ public class InferenceSessionTest {
     /**
      * Some field of Option must be given: deviceTag, savedModelDir, modelVersion, controlPort
      */
-    @Test
-    public void optionCompletenessTest() {
+    @Test(expected = RuntimeException.class)
+    public void optionCompletenessTest0() {
+        Option option = new Option();
+        InferenceSession inferenceSession = new InferenceSession(option);
+        inferenceSession.open();
+        // the session is not opened and the code will not reach here
+        inferenceSession.close();
+    }
 
+    @Test(expected = RuntimeException.class)
+    public void optionCompletenessTest1() {
+        Option option = new Option();
+        option.setDeviceTag("gpu");
+        InferenceSession inferenceSession = new InferenceSession(option);
+        inferenceSession.open();
+        inferenceSession.close();
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void optionCompletenessTest2() {
+        Option option = new Option();
+        option.setDeviceTag("gpu").setControlPort(32321);
+        InferenceSession inferenceSession = new InferenceSession(option);
+        inferenceSession.open();
+        inferenceSession.close();
+    }
+
+    @Test(expected = RuntimeException.class)
+    public void optionCompletenessTest3() {
+        Option option = new Option();
+        option.setDeviceTag("gpu").setControlPort(32321).setSavedModelDir("mnist_test/models");
+        InferenceSession inferenceSession = new InferenceSession(option);
+        inferenceSession.open();
+        inferenceSession.close();
+    }
+
+    @Test
+    public void optionCompletenessTest4() {
+        Option option = new Option();
+        option.setDeviceTag("gpu")
+                .setControlPort(32321)
+                .setSavedModelDir("mnist_test/models")
+                .setModelVersion("3");
+        InferenceSession inferenceSession = new InferenceSession(option);
+        inferenceSession.open();
+        inferenceSession.close();
     }
 
     /**
      * If the model proto files not exist, libprotobuf will report error
      * and the user will hard to figure out what the problem is
      */
-    @Test
-    public void noModelProtoTest() {
+    @Test(expected = RuntimeException.class)
+    public void noModelProtoTest0() {
+        Option option = new Option();
+        option.setDeviceTag("gpu")
+                .setControlPort(32321)
+                .setSavedModelDir("mnist_test/models")
+                .setModelVersion("5");
+        InferenceSession inferenceSession = new InferenceSession(option);
+        inferenceSession.open();
+        inferenceSession.close();
+    }
 
+    @Test(expected = RuntimeException.class)
+    public void noModelProtoTest1() {
+        Option option = new Option();
+        option.setDeviceTag("gpu")
+                .setControlPort(32321)
+                .setSavedModelDir("mnist_test/models_not_exist_dir")
+                .setModelVersion("1");
+        InferenceSession inferenceSession = new InferenceSession(option);
+        inferenceSession.open();
+        inferenceSession.close();
     }
 
     /**
@@ -332,7 +394,24 @@ public class InferenceSessionTest {
      */
     @Test
     public void noCheckpointDirTest() {
-
+        Option option = new Option();
+        option.setDeviceTag("gpu")
+                .setControlPort(32321)
+                .setSavedModelDir("mnist_test/models")
+                .setModelVersion("4");
+        InferenceSession inferenceSession = new InferenceSession(option);
+        try {
+            inferenceSession.open();
+            // shouldn't be here
+            fail();
+        }
+        catch (RuntimeException e) {
+            assertTrue(true);
+        }
+        finally {
+            // the session is opened, it should be closed
+            inferenceSession.close();
+        }
     }
 
     /**
@@ -341,7 +420,82 @@ public class InferenceSessionTest {
      */
     @Test
     public void sessionStatusCheckTest() {
+        String jobName = "mlp_inference";
+        String savedModelDir = "mnist_test/models";
+        float[] image = readImage("mnist_test/test_set/" + IMAGE_FILES[0]);
+        Tensor imageTensor = Tensor.fromBlob(image, new long[]{ 1, 1, 28, 28 });
+        Map<String, Tensor> tensorMap = new HashMap<>();
+        tensorMap.put("image", imageTensor);
 
+        Option option = new Option();
+        option.setDeviceTag("gpu")
+                .setControlPort(11245)
+                .setSavedModelDir(savedModelDir)
+                .setModelVersion("2");
+
+        InferenceSession inferenceSession = new InferenceSession(option);
+
+        // call close
+        try {
+            inferenceSession.close();
+            fail();
+        }
+        catch (RuntimeException e) {
+            assertTrue(true);
+        }
+
+        // call run
+        try {
+            inferenceSession.run(jobName, tensorMap);
+            fail();
+        }
+        catch (RuntimeException e) {
+            assertTrue(true);
+        }
+
+        inferenceSession.open();
+        inferenceSession.run(jobName, tensorMap);
+        inferenceSession.close();
+
+        // call run
+        try {
+            inferenceSession.run(jobName, tensorMap);
+            fail();
+        }
+        catch (RuntimeException e) {
+            assertTrue(true);
+        }
+    }
+
+    /**
+     * reuse one session
+     */
+    @Test
+    public void reuseSessionTest() {
+        String jobName = "mlp_inference";
+        String savedModelDir = "mnist_test/models";
+        float[] image = readImage("mnist_test/test_set/" + IMAGE_FILES[0]);
+        Tensor imageTensor = Tensor.fromBlob(image, new long[]{ 1, 1, 28, 28 });
+        Map<String, Tensor> tensorMap = new HashMap<>();
+        tensorMap.put("image", imageTensor);
+
+        Option option = new Option();
+        option.setDeviceTag("gpu")
+                .setControlPort(11245)
+                .setSavedModelDir(savedModelDir)
+                .setModelVersion("2");
+
+        InferenceSession inferenceSession = new InferenceSession(option);
+        inferenceSession.open();
+        inferenceSession.run(jobName, tensorMap);
+        inferenceSession.close();
+
+        inferenceSession.open();
+        inferenceSession.run(jobName, tensorMap);
+        inferenceSession.close();
+
+        inferenceSession.open();
+        inferenceSession.close();
     }
 
     @Test
