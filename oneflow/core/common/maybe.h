@@ -315,6 +315,10 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 #define OF_UNIMPLEMENTED() \
   return Error::Unimplemented().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
+#define OF_RUNTIMEERROR()                                                                         \
+  return Error::RuntimeError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) << "RuntimeError " \
+                                                                                  ": "
+
 #define OF_COMPLIE_OPTION_EEEOR()                                                    \
   return Error::CompileOptionWrong().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << " Compile option wrong: "
