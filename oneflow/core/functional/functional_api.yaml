@@ -1064,3 +1064,11 @@
 - name: "consistent_randperm"
   signature: "Tensor ConsistentRandperm(Int32 n,*, Placement placement, SbpList sbp_tuple, Generator generator=None)"
   bind_python: True
+
+- name: "sparse_softmax_cross_entropy_ms"
+  signature: "TensorTuple SparseSoftmaxCrossEntropyMs(Tensor logits, Tensor label, *, Int64 depth)"
+  bind_python: True
+
+- name: "sparse_softmax_cross_entropy_ms_grad"
+  signature: "Tensor SparseSoftmaxCrossEntropyMsGrad(Tensor label, Tensor dy, Tensor prob, *, Int64 depth)"
+  bind_python: False

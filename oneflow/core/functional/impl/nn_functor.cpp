@@ -377,6 +377,50 @@ class SparseSoftmaxCrossEntropyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SparseSoftmaxCrossEntropyMsFunctor {
+ public:
+  SparseSoftmaxCrossEntropyMsFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy_ms")
+                         .Input("prediction")
+                         .Input("label")
+                         .Output("prob")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& logits,
+                                const std::shared_ptr<one::Tensor>& label,
+                                const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {logits, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SparseSoftmaxCrossEntropyMsGradFunctor {
+ public:
+  SparseSoftmaxCrossEntropyMsGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy_ms_grad")
+                         .Input("label")
+                         .Input("dy")
+                         .Output("prob")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& prob, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {label, dy, prob}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SmoothL1LossFunctor {
  public:
   SmoothL1LossFunctor() {
@@ -717,6 +761,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
+  m.add_functor<impl::SparseSoftmaxCrossEntropyMsFunctor>("SparseSoftmaxCrossEntropyMs");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
