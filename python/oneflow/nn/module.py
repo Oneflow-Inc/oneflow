@@ -538,7 +538,7 @@ class Module(object):
             Module: self
         """
         return self._apply(lambda t: t.cuda(device))
-    
+
     def float(self: T) -> T:
         r"""Casts all floating point parameters and buffers to ``float`` datatype.
 

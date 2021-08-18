@@ -156,8 +156,12 @@ def is_floating_point(input):
         False
 
     """
-    if input.dtype==flow.float16 or input.dtype==flow.float32 or input.dtype==flow.float64:
-        return True 
+    if (
+        input.dtype == flow.float16
+        or input.dtype == flow.float32
+        or input.dtype == flow.float64
+    ):
+        return True
     return False
 
 
@@ -180,8 +184,9 @@ def cpu(input):
     """
     return input.to(device="cpu")
 
+
 @register_tensor_op("cuda")
-def cuda(input, device: Union[int, str, flow.device]=None):
+def cuda(input, device: Union[int, str, flow.device] = None):
     """Returns a copy of this object in CUDA memory.
     If this object is already in CUDA memory and on the correct device, then no copy is performed and the original object is returned.
 
@@ -202,7 +207,7 @@ def cuda(input, device: Union[int, str, flow.device]=None):
     """
     if device is None:
         device = "cuda"
-    elif device is isinstance (int):
+    elif device is isinstance(int):
         device = "cuda:" + str(device)
     return input.to(device=device)
 
