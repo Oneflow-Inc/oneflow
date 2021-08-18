@@ -34,7 +34,7 @@ class ActorMsgMR final {
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
   ActorMsgMR(ibv_mr *   mr, char * addr, size_t  size):size_(size){
-    msg_ = reinterpret_cast<ActorMsg*>(addr);
+    msg_ = reinterpret_cast<ActorMsg*>(addr); //这里没有问题
     mr_.reset(mr);
   }
   ~ActorMsgMR() {
@@ -44,7 +44,8 @@ class ActorMsgMR final {
   char * addr() { return reinterpret_cast<char *>(msg_) ; } //这个是没错的
   uint32_t size() {return size_ ;}
   uint32_t lkey() { return mr_->lkey ; }
-  ActorMsg  msg()  { return *msg_;}
+  ActorMsg  msg()  { return *msg_;} //这个函数也没问题
+  //这个函数也没问题
   void set_msg(const ActorMsg& val) {
     std::cout<<"in set_msg of ActorMsgMR, the val comm_net_sequence_number:" << val.comm_net_sequence_number() << std::endl;
     *msg_ = val ;
@@ -71,10 +72,10 @@ class MessagePool final {
     MessagePool() = delete; //todo:这里可能要修改
     //析构函数
     ~MessagePool() {
-      while(message_buf_.empty() == false) {
-        delete message_buf_.front();
-        message_buf_.pop_front();
-      }
+      // while(message_buf_.empty() == false) {
+      //   delete message_buf_.front();
+      //   message_buf_.pop_front();
+      // }
     }//todo:这里可能要修改
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd),num_of_message_(number_of_message) {
@@ -92,7 +93,7 @@ class MessagePool final {
           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
       CHECK(mr);
       for(size_t i = 0;  i < num_of_message_ ; i++){
-          char * split_addr =addr + ActorMsgSize * i ;
+          char * split_addr =addr + ActorMsgSize * i ; //这里切割地址没有问题
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
           message_buf_.push_front(msg_mr);
       }
