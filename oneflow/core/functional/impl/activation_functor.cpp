@@ -189,7 +189,7 @@ class SoftmaxFunctor : public UnaryFunctor {
 class LogSoftmaxFunctor : public UnaryFunctor {
  public:
   LogSoftmaxFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("logsoftmax").Input("in").Output("out").Output("prob").Build());
+    op_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits) const {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {logits});

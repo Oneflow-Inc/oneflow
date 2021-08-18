@@ -232,7 +232,7 @@
   signature: "Tensor Softmax(Tensor x)"
   bind_python: True
 
-- name: "logsoftmax"
+- name: "log_softmax"
   signature: "Tensor LogSoftmax(Tensor x)"
   bind_python: True
 

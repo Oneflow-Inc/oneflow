@@ -45,7 +45,7 @@ Maybe<void> LogSoftmax::Init(const OpExpr& op) {
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   const std::string& op_name = fw_op_expr->op_name();
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  grad_op_ = JUST(one::OpBuilder("logsoftmax_grad", GradientOpName(op_name))
+  grad_op_ = JUST(one::OpBuilder("log_softmax_grad", GradientOpName(op_name))
                       .Input("prob")
                       .Input("dy")
                       .Output("dx")
@@ -61,14 +61,14 @@ Maybe<void> LogSoftmax::Capture(LogSoftmaxInterpState* ctx, const TensorTuple& i
 
   if (!ctx->requires_grad) return Maybe<void>::Ok();
 
-  ctx->SaveTensorForBackward(outputs.at(1));
+  ctx->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> LogSoftmax::Apply(const LogSoftmaxInterpState* ctx, const TensorTuple& out_grads,
                               TensorTuple* in_grads) const {
   if (!ctx->requires_grad) return Maybe<void>::Ok();
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const auto& dy = out_grads.at(0);
   const auto& prob = ctx->SavedTensors().at(0);
   in_grads->resize(1);
@@ -76,7 +76,7 @@ Maybe<void> LogSoftmax::Apply(const LogSoftmaxInterpState* ctx, const TensorTupl
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("logsoftmax", LogSoftmax);
+REGISTER_OP_EXPR_GRAD_FUNCTION("log_softmax", LogSoftmax);
 
 }  // namespace one
 }  // namespace oneflow
