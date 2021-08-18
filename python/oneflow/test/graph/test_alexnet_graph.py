@@ -87,7 +87,7 @@ def _test_alexnet_graph_repr(test_case, args):
             super().__init__()
             self.alexnet = alexnet_module
             self.cross_entropy = of_cross_entropy
-            self.add_optimizer("sgd", of_sgd)
+            self.add_optimizer(of_sgd)
 
         def build(self, image, label):
             logits = self.alexnet(image)
@@ -146,7 +146,7 @@ def _test_alexnet_graph(test_case, args):
             self.train_data_loader = train_data_loader
             self.alexnet = alexnet_module
             self.cross_entropy = of_cross_entropy
-            self.add_optimizer("sgd", of_sgd)
+            self.add_optimizer(of_sgd)
 
         def build(self):
             image, label = self.train_data_loader()
