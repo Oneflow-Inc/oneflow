@@ -26,12 +26,12 @@ from oneflow.framework.config_util import (
     api_nccl_fusion_max_ops as boxing_fusion_max_ops_num,
 )
 
-from oneflow.framework.config_util import (
-    api_nccl_num_streams as streams_num,
-)
+from oneflow.framework.config_util import api_nccl_num_streams as streams_num
 
 from oneflow.framework.config_util import (
     api_nccl_enable_all_to_all as enable_all_to_all,
 )
 
-from oneflow.framework.config_util import api_nccl_use_compute_stream as reuse_compute_stream 
+from oneflow.framework.config_util import (
+    api_nccl_use_compute_stream as reuse_compute_stream,
+)
