@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/boxing/naive_b2p_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_s2p_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_1ton_boxing_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/boxing/naive_nto1_boxing_interpreter.h"
 
 namespace oneflow {
 
@@ -96,6 +97,26 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
       return nccl_1tos_boxing_interpreter;
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Eager boxing type(1 to n) \'"
+                                  << *JUST(NdSbpToString(in_nd_sbp)) << " -> "
+                                  << *JUST(NdSbpToString(out_nd_sbp)) << "\'"
+                                  << " not support yet\n"
+                                  << GetSupportedBoxingTypeInfo();
+    }
+  } else if (out_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1) {
+    if (EagerBoxingInterpreterUtil::IsBroadcastNdSbp(in_nd_sbp)) {
+      static std::shared_ptr<EagerBoxingInterpreter> nccl_bto1_boxing_interpreter =
+          std::make_shared<NcclBTo1BoxingInterpreter>();
+      return nccl_bto1_boxing_interpreter;
+    } else if (EagerBoxingInterpreterUtil::IsPartialSumNdSbp(in_nd_sbp)) {
+      static std::shared_ptr<EagerBoxingInterpreter> nccl_pto1_boxing_interpreter =
+          std::make_shared<NcclPTo1BoxingInterpreter>();
+      return nccl_pto1_boxing_interpreter;
+    } else if (EagerBoxingInterpreterUtil::IsSplitNdSbp(in_nd_sbp, 0)) {
+      static std::shared_ptr<EagerBoxingInterpreter> nccl_sto1_boxing_interpreter =
+          std::make_shared<NcclSTo1BoxingInterpreter>();
+      return nccl_sto1_boxing_interpreter;
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Eager boxing type(n to 1) \'"
                                   << *JUST(NdSbpToString(in_nd_sbp)) << " -> "
                                   << *JUST(NdSbpToString(out_nd_sbp)) << "\'"
                                   << " not support yet\n"
