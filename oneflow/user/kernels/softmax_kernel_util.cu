@@ -84,7 +84,6 @@ void BroadcastSubExpGpu<float16>(DeviceCtx* ctx, const int64_t num_instances,
 
 template<SoftmaxType softmax_type, typename T>
 struct SoftmaxKernelUtil<DeviceType::kGPU, softmax_type, T> {
-
   static void ComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* prob,
                           void* temp_storage, const size_t temp_storage_bytes) {
     auto Val = NdarrayUtil<DeviceType::kGPU, T>::GetValNdarrayBuilder();
@@ -145,8 +144,8 @@ struct SoftmaxKernelUtil<DeviceType::kGPU, softmax_type, T> {
   }
 };
 
-#define INSTANTIATE_SOFTMAX_KERNEL_UTIL(data_type)                                       \
-  template struct SoftmaxKernelUtil<DeviceType::kGPU, SoftmaxType::kSoftmax, data_type>; 
+#define INSTANTIATE_SOFTMAX_KERNEL_UTIL(data_type) \
+  template struct SoftmaxKernelUtil<DeviceType::kGPU, SoftmaxType::kSoftmax, data_type>;
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(float16)
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(float)
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(double)

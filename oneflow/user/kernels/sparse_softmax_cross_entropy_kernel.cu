@@ -48,46 +48,40 @@ __global__ void ComputeSparseSoftmaxCrossEntropyResultGpu(const int64_t num_inst
                                                           const int64_t num_classes,
                                                           const int64_t depth,
                                                           const int64_t lower_bound,
-                                                          const K* labels, const T* prob, T* out)
-                                                          {
+                                                          const K* labels, const T* prob, T* out) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
-    if (label >= 0 && label < num_classes) {
-      out[i] = -prob[i * num_classes + label];
-    }
+    if (label >= 0 && label < num_classes) { out[i] = -prob[i * num_classes + label]; }
   }
 }
 template<typename T, typename K>
-inline typename std::enable_if<std::is_floating_point<T>::value,void>::type ComputeSparseSoftmaxCrossEntropyResult(DeviceCtx* ctx,
-    const int64_t num_instances,
-    const int64_t num_classes,
-    const int64_t depth,
-    const int64_t lower_bound,
-    const K* labels, const T* prob, T* out) {
-        ComputeSparseSoftmaxCrossEntropyResultGpu<T, K>
-        <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-           ctx->cuda_stream()>>>(num_instances, num_classes, depth, lower_bound,
-                                               labels, prob, out);
-    }
+inline typename std::enable_if<std::is_floating_point<T>::value, void>::type
+ComputeSparseSoftmaxCrossEntropyResult(DeviceCtx* ctx, const int64_t num_instances,
+                                       const int64_t num_classes, const int64_t depth,
+                                       const int64_t lower_bound, const K* labels, const T* prob,
+                                       T* out) {
+  ComputeSparseSoftmaxCrossEntropyResultGpu<T, K>
+      <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          num_instances, num_classes, depth, lower_bound, labels, prob, out);
+}
 template<typename T, typename K>
-inline typename std::enable_if<std::is_same<T,float16>::value,void>::type ComputeSparseSoftmaxCrossEntropyResult(DeviceCtx* ctx,
-    const int64_t num_instances,
-    const int64_t num_classes,
-    const int64_t depth,
-    const int64_t lower_bound,
-    const K* labels, const T* prob, T* out) {
+inline typename std::enable_if<std::is_same<T, float16>::value, void>::type
+ComputeSparseSoftmaxCrossEntropyResult(DeviceCtx* ctx, const int64_t num_instances,
+                                       const int64_t num_classes, const int64_t depth,
+                                       const int64_t lower_bound, const K* labels, const T* prob,
+                                       T* out) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-        ComputeSparseSoftmaxCrossEntropyResultGpu<half, K>
-        <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-            ctx->cuda_stream()>>>(num_instances, num_classes, depth, lower_bound,
-                                                labels, reinterpret_cast<const half*>(prob), reinterpret_cast<half*>(out));
+  ComputeSparseSoftmaxCrossEntropyResultGpu<half, K>
+      <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          num_instances, num_classes, depth, lower_bound, labels,
+          reinterpret_cast<const half*>(prob), reinterpret_cast<half*>(out));
 #else
   printf("use half need nvcc arch >= 530");
   assert(false);
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-    }
+}
 }  // namespace
 
 template<typename T, typename K>
@@ -112,18 +106,19 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
 
     ComputeProb<T>(ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(),
                    prob->mut_dptr<T>());
-    ComputeSparseSoftmaxCrossEntropyResult<T, K>(ctx->device_ctx(),num_instances, num_classes, depth, lower_bound,
-    label->dptr<K>(), prob->dptr<T>(), out->mut_dptr<T>());
+    ComputeSparseSoftmaxCrossEntropyResult<T, K>(ctx->device_ctx(), num_instances, num_classes,
+                                                 depth, lower_bound, label->dptr<K>(),
+                                                 prob->dptr<T>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL(dtype_pair, ltype_pair)                     \
-  REGISTER_USER_KERNEL("sparse_softmax_cross_entropy")                                           \
-      .SetCreateFn<SparseSoftmaxCrossEntropyKernel<OF_PP_PAIR_FIRST(dtype_pair),                 \
-                                                   OF_PP_PAIR_FIRST(ltype_pair)>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                             \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))     \
+#define REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL(dtype_pair, ltype_pair)                 \
+  REGISTER_USER_KERNEL("sparse_softmax_cross_entropy")                                       \
+      .SetCreateFn<SparseSoftmaxCrossEntropyKernel<OF_PP_PAIR_FIRST(dtype_pair),             \
+                                                   OF_PP_PAIR_FIRST(ltype_pair)>>()          \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                         \
+                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,

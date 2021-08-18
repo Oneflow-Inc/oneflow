@@ -60,7 +60,6 @@ __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t nu
 
 template<typename T, typename K>
 struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
-
   static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                           const int64_t depth, const int64_t lower_bound, const T* prob,
                           const K* labels, const T* dy, T* dx) {
@@ -72,7 +71,6 @@ struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
 
 template<typename K>
 struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
-
   static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                           const int64_t depth, const int64_t lower_bound, const float16* prob,
                           const K* labels, const float16* dy, float16* dx) {

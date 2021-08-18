@@ -487,21 +487,16 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
     }
     const ComputeType row_max = BlockAllReduce<MaxOp, ComputeType, block_size>(thread_max);
     ComputeType thread_sum = 0;
-    for (int col = tid; col < cols; col += block_size) {
-      f(&buf[col], row_max, &thread_sum);
-    }
+    for (int col = tid; col < cols; col += block_size) { f(&buf[col], row_max, &thread_sum); }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) {
-        f(&pack[i], &buf[i * num_packs + pack_id], row_sum);
-      }
+      for (int i = 0; i < pack_size; ++i) { f(&pack[i], &buf[i * num_packs + pack_id], row_sum); }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
     }
   }
 }
-
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size,
          SoftmaxType softmax_type>
@@ -531,8 +526,7 @@ inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(cudaStream_t stream, LOAD l
       SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_4, softmax_type>,
       block_size_conf_4, smem));
   if (max_active_blocks_conf_4 == max_active_blocks_conf_1) {
-    LaunchSoftmaxBlockSMemImpl(block_size_conf_4)
-        return true;
+    LaunchSoftmaxBlockSMemImpl(block_size_conf_4) return true;
   }
   int max_active_blocks_conf_3;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
@@ -540,8 +534,7 @@ inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(cudaStream_t stream, LOAD l
       SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_3, softmax_type>,
       block_size_conf_3, smem));
   if (max_active_blocks_conf_3 == max_active_blocks_conf_1) {
-    LaunchSoftmaxBlockSMemImpl(block_size_conf_3)
-        return true;
+    LaunchSoftmaxBlockSMemImpl(block_size_conf_3) return true;
   }
   int max_active_blocks_conf_2;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
@@ -549,11 +542,9 @@ inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(cudaStream_t stream, LOAD l
       SoftmaxBlockSMemImpl<LOAD, STORE, ComputeType, pack_size, block_size_conf_2, softmax_type>,
       block_size_conf_2, smem));
   if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
-    LaunchSoftmaxBlockSMemImpl(block_size_conf_2)
-        return true;
+    LaunchSoftmaxBlockSMemImpl(block_size_conf_2) return true;
   }
-  LaunchSoftmaxBlockSMemImpl(block_size_conf_1)
-      return true;
+  LaunchSoftmaxBlockSMemImpl(block_size_conf_1) return true;
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, SoftmaxType softmax_type>

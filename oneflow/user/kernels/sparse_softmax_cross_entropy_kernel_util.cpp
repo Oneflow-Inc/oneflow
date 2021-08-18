@@ -21,7 +21,6 @@ namespace user_op {
 
 template<typename T, typename K>
 struct SparseSoftmaxCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
-
   static void ComputeDiff(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
                           const int64_t depth, const int64_t lower_bound, const T* prob,
                           const K* labels, const T* dy, T* dx) {

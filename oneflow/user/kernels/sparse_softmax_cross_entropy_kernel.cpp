@@ -65,7 +65,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
     SoftmaxKernelUtil<device_type, SoftmaxType::kLogSoftmax, T>::ComputeProb(
         ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), prob->mut_dptr<T>(),
         tmp_buffer->mut_dptr(), temp_storage_bytes);
-    
+
     const K* labels = label->dptr<K>();
     const T* prob_ptr = prob->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
@@ -74,9 +74,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
       CHECK_GE(labels[i], 0);
       CHECK_LT(labels[i], depth);
       K _label = labels[i] - lower_bound;
-      if (_label >= 0 && _label < num_classes) {
-        out_ptr[i] = -prob_ptr[i * num_classes + _label];
-      }
+      if (_label >= 0 && _label < num_classes) { out_ptr[i] = -prob_ptr[i * num_classes + _label]; }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -107,7 +105,9 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
         const Shape& prediction_shape = ctx->InputShape("prediction", 0);                        \
         const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
         const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
-        return SoftmaxComputeDiffTempStorageSize<OF_PP_PAIR_FIRST(dtype_pair),SoftmaxType::kLogSoftmax>(num_instances, num_classes); \
+        return SoftmaxComputeDiffTempStorageSize<OF_PP_PAIR_FIRST(dtype_pair),                   \
+                                                 SoftmaxType::kLogSoftmax>(num_instances,        \
+                                                                           num_classes);         \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,

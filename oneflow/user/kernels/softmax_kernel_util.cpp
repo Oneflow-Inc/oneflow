@@ -118,10 +118,10 @@ struct SoftmaxKernelUtil<DeviceType::kCPU, SoftmaxType::kLogSoftmax, T> {
     // exp | prob[i][j] = Exp(new_temp_storage[i][j])
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastExp(ctx, Var({n, w}, prob),
                                                    Val({n, w}, new_temp_storage));
-    //sum / reduce_result_storage[i] = Sum_j(prob[i][j])
+    // sum / reduce_result_storage[i] = Sum_j(prob[i][j])
     NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(ctx, Var({n, 1}, reduce_result_storage),
                                                 Val({n, w}, prob), reduce_operation_storage_var);
-    // log | reduce_result_storage[i] = SafeLog(reduce_result_storage[i])                                            
+    // log | reduce_result_storage[i] = SafeLog(reduce_result_storage[i])
     FOR_RANGE(int64_t, i, 0, n) { reduce_result_storage[i] = SafeLog(reduce_result_storage[i]); }
     // sub / prob[i][j] = new_temp_storage[i][j] - reduce_result_storage[i]
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastSub(
