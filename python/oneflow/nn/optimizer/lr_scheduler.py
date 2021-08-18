@@ -67,7 +67,9 @@ class LrScheduler(object):
     def print_lr(self, group_idx, lr):
         """Display the current learning rate.
         """
-        print(f"Adjusting learning rate of param_groups[{group_idx}] to {lr}")
+        print(
+            f"Last step {self.last_step} adjusting learning rate of param_groups[{group_idx}] to {lr}"
+        )
 
     def step(self):
         self.last_step += 1
@@ -76,3 +78,31 @@ class LrScheduler(object):
             group["lr"] = self.last_lr[i]
             if self.verbose:
                 self.print_lr(i, self.last_lr[i])
+
+
+class WarmupLrScheduler(LrScheduler):
+    def __init__(
+        self, lrsch_or_optimizer, last_step=-1, verbose=False,
+    ):
+        self._lr_sch = None
+        isinstance(lrsch_or_optimizer, (LrScheduler, Optimizer))
+        if isinstance(lrsch_or_optimizer, LrScheduler):
+            super().__init__(lrsch_or_optimizer._optimizer, last_step, verbose)
+            self._lr_sch = lrsch_or_optimizer
+        else:
+            super().__init__(lrsch_or_optimizer, last_step, verbose)
+
+    def step(self):
+        self.last_step += 1
+        if self.last_step < self.steps or self._lr_sch is None:
+            self.last_lr = self.get_lr()
+            for (i, group) in enumerate(self._optimizer.param_groups):
+                group["lr"] = self.last_lr[i]
+                if self.verbose:
+                    self.print_lr(i, self.last_lr[i])
+        elif self.last_step == self.steps:
+            self._lr_sch.last_step = self.last_step - 1
+            self._lr_sch.last_lr = self.last_lr
+            self._lr_sch.step()
+        else:
+            self._lr_sch.step()
