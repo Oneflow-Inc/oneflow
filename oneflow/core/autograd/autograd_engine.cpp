@@ -168,9 +168,9 @@ void StackAutogradEngine::ClearReleasedFunctionNodes() {
 }
 
 Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
-                                                                      const TensorTuple& out_grads,
-                                                                      bool retain_graph,
-                                                                      bool create_graph) {
+                                                                    const TensorTuple& out_grads,
+                                                                    bool retain_graph,
+                                                                    bool create_graph) {
   ClearReleasedFunctionNodes();
   for (int i = 0; i < outputs.size(); ++i) {
     JUST(JUST(outputs.at(i)->current_grad())->PushPartialTensor(out_grads.at(i)));
@@ -397,9 +397,9 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
 }
 
 Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
-                                                                      const TensorTuple& out_grads,
-                                                                      bool retain_graph,
-                                                                      bool create_graph) {
+                                                                    const TensorTuple& out_grads,
+                                                                    bool retain_graph,
+                                                                    bool create_graph) {
   for (int i = 0; i < outputs.size(); ++i) {
     JUST(JUST(outputs.at(i)->current_grad())->PushPartialTensor(out_grads.at(i)));
   }
