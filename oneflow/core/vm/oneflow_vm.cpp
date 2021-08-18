@@ -23,12 +23,27 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> ForEachThreadCtx(vm::VirtualMachine* vm,
+                             const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
+    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
+    if (stream_type.SharingVirtualMachineThread()) { continue; }
+    JUST(DoEach(thread_ctx));
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     : vm_(ObjectMsgPtr<vm::VirtualMachine>::New(vm::MakeVmDesc(resource, this_machine_id).Get())) {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_->mut_thread_ctx_list(), thread_ctx) {
+  CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     auto thread = std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx);
     worker_threads_.push_back(std::move(thread));
-  }
+    return Maybe<void>::Ok();
+  }));
   exiting_ = false;
   schedule_thread_ = std::thread(&OneflowVM::Loop, this);
 }
@@ -65,9 +80,10 @@ void OneflowVM::Loop() {
   auto* vm = mut_vm();
   while (!exiting_) { vm->Schedule(); }
   while (!mut_vm()->Empty()) { vm->Schedule(); }
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_->mut_thread_ctx_list(), thread_ctx) {
+  CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     thread_ctx->mut_pending_instruction_list()->Close();
-  }
+    return Maybe<void>::Ok();
+  }));
   for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
   vm_.Reset();
 }
