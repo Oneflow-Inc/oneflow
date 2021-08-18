@@ -158,7 +158,8 @@ class IBVerbsQP final {
   void PostRecvRequest(ActorMsgMR*);
 
   ibv_context* ctx_;
-  ibv_pd* pd_;
+  //ibv_pd* pd_;
+  std::shared_ptr<ibv_pd> pd_;
   uint8_t port_num_;
   ibv_qp* qp_;
 

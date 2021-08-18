@@ -40,7 +40,7 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 void MessagePool::RegisterMessagePool(){
       ActorMsg msg;
       size_t ActorMsgSize = sizeof(msg);
-      std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
+    //  std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
       size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
       char * addr =(char*) malloc(RegisterMemorySize );
       ibv_mr *   mr =ibv::wrapper.ibv_reg_mr_wrap(
@@ -52,13 +52,13 @@ void MessagePool::RegisterMessagePool(){
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
           message_buf_.push_front(msg_mr);
       }
-       std::cout<<"In RegisterMessagePoo, the size of message_buf_:" << message_buf_.size() << std::endl;
+  //     std::cout<<"In RegisterMessagePoo, the size of message_buf_:" << message_buf_.size() << std::endl;
     }
 
 void MessagePool::PutMessage(ActorMsgMR *msg_mr) {
       std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
       message_buf_.push_front(msg_mr);
-      std::cout<<"In PutMessage, the size of message_buf_:" << message_buf_.size() << std::endl;
+     // std::cout<<"In PutMessage, the size of message_buf_:" << message_buf_.size() << std::endl;
 }
 
 ActorMsgMR *  MessagePool::GetMessage(){
@@ -74,7 +74,7 @@ ActorMsgMR * MessagePool::GetMessageFromBuf() {
   std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
   ActorMsgMR * msg_mr = message_buf_.front();
   message_buf_.pop_front();
-  std::cout<<"In GetMessageFromBuf, the size of message_buf_:" << message_buf_.size() << std::endl;
+  //std::cout<<"In GetMessageFromBuf, the size of message_buf_:" << message_buf_.size() << std::endl;
   return msg_mr;
 }
 
@@ -84,7 +84,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
                      std::shared_ptr<MessagePool> send_msg_buf) {
   // ctx_, pd_
   ctx_ = ctx;
-  pd_ = pd;
+  pd_.reset(pd);
   port_num_ = port_num;
   // qp_
   ibv_device_attr device_attr{};
@@ -116,7 +116,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
                      ibv_cq* recv_cq) {
   // ctx_, pd_
   ctx_ = ctx;
-  pd_ = pd;
+  pd_.reset(pd);
   port_num_ = port_num;
   // qp_
   ibv_device_attr device_attr{};
