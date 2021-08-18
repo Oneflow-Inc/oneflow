@@ -225,9 +225,14 @@ Maybe<Tensor> ConsistentToConsistent(
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   const auto& op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
-  const auto& ret = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+  const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
-  return ret;
+  if (tensor != x) {
+    const auto& input_consistent_id = JUST(x->transport_token());
+    const auto& output_consistend_id = JUST(tensor->transport_token());
+    CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);
+  }
+  return tensor;
 }
 
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
@@ -283,11 +288,13 @@ class ToConsistentFunctor {
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_parallels) const {
+    std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
-      return JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
+      tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
-      return JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
+      tensor = JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
     }
+    return tensor;
   }
 
  private:
