@@ -53,11 +53,6 @@ jint JNICALL Java_org_oneflow_OneFlow_getEndian(JNIEnv* env, jobject obj) {
 }
 
 JNIEXPORT
-jint JNICALL Java_org_oneflow_OneFlow_getNodeSize(JNIEnv* env, jobject obj) {
-  return oneflow::GetNodeSize().GetOrThrow();
-}
-
-JNIEXPORT
 void JNICALL Java_org_oneflow_OneFlow_setIsMultiClient(JNIEnv* env, jobject obj, jboolean is_multi_client) {
   return oneflow::SetIsMultiClient(is_multi_client).GetOrThrow();
 }
@@ -136,55 +131,6 @@ void JNICALL Java_org_oneflow_OneFlow_loadModel(JNIEnv* env, jobject obj, jobjec
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_name) {
-  std::string job_name_ = ConvertToString(env, job_name);
-
-  return oneflow::JobBuildAndInferCtx_Open(job_name_).GetOrThrow();
-}
-
-JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_setJobConfForCurJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring job_conf_proto) {
-  std::string job_conf_proto_ = ConvertToString(env, job_conf_proto);
-
-  return SetJobConfForCurJobBuildAndInferCtx(job_conf_proto_);
-}
-
-JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_setScopeForCurJob(JNIEnv* env, jobject obj, jstring job_conf_proto, jstring ids, jstring device) {
-  std::string job_conf_proto_ = ConvertToString(env, job_conf_proto);
-  std::string ids_ = ConvertToString(env, ids);
-  std::string device_ = ConvertToString(env, device);
-
-  return SetScopeForCurJob(job_conf_proto_, ids_, device_);
-}
-
-JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_curJobAddOp(JNIEnv* env, jobject obj, jstring op_conf_proto) {
-  std::string op_conf_proto_ = ConvertToString(env, op_conf_proto);
-  return CurJobAddOp(op_conf_proto_);
-}
-
-JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_completeCurJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
-  return oneflow::CurJobBuildAndInferCtx_Complete().GetOrThrow();
-}
-
-JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_rebuildCurJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
-  return oneflow::CurJobBuildAndInferCtx_Rebuild().GetOrThrow();
-}
-
-JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_unsetScopeForCurJob(JNIEnv* env, jobject obj) {
-  return oneflow::ThreadLocalScopeStackPop().GetOrThrow();
-}
-
-JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_closeJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
-  return oneflow::JobBuildAndInferCtx_Close().GetOrThrow();
-}
-
-JNIEXPORT
 void JNICALL Java_org_oneflow_OneFlow_startLazyGlobalSession(JNIEnv* env, jobject obj) {
   return oneflow::StartLazyGlobalSession().GetOrThrow();
 }
@@ -257,12 +203,6 @@ void JNICALL Java_org_oneflow_OneFlow_destroyEnv(JNIEnv* env, jobject obj) {
 JNIEXPORT
 void JNICALL Java_org_oneflow_OneFlow_setShuttingDown(JNIEnv* env, jobject obj) {
   return oneflow::SetShuttingDown();
-}
-
-JNIEXPORT
-jstring JNICALL Java_org_oneflow_OneFlow_getInterUserJobInfo(JNIEnv* env, jobject obj) {
-  std::string inter_user_job_info = oneflow::GetSerializedInterUserJobInfo().GetOrThrow();
-  return ConvertToJString(env, inter_user_job_info);
 }
 
 JNIEXPORT

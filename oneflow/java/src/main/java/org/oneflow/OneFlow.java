@@ -22,7 +22,6 @@ class OneFlow {
 
     // 0 for big endian, 1 for little endian
     static native int getEndian();
-    static native int getNodeSize();
 
     // init
     static native void setIsMultiClient(boolean isMultiClient);
@@ -36,14 +35,6 @@ class OneFlow {
 
     // compile
     static native void loadModel(Option option);
-    static native void openJobBuildAndInferCtx(String jobName);
-    static native void setJobConfForCurJobBuildAndInferCtx(String jobConfProto);
-    static native void setScopeForCurJob(String jobConfProto, String ids, String device);
-    static native void curJobAddOp(String opConfProto);
-    static native void completeCurJobBuildAndInferCtx();
-    static native void rebuildCurJobBuildAndInferCtx();
-    static native void unsetScopeForCurJob();
-    static native void closeJobBuildAndInferCtx();
 
     // launch
     static native void startLazyGlobalSession();
@@ -65,7 +56,4 @@ class OneFlow {
     static native void destroyLazyGlobalSession();
     static native void destroyEnv();
     static native void setShuttingDown();
-
-    // others
-    static native String getInterUserJobInfo();
 }

@@ -10,7 +10,6 @@ extern "C" {
 
 // Detect Endian
 JNIEXPORT jint          JNICALL Java_org_oneflow_OneFlow_getEndian(JNIEnv* env, jobject obj);
-JNIEXPORT jint          JNICALL Java_org_oneflow_OneFlow_getNodeSize(JNIEnv* env, jobject obj);
 
 // init
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_setIsMultiClient(JNIEnv* env, jobject obj, jboolean is_multi_client);
@@ -24,14 +23,6 @@ JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_initSession(JNIEnv* env
 
 // compile
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_loadModel(JNIEnv* env, jobject obj, jobject option);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_openJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring jstr);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_setJobConfForCurJobBuildAndInferCtx(JNIEnv* env, jobject obj, jstring jstr);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_setScopeForCurJob(JNIEnv* env, jobject obj, jstring job_conf_proto, jstring ids, jstring device);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_curJobAddOp(JNIEnv* env, jobject obj, jstring jstr);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_completeCurJobBuildAndInferCtx(JNIEnv* env, jobject obj);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_rebuildCurJobBuildAndInferCtx(JNIEnv* env, jobject obj);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_unsetScopeForCurJob(JNIEnv* env, jobject obj);
-JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_closeJobBuildAndInferCtx(JNIEnv* env, jobject obj);
 
 // launch
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_startLazyGlobalSession(JNIEnv* env, jobject obj);
@@ -47,9 +38,6 @@ JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_stopLazyGlobalSession(J
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_destroyLazyGlobalSession(JNIEnv* env, jobject obj);
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_destroyEnv(JNIEnv* env, jobject obj);
 JNIEXPORT void          JNICALL Java_org_oneflow_OneFlow_setShuttingDown(JNIEnv* env, jobject obj);
-
-// others
-JNIEXPORT jstring       JNICALL Java_org_oneflow_OneFlow_getInterUserJobInfo(JNIEnv* env, jobject obj);
 
 #ifdef __cplusplus
 }
