@@ -112,7 +112,7 @@ Error&& operator<<(Error&& error, const T& x) {
   return std::move(error);
 }
 
-template <>
+template<>
 inline Error&& operator<<(Error&& error, const std::ostream& x) {
   error << x.rdbuf();
   return std::move(error);
