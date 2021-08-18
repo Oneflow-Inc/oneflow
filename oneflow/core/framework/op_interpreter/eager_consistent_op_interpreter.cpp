@@ -186,7 +186,7 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
     CHECK_OR_RETURN(parallel_desc == out_parallel_desc);
     outputs->at(0) = tensor;
   } else {
-    ConsistentTensorMeta tensor_meta(tensor->shape(), tensor->dtype(), out_nd_sbp,
+    ConsistentTensorMeta tensor_meta(tensor->shape(), tensor->dtype()->data_type(), out_nd_sbp,
                                      out_parallel_desc);
     const auto& tensor_impl =
         JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), tensor->requires_grad(), false));
