@@ -157,6 +157,7 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK(!(in->shape() == out->shape()));
     CHECK_EQ(in->data_type(), out->data_type());
     const auto& op_type = ctx->Attr<std::string>("op_type");
     OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
