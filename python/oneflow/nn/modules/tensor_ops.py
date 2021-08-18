@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Optional, Union
+
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
@@ -44,7 +46,7 @@ def type_as_op(input, target):
 
 
 @register_tensor_op("int")
-def int_op(input):
+def int(input):
     """`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
 
     Args:
@@ -67,7 +69,7 @@ def int_op(input):
 
 
 @register_tensor_op("long")
-def long_op(input):
+def long(input):
     """`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
 
     Args:
@@ -90,7 +92,7 @@ def long_op(input):
 
 
 @register_tensor_op("float")
-def float_op(input):
+def float(input):
     """`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
 
     Args:
@@ -113,7 +115,7 @@ def float_op(input):
 
 
 @register_tensor_op("double")
-def double_op(input):
+def double(input):
     """`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
 
     Args:
@@ -135,8 +137,32 @@ def double_op(input):
     return input.to(dtype=flow.float64)
 
 
+@register_tensor_op("is_floating_point")
+def is_floating_point(input):
+    """Returns True if the data type of input is a floating point data type i.e., one of flow.float64, flow.float32, flow.float16.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor([1, 2, 3, 4, 5], dtype=flow.int)
+        >>> output = flow.is_floating_point(input)
+        >>> output
+        False
+
+    """
+    if input.dtype==flow.float16 or input.dtype==flow.float32 or input.dtype==flow.float64:
+        return True 
+    return False
+
+
 @register_tensor_op("cpu")
-def cpu_op(input):
+def cpu(input):
     """Returns a copy of this object in CPU memory.
     If this object is already in CPU memory and on the correct device, then no copy is performed and the original object is returned.
 
@@ -155,7 +181,7 @@ def cpu_op(input):
     return input.to(device="cpu")
 
 @register_tensor_op("cuda")
-def cuda_op(input):
+def cuda(input, device: Union[int, str, flow.device]=None):
     """Returns a copy of this object in CUDA memory.
     If this object is already in CUDA memory and on the correct device, then no copy is performed and the original object is returned.
 
@@ -174,7 +200,11 @@ def cuda_op(input):
         device(type='cuda', index=0)
 
     """
-    return input.to(device="cuda")
+    if device is None:
+        device = "cuda"
+    elif device is isinstance (int):
+        device = "cuda:" + str(device)
+    return input.to(device=device)
 
 
 if __name__ == "__main__":

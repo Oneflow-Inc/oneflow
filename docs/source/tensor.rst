@@ -150,4 +150,14 @@ OneFlow Tensor Class
             where, 
             xavier_normal_, 
             xavier_uniform_, 
-            zeros_
+            zeros_,
+            is_floating_point,
+            int,
+            long,
+            float,
+            double,
+            type_as,
+            cpu,
+            cuda
+
+
