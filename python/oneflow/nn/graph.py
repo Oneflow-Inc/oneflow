@@ -92,7 +92,7 @@ class Graph(object):
         raise NotImplementedError()
 
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LrScheduler = None, lr_warmup: Dict = None,
+        self, optim: Optimizer, *, lr_sch: LrScheduler = None,
     ):
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
@@ -106,9 +106,6 @@ class Graph(object):
                 lr_sch._optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
-        if lr_warmup is not None:
-            assert isinstance(lr_warmup, dict)
-            opt_dict["lr_warmup"] = lr_warmup
         self._opts.append(opt_dict)
 
     def _generate_name(self):
