@@ -61,7 +61,7 @@ Maybe<void> RawTorchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor)
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* TorchConsistentTensor = 
+static constexpr auto* TorchConsistentTensor =
     DECORATE(&RawTorchConsistentTensor, CheckConsistentTensorMeta);
 
 Maybe<void> CheckConsistentTensorsMeta(const TensorTuple& tensor_tuple) {
