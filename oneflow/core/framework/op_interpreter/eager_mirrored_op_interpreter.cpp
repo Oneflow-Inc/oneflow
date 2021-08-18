@@ -336,7 +336,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
       const auto& reshaped_tensor = JUST(TryReshapeTensor(input_mirrored_tensor, tensor_meta));
       const auto& synced_tensor =
           JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
-      CHECK_EQ_OR_RETURN(dtype, input_mirrored_tensor->dtype());
+      CHECK_EQ_OR_RETURN(dtype, input_mirrored_tensor->dtype()->data_type());
       consistent_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsMirroredTensor()));
       return Maybe<void>::Ok();
     }));
