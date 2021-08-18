@@ -242,7 +242,7 @@ def _pow(self, b):
     return flow.pow(self, b)
 
 
-def _uniform_(self, a=0, b=1):
+def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
     )
@@ -396,7 +396,7 @@ def RegisterMethods():
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
-    Tensor.uniform_ = _uniform_
+    Tensor.uniform_ = _uniform
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal
     Tensor.xavier_normal_ = _xavier_normal
