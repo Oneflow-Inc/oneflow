@@ -78,49 +78,32 @@ class MessagePool final {
       // }
     }//todo:这里可能要修改
 
-    MessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd),num_of_message_(number_of_message) {
+    MessagePool(ibv_pd* pd, uint32_t number_of_message):num_of_message_(number_of_message) {
+      pd_.reset(pd);
       RegisterMessagePool();
     }
     //以后这里可以切割内存，注册一块大的，再不断的分割
-    void RegisterMessagePool(){
-      ActorMsg msg;
-      size_t ActorMsgSize = sizeof(msg);
-      std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
-      size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
-      char * addr =(char*) malloc(RegisterMemorySize );
-      ibv_mr *   mr =ibv::wrapper.ibv_reg_mr_wrap(
-          pd_,  addr, RegisterMemorySize,
-          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
-      CHECK(mr);
-      for(size_t i = 0;  i < num_of_message_ ; i++){
-          char * split_addr =addr + ActorMsgSize * i ; //这里切割地址没有问题
-          ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
-          message_buf_.push_front(msg_mr);
-      }
-    }
+    void RegisterMessagePool();
+    // void RegisterMessagePool(){
+    //   ActorMsg msg;
+    //   size_t ActorMsgSize = sizeof(msg);
+    //   std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
+    //   size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
+    //   char * addr =(char*) malloc(RegisterMemorySize );
+    //   ibv_mr *   mr =ibv::wrapper.ibv_reg_mr_wrap(
+    //       pd_.get(),  addr, RegisterMemorySize,
+    //       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+    //   CHECK(mr);
+    //   for(size_t i = 0;  i < num_of_message_ ; i++){
+    //       char * split_addr =addr + ActorMsgSize * i ; //这里切割地址没有问题
+    //       ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
+    //       message_buf_.push_front(msg_mr);
+    //   }
+    // }
+    ActorMsgMR *  GetMessage();
+    ActorMsgMR * GetMessageFromBuf();
+    void PutMessage(ActorMsgMR * msg_mr);
     
-    ActorMsgMR *  GetMessage(){
-      if(isEmpty() == false)  {
-        return GetMessageFromBuf();
-      } else {
-        RegisterMessagePool();
-        return GetMessageFromBuf();
-      }
-    }
-
-    ActorMsgMR * GetMessageFromBuf() {
-      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      std::deque<ActorMsgMR*> buf = GetMessageBuf();
-      ActorMsgMR * msg_mr = buf.front();
-      buf.pop_front();
-      return msg_mr;
-    }
-
-    void PutMessage(ActorMsgMR * msg_mr) {
-      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      message_buf_.push_front(msg_mr);
-    }
-
     std::deque<ActorMsgMR*> GetMessageBuf() {
       return message_buf_;
     }
@@ -131,7 +114,8 @@ class MessagePool final {
     }
 
   private:
-    ibv_pd* pd_;
+//    ibv_pd* pd_;
+    std::shared_ptr<ibv_pd> pd_;
     size_t  num_of_message_;
     std::mutex message_buf_mutex_;
     std::deque<ActorMsgMR*> message_buf_;

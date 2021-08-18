@@ -37,6 +37,46 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 
 }  // namespace
 
+void MessagePool::RegisterMessagePool(){
+      ActorMsg msg;
+      size_t ActorMsgSize = sizeof(msg);
+      std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
+      size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
+      char * addr =(char*) malloc(RegisterMemorySize );
+      ibv_mr *   mr =ibv::wrapper.ibv_reg_mr_wrap(
+          pd_.get(),  addr, RegisterMemorySize,
+          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+      CHECK(mr);
+      for(size_t i = 0;  i < num_of_message_ ; i++){
+          char * split_addr =addr + ActorMsgSize * i ; //这里切割地址没有问题
+          ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
+          message_buf_.push_front(msg_mr);
+      }
+    }
+
+void MessagePool::PutMessage(ActorMsgMR *msg_mr) {
+      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      message_buf_.push_front(msg_mr);
+      std::cout<<"In PutMessage, the size of message_buf_:" << message_buf_.size() << std::endl;
+}
+
+ActorMsgMR *  MessagePool::GetMessage(){
+  if(isEmpty() == false)  {
+    return GetMessageFromBuf();
+  } else {
+      RegisterMessagePool();
+        return GetMessageFromBuf();
+  }
+}
+
+ActorMsgMR * MessagePool::GetMessageFromBuf() {
+  std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+  std::deque<ActorMsgMR*> buf = GetMessageBuf();
+  ActorMsgMR * msg_mr = buf.front();
+  buf.pop_front();
+  return msg_mr;
+}
+
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq,
                      std::shared_ptr<MessagePool> recv_msg_buf,
@@ -67,8 +107,8 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK(qp_);
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
-  recv_msg_buf_ = recv_msg_buf; 
-  send_msg_buf_ = send_msg_buf; 
+  recv_msg_buf_ = recv_msg_buf; //this is no problem 
+  send_msg_buf_ = send_msg_buf; //this is no problem 
 }
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
@@ -99,7 +139,6 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK(qp_);
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
-  // recv_msg_buf_.reset(new MessagePool(pd_, queue_depth));
 }
 
 IBVerbsQP::~IBVerbsQP() {
