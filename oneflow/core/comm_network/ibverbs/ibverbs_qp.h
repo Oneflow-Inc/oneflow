@@ -114,6 +114,11 @@ class MessagePool final {
       return message_buf_.empty() == true ;
     }
 
+    size_t size() {
+      std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      return message_buf_.size();
+    }
+
   private:
     std::shared_ptr<ibv_pd> pd_;
     size_t  num_of_message_;

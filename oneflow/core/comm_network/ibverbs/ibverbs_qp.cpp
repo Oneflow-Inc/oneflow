@@ -72,9 +72,8 @@ ActorMsgMR *  MessagePool::GetMessage(){
 
 ActorMsgMR * MessagePool::GetMessageFromBuf() {
   std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
-  std::deque<ActorMsgMR*> buf = GetMessageBuf();
-  ActorMsgMR * msg_mr = buf.front();
-  buf.pop_front();
+  ActorMsgMR * msg_mr = message_buf_.front();
+  message_buf_.pop_front();
   std::cout<<"In GetMessageFromBuf, the size of message_buf_:" << message_buf_.size() << std::endl;
   return msg_mr;
 }
@@ -219,14 +218,20 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 void IBVerbsQP::PostAllRecvRequest() {
     if(recv_msg_buf_->isEmpty()) {
       recv_msg_buf_->RegisterMessagePool();
-      while(recv_msg_buf_->isEmpty() == false) {
+      size_t size = recv_msg_buf_->size();
+      size_t i = 0;
+      while(recv_msg_buf_->isEmpty() == false && i < size) {
         ActorMsgMR * msg_mr = recv_msg_buf_->GetMessage();
         PostRecvRequest(msg_mr);
+        i++;
       }
     } else {
-        while(recv_msg_buf_->isEmpty() == false) {
+        size_t size = recv_msg_buf_->size();
+        size_t i = 0;
+        while(recv_msg_buf_->isEmpty() == false && i < size ) {
         ActorMsgMR * msg_mr = recv_msg_buf_->GetMessage();
         PostRecvRequest(msg_mr);
+        i++;
       }
     }
 }
