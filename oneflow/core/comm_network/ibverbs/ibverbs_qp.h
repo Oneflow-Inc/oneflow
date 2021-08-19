@@ -40,7 +40,6 @@ class ActorMsgMR final {
   }
   ~ActorMsgMR() {
     delete msg_;
-    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0); 
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
@@ -76,6 +75,10 @@ class MessagePool final {
         delete message_buf_.front();
          message_buf_.pop_front();
        }
+       while(mrs_.empty() == false) {
+          CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mrs_.front()), 0);
+          mrs_.pop_front();
+       }
     }//todo:这里可能要修改
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
@@ -90,6 +93,7 @@ class MessagePool final {
           pd_,  addr, RegisterMemorySize,
           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
       CHECK(mr);
+      mrs_.push_front(mr);
       for(size_t i = 0;  i < num_of_message_ ; i++){
           char * split_addr =addr + ActorMsgSize * i ; 
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
@@ -133,6 +137,7 @@ class MessagePool final {
     size_t  num_of_message_;
     std::mutex message_buf_mutex_;
     std::deque<ActorMsgMR*> message_buf_;
+    std::deque<ibv_mr *> mrs_;
 };
 
 struct IBVerbsCommNetRMADesc;
