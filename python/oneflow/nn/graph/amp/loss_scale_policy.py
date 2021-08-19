@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 
-class LossScalePolicy(objcet):
+class LossScalePolicy(object):
     def generate_conf_for_graph(self, train_conf):
         raise NotImplementedError()
 

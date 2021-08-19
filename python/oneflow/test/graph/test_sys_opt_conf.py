@@ -77,7 +77,9 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = CustomModule()
-                self.config.enable_auto_mixed_precision(True)
+                self.config.enable_amp(True)
+                loss_scale = flow.nn.graph.amp.DynamicLossScalePolicy(3000, 1000, 3.0)
+                self.config.amp_add_loss_scale_policy(loss_scale)
                 self.config.enable_fuse_add_to_output(True)
 
             def build(self, x):
