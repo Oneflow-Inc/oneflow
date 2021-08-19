@@ -18,12 +18,29 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_FUNCTION_H_
 
 #include "oneflow/core/common/auto_registration_factory.h"
-#include "oneflow/core/framework/op_interpreter.h"  // OpExprInterpState
+#include "oneflow/core/framework/op_interpreter.h"
 
 namespace oneflow {
 namespace one {
 
 static constexpr char kGradientOpSuffix[] = ".grad";
+
+class AutoGradCaptureState {
+ public:
+  AutoGradCaptureState() = default;
+  virtual ~AutoGradCaptureState() = default;
+
+  const TensorTuple& SavedTensors() const { return saved_tensors_; }
+
+  size_t SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
+    size_t offset = saved_tensors_.size();
+    saved_tensors_.push_back(tensor);
+    return offset;
+  }
+
+ private:
+  TensorTuple saved_tensors_;
+};
 
 // Stateless container base of the backward op exprs.
 // The backward op exprs should be contained in the derived class.
@@ -31,27 +48,27 @@ class OpExprGradFunctionIf {
  public:
   virtual ~OpExprGradFunctionIf() = default;
 
-  virtual std::shared_ptr<OpExprInterpState> MakeCustomState() const = 0;
+  virtual std::shared_ptr<AutoGradCaptureState> MakeCustomState() const = 0;
 
   virtual Maybe<void> Init(const OpExpr& op) = 0;
 
   // Capture forward inputs and outputs for backward.
-  virtual Maybe<void> CaptureIf(OpExprInterpState* ctx, const TensorTuple& inputs,
+  virtual Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
                                 const TensorTuple& outputs,
                                 const OpExprInterpContext& interp_ctx) const = 0;
 
-  virtual Maybe<void> ApplyIf(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  virtual Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
                               TensorTuple* in_grads) const = 0;
 };
 
 template<typename StateT>
 class OpExprGradFunction : public OpExprGradFunctionIf {
  public:
-  std::shared_ptr<OpExprInterpState> MakeCustomState() const override {
+  std::shared_ptr<AutoGradCaptureState> MakeCustomState() const override {
     return std::make_shared<StateT>();
   }
 
-  Maybe<void> CaptureIf(OpExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
                         const TensorTuple& outputs,
                         const OpExprInterpContext& interp_ctx) const override {
     StateT* state = dynamic_cast<StateT*>(ctx);
@@ -71,7 +88,7 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     return Capture(state, detach_inputs, detach_outputs, interp_ctx);
   }
 
-  Maybe<void> ApplyIf(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
                       TensorTuple* in_grads) const override {
     const StateT* state = dynamic_cast<const StateT*>(ctx);
     CHECK_NOTNULL_OR_RETURN(state);
@@ -104,7 +121,7 @@ class OpExprGradClosure {
   explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunctionIf>& impl)
       : impl_(impl), state_(impl->MakeCustomState()) {}
   explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunctionIf>& impl,
-                             const std::shared_ptr<OpExprInterpState>& state)
+                             const std::shared_ptr<AutoGradCaptureState>& state)
       : impl_(impl), state_(state) {}
 
   virtual ~OpExprGradClosure() = default;
@@ -120,7 +137,7 @@ class OpExprGradClosure {
 
  private:
   std::shared_ptr<OpExprGradFunctionIf> impl_;
-  std::shared_ptr<OpExprInterpState> state_;
+  std::shared_ptr<AutoGradCaptureState> state_;
 };
 
 #define REGISTER_OP_EXPR_GRAD_FUNCTION(op_type, op_grad) \
