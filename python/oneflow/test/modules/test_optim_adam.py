@@ -26,15 +26,7 @@ from oneflow.nn.parameter import Parameter
 
 
 def compare_with_numpy_adam(
-    test_case,
-    device,
-    x_shape,
-    learning_rate,
-    train_iters,
-    betas,
-    weight_decay,
-    eps,
-    do_bias_correction,
+    test_case, device, x_shape, learning_rate, train_iters, betas, weight_decay, eps,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -53,7 +45,6 @@ def compare_with_numpy_adam(
                     "weight_decay": weight_decay,
                 }
             ],
-            do_bias_correction=do_bias_correction,
         )
 
         def train_one_iter(grad):
@@ -79,14 +70,12 @@ def compare_with_numpy_adam(
         def train_one_iter(iter, grad):
             grad = grad + weight_decay * x
 
-            if do_bias_correction:
-                lr = (
-                    learning_rate
-                    * np.sqrt(1 - beta2 ** (iter + 1))
-                    / (1 - beta1 ** (iter + 1))
-                )
-            else:
-                lr = learning_rate
+            # Do bias correction
+            lr = (
+                learning_rate
+                * np.sqrt(1 - beta2 ** (iter + 1))
+                / (1 - beta1 ** (iter + 1))
+            )
 
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
@@ -113,7 +102,6 @@ def compare_with_numpy_adam_clip_grad(
     betas,
     weight_decay,
     eps,
-    do_bias_correction,
     clip_grad_max_norm,
     clip_grad_norm_type,
 ):
@@ -136,7 +124,6 @@ def compare_with_numpy_adam_clip_grad(
                     "clip_grad_norm_type": clip_grad_norm_type,
                 }
             ],
-            do_bias_correction=do_bias_correction,
         )
 
         def train_one_iter(grad):
@@ -166,14 +153,12 @@ def compare_with_numpy_adam_clip_grad(
             )
             grad = grad + weight_decay * x
 
-            if do_bias_correction:
-                lr = (
-                    learning_rate
-                    * np.sqrt(1 - beta2 ** (iter + 1))
-                    / (1 - beta1 ** (iter + 1))
-                )
-            else:
-                lr = learning_rate
+            # Do bias correction
+            lr = (
+                learning_rate
+                * np.sqrt(1 - beta2 ** (iter + 1))
+                / (1 - beta1 ** (iter + 1))
+            )
 
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
@@ -202,7 +187,6 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
         arg_dict["weight_decay"] = [0.0, 0.1]
         arg_dict["eps"] = [1e-08, 1e-07]
-        arg_dict["do_bias_correction"] = [True, False]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
@@ -216,7 +200,6 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
         arg_dict["weight_decay"] = [0.0, 0.1]
         arg_dict["eps"] = [1e-08, 1e-07]
-        arg_dict["do_bias_correction"] = [True, False]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
 

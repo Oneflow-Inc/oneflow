@@ -126,6 +126,12 @@ class AdamW(Optimizer):
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
                 }
+                # Do bias correction.
+                kwargs["learning_rate_val"] = (
+                    param_group["lr"]
+                    * math.sqrt(1 - kwargs["beta2"] ** (self._state["step"] + 1))
+                    / (1 - kwargs["beta1"] ** (self._state["step"] + 1))
+                )
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
@@ -150,9 +156,7 @@ class AdamW(Optimizer):
             optimizer_conf.mutable_adam_conf().set_beta1(beta1)
             optimizer_conf.mutable_adam_conf().set_beta2(beta2)
             optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
-            optimizer_conf.mutable_adam_conf().set_do_bias_correction(
-                False
-            )  # TODO(zzk): Check this option
+            optimizer_conf.mutable_adam_conf().set_do_bias_correction(True)
 
             optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
                 weight_decay

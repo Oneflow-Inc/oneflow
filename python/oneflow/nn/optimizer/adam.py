@@ -69,7 +69,6 @@ class Adam(Optimizer):
         eps: float = 1e-08,
         weight_decay: float = 0,
         amsgrad: bool = False,
-        do_bias_correction: bool = False,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
@@ -82,7 +81,6 @@ class Adam(Optimizer):
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert amsgrad is False, "Not support AMSGrad now!"
         options = dict()
-        options["do_bias_correction"] = do_bias_correction
         options["lr"] = lr
         options["eps"] = eps
         options["betas"] = betas
@@ -126,12 +124,12 @@ class Adam(Optimizer):
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
                 }
-                if param_group["do_bias_correction"]:
-                    kwargs["learning_rate_val"] = (
-                        param_group["lr"]
-                        * math.sqrt(1 - kwargs["beta2"] ** (self._state["step"] + 1))
-                        / (1 - kwargs["beta1"] ** (self._state["step"] + 1))
-                    )
+                # Do bias correction.
+                kwargs["learning_rate_val"] = (
+                    param_group["lr"]
+                    * math.sqrt(1 - kwargs["beta2"] ** (self._state["step"] + 1))
+                    / (1 - kwargs["beta1"] ** (self._state["step"] + 1))
+                )
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
@@ -158,9 +156,7 @@ class Adam(Optimizer):
             optimizer_conf.mutable_adam_conf().set_beta1(beta1)
             optimizer_conf.mutable_adam_conf().set_beta2(beta2)
             optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
-            optimizer_conf.mutable_adam_conf().set_do_bias_correction(
-                param_group["do_bias_correction"]
-            )  # TODO(zzk): Check this option
+            optimizer_conf.mutable_adam_conf().set_do_bias_correction(True)
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 

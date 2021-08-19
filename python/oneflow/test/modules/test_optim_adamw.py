@@ -59,18 +59,17 @@ def compare_with_numpy_adamw(
         beta1 = 0.9
         beta2 = 0.999
 
-        def train_one_iter(grad):
+        def train_one_iter(i, grad):
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
-            g = (
-                learning_rate / (np.sqrt(s) + 1e-08) * v
-                + learning_rate * weight_decay * x
-            )
+            # Do bias correction
+            lr = learning_rate * np.sqrt(1 - beta2 ** (i + 1)) / (1 - beta1 ** (i + 1))
+            g = lr / (np.sqrt(s) + 1e-08) * v + lr * weight_decay * x
             param = x - g
             return (param, v, s)
 
         for i in range(train_iters):
-            (x, vt, st) = train_one_iter(random_grad_seq[i])
+            (x, vt, st) = train_one_iter(i, random_grad_seq[i])
         return x
 
     oneflow_res = train_by_oneflow().numpy()
@@ -132,21 +131,20 @@ def compare_with_numpy_adamw_clip_grad(
         beta1 = 0.9
         beta2 = 0.999
 
-        def train_one_iter(grad):
+        def train_one_iter(i, grad):
             total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
-            g = (
-                learning_rate / (np.sqrt(s) + 1e-08) * v
-                + learning_rate * weight_decay * x
-            )
+            # Do bias correction
+            lr = learning_rate * np.sqrt(1 - beta2 ** (i + 1)) / (1 - beta1 ** (i + 1))
+            g = lr / (np.sqrt(s) + 1e-08) * v + lr * weight_decay * x
             param = x - g
             return (param, v, s)
 
         for i in range(train_iters):
-            (x, vt, st) = train_one_iter(random_grad_seq[i])
+            (x, vt, st) = train_one_iter(i, random_grad_seq[i])
         return x
 
     oneflow_res = train_by_oneflow().numpy()
