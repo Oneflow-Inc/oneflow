@@ -40,6 +40,7 @@ class ActorMsgMR final {
   }
   ~ActorMsgMR() {
     delete msg_;
+    delete mr_;
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
@@ -96,13 +97,13 @@ class MessagePool final {
       }
     }
 
-    ActorMsgMR *  GetMessage() {
-    if(isEmpty() == false)  {
-        return GetMessageFromBuf();
-    } else {
-        RegisterMessagePool();
-        return GetMessageFromBuf();
-    }
+  ActorMsgMR *  GetMessage() {
+        if(isEmpty() == false)  {
+            return GetMessageFromBuf();
+        } else {
+            RegisterMessagePool();
+            return GetMessageFromBuf();
+      }
   }
 
   ActorMsgMR * GetMessageFromBuf() {
