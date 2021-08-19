@@ -80,7 +80,7 @@ class LrScheduler(object):
                 self.print_lr(i, self.last_lr[i])
 
 
-class WarmupLrScheduler(LrScheduler):
+class WarmUpLrScheduler(LrScheduler):
     def __init__(
         self, lrsch_or_optimizer, last_step=-1, verbose=False,
     ):
@@ -99,13 +99,13 @@ class WarmupLrScheduler(LrScheduler):
 
     def step(self):
         self.last_step += 1
-        if self.last_step < self.steps or self._lr_sch is None:
+        if self.last_step < self.warmup_iters or self._lr_sch is None:
             self.last_lr = self.get_lr()
             for (i, group) in enumerate(self._optimizer.param_groups):
                 group["lr"] = self.last_lr[i]
                 if self.verbose:
                     self.print_lr(i, self.last_lr[i])
-        elif self.last_step == self.steps:
+        elif self.last_step == self.warmup_iters:
             self._lr_sch.last_step = self.last_step - 1
             self._lr_sch.last_lr = self.last_lr
             self._lr_sch.step()

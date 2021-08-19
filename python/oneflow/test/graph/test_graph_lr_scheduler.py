@@ -155,8 +155,8 @@ def _sgd_cosine_constant_fn(parameters):
     cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
         of_sgd, steps=steps, alpha=alpha
     )
-    constant_warmup_cosine_lr = flow.optim.lr_scheduler.ConstantWarmupLR(
-        cosine_annealing_lr, steps=5, multiplier=0.5
+    constant_warmup_cosine_lr = flow.optim.lr_scheduler.WarmUpLR(
+        cosine_annealing_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="constant"
     )
     return of_sgd, constant_warmup_cosine_lr
 
@@ -165,8 +165,8 @@ def _sgd_constant_fn(parameters):
     of_sgd = flow.optim.SGD(parameters, lr=0.001)
     alpha = 0.5
     steps = 10
-    constant_warmup_lr = flow.optim.lr_scheduler.ConstantWarmupLR(
-        of_sgd, steps=5, multiplier=0.5
+    constant_warmup_lr = flow.optim.lr_scheduler.WarmUpLR(
+        of_sgd, warmup_factor=0.5, warmup_iters=5, warmup_method="constant"
     )
     return of_sgd, constant_warmup_lr
 
@@ -178,8 +178,8 @@ def _sgd_cosine_linear_fn(parameters):
     cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
         of_sgd, steps=steps, alpha=alpha
     )
-    linear_warmup_cosine_lr = flow.optim.lr_scheduler.LinearWarmupLR(
-        cosine_annealing_lr, steps=5, start_multiplier=0.5
+    linear_warmup_cosine_lr = flow.optim.lr_scheduler.WarmUpLR(
+        cosine_annealing_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
     )
     return of_sgd, linear_warmup_cosine_lr
 
@@ -188,8 +188,8 @@ def _sgd_linear_fn(parameters):
     of_sgd = flow.optim.SGD(parameters, lr=0.001)
     alpha = 0.5
     steps = 10
-    linear_warmup_lr = flow.optim.lr_scheduler.LinearWarmupLR(
-        of_sgd, steps=5, start_multiplier=0.5
+    linear_warmup_lr = flow.optim.lr_scheduler.WarmUpLR(
+        of_sgd, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
     )
     return of_sgd, linear_warmup_lr
 
