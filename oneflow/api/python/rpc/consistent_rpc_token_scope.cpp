@@ -48,7 +48,7 @@ Maybe<void> InitConsistentTransportTokenScope(const std::string& thread_tag,
 }
 
 void ApiInitDefaultConsistentTransportTokenScope() {
-  return InitConsistentTransportTokenScope("main", 0).GetOrThrow();
+  return InitConsistentTransportTokenScope("main", kThreadConsistentIdMain).GetOrThrow();
 }
 
 }  // namespace

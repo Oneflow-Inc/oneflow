@@ -38,11 +38,9 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachine* vm,
   return Maybe<void>::Ok();
 }
 
-void GetSchedulerThreadInitializer(int64_t* scheduler_thread_consistent_id,
-                                   std::function<void()>* Initializer) {
-  *scheduler_thread_consistent_id = GetThreadConsistentIdCount();
+void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
-    CHECK_JUST(InitThisThreadUniqueConsistentId(*scheduler_thread_consistent_id, "scheduler"));
+    CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
   };
 }
 
@@ -63,13 +61,14 @@ std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
 //   to make them communicate with each other, we can allocate thread_consistent_id 1 to all those
 //   gpu threads in all processes.
 void GetWorkerThreadInitializer(ObjectMsgPtr<vm::VirtualMachine> vm,
-                                int64_t scheduler_thread_consistent_id,
                                 std::function<void(vm::ThreadCtx*)>* Initializer) {
-  int64_t thread_consistent_id = scheduler_thread_consistent_id + 1;
-  HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
+  std::set<std::type_index> stream_type_indexes;
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
-    const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
-    if (stream_type_index2consistent_id.count(stream_type_index) > 0) { continue; }
+    stream_type_indexes.insert(GetStreamTypeIndex(thread_ctx));
+  }
+  HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
+  int64_t thread_consistent_id = kThreadConsistentIdScheduler + 1;
+  for (const auto& stream_type_index : stream_type_indexes) {
     stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
   }
   *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
@@ -83,11 +82,10 @@ void GetWorkerThreadInitializer(ObjectMsgPtr<vm::VirtualMachine> vm,
 
 OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     : vm_(ObjectMsgPtr<vm::VirtualMachine>::New(vm::MakeVmDesc(resource, this_machine_id).Get())) {
-  int64_t scheduler_thread_consistent_id = -1;
   std::function<void()> SchedulerInitializer;
-  GetSchedulerThreadInitializer(&scheduler_thread_consistent_id, &SchedulerInitializer);
+  GetSchedulerThreadInitializer(&SchedulerInitializer);
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
-  GetWorkerThreadInitializer(vm_, scheduler_thread_consistent_id, &WorkerInitializer);
+  GetWorkerThreadInitializer(vm_, &WorkerInitializer);
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     auto thread =
         std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx, WorkerInitializer);
