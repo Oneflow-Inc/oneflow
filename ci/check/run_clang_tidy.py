@@ -20,7 +20,6 @@ import asyncio
 import argparse
 import subprocess
 import os
-import platform
 
 
 def split_and_print(prefix, text):
@@ -57,58 +56,43 @@ async def run_command(cmd=None, dry=False, name=None):
     return process.returncode
 
 
-def download(dry=False):
-    if platform.system() != "Linux":
-        raise ValueError("Please install clang format 11.0.0")
-    url = "https://oneflow-static.oss-cn-beijing.aliyuncs.com/bin/clang-tidy/linux-x86_64/clang-tidy.AppImage"
-    if os.getenv("CI"):
-        url = "https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage"
-    dst_dir = ".cache/bin"
-    dst = f"{dst_dir}/clang-tidy"
+def download(build_dir, dry=False):
+    urls = [
+        "https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage"
+        if os.getenv("CI")
+        else "https://oneflow-static.oss-cn-beijing.aliyuncs.com/bin/clang-tidy/linux-x86_64/clang-tidy.AppImage",
+        "https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py",
+    ]
+    dst_dir = f"{build_dir}/.cache/bin"
+    dst = [f"{dst_dir}/clang-tidy", f"{dst_dir}/clang-tidy-diff.py"]
     if dry:
-        if os.path.isfile(dst):
+        if os.path.isfile(dst[0]) and os.path.isfile(dst[1]):
             return dst
         else:
             None
     else:
         assert subprocess.call(f"mkdir -p {dst_dir}", shell=True) == 0
-        assert subprocess.call(f"curl -L {url} -o {dst}", shell=True) == 0
-        assert subprocess.call(f"chmod +x {dst}", shell=True) == 0
+        for i, _dst in enumerate(dst):
+            assert subprocess.call(f"curl -L {urls[i]} -o {_dst}", shell=True) == 0
+            assert subprocess.call(f"chmod +x {_dst}", shell=True) == 0
         return dst
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Runs clang-format on all of the source "
-        "files. If --fix is specified enforce format by "
-        "modifying in place, otherwise compare the output "
-        "with the existing file and output any necessary "
-        "changes as a patch in unified diff format"
-    )
-    parser.add_argument(
-        "--clang_tidy_binary",
-        required=False,
-        help="Path to the clang-tidy binary.",
-        default="clang-tidy",
-    )
-    parser.add_argument(
-        "--source_dir", required=True,
+        description="Runs clang-tidy on all of the source files."
     )
     parser.add_argument(
         "--build_dir", required=True,
     )
     args = parser.parse_args()
     loop = asyncio.get_event_loop()
-    if not os.path.exists(args.clang_tidy_binary):
-        downloaded = download(dry=True)
-        if downloaded:
-            args.clang_tidy_binary = downloaded
-        else:
-            args.clang_tidy_binary = download()
-    assert subprocess.call(f"chmod +x {args.source_dir}/ci/check/clang_tidy_diff.py", shell=True) == 0
+    downloaded = download(args.build_dir, dry=True)
+    if downloaded is None:
+        downloaded = download(args.build_dir)
     promises = [
         run_command(
-            f"cd .. && git diff -U0 master | {args.source_dir}/ci/check/clang_tidy_diff.py -clang-tidy-binary {args.build_dir}/{args.clang_tidy_binary} -path {args.build_dir} -quiet -j $(nproc) -p1"
+            f"cd .. && git diff -U0 master | {downloaded[1]} -clang-tidy-binary {downloaded[0]} -path {args.build_dir} -quiet -j $(nproc) -p1"
         )
     ]
     loop.run_until_complete(asyncio.gather(*promises))

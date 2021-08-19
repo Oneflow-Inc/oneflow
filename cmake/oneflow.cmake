@@ -211,7 +211,8 @@ add_custom_target(of_format
   )
 # clang tidy
 add_custom_target(of_tidy
-  COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py --source_dir ${CMAKE_SOURCE_DIR} --build_dir ${CMAKE_BINARY_DIR}
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py --build_dir ${CMAKE_BINARY_DIR}
+  DEPENDS of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
   )
 # generate version
 set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
