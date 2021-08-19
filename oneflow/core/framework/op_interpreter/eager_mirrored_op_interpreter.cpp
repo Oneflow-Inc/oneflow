@@ -150,7 +150,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
       tensor_impl->mut_tensor_meta()->set_stride(std::make_shared<Stride>(*tensor_impl->shape()));
-      JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
+      const auto& dep_object = JUST(GetLocalDepObject(op_device));
+      JUST(tensor_impl->InitEagerBlobObject(dep_object));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
     } else {
       // output i is inplaced.
