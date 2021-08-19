@@ -139,7 +139,6 @@ class MatMulFunctor {
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
     JUST(attrs.SetAttr<double>("alpha", alpha));
     if (a_shape->NumAxes() != b_shape->NumAxes()) {
-      printf("here!!!!!!is broadcast matmul!!!!!");
       CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2)
           << "Not support number of dimensions of a being less than number of dimensions of b!";
       return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
