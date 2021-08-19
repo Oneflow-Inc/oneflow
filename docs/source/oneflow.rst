@@ -125,5 +125,6 @@ oneflow
             no_grad,
             grad_enable,
             inference_mode,
+            is_grad_enabled,
 
 .. autofunction:: oneflow.data.load_mnist(train_batch_size=100, test_batch_size=100, data_format='NCHW')

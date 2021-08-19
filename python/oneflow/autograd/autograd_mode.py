@@ -14,7 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import oneflow._oneflow_internal
 from oneflow._oneflow_internal.autograd import AutoGradMode
+
+
+def is_grad_enabled():
+    r"""
+    Returns True if grad mode is currently enabled.
+    """
+    return oneflow._oneflow_internal.autograd.is_grad_enabled()
 
 
 class inference_mode(AutoGradMode):
