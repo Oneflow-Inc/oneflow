@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct SmoothL1LossInterpState : public OpExprInterpState {
+struct SmoothL1LossCaptureState : public AutoGradCaptureState {
   std::string reduction;
   float beta;
   size_t prediction_index;
@@ -29,7 +29,7 @@ struct SmoothL1LossInterpState : public OpExprInterpState {
   bool requires_grad;
 };
 
-class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossInterpState> {
+class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -38,7 +38,7 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(SmoothL1LossInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(SmoothL1LossCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->requires_grad = inputs.at(0)->requires_grad();  // prediction
@@ -52,7 +52,7 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const SmoothL1LossInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const SmoothL1LossCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(2);
