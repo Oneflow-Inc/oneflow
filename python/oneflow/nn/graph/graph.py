@@ -26,13 +26,12 @@ from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph_block import Block, BlockType
-from oneflow.nn.graph_optimizer import OptDict, VariableConfig
+from oneflow.nn.graph.graph_block import Block, BlockType
+from oneflow.nn.graph.graph_optimizer import OptDict, VariableConfig
+from oneflow.nn.graph.util import add_indent, sys_exc_error_msg, list_to_func_return
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
-from oneflow.nn.util import add_indent
-from oneflow.nn.util import add_indent, sys_exc_error_msg, list_to_func_return
 
 
 class Graph(object):
@@ -510,7 +509,3 @@ class GraphConfig(FunctionConfig):
             self.proto.mutable_train_conf(), variables_conf
         )
 
-
-from oneflow.nn.graph import Graph as Graph
-from oneflow.nn.graph_block import Block, BlockConfig
-from oneflow.nn.graph_optimizer import OptDict
