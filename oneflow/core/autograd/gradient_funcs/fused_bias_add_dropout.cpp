@@ -52,26 +52,27 @@ Maybe<void> FusedBiasAddDropout::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* ctx, const TensorTuple& inputs,
-                             const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* ctx,
+                                         const TensorTuple& inputs, const TensorTuple& outputs,
+                                         const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->input_requires_grad = inputs.at(0)->requires_grad(); // input 
-  ctx->bias_requires_grad = inputs.at(1)->requires_grad(); // bias
+  ctx->input_requires_grad = inputs.at(0)->requires_grad();  // input
+  ctx->bias_requires_grad = inputs.at(1)->requires_grad();   // bias
 
   if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
   ctx->scale = JUST(composed_attrs.GetAttr<float>("scale"));
   ctx->axis = JUST(composed_attrs.GetAttr<int32_t>("axis"));
 
   CHECK_EQ_OR_RETURN(inputs.size(), 3);
-  ctx->SaveTensorForBackward(inputs.at(2)); 
-  
+  ctx->SaveTensorForBackward(inputs.at(2));
+
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedBiasAddDropout::Apply(const FusedBiasAddDropoutInterpState* ctx, const TensorTuple& out_grads,
-                           TensorTuple* in_grads) const {
+Maybe<void> FusedBiasAddDropout::Apply(const FusedBiasAddDropoutInterpState* ctx,
+                                       const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
-  
+
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
   MutableAttrMap attrs;
@@ -80,12 +81,11 @@ Maybe<void> FusedBiasAddDropout::Apply(const FusedBiasAddDropoutInterpState* ctx
   in_grads->resize(3);
 
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
-  const std::shared_ptr<oneflow::one::Tensor>& dropout_grad = JUST(OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {out_grads.at(0), mask}, attrs));
+  const std::shared_ptr<oneflow::one::Tensor>& dropout_grad =
+      JUST(OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {out_grads.at(0), mask}, attrs));
 
-  if(ctx->input_requires_grad){
-    in_grads->at(0) = dropout_grad;
-  }
-  
+  if (ctx->input_requires_grad) { in_grads->at(0) = dropout_grad; }
+
   const int64_t num_axes = out_grads.at(0)->shape()->NumAxes();
   if (ctx->bias_requires_grad) {
     std::vector<int32_t> reduce_axes_vec;

@@ -742,12 +742,16 @@ class FusedBiasAddDropoutFunctor {
   FusedBiasAddDropoutFunctor() {
     random_mask_like_op_ =
         CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
-    fused_bias_add_mask_scale_op_ =
-        CHECK_JUST(one::OpBuilder("fused_bias_add_mask_scale").Input("a").Input("b").Input("mask").Output("out").Build());
+    fused_bias_add_mask_scale_op_ = CHECK_JUST(one::OpBuilder("fused_bias_add_mask_scale")
+                                                   .Input("a")
+                                                   .Input("b")
+                                                   .Input("mask")
+                                                   .Output("out")
+                                                   .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a, const std::shared_ptr<one::Tensor>& b, 
-                           const float& p, const int32_t& axis, 
-                           const Optional<one::Generator>& generator) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, const float& p,
+                           const int32_t& axis, const Optional<one::Generator>& generator) const {
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
     std::shared_ptr<one::Generator> gen;
@@ -766,7 +770,8 @@ class FusedBiasAddDropoutFunctor {
     MutableAttrMap fused_bias_add_mask_attrs;
     JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
     JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, mask}, fused_bias_add_mask_attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, mask},
+                                          fused_bias_add_mask_attrs);
   }
 
  private:

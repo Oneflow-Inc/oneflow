@@ -32,32 +32,47 @@ def _test_fused_bias_add_dropout(test_case, channel, axis, drop_prob, seed):
     bias = np.random.randn(channel)
     # fused version only support in GPU
     fused_x_tensor = flow.Tensor(x).to("cuda")
-    fused_x_tensor.requires_grad = True 
+    fused_x_tensor.requires_grad = True
     fused_bias_tensor = flow.Tensor(bias).to("cuda")
-    fused_bias_tensor.requires_grad = True 
-    fused_out = flow.F.fused_bias_add_dropout(fused_x_tensor, fused_bias_tensor, p=drop_prob, axis=axis, generator=generator)
-    
+    fused_bias_tensor.requires_grad = True
+    fused_out = flow.F.fused_bias_add_dropout(
+        fused_x_tensor, fused_bias_tensor, p=drop_prob, axis=axis, generator=generator
+    )
+
     origin_x_tensor = flow.Tensor(x).to("cuda")
-    origin_x_tensor.requires_grad = True 
+    origin_x_tensor.requires_grad = True
     origin_bias_tensor = flow.Tensor(bias).to("cuda")
     origin_bias_tensor.requires_grad = True
 
-    generator.manual_seed(seed) # reset seed
-    origin_dropout = flow.nn.Dropout(p=drop_prob, generator=generator) 
-    origin_out = origin_dropout(flow.F.bias_add(origin_x_tensor, origin_bias_tensor, axis=axis))
+    generator.manual_seed(seed)  # reset seed
+    origin_dropout = flow.nn.Dropout(p=drop_prob, generator=generator)
+    origin_out = origin_dropout(
+        flow.F.bias_add(origin_x_tensor, origin_bias_tensor, axis=axis)
+    )
 
     total_out = fused_out.sum() + origin_out.sum()
     total_out.backward()
-     
+
     test_case.assertTrue(
         np.allclose(fused_out.numpy(), origin_out.numpy(), atol=1e-4, rtol=1e-4)
     )
     test_case.assertTrue(
-        np.allclose(fused_x_tensor.grad.numpy(), origin_x_tensor.grad.numpy(), atol=1e-4, rtol=1e-4)
+        np.allclose(
+            fused_x_tensor.grad.numpy(),
+            origin_x_tensor.grad.numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+        )
     )
     test_case.assertTrue(
-        np.allclose(fused_bias_tensor.grad.numpy(), origin_bias_tensor.grad.numpy(), atol=1e-4, rtol=1e-4)
+        np.allclose(
+            fused_bias_tensor.grad.numpy(),
+            origin_bias_tensor.grad.numpy(),
+            atol=1e-4,
+            rtol=1e-4,
+        )
     )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestFusedBiasAddDropout(flow.unittest.TestCase):
