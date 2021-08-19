@@ -1072,3 +1072,7 @@
 - name: "sparse_softmax_cross_entropy_ms_grad"
   signature: "Tensor SparseSoftmaxCrossEntropyMsGrad(Tensor label, Tensor dy, Tensor prob, *, Int64 depth)"
   bind_python: False
+
+- name: "fused_scale_tril"
+  signature: "Tensor FusedScaleTril(Tensor x, *, Int64 diagonal=0, Scalar fill_value=0, Scalar scale=1)"
+  bind_python: True
