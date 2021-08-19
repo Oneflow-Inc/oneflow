@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_xtob_boxing_interpreter.h"
@@ -58,6 +59,9 @@ Maybe<Symbol<ParallelDesc>> GetOverlapParallelDescWithParallelNumEqualsOne(
 auto* CachedGetOverlapParallelDescWithParallelNumEqualsOne =
     DECORATE(&GetOverlapParallelDescWithParallelNumEqualsOne, ThreadLocal);
 
+// avoid check consistent_id in ConsistentToConsistent function
+auto* CachedToConsistent = DECORATE(&one::functional::ToConsistent, CheckConsistentTensorMeta);
+
 }  // namespace
 
 Maybe<one::Tensor> NcclXToBBoxingInterpreter::InterpretImpl(
@@ -71,9 +75,9 @@ Maybe<one::Tensor> NcclXToBBoxingInterpreter::InterpretImpl(
       CachedGetOverlapParallelDescWithParallelNumEqualsOne(in_parallel_desc, out_parallel_desc));
   // n -> 1, 1 -> n
   std::shared_ptr<one::Tensor> mid_tensor =
-      JUST(one::functional::ToConsistent(input, parallel_desc_with_parallel_num_eq_one,
+      JUST(CachedToConsistent(input, parallel_desc_with_parallel_num_eq_one,
                                          *JUST(GetSbpList(in_nd_sbp)), GetNoneSbpList()));
-  return one::functional::ToConsistent(mid_tensor, out_parallel_desc, *JUST(GetSbpList(out_nd_sbp)),
+  return CachedToConsistent(mid_tensor, out_parallel_desc, *JUST(GetSbpList(out_nd_sbp)),
                                        GetNoneSbpList());
 }
 
