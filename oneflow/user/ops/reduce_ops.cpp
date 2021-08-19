@@ -114,29 +114,6 @@ REGISTER_USER_OP_GRAD("reduce_sum")
       return Maybe<void>::Ok();
     });
 
-/* REGISTER_USER_OP_GRAD("reduce_prod")
-  .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      LOG(ERROR) << "reduce_prod grad start";
-      if (op.NeedGenGradTensor4OpInput("input_tensor", 0)) {
-        //const auto& axes = op.attr<std::vector<int32_t>>("axis");
-      LOG(ERROR) << "reduce_prod grad start 1111";
-        
-        user_op::UserOpConfWrapperBuilder divide_builder(op.op_name() + "_grad_divide");
-        user_op::UserOpConfWrapper divide_op =
-            divide_builder.Op("broadcast_div")
-                .Input("x", op.GetGradTensorWithOpOutput("output_tensor", 0))
-                .Input("y", op.input("input_tensor", 0))
-                .Output("z")
-                .Build();
-        AddOp(divide_op);
-
-        op.BindGradTensorWithOpInput(divide_op.output("z", 0), "input_tensor", 0);
-      }
-      LOG(ERROR) << "reduce_prod grad end";
-      return Maybe<void>::Ok();
-    }); */
-
 Maybe<void> GenerateBackwardOpConf4ReduceMaxMin(const user_op::UserOpWrapper& op,
                                                 user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("input_tensor", 0)) {

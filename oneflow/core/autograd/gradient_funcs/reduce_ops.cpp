@@ -92,15 +92,20 @@ Maybe<void> ReduceProdOp::Capture(ReduceProdOpInterpState* ctx, const TensorTupl
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
   ctx->SaveTensorForBackward(inputs.at(0));
+  ctx->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* ctx, const TensorTuple& out_grads,
                                TensorTuple* in_grads) const {
   const auto& input = ctx->SavedTensors().at(0);
-  const auto& dy = out_grads.at(0);
+  const auto& output = ctx->SavedTensors().at(1);
+  //const auto& dy = out_grads.at(0);
+
+  const auto& bcast_like = JUST(functional::BroadcastLike(output, input, ctx->axis));
+
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::BroadcastLike(dy, input, ctx->axis));
+  in_grads->at(0) = JUST(functional::BroadcastDiv(bcast_like, input));
   return Maybe<void>::Ok();
 }
 

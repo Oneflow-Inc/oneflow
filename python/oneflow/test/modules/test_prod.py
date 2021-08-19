@@ -7,7 +7,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestReduceProd(flow.unittest.TestCase):
-    @autotest
+    @autotest()
     def test_reduce_prod_without_dim(test_case):
         device = random_device()
 
@@ -17,7 +17,7 @@ class TestReduceProd(flow.unittest.TestCase):
 
         return y
 
-    @autotest
+    @autotest()
     def test_reduce_prod_with_dim(test_case):
         device = random_device()
 
