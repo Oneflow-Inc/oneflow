@@ -74,24 +74,24 @@ Maybe<void> CheckConsistentTensorsMeta(const TensorTuple& tensor_tuple) {
 
 }  // namespace
 
-Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
+Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTuple& outputs,
                                                                const TensorTuple& out_grads,
                                                                bool retain_graph,
                                                                bool create_graph) {
   JUST(CheckConsistentTensorsMeta(outputs));
   JUST(CheckConsistentTensorsMeta(out_grads));
   DisableCheckConsistentTensorMetaScope disable_meta_check;
-  return RunBackwardAndSaveGrads4LeafTensorIf(outputs, out_grads, retain_graph, create_graph);
+  return RunBackwardAndSaveGrads4LeafTensor(outputs, out_grads, retain_graph, create_graph);
 }
 
-Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGrad(
+Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGradIf(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
   JUST(CheckConsistentTensorsMeta(outputs));
   JUST(CheckConsistentTensorsMeta(inputs));
   JUST(CheckConsistentTensorsMeta(out_grads));
   DisableCheckConsistentTensorMetaScope disable_meta_check;
-  return RunBackwardAndReturnInputsTensorGradIf(outputs, inputs, out_grads, retain_graph,
+  return RunBackwardAndReturnInputsTensorGrad(outputs, inputs, out_grads, retain_graph,
                                                 create_graph);
 }
 
