@@ -29,13 +29,6 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kDecodeH2D; }
-  CudaWorkType GetCudaWorkType() const override {
-#ifdef WITH_CUDA
-    return CudaWorkType::kDecodeH2D;
-#else
-    UNIMPLEMENTED();
-#endif
-  }
 
  private:
   void BuildExecGphAndRegst() override;
