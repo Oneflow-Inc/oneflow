@@ -128,7 +128,6 @@ class Sequential(Module):
         return input
 
 
-
 class ModuleList(Module):
     def __init__(self, modules: Optional[Iterable[Module]] = None) -> None:
         super(ModuleList, self).__init__()
@@ -447,8 +446,8 @@ class ParameterDict(Module):
         """Remove all items from the ParameterDict.
         """
         self._parameters.clear()
-    
-    def pop(self, key: str) -> 'Parameter':
+
+    def pop(self, key: str) -> "Parameter":
         r"""Remove key from the ParameterDict and return its parameter.
         Args:
             key (string): key to pop from the ParameterDict
@@ -456,23 +455,23 @@ class ParameterDict(Module):
         v = self[key]
         del self[key]
         return v
-    
+
     def keys(self) -> Iterable[str]:
         r"""Return an iterable of the ParameterDict keys.
         """
         return self._parameters.keys()
 
-    def items(self) -> Iterable[Tuple[str, 'Parameter']]:
+    def items(self) -> Iterable[Tuple[str, "Parameter"]]:
         r"""Return an iterable of the ParameterDict key/value pairs.
         """
         return self._parameters.items()
 
-    def values(self) -> Iterable['Parameter']:
+    def values(self) -> Iterable["Parameter"]:
         r"""Return an iterable of the ParameterDict values.
         """
         return self._parameters.values()
-    
-    def update(self, parameters: Mapping[str, 'Parameter']) -> None:
+
+    def update(self, parameters: Mapping[str, "Parameter"]) -> None:
         r"""Update the :class:`~torch.nn.ParameterDict` with the key-value pairs from a
         mapping or an iterable, overwriting existing keys.
         .. note::
@@ -484,9 +483,10 @@ class ParameterDict(Module):
                 key-value pairs of type (string, :class:`~torch.nn.Parameter`)
         """
         if not isinstance(parameters, container_abcs.Iterable):
-            raise TypeError("ParametersDict.update should be called with an "
-                            "iterable of key/value pairs, but got " +
-                            type(parameters).__name__)
+            raise TypeError(
+                "ParametersDict.update should be called with an "
+                "iterable of key/value pairs, but got " + type(parameters).__name__
+            )
 
         if isinstance(parameters, (OrderedDict, ParameterDict)):
             for key, parameter in parameters.items():
@@ -497,34 +497,39 @@ class ParameterDict(Module):
         else:
             for j, p in enumerate(parameters):
                 if not isinstance(p, container_abcs.Iterable):
-                    raise TypeError("ParameterDict update sequence element "
-                                    "#" + str(j) + " should be Iterable; is" +
-                                    type(p).__name__)
+                    raise TypeError(
+                        "ParameterDict update sequence element "
+                        "#" + str(j) + " should be Iterable; is" + type(p).__name__
+                    )
                 if not len(p) == 2:
-                    raise ValueError("ParameterDict update sequence element "
-                                     "#" + str(j) + " has length " + str(len(p)) +
-                                     "; 2 is required")
+                    raise ValueError(
+                        "ParameterDict update sequence element "
+                        "#" + str(j) + " has length " + str(len(p)) + "; 2 is required"
+                    )
                 # parameters as length-2 list too cumbersome to type, see ModuleDict.update comment
                 self[p[0]] = p[1]  # type: ignore[assignment]
 
     def extra_repr(self) -> str:
         child_lines = []
         for k, p in self._parameters.items():
-            size_str = 'x'.join(str(size) for size in p.size())
-            device_str = '' if not p.is_cuda else ' (GPU {})'.format(p.get_device())
-            parastr = 'Parameter containing: [{} of size {}{}]'.format(
-                type(p), size_str, device_str)
-            child_lines.append('  (' + k + '): ' + parastr)
-        tmpstr = '\n'.join(child_lines)
+            size_str = "x".join(str(size) for size in p.size())
+            device_str = "" if not p.is_cuda else " (GPU {})".format(p.get_device())
+            parastr = "Parameter containing: [{} of size {}{}]".format(
+                type(p), size_str, device_str
+            )
+            child_lines.append("  (" + k + "): " + parastr)
+        tmpstr = "\n".join(child_lines)
         return tmpstr
 
     def __call__(self, input):
-        raise RuntimeError('ParameterDict should not be called.')
+        raise RuntimeError("ParameterDict should not be called.")
 
     def _replicate_for_data_parallel(self):
-        warnings.warn("nn.ParameterDict is being used with DataParallel but this is not "
-                      "supported. This dict will appear empty for the models replicated "
-                      "on each GPU except the original one.")
+        warnings.warn(
+            "nn.ParameterDict is being used with DataParallel but this is not "
+            "supported. This dict will appear empty for the models replicated "
+            "on each GPU except the original one."
+        )
 
         return super(ParameterDict, self)._replicate_for_data_parallel()
 
