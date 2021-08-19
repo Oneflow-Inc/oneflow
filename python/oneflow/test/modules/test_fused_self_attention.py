@@ -37,7 +37,7 @@ def test_fused_self_attention(
     )
     fused_atten = flow.matmul(fused_qmk, fused_v)
     fused_atten_sum = fused_atten.sum()
-    fused_atten_sum.backward()
+    # fused_atten_sum.backward()
 
     origin_input = flow.Tensor(x).to("cuda")
     origin_input.requires_grad = True
@@ -49,7 +49,12 @@ def test_fused_self_attention(
     origin_qmk = flow.matmul(origin_q, origin_k)
     origin_atten = flow.matmul(origin_qmk, origin_v)
     origin_atten_sum = origin_atten.sum()
-    origin_atten_sum.backward()
+    # origin_atten_sum.backward()
+
+    total_sum = fused_atten_sum + origin_atten_sum
+    total_sum.backward()
+    print(fused_input.grad)
+    print(origin_input.grad)
 
     test_case.assertTrue(
         np.allclose(fused_atten.numpy(), origin_atten.numpy(), atol=1e-4, rtol=1e-4)
