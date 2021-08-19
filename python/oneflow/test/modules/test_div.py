@@ -49,33 +49,7 @@ class TestDiv(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=4, dim0=3).to(device)
         y = random_pytorch_tensor(ndim=4).to(device)
         z = torch.div(x, y)
-        return z
-
-    @autotest()
-    def test_tensor_div_with_random_data_Number(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
-        k = random(1,4).to(float)
-        y = x.div(k)
-        return y
-
-    
-    @autotest(auto_backward=False)
-    def test_tensor_div_with_0shape(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=1, dim2=0, dim3=3).to(device)
-        y = random_pytorch_tensor(ndim=4, dim0=2, dim1=1, dim2=0, dim3=3).to(device)
-        z = x.div(y)
-        return z
-    
-    @autotest(auto_backward=False)
-    def test_tensor_div_with_diff_shape(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim0=3).to(device)
-        y = random_pytorch_tensor(ndim=4).to(device)
-        z = x.div(y)
-        return z
-
+        return z   
 
 if __name__ == "__main__":
     unittest.main()

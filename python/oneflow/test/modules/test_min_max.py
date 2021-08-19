@@ -25,7 +25,7 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestMin(flow.unittest.TestCase):
+class TestMin_Max(flow.unittest.TestCase):
     @autotest()
     def test_min_with_random_data(test_case):
         device = random_device()
@@ -38,20 +38,6 @@ class TestMin(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor(ndim=3, dim0=3).to(device)
         y = torch.max(x)
-        return y
-    
-    @autotest()
-    def test_tensor_min_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=3).to(device)
-        y = x.min()
-        return y
-    
-    @autotest()
-    def test_tensor_max_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=3).to(device)
-        y = x.max()
         return y
 
 

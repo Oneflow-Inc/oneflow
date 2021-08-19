@@ -47,29 +47,5 @@ class TestSub(flow.unittest.TestCase):
         z = torch.sub(x, y)
         return z
 
-    @autotest()
-    def test_tensor_sub(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=2, dim0=0, dim1=3).to(device)
-        y = random_pytorch_tensor(ndim=2, dim0=1, dim1=3).to(device)
-        return x.sub(y)
-    
-    @autotest()
-    def test_tensor_sub_with_scalar_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        y = x.tan()
-        return x.sub(y)
-
-    @autotest()
-    def test_tensor_sub_with_broadcast_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=4, dim2=1).to(device)
-        y = random_pytorch_tensor(ndim=3, dim0=1, dim1=1).to(device)
-        return y.sub(x)
-    
-    
-
-
 if __name__ == "__main__":
     unittest.main()

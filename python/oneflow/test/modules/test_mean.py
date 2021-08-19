@@ -47,29 +47,5 @@ class TestMean(flow.unittest.TestCase):
         y = torch.mean(x, dim=k, keepdim=True)
         return y
     
-    @autotest()
-    def test_tensor_mean_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
-        y = x.mean()
-        return y
-    
-    @autotest()
-    def test_tensor_mean_with_random_data_dim(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim0=4).to(device)
-        k = random(1,4).to(int)
-        y = x.mean(dim=k)
-        return y
-    
-    @autotest()
-    def test_tensor_mean_with_random_data_dim_keepdim(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim0=4).to(device)
-        k = random(1,4).to(int)
-        y = x.mean(dim=k, keepdim=True)
-        return y
-    
-
 if __name__ == "__main__":
     unittest.main()

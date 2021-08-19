@@ -1204,7 +1204,112 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         return x.round()
+    
+    @autotest()
+    def test_tensor_sum_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim0=random(0, 5), dim1=3).to(device)
+        return x.sum()
 
+    @autotest(auto_backward=False)
+    def test_tensor_sum_with_0shape_tensor(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 4, 3, 0, 2).to(device)
+        y = x.sum(dim=np.random.randint(0, 3))
+        return y
+    
+    @autotest()
+    def test_tensor_sub(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim0=0, dim1=3).to(device)
+        y = random_pytorch_tensor(ndim=2, dim0=1, dim1=3).to(device)
+        return x.sub(y)
+    
+    @autotest()
+    def test_tensor_sub_with_scalar_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.tan()
+        return x.sub(y)
+
+    @autotest()
+    def test_tensor_sub_with_broadcast_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=4, dim2=1).to(device)
+        y = random_pytorch_tensor(ndim=3, dim0=1, dim1=1).to(device)
+        return y.sub(x)
+    
+    @autotest()
+    def test_tensor_div_with_random_data_Number(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
+        k = random(1,4).to(float)
+        y = x.div(k)
+        return y
+
+    
+    @autotest(auto_backward=False)
+    def test_tensor_div_with_0shape(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=2, dim1=1, dim2=0, dim3=3).to(device)
+        y = random_pytorch_tensor(ndim=4, dim0=2, dim1=1, dim2=0, dim3=3).to(device)
+        z = x.div(y)
+        return z
+    
+    @autotest()
+    def test_tensor_mean_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
+        y = x.mean()
+        return y
+    
+    @autotest()
+    def test_tensor_mean_with_random_data_dim(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=4).to(device)
+        k = random(1,4).to(int)
+        y = x.mean(dim=k)
+        return y
+    
+    @autotest()
+    def test_tensor_mean_with_random_data_dim_keepdim(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=4).to(device)
+        k = random(1,4).to(int)
+        y = x.mean(dim=k, keepdim=True)
+        return y
+    
+    @autotest()
+    def test_tensor_mul_with_random_data_integer(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
+        k = random(10,100).to(int)
+        y = x.mul(k)
+        return y
+
+    @autotest()
+    def test_tensor_mul_with_random_data_broadcast(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
+        y = random_pytorch_tensor(ndim=1, dim0=4).to(device)
+        z = y.mul(x)
+        return z
+    
+        
+    @autotest()
+    def test_tensor_min_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim0=3).to(device)
+        y = x.min()
+        return y
+    
+    @autotest()
+    def test_tensor_max_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=3, dim0=3).to(device)
+        y = x.max()
+        return y
+    
 
 if __name__ == "__main__":
     unittest.main()

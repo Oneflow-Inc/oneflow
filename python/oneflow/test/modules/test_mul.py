@@ -38,22 +38,6 @@ class TestMulModule(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=1, dim0=4).to(device)
         z = torch.mul(x, y)
         return z
-    
-    @autotest()
-    def test_tensor_mul_with_random_data_integer(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
-        k = random(10,100).to(int)
-        y = x.mul(k)
-        return y
-
-    @autotest()
-    def test_tensor_mul_with_random_data_broadcast(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim0=1).to(device)
-        y = random_pytorch_tensor(ndim=1, dim0=4).to(device)
-        z = y.mul(x)
-        return z
 
 if __name__ == "__main__":
     unittest.main()

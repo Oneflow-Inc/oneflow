@@ -40,20 +40,5 @@ class TestSumModule(flow.unittest.TestCase):
         y = torch.sum(x, dim=np.random.randint(0, 3))
         return y
 
-    @autotest()
-    def test_tensor_sum_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=2, dim0=random(0, 5), dim1=3).to(device)
-        return x.sum()
-
-    @autotest(auto_backward=False)
-    def test_tensor_sum_with_0shape_tensor(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(4, 4, 3, 0, 2).to(device)
-        y = x.sum(dim=np.random.randint(0, 3))
-        return y
-
-
-
 if __name__ == "__main__":
     unittest.main()
