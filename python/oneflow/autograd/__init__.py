@@ -16,4 +16,4 @@ limitations under the License.
 
 from oneflow.autograd.autograd import backward, grad
 from oneflow.autograd.autograd_mode import inference_mode, grad_enable, no_grad
-from oneflow._oneflow_internal.autograd import grad_mode
+from oneflow._oneflow_internal.autograd import is_grad_enabled
