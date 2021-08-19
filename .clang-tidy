@@ -6,7 +6,7 @@
 Checks: '-*, maybe-*, clang-analyzer-core.*, clang-analyzer-cplusplus.*, clang-analyzer-nullability.*, clang-analyzer-deadcode.*, clang-analyzer-security.*, clang-analyzer-optin.cplusplus.*, clang-analyzer-optin.performance.*, clang-analyzer-alpha.core.*, clang-analyzer-alpha.cplusplus.*, clang-analyzer-alpha.security.*, cppcoreguidelines-avoid-goto, cppcoreguidelines-init-variables, cppcoreguidelines-interfaces-global-init, cppcoreguidelines-no-malloc, cppcoreguidelines-prefer-member-initializer, cppcoreguidelines-pro-type-member-init, cppcoreguidelines-pro-type-static-cast-downcast, cppcoreguidelines-slicing, cppcoreguidelines-special-member-functions, performance-unnecessary-value-param, performance-unnecessary-copy-initialization, performance-noexcept-move-constructor, performance-no-automatic-move, performance-move-const-arg, performance-implicit-conversion-in-loop, performance-for-range-copy'
 
 # TODO: treat all maybe warnings as errors when existing warnings are all fixed
-WarningsAsErrors: 'maybe-unused, clang-analyzer-nullability.*'
+WarningsAsErrors: 'maybe-unused, clang-analyzer-nullability.*, clang-analyzer-cplusplus.*'
 
 CheckOptions:
   # `cppcoreguidelines-special-member-functions` is enabled, refer to https://en.cppreference.com/w/cpp/language/rule_of_three
