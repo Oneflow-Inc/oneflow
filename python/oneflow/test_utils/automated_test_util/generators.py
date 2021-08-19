@@ -34,6 +34,7 @@ TEST_TENSOR = 2
 rng = np.random.default_rng()
 annotation2default_generator = {}
 annotation2torch_to_flow_converter = {}
+NoneType = type(None)
 
 
 def data_generator(annotation):

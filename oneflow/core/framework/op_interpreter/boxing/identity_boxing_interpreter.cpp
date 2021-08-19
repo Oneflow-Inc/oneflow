@@ -21,7 +21,7 @@ Maybe<one::Tensor> IdentityBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
     Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
-  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   CHECK_OR_RETURN(in_parallel_desc->parallel_num() == 1 || in_nd_sbp == out_nd_sbp);
   return input;
 }
