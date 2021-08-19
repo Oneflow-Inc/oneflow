@@ -37,6 +37,7 @@ class ActorMsgMR final {
   }
   ~ActorMsgMR() {
     delete msg_;
+    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0); 
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
@@ -72,7 +73,7 @@ class MessagePool final {
         delete message_buf_.front();
          message_buf_.pop_front();
        }
-    }
+    }//todo:这里可能要修改
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
       RegisterMessagePool();
@@ -94,7 +95,7 @@ class MessagePool final {
     }
 
   ActorMsgMR *  GetMessage() {
-        if(IsEmpty() == false)  {
+        if(isEmpty() == false)  {
             return GetMessageFromBuf();
         } else {
             RegisterMessagePool();
@@ -114,12 +115,12 @@ class MessagePool final {
       message_buf_.push_front(msg_mr);
   }
 
-  bool IsEmpty() {
+  bool isEmpty() {
       std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
       return message_buf_.empty() == true ;
   }
 
-  size_t Size() {
+  size_t size() {
     std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
     return message_buf_.size();
   }
