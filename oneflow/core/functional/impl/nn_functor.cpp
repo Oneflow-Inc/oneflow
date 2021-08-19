@@ -697,6 +697,44 @@ class L2NormalizeGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedScaleTrilFunctor {
+ public:
+  FusedScaleTrilFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_tril").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal,
+                           const Scalar& fill_value, const Scalar& scale) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    bool is_fill_value_double = fill_value.IsFloatingPoint();
+    bool is_scale_double = scale.IsFloatingPoint();
+    if (is_fill_value_double) {
+      JUST(attrs.SetAttr<double>("floating_fill_value", JUST(fill_value.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integer_fill_value", 0));
+      JUST(attrs.SetAttr<bool>("is_floating_fill_value", true));
+    } else {
+      JUST(attrs.SetAttr<double>("floating_fill_value", 0));
+      JUST(attrs.SetAttr<int64_t>("integer_fill_value", JUST(fill_value.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("is_floating_fill_value", false));
+    }
+
+    if (is_scale_double) {
+      JUST(attrs.SetAttr<double>("floating_scale_value", JUST(scale.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integer_scale_value", 0));
+      JUST(attrs.SetAttr<bool>("is_floating_scale_value", true));
+    } else {
+      JUST(attrs.SetAttr<double>("floating_scale_value", 0));
+      JUST(attrs.SetAttr<int64_t>("integer_scale_value", JUST(scale.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("is_floating_scale_value", false));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -728,6 +766,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
+  m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
 };
 
 }  // namespace functional
