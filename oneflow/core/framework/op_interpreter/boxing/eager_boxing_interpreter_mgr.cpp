@@ -117,7 +117,9 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
         in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
     if (interpreter.IsOk()) { return JUST(interpreter); }
   }
-  if (in_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1) {
+  if (in_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1
+      && (in_parallel_desc->device_type() == DeviceType::kGPU
+          && out_parallel_desc->device_type() == DeviceType::kGPU)) {
     if (EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)) {
       static std::shared_ptr<EagerBoxingInterpreter> nccl_1tob_boxing_interpreter =
           std::make_shared<Nccl1ToBBoxingInterpreter>();
