@@ -251,6 +251,25 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
   }
   return iter->second;
 }
+}  // namespace
+
+Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc) {
+  CHECK_OR_RETURN(parallel_desc->containing_current_rank());
+  if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
+  std::shared_ptr<UserOpExpr> op_expr = JUST(FindOrCreatEagerNcclBroadcastOpExpr(parallel_desc));
+  if (JUST(parallel_desc->MachineId4ParallelId(0)) == GlobalProcessCtx::Rank()) {
+    // inplace.
+    TensorTuple outputs{tensor};
+    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
+                                one::OpExprInterpContext(AttrMap{}, parallel_desc)));
+    return tensor;
+  } else {
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(
+        *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, parallel_desc)));
+  }
+}
+
+namespace {
 
 Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
                                          Symbol<ParallelDesc> parallel_desc,
@@ -259,19 +278,7 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
   const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
-  if (broadcast_parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
-  std::shared_ptr<UserOpExpr> op_expr =
-      JUST(FindOrCreatEagerNcclBroadcastOpExpr(broadcast_parallel_desc));
-  if (JUST(broadcast_parallel_desc->MachineId4ParallelId(0)) == GlobalProcessCtx::Rank()) {
-    // inplace.
-    TensorTuple outputs{tensor};
-    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
-                                one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
-    return tensor;
-  } else {
-    return JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
-  }
+  return Broadcast(tensor, broadcast_parallel_desc);
 }
 
 Maybe<Shape> CalcPhysicalShape(Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
