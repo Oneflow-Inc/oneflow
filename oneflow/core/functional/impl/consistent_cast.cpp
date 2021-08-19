@@ -215,7 +215,7 @@ Maybe<one::OpExpr> RawGetConsistentToConsistentOpExpr(
 }  // namespace
 
 static constexpr auto* GetConsistentToConsistentOpExpr =
-    DECORATE(&RawGetConsistentToConsistentOpExpr, ThreadLocal);
+    DECORATE(&RawGetConsistentToConsistentOpExpr, ThreadLocalCopiable);
 
 Maybe<Tensor> ConsistentToConsistent(
     const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
