@@ -28,6 +28,12 @@ namespace oneflow {
 
 namespace {
 
+constexpr uint32_t kDefaultMessagePoolSize = 1024;
+
+}  // namespace
+
+namespace {
+
 std::string GenTokensMsgKey(int64_t machine_id) {
   return "IBVerbsTokensMsg/" + std::to_string(machine_id);
 }
@@ -94,7 +100,6 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
 }
 
 void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
-//  std::cout << " IBVerbsCommNet::RecvActorMsg, the msg.comm_net_sequence_number:" << msg.comm_net_sequence_number() << std::endl;
   ActorMsg new_msg = msg;
   if (msg.IsDataRegstMsgToConsumer()) {
     std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
@@ -136,9 +141,8 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   ibv_device_attr device_attr{};
   CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  recv_msg_buf_ = std::make_shared<MessagePool>(pd_,1024);//这个应该没问题
-  send_msg_buf_ =  std::make_shared<MessagePool>(pd_,1024);//这个应该没问题
-  std::cout<<"messagePool";
+  recv_msg_buf_ = std::make_shared<MessagePool>(pd_,kDefaultMessagePoolSize);
+  send_msg_buf_ =  std::make_shared<MessagePool>(pd_,kDefaultMessagePoolSize);
   CHECK(cq_);
   ibv_port_attr port_attr{};
   const uint8_t port = user_port == 0 ? 1 : user_port;
