@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/framework/transport_util.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/object_msg/flat_msg.h"
 #include "oneflow/core/common/flat_shape.h"
@@ -215,7 +216,7 @@ Maybe<one::OpExpr> RawGetConsistentToConsistentOpExpr(
 }  // namespace
 
 static constexpr auto* GetConsistentToConsistentOpExpr =
-    DECORATE(&RawGetConsistentToConsistentOpExpr, ThreadLocal);
+    DECORATE(&RawGetConsistentToConsistentOpExpr, ThreadLocalCopiable);
 
 Maybe<Tensor> ConsistentToConsistent(
     const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
@@ -227,6 +228,11 @@ Maybe<Tensor> ConsistentToConsistent(
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
+  if (tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
+    const auto& input_consistent_id = JUST(x->transport_token());
+    const auto& output_consistend_id = JUST(tensor->transport_token());
+    CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);
+  }
   return tensor;
 }
 

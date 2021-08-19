@@ -44,7 +44,7 @@ Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::NdSbp> nd
 
 }  // namespace private_details
 
-static constexpr auto* GetNdSbp = DECORATE(&private_details::RawGetNdSbp, ThreadLocal);
+static constexpr auto* GetNdSbp = DECORATE(&private_details::RawGetNdSbp, ThreadLocalCopiable);
 static constexpr auto* GetSbpList = DECORATE(&private_details::RawGetSbpList, ThreadLocal);
 const std::vector<Symbol<cfg::SbpParallel>>& GetNoneSbpList();
 

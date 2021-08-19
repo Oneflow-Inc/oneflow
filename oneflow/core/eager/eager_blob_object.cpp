@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/shape_vec.h"
@@ -23,24 +22,15 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-namespace {
-Maybe<VmLocalDepObject> GetVmLocalDepObject(
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  return parallel_desc != nullptr
-             ? Maybe<VmLocalDepObject>(std::make_shared<VmLocalDepObject>(parallel_desc))
-             : Error::Unimplemented();
-}
-}  // namespace
-
 EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                                  const std::shared_ptr<Shape>& shape, DataType data_type,
                                  const std::shared_ptr<TensorBuffer>& tensor_buffer,
-                                 const std::shared_ptr<const ParallelDesc>& parallel_desc)
+                                 const Optional<LocalDepObject*>& dep_object)
     : BlobObject(mem_case, shape, data_type),
       tensor_buffer_(tensor_buffer),
       blob_body_bytes_(0),
       is_shape_synced_(true),
-      compute_local_dep_object_(GetVmLocalDepObject(parallel_desc)) {
+      compute_local_dep_object_(dep_object) {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_buffer));
   non_pod_initer_ = std::make_unique<MemoryAllocator>();
