@@ -60,7 +60,7 @@ class FusedSelfAttention : public OpExprGradFunction<FusedSelfAttentionInterpSta
     if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
 
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    in_grads->resize(1);
+    in_grads->resize(2);
     const auto& hidden_states = ctx->SavedTensors().at(0);
     const std::shared_ptr<oneflow::one::Tensor>& fused_self_attention_grad =
         JUST(functional::FusedSelfAttentionGrad(out_grads.at(0), out_grads.at(1), hidden_states,
