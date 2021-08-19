@@ -20,17 +20,17 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct FlipInterpState : public OpExprInterpState {
+struct FlipCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   std::vector<int32_t> dims;
 };
 
-class Flip : public OpExprGradFunction<FlipInterpState> {
+class Flip : public OpExprGradFunction<FlipCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(FlipInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(FlipCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override;
-  Maybe<void> Apply(const FlipInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const FlipCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -44,7 +44,7 @@ Maybe<void> Flip::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Flip::Capture(FlipInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Flip::Capture(FlipCaptureState* ctx, const TensorTuple& inputs,
                           const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -53,7 +53,7 @@ Maybe<void> Flip::Capture(FlipInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Flip::Apply(const FlipInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Flip::Apply(const FlipCaptureState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
