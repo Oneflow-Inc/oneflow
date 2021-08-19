@@ -24,12 +24,10 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/model_io_v2_job.h"
 #include "oneflow/core/job/model_io_job.h"
@@ -65,7 +63,7 @@ bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
 
 bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
 
-bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
+bool operator==(const NdSbp& lhs, const NdSbp& rhs) {
   if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
   for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
     if (lhs.sbp_parallel().Get(i) != rhs.sbp_parallel().Get(i)) { return false; }
@@ -73,14 +71,11 @@ bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs
   return true;
 }
 
-bool operator!=(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
-  return !(lhs == rhs);
-}
+bool operator!=(const NdSbp& lhs, const NdSbp& rhs) { return !(lhs == rhs); }
 
 bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
   return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())
-         && lhs.parallel_conf() == rhs.parallel_conf()
-         && lhs.parallel_distribution() == rhs.parallel_distribution();
+         && lhs.parallel_conf() == rhs.parallel_conf() && lhs.nd_sbp() == rhs.nd_sbp();
 }
 
 namespace {
@@ -119,30 +114,6 @@ std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64
 
 std::string block7chunk_key(const std::string& plan_name, int64_t machine_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_block7chunk";
-}
-
-void PopulateOpAttibute(
-    Plan* plan,
-    const PbMap<int64_t, ::oneflow::OpAttributeRefTable>& job_id2op_attribute_ref_table) {
-  for (auto& task : *plan->mutable_task()) {
-    if (task.exec_sequence().exec_node_size() == 1
-        && task.exec_sequence().exec_node(0).kernel_conf().has_op_attribute_ref()) {
-      auto* kernel_conf = task.mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-      auto table_it = job_id2op_attribute_ref_table.find(task.job_id());
-      CHECK(table_it != job_id2op_attribute_ref_table.end())
-          << "op attribute ref table not found for job id: " << task.job_id();
-      auto it = table_it->second.op_name2op_attribute().find(kernel_conf->op_attribute_ref());
-      CHECK(it != table_it->second.op_name2op_attribute().end())
-          << "ref: " << kernel_conf->op_attribute_ref() << " not found";
-      *kernel_conf->mutable_op_attribute() = it->second;
-      kernel_conf->clear_op_attribute_ref();
-    } else {
-      for (auto& exec_node : task.exec_sequence().exec_node()) {
-        CHECK(exec_node.kernel_conf().has_op_attribute())
-            << "op_attribute absent, exec_node: " << exec_node.DebugString();
-      }
-    }
-  }
 }
 
 void PushPlan(const std::string& plan_name, Plan&& plan) {
@@ -226,7 +197,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   OpAttributeInfo op_attribute_info;
   Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
   // populate op_attribute_info
-  PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
+  PlanUtil::PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
 }
 
 Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) {
@@ -234,6 +205,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     Compiler().Compile(job, plan, need_job_complete);
+    PlanUtil::GenMemBlockAndChunk4Plan(plan);
 
     LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
@@ -417,11 +389,9 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   ParallelBlobConf ret;
   *blob_conf->mutable_parallel_conf() = job_builder.ParallelConf4OpName(op_name);
   *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
-  *blob_conf->mutable_parallel_distribution() = job.job_parallel_view_conf()
-                                                    .op_name2parallel_distribution_signature_conf()
-                                                    .at(op_name)
-                                                    .bn_in_op2parallel_distribution()
-                                                    .at(obn);
+  *blob_conf->mutable_nd_sbp() =
+      job.job_parallel_view_conf().op_name2nd_sbp_signature_conf().at(op_name).bn_in_op2nd_sbp().at(
+          obn);
 }
 
 void FilterOpName2ParallelBlobConf(
@@ -1048,7 +1018,9 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
     LOG(ERROR) << "this is dry run, exiting";
     exit(0);
   }
-  runtime_.reset(new Runtime(plan_, GetMaxVal<size_t>(), false));
+
+  HashMap<std::string, Blob*> variable_op_name2eager_blob;
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob));
   OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();
 }
@@ -1056,10 +1028,6 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
 Oneflow::~Oneflow() {
   if (GlobalProcessCtx::IsThisProcessMaster()) { runtime_buffers_scope_.reset(); }
   runtime_.reset();
-  if (Global<Profiler>::Get() != nullptr) {
-    Global<Profiler>::Get()->Profile(
-        plan_, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
-  }
 }
 
 }  // namespace oneflow

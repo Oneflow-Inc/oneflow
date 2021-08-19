@@ -77,7 +77,7 @@ class FlipGpuKernel final : public user_op::OpKernel {
     SIZE_V strides_v;
     strides_v.val[total_dims - 1] = 1;
     for (int32_t i = total_dims - 2; i >= 0; i--) {
-      strides_v.val[i] = strides_v.val[i + 1] * y_tensor->shape().At(i);
+      strides_v.val[i] = strides_v.val[i + 1] * y_tensor->shape().At(i + 1);
     }
 
     SIZE_V stride_contiguous_v;

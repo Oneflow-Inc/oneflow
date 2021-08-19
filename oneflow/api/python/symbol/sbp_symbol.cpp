@@ -14,17 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
-
-static const int64_t kMaxSplitAxis = 6;
 
 namespace {
 
@@ -45,24 +46,8 @@ std::string SbpParallelSymbolToString(const Symbol<cfg::SbpParallel>& sbp_sym) {
 Maybe<std::vector<Symbol<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {
   std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> ret =
       std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(max_split_axis);
-  for (int i = 0; i < max_split_axis; ++i) {
-    cfg::SbpParallel split_sbp_parallel;
-    split_sbp_parallel.mutable_split_parallel()->set_axis(i);
-    ret->at(i) = SymbolOf(split_sbp_parallel);
-  }
+  for (int i = 0; i < max_split_axis; ++i) { ret->at(i) = JUST(MakeSplitSbpParallel(i)); }
   return ret;
-}
-
-Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel() {
-  cfg::SbpParallel broadcast_sbp;
-  broadcast_sbp.mutable_broadcast_parallel();
-  return SymbolOf(broadcast_sbp);
-}
-
-Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
-  cfg::SbpParallel partial_sum_sbp;
-  partial_sum_sbp.mutable_partial_sum_parallel();
-  return SymbolOf(partial_sum_sbp);
 }
 
 Maybe<Symbol<cfg::SbpParallel>> GetSplitSbpParallel(int axis) {
@@ -88,7 +73,11 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
   m.attr("max_split_axis") = kMaxSplitAxis;
   py::class_<Symbol<cfg::SbpParallel>, std::shared_ptr<Symbol<cfg::SbpParallel>>>(m, "sbp")
       .def("__str__", &SbpParallelSymbolToString)
-      .def("__repr__", &SbpParallelSymbolToString);
+      .def("__repr__", &SbpParallelSymbolToString)
+      .def(py::self == py::self)
+      .def(py::hash(py::self))
+      .def("_ToAttrStr",
+           [](const Symbol<cfg::SbpParallel>& sbp_sym) { return SbpParallelToString(*sbp_sym); });
   m.def(
       "split", [](int axis) { return GetSplitSbpParallel(axis).GetOrThrow(); }, py::arg("axis"));
   m.def("broadcast", []() { return GetBroadcastSbpParallel().GetOrThrow(); });

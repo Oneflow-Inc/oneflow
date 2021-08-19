@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/job/placement_scope.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/tensor.h"
@@ -24,28 +23,39 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+namespace {
+
+bool OptionalEqual(const Optional<Symbol<cfg::NdSbp>>& lhs,
+                   const Optional<Symbol<cfg::NdSbp>>& rhs) {
+  if (lhs.has_value() != rhs.has_value()) { return false; }
+  if (!lhs.has_value()) { return true; }
+  return CHECK_JUST(lhs.value()) == CHECK_JUST(rhs.value());
+}
+
+}  // namespace
+
 size_t InputConsistentTensorMeta::hash_value() const {
-  return std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta())
-         ^ std::hash<Symbol<cfg::ParallelDistribution>>()(
-             consumer_parallel_distribution_constraint());
+  size_t hash_value = std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta());
+  if (consumer_nd_sbp_constraint().has_value()) {
+    hash_value ^= std::hash<Symbol<cfg::NdSbp>>()(CHECK_JUST(consumer_nd_sbp_constraint().value()));
+  }
+  return hash_value;
 }
 
 bool InputConsistentTensorMeta::operator==(const InputConsistentTensorMeta& other) const {
   return this->tensor_meta() == other.tensor_meta()
-         && this->consumer_parallel_distribution_constraint()
-                == other.consumer_parallel_distribution_constraint();
+         && OptionalEqual(this->consumer_nd_sbp_constraint(), other.consumer_nd_sbp_constraint());
 }
 
 void InputConsistentTensorMeta::assign(
     Symbol<ConsistentTensorMeta> tensor_meta,
-    Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint) {
+    const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint) {
   tensor_meta_ = tensor_meta;
-  consumer_parallel_distribution_constraint_ = consumer_parallel_distribution_constraint;
+  consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint;
 }
 
 size_t ConsistentTensorMetaInferArgs::hash_value() const {
-  size_t hash_value = std::hash<Symbol<PlacementScope>>()(placement_scope_);
-  hash_value ^= std::hash<AttrMap>()(attrs_);
+  size_t hash_value = std::hash<AttrMap>()(attrs_);
   const auto& tensor_meta_hash_functor = std::hash<InputConsistentTensorMeta>();
   for (const auto& tensor_meta : input_consistent_tensor_metas_) {
     HashCombine(&hash_value, tensor_meta_hash_functor(tensor_meta));
@@ -53,20 +63,33 @@ size_t ConsistentTensorMetaInferArgs::hash_value() const {
   return hash_value;
 }
 
-bool ConsistentTensorMetaInferArgs::operator==(const ConsistentTensorMetaInferArgs& other) const {
-  return this->input_consistent_tensor_metas_ == other.input_consistent_tensor_metas_
-         && this->placement_scope_ == other.placement_scope_ && this->attrs_ == other.attrs_;
+size_t SrcOpConsistentTensorMetaInferArgs::hash_value() const {
+  size_t hash_value = std::hash<AttrMap>()(attrs_);
+  hash_value ^= std::hash<Symbol<ParallelDesc>>()(parallel_desc_);
+  hash_value ^= std::hash<Symbol<cfg::NdSbp>>()(nd_sbp_);
+  return hash_value;
 }
 
-Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionConstraints(
-    const UserOpExpr& user_op_expr,
-    cfg::ParallelDistributionSignature* parallel_distribution_signature) const {
+bool ConsistentTensorMetaInferArgs::operator==(const ConsistentTensorMetaInferArgs& other) const {
+  return this->attrs_ == other.attrs_
+         && this->input_consistent_tensor_metas_ == other.input_consistent_tensor_metas_;
+}
+
+bool SrcOpConsistentTensorMetaInferArgs::operator==(
+    const SrcOpConsistentTensorMetaInferArgs& other) const {
+  return this->attrs_ == other.attrs_ && this->parallel_desc_ == other.parallel_desc_
+         && this->nd_sbp_ == other.nd_sbp_;
+}
+
+Maybe<void> ConsistentTensorMetaInferArgs::MakeNdSbpConstraints(
+    const UserOpExpr& user_op_expr, cfg::NdSbpSignature* nd_sbp_signature) const {
   const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
-  auto* map = parallel_distribution_signature->mutable_bn_in_op2parallel_distribution();
+  auto* map = nd_sbp_signature->mutable_bn_in_op2nd_sbp();
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
-    const auto& constaint =
-        input_consistent_tensor_metas_.at(i).consumer_parallel_distribution_constraint();
-    if (constaint) { (*map)[input_arg_tuple.indexed_bns().at(i)] = *constaint; }
+    const auto& constaint = input_consistent_tensor_metas_.at(i).consumer_nd_sbp_constraint();
+    if (constaint.has_value()) {
+      (*map)[input_arg_tuple.indexed_bns().at(i)] = *CHECK_JUST(constaint.value());
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -84,9 +107,9 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeInputBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionInferHints(
+Maybe<void> ConsistentTensorMetaInferArgs::MakeNdSbpInferHints(
     const UserOpExpr& user_op_expr, const std::vector<BlobDesc>& blob_descs,
-    std::vector<ParallelDistributionInferHint>* hints) const {
+    std::vector<NdSbpInferHint>* hints) const {
   CHECK_OR_RETURN(hints->empty());
   const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
   hints->reserve(input_arg_tuple.size());
@@ -94,20 +117,28 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionInferHints(
     const auto& tensor_meta = *input_consistent_tensor_metas_.at(i).tensor_meta();
     const auto* parallel_desc = &*tensor_meta.parallel_desc();
     const auto* blob_desc = &blob_descs.at(i);
-    const auto* parallel_distribution = &*tensor_meta.parallel_distribution();
-    hints->emplace_back(parallel_desc, blob_desc, parallel_distribution);
+    const auto* nd_sbp = &*tensor_meta.nd_sbp();
+    hints->emplace_back(parallel_desc, blob_desc, nd_sbp);
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<ConsistentTensorMetaInferArgs> ConsistentTensorMetaInferArgs::New(
-    const TensorTuple& input_tensors, Symbol<PlacementScope> placement_scope,
-    const AttrMap& attrs) {
+    const AttrMap& attrs, const TensorTuple& input_tensors) {
   std::shared_ptr<ConsistentTensorMetaInferArgs> infer_args(new ConsistentTensorMetaInferArgs());
-  infer_args->input_consistent_tensor_metas_.resize(input_tensors.size());
-  infer_args->placement_scope_ = placement_scope;
   infer_args->attrs_ = attrs;
+  infer_args->input_consistent_tensor_metas_.resize(input_tensors.size());
   JUST(infer_args->InitInputConsistentTensorMetas(input_tensors));
+  return infer_args;
+}
+
+Maybe<SrcOpConsistentTensorMetaInferArgs> SrcOpConsistentTensorMetaInferArgs::New(
+    const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc, Symbol<cfg::NdSbp> nd_sbp) {
+  std::shared_ptr<SrcOpConsistentTensorMetaInferArgs> infer_args(
+      new SrcOpConsistentTensorMetaInferArgs());
+  infer_args->attrs_ = attrs;
+  infer_args->parallel_desc_ = parallel_desc;
+  infer_args->nd_sbp_ = nd_sbp;
   return infer_args;
 }
 
@@ -116,8 +147,8 @@ Maybe<void> ConsistentTensorMetaInferArgs::InitInputConsistentTensorMetas(
   for (int i = 0; i < input_tensors.size(); ++i) {
     const auto& tensor = *input_tensors.at(i);
     const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
-    const auto& constraints = JUST(tensor.consumer_parallel_distribution_constraint());
-    input_consistent_tensor_metas_.at(i).assign(tensor_meta, constraints);
+    const auto& constraint = JUST(tensor.consumer_nd_sbp_constraint());
+    input_consistent_tensor_metas_.at(i).assign(tensor_meta, constraint);
   }
   return Maybe<void>::Ok();
 }
@@ -132,16 +163,31 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
   return JUST(ConstructOp(op_conf, device_type));
 }
 
+Maybe<void> CheckInputParallelDescIdentical(const ConsistentTensorMetaInferArgs& infer_args) {
+  if (infer_args.input_consistent_tensor_metas().empty()) { return Maybe<void>::Ok(); }
+  const auto& first_parallel_desc =
+      infer_args.input_consistent_tensor_metas().begin()->tensor_meta()->parallel_desc();
+  for (const auto& input_meta : infer_args.input_consistent_tensor_metas()) {
+    CHECK_OR_RETURN(first_parallel_desc == input_meta.tensor_meta()->parallel_desc());
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
+                                       const std::string& op_type_name) {
+  if (IsCpuOnly(op_type_name)) { CHECK_EQ_OR_RETURN(parallel_desc.device_tag(), "cpu"); }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 /* static */ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
     const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
-  Symbol<ParallelDesc> parallel_desc;
-  {
-    // Get parallel description.
-    const auto& placement_scope = infer_args.placement_scope();
-    parallel_desc = JUST(placement_scope->GetParallelDesc(user_op_expr.op_type_name()));
-  }
+  CHECK_GT_OR_RETURN(infer_args.input_consistent_tensor_metas().size(), 0);
+  Symbol<ParallelDesc> parallel_desc =
+      infer_args.input_consistent_tensor_metas().at(0).tensor_meta()->parallel_desc();
+  JUST(CheckInputParallelDescIdentical(infer_args));
+  JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
   std::vector<OpArgMutConsistentTensorMeta> output_mut_metas(user_op_expr.output_size());
   {
     // Infer OpArgMutConsistentTensorMeta.
@@ -155,31 +201,34 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
   JUST(op->FillOpParallelDesc(parallel_desc.shared_from_symbol()));
   {
     // Infer parallel distribution.
-    cfg::ParallelDistributionSignature parallel_distribution_constraints;
-    JUST(infer_args.MakeParallelDistributionConstraints(user_op_expr,
-                                                        &parallel_distribution_constraints));
+    cfg::NdSbpSignature nd_sbp_constraints;
+    JUST(infer_args.MakeNdSbpConstraints(user_op_expr, &nd_sbp_constraints));
     std::vector<BlobDesc> blob_descs;
     JUST(infer_args.MakeInputBlobDescs(user_op_expr, &blob_descs));
-    std::vector<ParallelDistributionInferHint> pd_infer_hints;
-    JUST(infer_args.MakeParallelDistributionInferHints(user_op_expr, blob_descs, &pd_infer_hints));
+    std::vector<NdSbpInferHint> pd_infer_hints;
+    JUST(infer_args.MakeNdSbpInferHints(user_op_expr, blob_descs, &pd_infer_hints));
     const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
-    const auto& ParallelDistributionInferHint4Ibn =
-        [&](const std::string& ibn) -> Maybe<const ParallelDistributionInferHint*> {
+    const auto& NdSbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const NdSbpInferHint*> {
       int32_t input_index = input_arg_tuple.bn_in_op2tensor_tuple_index().at(ibn);
       CHECK_GE_OR_RETURN(input_index, 0);
       CHECK_LT_OR_RETURN(input_index, pd_infer_hints.size());
       return &pd_infer_hints.at(input_index);
     };
-    // The inferred results can be retrieved by op->ParallelDistribution4BnInOp(obn).
-    JUST(op->InferParallelDistributionSignatureIf(parallel_distribution_constraints, *parallel_desc,
-                                                  ParallelDistributionInferHint4Ibn));
+    // The inferred results can be retrieved by op->NdSbp4BnInOp(obn).
+    JUST(op->InferNdSbpSignatureIf(nd_sbp_constraints, *parallel_desc, NdSbpInferHint4Ibn));
   }
-  auto* result =
-      new ConsistentTensorInferResult(user_op_expr.input_size(), user_op_expr.output_size());
-  auto* input_pd = result->mut_input_parallel_distributions();
+  auto result = std::make_unique<ConsistentTensorInferResult>(user_op_expr.input_size(),
+                                                              user_op_expr.output_size());
+  auto* input_metas = result->mut_input_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.input_size(); ++i) {
+    const auto& old_consistent_tensor_meta =
+        infer_args.input_consistent_tensor_metas().at(i).tensor_meta();
     const auto& ibn = user_op_expr.input_arg_tuple()->indexed_bns().at(i);
-    input_pd->at(i) = SymbolOf(*JUST(op->ParallelDistribution4BnInOp(ibn)));
+    const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(ibn)));
+    ConsistentTensorMeta consistent_tensor_meta(old_consistent_tensor_meta->shape_ptr(),
+                                                old_consistent_tensor_meta->dtype(), nd_sbp,
+                                                old_consistent_tensor_meta->parallel_desc());
+    input_metas->at(i) = SymbolOf(consistent_tensor_meta);
   }
   auto* output_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
@@ -187,8 +236,37 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
     const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
     DataType data_type = output_mut_meta.tensor_meta().data_type();
     const auto& obn = user_op_expr.output_arg_tuple()->indexed_bns().at(i);
-    const auto& parallel_distribution = SymbolOf(*JUST(op->ParallelDistribution4BnInOp(obn)));
-    ConsistentTensorMeta tensor_meta(shape, data_type, parallel_distribution, parallel_desc);
+    const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(obn)));
+    ConsistentTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
+    output_metas->at(i) = SymbolOf(tensor_meta);
+  }
+  return std::shared_ptr<const ConsistentTensorInferResult>(std::move(result));
+}
+
+/* static */ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
+    const UserOpExpr& user_op_expr, const SrcOpConsistentTensorMetaInferArgs& infer_args) {
+  Symbol<ParallelDesc> parallel_desc = infer_args.parallel_desc();
+  JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
+  std::vector<OpArgMutConsistentTensorMeta> output_mut_metas(user_op_expr.output_size());
+  {
+    // Infer OpArgMutConsistentTensorMeta.
+    const auto& GetInputTensorMeta = [](int32_t i) {
+      UNIMPLEMENTED();
+      return nullptr;
+    };
+    JUST(user_op_expr.InferLogicalShapeAndDType(
+        infer_args.attrs(), parallel_desc->device_tag(), GetInputTensorMeta,
+        [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
+  }
+  auto* result =
+      new ConsistentTensorInferResult(user_op_expr.input_size(), user_op_expr.output_size());
+  auto* output_metas = result->mut_output_tensor_metas();
+  for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
+    const auto& output_mut_meta = output_mut_metas.at(i);
+    const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
+    DataType data_type = output_mut_meta.tensor_meta().data_type();
+    const auto& nd_sbp = infer_args.nd_sbp();
+    ConsistentTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
   return std::shared_ptr<const ConsistentTensorInferResult>(result);
@@ -202,6 +280,18 @@ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::GetOrInfer(
     CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
     const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));
     iter = cache_.emplace(infer_args, output_tensor_metas).first;
+  }
+  return iter->second;
+}
+
+Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::GetOrInfer(
+    const SrcOpConsistentTensorMetaInferArgs& infer_args) {
+  auto iter = src_op_cache_.find(infer_args);
+  if (iter == src_op_cache_.end()) {
+    const auto& user_op_expr = user_op_expr_.lock();
+    CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
+    const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));
+    iter = src_op_cache_.emplace(infer_args, output_tensor_metas).first;
   }
   return iter->second;
 }

@@ -18,17 +18,19 @@ limitations under the License.
 
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/runtime.h"
 
 namespace oneflow {
 
 class Blob;
-class Runtime;
 
 class NNGraph final : public NNGraphIf {
  public:
-  explicit NNGraph(const std::string& name) : name_(name), runtime_inited_(false) {}
+  explicit NNGraph(const std::string& name)
+      : name_(name), runtime_inited_(false), is_closed_(false) {}
   ~NNGraph();
 
   const std::string& job_name() const { return name_; }
@@ -42,8 +44,10 @@ class NNGraph final : public NNGraphIf {
       const std::vector<std::string>& variable_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
   Maybe<void> CompileAndInitRuntime();
+  Maybe<void> Close();
 
  private:
+  Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
   void NewRuntimeBuffers();
   void CloseRuntimeBuffers();
 
@@ -51,16 +55,17 @@ class NNGraph final : public NNGraphIf {
   std::vector<std::string> input_op_names_;
   std::vector<std::string> output_op_names_;
   HashMap<std::string, Blob*> variable_op_name2eager_blob_;
+  HashSet<std::string> variable_op_names_;
   Job job_;
   Plan plan_;
   // TODO(chengcheng): temp impl using runtime now, need reimplement for dynamic multi nn.Graph.
   std::unique_ptr<Runtime> runtime_;
   bool runtime_inited_;
+  bool is_closed_;
 };
 
-Maybe<void> RunLazyNNGraph(const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-                           const std::vector<std::shared_ptr<one::Tensor>>& outputs,
-                           const std::vector<std::shared_ptr<one::Tensor>>& parameters,
+Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,
+                           const one::TensorTuple& parameters,
                            const std::shared_ptr<NNGraph>& nn_graph);
 
 }  // namespace oneflow

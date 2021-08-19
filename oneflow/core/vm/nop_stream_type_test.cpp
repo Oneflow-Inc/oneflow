@@ -35,13 +35,6 @@ namespace test {
 
 namespace {
 
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
-}
-
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
-
 ObjectMsgPtr<VirtualMachine> NaiveNewVirtualMachine(const VmDesc& vm_desc) {
   return ObjectMsgPtr<VirtualMachine>::New(vm_desc);
 }
@@ -72,7 +65,7 @@ void TestNopStreamTypeNoArgument(
   auto nop_instr_msg = NewInstruction("Nop");
   list.PushBack(nop_instr_msg.Mutable());
   ASSERT_TRUE(vm->pending_msg_list().empty());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   ASSERT_EQ(vm->pending_msg_list().size(), 1 * 2);
   vm->Schedule();
   ASSERT_TRUE(vm->pending_msg_list().empty());
@@ -87,16 +80,18 @@ void TestNopStreamTypeNoArgument(
   ASSERT_EQ(instruction->mut_instr_msg(), nop_instr_msg.Mutable());
 }
 
-TEST(NopStreamType, no_argument) { TestNopStreamTypeNoArgument(&NaiveNewVirtualMachine); }
+TEST(NopStreamType, no_argument) {
+  TestResourceDescScope scope(1, 1);
+  TestNopStreamTypeNoArgument(&NaiveNewVirtualMachine);
+}
 
 TEST(NopStreamType, cached_allocator_no_argument) {
+  TestResourceDescScope scope(1, 1);
   TestNopStreamTypeNoArgument(CachedAllocatorNewVirtualMachine());
 }
 
 void TestNopStreamTypeOneArgument(
     std::function<ObjectMsgPtr<VirtualMachine>(const VmDesc&)> NewVirtualMachine) {
-  InitNumProcessPerNode();
-  TestResourceDescScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NewVirtualMachine(vm_desc.Get());
@@ -109,24 +104,25 @@ void TestNopStreamTypeOneArgument(
   nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
   ASSERT_TRUE(vm->pending_msg_list().empty());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 
 TEST(NopStreamType, one_argument_dispatch) {
+  TestResourceDescScope scope(1, 1);
   TestNopStreamTypeOneArgument(&NaiveNewVirtualMachine);
 }
 
 TEST(NopStreamType, cached_allocator_one_argument_dispatch) {
+  TestResourceDescScope scope(1, 1);
   TestNopStreamTypeOneArgument(CachedAllocatorNewVirtualMachine());
 }
 
 TEST(NopStreamType, one_argument_triger_next_instruction) {
-  InitNumProcessPerNode();
+  TestResourceDescScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NaiveNewVirtualMachine(vm_desc.Get());
@@ -138,16 +134,15 @@ TEST(NopStreamType, one_argument_triger_next_instruction) {
   auto nop1_instr_msg = NewInstruction("Nop");
   nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 
 TEST(NopStreamType, one_argument_triger_all_instructions) {
-  InitNumProcessPerNode();
+  TestResourceDescScope scope(1, 1);
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"Nop", "NewObject"});
   auto vm = NaiveNewVirtualMachine(vm_desc.Get());
@@ -159,12 +154,11 @@ TEST(NopStreamType, one_argument_triger_all_instructions) {
   auto nop1_instr_msg = NewInstruction("Nop");
   nop1_instr_msg->add_mut_operand(object_id);
   list.PushBack(nop1_instr_msg.Mutable());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 
 }  // namespace

@@ -167,7 +167,7 @@ message VariableOpConf {
   optional int64 random_seed = 9;
   optional RegularizerConf regularizer = 10;
   optional bool trainable = 11 [default = true];
-  repeated string parallel_distribution = 12;
+  repeated string nd_sbp = 12;
 }
 
 message DecodeRandomOpConf {
@@ -220,8 +220,7 @@ message DstSubsetTickOpConf {
 }
 
 message SourceTickOpConf {
-  optional string wait_in = 1;
-  required string out = 2;
+  required string out = 1;
 }
 
 message SinkTickOpConf {

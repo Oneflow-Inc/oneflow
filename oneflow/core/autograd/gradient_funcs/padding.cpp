@@ -102,9 +102,9 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdInterpState> {
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->paddings = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("padding"));
-    if (IsFloatingDataType(inputs.at(0)->dtype())) {
+    if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
       ctx->padding_value = JUST(composed_attrs.GetAttr<double>("floating_value"));
-    } else if (IsIntegralDataType(inputs.at(0)->dtype())) {
+    } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
       ctx->padding_value = JUST(composed_attrs.GetAttr<int64_t>("integral_value"));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
@@ -127,6 +127,7 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdInterpState> {
   AttrMap base_attrs_;
 };
 
+REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad1d", ConstantPadNd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad2d", ConstantPadNd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad3d", ConstantPadNd);
 

@@ -40,14 +40,24 @@ def check_unwanted_test_scripts(python_test_dir=None, allowed=None):
                     )
 
 
+def check_dir_empty(path):
+    if os.path.exists(path):
+        for dirpath, dirnames, files in os.walk(path):
+            if files:
+                raise ValueError(dirpath, "must be empty")
+
+
 check_unwanted_test_scripts(
-    python_test_dir=os.path.join(src_root, "oneflow/python/test"),
+    python_test_dir=os.path.join(src_root, "python/oneflow/test"),
     allowed=["custom_ops", "dataloader", "graph", "models", "modules", "tensor"],
 )
 
 check_unwanted_test_scripts(
     python_test_dir=os.path.join(
-        src_root, "oneflow/compatible_single_client_python/test"
+        src_root, "python/oneflow/compatible/single_client/test"
     ),
     allowed=["models", "ops", "serving", "xrt",],
 )
+
+check_dir_empty(os.path.join(src_root, "oneflow/python"))
+check_dir_empty(os.path.join(src_root, "oneflow/compatible_single_client_python"))

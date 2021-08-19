@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -56,7 +57,7 @@ struct GpuAddCaller {
     for (int32_t i = 0; i < N; ++i) {
       para.in[i] = ctx->Tensor4ArgNameAndIndex("in", i)->dptr<T>();
     }
-
+    if (n == 0) { return; }
     gpu_add<T, N>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
             n, para);
@@ -95,7 +96,7 @@ const CallFn* LookUpInRegistry(int32_t in_num) {
 }  // namespace
 
 template<typename T>
-class GpuAddNKernel : public user_op::OpKernel {
+class GpuAddNKernel : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuAddNKernel() = default;
   ~GpuAddNKernel() = default;
@@ -169,7 +170,7 @@ struct GpuAddCaller<float16, N> {
 
 }  // namespace
 
-class GpuAddNHalfKernel : public user_op::OpKernel {
+class GpuAddNHalfKernel : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuAddNHalfKernel() = default;
   ~GpuAddNHalfKernel() = default;

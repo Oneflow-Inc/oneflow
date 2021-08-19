@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/vm/soft_sync_stream_phy_instr_operand.h"
+#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
@@ -670,10 +671,23 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::OpExprInterpContext& ctx,
     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
     const std::string& instr_type_name) {
+  return LocalCallOpKernel(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr,
+                           ctx, parallel_desc_sym, instr_type_name);
+}
+
+Maybe<void> InstructionsBuilder::LocalCallOpKernel(
+    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+    const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+    const one::OpExprInterpContext& ctx,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    const std::string& instr_type_name) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx);
+      opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
+      ctx, *one::CurrentDevVmDepObjectConsumeMode());
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
@@ -930,6 +944,30 @@ const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
 }  // namespace
 
 template<typename T>
+Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
+    const T tensor, const std::shared_ptr<SpinCounter>& spin_counter,
+    std::shared_ptr<std::function<void(uint64_t)>> Callback, const std::string& modifier) {
+  const auto& CallbackWrapper = [spin_counter, Callback](uint64_t ofblob_ptr) {
+    (*Callback)(ofblob_ptr);
+    CHECK_GT(Callback.use_count(), 1);
+    // What we want to do here is dereferencing the `Callback` in scheduler thread, because we don't
+    // want any python objects destructed in scheduler thread.
+    const_cast<std::shared_ptr<std::function<void(uint64_t)>>*>(&Callback)->reset();
+    spin_counter->Decrease();
+  };
+  return AccessBlobByCallback(tensor, CallbackWrapper, modifier);
+}
+
+template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
+    const std::shared_ptr<one::MirroredTensor> tensor,
+    const std::shared_ptr<SpinCounter>& spin_counter,
+    std::shared_ptr<std::function<void(uint64_t)>> callback, const std::string& modifier);
+
+template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
+    const one::EagerMirroredTensorImpl* tensor, const std::shared_ptr<SpinCounter>& spin_counter,
+    std::shared_ptr<std::function<void(uint64_t)>> callback, const std::string& modifier);
+
+template<typename T>
 Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
                                                       const std::function<void(uint64_t)>& callback,
                                                       const std::string& modifier) {
@@ -1165,7 +1203,7 @@ Maybe<void> InstructionsBuilder::StatefulCall(
   };
 
   const auto GetDelegateBlobObject =
-      [this, &FetchDelegateBlobObject](
+      [&FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
@@ -1198,7 +1236,7 @@ Maybe<void> InstructionsBuilder::StatelessCall(
   };
 
   const auto GetDelegateBlobObject =
-      [this, &FetchDelegateBlobObject](
+      [&FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
@@ -1241,7 +1279,7 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
   };
 
   const auto GetDirectOr121BlobObject =
-      [this, &FetchDelegateBlobObject](
+      [&FetchDelegateBlobObject](
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {

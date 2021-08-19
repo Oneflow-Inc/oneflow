@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <string>
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/api/python/of_api_registry.h"
@@ -47,12 +48,11 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
       .def("complie_and_init_runtime",
            [](NNGraph& graph) { return graph.CompileAndInitRuntime().GetOrThrow(); });
 
-  m.def("RunLazyNNGraph", [](const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-                             const std::vector<std::shared_ptr<one::Tensor>>& outputs,
-                             const std::vector<std::shared_ptr<one::Tensor>>& parameters,
-                             const std::shared_ptr<NNGraph>& nn_graph) {
-    return RunLazyNNGraph(inputs, outputs, parameters, nn_graph).GetOrThrow();
-  });
+  m.def("RunLazyNNGraph",
+        [](const one::TensorTuple& inputs, const one::TensorTuple& outputs,
+           const one::TensorTuple& parameters, const std::shared_ptr<NNGraph>& nn_graph) {
+          return RunLazyNNGraph(inputs, outputs, parameters, nn_graph).GetOrThrow();
+        });
   m.def("AddTensorAsGraphLoss",
         [](const std::shared_ptr<one::Tensor>& t) { return AddTensorAsGraphLoss(t).GetOrThrow(); });
 }

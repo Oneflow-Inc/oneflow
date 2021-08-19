@@ -22,13 +22,21 @@ limitations under the License.
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 class Shape;
 class AttrMap;
 
+template<typename T>
+class Symbol;
+
+class Device;
+class ParallelDesc;
+
 namespace cfg {
 class AttrValue;
+class SbpParallel;
 }  // namespace cfg
 
 namespace one {
@@ -82,6 +90,10 @@ enum ValueType {
   kGENERATOR_REF,
   kGENERATOR_MAYBE,
   kTENSOR_INDEX,
+  kDEVICE,
+  kPARALLEL_DESC,
+  kSBP_PARALLEL,
+  kSBP_PARALLEL_LIST,
 };
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
@@ -126,12 +138,16 @@ VALUE_TYPE_OF_IMPL(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
 VALUE_TYPE_OF_IMPL(cfg::AttrValue, kATTR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<cfg::AttrValue>, kATTR_REF);
 VALUE_TYPE_OF_IMPL(AttrMap, kATTR_MAP);
-VALUE_TYPE_OF_IMPL(DataType, kDTYPE);
+VALUE_TYPE_OF_IMPL(Symbol<DType>, kDTYPE);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
 VALUE_TYPE_OF_IMPL(one::Generator, kGENERATOR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::Generator>, kGENERATOR_REF);
 VALUE_TYPE_OF_IMPL(Maybe<one::Generator>, kGENERATOR_MAYBE);
 VALUE_TYPE_OF_IMPL(TensorIndex, kTENSOR_INDEX);
+VALUE_TYPE_OF_IMPL(Symbol<Device>, kDEVICE);
+VALUE_TYPE_OF_IMPL(Symbol<ParallelDesc>, kPARALLEL_DESC);
+VALUE_TYPE_OF_IMPL(Symbol<cfg::SbpParallel>, kSBP_PARALLEL);
+VALUE_TYPE_OF_IMPL(std::vector<Symbol<cfg::SbpParallel>>, kSBP_PARALLEL_LIST);
 
 #undef VALUE_TYPE_OF_IMPL
 

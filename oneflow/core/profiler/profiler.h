@@ -22,8 +22,6 @@ namespace oneflow {
 
 namespace profiler {
 
-void ParseBoolFlagFromEnv(const std::string& env_var, bool* flag);
-
 void NameThisHostThread(const std::string& name);
 
 void RangePush(const std::string& name);

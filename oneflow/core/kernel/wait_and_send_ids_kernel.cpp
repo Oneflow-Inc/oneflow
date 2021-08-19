@@ -23,7 +23,7 @@ namespace oneflow {
 
 template<typename T>
 void WaitAndSendIdsKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CHECK(ctx.other);
   auto* status = static_cast<WaitAndSendIdsStatus*>(ctx.other);
   const auto& conf = this->op_conf().wait_and_send_ids_conf();
@@ -48,7 +48,12 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(
       status->out_num_ = conf.id_list(status->in_id_).value_size();
     }
   }
-  *BnInOp2Blob("out")->mut_dptr<T>() = conf.id_list(status->in_id_).value(status->out_idx_);
+
+  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    *BnInOp2Blob("out")->mut_dptr<T>() = 0;
+  } else {
+    *BnInOp2Blob("out")->mut_dptr<T>() = conf.id_list(status->in_id_).value(status->out_idx_);
+  }
   ++status->out_idx_;
 }
 

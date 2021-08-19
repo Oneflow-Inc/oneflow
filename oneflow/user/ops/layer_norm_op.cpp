@@ -68,7 +68,6 @@ REGISTER_USER_OP("layer_norm")
       param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                                  x.shape().dim_vec().cbegin() + begin_params_axis,
                                  x.shape().dim_vec().cend());
-      if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
       const Shape param_shape(param_shape_dim_vec);
       if (center) {
         const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
@@ -214,7 +213,6 @@ REGISTER_USER_OP("layer_norm_param_grad")
       param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                                  dy.shape().dim_vec().cbegin() + begin_params_axis,
                                  dy.shape().dim_vec().cend());
-      if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
       const Shape param_shape(param_shape_dim_vec);
       if (has_beta_diff) {
         user_op::TensorDesc* beta_diff = ctx->OutputTensorDesc("beta_diff", 0);
