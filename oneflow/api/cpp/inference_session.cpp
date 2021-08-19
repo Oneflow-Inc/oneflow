@@ -367,7 +367,7 @@ Maybe<void> InferenceSession::RunPushJobs(std::map<std::string, std::shared_ptr<
     std::shared_ptr<Tensor> input_tensor = input_tensors[input_name];
 
     auto push_fn = [&input_tensor](OfBlob* ofblob){
-      ofblob->CopyShapeFrom(input_tensor->shape(), input_tensor->num_axes());
+      ofblob->CopyShapeFrom(input_tensor->shape().dim_vec().data(), input_tensor->num_axes());
       int64_t num_elems = input_tensor->num_elems();
       DataType dtype = input_tensor->dtype();
 
@@ -391,13 +391,12 @@ Maybe<void> InferenceSession::RunPullJobs(std::map<std::string, std::shared_ptr<
       std::string pull_job_name = pair.second;
       std::promise<std::shared_ptr<Tensor>> pull_job_promise;
       auto pull_fn = [&pull_job_promise](OfBlob* ofblob) {
-        int num_axes = ofblob->NumAxes();
         DataType dtype = ofblob->data_type();
-        std::vector<int64_t> shapes(num_axes);
-        ofblob->CopyShapeTo(shapes.data(), num_axes);
+        Shape shape = ofblob->blob().static_shape();
+        int64_t num_elems = shape->elem_cnt();
 
-        std::shared_ptr<Tensor> tensor = std::make_shared<Tensor>(shapes, dtype);
-        int64_t num_elems = tensor->num_elems();
+        std::shared_ptr<Tensor> tensor = std::make_shared<Tensor>(shape, dtype);
+
         // support type traits
         if (dtype == kFloat) {
           ofblob->AutoMemCopyTo((float*)tensor->mutable_data(), num_elems);

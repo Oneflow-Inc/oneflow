@@ -20,38 +20,32 @@ limitations under the License.
 #include <stdint.h>
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 
 class Tensor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Tensor);
-  explicit Tensor();
+  explicit Tensor(Shape shape, DataType dtype);
   ~Tensor();
 
   char* mutable_data() { return this->data_; }
   const char* data() const { return this->data_; }
-  const int64_t* shape() const { return this->shape_.data(); }
-  int64_t num_axes() const { return this->shape_.size(); }
-  int64_t num_elems() const {
-    int64_t elems = 1;
-    for(auto dim : this->shape_) {
-      elems *= dim;
-    }
-    return elems;
-  }
+  int64_t num_axes() const { return this->shape_.NumAxes(); }
+  int64_t num_elems() const { return this->shape_.elem_cnt();}
+  Shape shape() const { return this->shape_; }
   DataType dtype() const { return this->dtype_; }
-  bool is_mutable() { return this->is_mutable_; }
   
-  void fromBlob(char* blob_data, 
-                const std::vector<int64_t>& shape, 
-                DataType dtype,
-                bool zero_copy);
+  void CopyFrom(char* blob_data);
+  
+  static std::shared_ptr<Tensor> fromBlob(char* blob_data, 
+                                          Shape shape, 
+                                          DataType dtype);
 
  private:
-  bool is_mutable_;
   char* data_;
-  std::vector<int64_t> shape_;
+  Shape shape_;
   DataType dtype_;
 };
 

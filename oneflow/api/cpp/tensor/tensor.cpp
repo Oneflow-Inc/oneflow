@@ -18,33 +18,29 @@ limitations under the License.
 
 namespace oneflow {
 
-Tensor::Tensor() {}
-
-Tensor::~Tensor() { 
-  if(this->is_mutable_) {
-    delete this->data_;
-  }
+Tensor::Tensor(Shape shape, DataType dtype)
+  : shape_(shape), dtype_(dtype){
+  int64_t num_elems = shape.elem_cnt();
+  size_t num_bytes = DType::Get(dtype).GetOrThrow()->bytes().GetOrThrow();
+  this->data_ = new char[num_items*num_bytes];
 }
 
-void Tensor::fromBlob(char* blob_data, 
-                      const std::vector<int64_t>& shape, 
-                      DataType dtype,
-                      bool zero_copy) {
-  this->shape_.assign(std::begin(shape), std::end(shape));
-  this->dtype_ = dtype;
+Tensor::~Tensor() { 
+  delete this->data_;
+}
 
-  int64_t num_items = 1;
-  for(int64_t dim : shape) {
-    num_items *= dim;
-  }
-  size_t num_bytes = DType::Get().GetOrThrow()->bytes().GetOrThrow();
+Tensor::CopyFrom(const char* data) {
+  int64_t num_elems = this->shape_.elem_cnt();
+  size_t num_bytes = DType::Get(this->dtype_).GetOrThrow()->bytes().GetOrThrow();
+  std::copy(data, data + num_elems * num_bytes, this->data_);
+}
 
-  if(zero_copy) {
-    this->data_ = blob_data;
-  } else {
-    this->data_ = (char*) malloc(num_items*num_bytes);
-    std::copy(blob_data, blob_data + num_items*num_bytes, this->data_);
-  }
+static std::shared_ptr<Tensor> Tensor::fromBlob(char* blob_data, 
+                                                Shape shape, 
+                                                DataType dtype) {
+  std::shared_ptr<Tensor> tensor = std::make_shared<Tensor>(shape, dtype);
+  tensor->CopyFrom(blob_data);
+  return tensor;
 }
 
 }  // namespace oneflow
