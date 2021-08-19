@@ -22,18 +22,18 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct ExpandInterpState : public OpExprInterpState {
+struct ExpandCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> out_shape;
   std::vector<int32_t> stride;
   bool requires_grad;
 };
 
-class Expand : public OpExprGradFunction<ExpandInterpState> {
+class Expand : public OpExprGradFunction<ExpandCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(ExpandInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override;
-  Maybe<void> Apply(const ExpandInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Capture(ExpandCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Apply(const ExpandCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -52,7 +52,7 @@ Maybe<void> Expand::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Expand::Capture(ExpandInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Expand::Capture(ExpandCaptureState* ctx, const TensorTuple& inputs,
                             const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -63,7 +63,7 @@ Maybe<void> Expand::Capture(ExpandInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Expand::Apply(const ExpandInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Expand::Apply(const ExpandCaptureState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
