@@ -14,10 +14,92 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from oneflow._oneflow_internal.autograd import NoGradGuard
+from oneflow._oneflow_internal.autograd import AutoGradMode
 
 
-class no_grad(NoGradGuard):
+class inference_mode(AutoGradMode):
+    r"""
+    Context-manager that enables or disables inference mode
+
+    InferenceMode is a new context manager analogous to no_grad to be used when you arecertain
+    your operations will have no interactions with autograd (e.g., model training). Code run
+    under this mode gets better performance by disabling view tracking and version counter bumps.
+
+    This context manager is thread local; it will not affect computation in other threads.
+
+    Also functions as a decorator. (Make sure to instantiate with parenthesis.)
+
+    Args:
+        mode (bool): Flag whether to enable or disable inference mode. (default: True)
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.ones(2, 3, requires_grad=True)
+        >>> with flow.inference_mode():
+        ...     y = x * x
+        >>> y.requires_grad
+        False
+        >>> @flow.inference_mode()
+        ... def no_grad_func(x):
+        ...     return x * x
+        >>> y = no_grad_func(x)
+        >>> y.requires_grad
+        False
+    """
+
+    def __init__(self, mode=True):
+        self.infer_mode = mode
+        super().__init__(not mode)
+
+    def __call__(self, func):
+        def warpper(*args, **kwargs):
+            with AutoGradMode(not self.infer_mode):
+                return func(*args, **kwargs)
+
+        return warpper
+
+
+class grad_enable(AutoGradMode):
+    r"""
+    Context-manager that enabled gradient calculation.
+
+    Enables gradient calculation, if it has been disabled via no_grad.
+
+    This context manager is thread local; it will not affect computation in other threads.
+
+    Also functions as a decorator. (Make sure to instantiate with parenthesis.)
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.ones(2, 3, requires_grad=True)
+        >>> with flow.no_grad():
+        ...     with flow.grad_enable():
+        ...         y = x * x
+        >>> y.requires_grad
+        True
+        >>> @flow.grad_enable()
+        ... def no_grad_func(x):
+        ...     return x * x
+        >>> with flow.no_grad():
+        ...     y = no_grad_func(x)
+        >>> y.requires_grad
+        True
+    """
+
+    def __init__(self):
+        super().__init__(True)
+
+    def __call__(self, func):
+        def warpper(*args, **kwargs):
+            with AutoGradMode(True):
+                return func(*args, **kwargs)
+
+        return warpper
+
+
+class no_grad(AutoGradMode):
     r"""
     Context-manager that disabled gradient calculation.
 
@@ -48,9 +130,12 @@ class no_grad(NoGradGuard):
         False
     """
 
+    def __init__(self):
+        super().__init__(False)
+
     def __call__(self, func):
         def warpper(*args, **kwargs):
-            with NoGradGuard():
+            with AutoGradMode(False):
                 return func(*args, **kwargs)
 
         return warpper

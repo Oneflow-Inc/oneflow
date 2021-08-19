@@ -26,12 +26,12 @@ namespace oneflow {
 namespace autograd {
 
 ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
-  py::class_<NoGradGuard, std::shared_ptr<NoGradGuard>>(m, "NoGradGuard")
-      .def(py::init([]() { return std::make_shared<NoGradGuard>(); }))
-      .def("__enter__", [](const NoGradGuard& no_grad_obj) {})
-      .def("__exit__", [](const NoGradGuard& no_grad_obj, const py::object& type,
+  py::class_<AutoGradMode, std::shared_ptr<AutoGradMode>>(m, "AutoGradMode")
+      .def(py::init([](bool mode) { return std::make_shared<AutoGradMode>(mode); }))
+      .def("__enter__", [](const AutoGradMode& no_grad_obj) {})
+      .def("__exit__", [](const AutoGradMode& no_grad_obj, const py::object& type,
                           const py::object& value, const py::object& traceback) {});
-  m.def("autograd_mode", &GradMode::is_enabled);
+  m.def("grad_mode", &GradMode::is_enabled);
 }
 
 }  // namespace autograd
