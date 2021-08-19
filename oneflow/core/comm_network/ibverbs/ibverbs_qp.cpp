@@ -33,50 +33,8 @@ namespace {
 
 constexpr uint32_t kDefaultQueueDepth = 1024;
 constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
-//constexpr uint32_t kDefaultMessageSize = 512; // 512 byte
 
 }  // namespace
-
-void MessagePool::RegisterMessagePool(){
-      ActorMsg msg;
-      size_t ActorMsgSize = sizeof(msg);
-    //  std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
-      size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
-      char * addr =(char*) malloc(RegisterMemorySize );
-      ibv_mr *   mr =ibv::wrapper.ibv_reg_mr_wrap(
-          pd_,  addr, RegisterMemorySize,
-          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
-      CHECK(mr);
-      for(size_t i = 0;  i < num_of_message_ ; i++){
-          char * split_addr =addr + ActorMsgSize * i ; //这里切割地址没有问题
-          ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
-          message_buf_.push_front(msg_mr);
-      }
-  //     std::cout<<"In RegisterMessagePoo, the size of message_buf_:" << message_buf_.size() << std::endl;
-    }
-
-void MessagePool::PutMessage(ActorMsgMR *msg_mr) {
-      std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      message_buf_.push_front(msg_mr);
-     // std::cout<<"In PutMessage, the size of message_buf_:" << message_buf_.size() << std::endl;
-}
-
-ActorMsgMR *  MessagePool::GetMessage(){
-  if(isEmpty() == false)  {
-    return GetMessageFromBuf();
-  } else {
-      RegisterMessagePool();
-      return GetMessageFromBuf();
-  }
-}
-
-ActorMsgMR * MessagePool::GetMessageFromBuf() {
-  std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
-  ActorMsgMR * msg_mr = message_buf_.front();
-  message_buf_.pop_front();
-  //std::cout<<"In GetMessageFromBuf, the size of message_buf_:" << message_buf_.size() << std::endl;
-  return msg_mr;
-}
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq,
@@ -84,8 +42,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
                      std::shared_ptr<MessagePool> send_msg_buf) {
   // ctx_, pd_
   ctx_ = ctx;
- // pd_.reset(pd);
- pd_ = pd ;
+  pd_ = pd ;
   port_num_ = port_num;
   // qp_
   ibv_device_attr device_attr{};
@@ -109,50 +66,12 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK(qp_);
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
-  recv_msg_buf_ = recv_msg_buf; //this is no problem 
-  send_msg_buf_ = send_msg_buf; //this is no problem 
-}
-
-IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
-                     ibv_cq* recv_cq) {
-  // ctx_, pd_
-  ctx_ = ctx;
- // pd_.reset(pd);
-  pd_ = pd; 
-  port_num_ = port_num;
-  // qp_
-  ibv_device_attr device_attr{};
-  CHECK_EQ(ibv::wrapper.ibv_query_device(ctx, &device_attr), 0);
-  const int64_t user_queue_depth =
-      ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_QUEUE_DEPTH", kDefaultQueueDepth);
-  const uint32_t queue_depth = std::min<uint32_t>(device_attr.max_qp_wr, user_queue_depth);
-  ibv_qp_init_attr qp_init_attr{};
-  qp_init_attr.qp_context = nullptr;
-  qp_init_attr.send_cq = send_cq;
-  qp_init_attr.recv_cq = recv_cq;
-  qp_init_attr.srq = nullptr;
-  qp_init_attr.cap.max_send_wr = queue_depth;
-  qp_init_attr.cap.max_recv_wr = queue_depth;
-  qp_init_attr.cap.max_send_sge = 1;
-  qp_init_attr.cap.max_recv_sge = 1;
-  qp_init_attr.cap.max_inline_data = 0;
-  qp_init_attr.qp_type = IBV_QPT_RC;
-  qp_init_attr.sq_sig_all = 1;
-  qp_ = ibv::wrapper.ibv_create_qp(pd, &qp_init_attr);
-  CHECK(qp_);
-  num_outstanding_send_wr_ = 0;
-  max_outstanding_send_wr_ = queue_depth;
+  recv_msg_buf_ = recv_msg_buf; 
+  send_msg_buf_ = send_msg_buf; 
 }
 
 IBVerbsQP::~IBVerbsQP() {
   CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
-  // while (send_msg_buf_.empty() == false) {
-  //   delete send_msg_buf_.front();
-  //   send_msg_buf_.pop();
-  // }
-  // while(recv_msg_buf_.em)
-  //todo lambda:这里要加上recv_msg_buf_和sendMsgbuf_的析构
- // for (ActorMsgMR* msg_mr : recv_msg_buf_) { delete msg_mr; }
 }
 
 void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
@@ -267,7 +186,6 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 }
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
- // std::cout<<"In PostSendRequest,the msg.comm_net_sequence_token:" << msg.comm_net_sequence_number() << std::endl;
   ActorMsgMR * msg_mr = send_msg_buf_->GetMessage();
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();

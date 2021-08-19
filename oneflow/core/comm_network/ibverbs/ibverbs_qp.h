@@ -36,26 +36,23 @@ class ActorMsgMR final {
   ActorMsgMR() = delete;
   ActorMsgMR(ibv_mr *   mr, char * addr, size_t  size):size_(size){
     msg_ = reinterpret_cast<ActorMsg*>(addr); //这里没有问题
-   // mr_.reset(mr);
     mr_ = mr;
   }
   ~ActorMsgMR() {
- //   mr_.reset();
+    delete msg_;
   }
 
-  char * addr() { return reinterpret_cast<char *>(msg_) ; } //这个是没错的
-  uint32_t size() {return size_ ;}
+  char * addr() { return reinterpret_cast<char *>(msg_) ; }
   uint32_t lkey() { return mr_->lkey ; }
-  ActorMsg  msg()  { return *msg_;} //这个函数也没问题
-  //这个函数也没问题
+  ActorMsg  msg()  { return *msg_;}
   void set_msg(const ActorMsg& val) {
-  //  std::cout<<"in set_msg of ActorMsgMR, the val comm_net_sequence_number:" << val.comm_net_sequence_number() << std::endl;
     *msg_ = val ;
   }
-
+  size_t size() {
+    return size_; 
+  }
  private:
     size_t size_;
-   // std::shared_ptr<ibv_mr> mr_;
     ibv_mr * mr_;
     ActorMsg *  msg_;
 };
@@ -73,56 +70,64 @@ class MessagePool final {
   public:
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
     MessagePool() = delete; //todo:这里可能要修改
-    //析构函数
     ~MessagePool() {
-      // while(message_buf_.empty() == false) {
-      //   delete message_buf_.front();
-      //   message_buf_.pop_front();
-      // }
+       while(message_buf_.empty() == false) {
+        delete message_buf_.front();
+         message_buf_.pop_front();
+       }
     }//todo:这里可能要修改
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
-   //   pd_.reset(pd);
       RegisterMessagePool();
     }
-    //以后这里可以切割内存，注册一块大的，再不断的分割
-    void RegisterMessagePool();
-    // void RegisterMessagePool(){
-    //   ActorMsg msg;
-    //   size_t ActorMsgSize = sizeof(msg);
-    //   std::cout<<"ActorMsgSize:"<<ActorMsgSize << std::endl;
-    //   size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
-    //   char * addr =(char*) malloc(RegisterMemorySize );
-    //   ibv_mr *   mr =ibv::wrapper.ibv_reg_mr_wrap(
-    //       pd_.get(),  addr, RegisterMemorySize,
-    //       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
-    //   CHECK(mr);
-    //   for(size_t i = 0;  i < num_of_message_ ; i++){
-    //       char * split_addr =addr + ActorMsgSize * i ; //这里切割地址没有问题
-    //       ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
-    //       message_buf_.push_front(msg_mr);
-    //   }
-    // }
-    ActorMsgMR *  GetMessage();
-    ActorMsgMR * GetMessageFromBuf();
-    void PutMessage(ActorMsgMR * msg_mr);
-
-    std::deque<ActorMsgMR*> GetMessageBuf() {
-      return message_buf_;
+    void RegisterMessagePool() {
+      ActorMsg msg;
+      size_t ActorMsgSize = sizeof(msg);
+      size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
+      char * addr =(char*) malloc(RegisterMemorySize );
+      ibv_mr *   mr =ibv::wrapper.ibv_reg_mr_wrap(
+          pd_,  addr, RegisterMemorySize,
+          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+      CHECK(mr);
+      for(size_t i = 0;  i < num_of_message_ ; i++){
+          char * split_addr =addr + ActorMsgSize * i ; 
+          ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
+          message_buf_.push_front(msg_mr);
+      }
     }
 
-    bool isEmpty() {
+    ActorMsgMR *  GetMessage() {
+    if(isEmpty() == false)  {
+        return GetMessageFromBuf();
+    } else {
+        RegisterMessagePool();
+        return GetMessageFromBuf();
+    }
+  }
+
+  ActorMsgMR * GetMessageFromBuf() {
+      std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      ActorMsgMR * msg_mr = message_buf_.front();
+      message_buf_.pop_front();
+      return msg_mr;
+  }
+
+  void PutMessage(ActorMsgMR * msg_mr) {
+      std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      message_buf_.push_front(msg_mr);
+  }
+
+  bool isEmpty() {
       std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
       return message_buf_.empty() == true ;
-    }
+  }
 
-    size_t size() {
-      std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      return message_buf_.size();
-    }
+  size_t size() {
+    std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
+    return message_buf_.size();
+  }
 
   private:
-  //  std::shared_ptr<ibv_pd> pd_;
     ibv_pd * pd_;
     size_t  num_of_message_;
     std::mutex message_buf_mutex_;
@@ -135,7 +140,6 @@ class IBVerbsQP final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
   IBVerbsQP() = delete;
-  IBVerbsQP(ibv_context*, ibv_pd*, uint8_t port_num, ibv_cq* send_cq, ibv_cq* recv_cq);
   IBVerbsQP(ibv_context *, ibv_pd*, uint8_t port_num, ibv_cq * send_cq, ibv_cq* recv_cq,
             std::shared_ptr<MessagePool> recv_msg_buf, std::shared_ptr<MessagePool> send_msg_buf);
   ~IBVerbsQP();
@@ -162,7 +166,6 @@ class IBVerbsQP final {
 
   ibv_context* ctx_;
   ibv_pd* pd_;
- // std::shared_ptr<ibv_pd> pd_;
   uint8_t port_num_;
   ibv_qp* qp_;
 
