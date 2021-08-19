@@ -70,8 +70,8 @@ class InferenceSession {
   std::shared_ptr<JobConfProto> GetJobConf(std::string job_name);
   
   Maybe<void> RunJob(std::shared_ptr<CPPJobInstance> job_inst);
-  Maybe<void> RunPushJobs(std::map<std::string, Tensor>& input_tensors);
-  Maybe<void> RunPullJobs(std::map<std::string, Tensor>& output_tensors);
+  Maybe<void> RunPushJobs(std::map<std::string, std::shared_ptr<Tensor>>& input_tensors);
+  Maybe<void> RunPullJobs(std::map<std::string, std::shared_ptr<Tensor>>& output_tensors);
   Maybe<void> RunLoadCheckpointJob();
 
   void WaitForAllJobsFinished();

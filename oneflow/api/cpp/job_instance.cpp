@@ -64,7 +64,7 @@ void CPPJobInstance::AddPostFinishCallback(std::function<void(JobInstance*)> cb)
 
 std::shared_ptr<CPPJobInstance> MakeUserJobInstance(
   std::string job_name, 
-  std::function<void()> finish_cb) {
+  std::function<void()> finish_cb = std::function<void()>()) {
   return std::make_shared<CPPJobInstance>(job_name, "", "",
     std::function<void(OfBlob*)>(), std::function<void(OfBlob*)>(),
     finish_cb);
@@ -74,7 +74,7 @@ std::shared_ptr<CPPJobInstance> MakePullJobInstance(
   std::string job_name, 
   std::string op_name,
   std::function<void(OfBlob*)> pull_cb,
-  std::function<void()> finish_cb) {
+  std::function<void()> finish_cb = std::function<void()>()) {
   return std::make_shared<CPPJobInstance>(
       job_name, op_name, "", std::function<void(OfBlob*)>(), pull_cb, finish_cb);
 }
@@ -83,7 +83,7 @@ std::shared_ptr<CPPJobInstance> MakePushJobInstance(
   std::string job_name, 
   std::string op_name,
   std::function<void(OfBlob*)> push_cb,
-  std::function<void()> finish_cb) {
+  std::function<void()> finish_cb = std::function<void()>()) {
   return std::make_shared<CPPJobInstance>(
       job_name, "", op_name, push_cb, std::function<void(OfBlob*)>(), finish_cb);
 }
@@ -92,7 +92,7 @@ std::shared_ptr<CPPJobInstance> MakeArgPassJobInstance(
   std::string job_name,
   std::string src_op_name;
   std::string dst_op_name;
-  std::function<void()> finish_cb) {
+  std::function<void()> finish_cb = std::function<void()>()) {
   return std::make_shared<CPPJobInstance>(job_name, src_op_name, dst_op_name,
     std::function<void(OfBlob*)>(), std::function<void(OfBlob*)>(),
     finish_cb);

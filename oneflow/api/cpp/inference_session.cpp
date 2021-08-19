@@ -18,14 +18,16 @@ limitations under the License.
 #include "oneflow/core/persistence/posix/posix_file_system.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/register/ofblob.h"
+
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/session/session.h"
-#include "oneflow/api/python/job_build/job_build_and_infer_api.h"
+#include "oneflow/api/python/job_build/job_build_and_infer.h"
+
 #include "oneflow/api/cpp/env/env_util.h"
 #include "oneflow/api/cpp/session/session_util.h"
 #include "oneflow/api/cpp/framework/framework_util.h"
+#include "oneflow/api/cpp/tensor/tensor.h"
 #include "oneflow/api/cpp/job_instance.h"
 #include "oneflow/api/cpp/inference_session.h"
 
@@ -257,13 +259,13 @@ Maybe<void> InferenceSession::LoadModel_(std::string saved_model_dir,
   return Maybe<void>::Ok();
 }
 
-std::map<std::string, Tensor> InferenceSession::Run(std::string job_name,
-                                                    std::map<std::string, Tensor>& input_tensors) {
+std::map<std::string, std::shared_ptr<Tensor>> InferenceSession::Run(std::string job_name,
+                                                    std::map<std::string, std::shared_ptr<Tensor>>& input_tensors) {
   this->CheckStatus(SessionStatus::RUNNING).GetOrThrow();
   this->RunPushJobs(input_tensors).GetOrThrow();
   auto job_inst = MakeUserJobInstance(job_name);
   this->RunJob(job_inst).GetOrThrow();
-  std::map<std::string, Tensor>> output_tensors;
+  std::map<std::string, std::shared_ptr<Tensor>>> output_tensors;
   this->RunPullJobs(output_tensors).GetOrThrow();
   return output_tensors;
 }
@@ -353,7 +355,7 @@ Maybe<void> InferenceSession::RunJob(std::shared_ptr<CPPJobInstance> job_inst) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferenceSession::RunPushJobs(std::map<std::string, Tensor>& input_tensors) {
+Maybe<void> InferenceSession::RunPushJobs(std::map<std::string, std::shared_ptr<Tensor>>& input_tensors) {
   for (auto& pair : this->inter_user_job_info_->input_or_var_op_name2push_job_name()) {
     std::string input_name = pair.first;
     std::string push_job_name = pair.second;
@@ -362,10 +364,20 @@ Maybe<void> InferenceSession::RunPushJobs(std::map<std::string, Tensor>& input_t
         << Error::ValueError("input \"" + input_name + "\" is absent");
     }
 
-    Tensor input_tensor = input_tensors[input_name];
+    std::shared_ptr<Tensor> input_tensor = input_tensors[input_name];
 
-    auto push_fn = [&input_tensor](OfBlob*){
-      // TODO
+    auto push_fn = [&input_tensor](OfBlob* ofblob){
+      ofblob->CopyShapeFrom(input_tensor->shape(), input_tensor->num_axes());
+      int64_t num_elems = input_tensor->num_elems();
+      DataType dtype = input_tensor->dtype();
+
+      // support type traits
+      if (dtype == kFloat) {
+        ofblob->AutoMemCopyFrom((const float*) input_tensor->data(), num_elems);
+      }
+      else if (dtype == kInt32) {
+        ofblob->AutoMemCopyFrom((const int*) input_tensor->data(), num_elems);
+      }
     };
     auto push_job_inst = MakePushJobInstance(push_job_name, input_name, push_fn);
     JUST(this->RunJob(push_job_inst));
@@ -373,13 +385,27 @@ Maybe<void> InferenceSession::RunPushJobs(std::map<std::string, Tensor>& input_t
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferenceSession::RunPullJobs(std::map<std::string, Tensor>& output_tensors) {
+Maybe<void> InferenceSession::RunPullJobs(std::map<std::string, std::shared_ptr<Tensor>>& output_tensors) {
   for (auto& pair : this->inter_user_job_info_->output_or_var_op_name2pull_job_name()) {
       std::string output_name = pair.first;
       std::string pull_job_name = pair.second;
-      std::promise<Tensor> pull_job_promise;
-      auto pull_fn = [&pull_job_promise](OfBlob*) {
-        // TODO
+      std::promise<std::shared_ptr<Tensor>> pull_job_promise;
+      auto pull_fn = [&pull_job_promise](OfBlob* ofblob) {
+        int num_axes = ofblob->NumAxes();
+        DataType dtype = ofblob->data_type();
+        std::vector<int64_t> shapes(num_axes);
+        ofblob->CopyShapeTo(shapes.data(), num_axes);
+
+        std::shared_ptr<Tensor> tensor = std::make_shared<Tensor>(shapes, dtype);
+        int64_t num_elems = tensor->num_elems();
+        // support type traits
+        if (dtype == kFloat) {
+          ofblob->AutoMemCopyTo((float*)tensor->mutable_data(), num_elems);
+        }
+        else if (dtype == kInt32) {
+          ofblob->AutoMemCopyTo((int*)tensor->mutable_data(), num_elems);
+        }
+        pull_job_promise.set_value(tensor);
       };
       auto pull_job_inst = MakePullJobInstance(pull_job_name, output_name, pull_fn);
       JUST(this->RunJob(pull_job_inst));
@@ -392,13 +418,15 @@ Maybe<void> InferenceSession::RunLoadCheckpointJob() {
   CHECK_OR_RETURN(!this->checkpoint_path_.empty()) 
     << Error::ValueError(std::string("checkpoint path not set")); 
 
-  auto copy_model_load_path = [](OfBlob* ofblob) {
-    // TODO
+  auto copy_model_load_path = [this](OfBlob* ofblob) -> void {
+    int64_t shape = new int64_t[1]{this->checkpoint_path_.size()};
+    ofblob->CopyShapeFrom(shape, 1);
+    ofblob->AutoMemCopyFrom(this->checkpoint_path_.data(), this->checkpoint_path_.size());
+    delete[] shape;
   };
 
   std::string load_job_name = this->inter_user_job_info_->global_model_load_job_name();
-  auto load_checkpoint_job_inst = MakeUserJobInstance(load_job_name);
-  load_checkpoint_job_inst->SetPushCb(copy_model_load_path);
+  auto load_checkpoint_job_inst = MakePushJobInstance(load_job_name, "", copy_model_load_path);
   JUST(this->RunJob(load_checkpoint_job_inst));
   return Maybe<void>::Ok();
 }
