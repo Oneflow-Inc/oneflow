@@ -136,41 +136,6 @@ class TestTensor(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n1d()
-    def test_creating_consistent_tensor(test_case):
-        placement = flow.placement("cuda", {0: 0})
-        sbp = flow.sbp.broadcast
-        shape = (2, 3)
-
-        # Shape -> ConsistentTensor
-        x = flow.Tensor(*shape, placement=placement, sbp=sbp)
-        test_case.assertTrue(x.is_consistent)
-
-        # LocalTensor -> ConsistentTensor
-        x = flow.Tensor(*shape, device="cpu")
-        test_case.assertTrue(x.is_local)
-        y = flow.Tensor(x, placement=placement, sbp=sbp)
-        test_case.assertTrue(y.is_consistent)
-
-        # ConsistentTensor -> ConsistentTensor
-        z = flow.Tensor(y, placement=placement, sbp=sbp)
-        test_case.assertTrue(z.is_consistent)
-
-        # TODO: ndarray -> ConsistentTensor
-
-    @flow.unittest.skip_unless_1n1d()
-    def test_construct_local_from_consistent_tensor(test_case):
-        placement = flow.placement("cuda", {0: 0})
-        sbp = flow.sbp.broadcast
-        shape = (2, 3)
-        x = flow.Tensor(*shape, placement=placement, sbp=sbp)
-        test_case.assertTrue(x.is_consistent)
-        # ConsistentTensor -> LocalTensor
-        y = flow.Tensor(x)
-        test_case.assertTrue(y.is_local)
-        y = flow.Tensor(x, device="cuda")
-        test_case.assertTrue(y.is_local)
-
-    @flow.unittest.skip_unless_1n1d()
     def test_tensor_with_single_int(test_case):
         x = flow.Tensor(5)
         test_case.assertEqual(x.shape, flow.Size([5]))
