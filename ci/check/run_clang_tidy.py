@@ -102,13 +102,14 @@ if __name__ == "__main__":
     if not os.path.exists(args.clang_tidy_binary):
         downloaded = download(dry=True)
         if downloaded:
-            args.clang_format_binary = downloaded
+            args.clang_tidy_binary = downloaded
         else:
-            args.clang_format_binary = download()
+            args.clang_tidy_binary = download()
     assert subprocess.call(f"chmod +x {args.source_dir}/ci/check/clang_tidy_diff.py", shell=True) == 0
     promises = [
         run_command(
-            f"git diff -U0 master | {args.source_dir}/ci/check/clang_tidy_diff.py -clang-tidy-binary {args.clang_format_binary} -path {args.build_dir} -quiet -j $(nproc) -p1"
+            f"cd .. && git diff -U0 master | {args.source_dir}/ci/check/clang_tidy_diff.py -clang-tidy-binary {args.build_dir}/{args.clang_tidy_binary} -path {args.build_dir} -quiet -j $(nproc) -p1"
         )
     ]
     loop.run_until_complete(asyncio.gather(*promises))
+
