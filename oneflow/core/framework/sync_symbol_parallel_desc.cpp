@@ -69,7 +69,7 @@ struct FlatParallelConf {
 
 Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> parallel_desc) {
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncSymbolParallelDesc));
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncSymbolParallelDesc));
   const auto& recv_buffer = std::make_shared<FlatParallelConf>();
   NaiveAsyncTransportCtx ctx(
       transport_token,

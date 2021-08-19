@@ -30,7 +30,6 @@ namespace oneflow {
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
   JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds));
-  JUST(ctx.transport_token().TryReleaseCtrlTransportTokenLock());
   return Maybe<void>::Ok();
 }
 
@@ -86,14 +85,32 @@ Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const TransportToke
   return AccessToOtherRanks<SendOrRecv, Prepare>(ForEachRank, token, ctx);
 }
 
+namespace {
+
+Maybe<std::shared_ptr<TransportToken>> RawGetTransportToken(int64_t src_rank, int64_t dst_rank,
+                                                            const TransportToken& token) {
+  JUST(token.CheckThreadConsistentId());
+  JUST(token.CheckRankGroupLevel());
+  return std::make_shared<TransportToken>(token);
+}
+static constexpr auto* GetTransportToken = DECORATE(&RawGetTransportToken, ThreadLocal);
+
+Maybe<TransportToken> GetAutoIncrementalTransportToken(int64_t src_rank, int64_t dst_rank,
+                                                       const TransportToken& token) {
+  return ++**JUST(GetTransportToken(src_rank, dst_rank, token));
+}
+
+}  // namespace
+
 Maybe<void> Send(const TransportToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
+  CHECK_EQ_OR_RETURN(token.seq_id(), 0);
 #ifdef __linux__
+  int64_t src_rank = GlobalProcessCtx::Rank();
+  int64_t dst_rank = rank;
+  TransportToken send_token = JUST(GetAutoIncrementalTransportToken(src_rank, dst_rank, token));
   auto* transport = JUST(GlobalMaybe<Transport>());
-  TransportToken transport_token(token);
-  JUST(transport_token.set_src_rank(GlobalProcessCtx::Rank()));
-  JUST(transport_token.set_dst_rank(rank));
-  transport->Send(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
+  transport->Send(static_cast<uint64_t>(send_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 #else
   UNIMPLEMENTED();
@@ -103,12 +120,13 @@ Maybe<void> Send(const TransportToken& token, int64_t rank, void* buffer, std::s
 
 Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
+  CHECK_EQ_OR_RETURN(token.seq_id(), 0);
 #ifdef __linux__
+  int64_t src_rank = rank;
+  int64_t dst_rank = GlobalProcessCtx::Rank();
+  TransportToken recv_token = JUST(GetAutoIncrementalTransportToken(src_rank, dst_rank, token));
   auto* transport = JUST(GlobalMaybe<Transport>());
-  TransportToken transport_token(token);
-  JUST(transport_token.set_src_rank(rank));
-  JUST(transport_token.set_dst_rank(GlobalProcessCtx::Rank()));
-  transport->Receive(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
+  transport->Receive(static_cast<uint64_t>(recv_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 #else
   UNIMPLEMENTED();

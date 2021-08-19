@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/framework/tensor_consistent_id.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/functional/functional.h"
@@ -322,7 +323,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
         SymbolOf(tensor_meta), device, parallel_id, input_mirrored_tensor->requires_grad(),
         !input_mirrored_tensor->requires_grad()));
-    const auto& transport_token = JUST(TransportToken::NewMetaTransportToken());
+    const auto& transport_token = JUST(NewTensorConsistentId());
     JUST(consistent_tensor_impl->set_transport_token(transport_token));
     consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
     JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
