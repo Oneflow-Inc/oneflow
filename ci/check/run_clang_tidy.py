@@ -48,7 +48,6 @@ async def run_command(cmd=None, dry=False, name=None):
         cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
     )
     l = lambda x: split_and_print(f"[{name}]" if name else "", x)
-    # l = lambda x: x
     await asyncio.gather(
         handle_stream(process.stdout, l), handle_stream(process.stderr, l),
     )
@@ -63,7 +62,7 @@ def download(build_dir, dry=False):
         else "https://oneflow-static.oss-cn-beijing.aliyuncs.com/bin/clang-tidy/linux-x86_64/clang-tidy.AppImage",
         "https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py",
     ]
-    dst_dir = f"{build_dir}/.cache/bin"
+    dst_dir = f"{build_dir}/cache/bin"
     dst = [f"{dst_dir}/clang-tidy", f"{dst_dir}/clang-tidy-diff.py"]
     if dry:
         if os.path.isfile(dst[0]) and os.path.isfile(dst[1]):
