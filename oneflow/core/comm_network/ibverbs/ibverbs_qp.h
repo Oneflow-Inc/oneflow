@@ -40,7 +40,7 @@ class ActorMsgMR final {
   }
   ~ActorMsgMR() {
     delete msg_;
-    delete mr_;
+    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0); 
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
