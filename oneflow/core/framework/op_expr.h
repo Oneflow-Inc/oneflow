@@ -197,6 +197,26 @@ class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
  private:
   CastFromConsistentOpExpr(const std::string& op_name);
 };
+
+class ConsistentToConsistentOpExpr final : public CastConsistentOpExpr {
+ public:
+  ~ConsistentToConsistentOpExpr() = default;
+
+  static Maybe<ConsistentToConsistentOpExpr> New(const std::string& op_name);
+
+  const std::string& op_type_name() const override;
+
+  // Note(zwx): ConsistentToConsistentOpExpr is currently only used by lazy,
+  //     there's no need to gen grad through autograd engine
+  Maybe<bool> IsGradDisabled() const override { return true; }
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+
+ private:
+  ConsistentToConsistentOpExpr(const std::string& op_name);
+};
+
 // NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
 using FeedInputOpExpr = BuiltinOpExprImpl<FeedInputOpConf>;
 using FeedVariableOpExpr = BuiltinOpExprImpl<FeedVariableOpConf>;
@@ -238,11 +258,11 @@ class SelectFirstOpExpr final : public OpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class OpExprInterpState;
+class AutoGradCaptureState;
 // TODO(): Finish the class definition of `FunctionOpExpr`.
 class FunctionOpExpr : public OpExpr {
  public:
-  using FType = std::function<Maybe<void>(const std::shared_ptr<OpExprInterpState>& /*ctx*/,
+  using FType = std::function<Maybe<void>(const std::shared_ptr<AutoGradCaptureState>& /*ctx*/,
                                           const TensorTuple& /*inputs or out_grads*/,
                                           TensorTuple* /*outputs or in_grads*/)>;
 
@@ -267,8 +287,8 @@ class FunctionOpExpr : public OpExpr {
   FType forward() const { return forward_; }
   FType backward() const { return backward_; }
 
-  std::shared_ptr<const OpExprInterpState> state() const { return state_; }
-  std::shared_ptr<OpExprInterpState> mutable_state() { return state_; }
+  std::shared_ptr<const AutoGradCaptureState> state() const { return state_; }
+  std::shared_ptr<AutoGradCaptureState> mutable_state() { return state_; }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override { OF_UNIMPLEMENTED(); }
@@ -276,7 +296,7 @@ class FunctionOpExpr : public OpExpr {
  private:
   FType forward_;
   FType backward_;
-  std::shared_ptr<OpExprInterpState> state_;
+  std::shared_ptr<AutoGradCaptureState> state_;
 };
 
 }  // namespace one

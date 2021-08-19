@@ -28,27 +28,10 @@ namespace oneflow {
 class Device;
 class ParallelDesc;
 namespace cfg {
-class ParallelDistribution;
+class NdSbp;
 }
 
 namespace one {
-
-class OpExprInterpState {
- public:
-  OpExprInterpState() = default;
-  virtual ~OpExprInterpState() = default;
-
-  const TensorTuple& SavedTensors() const { return saved_tensors_; }
-
-  size_t SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
-    size_t offset = saved_tensors_.size();
-    saved_tensors_.push_back(tensor);
-    return offset;
-  }
-
- private:
-  TensorTuple saved_tensors_;
-};
 
 struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg) : attrs(attrs_arg) {}
@@ -62,22 +45,17 @@ struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg)
       : attrs(attrs_arg), parallel_desc(parallel_desc_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
-                      Symbol<cfg::ParallelDistribution> parallel_distribution_arg)
-      : attrs(attrs_arg),
-        parallel_desc(parallel_desc_arg),
-        parallel_distribution(parallel_distribution_arg) {}
+                      Symbol<cfg::NdSbp> nd_sbp_arg)
+      : attrs(attrs_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
-                      Symbol<cfg::ParallelDistribution> parallel_distribution_arg,
+                      Symbol<cfg::NdSbp> nd_sbp_arg,
                       std::shared_ptr<user_op::OpKernelState> state_arg)
-      : attrs(attrs_arg),
-        parallel_desc(parallel_desc_arg),
-        parallel_distribution(parallel_distribution_arg),
-        state(state_arg) {}
+      : attrs(attrs_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg), state(state_arg) {}
 
   AttrMap attrs;
-  Optional<Symbol<Device>> device;                                    // for local op
-  Optional<Symbol<ParallelDesc>> parallel_desc;                       // for consistent op
-  Optional<Symbol<cfg::ParallelDistribution>> parallel_distribution;  // for consistent op
+  Optional<Symbol<Device>> device;               // for local op
+  Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
+  Optional<Symbol<cfg::NdSbp>> nd_sbp;           // for consistent op
   std::shared_ptr<user_op::OpKernelState> state;
 };
 
@@ -141,6 +119,7 @@ class LazyInterpreter : public OpExprInterpreter {
   DECLARE_NORMAL_APPLY_FUNC(FeedVariableOp);
   DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
+  DECLARE_NORMAL_APPLY_FUNC(ConsistentToConsistentOp);
 };
 
 class EagerInterpreter : public OpExprInterpreter {

@@ -32,8 +32,8 @@ namespace one {
 
 Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
-  return std::dynamic_pointer_cast<MirroredTensor>(
-      JUST(functional::Constant(*shape_, functional::Scalar(0), dtype_, device_)));
+  return std::dynamic_pointer_cast<MirroredTensor>(JUST(functional::Constant(
+      *shape_, functional::Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
 }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
@@ -83,13 +83,14 @@ Maybe<Tensor> MirroredTensor::clone() const {
   return JUST(functional::Copy(input, device_type, device_id));
 }
 
-Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
-    const std::shared_ptr<const Shape>& shape, DataType dtype,
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc,
-    bool is_lazy, bool requires_grad, bool is_leaf) {
+Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                                     DataType dtype, Symbol<cfg::NdSbp> nd_sbp,
+                                                     Symbol<ParallelDesc> parallel_desc,
+                                                     bool is_lazy, bool requires_grad,
+                                                     bool is_leaf) {
   std::shared_ptr<ConsistentTensorImpl> impl;
   Symbol<ConsistentTensorMeta> consistent_tensor_meta(
-      ConsistentTensorMeta(shape, dtype, parallel_distribution, parallel_desc));
+      ConsistentTensorMeta(shape, dtype, nd_sbp, parallel_desc));
   if (is_lazy) {
     impl =
         std::make_shared<LazyConsistentTensorImpl>(consistent_tensor_meta, requires_grad, is_leaf);
