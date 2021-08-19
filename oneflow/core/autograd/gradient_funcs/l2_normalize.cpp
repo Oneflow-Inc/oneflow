@@ -22,18 +22,18 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct L2NormalizeInterpState : public OpExprInterpState {
+struct L2NormalizeCaptureState : public AutoGradCaptureState {
   int64_t axis;
   float epsilon;
   bool requires_grad;
 };
 
-class L2Normalize : public OpExprGradFunction<L2NormalizeInterpState> {
+class L2Normalize : public OpExprGradFunction<L2NormalizeCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(L2NormalizeInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(L2NormalizeCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const L2NormalizeInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const L2NormalizeCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -47,7 +47,7 @@ Maybe<void> L2Normalize::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> L2Normalize::Capture(L2NormalizeInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> L2Normalize::Capture(L2NormalizeCaptureState* ctx, const TensorTuple& inputs,
                                  const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -61,7 +61,7 @@ Maybe<void> L2Normalize::Capture(L2NormalizeInterpState* ctx, const TensorTuple&
   return Maybe<void>::Ok();
 }
 
-Maybe<void> L2Normalize::Apply(const L2NormalizeInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> L2Normalize::Apply(const L2NormalizeCaptureState* ctx, const TensorTuple& out_grads,
                                TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   in_grads->resize(1);

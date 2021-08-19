@@ -21,14 +21,14 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct NarrowOpInterpState : public OpExprInterpState {
+struct NarrowCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   int64_t dim;
   int64_t start;
   int64_t length;
 };
 
-class NarrowOp : public OpExprGradFunction<NarrowOpInterpState> {
+class Narrow : public OpExprGradFunction<NarrowCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -37,7 +37,7 @@ class NarrowOp : public OpExprGradFunction<NarrowOpInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(NarrowOpInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(NarrowCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -52,7 +52,7 @@ class NarrowOp : public OpExprGradFunction<NarrowOpInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const NarrowOpInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const NarrowCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (ctx->requires_grad) {
       const auto& like = ctx->SavedTensors().at(0);
@@ -67,7 +67,7 @@ class NarrowOp : public OpExprGradFunction<NarrowOpInterpState> {
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("narrow", NarrowOp);
+REGISTER_OP_EXPR_GRAD_FUNCTION("narrow", Narrow);
 
 }  // namespace one
 }  // namespace oneflow
