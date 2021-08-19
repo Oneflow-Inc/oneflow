@@ -25,7 +25,7 @@ import oneflow.unittest
 
 
 def test_fused_self_attention(
-    test_case, batch_size, seq_len, num_heads, head_size, alpha
+    test_case, batch_size, seq_len, num_heads, head_size
 ):
     hidden_size = num_heads * 3 * head_size
 
@@ -33,9 +33,9 @@ def test_fused_self_attention(
     fused_input = flow.Tensor(x).to("cuda")
     fused_input.requires_grad = True
     (fused_qmk, fused_v) = flow.F.fused_self_attention(
-        fused_input, head_size=head_size, alpha=alpha
+        fused_input, head_size=head_size, alpha=1.0,
     )
-    fused_atten = fused_qmk * fused_v
+    fused_atten = flow.matmul(fused_qmk, fused_v)
     fused_atten_sum = fused_atten.sum()
     fused_atten_sum.backward()
 
@@ -43,10 +43,11 @@ def test_fused_self_attention(
     origin_input.requires_grad = True
     origin_input = flow.reshape(origin_input, (seq_len, batch_size, -1, 3 * head_size))
     (origin_q, origin_k, origin_v) = (
-        flow.transpose(origin_input[:, :, :, i], perm=[1, 2, 0, 3],) for i in range(3)
+        origin_input[:, :, :, i * head_size : (i+1) * head_size].permute(1, 2, 0, 3) for i in range(3)
     )
-    origin_qmk = flow.matmul(origin_q, origin_k, transpose_b=True, alpha=alpha)
-    origin_atten = origin_qmk * origin_v
+    origin_k = origin_k.transpose(2, 3)
+    origin_qmk = flow.matmul(origin_q, origin_k)
+    origin_atten = flow.matmul(origin_qmk, origin_v)
     origin_atten_sum = origin_atten.sum()
     origin_atten_sum.backward()
 
@@ -62,14 +63,13 @@ def test_fused_self_attention(
 
 @flow.unittest.skip_unless_1n1d()
 class TestFusedBiasAddDropout(flow.unittest.TestCase):
-    def test_gather(test_case):
+    def test_fused_self_attention(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [test_fused_self_attention]
         arg_dict["batch_size"] = [1, 4, 6, 8]
         arg_dict["seq_len"] = [5, 10, 12]
         arg_dict["num_heads"] = [4, 8, 16]
         arg_dict["head_size"] = [16, 32, 64]
-        arg_dict["alpha"] = [1.0, 2.0]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
