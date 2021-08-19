@@ -318,6 +318,7 @@ from . import (
     distributed,
     linalg,
     optim,
+    comm,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
