@@ -26,8 +26,8 @@ from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph.graph_block import Block, BlockType
-from oneflow.nn.graph.graph_optimizer import OptDict, VariableConfig
+from oneflow.nn.graph.block import Block, BlockType
+from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import add_indent, sys_exc_error_msg, list_to_func_return
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
@@ -508,4 +508,3 @@ class GraphConfig(FunctionConfig):
         opt_dict.generate_optimizer_and_variable_configs(
             self.proto.mutable_train_conf(), variables_conf
         )
-
