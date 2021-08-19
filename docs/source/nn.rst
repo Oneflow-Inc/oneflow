@@ -23,6 +23,7 @@ Operators for neural networks
         ConstantPad3d,
         Conv1d,
         Conv2d,
+        Conv3d,
         ConvTranspose2d,
         CombinedMarginLoss,
         CropMirrorNormalize,
