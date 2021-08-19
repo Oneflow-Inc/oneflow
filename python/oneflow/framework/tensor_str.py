@@ -133,7 +133,7 @@ class _Formatter(object):
 
 
 def _scalar_str(self, formatter1):
-    return formatter1.format(self.tolist())
+    return formatter1.format(_try_convert_to_local_tensor(self).tolist())
 
 
 def _vector_str(self, indent, summarize, formatter1):
