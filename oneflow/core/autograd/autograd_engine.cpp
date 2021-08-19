@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/functional/functional.h"
@@ -46,11 +47,27 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     if (new_grad) { current_grad = new_grad; }
   }
   if (autograd_meta->acc_grad()) {
+    DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
     const auto& output =
         JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*inplace=*/true));
     JUST(autograd_meta->set_acc_grad(output));
   } else {
     JUST(autograd_meta->set_acc_grad(current_grad));
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RawTorchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
+  // Do nothing.
+  return Maybe<void>::Ok();
+}
+
+static constexpr auto* TorchConsistentTensor =
+    DECORATE(&RawTorchConsistentTensor, CheckConsistentTensorMeta);
+
+Maybe<void> CheckConsistentTensorsMeta(const TensorTuple& tensor_tuple) {
+  for (const auto& tensor : tensor_tuple) {
+    if (tensor->is_consistent()) { JUST(TorchConsistentTensor(tensor)); }
   }
   return Maybe<void>::Ok();
 }
@@ -61,14 +78,19 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple
                                                                const TensorTuple& out_grads,
                                                                bool retain_graph,
                                                                bool create_graph) {
-  DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
+  JUST(CheckConsistentTensorsMeta(outputs));
+  JUST(CheckConsistentTensorsMeta(out_grads));
+  DisableCheckConsistentTensorMetaScope disable_meta_check;
   return RunBackwardAndSaveGrads4LeafTensorIf(outputs, out_grads, retain_graph, create_graph);
 }
 
 Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
-  DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
+  JUST(CheckConsistentTensorsMeta(outputs));
+  JUST(CheckConsistentTensorsMeta(inputs));
+  JUST(CheckConsistentTensorsMeta(out_grads));
+  DisableCheckConsistentTensorMetaScope disable_meta_check;
   return RunBackwardAndReturnInputsTensorGradIf(outputs, inputs, out_grads, retain_graph,
                                                 create_graph);
 }

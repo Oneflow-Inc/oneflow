@@ -14,64 +14,68 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-struct GatherCaptureState : public AutoGradCaptureState {
-  int64_t axis;
+struct FusedScaleTrilState : public AutoGradCaptureState {
   bool requires_grad;
+  int64_t diagonal;
+  double floating_scale_value;
+  int64_t integer_scale_value;
+  bool is_floating_scale_value;
 };
 
-class Gather : public OpExprGradFunction<GatherCaptureState> {
+class FusedScaleTril : public OpExprGradFunction<FusedScaleTrilState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(GatherCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(FusedScaleTrilState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const GatherCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const FusedScaleTrilState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
 };
 
-Maybe<void> Gather::Init(const OpExpr& op) {
+Maybe<void> FusedScaleTril::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Gather::Capture(GatherCaptureState* ctx, const TensorTuple& inputs,
-                            const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> FusedScaleTril::Capture(FusedScaleTrilState* ctx, const TensorTuple& inputs,
+                                    const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  ctx->SaveTensorForBackward(inputs.at(0));
-  ctx->SaveTensorForBackward(inputs.at(1));
-
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
+  ctx->diagonal = JUST(composed_attrs.GetAttr<int64_t>("diagonal"));
+  ctx->floating_scale_value = JUST(composed_attrs.GetAttr<double>("floating_scale_value"));
+  ctx->integer_scale_value = JUST(composed_attrs.GetAttr<int64_t>("integer_scale_value"));
+  ctx->is_floating_scale_value = JUST(composed_attrs.GetAttr<bool>("is_floating_scale_value"));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Gather::Apply(const GatherCaptureState* ctx, const TensorTuple& out_grads,
-                          TensorTuple* in_grads) const {
+Maybe<void> FusedScaleTril::Apply(const FusedScaleTrilState* ctx, const TensorTuple& out_grads,
+                                  TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  const auto& x = ctx->SavedTensors().at(0);
-  const auto& indices = ctx->SavedTensors().at(1);
-  in_grads->at(0) =
-      JUST(functional::UnsortedSegmentSumLike(out_grads.at(0), indices, x, ctx->axis));
+  in_grads->resize(1);
+  functional::Scalar scale;
+  if (ctx->is_floating_scale_value) {
+    scale = ctx->floating_scale_value;
+  } else {
+    scale = ctx->integer_scale_value;
+  }
+  (*in_grads)[0] = JUST(functional::FusedScaleTril(out_grads[0], ctx->diagonal, 0, scale));
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("gather", Gather);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_scale_tril", FusedScaleTril);
 
 }  // namespace one
 }  // namespace oneflow
