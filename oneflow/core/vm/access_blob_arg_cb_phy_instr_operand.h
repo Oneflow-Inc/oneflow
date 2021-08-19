@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class VmLocalDepObject;
+class LocalDepObject;
 
 namespace one {
 
@@ -36,7 +36,7 @@ class EagerBlobObject;
 class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
   AccessBlobArgCbPhyInstrOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                 const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object,
+                                 LocalDepObject* compute_local_dep_object,
                                  const std::function<void(uint64_t)>& callback,
                                  const std::string& modifier)
       : eager_blob_object_(eager_blob_object),
@@ -62,7 +62,7 @@ class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
   std::function<void(uint64_t)> callback_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
+  LocalDepObject* compute_local_dep_object_;
   const std::string modifier_;
 };
 
