@@ -1062,11 +1062,11 @@
   bind_python: True
 
 - name: "fused_self_attention"
-  signature: "TensorTuple FusedSelfAttention(Tensor hidden_states, *, Int64 head_size, Float alpha)"
+  signature: "TensorTuple FusedSelfAttention(Tensor hidden_states, *, Int64 head_size, Float alpha=0)"
   bind_python: True
 
 - name: "fused_self_attention_grad"
-  signature: "Tensor FusedSelfAttentionGrad(Tensor query_mul_key_grad, Tensor value_grad, Tensor hidden_states, *, Float alpha)"
+  signature: "Tensor FusedSelfAttentionGrad(Tensor query_mul_key_grad, Tensor value_grad, Tensor hidden_states, *, Float alpha=0)"
   bind_python: False
 
 - name: "consistent_randperm"
