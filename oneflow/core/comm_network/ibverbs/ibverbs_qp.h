@@ -36,8 +36,6 @@ class ActorMsgMR final {
     mr_ = mr;
   }
   ~ActorMsgMR() {
-    delete msg_;
-    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_), 0); 
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
@@ -104,24 +102,24 @@ class MessagePool final {
   }
 
   ActorMsgMR * GetMessageFromBuf() {
-      std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       ActorMsgMR * msg_mr = message_buf_.front();
       message_buf_.pop_front();
       return msg_mr;
   }
 
   void PutMessage(ActorMsgMR * msg_mr) {
-      std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       message_buf_.push_front(msg_mr);
   }
 
   bool isEmpty() {
-      std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      return message_buf_.empty() == true ;
+    std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+    return message_buf_.empty() == true ;
   }
-
+ 
   size_t size() {
-    std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
+    std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
     return message_buf_.size();
   }
 
