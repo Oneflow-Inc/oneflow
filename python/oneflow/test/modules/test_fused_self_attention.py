@@ -37,24 +37,22 @@ def test_fused_self_attention(
     )
     fused_atten = flow.matmul(fused_qmk, fused_v)
     fused_atten_sum = fused_atten.sum()
-    # fused_atten_sum.backward()
 
     origin_input = flow.Tensor(x).to("cuda")
     origin_input.requires_grad = True
-    origin_input = flow.reshape(origin_input, (seq_len, batch_size, -1, 3 * head_size))
-    (origin_q, origin_k, origin_v) = (
-        origin_input[:, :, :, i * head_size : (i+1) * head_size].permute(1, 2, 0, 3) for i in range(3)
-    )
+    reshape_input = flow.reshape(origin_input, (seq_len, batch_size, -1, 3 * head_size))
+
+    origin_q = flow.slice(reshape_input, slice_tup_list=[[None, None, None], [None, None, None], [None, None, None], [0, head_size, 1]]).permute(1, 2, 0, 3)
+    origin_k = flow.slice(reshape_input, slice_tup_list=[[None, None, None], [None, None, None], [None, None, None], [head_size, 2 * head_size, 1]]).permute(1, 2, 0, 3)
+    origin_v = flow.slice(reshape_input, slice_tup_list=[[None, None, None], [None, None, None], [None, None, None], [2 * head_size, 3 * head_size, 1]]).permute(1, 2, 0, 3)
+
     origin_k = origin_k.transpose(2, 3)
     origin_qmk = flow.matmul(origin_q, origin_k)
     origin_atten = flow.matmul(origin_qmk, origin_v)
     origin_atten_sum = origin_atten.sum()
-    # origin_atten_sum.backward()
 
     total_sum = fused_atten_sum + origin_atten_sum
     total_sum.backward()
-    print(fused_input.grad)
-    print(origin_input.grad)
 
     test_case.assertTrue(
         np.allclose(fused_atten.numpy(), origin_atten.numpy(), atol=1e-4, rtol=1e-4)
