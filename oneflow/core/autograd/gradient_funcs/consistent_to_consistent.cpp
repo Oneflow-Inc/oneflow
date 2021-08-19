@@ -25,13 +25,12 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct ConsistentToConsistentOpExprInterpState : public OpExprInterpState {
+struct ConsistentToConsistentState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
   Symbol<cfg::NdSbp> nd_sbp;
 };
 
-class ConsistentToConsistentGradFunction
-    : public OpExprGradFunction<ConsistentToConsistentOpExprInterpState> {
+class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentToConsistentState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const ConsistentToConsistentOpExpr*>(&op);
@@ -40,7 +39,7 @@ class ConsistentToConsistentGradFunction
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(ConsistentToConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ConsistentToConsistentState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -49,8 +48,8 @@ class ConsistentToConsistentGradFunction
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const ConsistentToConsistentOpExprInterpState* ctx,
-                    const TensorTuple& out_grads, TensorTuple* in_grads) const override {
+  Maybe<void> Apply(const ConsistentToConsistentState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const auto& out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent());
