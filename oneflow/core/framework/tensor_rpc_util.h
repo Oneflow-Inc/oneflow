@@ -52,7 +52,7 @@ struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args
     int64_t* depth = private_details::MutThreadLocalDepth();
     if (*depth == 0) { ctx = JUST(private_details::LaunchTensorMetaConsistencyCheck(*tensor)); }
     ++*depth;
-    RetT&& ret = func(tensor, args...);
+    RetT ret = func(tensor, args...);
     --*depth;
     // Always synchronize consistent tensor meta even if `func` failed.
     if (*depth == 0) { JUST(private_details::BuzyWaitAndCheck(ctx)); }
