@@ -644,6 +644,10 @@ void InitInsertNcclSubGraphInfoFromSet(
   CHECK_LT(nccl_subgraph_info->begin_op_global_order, nccl_subgraph_info->end_op_global_order);
 }
 
+constexpr uint32_t kMaxNcclComputeStreamCount = 8;
+
+std::string GetStreamIndexName(uint32_t id) { return "NCCL_COMPUTE_" + std::to_string(id); }
+
 void InsertNcclLogicalOpsInSubGraph(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::vector<const OpNode*>& subgraph_order,
@@ -704,11 +708,11 @@ void InsertNcclLogicalOpsInSubGraph(
 
     int64_t nccl_compute_stream_id = *stream_offset;
     CudaStreamIndexGenerator stream_idx_gen;
-    if (nccl_compute_stream_id >= stream_idx_gen.GetNcclComputeStreamCount()) {
-      break;  // NOTE(chengcheng): ONLY support GetNcclComputeStreamCount() insert nccl subgraphs.
+    if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
+      break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
     }
-    int32_t stream_index =
-        static_cast<int32_t>(stream_idx_gen.GenerateNcclComputeStreamIndex(nccl_compute_stream_id));
+    int32_t stream_index = static_cast<int32_t>(
+        stream_idx_gen.GenerateNamedStreamIndex(GetStreamIndexName(nccl_compute_stream_id)));
 
     // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index.
     for (auto& pair : subgraph_op_name2conf) {

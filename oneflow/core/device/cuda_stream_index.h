@@ -22,28 +22,22 @@ namespace oneflow {
 
 class CudaStreamIndexGenerator final : public StreamIndexGenerator {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaStreamIndexGenerator);
+  CudaStreamIndexGenerator();
+  ~CudaStreamIndexGenerator();
   stream_index_t GenerateComputeStreamIndex() override { return kCompute; }
   stream_index_t GenerateH2DStreamIndex() override { return kH2D; }
   stream_index_t GenerateD2HStreamIndex() override { return kD2H; }
-  stream_index_t GenerateMixStreamIndex() { return kMix; }
-  stream_index_t GenerateNcclStreamIndex() { return kNccl; }
-  stream_index_t GenerateDecodeH2DStreamIndex() { return kDecodeH2D; }
-  stream_index_t GenerateNcclComputeStreamIndex(const uint32_t id) {
-    stream_index_t idx = kNcclComputeBegin + id;
-    CHECK_LE(idx, kNcclComputeEnd);
-    return idx;
-  }
-  uint32_t GetNcclComputeStreamCount() const { return kNcclComputeEnd - kNcclComputeBegin + 1; }
+  stream_index_t GenerateNamedStreamIndex(const std::string& name);
+  bool IsNamedStreamIndex(const std::string& name, stream_index_t index);
 
  private:
   static const stream_index_t kCompute = 0;
   static const stream_index_t kH2D = 1;
   static const stream_index_t kD2H = 2;
-  static const stream_index_t kMix = 3;
-  static const stream_index_t kNccl = 4;
-  static const stream_index_t kDecodeH2D = 5;
-  static const stream_index_t kNcclComputeBegin = 10;
-  static const stream_index_t kNcclComputeEnd = 17;
+  HashMap<std::string, stream_index_t> named_stream_index_;
+  std::mutex named_stream_index_mutex_;
+  stream_index_t next_stream_index_;
 };
 
 }  // namespace oneflow
