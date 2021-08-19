@@ -23,13 +23,15 @@ limitations under the License.
 namespace oneflow {
 
 /*static*/ Maybe<TransportToken> TransportToken::NewTransportToken(TransportTokenType type) {
-  int32_t thread_consistent_unique_id = JUST(GetThisThreadConsistentUniqueId());
+  int32_t thread_consistent_id = JUST(GetThisThreadConsistentUniqueId());
+  CHECK_GE_OR_RETURN(thread_consistent_id, 0);
+  CHECK_LT_OR_RETURN(thread_consistent_id, MaxNumberOfThreadConsistentUId());
   int32_t rank_group_level = 0;
   if (type != kTransportTokenTypeData) { rank_group_level = JUST(GetCurrentRankGroupLevel()); }
   static const int kTransportTokenRankGroupLevelLimit = (1 << kTransportTokenRankGroupLevelBit);
   CHECK_GE_OR_RETURN(rank_group_level, 0);
   CHECK_LT_OR_RETURN(rank_group_level, kTransportTokenRankGroupLevelLimit);
-  return TransportToken(type, thread_consistent_unique_id, rank_group_level);
+  return TransportToken(type, thread_consistent_id, rank_group_level);
 }
 
 Maybe<void> TransportToken::CheckThreadConsistentId() const {
@@ -42,6 +44,20 @@ Maybe<void> TransportToken::CheckRankGroupLevel() const {
   int32_t rank_group_level = 0;
   if (type() != kTransportTokenTypeData) { rank_group_level = JUST(GetCurrentRankGroupLevel()); }
   CHECK_EQ_OR_RETURN(rank_group_level, this->rank_group_level());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> TransportToken::set_src_rank(int64_t val) {
+  CHECK_GE_OR_RETURN(val, 0);
+  CHECK_LT_OR_RETURN(val, GetMaxVal<uint16_t>());
+  src_rank_ = val;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> TransportToken::set_dst_rank(int64_t val) {
+  CHECK_GE_OR_RETURN(val, 0);
+  CHECK_LT_OR_RETURN(val, GetMaxVal<uint16_t>());
+  dst_rank_ = val;
   return Maybe<void>::Ok();
 }
 

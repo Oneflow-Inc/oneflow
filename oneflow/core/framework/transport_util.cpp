@@ -91,8 +91,12 @@ Maybe<std::shared_ptr<TransportToken>> RawGetTransportToken(int64_t src_rank, in
                                                             const TransportToken& token) {
   JUST(token.CheckThreadConsistentId());
   JUST(token.CheckRankGroupLevel());
-  return std::make_shared<TransportToken>(token);
+  auto auto_token = std::make_shared<TransportToken>(token);
+  JUST(auto_token->set_src_rank(src_rank));
+  JUST(auto_token->set_dst_rank(dst_rank));
+  return auto_token;
 }
+
 static constexpr auto* GetTransportToken = DECORATE(&RawGetTransportToken, ThreadLocal);
 
 Maybe<TransportToken> GetAutoIncrementalTransportToken(int64_t src_rank, int64_t dst_rank,
