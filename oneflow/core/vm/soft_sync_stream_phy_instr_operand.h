@@ -21,13 +21,13 @@ limitations under the License.
 
 namespace oneflow {
 
-class VmLocalDepObject;
+class LocalDepObject;
 
 namespace vm {
 
 class SoftSyncStreamPhyInstrOperand : public PhyInstrOperand {
  public:
-  SoftSyncStreamPhyInstrOperand(const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object,
+  SoftSyncStreamPhyInstrOperand(LocalDepObject* compute_local_dep_object,
                                 const std::string& modifier)
       : compute_local_dep_object_(compute_local_dep_object), modifier_(modifier) {}
   ~SoftSyncStreamPhyInstrOperand() = default;
@@ -42,7 +42,7 @@ class SoftSyncStreamPhyInstrOperand : public PhyInstrOperand {
       const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
 
  private:
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
+  LocalDepObject* compute_local_dep_object_;
   const std::string modifier_;
 };
 
