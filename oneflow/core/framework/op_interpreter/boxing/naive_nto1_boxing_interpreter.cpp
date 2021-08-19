@@ -75,12 +75,14 @@ Maybe<one::Tensor> NcclPTo1BoxingInterpreter::InterpretImpl(
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsPartialSumNdSbp(in_nd_sbp));
   CHECK_OR_RETURN(in_parallel_desc->Bigger(*out_parallel_desc));
   std::shared_ptr<one::Tensor> local_tensor = JUST(input->cur_rank_phy_tensor());
-  int64_t root = JUST(out_parallel_desc->MachineId4ParallelId(0));
-  const auto& op_expr = JUST(CachedEagerNcclReduce(in_parallel_desc, root));
-  std::shared_ptr<one::Tensor> out_local_tensor =
-      JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}));
+  const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
+  if (in_parallel_id->has_value()) {
+    int64_t root = JUST(out_parallel_desc->MachineId4ParallelId(0));
+    const auto& op_expr = JUST(CachedEagerNcclReduce(in_parallel_desc, root));
+    local_tensor = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}));
+  }
   const auto& output_tensor = JUST(one::functional::ToConsistent(
-      out_local_tensor, out_parallel_desc, *JUST(GetSbpList(out_nd_sbp)), GetNoneSbpList()));
+      local_tensor, out_parallel_desc, *JUST(GetSbpList(out_nd_sbp)), GetNoneSbpList()));
   CHECK_OR_RETURN(output_tensor->is_consistent());
   const auto& tensor_placement = JUST(output_tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == out_parallel_desc);
