@@ -44,7 +44,8 @@ Maybe<one::Tensor> Nccl1ToPBoxingInterpreter::InterpretImpl(
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsPartialSumNdSbp(out_nd_sbp));
   int64_t root = JUST(in_parallel_desc->MachineId4ParallelId(0));
   std::shared_ptr<one::Tensor> local_tensor = JUST(input->cur_rank_phy_tensor());
-  if (root == GlobalProcessCtx::Rank()) {
+  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+  if (root == GlobalProcessCtx::Rank() || !out_parallel_id->has_value()) {
     // do nothing
   } else {
     std::string device_type = Device::Type4DeviceTag(JUST(input->parallel_desc())->device_tag());
@@ -70,9 +71,21 @@ Maybe<one::Tensor> Nccl1ToBBoxingInterpreter::InterpretImpl(
       std::make_shared<Nccl1ToPBoxingInterpreter>();
   const auto& partial_sum_input = JUST(nccl_1top_boxing_interpreter->Interpret(
       input, in_nd_sbp, partial_sum_nd_sbp, in_parallel_desc, out_parallel_desc));
-  const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
-  const auto& output_tensor = JUST(one::functional::ToConsistent(
-      partial_sum_input, out_parallel_desc, *sbp_list, GetNoneSbpList()));
+  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+  std::shared_ptr<one::Tensor> output_tensor;
+  {
+    one::ConsistentTensorMeta tensor_meta(partial_sum_input->shape(),
+                                          partial_sum_input->dtype()->data_type(), out_nd_sbp,
+                                          out_parallel_desc);
+    const auto& tensor_impl = JUST(one::EagerConsistentTensorImpl::New(
+        SymbolOf(tensor_meta), partial_sum_input->requires_grad(), false));
+    output_tensor.reset(new one::ConsistentTensor(tensor_impl));
+  }
+  if (out_parallel_id->has_value()) {
+    const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
+    output_tensor = JUST(one::functional::ToConsistent(
+        partial_sum_input, out_parallel_desc, *sbp_list, GetNoneSbpList()));
+  }
   CHECK_OR_RETURN(output_tensor->is_consistent());
   const auto& tensor_placement = JUST(output_tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == out_parallel_desc);
@@ -90,9 +103,21 @@ Maybe<one::Tensor> Nccl1ToSBoxingInterpreter::InterpretImpl(
       std::make_shared<Nccl1ToPBoxingInterpreter>();
   const auto& partial_sum_input = JUST(nccl_1top_boxing_interpreter->Interpret(
       input, in_nd_sbp, partial_sum_nd_sbp, in_parallel_desc, out_parallel_desc));
-  const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
-  const auto& output_tensor = JUST(one::functional::ToConsistent(
-      partial_sum_input, out_parallel_desc, *sbp_list, GetNoneSbpList()));
+  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+  std::shared_ptr<one::Tensor> output_tensor;
+  {
+    one::ConsistentTensorMeta tensor_meta(partial_sum_input->shape(),
+                                          partial_sum_input->dtype()->data_type(), out_nd_sbp,
+                                          out_parallel_desc);
+    const auto& tensor_impl = JUST(one::EagerConsistentTensorImpl::New(
+        SymbolOf(tensor_meta), partial_sum_input->requires_grad(), false));
+    output_tensor.reset(new one::ConsistentTensor(tensor_impl));
+  }
+  if (out_parallel_id->has_value()) {
+    const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
+    output_tensor = JUST(one::functional::ToConsistent(
+        partial_sum_input, out_parallel_desc, *sbp_list, GetNoneSbpList()));
+  }
   CHECK_OR_RETURN(output_tensor->is_consistent());
   const auto& tensor_placement = JUST(output_tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == out_parallel_desc);
