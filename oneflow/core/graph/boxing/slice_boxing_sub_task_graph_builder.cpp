@@ -107,7 +107,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     } else if (stream_name == "D2H") {
       stream_index = generator->GenerateD2HStreamIndex();
     } else if (stream_name == "MIX") {
-      stream_index = generator->GenerateMixStreamIndex();
+      stream_index = generator->GenerateNamedStreamIndex("MIX");
     } else {
       UNIMPLEMENTED();
     }
