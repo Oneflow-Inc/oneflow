@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -35,6 +36,9 @@ Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp() {
 }
 
 auto* CachedGetPartialSumNdSbp = DECORATE(&GetPartialSumNdSbp, ThreadLocal);
+
+// avoid check consistent_id in ConsistentToConsistent function
+auto* CachedToConsistent = DECORATE(&one::functional::ToConsistent, CheckConsistentTensorMeta);
 
 }  // namespace
 
@@ -85,8 +89,8 @@ Maybe<one::Tensor> Nccl1ToBBoxingInterpreter::InterpretImpl(
   }
   if (out_parallel_id->has_value()) {
     const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
-    output_tensor = JUST(one::functional::ToConsistent(partial_sum_input, out_parallel_desc,
-                                                       *sbp_list, GetNoneSbpList()));
+    output_tensor =
+        JUST(CachedToConsistent(partial_sum_input, out_parallel_desc, *sbp_list, GetNoneSbpList()));
   }
   CHECK_OR_RETURN(output_tensor->is_consistent());
   const auto& tensor_placement = JUST(output_tensor->parallel_desc());
@@ -117,8 +121,8 @@ Maybe<one::Tensor> Nccl1ToSBoxingInterpreter::InterpretImpl(
   }
   if (out_parallel_id->has_value()) {
     const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
-    output_tensor = JUST(one::functional::ToConsistent(partial_sum_input, out_parallel_desc,
-                                                       *sbp_list, GetNoneSbpList()));
+    output_tensor =
+        JUST(CachedToConsistent(partial_sum_input, out_parallel_desc, *sbp_list, GetNoneSbpList()));
   }
   CHECK_OR_RETURN(output_tensor->is_consistent());
   const auto& tensor_placement = JUST(output_tensor->parallel_desc());
