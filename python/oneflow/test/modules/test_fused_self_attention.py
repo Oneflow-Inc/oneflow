@@ -1,9 +1,12 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,13 +23,18 @@ from test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
-def test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_size, alpha):
+
+def test_fused_self_attention(
+    test_case, batch_size, seq_len, num_heads, head_size, alpha
+):
     hidden_size = num_heads * 3 * head_size
 
     x = np.random.randn(seq_len, batch_size, hidden_size)
     fused_input = flow.Tensor(x).to("cuda")
     fused_input.requires_grad = True
-    (fused_qmk, fused_v) = flow.F.fused_self_attention(fused_input, head_size=head_size, alpha=alpha)
+    (fused_qmk, fused_v) = flow.F.fused_self_attention(
+        fused_input, head_size=head_size, alpha=alpha
+    )
     fused_atten = fused_qmk * fused_v
     fused_atten_sum = fused_atten.sum()
     fused_atten_sum.backward()
@@ -35,12 +43,8 @@ def test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_si
     origin_input.requires_grad = True
     origin_input = flow.reshape(origin_input, (seq_len, batch_size, -1, 3 * head_size))
     (origin_q, origin_k, origin_v) = (
-                flow.transpose(
-                    origin_input[:, :, :, i],
-                    perm=[1, 2, 0, 3],
-                )
-                for i in range(3)
-            )
+        flow.transpose(origin_input[:, :, :, i], perm=[1, 2, 0, 3],) for i in range(3)
+    )
     origin_qmk = flow.matmul(origin_q, origin_k, transpose_b=True, alpha=alpha)
     origin_atten = origin_qmk * origin_v
     origin_atten_sum = origin_atten.sum()
@@ -51,10 +55,7 @@ def test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_si
     )
     test_case.assertTrue(
         np.allclose(
-            fused_input.grad.numpy(),
-            origin_input.grad.numpy(),
-            atol=1e-4,
-            rtol=1e-4,
+            fused_input.grad.numpy(), origin_input.grad.numpy(), atol=1e-4, rtol=1e-4,
         )
     )
 
@@ -75,6 +76,3 @@ class TestFusedBiasAddDropout(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
