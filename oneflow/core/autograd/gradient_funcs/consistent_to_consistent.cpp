@@ -30,8 +30,7 @@ struct ConsistentToConsistentState : public AutoGradCaptureState {
   Symbol<cfg::NdSbp> nd_sbp;
 };
 
-class ConsistentToConsistentGradFunction
-    : public OpExprGradFunction<ConsistentToConsistentState> {
+class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentToConsistentState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const ConsistentToConsistentOpExpr*>(&op);
@@ -49,8 +48,8 @@ class ConsistentToConsistentGradFunction
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const ConsistentToConsistentState* ctx,
-                    const TensorTuple& out_grads, TensorTuple* in_grads) const override {
+  Maybe<void> Apply(const ConsistentToConsistentState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const auto& out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent());
