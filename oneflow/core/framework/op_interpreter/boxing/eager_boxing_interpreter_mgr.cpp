@@ -121,17 +121,11 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
       && (in_parallel_desc->device_type() == DeviceType::kGPU
           && out_parallel_desc->device_type() == DeviceType::kGPU)) {
     if (EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)) {
-      static std::shared_ptr<EagerBoxingInterpreter> nccl_1tob_boxing_interpreter =
-          std::make_shared<Nccl1ToBBoxingInterpreter>();
-      return nccl_1tob_boxing_interpreter;
+      return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToBBoxingInterpreter());
     } else if (EagerBoxingInterpreterUtil::IsPartialSumNdSbp(out_nd_sbp)) {
-      static std::shared_ptr<EagerBoxingInterpreter> nccl_1top_boxing_interpreter =
-          std::make_shared<Nccl1ToPBoxingInterpreter>();
-      return nccl_1top_boxing_interpreter;
+      return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToPBoxingInterpreter());
     } else if (EagerBoxingInterpreterUtil::IsSplitNdSbp(out_nd_sbp, 0)) {
-      static std::shared_ptr<EagerBoxingInterpreter> nccl_1tos_boxing_interpreter =
-          std::make_shared<Nccl1ToSBoxingInterpreter>();
-      return nccl_1tos_boxing_interpreter;
+      return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToSBoxingInterpreter());
     }
   }
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
