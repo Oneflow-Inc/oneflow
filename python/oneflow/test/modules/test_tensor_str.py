@@ -151,7 +151,7 @@ class TestTensorStrModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @flow.unittest.skip_unless_1n2d()
     def test_tensor_str_1n2d(test_case):
         arg_dict = OrderedDict()

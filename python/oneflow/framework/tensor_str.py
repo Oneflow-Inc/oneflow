@@ -36,7 +36,9 @@ PRINT_OPTS = __PrinterOptions()
 
 def _try_convert_to_local_tensor(tensor):
     if tensor.is_consistent:
-        tensor = tensor.to_consistent(placement=tensor.placement, sbp=flow.sbp.broadcast).to_local()
+        tensor = tensor.to_consistent(
+            placement=tensor.placement, sbp=flow.sbp.broadcast
+        ).to_local()
     return tensor
 
 
