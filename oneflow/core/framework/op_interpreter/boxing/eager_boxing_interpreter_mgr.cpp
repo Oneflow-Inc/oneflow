@@ -135,17 +135,11 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   }
   if (out_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1) {
     if (EagerBoxingInterpreterUtil::IsBroadcastNdSbp(in_nd_sbp)) {
-      static std::shared_ptr<EagerBoxingInterpreter> nccl_bto1_boxing_interpreter =
-          std::make_shared<NcclBTo1BoxingInterpreter>();
-      return nccl_bto1_boxing_interpreter;
+      return std::shared_ptr<EagerBoxingInterpreter>(new NcclBTo1BoxingInterpreter());
     } else if (EagerBoxingInterpreterUtil::IsPartialSumNdSbp(in_nd_sbp)) {
-      static std::shared_ptr<EagerBoxingInterpreter> nccl_pto1_boxing_interpreter =
-          std::make_shared<NcclPTo1BoxingInterpreter>();
-      return nccl_pto1_boxing_interpreter;
+      return std::shared_ptr<EagerBoxingInterpreter>(new NcclPTo1BoxingInterpreter());
     } else if (EagerBoxingInterpreterUtil::IsSplitNdSbp(in_nd_sbp, 0)) {
-      static std::shared_ptr<EagerBoxingInterpreter> nccl_sto1_boxing_interpreter =
-          std::make_shared<NcclSTo1BoxingInterpreter>();
-      return nccl_sto1_boxing_interpreter;
+      return std::shared_ptr<EagerBoxingInterpreter>(new NcclSTo1BoxingInterpreter());
     }
   }
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
