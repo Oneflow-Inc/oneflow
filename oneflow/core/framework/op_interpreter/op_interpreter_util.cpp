@@ -196,19 +196,19 @@ template<>
   CHECK_EQ_OR_RETURN(tensor->is_lazy(), is_lazy);
   CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
   const auto& dtype = DataType(blob_attr->get_dtype());
-  CHECK_EQ_OR_RETURN(tensor->dtype(), dtype);
+  CHECK_EQ_OR_RETURN(tensor->dtype()->data_type(), dtype);
   CHECK_EQ_OR_RETURN(tensor->requires_grad(), requires_grad);
   CHECK_EQ_OR_RETURN(tensor->is_leaf(), is_leaf);
   if (is_local) {
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
-    CHECK_EQ_OR_RETURN(JUST(tensor->device()), device);
+    CHECK_OR_RETURN(JUST(tensor->device()) == device);
   } else {
     const auto& nd_sbp = std::make_shared<cfg::NdSbp>();
     *nd_sbp->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
-    CHECK_EQ_OR_RETURN(JUST(tensor->nd_sbp()), SymbolOf(*nd_sbp));
-    CHECK_EQ_OR_RETURN(JUST(tensor->parallel_desc()),
-                       SymbolOf(*parallel_attr->parallel_desc_symbol()));
+    CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(*nd_sbp));
+    CHECK_OR_RETURN(JUST(tensor->parallel_desc())
+                    == SymbolOf(*parallel_attr->parallel_desc_symbol()));
   }
   return Maybe<void>::Ok();
 }

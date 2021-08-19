@@ -36,7 +36,7 @@ Maybe<one::Tensor> NcclS2PBoxingInterpreter::InterpretImpl(
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2P(in_nd_sbp->sbp_parallel(0),
                                                           out_nd_sbp->sbp_parallel(0)));
-  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   static Symbol<cfg::NdSbp> mid_nd_sbp = JUST(GetBroadcastNdSbp());
   static std::shared_ptr<NcclCollectiveAllGatherBoxingInterpreter> s2b_interpreter =
       std::make_shared<NcclCollectiveAllGatherBoxingInterpreter>();

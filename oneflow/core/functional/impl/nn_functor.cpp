@@ -394,6 +394,31 @@ class SmoothL1LossFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CombinedMarginLossFunctor {
+ public:
+  CombinedMarginLossFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("combined_margin_loss")
+                         .Input("x")
+                         .Input("label")
+                         .Output("y")
+                         .Output("theta")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& label, const float& m1,
+                                const float& m2, const float& m3, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("m1", m1));
+    JUST(attrs.SetAttr<float>("m2", m2));
+    JUST(attrs.SetAttr<float>("m3", m3));
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class NormalizationFunctor {
  public:
   NormalizationFunctor() {
@@ -480,10 +505,10 @@ class PadFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     if (mode == "constant") {
-      if (IsFloatingDataType(x->dtype())) {
+      if (IsFloatingDataType(x->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_value", 0));
-      } else if (IsIntegralDataType(x->dtype())) {
+      } else if (IsIntegralDataType(x->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_value", 0));
         JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
       } else {
@@ -730,6 +755,44 @@ class L2NormalizeGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedScaleTrilFunctor {
+ public:
+  FusedScaleTrilFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_scale_tril").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal,
+                           const Scalar& fill_value, const Scalar& scale) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    bool is_fill_value_double = fill_value.IsFloatingPoint();
+    bool is_scale_double = scale.IsFloatingPoint();
+    if (is_fill_value_double) {
+      JUST(attrs.SetAttr<double>("floating_fill_value", JUST(fill_value.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integer_fill_value", 0));
+      JUST(attrs.SetAttr<bool>("is_floating_fill_value", true));
+    } else {
+      JUST(attrs.SetAttr<double>("floating_fill_value", 0));
+      JUST(attrs.SetAttr<int64_t>("integer_fill_value", JUST(fill_value.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("is_floating_fill_value", false));
+    }
+
+    if (is_scale_double) {
+      JUST(attrs.SetAttr<double>("floating_scale_value", JUST(scale.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integer_scale_value", 0));
+      JUST(attrs.SetAttr<bool>("is_floating_scale_value", true));
+    } else {
+      JUST(attrs.SetAttr<double>("floating_scale_value", 0));
+      JUST(attrs.SetAttr<int64_t>("integer_scale_value", JUST(scale.As<int64_t>())));
+      JUST(attrs.SetAttr<bool>("is_floating_scale_value", false));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -751,6 +814,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
+  m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
@@ -762,6 +826,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
+  m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
 };
 
 }  // namespace functional
