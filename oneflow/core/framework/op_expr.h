@@ -262,11 +262,11 @@ class SelectFirstOpExpr final : public OpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class OpExprInterpState;
+class AutoGradCaptureState;
 // TODO(): Finish the class definition of `FunctionOpExpr`.
 class FunctionOpExpr : public OpExpr {
  public:
-  using FType = std::function<Maybe<void>(const std::shared_ptr<OpExprInterpState>& /*ctx*/,
+  using FType = std::function<Maybe<void>(const std::shared_ptr<AutoGradCaptureState>& /*ctx*/,
                                           const TensorTuple& /*inputs or out_grads*/,
                                           TensorTuple* /*outputs or in_grads*/)>;
 
@@ -291,8 +291,8 @@ class FunctionOpExpr : public OpExpr {
   FType forward() const { return forward_; }
   FType backward() const { return backward_; }
 
-  std::shared_ptr<const OpExprInterpState> state() const { return state_; }
-  std::shared_ptr<OpExprInterpState> mutable_state() { return state_; }
+  std::shared_ptr<const AutoGradCaptureState> state() const { return state_; }
+  std::shared_ptr<AutoGradCaptureState> mutable_state() { return state_; }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override { OF_UNIMPLEMENTED(); }
@@ -300,7 +300,7 @@ class FunctionOpExpr : public OpExpr {
  private:
   FType forward_;
   FType backward_;
-  std::shared_ptr<OpExprInterpState> state_;
+  std::shared_ptr<AutoGradCaptureState> state_;
 };
 
 }  // namespace one
