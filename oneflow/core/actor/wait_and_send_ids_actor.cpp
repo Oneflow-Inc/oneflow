@@ -13,43 +13,66 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/wait_and_send_ids_compute_actor.h"
+#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/kernel/wait_and_send_ids_kernel.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
 
-void WaitAndSendIdsCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+class WaitAndSendIdsActor final : public Actor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(WaitAndSendIdsActor);
+  WaitAndSendIdsActor() = default;
+  ~WaitAndSendIdsActor() = default;
+
+ private:
+  void VirtualActorInit(const TaskProto&) override;
+  void Act() override;
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
+  }
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  bool IsCustomizedReadReady() const override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override { return !IsCustomizedReadReady(); }
+
+  int HandlerWaitToStart(const ActorMsg&);
+
+  WaitAndSendIdsStatus wait_and_send_ids_status_;
+};
+
+void WaitAndSendIdsActor::VirtualActorInit(const TaskProto& task_proto) {
   wait_and_send_ids_status_.buffer_status_ = kBufferStatusSuccess;
   wait_and_send_ids_status_.in_id_ = 0;
   wait_and_send_ids_status_.out_idx_ = 0;
   wait_and_send_ids_status_.out_num_ = 0;
-  OF_SET_MSG_HANDLER(&WaitAndSendIdsCompActor::HandlerWaitToStart);
+  OF_SET_MSG_HANDLER(&WaitAndSendIdsActor::HandlerWaitToStart);
 }
 
-void WaitAndSendIdsCompActor::Act() {
+void WaitAndSendIdsActor::Act() {
   CHECK_LE(wait_and_send_ids_status_.out_idx_, wait_and_send_ids_status_.out_num_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &wait_and_send_ids_status_;
   AsyncLaunchKernel(kernel_ctx);
 }
 
-void WaitAndSendIdsCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+void WaitAndSendIdsActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (wait_and_send_ids_status_.buffer_status_ == kBufferStatusSuccess) {
     HandleProducedNaiveDataRegstToConsumer();
   }
 }
 
-bool WaitAndSendIdsCompActor::IsCustomizedReadReady() const {
+bool WaitAndSendIdsActor::IsCustomizedReadReady() const {
   return wait_and_send_ids_status_.buffer_status_ == kBufferStatusSuccess;
 }
 
-int WaitAndSendIdsCompActor::HandlerWaitToStart(const ActorMsg& msg) {
+int WaitAndSendIdsActor::HandlerWaitToStart(const ActorMsg& msg) {
   CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
-  OF_SET_MSG_HANDLER(&WaitAndSendIdsCompActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&WaitAndSendIdsActor::HandlerNormal);
   return ProcessMsg(msg);
 }
 
-REGISTER_ACTOR(kWaitAndSendIds, WaitAndSendIdsCompActor);
+REGISTER_ACTOR(kWaitAndSendIds, WaitAndSendIdsActor);
 
 }  // namespace oneflow

@@ -203,7 +203,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   auto session_ctx = Global<MultiClientSessionContext>::Get();
   if (session_ctx != nullptr) {
     VLOG(2) << "Multi client session has not closed , env close it at env scope destruction.";
-    session_ctx->TryClose();
+    CHECK_JUST(session_ctx->TryClose());
   }
 
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {

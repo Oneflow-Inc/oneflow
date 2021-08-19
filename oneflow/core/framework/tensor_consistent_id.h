@@ -37,7 +37,7 @@ struct NonRecursiveInitConsistentId<RetT, Arg0, Arg1, TensorTuple*, Args...> {
   static RetT Call(Arg0 arg0, Arg1 arg1, TensorTuple* outputs, Args... args) {
     auto* recursive_depth = MutThreadLocalRecursiveDepth();
     ++*recursive_depth;
-    RetT&& ret = func(arg0, arg1, outputs, args...);
+    RetT ret = func(arg0, arg1, outputs, args...);
     --*recursive_depth;
     if (*recursive_depth == 0) { JUST(InitConsistentId(outputs)); }
     return ret;

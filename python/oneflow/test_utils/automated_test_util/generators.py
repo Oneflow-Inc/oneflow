@@ -32,6 +32,7 @@ TEST_TENSOR = 2
 rng = np.random.default_rng()
 annotation2default_generator = {}
 annotation2torch_to_flow_converter = {}
+NoneType = type(None)
 
 
 def data_generator(annotation):
@@ -245,6 +246,8 @@ class random(generator):
             val = float(rng.random() * (high - low) + low)
         elif annotation == bool:
             val = random_util.choice([True, False])
+        elif annotation == NoneType:
+            val = None
         else:
             raise NotImplementedError(
                 f"Not implemented annotation {annotation} in random"
