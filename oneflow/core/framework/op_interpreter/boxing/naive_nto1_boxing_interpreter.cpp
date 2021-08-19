@@ -79,8 +79,7 @@ Maybe<one::Tensor> NcclPTo1BoxingInterpreter::InterpretImpl(
   if (in_parallel_id->has_value()) {
     int64_t root = JUST(out_parallel_desc->MachineId4ParallelId(0));
     const auto& op_expr = JUST(CachedEagerNcclReduce(in_parallel_desc, root));
-    local_tensor =
-        JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}));
+    local_tensor = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}));
   }
   const auto& output_tensor = JUST(one::functional::ToConsistent(
       local_tensor, out_parallel_desc, *JUST(GetSbpList(out_nd_sbp)), GetNoneSbpList()));

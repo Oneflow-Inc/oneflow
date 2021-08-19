@@ -70,10 +70,11 @@ Maybe<one::Tensor> NcclXToBBoxingInterpreter::InterpretImpl(
   Symbol<ParallelDesc> parallel_desc_with_parallel_num_eq_one = JUST(
       CachedGetOverlapParallelDescWithParallelNumEqualsOne(in_parallel_desc, out_parallel_desc));
   // n -> 1, 1 -> n
-  std::shared_ptr<one::Tensor> mid_tensor = JUST(one::functional::ToConsistent(
-      input, parallel_desc_with_parallel_num_eq_one, *JUST(GetSbpList(in_nd_sbp)), GetNoneSbpList()));
-  return one::functional::ToConsistent(
-      mid_tensor, out_parallel_desc, *JUST(GetSbpList(out_nd_sbp)), GetNoneSbpList());
+  std::shared_ptr<one::Tensor> mid_tensor =
+      JUST(one::functional::ToConsistent(input, parallel_desc_with_parallel_num_eq_one,
+                                         *JUST(GetSbpList(in_nd_sbp)), GetNoneSbpList()));
+  return one::functional::ToConsistent(mid_tensor, out_parallel_desc, *JUST(GetSbpList(out_nd_sbp)),
+                                       GetNoneSbpList());
 }
 
 }  // namespace oneflow
