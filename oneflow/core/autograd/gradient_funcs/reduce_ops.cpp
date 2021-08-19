@@ -66,6 +66,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_sum", ReduceSumOp);
 
 struct ReduceProdOpInterpState : public OpExprInterpState {
   std::vector<int32_t> axis;
+  bool requires_grad;
 };
 
 class ReduceProdOp : public OpExprGradFunction<ReduceProdOpInterpState> {
@@ -88,21 +89,25 @@ Maybe<void> ReduceProdOp::Init(const OpExpr& op) {
 }
 
 Maybe<void> ReduceProdOp::Capture(ReduceProdOpInterpState* ctx, const TensorTuple& inputs,
-                                 const TensorTuple& outputs, const AttrMap& attrs) const {
+                                  const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+  ctx->requires_grad = inputs.at(0)->requires_grad();
   ctx->SaveTensorForBackward(inputs.at(0));
   ctx->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* ctx, const TensorTuple& out_grads,
-                               TensorTuple* in_grads) const {
+                                TensorTuple* in_grads) const {
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
   const auto& input = ctx->SavedTensors().at(0);
   const auto& output = ctx->SavedTensors().at(1);
-  //const auto& dy = out_grads.at(0);
+  const auto& dy = out_grads.at(0);
 
-  const auto& bcast_like = JUST(functional::BroadcastLike(output, input, ctx->axis));
+  const auto& mltply_dy_y = JUST(functional::Multiply(dy, output));
+  const auto& bcast_like = JUST(functional::BroadcastLike(mltply_dy_y, input, ctx->axis));
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::BroadcastDiv(bcast_like, input));
