@@ -21,15 +21,15 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class BroadcastBinaryGrad : public OpExprGradFunction<OpExprInterpState> {
+class BroadcastBinaryGrad : public OpExprGradFunction<AutoGradCaptureState> {
  public:
   BroadcastBinaryGrad() = default;
   virtual ~BroadcastBinaryGrad() = default;
 
   virtual Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override {
+  Maybe<void> Capture(AutoGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->SaveTensorForBackward(inputs.at(0));
@@ -41,7 +41,7 @@ class BroadcastBinaryGrad : public OpExprGradFunction<OpExprInterpState> {
 
 class BroadcastAdd : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
@@ -60,7 +60,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_add", BroadcastAdd);
 
 class BroadcastSub : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
@@ -80,7 +80,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_sub", BroadcastSub);
 
 class BroadcastMul : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
@@ -101,7 +101,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_mul", BroadcastMul);
 
 class BroadcastDiv : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
@@ -122,7 +122,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_div", BroadcastDiv);
 
 class BroadcastMinMax : public BroadcastBinaryGrad {
  public:
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);

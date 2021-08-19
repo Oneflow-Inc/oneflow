@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/spin_counter.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
@@ -585,10 +586,10 @@ Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
     }
     compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
   }
-  static const int64_t kHighWaterMark = 500;
-  static const int64_t kLowWaterMark = 200;
+  const int64_t kHighWaterMark = GetInstructionHighWaterMark();
+  const int64_t kLowWaterMark = GetInstructionLowWaterMark();
   if (*mut_flying_instruction_cnt() > kHighWaterMark) {
-    JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([this]() -> Maybe<void> {
+    JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
       const auto& NeedSpin = [&] { return *mut_flying_instruction_cnt() > kLowWaterMark; };
       while (true) {
         int64_t last_cnt = *mut_flying_instruction_cnt();

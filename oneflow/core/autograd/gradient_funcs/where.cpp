@@ -21,27 +21,27 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct WhereInterpState : public OpExprInterpState {
+struct WhereCaptureState : public AutoGradCaptureState {
   bool requires_grad_x;
   bool requires_grad_y;
 };
 
-struct WhereScalarInterpState : public OpExprInterpState {
+struct WhereScalarCaptureState : public AutoGradCaptureState {
   bool requires_grad;
 };
 
-class Where : public OpExprGradFunction<WhereInterpState> {
+class Where : public OpExprGradFunction<WhereCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(WhereInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(WhereCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override;
-  Maybe<void> Apply(const WhereInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const WhereCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
 Maybe<void> Where::Init(const OpExpr& op) { return Maybe<void>::Ok(); }
 
-Maybe<void> Where::Capture(WhereInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Where::Capture(WhereCaptureState* ctx, const TensorTuple& inputs,
                            const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad_x = inputs.at(1)->requires_grad();
   ctx->requires_grad_y = inputs.at(2)->requires_grad();
@@ -53,7 +53,7 @@ Maybe<void> Where::Capture(WhereInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Where::Apply(const WhereCaptureState* ctx, const TensorTuple& out_grads,
                          TensorTuple* in_grads) const {
   if ((!ctx->requires_grad_x) && (!ctx->requires_grad_y)) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -74,10 +74,10 @@ Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_gra
   return Maybe<void>::Ok();
 }
 
-class WhereScalar : public OpExprGradFunction<WhereScalarInterpState> {
+class WhereScalar : public OpExprGradFunction<WhereScalarCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-  Maybe<void> Capture(WhereScalarInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(WhereScalarCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->requires_grad = inputs.at(1)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -90,7 +90,7 @@ class WhereScalar : public OpExprGradFunction<WhereScalarInterpState> {
 
 class WhereScalarX : public WhereScalar {
  public:
-  Maybe<void> Apply(const WhereScalarInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const WhereScalarCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -107,7 +107,7 @@ class WhereScalarX : public WhereScalar {
 
 class WhereScalarY : public WhereScalar {
  public:
-  Maybe<void> Apply(const WhereScalarInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const WhereScalarCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
