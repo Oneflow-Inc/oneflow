@@ -70,10 +70,6 @@ class MessagePool final {
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
     MessagePool() = delete; //todo:这里可能要修改
     ~MessagePool() {
-      while(mr_buf_.empty() == false) {
-        CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr_buf_.front()), 0);
-        mr_buf_.pop_front();
-      }
     }//todo:这里可能要修改
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
@@ -97,7 +93,7 @@ class MessagePool final {
     }
 
   ActorMsgMR *  GetMessage() {
-        if(isEmpty() == false)  {
+        if(IsEmpty() == false)  {
             return GetMessageFromBuf();
         } else {
             RegisterMessagePool();
@@ -117,12 +113,12 @@ class MessagePool final {
       message_buf_.push_front(msg_mr);
   }
 
-  bool isEmpty() {
+  bool IsEmpty() {
     std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
     return message_buf_.empty() == true ;
   }
  
-  size_t size() {
+  size_t Size() {
     std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
     return message_buf_.size();
   }
