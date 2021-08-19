@@ -36,6 +36,9 @@ class ActorMsgMR final {
     mr_ = mr;
   }
   ~ActorMsgMR() {
+    delete msg_;
+    delete mr_;
+
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
@@ -67,10 +70,6 @@ class MessagePool final {
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
     MessagePool() = delete; //todo:这里可能要修改
     ~MessagePool() {
-       while(message_buf_.empty() == false) {
-        delete message_buf_.front();
-         message_buf_.pop_front();
-       }
     }//todo:这里可能要修改
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
