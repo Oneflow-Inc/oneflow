@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct NormalizationGradInterpState : public OpExprInterpState {
+struct NormalizationGradCaptureState : public AutoGradCaptureState {
   int32_t axis;
   float epsilon;
   bool track_running_stats;
@@ -39,7 +39,7 @@ struct NormalizationGradInterpState : public OpExprInterpState {
 // inference:
 // y = normalization(x, moving_mean, moving_variance, gamma, beta, axis=1, epsilon=0.01,
 // momentum=0.9)
-class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState> {
+class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -48,7 +48,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(NormalizationGradInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(NormalizationGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     std::shared_ptr<Tensor> gamma, beta;
@@ -81,7 +81,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const NormalizationGradInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const NormalizationGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);      // x
     const auto& gamma = ctx->SavedTensors().at(1);  // gamma

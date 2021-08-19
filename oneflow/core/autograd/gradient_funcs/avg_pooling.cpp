@@ -26,7 +26,7 @@ namespace one {
 
 namespace {
 
-struct AvgPoolingInterpState : public OpExprInterpState {
+struct AvgPoolingCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   size_t input_index;
   size_t output_index;
@@ -40,13 +40,13 @@ struct AvgPoolingInterpState : public OpExprInterpState {
   int64_t divisor_override;
 };
 
-class AvgPoolingNdGrad : public OpExprGradFunction<AvgPoolingInterpState> {
+class AvgPoolingNdGrad : public OpExprGradFunction<AvgPoolingCaptureState> {
  public:
   virtual ~AvgPoolingNdGrad() = default;
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(AvgPoolingInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(AvgPoolingCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const AvgPoolingInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AvgPoolingCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -60,7 +60,7 @@ Maybe<void> AvgPoolingNdGrad::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingCaptureState* ctx, const TensorTuple& inputs,
                                       const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -80,7 +80,7 @@ Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingInterpState* ctx, const TensorTu
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingCaptureState* ctx, const TensorTuple& out_grads,
                                     TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
