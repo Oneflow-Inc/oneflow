@@ -13,4 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.framework.config_util import api_enable_debug_mode as enable
+from oneflow.framework.config_util import (
+    api_reserved_device_mem_mbyte as set_reserved_mem_mbytes,
+)

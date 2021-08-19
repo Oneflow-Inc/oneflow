@@ -54,24 +54,24 @@ class CustomModule(flow.nn.Module):
 @flow.unittest.skip_unless_1n1d()
 class TestGraphWithSysConf(flow.unittest.TestCase):
     def test_graph_config(test_case):
-        flow.backends.nccl.boxing_fusion_enable(True)
-        flow.backends.nccl.boxing_fusion_enable_mixed(True)
-        flow.backends.nccl.boxing_fusion_all_reduce(True)
-        flow.backends.nccl.boxing_fusion_all_reduce_use_buffer(True)
-        flow.backends.nccl.boxing_fusion_reduce(True)
-        flow.backends.nccl.boxing_fusion_broadcast(True)
-        flow.backends.nccl.boxing_fusion_all_gather(True)
-        flow.backends.nccl.boxing_fusion_reduce_scatter(True)
-        flow.backends.nccl.boxing_fusion_threshold_mb(1024)
-        flow.backends.nccl.boxing_fusion_max_ops_num(5)
-        flow.backends.nccl.streams_num(4)
-        flow.backends.nccl.reuse_compute_stream(True)
-        flow.backends.nccl.enable_all_to_all(True)
+        flow.boxing.enable_fusion(True)
 
-        flow.backends.cuda.reserved_mem_mbyte(1000)
+        flow.boxing.nccl.set_fusion_threshold_mbytes(800)
+        flow.boxing.nccl.set_fusion_max_ops_num(10)
+        flow.boxing.nccl.allow_fuse_all_reduce(True)
+        flow.boxing.nccl.allow_fuse_reduce_scatter(True)
+        flow.boxing.nccl.allow_fuse_all_gather(True)
+        flow.boxing.nccl.allow_fuse_reduce(True)
+        flow.boxing.nccl.allow_fuse_broadcast(True)
+        flow.boxing.nccl.allow_fuse_mixed_ops(True)
+        flow.boxing.nccl.enable_use_buffer_to_fuse_all_reduce(True)
+        flow.boxing.nccl.set_stream_num(3)
+        flow.boxing.nccl.enable_all_to_all(True)
+        flow.boxing.nccl.enable_use_compute_stream(True)
 
-        flow.backends.debug.enable(True)
-        flow.backends.lib.load("")
+        flow.backends.cudnn.set_reserved_mem_mbytes(1000)
+
+        flow.utils.load_library("")
 
         class CustomGraphSysConf(flow.nn.Graph):
             def __init__(self):

@@ -13,6 +13,5 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.framework.config_util import (
-    api_reserved_device_mem_mbyte as reserved_mem_mbyte,
-)
+from oneflow.framework.config_util import api_enable_fusion as enable_fusion
+from . import nccl
