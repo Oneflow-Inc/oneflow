@@ -41,38 +41,36 @@ struct unpack_call_dispatcher {
   }
 };
 
-template<typename F, typename R>
-struct unpack_call {
-  static R apply(const F& f, const std::vector<PythonArg>& args) {
-    constexpr size_t nargs = function_traits<F>::nargs;
-    CHECK_EQ_OR_THROW(nargs, args.size())
-        << "Requires " << nargs << " arguments, but " << args.size() << " is given.";
-    return unpack_call_dispatcher<F, R>::apply(f, args, std::make_index_sequence<nargs>{});
-  }
-};
+template<typename T>
+inline py::object CastToPyObject(T&& t) {
+  return py::cast(t);
+}
 
-#define INSTANCE_MAYBE_UNPACK_CALL(K, R, return_fn)                                         \
-  template<typename F>                                                                      \
-  struct unpack_call<F, K> {                                                                \
-    static R apply(const F& f, const std::vector<PythonArg>& args) {                        \
-      constexpr size_t nargs = function_traits<F>::nargs;                                   \
-      CHECK_EQ_OR_THROW(nargs, args.size())                                                 \
-          << "Requires " << nargs << " arguments, but " << args.size() << " is given.";     \
-      return (return_fn)(                                                                   \
-          unpack_call_dispatcher<F, K>::apply(f, args, std::make_index_sequence<nargs>{})); \
-    }                                                                                       \
-  };
+template<>
+inline py::object CastToPyObject<Maybe<Tensor>>(Maybe<Tensor>&& t) {
+  return py::cast(t.GetPtrOrThrow());
+}
 
-INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::Tensor>, std::shared_ptr<one::Tensor>,
-                           ([](const Maybe<one::Tensor>& t) { return t.GetPtrOrThrow(); }));
-INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::TensorTuple>, std::shared_ptr<one::TensorTuple>,
-                           ([](const Maybe<one::TensorTuple>& t) { return t.GetPtrOrThrow(); }));
-INSTANCE_MAYBE_UNPACK_CALL(Maybe<void>, bool, ([](const Maybe<void>& t) {
-                             t.GetOrThrow();
-                             return true;
-                           }));
+template<>
+inline py::object CastToPyObject<Maybe<TensorTuple>>(Maybe<TensorTuple>&& t) {
+  return py::cast(t.GetPtrOrThrow());
+}
 
-#undef INSTANCE_MAYBE_UNPACK_CALL
+template<>
+inline py::object CastToPyObject<Maybe<void>>(Maybe<void>&& t) {
+  t.GetOrThrow();
+  return py::none();
+}
+
+template<typename F>
+py::object unpack_call(const F& f, const std::vector<PythonArg>& args) {
+  constexpr size_t nargs = function_traits<F>::nargs;
+  CHECK_EQ_OR_THROW(nargs, args.size())
+      << "Requires " << nargs << " arguments, but " << args.size() << " is given.";
+  using R = typename function_traits<F>::return_type;
+  return CastToPyObject(
+      unpack_call_dispatcher<F, R>::apply(f, args, std::make_index_sequence<nargs>{}));
+}
 
 }  // namespace detail
 

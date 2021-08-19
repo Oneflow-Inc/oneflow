@@ -253,24 +253,32 @@ def _std_decay(fmt):
 def parse_function_params(fmt):
     params = []
     fmt = _normalize(fmt)
-    if not fmt.endswith(")"):
-        raise ValueError('Function def should end with ")": ' + fmt)
     open_paren = fmt.find("(")
     if open_paren == -1:
         raise ValueError('Missing "(" in function def: ' + fmt)
 
-    header = fmt[0:open_paren]
+    header = _normalize(fmt[0:open_paren])
     items = header.split(" ")
-    if (len(items)) != 2:
-        raise ValueError("Missing return type or function name in function def: " + fmt)
+    if (len(items)) != 1:
+        raise ValueError(
+            "Missing return type or more than 1 return type in function def: " + fmt
+        )
     params.append(items[0])
-    function_name = items[1]
 
-    tail = fmt[open_paren + 1 : -1]
+    close_paren = fmt.rfind(")")
+    if close_paren == -1:
+        raise ValueError('Missing ")" in Missingfunction def: ' + fmt)
+
+    tail = fmt[open_paren + 1 : close_paren]
     # TODO(): Parse the parameter list more comprehensively.
     items = tail.split(",")
     for param in items:
         params.append(_normalize(param))
+
+    pos = fmt.rfind("=>")
+    if pos == -1:
+        raise ValueError('Missing "=>" in Missingfunction def: ' + fmt)
+    function_name = _normalize(fmt[pos + 2 :])
     return function_name, params
 
 
@@ -288,8 +296,8 @@ def render_file_if_different(target_file, content):
 
 
 class Argument:
-    def __init__(self, fmt, keyword_allowed=False):
-        self._keyword_allowed = keyword_allowed
+    def __init__(self, fmt, keyword_only=False):
+        self._keyword_only = keyword_only
         self._type = None
         self._name = None
         self._default_value = None
@@ -356,19 +364,21 @@ class FunctionSignature:
         self._fmt = fmt
         self._name, self._params = parse_function_params(fmt)
         self._ret = Return(self._params[0])
-        keyword_allowed = False
+        keyword_only = False
         self._args = []
+        self._max_positional_args_count = 0
         for arg in self._params[1:]:
             if arg == "*":
-                keyword_allowed = True
+                keyword_only = True
                 continue
-            self._args.append(Argument(arg, keyword_allowed=keyword_allowed))
+            self._args.append(Argument(arg, keyword_only=keyword_only))
+            if not keyword_only:
+                self._max_positional_args_count += 1
 
         self._max_args_count = len(self._args)
-        self._max_positional_args_count = self._max_args_count
         count = 0
         for arg in self._args:
-            if arg._keyword_allowed:
+            if arg._keyword_only:
                 count += 1
         self._max_keyword_args_count = count
 
@@ -382,7 +392,7 @@ class FunctionSignature:
         for i, arg in enumerate(self._args):
             if i > 0 and i < len(self._args):
                 fmt += ", "
-            if not keyword_start and arg._keyword_allowed:
+            if not keyword_start and arg._keyword_only:
                 keyword_start = True
                 if not to_cpp:
                     fmt += "*, "
@@ -411,35 +421,44 @@ class FunctionalGenerator:
                 bind_python = False
                 if "bind_python" in block:
                     bind_python = block["bind_python"]
-                self._blocks[name] = Block(
-                    name, FunctionSignature(signature), bind_python
-                )
+                self._blocks[name] = list()
+                if isinstance(signature, list):
+                    for s in signature:
+                        self._blocks[name].append(
+                            Block(name, FunctionSignature(s), bind_python)
+                        )
+                else:
+                    self._blocks[name].append(
+                        Block(name, FunctionSignature(signature), bind_python)
+                    )
 
     def generate_cpp_header_file(self, target_header_file):
         fmt = ""
-        for name, block in self._blocks.items():
-            fmt += "\n"
-            fmt += block._signature.to_string(to_cpp=True)
-            fmt += ";\n"
+        for name, blocks in self._blocks.items():
+            for block in blocks:
+                fmt += "\n"
+                fmt += block._signature.to_string(to_cpp=True)
+                fmt += ";\n"
 
         render_file_if_different(target_header_file, header_fmt.format(fmt))
 
     def generate_cpp_source_file(self, target_source_file):
         fmt = ""
-        for name, block in self._blocks.items():
-            signature = block._signature
-            fmt += "\n"
-            fmt += signature.to_string(to_cpp=True)
-            fmt += " {\n"
-            fmt += '  static thread_local const auto& op = CHECK_JUST(FunctionLibrary::Global()->find("{0}"));\n'.format(
-                signature._name
-            )
-            fmt += "  return op->call<{0}, {1}>({2});\n".format(
-                signature._ret._cpp_type,
-                ", ".join([arg._cpp_type for arg in signature._args]),
-                ", ".join([arg._name for arg in signature._args]),
-            )
-            fmt += "}\n"
+        for name, blocks in self._blocks.items():
+            for block in blocks:
+                signature = block._signature
+                fmt += "\n"
+                fmt += signature.to_string(to_cpp=True)
+                fmt += " {\n"
+                fmt += '  static thread_local const auto& op = CHECK_JUST(FunctionLibrary::Global()->find("{0}"));\n'.format(
+                    signature._name
+                )
+                fmt += "  return op->call<{0}, {1}>({2});\n".format(
+                    signature._ret._cpp_type,
+                    ", ".join([arg._cpp_type for arg in signature._args]),
+                    ", ".join([arg._name for arg in signature._args]),
+                )
+                fmt += "}\n"
 
         render_file_if_different(
             target_source_file, source_fmt.format(api_generate_dir, fmt)
@@ -448,74 +467,72 @@ class FunctionalGenerator:
     def generate_pybind_for_python(self, target_pybind_source_file):
         schema_fmt = ""
         module_fmt = ""
-        for name, block in self._blocks.items():
-            if not block._bind_python:
-                continue
-            signature = block._signature
-            return_type = signature._ret._cpp_type
-            schema_fmt += "\n"
-            schema_fmt += "struct {0}Schema {{\n".format(signature._name)
-            schema_fmt += "  using FType = decltype(functional::{0});\n".format(
-                signature._name
-            )
-            schema_fmt += "  using R = {0};\n".format(return_type)
-            schema_fmt += "\n"
-            schema_fmt += "  static constexpr FType* func = &functional::{0};\n".format(
-                signature._name
-            )
-            schema_fmt += "  static constexpr size_t max_args = {0};\n".format(
-                signature._max_args_count
-            )
-            schema_fmt += "  static constexpr size_t max_positionals = {0};\n".format(
-                signature._max_positional_args_count
-            )
-            schema_fmt += "  static constexpr size_t max_keywords = {0};\n".format(
-                signature._max_keyword_args_count
-            )
-            schema_fmt += '  static constexpr char const* signature = "{0}";\n'.format(
-                _escape_quote(signature.to_string())
-            )
-            schema_fmt += "  static ReturnDef return_def;\n"
-            schema_fmt += "  static std::vector<ArgumentDef> argument_def;\n"
-            schema_fmt += "};\n"
-            schema_fmt += "\n"
-            schema_fmt += "constexpr size_t {0}Schema::max_args;\n".format(
-                signature._name
-            )
-            schema_fmt += "constexpr size_t {0}Schema::max_positionals;\n".format(
-                signature._name
-            )
-            schema_fmt += "constexpr size_t {0}Schema::max_keywords;\n".format(
-                signature._name
-            )
-            schema_fmt += "constexpr char const* {0}Schema::signature;\n".format(
-                signature._name
-            )
-            schema_fmt += "ReturnDef {0}Schema::return_def = ReturnDef(ValueTypeOf<{1}>());\n".format(
-                signature._name, return_type,
-            )
-
-            argument_def = []
-            for arg in signature._args:
-                if arg.has_default_value:
-                    argument_def.append(
-                        'ArgumentDef("{0}", {1}({2}))'.format(
-                            arg._name, _std_decay(arg._cpp_type), arg._default_cpp_value
+        for name, blocks in self._blocks.items():
+            schema_types = []
+            for block in blocks:
+                if not block._bind_python:
+                    continue
+                signature = block._signature
+                schema_types.append("functional::{0}Schema".format(signature._name))
+                return_type = signature._ret._cpp_type
+                schema_fmt += "\n"
+                schema_fmt += "struct {0}Schema {{\n".format(signature._name)
+                schema_fmt += "  using FType = decltype(functional::{0});\n".format(
+                    signature._name
+                )
+                schema_fmt += "  using R = {0};\n".format(return_type)
+                schema_fmt += "\n"
+                schema_fmt += "  static constexpr FType* func = &functional::{0};\n".format(
+                    signature._name
+                )
+                schema_fmt += "  static constexpr size_t max_args = {0};\n".format(
+                    signature._max_args_count
+                )
+                schema_fmt += "  static constexpr size_t max_pos_args = {0};\n".format(
+                    signature._max_positional_args_count
+                )
+                schema_fmt += '  static constexpr char const* signature = "{0}";\n'.format(
+                    _escape_quote(signature.to_string())
+                )
+                schema_fmt += "  static FunctionDef function_def;\n"
+                schema_fmt += "};\n"
+                schema_fmt += "\n"
+                schema_fmt += "constexpr size_t {0}Schema::max_args;\n".format(
+                    signature._name
+                )
+                schema_fmt += "constexpr size_t {0}Schema::max_pos_args;\n".format(
+                    signature._name
+                )
+                schema_fmt += "constexpr char const* {0}Schema::signature;\n".format(
+                    signature._name
+                )
+                return_def = "ReturnDef(ValueTypeOf<{0}>())".format(return_type)
+                argument_def = []
+                for arg in signature._args:
+                    keyword_only = "true" if arg._keyword_only else "false"
+                    if arg.has_default_value:
+                        argument_def.append(
+                            '  ArgumentDef(/*name*/"{0}", /*default_value*/{1}({2}), /*keyword_only*/{3})'.format(
+                                arg._name,
+                                _std_decay(arg._cpp_type),
+                                arg._default_cpp_value,
+                                keyword_only,
+                            )
                         )
-                    )
-                else:
-                    argument_def.append(
-                        'ArgumentDef("{0}", ValueTypeOf<{1}>())'.format(
-                            arg._name, _std_decay(arg._cpp_type)
+                    else:
+                        argument_def.append(
+                            '  ArgumentDef(/*name*/"{0}", /*value_type*/ValueTypeOf<{1}>(), /*keyword_only*/{2})'.format(
+                                arg._name, _std_decay(arg._cpp_type), keyword_only
+                            )
                         )
-                    )
+                schema_fmt += 'FunctionDef {0}Schema::function_def = {{\n/*name*/"{1}",\n/*return_def*/{2},\n/*argument_def*/{{\n{3}\n}}\n}};\n'.format(
+                    signature._name, name, return_def, ",\n".join(argument_def)
+                )
 
-            schema_fmt += "std::vector<ArgumentDef> {0}Schema::argument_def = {{{1}}};\n".format(
-                signature._name, ", ".join(argument_def)
-            )
-            module_fmt += '  m.def("{0}", &functional::PyFunction<functional::{1}Schema>);\n'.format(
-                name, signature._name
-            )
+            if len(schema_types) > 0:
+                module_fmt += '  m.def("{0}", &functional::PyFunction<{1}>);\n'.format(
+                    name, ", ".join(schema_types)
+                )
 
         render_file_if_different(
             target_pybind_source_file, pybind_fmt.format(schema_fmt, module_fmt)
