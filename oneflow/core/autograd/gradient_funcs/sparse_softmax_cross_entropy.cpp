@@ -23,16 +23,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct SparseSoftmaxCrossEntropyInterpState : public OpExprInterpState {
+struct SparseSoftmaxCrossEntropyCaptureState : public AutoGradCaptureState {
   int64_t depth;
 };
 
-class SparseSoftmaxCrossEntropy : public OpExprGradFunction<SparseSoftmaxCrossEntropyInterpState> {
+class SparseSoftmaxCrossEntropy : public OpExprGradFunction<SparseSoftmaxCrossEntropyCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(SparseSoftmaxCrossEntropyInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(SparseSoftmaxCrossEntropyCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const SparseSoftmaxCrossEntropyInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const SparseSoftmaxCrossEntropyCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -50,7 +50,7 @@ Maybe<void> SparseSoftmaxCrossEntropy::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyInterpState* ctx,
+Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyCaptureState* ctx,
                                                const TensorTuple& inputs,
                                                const TensorTuple& outputs,
                                                const AttrMap& attrs) const {
@@ -63,7 +63,7 @@ Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyInterpSt
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyInterpState* ctx,
+Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyCaptureState* ctx,
                                              const TensorTuple& out_grads,
                                              TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);
