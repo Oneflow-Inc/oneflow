@@ -109,6 +109,7 @@ def _test_consistent_tensor_str(test_case, device):
     x = flow.ones((10, 10), placement=placement, sbp=[flow.sbp.partial_sum])
     tensor_str = str(x)
     test_case.assertTrue("1." in tensor_str)
+    test_case.assertTrue("1." in str(x[0][0]))
 
     # summarized consistent tensor
     x = flow.ones((100, 100), placement=placement, sbp=[flow.sbp.split(0)])
