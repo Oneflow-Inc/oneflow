@@ -24,9 +24,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_fused_bias_add_gelu(test_case):
-    channel = 6
-    axis = 1
+def _test_fused_bias_add_gelu(test_case, channel, axis):
     x = np.random.randn(4, channel, 8, 10)
     bias = np.random.randn(channel)
     # fused version only support in GPU
@@ -73,8 +71,11 @@ class TestFusedBiasAddGelu(flow.unittest.TestCase):
     def test_gather(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_fused_bias_add_gelu]
+        arg_dict["channel"] = [2, 4, 6, 8]
+        arg_dict["axis"] = [1]
+
         for arg in GenArgList(arg_dict):
-            arg[0](test_case)
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
