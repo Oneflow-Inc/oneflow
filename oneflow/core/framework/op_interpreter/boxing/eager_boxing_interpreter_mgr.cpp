@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/boxing/naive_nto1_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/cuda_copy_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/cuda_based_cpu_mpi_boxing_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/boxing/naive_xtob_boxing_interpreter.h"
 
 namespace oneflow {
 
@@ -147,6 +148,13 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
           std::make_shared<NcclSTo1BoxingInterpreter>();
       return nccl_sto1_boxing_interpreter;
     }
+  }
+  if (in_parallel_desc->parallel_num() != out_parallel_desc->parallel_num()
+      && (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1)
+      && EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)
+      && (in_parallel_desc->device_type() == DeviceType::kGPU
+          && out_parallel_desc->device_type() == DeviceType::kGPU)) {
+    return std::shared_ptr<EagerBoxingInterpreter>(new NcclXToBBoxingInterpreter());
   }
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
                               << "consistent-to-consistent not supported"
