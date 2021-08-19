@@ -99,7 +99,7 @@ class MessagePool final {
     }
 
   ActorMsgMR *  GetMessage() {
-        if(isEmpty() == false)  {
+        if(IsEmpty() == false)  {
             return GetMessageFromBuf();
         } else {
             RegisterMessagePool();
@@ -119,7 +119,7 @@ class MessagePool final {
       message_buf_.push_front(msg_mr);
   }
 
-  bool isEmpty() {
+  bool IsEmpty() {
       std::lock_guard<std::mutex>  msg_buf_lck(message_buf_mutex_);
       return message_buf_.empty() == true ;
   }
