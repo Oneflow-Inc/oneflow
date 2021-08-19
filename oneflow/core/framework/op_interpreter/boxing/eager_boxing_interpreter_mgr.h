@@ -27,7 +27,7 @@ class EagerBoxingInterpreterManager final {
   virtual ~EagerBoxingInterpreterManager() = default;
 
   Maybe<EagerBoxingInterpreter> GetEagerBoxingInterpreter(
-      Symbol<cfg::ParallelDistribution> in_nd_sbp, Symbol<cfg::ParallelDistribution> out_nd_sbp,
+      Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
       Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc) const;
 };
 
@@ -39,7 +39,7 @@ struct DisableRecusiveBoxingCall {
     static thread_local bool disable_boxing = false;
     CHECK_OR_RETURN(!disable_boxing);
     disable_boxing = true;
-    RetT&& ret = func(arg...);
+    RetT ret = func(arg...);
     disable_boxing = false;
     return ret;
   }

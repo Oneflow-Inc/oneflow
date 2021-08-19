@@ -59,36 +59,36 @@ auto* CachedNcclReduceScatterOpExpr = DECORATE(&EagerNcclReduceScatter, ThreadLo
 }  // namespace
 
 Maybe<one::Tensor> NcclCollectiveAllGatherBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2B(in_nd_sbp->sbp_parallel(0),
                                                           out_nd_sbp->sbp_parallel(0)));
-  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   const auto& op_expr = JUST(CachedEagerNcclAllGatherOpExpr(in_parallel_desc));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
 Maybe<one::Tensor> NcclCollectiveAllReduceBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingP2B(in_nd_sbp->sbp_parallel(0),
                                                           out_nd_sbp->sbp_parallel(0)));
-  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   const auto& op_expr = JUST(CachedEagerNcclAllReduceOpExpr(in_parallel_desc));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
 Maybe<one::Tensor> NcclCollectiveReduceScatterBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN((EagerBoxingInterpreterUtil::IsBoxingP2S(in_nd_sbp->sbp_parallel(0),
                                                            out_nd_sbp->sbp_parallel(0))
                    || EagerBoxingInterpreterUtil::IsBoxingB2S(in_nd_sbp->sbp_parallel(0),
                                                               out_nd_sbp->sbp_parallel(0))));
-  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   const auto& op_expr = JUST(CachedNcclReduceScatterOpExpr(in_parallel_desc, op_type_));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }

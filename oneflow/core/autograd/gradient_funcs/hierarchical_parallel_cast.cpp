@@ -28,9 +28,8 @@ namespace one {
 
 namespace {
 
-Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
-    Symbol<cfg::ParallelDistribution> nd_sbp) {
-  thread_local HashMap<Symbol<cfg::ParallelDistribution>, std::shared_ptr<one::UserOpExpr>>
+Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(Symbol<cfg::NdSbp> nd_sbp) {
+  thread_local HashMap<Symbol<cfg::NdSbp>, std::shared_ptr<one::UserOpExpr>>
       nd_sbp2hierarchical_parallel_cast_op_expr;
   auto iter = nd_sbp2hierarchical_parallel_cast_op_expr.find(nd_sbp);
   if (iter == nd_sbp2hierarchical_parallel_cast_op_expr.end()) {
@@ -50,12 +49,11 @@ Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(
 
 }  // namespace
 
-struct HerarchicalParallelCastOpExprInterpState : public OpExprInterpState {
-  Symbol<cfg::ParallelDistribution> nd_sbp;
+struct HerarchicalParallelCastCaptureState : public AutoGradCaptureState {
+  Symbol<cfg::NdSbp> nd_sbp;
 };
 
-class HerarchicalParallelCast
-    : public OpExprGradFunction<HerarchicalParallelCastOpExprInterpState> {
+class HerarchicalParallelCast : public OpExprGradFunction<HerarchicalParallelCastCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -63,14 +61,14 @@ class HerarchicalParallelCast
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(HerarchicalParallelCastOpExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(HerarchicalParallelCastCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->nd_sbp = JUST(inputs.at(0)->nd_sbp());
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const HerarchicalParallelCastOpExprInterpState* ctx,
-                    const TensorTuple& out_grads, TensorTuple* in_grads) const override {
+  Maybe<void> Apply(const HerarchicalParallelCastCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
     const auto& grad_op = JUST(FindOrCreatHierarchicalParallelCastOpExpr(ctx->nd_sbp));
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);

@@ -32,28 +32,24 @@ REGISTER_NO_GRAD_USER_OP("cast_to_tick")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn(
-        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
-          const cfg::ParallelDistribution& in_dis_hint =
-              ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
-          const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-          CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
 
-          cfg::ParallelDistribution* in_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-          cfg::ParallelDistribution* out_distribution =
-              ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-          in_distribution->clear_sbp_parallel();
-          out_distribution->clear_sbp_parallel();
-          // in use hint
-          in_distribution->CopyFrom(in_dis_hint);
+      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
+      // in use hint
+      in_distribution->CopyFrom(in_dis_hint);
 
-          for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
-            // out dim1 = broadcast
-            out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
-          }
-          return Maybe<void>::Ok();
-        })
+      for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+        // out dim1 = broadcast
+        out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+      }
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace

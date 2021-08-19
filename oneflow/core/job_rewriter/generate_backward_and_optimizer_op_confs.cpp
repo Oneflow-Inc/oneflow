@@ -41,10 +41,10 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
   }
 }
 
-void SetParallelDistributionSignatureHintByIdenticalSbpObaPairs(
-    const OpGraph& op_graph, const OpBlobArgPairs& identical_sbp_oba_pairs,
-    JobBuilder* job_builder) {
-  HashMap<OpBlobArg, const cfg::ParallelDistribution*> oba2nd_sbp;
+void SetNdSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph,
+                                                 const OpBlobArgPairs& identical_sbp_oba_pairs,
+                                                 JobBuilder* job_builder) {
+  HashMap<OpBlobArg, const cfg::NdSbp*> oba2nd_sbp;
   op_graph.ForEachNode([&](OpNode* op_node) {
     auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
       for (const auto& ibn : op_node->op().input_bns()) { Handler(ibn); }
@@ -52,26 +52,24 @@ void SetParallelDistributionSignatureHintByIdenticalSbpObaPairs(
     };
     ForEachBn([&](const std::string& bn_in_op) {
       const auto& oba = GenOpBlobArg(op_node->op().op_name(), bn_in_op);
-      oba2nd_sbp[oba] = &op_node->ParallelDistribution4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
+      oba2nd_sbp[oba] = &op_node->NdSbp4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
     });
   });
-  auto HasParallelDistribution = [&](const OpBlobArg& oba) {
-    return oba2nd_sbp.find(oba) != oba2nd_sbp.end();
-  };
+  auto HasNdSbp = [&](const OpBlobArg& oba) { return oba2nd_sbp.find(oba) != oba2nd_sbp.end(); };
   for (const auto& pair : identical_sbp_oba_pairs.pair()) {
-    const cfg::ParallelDistribution* nd_sbp = nullptr;
-    if (HasParallelDistribution(pair.first()) && HasParallelDistribution(pair.second())) {
+    const cfg::NdSbp* nd_sbp = nullptr;
+    if (HasNdSbp(pair.first()) && HasNdSbp(pair.second())) {
       CHECK(oba2nd_sbp.at(pair.first()) == oba2nd_sbp.at(pair.second()));
       nd_sbp = oba2nd_sbp.at(pair.first());
-    } else if (HasParallelDistribution(pair.first())) {
+    } else if (HasNdSbp(pair.first())) {
       nd_sbp = oba2nd_sbp.at(pair.first());
-    } else if (HasParallelDistribution(pair.second())) {
+    } else if (HasNdSbp(pair.second())) {
       nd_sbp = oba2nd_sbp.at(pair.second());
     } else {
       UNIMPLEMENTED();
     }
-    job_builder->SetParallelDistribution4Oba(pair.first(), *nd_sbp);
-    job_builder->SetParallelDistribution4Oba(pair.second(), *nd_sbp);
+    job_builder->SetNdSbp4Oba(pair.first(), *nd_sbp);
+    job_builder->SetNdSbp4Oba(pair.second(), *nd_sbp);
   }
 }
 
@@ -213,8 +211,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     return Maybe<void>::Ok();
   }));
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder.get());
-  SetParallelDistributionSignatureHintByIdenticalSbpObaPairs(op_graph, identical_sbp_oba_pairs,
-                                                             job_builder.get());
+  SetNdSbpSignatureHintByIdenticalSbpObaPairs(op_graph, identical_sbp_oba_pairs, job_builder.get());
   return Maybe<void>::Ok();
 }
 

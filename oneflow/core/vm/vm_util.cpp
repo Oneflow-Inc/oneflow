@@ -38,7 +38,7 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
   printf("\nvm_util.cpp >> Run(vm::InstructionMsgList* instr_msg_list)");
   auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
   auto* vm = oneflow_vm->mut_vm();
-  vm->Receive(instr_msg_list);
+  JUST(vm->Receive(instr_msg_list));
   return Maybe<void>::Ok();
 }
 

@@ -22,18 +22,17 @@ namespace oneflow {
 
 namespace user_op {
 
-class InferParallelDistributionFnContext {
+class InferNdSbpFnContext {
  public:
-  InferParallelDistributionFnContext() = default;
-  virtual ~InferParallelDistributionFnContext() = default;
-  InferParallelDistributionFnContext(const InferParallelDistributionFnContext&) = delete;
+  InferNdSbpFnContext() = default;
+  virtual ~InferNdSbpFnContext() = default;
+  InferNdSbpFnContext(const InferNdSbpFnContext&) = delete;
   virtual const TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
       const std::string& input_arg_name, int32_t index) const = 0;
-  virtual cfg::ParallelDistribution* ParallelDistribution4ArgNameAndIndex(
-      const std::string& arg_name, int32_t index) = 0;
-  virtual const cfg::ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const = 0;
-  virtual const cfg::ParallelDistributionSignature& nd_sbp_constraints() const = 0;
+  virtual cfg::NdSbp* NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
+  virtual const cfg::NdSbp& NdSbpHint4InputArgNameAndIndex(const std::string& arg_name,
+                                                           int32_t index) const = 0;
+  virtual const cfg::NdSbpSignature& nd_sbp_constraints() const = 0;
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
   virtual int64_t parallel_num() const = 0;
   virtual const Shape& parallel_hierarchy() = 0;
