@@ -87,8 +87,13 @@ class WarmupLrScheduler(LrScheduler):
         self._lr_sch = None
         isinstance(lrsch_or_optimizer, (LrScheduler, Optimizer))
         if isinstance(lrsch_or_optimizer, LrScheduler):
-            super().__init__(lrsch_or_optimizer._optimizer, last_step, verbose)
             self._lr_sch = lrsch_or_optimizer
+            for i, base_lr in enumerate(self._lr_sch.base_lrs):
+                # WarmupLRScheduler will restore lr changed by step() in self._lr_sch.__init___()
+                self._lr_sch._optimizer.param_groups[i][
+                    "lr"
+                ] = self._lr_sch._optimizer.param_groups[i]["initial_lr"]
+            super().__init__(lrsch_or_optimizer._optimizer, last_step, verbose)
         else:
             super().__init__(lrsch_or_optimizer, last_step, verbose)
 

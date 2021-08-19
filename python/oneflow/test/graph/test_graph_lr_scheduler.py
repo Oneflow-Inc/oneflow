@@ -201,25 +201,40 @@ class TestLinearGraphTrainWithCosineLrScheduler(flow.unittest.TestCase):
         _test_linear_graph_train_with_lr_sch(
             test_case, 21, flow.device("cuda"), _sgd_cosine_fn
         )
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cpu"), _sgd_cosine_fn
+        )
 
     def test_graph_cosine_constant(test_case):
         _test_linear_graph_train_with_lr_sch(
             test_case, 21, flow.device("cuda"), _sgd_cosine_constant_fn
+        )
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cpu"), _sgd_cosine_constant_fn
         )
 
     def test_graph_constant(test_case):
         _test_linear_graph_train_with_lr_sch(
             test_case, 21, flow.device("cuda"), _sgd_constant_fn
         )
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cpu"), _sgd_constant_fn
+        )
 
     def test_graph_cosine_linear(test_case):
         _test_linear_graph_train_with_lr_sch(
             test_case, 21, flow.device("cuda"), _sgd_cosine_linear_fn
         )
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cpu"), _sgd_cosine_linear_fn
+        )
 
     def test_graph_linear(test_case):
         _test_linear_graph_train_with_lr_sch(
             test_case, 21, flow.device("cuda"), _sgd_linear_fn
+        )
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cpu"), _sgd_linear_fn
         )
 
 
