@@ -174,9 +174,8 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   const auto& out_parallel_desc = JUST(ctx.parallel_desc.value());
   const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
-  const auto& tensor =
-      JUST(RecursiveGetBoxingOutput(input, out_nd_sbp, out_parallel_desc,
-                                    in_parallel_id->has_value() || out_parallel_id->has_value()));
+  const auto& tensor = JUST(RecursiveGetBoxingOutput(input, out_nd_sbp, out_parallel_desc,
+                                                     /* current_rank_local_is_valid */ true));
   CHECK_OR_RETURN(tensor);
   if (out_parallel_id->has_value()) {
     const auto& nd_sbp = JUST(tensor->nd_sbp());
