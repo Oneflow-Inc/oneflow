@@ -19,12 +19,15 @@ limitations under the License.
 #include <functional>
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
 const static int kTransportTokenTypeBit = 8;
 const static int kTransportTokenThreadConsistentIdBit = 4;
 const static int kTransportTokenRankGroupLevelBit = 4;
+
+const static int kDataTransportTokenThreadConsistentUIdBit = 8;
 
 enum TransportTokenType {
   // Begin

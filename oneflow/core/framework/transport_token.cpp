@@ -17,13 +17,13 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/thread/consistent_unique_id.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 
 namespace oneflow {
 
 /*static*/ Maybe<TransportToken> TransportToken::NewTransportToken(TransportTokenType type) {
-  int32_t thread_consistent_id = JUST(GetThisThreadConsistentUniqueId());
+  int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
   CHECK_GE_OR_RETURN(thread_consistent_id, 0);
   CHECK_LT_OR_RETURN(thread_consistent_id, MaxNumberOfThreadConsistentUId());
   int32_t rank_group_level = 0;
@@ -35,7 +35,7 @@ namespace oneflow {
 }
 
 Maybe<void> TransportToken::CheckThreadConsistentId() const {
-  int32_t thread_consistent_id = JUST(GetThisThreadConsistentUniqueId());
+  int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
   CHECK_EQ_OR_RETURN(thread_consistent_id, this->thread_consistent_id());
   return Maybe<void>::Ok();
 }
