@@ -41,7 +41,7 @@ Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor
   const auto& op = JUST(GetLocalToConsistentOpExpr());
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", shape));
-  JUST(attrs.SetAttr<DataType>("dtype", tensor->dtype()));
+  JUST(attrs.SetAttr<DataType>("dtype", tensor->dtype()->data_type()));
   const auto& x = JUST(tensor->cur_rank_phy_tensor());
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(
       *op, {x}, one::OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
