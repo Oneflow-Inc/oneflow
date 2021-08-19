@@ -18,6 +18,7 @@ from functools import partial
 from typing import Dict
 
 import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
@@ -28,7 +29,7 @@ from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-from oneflow.nn.graph.amp import StaticLossScalePolicy, DynamicLossScalePolicy
+from oneflow.nn.graph.amp import GradScaler
 from oneflow.nn.graph.util import add_indent, sys_exc_error_msg, list_to_func_return
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
@@ -39,11 +40,11 @@ class Graph(object):
     _child_init_cnt = dict()
 
     def __init__(self):
-        self.config = GraphConfig()
         self._generate_name()
-        self.config.proto.set_job_name(self._name)
+        self.config = GraphConfig()
         self._blocks = OrderedDict()
         self._opts = []
+        self._grad_scaler = None
         self._variables_conf = OrderedDict()
         self._is_compiled = False
         self._job_proto = None
@@ -65,11 +66,11 @@ class Graph(object):
         return self.config.training
 
     @property
-    def _graph_conf_proto(self):
+    def _config_proto(self):
         return self.config.proto
 
     @property
-    def _backends_conf_proto(self):
+    def _optimization_conf_proto(self):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
         return session.resource
@@ -108,6 +109,10 @@ class Graph(object):
             opt_dict["lr_sch"] = lr_sch
         self._opts.append(opt_dict)
 
+    def set_grad_scaler(self, grad_scaler: GradScaler = None):
+        assert isinstance(grad_scaler, GradScaler)
+        self._grad_scaler = grad_scaler
+
     def _generate_name(self):
         child_name = self.__class__.__name__
         if Graph._child_init_cnt.get(child_name) is None:
@@ -124,7 +129,14 @@ class Graph(object):
             for bu in bu_gen:
                 yield bu
 
-    def _generate_optimizer_and_variable_configs(self):
+    def _generate_config_proto(self):
+        self.config.proto.set_job_name(self._name)
+
+        if self._grad_scaler is not None:
+            self._grad_scaler.generate_conf_for_graph(
+                self.config.proto.mutable_train_conf()
+            )
+
         if len(self._opts) > 0:
             self.config._train(True)
         for state_block in self._state():
@@ -182,10 +194,9 @@ class Graph(object):
         return eager_outputs
 
     def _build_forward_graph(self, *args):
-        self._generate_optimizer_and_variable_configs()
-
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
+        self._generate_config_proto()
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             arg_op_names, lazy_args, self._args_repr = self._build_io(
@@ -479,14 +490,17 @@ class Graph(object):
         return shallow_repr
 
 
-class GraphConfig(FunctionConfig):
+class GraphConfig(object):
     def __init__(self):
         super().__init__()
+        self.proto = job_conf_cfg.JobConfigProto()
         self._train(False)
 
-    @property
-    def proto(self):
-        return self.function_desc.job_config_proto
+    def _train(self, mode: bool = True):
+        if mode:
+            self.proto.mutable_train_conf()
+        else:
+            self.proto.mutable_predict_conf()
 
     @property
     def training(self):
@@ -497,18 +511,40 @@ class GraphConfig(FunctionConfig):
         raise NotImplementedError
 
     def enable_amp(self, mode: bool = True):
+        """If true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
+
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
         assert type(mode) is bool
-        self.enable_auto_mixed_precision(mode)
+        self.proto.set_enable_auto_mixed_precision(mode)
 
-    def amp_add_loss_scale_policy(self, policy):
-        assert isinstance(policy, (StaticLossScalePolicy, DynamicLossScalePolicy))
-        policy.generate_conf_for_graph(self.proto.mutable_train_conf())
+    def allow_fuse_model_update_ops(self, mode: bool = True):
+        """If true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
 
-    def _train(self, mode: bool = True):
-        if mode:
-            self.proto.mutable_train_conf()
-        else:
-            self.proto.mutable_predict_conf()
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.set_enable_fuse_model_update_ops(mode)
+
+    def allow_fuse_add_to_output(self, mode: bool = True):
+        """If true, try to fuse a binary element-wise add to one of the predecessors to improve performance.
+
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.set_enable_fuse_add_to_output(mode)
+
+    def allow_fuse_cast_scale(self, mode: bool = True):
+        """If true, try to fuse cast and scalar_mul_by_tensor to improve performance.
+    
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.set_enable_fuse_cast_scale(mode)
+
+    def set_gradient_accumulation_steps(self, value):
+        self.proto.set_num_gradient_accumulation_steps(value)
 
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,

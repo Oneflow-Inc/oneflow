@@ -77,10 +77,16 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.m = CustomModule()
+
+                # amp
                 self.config.enable_amp(True)
-                loss_scale = flow.nn.graph.amp.DynamicLossScalePolicy(3000, 1000, 3.0)
-                self.config.amp_add_loss_scale_policy(loss_scale)
-                self.config.enable_fuse_add_to_output(True)
+                grad_scaler = flow.nn.graph.amp.GradScaler(3000, 2.0, 0.5, 1000)
+                self.set_grad_scaler(grad_scaler)
+
+                self.config.allow_fuse_model_update_ops(True)
+                self.config.allow_fuse_add_to_output(True)
+                self.config.allow_fuse_cast_scale(True)
+                self.config.set_gradient_accumulation_steps(100)
 
             def build(self, x):
                 x = self.m(x)
@@ -88,5 +94,6 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
         g = CustomGraphSysConf()
 
-        print("backends conf: \n", g._backends_conf_proto)
-        print("graph conf: \n", g._graph_conf_proto)
+        print("optimization conf: \n", g._optimization_conf_proto)
+        g._generate_config_proto()
+        print("graph conf: \n", g._config_proto)

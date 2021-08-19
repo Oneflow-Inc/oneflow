@@ -38,6 +38,7 @@ class MultiClientSession(object):
         self.scope_attr_name2default_val_ = {}
         self._update_scope_attr_name2defaultVal()
         self.status_ = self.Status.CREATED
+        self.global_config_dict = dict()
 
     def __del__(self):
         self.TryClose()

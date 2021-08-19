@@ -122,14 +122,14 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         cosine_lr0 = flow.optim.lr_scheduler.CosineAnnealingLR(
             sgd0, steps=10, alpha=0.01
         )
-        constant_warmup_cosine_lr0 = flow.optim.lr_scheduler.ConstantWarmupLR(
-            cosine_lr0, steps=7, multiplier=0.4
+        constant_warmup_cosine_lr0 = flow.optim.lr_scheduler.WarmUpLR(
+            cosine_lr0, warmup_factor=0.5, warmup_iters=5, warmup_method="constant"
         )
         cosine_lr1 = flow.optim.lr_scheduler.CosineAnnealingLR(
             sgd1, steps=100, alpha=0.1
         )
-        linear_warmup_cosine_lr1 = flow.optim.lr_scheduler.LinearWarmupLR(
-            cosine_lr1, steps=17, start_multiplier=0.6
+        linear_warmup_cosine_lr1 = flow.optim.lr_scheduler.WarmUpLR(
+            cosine_lr1, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
         )
 
         class CustomGraph0(flow.nn.Graph):
@@ -148,7 +148,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         g = CustomGraph0()
         x = flow.Tensor(4, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
-        g._generate_optimizer_and_variable_configs()
+        g._generate_config_proto()
         print("repr(g): \n", repr(g))
         print("g.config.proto: \n", g.config.proto)
 
