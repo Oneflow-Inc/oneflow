@@ -131,8 +131,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
-  Maybe<void> SoftSyncStream(const std::shared_ptr<VmLocalDepObject> compute_local_dep_object,
-                             const std::string& modifier,
+  Maybe<void> SoftSyncStream(LocalDepObject* compute_local_dep_object, const std::string& modifier,
                              const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
   template<typename T>
