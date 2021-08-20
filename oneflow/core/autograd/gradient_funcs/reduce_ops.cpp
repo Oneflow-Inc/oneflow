@@ -65,7 +65,7 @@ Maybe<void> ReduceSum::Apply(const ReduceSumCaptureState* ctx, const TensorTuple
 REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_sum", ReduceSum);
 
 
-struct ReduceProdOpInterpState : public OpExprInterpState {
+struct ReduceProdOpInterpState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
   bool requires_grad;
 };
@@ -117,7 +117,7 @@ Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* ctx, const Tensor
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_prod", ReduceProdOp);
 
-struct ReduceMaxOrMinCaptureState : public OpExprInterpState {
+struct ReduceMaxOrMinCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
   bool keepdims;
 };
