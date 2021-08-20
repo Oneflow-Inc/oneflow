@@ -582,9 +582,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   CHECK_OR_RETURN(input_tensor->is_lazy());
   CHECK_OR_RETURN(input_tensor->is_consistent());
 
-  bool identity_grad = JUST(ctx.attrs.GetAttr<bool>("identity_grad"));
-  const auto& grad_sbp_list = JUST(ctx.attrs.GetAttr<std::vector<std::string>>("grad_sbp"));
-
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
   const auto& parallel_desc_sym = JUST(ctx.parallel_desc.value());
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
@@ -611,24 +608,22 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   }
 
   // build parallel cast op expr
+  std::shared_ptr<std::vector<std::string>> sbp_list_ptr = JUST(GetNdSbpStrList(sbp_sym));
   std::string grad_mode;
-  std::vector<std::string> grad_parallel_distribution;
-  if (identity_grad) {
-    grad_mode = "identity";
-  } else if (grad_sbp_list.size() > 0) {
+  std::vector<std::string> grad_sbp_str_list;
+  if (op_expr.grad_nd_sbp().has_value()) {
     grad_mode = "manual";
-    grad_parallel_distribution = grad_sbp_list;
+    grad_sbp_str_list = *JUST(GetNdSbpStrList(JUST(op_expr.grad_nd_sbp().value())));
   } else {
-    grad_mode = "restore";
+    grad_mode = "identity";
   }
-  auto sbp_list_ptr = JUST(GetNdSbpStrList(sbp_sym));
   std::shared_ptr<UserOpExpr> parallel_cast_op_expr =
       JUST(OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
                .Input("in")
                .Output("out")
                .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
                .Attr<std::string>("grad_mode", grad_mode)
-               .Attr<std::vector<std::string>>("grad_nd_sbp", grad_parallel_distribution)
+               .Attr<std::vector<std::string>>("grad_nd_sbp", grad_sbp_str_list)
                .Build());
 
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);

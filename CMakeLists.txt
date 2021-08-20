@@ -23,6 +23,7 @@ if (NOT THIRD_PARTY AND NOT ONEFLOW)
 endif()
 
 option(USE_CLANG_FORMAT "" OFF)
+option(USE_CLANG_TIDY "" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
 option(BUILD_TESTING "" OFF)

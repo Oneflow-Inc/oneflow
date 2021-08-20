@@ -959,7 +959,7 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, Bool identity_grad=False, SbpList grad_sbp)"
+  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, SbpList grad_sbp)"
   bind_python: True
 
 - name: "to_local"
@@ -968,6 +968,10 @@
 
 - name: "all_reduce"
   signature: "Tensor AllReduce(Tensor x)"
+  bind_python: True
+
+- name: "broadcast"
+  signature: "Tensor Broadcast(Tensor x)"
   bind_python: True
 
 - name: "select_first"
@@ -1063,4 +1067,8 @@
 
 - name: "consistent_randperm"
   signature: "Tensor ConsistentRandperm(Int32 n,*, Placement placement, SbpList sbp_tuple, Generator generator=None)"
+  bind_python: True
+
+- name: "fused_scale_tril"
+  signature: "Tensor FusedScaleTril(Tensor x, *, Int64 diagonal=0, Scalar fill_value=0, Scalar scale=1)"
   bind_python: True
