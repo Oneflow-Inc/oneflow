@@ -5,7 +5,7 @@ namespace oneflow {
 
 namespace pthread_fork {
 
-bool IsFork();
+bool IsForkedSubProcess();
 
 }  // namespace pthread_fork
 

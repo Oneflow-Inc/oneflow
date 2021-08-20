@@ -7,10 +7,10 @@ namespace pthread_fork {
 
 static bool is_fork = false;
 
-bool IsFork() { return is_fork; }
-static void SetIsFork() { is_fork = true; }
+bool IsForkedSubProcess() { return is_fork; }
+static void SetIsForkedSubProcess() { is_fork = true; }
 
-void RegisterForkCallback() { pthread_atfork(nullptr, nullptr, SetIsFork); }
+void RegisterForkCallback() { pthread_atfork(nullptr, nullptr, SetIsForkedSubProcess); }
 COMMAND(RegisterForkCallback());
 
 }  // namespace pthread_fork
