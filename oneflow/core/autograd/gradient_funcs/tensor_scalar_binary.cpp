@@ -22,18 +22,18 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct TensorScalarInterpState : public OpExprInterpState {
+struct TensorScalarCaptureState : public AutoGradCaptureState {
   bool x_requires_grad;
   bool scalar_requires_grad;
 };
 
-class TensorScalarAddOrSub : public OpExprGradFunction<TensorScalarInterpState> {
+class TensorScalarAddOrSub : public OpExprGradFunction<TensorScalarCaptureState> {
  public:
   TensorScalarAddOrSub() = default;
   virtual ~TensorScalarAddOrSub() = default;
 
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(TensorScalarCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
 
  protected:
@@ -55,7 +55,7 @@ Maybe<void> TensorScalarAddOrSub::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorScalarAddOrSub::Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> TensorScalarAddOrSub::Capture(TensorScalarCaptureState* ctx, const TensorTuple& inputs,
                                           const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   ctx->scalar_requires_grad = inputs.at(1)->requires_grad();
@@ -64,7 +64,7 @@ Maybe<void> TensorScalarAddOrSub::Capture(TensorScalarInterpState* ctx, const Te
 
 class TensorScalarAdd : public TensorScalarAddOrSub {
  public:
-  Maybe<void> Apply(const TensorScalarInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const TensorScalarCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
     if (ctx->x_requires_grad) {
@@ -85,7 +85,7 @@ class TensorScalarAdd : public TensorScalarAddOrSub {
 
 class TensorScalarSub : public TensorScalarAddOrSub {
  public:
-  Maybe<void> Apply(const TensorScalarInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const TensorScalarCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
     if (ctx->x_requires_grad) {
@@ -108,12 +108,12 @@ class TensorScalarSub : public TensorScalarAddOrSub {
 REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_add_by_tensor", TensorScalarAdd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_sub_by_tensor", TensorScalarSub);
 
-class TensorScalarMul : public OpExprGradFunction<TensorScalarInterpState> {
+class TensorScalarMul : public OpExprGradFunction<TensorScalarCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(TensorScalarCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const TensorScalarInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const TensorScalarCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -133,7 +133,7 @@ Maybe<void> TensorScalarMul::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorScalarMul::Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> TensorScalarMul::Capture(TensorScalarCaptureState* ctx, const TensorTuple& inputs,
                                      const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   ctx->scalar_requires_grad = inputs.at(1)->requires_grad();
@@ -142,8 +142,8 @@ Maybe<void> TensorScalarMul::Capture(TensorScalarInterpState* ctx, const TensorT
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorScalarMul::Apply(const TensorScalarInterpState* ctx, const TensorTuple& out_grads,
-                                   TensorTuple* in_grads) const {
+Maybe<void> TensorScalarMul::Apply(const TensorScalarCaptureState* ctx,
+                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(2);
   if (ctx->x_requires_grad) {
     const auto& scalar = ctx->SavedTensors().at(0);
@@ -165,12 +165,12 @@ Maybe<void> TensorScalarMul::Apply(const TensorScalarInterpState* ctx, const Ten
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_mul_by_tensor", TensorScalarMul);
 
-class TensorScalarDiv : public OpExprGradFunction<TensorScalarInterpState> {
+class TensorScalarDiv : public OpExprGradFunction<TensorScalarCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(TensorScalarCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const TensorScalarInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const TensorScalarCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -188,7 +188,7 @@ Maybe<void> TensorScalarDiv::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorScalarDiv::Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> TensorScalarDiv::Capture(TensorScalarCaptureState* ctx, const TensorTuple& inputs,
                                      const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   ctx->scalar_requires_grad = inputs.at(1)->requires_grad();
@@ -199,8 +199,8 @@ Maybe<void> TensorScalarDiv::Capture(TensorScalarInterpState* ctx, const TensorT
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorScalarDiv::Apply(const TensorScalarInterpState* ctx, const TensorTuple& out_grads,
-                                   TensorTuple* in_grads) const {
+Maybe<void> TensorScalarDiv::Apply(const TensorScalarCaptureState* ctx,
+                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(2);
   if (ctx->x_requires_grad) {
     const auto& scalar = ctx->SavedTensors().at(0);

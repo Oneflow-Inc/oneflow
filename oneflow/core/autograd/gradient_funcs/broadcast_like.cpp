@@ -22,17 +22,17 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct BroadCastLikeInterpState : public OpExprInterpState {
+struct BroadCastLikeCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   std::vector<int32_t> broadcast_axes;
 };
 
-class BroadCastLike : public OpExprGradFunction<BroadCastLikeInterpState> {
+class BroadCastLike : public OpExprGradFunction<BroadCastLikeCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(BroadCastLikeInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(BroadCastLikeCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const BroadCastLikeInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BroadCastLikeCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -50,7 +50,7 @@ Maybe<void> BroadCastLike::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BroadCastLike::Capture(BroadCastLikeInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> BroadCastLike::Capture(BroadCastLikeCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -61,7 +61,7 @@ Maybe<void> BroadCastLike::Capture(BroadCastLikeInterpState* ctx, const TensorTu
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BroadCastLike::Apply(const BroadCastLikeInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> BroadCastLike::Apply(const BroadCastLikeCaptureState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
