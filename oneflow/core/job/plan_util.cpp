@@ -869,6 +869,36 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
   }
 }
 
+void PlanUtil::GenRegisterHint(Plan* plan) {
+  HashSet<int64_t> multi_regst_regst_desc_ids;
+  for (const TaskProto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.register_num() != 1) {
+        multi_regst_regst_desc_ids.emplace(pair.second.regst_desc_id());
+      }
+    }
+  }
+  for (TaskProto& task : *(plan->mutable_task())) {
+    bool all_register_num_eq_one = true;
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.register_num() != 1) {
+        all_register_num_eq_one = false;
+        break;
+      }
+    }
+    for (const auto& pair : task.consumed_regst_desc_id()) {
+      if (!all_register_num_eq_one) { break; }
+      for (auto regst_desc_id : pair.second.regst_desc_id()) {
+        if (multi_regst_regst_desc_ids.count(regst_desc_id) > 0) {
+          all_register_num_eq_one = false;
+          break;
+        }
+      }
+    }
+    task.set_all_register_num_eq_one_hint(all_register_num_eq_one);
+  }
+}
+
 const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t job_id,
                                                      const oneflow::KernelConf& kernel_conf) {
   if (kernel_conf.has_op_attribute()) {
