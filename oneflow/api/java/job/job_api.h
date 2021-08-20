@@ -23,7 +23,7 @@ namespace oneflow {
 
 class JavaForeignJobInstance : public JobInstance {
  public:
-  JavaForeignJobInstance(std::string job_name,  std::string sole_input_op_name_in_user_job,
+  JavaForeignJobInstance(std::string job_name, std::string sole_input_op_name_in_user_job,
                          std::string sole_output_op_name_in_user_job, std::function<void(uint64_t)> push_cb,
                          std::function<void(uint64_t)> pull_cb, std::function<void()> finish) : 
                            job_name_(job_name), 
