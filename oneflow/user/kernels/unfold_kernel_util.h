@@ -95,7 +95,7 @@ OF_DEVICE_FUNC bool UnfoldIndexTransform(const UnfoldParams<INDEX_T, NDIM, SDIM>
 
 template<DeviceType device_type, typename T, typename INDEX_T, int NDIM, int SDIM>
 struct UnfoldKernelUtil {
-  static void Forward(DeviceCtx* ctx, const void* params, const T* input_ptr, T* output_ptr);
+  static void Forward(DeviceCtx* ctx, const UnfoldParams<INDEX_T, NDIM, SDIM>* params, const T* input_ptr, T* output_ptr);
 };
 
 #define SPATIAL_NDIM_SEQ OF_PP_MAKE_TUPLE_SEQ(1) OF_PP_MAKE_TUPLE_SEQ(2) OF_PP_MAKE_TUPLE_SEQ(3)

@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct UnfoldInterpState : public OpExprInterpState {
+struct UnfoldInterpState : public AutoGradCaptureState {
   bool requires_grad;
   std::string data_format;
   std::vector<int32_t> output_size;

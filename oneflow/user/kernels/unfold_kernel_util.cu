@@ -39,11 +39,10 @@ __global__ void CudaUnfoldForward(UnfoldParams<INDEX_T, NDIM, SDIM> params, cons
 template<typename T, typename INDEX_T, int NDIM, int SDIM>
 struct UnfoldKernelUtil<DeviceType::kGPU, T, INDEX_T, NDIM, SDIM> {
   using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
-  static void Forward(DeviceCtx* ctx, const void* params, const T* input_ptr, T* output_ptr) {
-    const auto* unfold_params = static_cast<const ParamType*>(params);
+  static void Forward(DeviceCtx* ctx, const UnfoldParams<INDEX_T, NDIM, SDIM>* params, const T* input_ptr, T* output_ptr) {
     CudaUnfoldForward<T, INDEX_T, NDIM, SDIM>
-        <<<GetNumBlocks(unfold_params->out_elem_cnt), kBlockSize, 0, ctx->cuda_stream()>>>(
-            *unfold_params, input_ptr, output_ptr);
+        <<<GetNumBlocks(params->out_elem_cnt), kBlockSize, 0, ctx->cuda_stream()>>>(
+            *params, input_ptr, output_ptr);
   }
 };
 INSTANTIATE_UNFOLD_KERNEL_UTIL_FOR_DEVICE(DeviceType::kGPU)
