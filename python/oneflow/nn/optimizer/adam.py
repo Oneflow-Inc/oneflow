@@ -68,7 +68,8 @@ class Adam(Optimizer):
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-08,
         weight_decay: float = 0,
-        amsgrad: bool = False,
+        amsgrad: bool = False, 
+        do_bias_correction = True
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
@@ -86,20 +87,27 @@ class Adam(Optimizer):
         options["betas"] = betas
         options["weight_decay"] = weight_decay
         options["amsgrad"] = amsgrad
+        options["do_bias_correction"] = do_bias_correction
         super().__init__(parameters, options)
+
+        # self.do_bias_correction = do_bias_correction
+        # self.amsgrad = amsgrad 
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
+                self._state[param]["step"] = 0
                 self._state[param]["exp_avg"] = flow.zeros_like(param)
                 self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
+                self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
         self._op = (
             flow.builtin_op("adam_update")
             .Input("model")
             .Input("model_diff")
             .Input("m")
             .Input("v")
+            .Input("max_v")
             .Attr("l1", 0.0)
             .Attr("weight_decay", 0.0)
             .Build()
@@ -122,21 +130,20 @@ class Adam(Optimizer):
                     "l2": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
-                    "epsilon": param_group["eps"],
+                    "epsilon": param_group["eps"], 
+                    "do_bias_correction": param_group["do_bias_correction"], 
+                    "amsgrad": param_group["amsgrad"], 
                 }
-                # Do bias correction.
-                kwargs["learning_rate_val"] = (
-                    param_group["lr"]
-                    * math.sqrt(1 - kwargs["beta2"] ** (self._state["step"] + 1))
-                    / (1 - kwargs["beta1"] ** (self._state["step"] + 1))
-                )
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
+                    self._state[param]["step"] += 1 
+                    kwargs.update({"train_step_val": self._state[param]["step"]})
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
-                    self._op(param, param.grad, m_tensor, v_tensor, **kwargs)
-            self._state["step"] = self._state["step"] + 1
+                    max_v_tensor = self._state[param]["max_exp_avg_sq"]
+                    self._op(param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs)
+            
             return loss
 
     def generate_conf_for_graph(self, train_conf, vars_conf):
@@ -150,13 +157,16 @@ class Adam(Optimizer):
             beta2 = param_group["betas"][1]
 
             epsilon = param_group["eps"]
+            do_bias_correction = param_group["do_bias_correction"]
+            amsgrad = param_group["amsgrad"]
 
             optimizer_conf.set_base_learning_rate(lr)
 
             optimizer_conf.mutable_adam_conf().set_beta1(beta1)
             optimizer_conf.mutable_adam_conf().set_beta2(beta2)
             optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
-            optimizer_conf.mutable_adam_conf().set_do_bias_correction(True)
+            optimizer_conf.mutable_adam_conf().set_do_bias_correction(do_bias_correction)
+            optimizer_conf.mutable_adam_conf().set_amsgrad(amsgrad)
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 

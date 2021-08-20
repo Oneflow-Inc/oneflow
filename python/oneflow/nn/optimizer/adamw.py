@@ -70,7 +70,8 @@ class AdamW(Optimizer):
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-08,
         weight_decay: float = 0,
-        amsgrad: bool = False,
+        amsgrad: bool = False, 
+        do_bias_correction: bool = True
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
@@ -87,6 +88,7 @@ class AdamW(Optimizer):
         options["eps"] = eps
         options["betas"] = betas
         options["weight_decay"] = weight_decay
+        options["do_bias_correction"] = do_bias_correction
         options["amsgrad"] = amsgrad
         super().__init__(parameters, options)
 
@@ -125,13 +127,15 @@ class AdamW(Optimizer):
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
+                    "do_bias_correction": param_group["do_bias_correction"],
+                    "amsgrad": param_group["amsgrad"],
                 }
-                # Do bias correction.
-                kwargs["learning_rate_val"] = (
-                    param_group["lr"]
-                    * math.sqrt(1 - kwargs["beta2"] ** (self._state["step"] + 1))
-                    / (1 - kwargs["beta1"] ** (self._state["step"] + 1))
-                )
+                # # Do bias correction.
+                # kwargs["learning_rate_val"] = (
+                #     param_group["lr"]
+                #     * math.sqrt(1 - kwargs["beta2"] ** (self._state["step"] + 1))
+                #     / (1 - kwargs["beta1"] ** (self._state["step"] + 1))
+                # )
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
@@ -150,13 +154,16 @@ class AdamW(Optimizer):
             beta1 = param_group["betas"][0]
             beta2 = param_group["betas"][1]
             epsilon = param_group["eps"]
+            do_bias_correction = param_group["do_bias_correction"]
+            amsgrad = param_group["amsgrad"]
 
             optimizer_conf.set_base_learning_rate(lr)
 
             optimizer_conf.mutable_adam_conf().set_beta1(beta1)
             optimizer_conf.mutable_adam_conf().set_beta2(beta2)
             optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
-            optimizer_conf.mutable_adam_conf().set_do_bias_correction(True)
+            optimizer_conf.mutable_adam_conf().set_do_bias_correction(do_bias_correction)
+            optimizer_conf.mutable_adam_conf().set_amsgrad(amsgrad)
 
             optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
                 weight_decay
