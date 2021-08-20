@@ -243,7 +243,7 @@ class TestModule(flow.unittest.TestCase):
                 res2.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
             )
         )
-    
+
     @flow.unittest.skip_unless_1n1d()
     def test_moduledict(test_case):
         class ModuleDict(nn.Module):
