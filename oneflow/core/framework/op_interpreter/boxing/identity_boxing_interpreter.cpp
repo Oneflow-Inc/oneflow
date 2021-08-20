@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/functional/functional.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_interpreter/boxing/identity_boxing_interpreter.h"
 
 namespace oneflow {
@@ -23,7 +25,10 @@ Maybe<one::Tensor> IdentityBoxingInterpreter::InterpretImpl(
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   CHECK_OR_RETURN(in_parallel_desc->parallel_num() == 1 || in_nd_sbp == out_nd_sbp);
-  return input;
+  // reset sbp if parallel_num == 1 and reset ConsistentId
+  std::shared_ptr<one::Tensor> tensor = JUST(input->cur_rank_phy_tensor());
+  return one::functional::ToConsistent(tensor, out_parallel_desc, *JUST(GetSbpList(out_nd_sbp)),
+                                       GetNoneSbpList());
 }
 
 }  // namespace oneflow

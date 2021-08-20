@@ -62,7 +62,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -p build -quiet
+          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -p build -quiet -allow-enabling-alpha-checkers -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" '^((?!third_party_install).)+(?<!cfg.cpp)(?<!pb.cc)$'
 
   hosted:
     name: CPU-only

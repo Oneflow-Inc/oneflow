@@ -209,7 +209,11 @@ add_custom_target(of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR} --fix
   )
-
+# clang tidy
+add_custom_target(of_tidy
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py --build_dir ${CMAKE_BINARY_DIR}
+  DEPENDS of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
+  )
 # generate version
 set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
 set(OF_GIT_VERSION_FILE ${OF_GIT_VERSION_DIR}/version.cpp)
@@ -291,6 +295,9 @@ add_dependencies(of_ccobj of_cfgobj)
 add_dependencies(of_ccobj of_git_version)
 if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
+endif()
+if (USE_CLANG_TIDY)
+  add_dependencies(of_ccobj of_tidy)
 endif()
 
 target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)

@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_consistent_id.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/decorator.h"
 
 namespace oneflow {
@@ -65,13 +66,11 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
 }
 
 Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
-                               bool current_rank_local_is_valid) {
-  if (!current_rank_local_is_valid) { return input; }
+                               Symbol<ParallelDesc> out_parallel_desc) {
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
   // Eager boxing
   const auto& in_nd_sbp = JUST(input->nd_sbp());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
-  const auto& out_parallel_desc = in_parallel_desc;
   const auto& boxing_interpreter = JUST(
       mgr->GetEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
   const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
@@ -112,8 +111,11 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   for (int i = 0; i < inputs.size(); ++i) {
     std::shared_ptr<Tensor> input = inputs.at(i);
     const auto& infered_input_meta = result->input_tensor_metas().at(i);
+    const auto& input_parallel_desc = JUST(input->parallel_desc());
+    CHECK_OR_RETURN(input_parallel_desc == infered_input_meta->parallel_desc());
     if (infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
-      input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(), parallel_id.has_value()));
+      input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(),
+                                   infered_input_meta->parallel_desc()));
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
     input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
@@ -149,6 +151,57 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
+}
+
+namespace {
+
+static constexpr auto* RecursiveGetBoxingOutput =
+    DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta);
+
+Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_expr,
+                                      const TensorTuple& inputs, TensorTuple* outputs,
+                                      const OpExprInterpContext& ctx) {
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  const auto& input = inputs.at(0);
+  CHECK_OR_RETURN(input->is_consistent());
+  CHECK_OR_RETURN(ctx.parallel_desc.has_value());
+  CHECK_OR_RETURN(ctx.nd_sbp.has_value());
+  const auto& in_parallel_desc = JUST(input->parallel_desc());
+  const auto& out_nd_sbp = JUST(ctx.nd_sbp.value());
+  const auto& out_parallel_desc = JUST(ctx.parallel_desc.value());
+  const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
+  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+  const auto& tensor = JUST(RecursiveGetBoxingOutput(input, out_nd_sbp, out_parallel_desc));
+  CHECK_OR_RETURN(tensor);
+  if (out_parallel_id->has_value()) {
+    const auto& nd_sbp = JUST(tensor->nd_sbp());
+    const auto& parallel_desc = JUST(tensor->parallel_desc());
+    CHECK_OR_RETURN(nd_sbp == out_nd_sbp) << ". nd_sbp: " << *JUST(NdSbpToString(nd_sbp))
+                                          << ", out_nd_sbp" << *JUST(NdSbpToString(out_nd_sbp));
+    CHECK_OR_RETURN(parallel_desc == out_parallel_desc);
+    outputs->at(0) = tensor;
+  } else {
+    ConsistentTensorMeta tensor_meta(tensor->shape(), tensor->dtype()->data_type(), out_nd_sbp,
+                                     out_parallel_desc);
+    const auto& tensor_impl =
+        JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), tensor->requires_grad(), false));
+    outputs->at(0).reset(new ConsistentTensor(tensor_impl));
+  }
+  CHECK_OR_RETURN(outputs->at(0));
+  return Maybe<void>::Ok();
+}
+
+static constexpr auto* ConsistentToConsistent =
+    DECORATE(&RawConsistentToConsistent, NonRecursiveInitConsistentId);
+
+}  // namespace
+
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
+                                                  const TensorTuple& inputs, TensorTuple* outputs,
+                                                  const OpExprInterpContext& ctx) const {
+  JUST(ConsistentToConsistent(op_expr, inputs, outputs, ctx));
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
