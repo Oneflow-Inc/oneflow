@@ -1326,6 +1326,7 @@ def maximum(x, y):
     """
     return flow.F.maximum(x, y)
 
+
 if __name__ == "__main__":
     import doctest
 

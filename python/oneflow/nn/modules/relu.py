@@ -11,6 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+from oneflow.framework.tensor import register_tensor_op
 
 def relu_op(input,inplace=False):
     """
@@ -28,8 +29,32 @@ def relu_op(input,inplace=False):
 
         >>> ndarr = np.asarray([1, -2, 3])
         >>> input = flow.Tensor(ndarr)
-        >>> outputs = flow.relu(input)
-        >>> outputs
+        >>> output = flow.relu(input)
+        >>> output
+        tensor([1., 0., 3.], dtype=oneflow.float32)
+
+    """
+    return flow.F.relu(input,inplace=inplace)
+
+@register_tensor_op("relu")
+def relu_tensor_op(input,inplace=False):
+    """
+    Applies the rectified linear unit function element-wise. See :class:`~oneflow.nn.ReLU` for more details. oneflow space
+
+    Args:
+        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
+    
+    For examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> ndarr = np.asarray([1, -2, 3])
+        >>> input = flow.Tensor(ndarr)
+        >>> output = input.relu()
+        >>> output
         tensor([1., 0., 3.], dtype=oneflow.float32)
 
     """
