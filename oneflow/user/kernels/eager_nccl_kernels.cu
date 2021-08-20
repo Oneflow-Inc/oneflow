@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
@@ -97,11 +98,15 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape(), out->shape());
-    CHECK_EQ(in->data_type(), out->data_type());
     int64_t root = ctx->Attr<int64_t>("root");
-    OF_NCCL_CHECK(ncclBroadcast(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                                GetNcclDataType(in->data_type()), root, kernel_state->comm(),
+    const void* in_ptr = nullptr;
+    if (GlobalProcessCtx::Rank() == root) {
+      CHECK_EQ(in->shape(), out->shape());
+      CHECK_EQ(in->data_type(), out->data_type());
+      in_ptr = in->dptr();
+    }
+    OF_NCCL_CHECK(ncclBroadcast(in_ptr, out->mut_dptr(), out->shape().elem_cnt(),
+                                GetNcclDataType(out->data_type()), root, kernel_state->comm(),
                                 ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -157,7 +162,6 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK(!(in->shape() == out->shape()));
     CHECK_EQ(in->data_type(), out->data_type());
     const auto& op_type = ctx->Attr<std::string>("op_type");
     OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
@@ -193,7 +197,6 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK(!(in->shape() == out->shape()));
     CHECK_EQ(in->data_type(), out->data_type());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), kernel_state->comm(),
