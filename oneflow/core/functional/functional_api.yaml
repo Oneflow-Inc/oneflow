@@ -25,13 +25,15 @@
     "Tensor (TensorTuple inputs, Bool inplace=False) => AddN",
     "Tensor (Tensor input, Tensor other, Bool inplace=False) => Add",
     "Tensor (Tensor input, Scalar other, Bool inplace=False) => ScalarAdd",
+    "Tensor (Scalar input, Tensor other) => ScalarAdd2",
   ]
   bind_python: true
 
 - name: "sub"
   signature: [
     "Tensor (Tensor input, Tensor other) => Sub",
-    "Tensor (Tensor input, Scalar other) => ScalarSub",
+    "Tensor (Tensor input, Scalar other, Bool inplace=False) => ScalarSub",
+    "Tensor (Scalar input, Tensor other) => ScalarSub2",
   ]
   bind_python: true
 
@@ -39,6 +41,7 @@
   signature: [
     "Tensor (Tensor input, Tensor other) => Mul",
     "Tensor (Tensor input, Scalar other) => ScalarMul",
+    "Tensor (Scalar input, Tensor other) => ScalarMul2",
   ]
   bind_python: true
 
@@ -46,6 +49,7 @@
   signature: [
     "Tensor (Tensor input, Tensor other) => Div",
     "Tensor (Tensor input, Scalar other) => ScalarDiv",
+    "Tensor (Scalar input, Tensor other) => ScalarDiv2",
   ]
   bind_python: true
 
