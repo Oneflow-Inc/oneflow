@@ -10,8 +10,8 @@
 #include "oneflow/core/framework/session_util.h"
 
 inline void OpenDefaultSession() {
-    int64_t session_id = oneflow::NewSessionId();
-    oneflow::RegsiterSession(session_id);
+  int64_t session_id = oneflow::NewSessionId();
+  oneflow::RegsiterSession(session_id);
 }
 
 inline void InitSession(const std::string& device_tag) {
@@ -23,8 +23,7 @@ inline void InitSession(const std::string& device_tag) {
   if (device_tag == "gpu") {
     resource->set_cpu_device_num(0);
     resource->set_gpu_device_num(1);
-  }
-  else {
+  } else {
     resource->set_cpu_device_num(1);
     resource->set_gpu_device_num(0);
   }

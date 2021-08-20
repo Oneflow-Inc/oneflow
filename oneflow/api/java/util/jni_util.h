@@ -30,11 +30,11 @@ inline int Endian() {
   // little endian: 0x01 0x00 0x00 0x00
   // big endian:    0x00 0x00 0x00 0x01
   int x = 1;
-  char *y = (char*) &x;
+  char* y = (char*)&x;
   return *y;
 }
 
-inline jobject GetOptionField(JNIEnv* env, jobject obj, const char* field_name, 
+inline jobject GetOptionField(JNIEnv* env, jobject obj, const char* field_name,
                               const char* signature) {
   jclass option_class = (*env).FindClass("org/oneflow/Option");
   jfieldID fid = (*env).GetFieldID(option_class, field_name, signature);
@@ -49,11 +49,11 @@ inline int GetIntFromField(JNIEnv* env, jobject obj) {
   return value;
 }
 
-inline void SetStringField(JNIEnv* env, jobject obj, const char* field_name,
-                           const char* signature, jstring value) {
+inline void SetStringField(JNIEnv* env, jobject obj, const char* field_name, const char* signature,
+                           jstring value) {
   jclass option_class = (*env).FindClass("org/oneflow/Option");
   jfieldID fid = (*env).GetFieldID(option_class, field_name, signature);
-  (*env).SetObjectField(obj, fid, (jobject) value);
+  (*env).SetObjectField(obj, fid, (jobject)value);
 }
 
 #endif  // ONEFLOW_API_JAVA_UTIL_JNI_UTIL_H_

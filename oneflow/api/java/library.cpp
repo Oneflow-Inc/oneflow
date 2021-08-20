@@ -46,14 +46,12 @@
 #include "oneflow/api/java/env/env_api.h"
 #include "oneflow/api/java/job/job_api.h"
 
-
-JNIEXPORT 
-jint JNICALL Java_org_oneflow_OneFlow_getEndian(JNIEnv* env, jobject obj) {
-  return Endian();
-}
+JNIEXPORT
+jint JNICALL Java_org_oneflow_OneFlow_getEndian(JNIEnv* env, jobject obj) { return Endian(); }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_setIsMultiClient(JNIEnv* env, jobject obj, jboolean is_multi_client) {
+void JNICALL Java_org_oneflow_OneFlow_setIsMultiClient(JNIEnv* env, jobject obj,
+                                                       jboolean is_multi_client) {
   return oneflow::SetIsMultiClient(is_multi_client).GetOrThrow();
 }
 
@@ -95,22 +93,21 @@ void JNICALL Java_org_oneflow_OneFlow_initSession(JNIEnv* env, jobject obj, jstr
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_OneFlow_loadModel(JNIEnv* env, jobject obj, jobject option) {
-  jstring full_path_name = (jstring) GetOptionField(env, option, "modelProtoPath", "Ljava/lang/String;");
+  jstring full_path_name =
+      (jstring)GetOptionField(env, option, "modelProtoPath", "Ljava/lang/String;");
   std::string full_path_name_ = ConvertToString(env, full_path_name);
 
-  jstring signature_name = (jstring) GetOptionField(env, option, "signatureName", "Ljava/lang/String;");
+  jstring signature_name =
+      (jstring)GetOptionField(env, option, "signatureName", "Ljava/lang/String;");
   std::string signature_name_ = "";
-  if (signature_name != nullptr) {
-    signature_name_ = ConvertToString(env, signature_name);
-  }
+  if (signature_name != nullptr) { signature_name_ = ConvertToString(env, signature_name); }
 
-  jstring device_tag = (jstring) GetOptionField(env, option, "deviceTag", "Ljava/lang/String;");
+  jstring device_tag = (jstring)GetOptionField(env, option, "deviceTag", "Ljava/lang/String;");
   std::string device_tag_ = "";
-  if (device_tag != nullptr) {
-    device_tag_ = ConvertToString(env, device_tag);
-  }
+  if (device_tag != nullptr) { device_tag_ = ConvertToString(env, device_tag); }
 
-  jstring machine_device_ids = (jstring) GetOptionField(env, option, "machineDeviceIds", "Ljava/lang/String;");
+  jstring machine_device_ids =
+      (jstring)GetOptionField(env, option, "machineDeviceIds", "Ljava/lang/String;");
   std::string machine_device_ids_ = "";
   if (machine_device_ids != nullptr) {
     machine_device_ids_ = ConvertToString(env, machine_device_ids);
@@ -118,9 +115,7 @@ void JNICALL Java_org_oneflow_OneFlow_loadModel(JNIEnv* env, jobject obj, jobjec
 
   jobject batch_size_obj = GetOptionField(env, option, "batchSize", "Ljava/lang/Integer;");
   int batch_size = 0;
-  if (batch_size_obj != nullptr) {
-    batch_size = GetIntFromField(env, batch_size_obj);
-  }
+  if (batch_size_obj != nullptr) { batch_size = GetIntFromField(env, batch_size_obj); }
 
   oneflow::SavedModel saved_model = LoadModel(full_path_name_);
   CompileGraph(saved_model, signature_name_, machine_device_ids_, device_tag_, batch_size);
@@ -140,17 +135,19 @@ void JNICALL Java_org_oneflow_OneFlow_loadCheckpoint(JNIEnv* env, jobject obj, j
   std::string load_job_name = GetInterUserJobInfo().global_model_load_job_name();
 
   int64_t path_length = (*env).GetDirectBufferCapacity(path);
-  void *path_address = (*env).GetDirectBufferAddress(path);
+  void* path_address = (*env).GetDirectBufferAddress(path);
 
-  return LoadCheckPoint(load_job_name, (signed char*) path_address, path_length);
+  return LoadCheckPoint(load_job_name, (signed char*)path_address, path_length);
 }
 
 JNIEXPORT
-void JNICALL Java_org_oneflow_OneFlow_runSinglePushJob(JNIEnv* env, jobject obj, jobject data, jobject shape, jint dtype_code, jstring job_name, jstring op_name) {
+void JNICALL Java_org_oneflow_OneFlow_runSinglePushJob(JNIEnv* env, jobject obj, jobject data,
+                                                       jobject shape, jint dtype_code,
+                                                       jstring job_name, jstring op_name) {
   std::string job_name_ = ConvertToString(env, job_name);
   std::string op_name_ = ConvertToString(env, op_name);
-  void *data_address = (*env).GetDirectBufferAddress(data);
-  long *shape_address = (long*) (*env).GetDirectBufferAddress(shape);
+  void* data_address = (*env).GetDirectBufferAddress(data);
+  long* shape_address = (long*)(*env).GetDirectBufferAddress(shape);
   long shape_length = (*env).GetDirectBufferCapacity(shape);
 
   return RunPushJob(job_name_, op_name_, data_address, dtype_code, shape_address, shape_length);
@@ -164,7 +161,8 @@ void JNICALL Java_org_oneflow_OneFlow_runInferenceJob(JNIEnv* env, jobject obj, 
 }
 
 JNIEXPORT
-jobject JNICALL Java_org_oneflow_OneFlow_runPullJob(JNIEnv* env, jobject obj, jstring job_name, jstring op_name) {  
+jobject JNICALL Java_org_oneflow_OneFlow_runPullJob(JNIEnv* env, jobject obj, jstring job_name,
+                                                    jstring op_name) {
   std::string job_name_ = ConvertToString(env, job_name);
   std::string op_name_ = ConvertToString(env, op_name);
 
@@ -172,15 +170,18 @@ jobject JNICALL Java_org_oneflow_OneFlow_runPullJob(JNIEnv* env, jobject obj, js
   RunPullJobSync(job_name_, op_name_, pull_tensor);
 
   jbyteArray array = (*env).NewByteArray(pull_tensor->len_);
-  (*env).SetByteArrayRegion(array, 0, pull_tensor->len_, reinterpret_cast<jbyte*>(pull_tensor->data_));
+  (*env).SetByteArrayRegion(array, 0, pull_tensor->len_,
+                            reinterpret_cast<jbyte*>(pull_tensor->data_));
   jlongArray shapeArray = (*env).NewLongArray(pull_tensor->axes_);
   (*env).SetLongArrayRegion(shapeArray, 0, pull_tensor->axes_, pull_tensor->shape_);
 
   // call nativeNewTensor
   // Todo: Exception handle
   jclass tensor_class = (*env).FindClass("org/oneflow/Tensor");
-  jmethodID mid = (*env).GetStaticMethodID(tensor_class, "nativeNewTensor", "([B[JI)Lorg/oneflow/Tensor;");
-  jobject tensor = (*env).CallStaticObjectMethod(tensor_class, mid, array, shapeArray, pull_tensor->dtype_);
+  jmethodID mid =
+      (*env).GetStaticMethodID(tensor_class, "nativeNewTensor", "([B[JI)Lorg/oneflow/Tensor;");
+  jobject tensor =
+      (*env).CallStaticObjectMethod(tensor_class, mid, array, shapeArray, pull_tensor->dtype_);
 
   return tensor;
 }
@@ -210,9 +211,9 @@ jstring JNICALL Java_org_oneflow_OneFlow_getPushJobNames(JNIEnv* env, jobject ob
   std::string push_job_names;
   auto input2push = GetInterUserJobInfo().input_or_var_op_name2push_job_name();
   for (auto iter = input2push.begin(); iter != input2push.end(); iter++) {
-    push_job_names = push_job_names + iter->first + "," + iter->second + ",";;
+    push_job_names = push_job_names + iter->first + "," + iter->second + ",";
   }
-  
+
   jstring res = ConvertToJString(env, push_job_names);
   return res;
 }
