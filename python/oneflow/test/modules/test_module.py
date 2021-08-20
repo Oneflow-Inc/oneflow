@@ -249,14 +249,13 @@ class TestModule(flow.unittest.TestCase):
         class ModuleDict(nn.Module):
             def __init__(self):
                 super(ModuleDict, self).__init__()
-                self.choices = nn.ModuleDict({
-                    'conv': nn.Conv2d(10, 10, 3),
-                    'pool': nn.MaxPool2d(3)
-                })
-                self.activations = nn.ModuleDict({
-                    'relu': nn.ReLU(),
-                    'prelu': nn.PReLU()
-                })
+                self.choices = nn.ModuleDict(
+                    {"conv": nn.Conv2d(10, 10, 3), "pool": nn.MaxPool2d(3)}
+                )
+                self.activations = nn.ModuleDict(
+                    {"relu": nn.ReLU(), "prelu": nn.PReLU()}
+                )
+
             def forward(self, x, choice, act):
                 x = self.choices[choice](x)
                 x = self.activations[act](x)
@@ -264,7 +263,7 @@ class TestModule(flow.unittest.TestCase):
 
         model = ModuleDict()
         input = flow.tensor(np.random.randn(4, 10, 32, 32), dtype=flow.float32)
-        output = model(input, 'conv', 'relu')
+        output = model(input, "conv", "relu")
         test_case.assertEqual(output.shape, flow.Size([4, 10, 30, 30]))
 
 
