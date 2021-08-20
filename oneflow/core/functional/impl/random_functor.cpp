@@ -252,17 +252,28 @@ class ConsistentRandNFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-class RandintFunctor {
+class RandIntFunctor {
  public:
-  RandintFunctor() { randint_op_ = CHECK_JUST(one::OpBuilder("randint").Output("out").Build()); }
+  RandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
 
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator) const {
+    DataType dtype_val = DataType::kInt64;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype.value())->data_type();
+
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+      }
+    }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<int64_t>("low", low));
-    JUST(attrs.SetAttr<int64_t>("high", high));
+    JUST(attrs.SetAttr<double>("low", low));
+    JUST(attrs.SetAttr<double>("high", high));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
 
     std::shared_ptr<one::Generator> gen;
     if (!generator) {
@@ -270,40 +281,55 @@ class RandintFunctor {
     } else {
       gen = JUST(generator.value());
     }
-    const auto& randint_kernel_state = std::make_shared<UniformKernelState>(gen);
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
       return OpInterpUtil::Dispatch<Tensor>(
-          *randint_op_, {}, OpExprInterpContext(attrs, device_symbol, randint_kernel_state));
+          *op_, {}, OpExprInterpContext(attrs, device_symbol, uniform_kernel_state));
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*randint_op_, {},
-                                            OpExprInterpContext(attrs, randint_kernel_state));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {},
+                                            OpExprInterpContext(attrs, uniform_kernel_state));
     }
   }
 
  private:
-  std::shared_ptr<OpExpr> randint_op_;
+  std::shared_ptr<OpExpr> op_;
 };
-class ConsistentRandintFunctor {
+
+class ConsistentRandIntFunctor {
  public:
-  ConsistentRandintFunctor() {
-    randint_op_ = CHECK_JUST(one::OpBuilder("randint").Output("out").Build());
-  }
+  ConsistentRandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator) const {
+    DataType dtype_val = DataType::kInt64;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype.value())->data_type();
+
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+      }
+    }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<int64_t>("low", low));
-    JUST(attrs.SetAttr<int64_t>("high", high));
+    JUST(attrs.SetAttr<double>("low", low));
+    JUST(attrs.SetAttr<double>("high", high));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
     std::shared_ptr<one::Generator> gen;
     if (!generator) {
       gen = JUST(one::DefaultAutoGenerator());
     } else {
       gen = JUST(generator.value());
     }
-    const auto& randint_kernel_state = std::make_shared<UniformKernelState>(gen);
+
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
 
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
@@ -317,11 +343,11 @@ class ConsistentRandintFunctor {
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
 
     return OpInterpUtil::Dispatch<Tensor>(
-        *randint_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, randint_kernel_state));
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, uniform_kernel_state));
   }
 
  private:
-  std::shared_ptr<OpExpr> randint_op_;
+  std::shared_ptr<OpExpr> op_;
 };
 
 class RandPermFunctor {
@@ -398,14 +424,14 @@ class ConsistentRandPermFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BernoulliFunctor>("Bernoulli");
-  m.add_functor<impl::RandPermFunctor>("Randperm");
-  m.add_functor<impl::ConsistentRandPermFunctor>("ConsistentRandperm");
+  m.add_functor<impl::RandPermFunctor>("RandPerm");
+  m.add_functor<impl::ConsistentRandPermFunctor>("ConsistentRandPerm");
   m.add_functor<impl::RandFunctor>("Rand");
   m.add_functor<impl::ConsistentRandFunctor>("ConsistentRand");
   m.add_functor<impl::RandNFunctor>("RandN");
   m.add_functor<impl::ConsistentRandNFunctor>("ConsistentRandN");
-  m.add_functor<impl::RandintFunctor>("Randint");
-  m.add_functor<impl::ConsistentRandintFunctor>("ConsistentRandint");
+  m.add_functor<impl::RandIntFunctor>("RandInt");
+  m.add_functor<impl::ConsistentRandIntFunctor>("ConsistentRandInt");
 };
 
 }  // namespace functional

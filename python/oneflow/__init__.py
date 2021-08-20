@@ -22,7 +22,6 @@ oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
-no_grad = oneflow._oneflow_internal.autograd.no_grad
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
@@ -114,6 +113,7 @@ from oneflow.framework.docstr.utils import register_docstr
 register_docstr()
 del register_docstr
 del docstr
+from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 import oneflow.nn.modules.acosh
 import oneflow.nn.modules.activation
@@ -257,8 +257,8 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.random_ops import bernoulli
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
-from oneflow.nn.modules.random_ops import randint
-from oneflow.nn.modules.random_ops import randperm
+from oneflow.nn.modules.random_ops import randint_op as randint
+from oneflow.nn.modules.random_ops import randperm_op as randperm
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min

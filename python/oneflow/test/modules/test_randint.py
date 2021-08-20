@@ -22,7 +22,6 @@ import oneflow as flow
 
 import oneflow.unittest
 from test_util import GenArgList
-from automated_test_util import *
 
 
 def _test_rand(test_case, device, shape, low, high):
@@ -80,16 +79,14 @@ def _test_high(test_case, device, shape, low, high):
 
 def _test_0rank(test_case, device, shape, low, high):
     y1 = flow.randint(low, high, shape, device=flow.device(device))
-    y2 = flow.randint(low, high, shape, device=flow.device(device))
-    test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
-
+    test_case.assertTrue(y1.shape == shape)
 
 @flow.unittest.skip_unless_1n1d()
 class TestRandint(flow.unittest.TestCase):
     def test_consistent_naive(test_case):
         placement = flow.placement("cpu", {0: [0]})
         sbp = (flow.sbp.broadcast,)
-        x = flow.randint(16, (10, 1), placement=placement, sbp=sbp)
+        x = flow.randint(0, 16, (10, 1), placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
 
