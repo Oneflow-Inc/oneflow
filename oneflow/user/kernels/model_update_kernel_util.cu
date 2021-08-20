@@ -253,8 +253,10 @@ __global__ void AdamUpdateGpu(int64_t n, T scale, float l1, float l2, float beta
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   if (train_step != nullptr) {train_step_val = *train_step; }
+  // printf("here is adam update gpu, and train step value is: %ld", train_step_val);
 
   CUDA_1D_KERNEL_LOOP(i, n) {
+    printf("cuda here amsgrad is: %d \n", amsgrad);
     AdamUpdateFunctor<T, G>()(model_diff + i, model + i, m + i, v + i, max_v+i, scale, l1, l2, beta1, beta2,
                               epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, train_step_val);
   }

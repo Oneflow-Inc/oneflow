@@ -101,16 +101,26 @@ struct AdamUpdateFunctor {
     const T next_v = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
     *v = next_v;
 
+    printf("amsgrad is %d \n", amsgrad);
+    // printf("FLoat amsgrad is %f \n", amsgrad); // it always with bias_correction2
+    printf("%02X \n",  * (char*)(&amsgrad));
+    
     T denom = 0; 
-    if(amsgrad){
+    if(amsgrad == true){
       const T next_max_v = std::max(*max_v, next_v); 
       *max_v = next_max_v; 
+      // printf("next_max_v is: %f", next_max_v);
+      printf("here is in amsgrad!!!!");
       denom = (sqrt(next_max_v) / sqrt(bias_correction2)) + epsilon; 
     } else {
+      printf("Else here Use char !!!! %02X \n",  * (char*)(&amsgrad));
+      printf("Else here Use int !!!! %d \n", amsgrad);
+      printf("here is NNNot in amsgrad!!!!");
+
       denom = (sqrt(next_v) / sqrt(bias_correction2)) + epsilon; 
     }
     const T step_size = learning_rate / bias_correction1; 
-    *model = model_val - (step_size / denom); 
+    *model = model_val - step_size * (next_m / denom) - step_size*weight_decay*model_val; 
   }
 };
 

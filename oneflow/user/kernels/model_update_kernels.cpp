@@ -425,7 +425,9 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("train_step", 0)) {
       const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
       train_step_ptr = train_step->dptr<int64_t>();
+      printf("In if has input train step is: %ld \n", *train_step_ptr);
     }
+    // printf("Out !!!! has input train step is: %ld \n", *train_step_ptr);
     
     printf("======= train step is: %d ======= \n", train_step_val); 
 
