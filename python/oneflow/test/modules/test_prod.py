@@ -27,7 +27,6 @@ class TestReduceProd(flow.unittest.TestCase):
 
         ndim = random(1, 5).to(int)
         x = random_pytorch_tensor(ndim=ndim).to(device)
-
         y = torch.prod(x)
 
         return y
@@ -38,11 +37,8 @@ class TestReduceProd(flow.unittest.TestCase):
 
         ndim = random(1, 5).to(int)
         x = random_pytorch_tensor(ndim=ndim).to(device)
-
         dim = random(0, ndim).to(int)
-
         y = torch.prod(x, dim)
-
         y = torch.exp(y)
 
         return y

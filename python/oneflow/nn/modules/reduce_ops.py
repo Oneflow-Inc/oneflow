@@ -162,9 +162,10 @@ def _max(input, dim=None, keepdim=False):
 
 
 def prod_op(input, dim=None, keepdim=False):
-    r"""Computes the product of row of elements in a tensor in the given axis, if the axis is None, \
-    product of all elements will be caculated.
+    r"""Computes the product of row of elements in a tensor in the given axis.
     
+    note: `if the dim is None, it will return a tensor with only one element whose value is the product of all elements of input.`
+
     Args:
         input (Tensor): the source tensor
         dim (int): the axis along which to prod
