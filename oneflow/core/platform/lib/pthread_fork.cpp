@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +12,22 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import unittest
+*/
+#include "oneflow/core/platform/include/pthread_fork.h"
+#include "oneflow/core/common/util.h"
 
-import oneflow as flow
-import oneflow.unittest
-from automated_test_util import *
+namespace oneflow {
 
+namespace pthread_fork {
 
-@flow.unittest.skip_unless_1n1d()
-class TestRepeat(flow.unittest.TestCase):
-    @autotest()
-    def test_flow_tensor_repeat_with_random_data(test_case):
-        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
-        sizes = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
-        y = x.repeat(sizes)
-        return y
+static bool is_fork = false;
 
+bool IsForkedSubProcess() { return is_fork; }
+static void SetIsForkedSubProcess() { is_fork = true; }
 
-if __name__ == "__main__":
-    unittest.main()
+void RegisterForkCallback() { pthread_atfork(nullptr, nullptr, SetIsForkedSubProcess); }
+COMMAND(RegisterForkCallback());
+
+}  // namespace pthread_fork
+
+}  // namespace oneflow
