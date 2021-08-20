@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/user/utils/pool_util.h"
 
@@ -59,6 +60,7 @@ __global__ void AdaptiveAvgPoolCudaKernel(const T* input, T* output, int num_ele
   const int in_panel_size = in_d * in_h * in_w;
 
   CUDA_1D_KERNEL_LOOP(idx, num_elems) {
+    // TODO (Tianyu): Replace following codes with 'NdIndexOffsetHelper'
     int bc_idx = idx / out_panel_size;
     int out_d_idx = (idx % out_panel_size) / out_w / out_h;
     int out_h_idx = (idx % out_panel_size) % (out_h * out_w) / out_w;
@@ -100,6 +102,7 @@ __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num
   const int in_panel_size = in_d * in_h * in_w;
 
   CUDA_1D_KERNEL_LOOP(idx, num_elems) {
+    // TODO (Tianyu): Replace following codes with 'NdIndexOffsetHelper'
     int bc_idx = idx / out_panel_size;
     int out_d_idx = (idx % out_panel_size) / out_w / out_h;
     int out_h_idx = (idx % out_panel_size) % (out_h * out_w) / out_w;
@@ -122,7 +125,10 @@ __global__ void AdaptiveAvgPoolGradCudaKernel(T* input, const T* output, int num
         input + bc_idx * in_panel_size + in_start_d * in_h * in_w + in_start_h * in_w + in_start_w;
     for (int id = 0; id < k_d; ++id) {
       for (int ih = 0; ih < k_h; ++ih) {
-        for (int iw = 0; iw < k_w; ++iw) { *(input_ptr + ih * in_w + iw) += grad_delta; }
+        for (int iw = 0; iw < k_w; ++iw) {
+          // TODO (Tianyu): Use 'atmoic::Add' when necessary
+          cuda::atomic::Add(input_ptr + ih * in_w + iw, grad_delta);
+        }
       }
       input_ptr += in_h * in_w;  // next input depth
     }
@@ -139,7 +145,7 @@ void AvgForwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const Shape& y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
 
-  // TODO: Support 'channels_last'
+  // TODO (Tianyu): Support 'channels_last'
   std::string data_format = "channels_first";
   const Shape& in = GetShape5D(x_shape, data_format, dim);
   const Shape& out = GetShape5D(y_shape, data_format, dim);
@@ -160,7 +166,7 @@ void AvgBackwardCompute(KernelComputeContext* ctx, const int32_t& dim) {
   const Shape& dx_shape = ctx->TensorDesc4ArgNameAndIndex("dx", 0)->shape();
   const Shape& dy_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();
 
-  // TODO: Support 'channels_last'
+  // TODO (Tianyu): Support 'channels_last'
   std::string data_format = "channels_first";
   const Shape& in = GetShape5D(dx_shape, data_format, dim);
   const Shape& out = GetShape5D(dy_shape, data_format, dim);
@@ -258,9 +264,7 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, double);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int8_t);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int32_t);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int64_t);
+REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int);
 
 #define REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(device, dtype)           \
   REGISTER_USER_KERNEL("adaptive_avg_pool1d_grad")                             \
@@ -278,9 +282,7 @@ REGISTER_GPU_ADAPTIVE_AVGPOOL_KERNEL(DeviceType::kGPU, int64_t);
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, double);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, int8_t);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, int32_t);
-REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, int64_t);
+REGISTER_GPU_ADAPTIVE_AVGPOOL_BACKWARD_KERNEL(DeviceType::kGPU, int);
 
 }  // namespace user_op
 
