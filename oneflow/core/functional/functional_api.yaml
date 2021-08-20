@@ -805,6 +805,10 @@
     "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
   bind_python: False
 
+- name: "tril"
+  signature: "Tensor Tril(Tensor x, Int64 diagonal=0)"
+  bind_python: True
+
 - name: "triu"
   signature: "Tensor Triu(Tensor x, Int64 diagonal=0)"
   bind_python: True
