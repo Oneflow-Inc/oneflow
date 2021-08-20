@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct FusedSelfAttentionInterpState : public OpExprInterpState {
+struct FusedSelfAttentionInterpState : public AutoGradCaptureState {
   bool input_requires_grad;
   float alpha;
 };
@@ -38,9 +38,10 @@ class FusedSelfAttention : public OpExprGradFunction<FusedSelfAttentionInterpSta
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     ctx->input_requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->alpha = JUST(composed_attrs.GetAttr<float>("alpha"));
-    if (ctx->input_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
