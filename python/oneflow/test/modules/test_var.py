@@ -40,7 +40,7 @@ class TestVar(flow.unittest.TestCase):
             keepdim=random().to(bool),
         )
         return y
-    
+
     @unittest.skip("var not support 0-shape tensor currently")
     @autotest()
     def test_flow_var_0d_tensor_with_random_data(test_case):
@@ -53,9 +53,6 @@ class TestVar(flow.unittest.TestCase):
             keepdim=random().to(bool),
         )
         return y
-
-    
-
 
 
 if __name__ == "__main__":

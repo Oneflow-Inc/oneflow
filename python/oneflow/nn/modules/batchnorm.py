@@ -112,7 +112,7 @@ class _BatchNorm(_NormBase):
                 if dim != 1:
                     reduce_axis.append(dim)
             mean = x.mean(dim=reduce_axis, keepdim=False)
-            variance = x.var(dim=reduce_axis, keepdim=False)
+            variance = x.var(dim=reduce_axis, unbiased=False, keepdim=False)
             if self.training and self.track_running_stats:
                 running_mean = (
                     self.momentum * self.running_mean + (1 - self.momentum) * mean

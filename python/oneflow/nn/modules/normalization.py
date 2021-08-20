@@ -115,7 +115,7 @@ class GroupNorm(Module):
             input, shape=[origin_shape[0], self.num_groups, -1]
         )
         mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
-        variance = flow.var(reshape_to_1d, dim=2, keepdim=True)
+        variance = flow.var(reshape_to_1d, dim=2, unbiased=False, keepdim=True)
         normalized = (reshape_to_1d - mean) / flow.sqrt(variance + self.eps)
         normalized = flow.reshape(
             normalized, shape=[origin_shape[0], self.num_channels, -1]
@@ -259,7 +259,7 @@ class LayerNorm(Module):
                 if dim >= self.begin_norm_axis:
                     reduce_axis.append(dim)
             mean = x.mean(dim=reduce_axis, keepdim=True)
-            variance = x.var(dim=reduce_axis, keepdim=True)
+            variance = x.var(dim=reduce_axis, unbiased=False, keepdim=True)
             axis = self.begin_norm_axis
             params_shape = x.shape[self.begin_params_axis :]
             weight = self.weight
