@@ -81,6 +81,7 @@ def _test_0rank(test_case, device, shape, low, high):
     y1 = flow.randint(low, high, shape, device=flow.device(device))
     test_case.assertTrue(y1.shape == shape)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestRandint(flow.unittest.TestCase):
     def test_consistent_naive(test_case):

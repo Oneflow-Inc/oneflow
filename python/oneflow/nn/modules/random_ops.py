@@ -264,7 +264,7 @@ def randn_op(
     )()
 
 
-class RandInt(flow.nn.Module):
+class RandInt(Module):
     def __init__(
         self,
         low: flow.int64,
@@ -382,6 +382,7 @@ class RandPerm(Module):
         super().__init__()
         assert n >= 0
         self.n = n
+        self.dtype=None
 
     def forward(self, out=None):
         if self.placement is not None:
@@ -391,7 +392,7 @@ class RandPerm(Module):
         else:
             res = flow.F.randperm(self.n, self.dtype, self.device, self.generator)
         res.requires_grad = self.requires_grad
-        return res
+        return res.to(dtype=self.dtype)
 
 
 def randperm_op(

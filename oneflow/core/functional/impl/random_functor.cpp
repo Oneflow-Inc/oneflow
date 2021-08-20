@@ -30,12 +30,12 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/bernoulli_kernel.h"
 #include "oneflow/user/kernels/distributions/normal_kernel.h"
 #include "oneflow/user/kernels/distributions/uniform_kernel.h"
 
-#include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/job/lazy_mode.h"
 namespace oneflow {
 namespace one {
 namespace functional {
