@@ -243,7 +243,7 @@ class TestModule(flow.unittest.TestCase):
                 res2.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
             )
         )
-    
+
     @flow.unittest.skip_unless_1n1d()
     def test_moduledict(test_case):
         class _DenseLayer(nn.Module):
@@ -256,35 +256,52 @@ class TestModule(flow.unittest.TestCase):
             ) -> None:
                 super(_DenseLayer, self).__init__()
                 self.norm1: nn.BatchNorm2d
-                self.add_module('norm1', nn.BatchNorm2d(num_input_features))
+                self.add_module("norm1", nn.BatchNorm2d(num_input_features))
                 self.relu1: nn.ReLU
-                self.add_module('relu1', nn.ReLU(inplace=True))
+                self.add_module("relu1", nn.ReLU(inplace=True))
                 self.conv1: nn.Conv2d
-                self.add_module('conv1', nn.Conv2d(num_input_features, bn_size *
-                                                growth_rate, kernel_size=1, stride=1,
-                                                bias=False))
+                self.add_module(
+                    "conv1",
+                    nn.Conv2d(
+                        num_input_features,
+                        bn_size * growth_rate,
+                        kernel_size=1,
+                        stride=1,
+                        bias=False,
+                    ),
+                )
                 self.norm2: nn.BatchNorm2d
-                self.add_module('norm2', nn.BatchNorm2d(bn_size * growth_rate))
+                self.add_module("norm2", nn.BatchNorm2d(bn_size * growth_rate))
                 self.relu2: nn.ReLU
-                self.add_module('relu2', nn.ReLU(inplace=True))
+                self.add_module("relu2", nn.ReLU(inplace=True))
                 self.conv2: nn.Conv2d
-                self.add_module('conv2', nn.Conv2d(bn_size * growth_rate, growth_rate,
-                                                kernel_size=3, stride=1, padding=1,
-                                                bias=False))
+                self.add_module(
+                    "conv2",
+                    nn.Conv2d(
+                        bn_size * growth_rate,
+                        growth_rate,
+                        kernel_size=3,
+                        stride=1,
+                        padding=1,
+                        bias=False,
+                    ),
+                )
                 self.drop_rate = float(drop_rate)
-            
+
             def bn_function(self, inputs: List[flow.Tensor]) -> flow.Tensor:
                 concated_features = flow.cat(inputs, 1)
-                bottleneck_output = self.conv1(self.relu1(self.norm1(concated_features)))  # noqa: T484
+                bottleneck_output = self.conv1(
+                    self.relu1(self.norm1(concated_features))
+                )  # noqa: T484
                 return bottleneck_output
 
             # todo: rewrite when torchscript supports any
             def any_requires_grad(self, input: List[flow.Tensor]) -> bool:
-                    for tensor in input:
-                        if tensor.requires_grad:
-                            return True
-                    return False
-        
+                for tensor in input:
+                    if tensor.requires_grad:
+                        return True
+                return False
+
             def forward(self, input: List[flow.Tensor]) -> flow.Tensor:
                 pass
 
@@ -301,8 +318,9 @@ class TestModule(flow.unittest.TestCase):
 
                 new_features = self.conv2(self.relu2(self.norm2(bottleneck_output)))
                 if self.drop_rate > 0:
-                    new_features = flow.F.dropout(new_features, p=self.drop_rate,
-                                            training=self.training)
+                    new_features = flow.F.dropout(
+                        new_features, p=self.drop_rate, training=self.training
+                    )
                 return new_features
 
         class _DenseBlock(nn.ModuleDict):
@@ -324,7 +342,7 @@ class TestModule(flow.unittest.TestCase):
                         bn_size=bn_size,
                         drop_rate=drop_rate,
                     )
-                    self.add_module('denselayer%d' % (i + 1), layer)
+                    self.add_module("denselayer%d" % (i + 1), layer)
 
             def forward(self, init_features):
                 features = [init_features]
@@ -332,15 +350,25 @@ class TestModule(flow.unittest.TestCase):
                     new_features = layer(features)
                     features.append(new_features)
                 return flow.cat(features, dim=1)
-        
+
         class _Transition(nn.Sequential):
-            def __init__(self, num_input_features: int, num_output_features: int) -> None:
+            def __init__(
+                self, num_input_features: int, num_output_features: int
+            ) -> None:
                 super(_Transition, self).__init__()
-                self.add_module('norm', nn.BatchNorm2d(num_input_features))
-                self.add_module('relu', nn.ReLU(inplace=True))
-                self.add_module('conv', nn.Conv2d(num_input_features, num_output_features,
-                                                kernel_size=1, stride=1, bias=False))
-                self.add_module('pool', nn.AvgPool2d(kernel_size=2, stride=2))
+                self.add_module("norm", nn.BatchNorm2d(num_input_features))
+                self.add_module("relu", nn.ReLU(inplace=True))
+                self.add_module(
+                    "conv",
+                    nn.Conv2d(
+                        num_input_features,
+                        num_output_features,
+                        kernel_size=1,
+                        stride=1,
+                        bias=False,
+                    ),
+                )
+                self.add_module("pool", nn.AvgPool2d(kernel_size=2, stride=2))
 
         class DenseNet(flow.nn.Module):
             def __init__(
@@ -354,13 +382,26 @@ class TestModule(flow.unittest.TestCase):
             ):
                 super().__init__()
                 # First convolution
-                self.features = nn.Sequential(OrderedDict([
-                    ('conv0', nn.Conv2d(3, num_init_features, kernel_size=7, stride=2,
-                                        padding=3, bias=False)),
-                    ('norm0', nn.BatchNorm2d(num_init_features)),
-                    ('relu0', nn.ReLU(inplace=True)),
-                    ('pool0', nn.MaxPool2d(kernel_size=3, stride=2, padding=1)),
-                ]))
+                self.features = nn.Sequential(
+                    OrderedDict(
+                        [
+                            (
+                                "conv0",
+                                nn.Conv2d(
+                                    3,
+                                    num_init_features,
+                                    kernel_size=7,
+                                    stride=2,
+                                    padding=3,
+                                    bias=False,
+                                ),
+                            ),
+                            ("norm0", nn.BatchNorm2d(num_init_features)),
+                            ("relu0", nn.ReLU(inplace=True)),
+                            ("pool0", nn.MaxPool2d(kernel_size=3, stride=2, padding=1)),
+                        ]
+                    )
+                )
 
                 # Each denseblock
                 num_features = num_init_features
@@ -372,19 +413,21 @@ class TestModule(flow.unittest.TestCase):
                         growth_rate=growth_rate,
                         drop_rate=drop_rate,
                     )
-                    self.features.add_module('denseblock%d' % (i + 1), block)
+                    self.features.add_module("denseblock%d" % (i + 1), block)
                     num_features = num_features + num_layers * growth_rate
                     if i != len(block_config) - 1:
-                        trans = _Transition(num_input_features=num_features,
-                                            num_output_features=num_features // 2)
-                        self.features.add_module('transition%d' % (i + 1), trans)
+                        trans = _Transition(
+                            num_input_features=num_features,
+                            num_output_features=num_features // 2,
+                        )
+                        self.features.add_module("transition%d" % (i + 1), trans)
                         num_features = num_features // 2
 
                     def forward(self):
                         return self.param
-                
+
                 # Final batch norm
-                self.features.add_module('norm5', nn.BatchNorm2d(num_features))
+                self.features.add_module("norm5", nn.BatchNorm2d(num_features))
 
                 # Linear layer
                 self.classifier = nn.Linear(num_features, num_classes)
