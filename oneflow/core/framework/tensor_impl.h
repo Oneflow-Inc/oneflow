@@ -32,7 +32,7 @@ limitations under the License.
 namespace oneflow {
 
 class MemoryCase;
-class VmLocalDepObject;
+class LocalDepObject;
 
 namespace cfg {
 
@@ -62,7 +62,7 @@ class TensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
-  virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+  virtual Maybe<LocalDepObject*> compute_local_dep_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
@@ -78,7 +78,7 @@ class TensorImpl {
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad);
   Maybe<Tensor> mut_acc_grad();
-  void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
+  void set_requires_grad(bool requires_grad);
   Maybe<void> set_retain_grad(bool retain_grad);
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
@@ -142,7 +142,7 @@ class ConsistentTensorImpl : public TensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<LocalDepObject*> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
@@ -187,7 +187,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<LocalDepObject*> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<TensorStorage> tensor_storage() const override { OF_UNIMPLEMENTED(); }
   Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<MirroredTensorImpl> detach() const override;
@@ -214,7 +214,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
     CHECK_OR_RETURN(eager_blob_object_);
     return eager_blob_object_;
   }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override;
+  Maybe<LocalDepObject*> compute_local_dep_object() const override;
   Maybe<TensorStorage> tensor_storage() const override {
     CHECK_OR_RETURN(eager_blob_object_);
     return tensor_storage_;
@@ -226,10 +226,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
-  Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
-  Maybe<void> InitEagerBlobObjectAndTensorStorage(
-      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-      const std::shared_ptr<TensorStorage>& tensor_storage);
+  Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
  private:

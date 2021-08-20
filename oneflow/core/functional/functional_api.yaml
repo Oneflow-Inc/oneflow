@@ -448,7 +448,19 @@
 
 - name: "where"
   signature: "Tensor (Tensor condition, Tensor x, Tensor y) => Where"
-  bind_python: True
+  bind_python: false
+
+- name: "where_scalar_x"
+  signature: "Tensor (Tensor condition, Scalar scalar, Tensor y) => WhereScalarX"
+  bind_python: False
+
+- name: "where_scalar_y"
+  signature: "Tensor (Tensor condition, Tensor x, Scalar scalar) => WhereScalarY"
+  bind_python: False
+
+- name: "where_scalar_xy"
+  signature: "Tensor (Tensor condition, Scalar x_scalar, Scalar y_scalar) => WhereScalarXY"
+  bind_python: False
 
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
@@ -924,7 +936,7 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Bool identity_grad=False, SbpList grad_sbp) => ToConsistent"
+  signature: "Tensor (Tensor x, *, Placement placement, SbpList sbp, SbpList grad_sbp) => ToConsistent"
   bind_python: True
 
 - name: "to_local"
@@ -933,6 +945,10 @@
 
 - name: "all_reduce"
   signature: "Tensor (Tensor x) => AllReduce"
+  bind_python: True
+
+- name: "broadcast"
+  signature: "Tensor Broadcast(Tensor x)"
   bind_python: True
 
 - name: "select_first"
@@ -954,6 +970,10 @@
 - name: "reduce_sum_like"
   signature: "Tensor (Tensor in, Tensor like, Int32List axis) => ReduceSumLike"
   bind_python: True
+
+- name: "broadcast_reduce_sum_like"
+  signature: "Tensor BroadcastReduceSumLike(Tensor in, Tensor like)"
+  bind_python: False
 
 - name: "scalar_logical_equal"
   signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalEqual"
@@ -1024,4 +1044,8 @@
 
 - name: "consistent_randperm"
   signature: "Tensor (Int32 n,Placement placement, SbpList sbp_tuple, Generator generator=None) => ConsistentRandperm"
+  bind_python: True
+
+- name: "fused_scale_tril"
+  signature: "Tensor FusedScaleTril(Tensor x, *, Int64 diagonal=0, Scalar fill_value=0, Scalar scale=1)"
   bind_python: True

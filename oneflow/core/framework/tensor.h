@@ -67,7 +67,7 @@ class Tensor {
   // Getters valid only for EagerMirroredTensor
   virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
-  virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+  virtual Maybe<LocalDepObject*> compute_local_dep_object() const = 0;
   virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
@@ -146,7 +146,7 @@ class StaticZerosTensor final : public Tensor {
   // Getters valid only for EagerMirroredTensor
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
   Maybe<vm::EagerBlobObject> eager_blob_object() const { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const { OF_UNIMPLEMENTED(); }
+  Maybe<LocalDepObject*> compute_local_dep_object() const { OF_UNIMPLEMENTED(); }
   Maybe<bool> has_eager_blob_object() const { OF_UNIMPLEMENTED(); }
   Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
@@ -278,7 +278,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return tensor_->eager_blob_object();
   }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
+  Maybe<LocalDepObject*> compute_local_dep_object() const override {
     return tensor_->compute_local_dep_object();
   }
   Maybe<bool> has_eager_blob_object() const override { return tensor_->has_eager_blob_object(); }
@@ -371,7 +371,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return impl_->eager_blob_object();
   }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
+  Maybe<LocalDepObject*> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
   }
   Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
@@ -415,10 +415,6 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
-  Maybe<MirroredTensor> MakeEagerTensor(
-      const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
-      const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf);
-
   Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override { UNIMPLEMENTED_THEN_RETURN(); }
 
@@ -457,7 +453,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return impl_->eager_blob_object();
   }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
+  Maybe<LocalDepObject*> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
   }
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }

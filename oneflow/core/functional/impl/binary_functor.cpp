@@ -35,7 +35,8 @@ class AddFunctor {
  public:
   AddFunctor() {
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
-    broadcast_add_op_ = CHECK_JUST(one::OpBuilder("broadcast_add").Input("x").Input("y").Output("z").Build());
+    broadcast_add_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_add").Input("x").Input("y").Output("z").Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -82,13 +83,12 @@ class MulFunctor {
  public:
   MulFunctor() {
     mul_op_ = CHECK_JUST(one::OpBuilder("multiply").Input("x").Input("y").Output("out").Build());
-    broadcast_mul_op_ = CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
+    broadcast_mul_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*mul_op_, {x, y});
-    }
+    if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, {x, y}); }
     return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, {x, y});
   }
 

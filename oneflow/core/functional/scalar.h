@@ -91,7 +91,6 @@ class Scalar {
   enum { HAS_S, HAS_U, HAS_D, HAS_NONE } active_tag_;
 };
 
-
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

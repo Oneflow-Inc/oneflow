@@ -373,7 +373,8 @@ class Module(object):
                     )
                     continue
                 try:
-                    param.copy_(input_param)
+                    with flow.no_grad():
+                        param.copy_(input_param)
                 except Exception as ex:
                     error_msgs.append(
                         'While copying the parameter named "{}", whose dimensions in the model are {} and whose dimensions in the checkpoint are {}, an exception occurred : {}.'.format(

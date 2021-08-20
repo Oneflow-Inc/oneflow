@@ -34,25 +34,17 @@ Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
 }
 
 bool IsShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
-  if (shape == expand_shape) {
-    return true;
-  }
-  if (expand_shape.NumAxes() < shape.NumAxes()) {
-    return false;
-  }
+  if (shape == expand_shape) { return true; }
+  if (expand_shape.NumAxes() < shape.NumAxes()) { return false; }
   int shift = expand_shape.NumAxes() - shape.NumAxes();
   for (int i = expand_shape.NumAxes() - 1; i >= 0; --i) {
     int index = i - shift;
     if (index >= 0) {
       int dim_a = expand_shape.At(i);
       int dim_b = shape.At(index);
-      if (dim_a != dim_b && (dim_a <= 0 || dim_b != 1)) {
-        return false;
-      }
+      if (dim_a != dim_b && (dim_a <= 0 || dim_b != 1)) { return false; }
     } else {
-      if (expand_shape.At(i) <= 0) {
-        return false;
-      }
+      if (expand_shape.At(i) <= 0) { return false; }
     }
   }
   return true;
