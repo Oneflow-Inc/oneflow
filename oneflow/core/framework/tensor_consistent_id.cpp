@@ -28,10 +28,9 @@ int64_t* MutThreadLocalRecursiveDepth() {
 }
 
 Maybe<void> InitConsistentId(TensorTuple* outputs) {
-  for (int i = 0; i < outputs->size(); ++i) {
-    const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(outputs->at(i));
-    CHECK_OR_RETURN(consistent_tensor)
-        << Error::Unimplemented() << "consistent tensors suppported only.";
+  for (const auto& output : *outputs) {
+    CHECK_OR_RETURN(output);
+    const auto& consistent_tensor = JUST(output->AsConsistentTensor());
     const auto& transport_token = JUST(TransportToken::NewMetaTransportToken());
     JUST(consistent_tensor->mut_impl()->set_transport_token(transport_token));
   }

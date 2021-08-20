@@ -40,6 +40,10 @@ Maybe<void> RunCallback(const std::shared_ptr<one::Tensor>& tensor,
 
 }  // namespace private_details
 
+inline bool IsConsistentTensorMetaCheckDisabled() {
+  return *private_details::MutThreadLocalDepth() > 1;
+}
+
 template<typename... Args>
 struct CheckConsistentTensorMeta;
 
