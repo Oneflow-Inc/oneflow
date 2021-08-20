@@ -65,7 +65,7 @@ def test_fused_self_attention(
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestFusedBiasAddDropout(flow.unittest.TestCase):
+class TestFusedSelfAttention(flow.unittest.TestCase):
     def test_fused_self_attention(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [test_fused_self_attention]
