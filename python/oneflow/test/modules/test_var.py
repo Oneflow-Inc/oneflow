@@ -16,15 +16,23 @@ limitations under the License.
 import unittest
 
 import oneflow as flow
+from oneflow.test_utils.automated_test_util.generators import random
 import oneflow.unittest
 from automated_test_util import *
 
 class TestVar(flow.unittest.TestCase):
     @autotest()
-    def test_var_alldim_with_random_data(test_case):
+    def test_var_all_dim_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.var(x)
+        return y
+
+    @autotest()
+    def test_var_one_dim_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = torch.var(x, dim=random(low=0, high=4).to(int), unbiased=random().to(bool), keepdim=random().to(bool))
         return y
 
 if __name__ == "__main__":
