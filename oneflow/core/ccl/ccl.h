@@ -30,6 +30,12 @@ class TransportToken;
 namespace ccl {
 
 template<DeviceType device_type>
+Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx);
+
+template<DeviceType device_type>
+Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx);
+
+template<DeviceType device_type>
 Maybe<void> Broadcast(const void* in, void* out, size_t elem_cnt, DataType dtype, int64_t root,
                       Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
 
