@@ -37,7 +37,7 @@
   bind_python: False
 
 - name: "broadcast_add"
-  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y, *, Bool inplace=False)"
   bind_python: False
 
 - name: "sub_scalar_by_tensor"
@@ -418,6 +418,10 @@
   signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
   bind_python: True
 
+- name: "arg_sort"
+  signature: "Tensor ArgSort(Tensor in, *, String direction)"
+  bind_python: True
+
 - name: "gather_nd"
   signature: "Tensor GatherNd(Tensor params, Tensor indices, *)"
   bind_python: True
@@ -469,7 +473,19 @@
 
 - name: "where"
   signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
+
+- name: "where_scalar_x"
+  signature: "Tensor WhereScalarX(Tensor condition, Scalar scalar, Tensor y)"
+  bind_python: False
+
+- name: "where_scalar_y"
+  signature: "Tensor WhereScalarY(Tensor condition, Tensor x, Scalar scalar)"
+  bind_python: False
+
+- name: "where_scalar_xy"
+  signature: "Tensor WhereScalarXY(Tensor condition, Scalar x_scalar, Scalar y_scalar)"
+  bind_python: False
 
 - name: "negative"
   signature: "Tensor Negative(Tensor x)"
@@ -947,7 +963,7 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, Bool identity_grad=False, SbpList grad_sbp)"
+  signature: "Tensor ToConsistent(Tensor x, *, Placement placement, SbpList sbp, SbpList grad_sbp)"
   bind_python: True
 
 - name: "to_local"
@@ -956,6 +972,10 @@
 
 - name: "all_reduce"
   signature: "Tensor AllReduce(Tensor x)"
+  bind_python: True
+
+- name: "broadcast"
+  signature: "Tensor Broadcast(Tensor x)"
   bind_python: True
 
 - name: "select_first"
@@ -977,6 +997,10 @@
 - name: "reduce_sum_like"
   signature: "Tensor ReduceSumLike(Tensor in, Tensor like, *,Int32List axis)"
   bind_python: True
+
+- name: "broadcast_reduce_sum_like"
+  signature: "Tensor BroadcastReduceSumLike(Tensor in, Tensor like)"
+  bind_python: False
 
 - name: "scalar_logical_equal"
   signature: "Tensor ScalarLogicalEqual(Tensor in, Scalar scalar)"
@@ -1001,9 +1025,7 @@
 - name: "scalar_logical_less_equal"
   signature: "Tensor ScalarLogicalLessEqual(Tensor in, Scalar scalar)"
   bind_python: False
-  
-- name: "split"
-  signature: "TensorTuple Split(Tensor x, *, Int64 split_size, Int64 dim=0)"
+
 - name: "rand"
   signature: "Tensor Rand(*, Shape shape, DataType dtype=None, Device device=None, Generator generator=None)"
   bind_python: True
@@ -1042,3 +1064,15 @@
 - name: "l2_normalize_grad"
   signature: "Tensor L2NormalizeGrad(Tensor dy, Tensor y, Tensor square_x_sum, Int32 axis, Float epsilon, *)"
   bind_python: False
+  
+- name: "randperm"
+  signature: "Tensor Randperm(Int32 n,*,Device device=None, Generator generator=None)"
+  bind_python: True
+
+- name: "consistent_randperm"
+  signature: "Tensor ConsistentRandperm(Int32 n,*, Placement placement, SbpList sbp_tuple, Generator generator=None)"
+  bind_python: True
+
+- name: "fused_scale_tril"
+  signature: "Tensor FusedScaleTril(Tensor x, *, Int64 diagonal=0, Scalar fill_value=0, Scalar scale=1)"
+  bind_python: True

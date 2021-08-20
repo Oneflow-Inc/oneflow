@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
@@ -49,7 +50,7 @@ class Tensor {
   int64_t ndim() const { return shape()->NumAxes(); }
 
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
-  virtual DataType dtype() const = 0;
+  virtual Symbol<DType> dtype() const = 0;
   virtual Maybe<TransportToken> transport_token() const = 0;
   virtual Maybe<Symbol<cfg::NdSbp>> nd_sbp() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
@@ -66,7 +67,7 @@ class Tensor {
   // Getters valid only for EagerMirroredTensor
   virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
-  virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+  virtual Maybe<LocalDepObject*> compute_local_dep_object() const = 0;
   virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
@@ -119,7 +120,7 @@ class StaticZerosTensor final : public Tensor {
   }
   // Getters
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
-  DataType dtype() const { return dtype_; }
+  Symbol<DType> dtype() const { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const { OF_UNIMPLEMENTED(); }
@@ -145,7 +146,7 @@ class StaticZerosTensor final : public Tensor {
   // Getters valid only for EagerMirroredTensor
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
   Maybe<vm::EagerBlobObject> eager_blob_object() const { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const { OF_UNIMPLEMENTED(); }
+  Maybe<LocalDepObject*> compute_local_dep_object() const { OF_UNIMPLEMENTED(); }
   Maybe<bool> has_eager_blob_object() const { OF_UNIMPLEMENTED(); }
   Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
@@ -256,7 +257,7 @@ class Parameter final : public TensorIf<Parameter> {
   }
 
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
-  DataType dtype() const override { return tensor_->dtype(); }
+  Symbol<DType> dtype() const override { return tensor_->dtype(); }
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return tensor_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override { return tensor_->device(); }
@@ -277,7 +278,7 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return tensor_->eager_blob_object();
   }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
+  Maybe<LocalDepObject*> compute_local_dep_object() const override {
     return tensor_->compute_local_dep_object();
   }
   Maybe<bool> has_eager_blob_object() const override { return tensor_->has_eager_blob_object(); }
@@ -354,7 +355,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  DataType dtype() const override { return impl_->dtype(); }
+  Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { OF_UNIMPLEMENTED(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { OF_UNIMPLEMENTED(); }
@@ -370,7 +371,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return impl_->eager_blob_object();
   }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
+  Maybe<LocalDepObject*> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
   }
   Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
@@ -414,10 +415,6 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
-  Maybe<MirroredTensor> MakeEagerTensor(
-      const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
-      const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf);
-
   Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override { UNIMPLEMENTED_THEN_RETURN(); }
 
@@ -435,7 +432,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  DataType dtype() const override { return impl_->dtype(); }
+  Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
@@ -456,7 +453,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return impl_->eager_blob_object();
   }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
+  Maybe<LocalDepObject*> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
   }
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }

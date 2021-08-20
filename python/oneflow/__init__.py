@@ -22,7 +22,6 @@ oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
-no_grad = oneflow._oneflow_internal.autograd.no_grad
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
@@ -94,17 +93,12 @@ del register_python_callback
 
 
 def _SyncOnMasterFn():
-    import oneflow
-
-    def Sync():
-        if not oneflow._oneflow_internal.IsEnvInited():
-            return
-        if oneflow.framework.distribute.is_multi_client():
-            oneflow._oneflow_internal.eager.multi_client.Sync()
-        elif oneflow.framework.distribute.get_rank() == 0:
-            oneflow._oneflow_internal.eager.single_client.Sync()
-
-    return Sync
+    if not oneflow._oneflow_internal.IsEnvInited():
+        return
+    if oneflow.framework.distribute.is_multi_client():
+        oneflow._oneflow_internal.eager.multi_client.Sync()
+    elif oneflow.framework.distribute.get_rank() == 0:
+        oneflow._oneflow_internal.eager.single_client.Sync()
 
 
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
@@ -119,6 +113,7 @@ from oneflow.framework.docstr.utils import register_docstr
 register_docstr()
 del register_docstr
 del docstr
+from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 import oneflow.nn.modules.acosh
 import oneflow.nn.modules.activation
@@ -262,6 +257,7 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.random_ops import bernoulli
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
+from oneflow.nn.modules.random_ops import randperm
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min
@@ -299,7 +295,7 @@ from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.builtin_ops import BuiltinOp as builtin_op
-from oneflow.ops.initializer_util import constant_initializer, empty_initializer
+from oneflow.ops.initializer_util import constant_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
 from oneflow.ops.initializer_util import (
     glorot_normal_initializer as xavier_normal_initializer,

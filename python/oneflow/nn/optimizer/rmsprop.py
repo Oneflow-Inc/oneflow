@@ -166,6 +166,7 @@ class RMSprop(Optimizer):
             return loss
 
     def generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
 
@@ -182,8 +183,13 @@ class RMSprop(Optimizer):
             optimizer_conf.mutable_rmsprop_conf().set_centered(centered)
             optimizer_conf.mutable_rmsprop_conf().set_epsilon(epslion)
 
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+
             # Set l2 penalty as weight decay
             for param in param_group.parameters:
                 vars_conf[param].l2 = weight_decay
                 if param.requires_grad:
                     optimizer_conf.add_variable_op_names(vars_conf[param].name)
+
+            new_opt_confs.append(optimizer_conf)
+        return new_opt_confs

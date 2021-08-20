@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct CombinedMarginLossInterpState : public OpExprInterpState {
+struct CombinedMarginLossCaptureState : public AutoGradCaptureState {
   float m1;
   float m2;
   float m3;
@@ -31,7 +31,7 @@ struct CombinedMarginLossInterpState : public OpExprInterpState {
   bool requires_grad;
 };
 
-class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossInterpState> {
+class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -40,7 +40,7 @@ class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossInterpSta
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(CombinedMarginLossInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(CombinedMarginLossCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->requires_grad = inputs.at(0)->requires_grad();  // x
@@ -57,7 +57,7 @@ class CombinedMarginLoss : public OpExprGradFunction<CombinedMarginLossInterpSta
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CombinedMarginLossInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CombinedMarginLossCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 2);
     in_grads->resize(2);

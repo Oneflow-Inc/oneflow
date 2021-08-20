@@ -18,16 +18,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct AddNInterpState : public OpExprInterpState {
+struct AddNCaptureState : public AutoGradCaptureState {
   int32_t input_num;
   std::vector<bool> requires_grad;
 };
 
-class AddN : public OpExprGradFunction<AddNInterpState> {
+class AddN : public OpExprGradFunction<AddNCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(AddNInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(AddNCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
     ctx->input_num = inputs.size();
     ctx->requires_grad.resize(inputs.size());
@@ -37,7 +37,7 @@ class AddN : public OpExprGradFunction<AddNInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const AddNInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AddNCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(ctx->input_num);
