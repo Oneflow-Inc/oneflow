@@ -19,8 +19,14 @@ namespace oneflow {
 
 class Device;
 class TensorTuple;
+class ParallelDesc;
 
 namespace one {
+
+class Tensor;
+
 Maybe<void> RunEmptyOp(TensorTuple* outputs);
-}
+Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc);
+
+}  // namespace one
 }  // namespace oneflow
