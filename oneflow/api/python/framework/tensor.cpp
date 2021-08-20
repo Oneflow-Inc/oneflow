@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_method.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/functional/value_types.h"
 #include "oneflow/core/job/placement.cfg.h"
@@ -299,9 +300,8 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
       if (other_tensor->is_local()) {
         if (placement) {
           // LocalTensor -> ConsistentTensor
-          tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple,
-                                                 /* identity_grad */ false,
-                                                 /* grad_sbp_parallels */ {}));
+          tensor =
+              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple, GetNoneSbpList()));
         } else {
           // LocalTensor -> LocalTensor
           if (!device) { device = JUST(Device::New("cpu")); }
@@ -310,9 +310,8 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
       } else {
         if (placement) {
           // ConsistentTensor -> ConsistentTensor
-          tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple,
-                                                 /* identity_grad */ false,
-                                                 /* grad_sbp_parallels */ {}));
+          tensor =
+              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple, GetNoneSbpList()));
         } else {
           // ConsistentTensor -> LocalTensor
           tensor = JUST(functional::ConsistentToLocal(other_tensor));
