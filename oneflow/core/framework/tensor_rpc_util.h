@@ -60,6 +60,11 @@ struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args
   }
 };
 
+struct DisableCheckConsistentTensorMetaScope final {
+  DisableCheckConsistentTensorMetaScope() { ++*private_details::MutThreadLocalDepth(); }
+  ~DisableCheckConsistentTensorMetaScope() { --*private_details::MutThreadLocalDepth(); }
+};
+
 static constexpr auto* WithConsistencyChecked =
     DECORATE(&private_details::RunCallback, CheckConsistentTensorMeta);
 
