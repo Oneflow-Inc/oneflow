@@ -291,7 +291,7 @@ class RandInt(Module):
             self.placement,
             self.sbp,
         ) = _rand_op_common_process(size, device, generator, placement, sbp)
-        self.dtype = dtype
+        self.dtype = None
         self.low = low
         self.high = high
 
@@ -311,7 +311,7 @@ class RandInt(Module):
                 self.low, self.high, self.size, self.dtype, self.device, self.generator
             )
         res.requires_grad = self.requires_grad
-        return res
+        return res.to(dtype=self.dtype)
 
 
 def randint_op(
