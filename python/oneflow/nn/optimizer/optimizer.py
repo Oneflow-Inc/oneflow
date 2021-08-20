@@ -66,7 +66,30 @@ class Optimizer(object):
         self._parse_input_parameters(parameters)
 
     def add_param_group(self, param_group) -> None:
-        raise NotImplementedError()
+        assert isinstance(param_group, dict), "param group must be dict"
+
+        params = param_group["params"]
+        if isinstance(params, (Parameter, Tensor)):
+            param_group["params"] = [params]
+        elif isinstance(params, set):
+            raise TypeError(
+                "optimizer parameters need to be organized in ordered collections, but "
+                "the ordering of tensors in sets will change between runs. Please use a list instead."
+            )
+        else:
+            param_group["params"] = list(params)
+
+        for name, default in self._default_options.items():
+            param_group.setdefault(name, default)
+
+        param_set = set()
+        for group in self.param_groups:
+            param_set.update(set(group.parameters))
+
+        if not param_set.isdisjoint(set(param_group["params"])):
+            raise ValueError("some parameters appear in more than one parameter group")
+
+        self.param_groups.append(ParamGroup(param_group, self._default_options))
 
     def load_state_dict(self, state_dict) -> None:
         raise NotImplementedError()
