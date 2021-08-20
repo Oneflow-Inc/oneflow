@@ -411,7 +411,6 @@ class TestModule(flow.unittest.TestCase):
         input = flow.tensor(np.random.randn(1, 3, 224, 224), dtype=flow.float32)
         output = model(input)
         test_case.assertEqual(output.shape, flow.Size([1, 1000]))
-        print("output.shape >>>> ", output.shape)
 
 
 if __name__ == "__main__":
