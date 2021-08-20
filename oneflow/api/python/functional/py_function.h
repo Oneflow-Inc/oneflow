@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 
+#include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/unpack_call.h"
 #include "oneflow/api/python/framework/throw.h"
@@ -25,110 +26,64 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-namespace detail {
+bool ParseArgs(const py::args& args, const py::kwargs& kwargs,  // NOLINT
+               std::vector<PythonArg>* parsed_args, const FunctionDef& function,
+               size_t max_pos_args, bool raise_exception);
 
-// The argument parsing refers to the implementation of Pytorch.
-template<typename SchemaT>
-inline bool ParseArgs(const py::args& args, const py::kwargs& kwargs,
-                      std::vector<PythonArg>* parsed_args, bool raise_exception) {
-  const auto& function = SchemaT::function_def;
-  bool treat_args_as_intlist = false;
-  size_t nargs = args.size();
-  size_t remaining_kwargs = kwargs.size();
+template<typename... SchemaT>
+class PyFunctionDispatcher {
+ public:
+  static_assert(sizeof...(SchemaT) >= 1, "Requires 1 template argument at least.");
+  using T0 = typename std::tuple_element<0, std::tuple<SchemaT...>>::type;
 
-  if (SchemaT::max_pos_args == 1) {
-    const auto& type = function.argument_def.at(0).type;
-    treat_args_as_intlist = (type == kINT32_LIST || type == kUINT32_LIST || type == kINT64_LIST
-                             || type == kUINT64_LIST);
+  PyFunctionDispatcher() : schema_size_(sizeof...(SchemaT)), func_name_(T0::function_def.name) {
+    signatures_.resize(schema_size_);
+    RecursiveInit(std::make_index_sequence<sizeof...(SchemaT)>{});
   }
-  if (nargs > SchemaT::max_pos_args && !treat_args_as_intlist) {
-    if (raise_exception) {
-      THROW(TypeError) << function.name << "(): takes " << SchemaT::max_pos_args
-                       << " positional arguments but " << nargs << " were given.";
-    }
-    return false;
-  }
-  int arg_pos = 0;
-  for (int i = 0; i < function.argument_def.size(); ++i) {
-    const auto& param = function.argument_def.at(i);
-    py::object obj;
-    if (arg_pos == 0 && treat_args_as_intlist && !param.keyword_only) {
-      obj = args;
-      arg_pos = nargs;
-    } else if (arg_pos < nargs) {
-      if (param.keyword_only) {
-        if (raise_exception) {
-          THROW(TypeError) << function.name << "(): argument '" << param.name
-                           << "' is keyword only.";
-        }
-        return false;
-      }
-      obj = args[arg_pos++];
-    } else {
-      if (kwargs.contains(param.name.c_str())) {
-        obj = kwargs[param.name.c_str()];
-        remaining_kwargs--;
-      }
-    }
 
-    if (!obj && !param.has_default_value) {
-      if (raise_exception) {
-        THROW(TypeError) << function.name << "(): missing required argument " << param.name;
-      }
-      return false;
-    } else if (obj) {
-      PythonArg arg(obj);
-      if (!PythonArgCheck(arg, param.type)) {
-        if (raise_exception) {
-          THROW(TypeError) << function.name << "(): argument '" << param.name << "' must be "
-                           << ValueTypeName(param.type).GetOrThrow() << ", not "
-                           << Py_TYPE(obj.ptr())->tp_name;
-        }
-        return false;
-      }
-      parsed_args->at(i) = std::move(arg);
-    } else {
-      parsed_args->at(i) = PythonArg(param.default_value);
+  template<size_t I0, size_t... I>
+  py::object call(const py::args& args, const py::kwargs& kwargs,
+                  std::index_sequence<I0, I...>) const {
+    using T = typename std::tuple_element<I0, std::tuple<SchemaT...>>::type;
+    std::vector<PythonArg> parsed_args(T::max_args);
+    if (ParseArgs(args, kwargs, &parsed_args, T::function_def, T::max_pos_args,
+                  /*raise_exception*/ schema_size_ == 1)) {
+      return detail::unpack_call(*T::func, parsed_args);
     }
+    return call(args, kwargs, std::index_sequence<I...>{});
   }
-  if (remaining_kwargs > 0) {
-    if (raise_exception) { THROW(TypeError); }
-    return false;
-  }
-  return true;
-}
 
-template<size_t Size, typename SchemaT, typename... SchemaListT>
-struct PyFunctionImpl {
-  inline static py::object apply(const py::args& args, const py::kwargs& kwargs,
-                                 bool raise_exception) {
-    std::vector<PythonArg> parsed_args(SchemaT::max_args);
-    if (ParseArgs<SchemaT>(args, kwargs, &parsed_args, raise_exception)) {
-      return detail::unpack_call(*SchemaT::func, parsed_args);
+  py::object call(const py::args& args, const py::kwargs& kwargs, std::index_sequence<>) const {
+    std::ostringstream ss;
+    ss << func_name_
+       << "(): received an invalid combination of arguments. The valid signatures are:";
+    for (int i = 0; i < signatures_.size(); ++i) {
+      ss << "\n\t*" << i << ": " << signatures_.at(i);
     }
-    return PyFunctionImpl<Size - 1, SchemaListT...>::apply(args, kwargs, raise_exception);
+    THROW(TypeError) << ss.str();
+    return py::none();
   }
+
+ private:
+  void RecursiveInit(std::index_sequence<>) {}
+
+  template<size_t I0, size_t... I>
+  void RecursiveInit(std::index_sequence<I0, I...>) {
+    using T = typename std::tuple_element<I0, std::tuple<SchemaT...>>::type;
+    signatures_[I0] = T::signature;
+    RecursiveInit(std::index_sequence<I...>{});
+  }
+
+ private:
+  size_t schema_size_;
+  const std::string func_name_;
+  std::vector<const char*> signatures_;
 };
 
-template<typename SchemaT>
-struct PyFunctionImpl<1, SchemaT> {
-  inline static py::object apply(const py::args& args, const py::kwargs& kwargs,
-                                 bool raise_exception) {
-    std::vector<PythonArg> parsed_args(SchemaT::max_args);
-    if (!ParseArgs<SchemaT>(args, kwargs, &parsed_args, raise_exception)) {
-      THROW(TypeError) << SchemaT::function_def.name << "(): no matching function to call.";
-    }
-    return detail::unpack_call(*SchemaT::func, parsed_args);
-  }
-};
-
-}  // namespace detail
-
-template<typename... SchemaListT>
+template<typename... SchemaT>
 inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
-  static constexpr size_t schema_size = sizeof...(SchemaListT);
-  return detail::PyFunctionImpl<schema_size, SchemaListT...>::apply(
-      args, kwargs, /*raise_exception=*/schema_size == 1);
+  static PyFunctionDispatcher<SchemaT...> dispatcher;
+  return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
 }
 
 }  // namespace functional
