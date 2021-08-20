@@ -369,10 +369,19 @@ endif()
 
 # build include
 set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
+add_custom_target(of_third_party_include_copy DEPENDS
+  prepare_oneflow_third_party)
+foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
+  set(oneflow_all_include_file)
+  file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
+  copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_third_party_include_copy)
+endforeach()
 add_custom_target(of_include_copy
   COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
 add_dependencies(of_include_copy oneflow_internal)
-foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS} ${CFG_INCLUDE_DIR})
+add_dependencies(of_include_copy of_third_party_include_copy)
+
+foreach(of_include_src_dir ${CFG_INCLUDE_DIR})
   set(oneflow_all_include_file)
   file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
   copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
