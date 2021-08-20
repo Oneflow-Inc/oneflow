@@ -68,7 +68,7 @@ def _mul(input, other):
 
 
 @register_tensor_op("var")
-def variance_op(input, dim=None, keepdim=False):
+def variance_op(input, dim=None, unbiased=True, keepdim=False):
     """Returns the variance of each row of the `input` tensor in the given dimension `dim`.
 
     If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
@@ -95,16 +95,16 @@ def variance_op(input, dim=None, keepdim=False):
         >>> output = flow.var(input, 1, True)
 
     """
-
+    input_shape = input.shape
     axis = _check_axis(dim, input.shape)
-    if isinstance(axis, list) and len(axis) == 0:
-        return flow.zeros(input.shape)
-    else:
-        return flow.sub(
-            flow.mean(flow.square(input), axis, keepdim),
-            flow.square(flow.mean(input, axis, keepdim)),
-        )
+    res = flow.sum(flow.square(input - flow.mean(input, dim=axis, keepdim=True)), dim=axis, keepdim=keepdim)
+    input_shape_dim = 1
+    for x in axis:
+        input_shape_dim *= input_shape[x]
+    if unbiased:
+        input_shape_dim -= 1
 
+    return res / input_shape_dim
 
 @register_tensor_op("sub")
 def _sub(input, other):
