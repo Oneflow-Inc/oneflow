@@ -203,11 +203,11 @@ class LightActor : public ActorBase {
     CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
-      kernel_info_[0]->kernel = ConstructKernel(
-          job_desc, task_proto.exec_sequence().exec_node(0).kernel_conf(), device_ctx_.get());
+      const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
+      kernel_info_[0]->kernel = ConstructKernel(job_desc, kernel_conf, device_ctx_.get());
 #ifdef WITH_CUDA_GRAPHS
       auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx_.get());
-      if (cuda_device_ctx != nullptr && task_proto_->all_blobs_are_static_hint()) {
+      if (cuda_device_ctx != nullptr && kernel_conf.all_blobs_are_static()) {
         auto* user_kernel = dynamic_cast<const UserKernel*>(kernel_info_[0]->kernel.get());
         if (user_kernel != nullptr && user_kernel->IsCudaGraphSupported()) {
           cuda_graph_ctx_[0].reset(new CudaGraphContext(cuda_device_ctx->cuda_stream()));

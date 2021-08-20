@@ -871,46 +871,31 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
 
 void PlanUtil::GenRegisterHint(Plan* plan) {
   HashSet<int64_t> multi_regst_regst_desc_ids;
-  HashSet<int64_t> dynamic_regst_desc_ids;
   for (const TaskProto& task : plan->task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       if (pair.second.register_num() != 1) {
         multi_regst_regst_desc_ids.emplace(pair.second.regst_desc_id());
       }
-      if (pair.second.regst_desc_type().has_data_regst_desc()) {
-        for (const auto& lbi7blob_desc :
-             pair.second.regst_desc_type().data_regst_desc().lbi2blob_desc()) {
-          if (lbi7blob_desc.blob_desc().is_dynamic()) {
-            dynamic_regst_desc_ids.emplace(pair.second.regst_desc_id());
-            break;
-          }
-        }
-      }
     }
   }
   for (TaskProto& task : *(plan->mutable_task())) {
     bool all_register_num_eq_one = true;
-    bool all_blobs_are_static = true;
     for (const auto& pair : task.produced_regst_desc()) {
-      if (all_register_num_eq_one && pair.second.register_num() != 1) {
+      if (pair.second.register_num() != 1) {
         all_register_num_eq_one = false;
-      }
-      if (all_blobs_are_static && dynamic_regst_desc_ids.count(pair.second.regst_desc_id()) > 0) {
-        all_blobs_are_static = false;
+        break;
       }
     }
     for (const auto& pair : task.consumed_regst_desc_id()) {
+      if (!all_register_num_eq_one) { break; }
       for (auto regst_desc_id : pair.second.regst_desc_id()) {
-        if (all_register_num_eq_one && multi_regst_regst_desc_ids.count(regst_desc_id) > 0) {
+        if (multi_regst_regst_desc_ids.count(regst_desc_id) > 0) {
           all_register_num_eq_one = false;
-        }
-        if (all_blobs_are_static && dynamic_regst_desc_ids.count(regst_desc_id) > 0) {
-          all_blobs_are_static = false;
+          break;
         }
       }
     }
     task.set_all_register_num_eq_one_hint(all_register_num_eq_one);
-    task.set_all_blobs_are_static_hint(all_blobs_are_static);
   }
 }
 

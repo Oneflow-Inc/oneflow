@@ -732,7 +732,7 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
 }
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (!kernel_conf().need_do_shape()) { return; }
+  if (kernel_conf().all_blobs_are_static()) { return; }
   UserKernelInferContext infer_ctx(nullptr, kernel_conf(), job_desc());
   infer_ctx.UpdateArg2Tensor(BnInOp2Blob);
   auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.MutOpInferContext());
