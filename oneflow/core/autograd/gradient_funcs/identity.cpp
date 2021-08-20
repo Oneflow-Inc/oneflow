@@ -18,22 +18,22 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct IdentityInterpState : public OpExprInterpState {
+struct IdentityCaptureState : public AutoGradCaptureState {
   bool requires_grad;
 };
 
-class Identity : public OpExprGradFunction<IdentityInterpState> {
+class Identity : public OpExprGradFunction<IdentityCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(IdentityInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(IdentityCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const IdentityInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const IdentityCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);

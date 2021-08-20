@@ -524,7 +524,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
                                     const JobDesc& job_desc)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
-        base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
+        base_ctx_(kernel_conf, job_desc) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (const auto& it : arg_map) {
         const std::string& arg_name = it.first;
