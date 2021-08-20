@@ -223,9 +223,8 @@ def full_op(
     The tensor’s dtype is inferred from `value`.
 
     Args:
-        size(an integer or tuple of integer values) - defining the shape of the output tensor. Can be \\
-         a variable number of arguments or a collection like a list or tuple.
-        value(Scalar) - the value to fill the output tensor with.
+        size(int...) - – a list, tuple, or torch.Size of integers defining the shape of the output tensor.
+        fill_value(Scalar) - the value to fill the output tensor with.
         dtype (flow.dtype, optional) – the desired data type of returned tensor.
         device (flow.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
         placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
@@ -239,8 +238,8 @@ def full_op(
         >>> import oneflow as flow
         >>> y = flow.full((5,),5)
         >>> y
-        tensor([5., 5., 5., 5., 5.], dtype=oneflow.float32)
-        >>> y = flow.full((2,3),5)
+        tensor([5., 5., 5., 5., 5.], dtype=oneflow.int64)
+        >>> y = flow.full((2,3),5.0)
         >>> y
         tensor([[5., 5., 5.],
                 [5., 5., 5.]], dtype=oneflow.float32)
