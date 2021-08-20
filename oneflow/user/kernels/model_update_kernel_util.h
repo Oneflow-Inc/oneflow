@@ -75,18 +75,42 @@ struct MomentumUpdateFunctor {
 template<typename T, typename G>
 struct AdamUpdateFunctor {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, T* model, T* m, T* v, T scale, float l1, float l2,
-                  float beta1, float beta2, float epsilon, float weight_decay,
-                  float learning_rate) const {
+  void operator()(const G* model_diff, T* model, T* m, T* v, T* max_v, T scale, float l1, float l2,
+                  float beta1, float beta2, float epsilon, float weight_decay, 
+                  bool amsgrad, bool do_bias_correction, float learning_rate, int64_t train_step) const {
     const T model_val = *model;
     T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
+    
+    
+    float bias_correction1 = 1.0;
+    float bias_correction2 = 1.0;
+
+    if(do_bias_correction){
+      bias_correction1 = 1 - std::pow(beta1, train_step);
+      bias_correction2 = 1 - std::pow(beta2, train_step);
+    }
+    printf("beta1 is: %f \n", beta1);
+    printf("beta2 is: %f \n", beta2);
+    printf("train step is: %d \n", train_step);
+    printf("bias correction1 is: %f \n", bias_correction1);
+    printf("bias correction2 is: %f \n", bias_correction2);
+
     const T next_m = beta1 * *m + (1 - beta1) * model_diff_t;
     *m = next_m;
     const T next_v = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
     *v = next_v;
-    *model =
-        model_val - learning_rate * (next_m / (sqrt(next_v) + epsilon) + weight_decay * model_val);
+
+    T denom = 0; 
+    if(amsgrad){
+      const T next_max_v = std::max(*max_v, next_v); 
+      *max_v = next_max_v; 
+      denom = (sqrt(next_max_v) / sqrt(bias_correction2)) + epsilon; 
+    } else {
+      denom = (sqrt(next_v) / sqrt(bias_correction2)) + epsilon; 
+    }
+    const T step_size = learning_rate / bias_correction1; 
+    *model = model_val - (step_size / denom); 
   }
 };
 
@@ -150,18 +174,24 @@ struct IndexedSlicesMomentumMdUpdateKernelUtil {
 template<DeviceType device_type, typename T, typename G>
 struct AdamUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, float learning_rate_val,
-                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model, T* m, T* v);
+                     float beta2, float epsilon, float weight_decay, 
+                     bool amsgrad, bool do_bias_correction, 
+                     float learning_rate_val, int64_t train_step_val, 
+                     const float* learning_rate, const T* scale_by_ptr, 
+                     const int64_t* skip_if, const int64_t* train_step_ptr,
+                     const G* model_diff, T* model, T* m, T* v, T* max_v);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
 struct IndexedSlicesAdamMdUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, float beta1, float beta2, float epsilon, float weight_decay,
+                     bool amsgrad, bool do_bias_correction, 
+                     float lr, int64_t train_step_val, 
                      int64_t num_instance, int64_t feature_size, int64_t lower_bound,
                      int64_t upper_bound, const IDX* num_unique_instance,
-                     const float* learning_rate, const K* indices, const T* values, T* model, T* m,
-                     T* v);
+                     const float* learning_rate, const int64_t* train_step, 
+                     const K* indices, const T* values, T* model, T* m,
+                     T* v, T* max_v);
 };
 
 template<DeviceType device_type, typename T, typename G>
