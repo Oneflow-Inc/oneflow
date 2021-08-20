@@ -889,28 +889,28 @@ void PlanUtil::GenRegisterHint(Plan* plan) {
     }
   }
   for (TaskProto& task : *(plan->mutable_task())) {
-    bool all_register_num_is_one = true;
-    bool all_blob_is_static = true;
+    bool all_register_num_eq_one = true;
+    bool all_blobs_are_static = true;
     for (const auto& pair : task.produced_regst_desc()) {
-      if (all_register_num_is_one && pair.second.register_num() != 1) {
-        all_register_num_is_one = false;
+      if (all_register_num_eq_one && pair.second.register_num() != 1) {
+        all_register_num_eq_one = false;
       }
-      if (all_blob_is_static && dynamic_regst_desc_ids.count(pair.second.regst_desc_id()) > 0) {
-        all_blob_is_static = false;
+      if (all_blobs_are_static && dynamic_regst_desc_ids.count(pair.second.regst_desc_id()) > 0) {
+        all_blobs_are_static = false;
       }
     }
     for (const auto& pair : task.consumed_regst_desc_id()) {
       for (auto regst_desc_id : pair.second.regst_desc_id()) {
-        if (all_register_num_is_one && multi_regst_regst_desc_ids.count(regst_desc_id) > 0) {
-          all_register_num_is_one = false;
+        if (all_register_num_eq_one && multi_regst_regst_desc_ids.count(regst_desc_id) > 0) {
+          all_register_num_eq_one = false;
         }
-        if (all_blob_is_static && dynamic_regst_desc_ids.count(regst_desc_id) > 0) {
-          all_blob_is_static = false;
+        if (all_blobs_are_static && dynamic_regst_desc_ids.count(regst_desc_id) > 0) {
+          all_blobs_are_static = false;
         }
       }
     }
-    task.set_all_register_num_is_one_hint(all_register_num_is_one);
-    task.set_all_blob_is_static_hint(all_blob_is_static);
+    task.set_all_register_num_eq_one_hint(all_register_num_eq_one);
+    task.set_all_blobs_are_static_hint(all_blobs_are_static);
   }
 }
 

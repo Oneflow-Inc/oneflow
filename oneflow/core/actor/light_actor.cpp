@@ -207,7 +207,7 @@ class LightActor : public ActorBase {
           job_desc, task_proto.exec_sequence().exec_node(0).kernel_conf(), device_ctx_.get());
 #ifdef WITH_CUDA_GRAPHS
       auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx_.get());
-      if (cuda_device_ctx != nullptr && task_proto_->all_blob_is_static_hint()) {
+      if (cuda_device_ctx != nullptr && task_proto_->all_blobs_are_static_hint()) {
         auto* user_kernel = dynamic_cast<const UserKernel*>(kernel_info_[0]->kernel.get());
         if (user_kernel != nullptr && user_kernel->IsCudaGraphSupported()) {
           cuda_graph_ctx_[0].reset(new CudaGraphContext(cuda_device_ctx->cuda_stream()));
@@ -603,7 +603,7 @@ ActorBase* NewLightActorWithoutKernel(const TaskProto& task_proto, const ThreadC
 }
 
 ActorBase* TryNewLightActorWithoutInit(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  if (!task_proto.all_register_num_is_one_hint()) { return nullptr; }
+  if (!task_proto.all_register_num_eq_one_hint()) { return nullptr; }
   if (task_proto.exec_sequence().exec_node_size() != 1) { return nullptr; }
   if (task_proto.task_type() == TaskType::kNormalForward) {
     const OperatorConf& op_conf =
