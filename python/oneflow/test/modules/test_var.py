@@ -40,6 +40,22 @@ class TestVar(flow.unittest.TestCase):
             keepdim=random().to(bool),
         )
         return y
+    
+    @unittest.skip("var not support 0-shape tensor currently")
+    @autotest()
+    def test_flow_var_0d_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 3, 0, 4).to(device)
+        y = torch.var(
+            x,
+            dim=random(low=0, high=4).to(int),
+            unbiased=random().to(bool),
+            keepdim=random().to(bool),
+        )
+        return y
+
+    
+
 
 
 if __name__ == "__main__":
