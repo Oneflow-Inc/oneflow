@@ -15,8 +15,10 @@ limitations under the License.
 """
 
 import unittest
+
 import numpy as np
 from automated_test_util import *
+
 import oneflow as flow
 import oneflow.unittest
 
@@ -30,6 +32,14 @@ class TestMulModule(flow.unittest.TestCase):
         k = random(10,100).to(int)
         y = torch.mul(x, k)
         return y
+    
+    @autotest()
+    def test_mul_with_random_data_scalar(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = random_pytorch_tensor(ndim=4).to(device)
+        z = torch.mul(x, y)
+        return z
 
     @autotest()
     def test_mul_with_random_data_broadcast(test_case):
