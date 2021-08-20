@@ -24,9 +24,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def test_fused_self_attention(
-    test_case, batch_size, seq_len, num_heads, head_size
-):
+def test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_size):
     hidden_size = num_heads * 3 * head_size
 
     x = np.random.randn(seq_len, batch_size, hidden_size)
@@ -42,9 +40,33 @@ def test_fused_self_attention(
     origin_input.requires_grad = True
     reshape_input = flow.reshape(origin_input, (seq_len, batch_size, -1, 3 * head_size))
 
-    origin_q = flow.slice(reshape_input, slice_tup_list=[[None, None, None], [None, None, None], [None, None, None], [0, head_size, 1]]).permute(1, 2, 0, 3)
-    origin_k = flow.slice(reshape_input, slice_tup_list=[[None, None, None], [None, None, None], [None, None, None], [head_size, 2 * head_size, 1]]).permute(1, 2, 0, 3)
-    origin_v = flow.slice(reshape_input, slice_tup_list=[[None, None, None], [None, None, None], [None, None, None], [2 * head_size, 3 * head_size, 1]]).permute(1, 2, 0, 3)
+    origin_q = flow.slice(
+        reshape_input,
+        slice_tup_list=[
+            [None, None, None],
+            [None, None, None],
+            [None, None, None],
+            [0, head_size, 1],
+        ],
+    ).permute(1, 2, 0, 3)
+    origin_k = flow.slice(
+        reshape_input,
+        slice_tup_list=[
+            [None, None, None],
+            [None, None, None],
+            [None, None, None],
+            [head_size, 2 * head_size, 1],
+        ],
+    ).permute(1, 2, 0, 3)
+    origin_v = flow.slice(
+        reshape_input,
+        slice_tup_list=[
+            [None, None, None],
+            [None, None, None],
+            [None, None, None],
+            [2 * head_size, 3 * head_size, 1],
+        ],
+    ).permute(1, 2, 0, 3)
 
     origin_k = origin_k.transpose(2, 3)
     origin_qmk = flow.matmul(origin_q, origin_k)
