@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections.abc
+import warnings
 import operator
-from collections import OrderedDict
+from collections import OrderedDict, abc as container_abcs
 from itertools import islice
 from typing import (
     Any,
@@ -36,7 +37,7 @@ T = TypeVar("T")
 
 
 class Sequential(Module):
-    """A sequential container.
+    r"""A sequential container.
     Modules will be added to it in the order they are passed in the constructor.
     Alternatively, an ordered dict of modules can also be passed in.
 

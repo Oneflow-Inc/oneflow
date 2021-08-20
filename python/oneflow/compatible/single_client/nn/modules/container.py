@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections.abc
+import warnings
 import operator
 from collections import OrderedDict
 from itertools import islice
@@ -521,4 +522,4 @@ class ModuleDict(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)
