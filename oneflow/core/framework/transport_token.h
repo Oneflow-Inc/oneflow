@@ -74,9 +74,9 @@ class TransportToken final {
 
   // Getters
   TransportTokenType type() const { return static_cast<TransportTokenType>(type_); }
-  uint8_t thread_consistent_id() const { return thread_consistent_id_; }
-  uint8_t rank_group_level() const { return rank_group_level_; }
-  uint16_t seq_id() const { return seq_id_; }
+  int thread_consistent_id() const { return thread_consistent_id_; }
+  int rank_group_level() const { return rank_group_level_; }
+  int seq_id() const { return seq_id_; }
 
   // Setters
   Maybe<void> set_src_rank(int64_t val);
