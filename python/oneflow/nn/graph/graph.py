@@ -18,16 +18,15 @@ from functools import partial
 from typing import Dict
 
 import oneflow._oneflow_internal
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.distribute import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
-from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType
+from oneflow.nn.graph.config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.amp import GradScaler
 from oneflow.nn.graph.util import add_indent, sys_exc_error_msg, list_to_func_return
@@ -488,67 +487,3 @@ class Graph(object):
     def _shallow_repr(self):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
-
-
-class GraphConfig(object):
-    def __init__(self):
-        super().__init__()
-        self.proto = job_conf_cfg.JobConfigProto()
-        self._train(False)
-
-    def _train(self, mode: bool = True):
-        if mode:
-            self.proto.mutable_train_conf()
-        else:
-            self.proto.mutable_predict_conf()
-
-    @property
-    def training(self):
-        if self.proto.has_train_conf():
-            return True
-        if self.proto.has_predict_conf():
-            return False
-        raise NotImplementedError
-
-    def enable_amp(self, mode: bool = True):
-        """If true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
-
-        Args:
-            mode (bool, optional): [description]. Default is True.
-        """
-        assert type(mode) is bool
-        self.proto.set_enable_auto_mixed_precision(mode)
-
-    def allow_fuse_model_update_ops(self, mode: bool = True):
-        """If true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
-
-        Args:
-            mode (bool, optional): [description]. Default is True.
-        """
-        self.proto.set_enable_fuse_model_update_ops(mode)
-
-    def allow_fuse_add_to_output(self, mode: bool = True):
-        """If true, try to fuse a binary element-wise add to one of the predecessors to improve performance.
-
-        Args:
-            mode (bool, optional): [description]. Default is True.
-        """
-        self.proto.set_enable_fuse_add_to_output(mode)
-
-    def allow_fuse_cast_scale(self, mode: bool = True):
-        """If true, try to fuse cast and scalar_mul_by_tensor to improve performance.
-    
-        Args:
-            mode (bool, optional): [description]. Default is True.
-        """
-        self.proto.set_enable_fuse_cast_scale(mode)
-
-    def set_gradient_accumulation_steps(self, value):
-        self.proto.set_num_gradient_accumulation_steps(value)
-
-    def _generate_optimizer_and_variable_configs(
-        self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
-    ):
-        opt_dict.generate_optimizer_and_variable_configs(
-            self.proto.mutable_train_conf(), variables_conf
-        )
