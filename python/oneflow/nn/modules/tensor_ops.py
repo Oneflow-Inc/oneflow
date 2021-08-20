@@ -156,11 +156,7 @@ def is_floating_point(input):
         False
 
     """
-    if (
-        input.dtype == flow.float16
-        or input.dtype == flow.float32
-        or input.dtype == flow.float64
-    ):
+    if input.dtype in (flow.float, flow.float16, flow.float32, flow.float64):
         return True
     return False
 
