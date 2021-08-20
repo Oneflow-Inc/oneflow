@@ -26,6 +26,8 @@ import torch
 import oneflow as flow
 
 py_tuple = tuple
+NoneType = type(None)
+
 TEST_MODULE = 0
 TEST_FLOW = 1
 TEST_TENSOR = 2
