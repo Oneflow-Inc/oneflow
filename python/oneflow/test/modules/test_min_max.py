@@ -22,9 +22,6 @@ from automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
-
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestMin_Max(flow.unittest.TestCase):
     @autotest()
