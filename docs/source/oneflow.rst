@@ -122,6 +122,10 @@ oneflow
             zeros, 
             zeros_like,
             is_nonzero,
+            no_grad,
+            grad_enable,
+            inference_mode,
+            is_grad_enabled,
             is_floating_point
 
 .. autofunction:: oneflow.data.load_mnist(train_batch_size=100, test_batch_size=100, data_format='NCHW')
