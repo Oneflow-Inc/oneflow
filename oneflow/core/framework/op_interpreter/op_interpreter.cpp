@@ -57,6 +57,7 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(VariableOp);
   APPLY_IF(CastToMirroredOp);
   APPLY_IF(CastFromMirroredOp);
+  APPLY_IF(ConsistentToConsistentOp);
   APPLY_IF(CastToConsistentOp);
   APPLY_IF(CastFromConsistentOp);
   APPLY_IF(DistributeSplitOp);
