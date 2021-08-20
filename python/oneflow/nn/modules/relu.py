@@ -15,7 +15,7 @@ from oneflow.framework.tensor import register_tensor_op
 
 def relu_op(input,inplace=False):
     """
-    Applies the rectified linear unit function element-wise. See :class:`~oneflow.nn.ReLU` for more details. oneflow space
+    Applies the rectified linear unit function element-wise. See :class:`~oneflow.nn.ReLU` for more details. 
 
     Args:
         inplace: If set to ``True``, will do this operation in-place. Default: ``False``
@@ -39,24 +39,8 @@ def relu_op(input,inplace=False):
 @register_tensor_op("relu")
 def relu_tensor_op(input,inplace=False):
     """
-    Applies the rectified linear unit function element-wise. See :class:`~oneflow.nn.ReLU` for more details. oneflow space
-
-    Args:
-        inplace: If set to ``True``, will do this operation in-place. Default: ``False``
+    Applies the rectified linear unit function element-wise. See :class:`~oneflow.nn.ReLU` for more details. 
     
-    For examples:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-
-        >>> ndarr = np.asarray([1, -2, 3])
-        >>> input = flow.Tensor(ndarr)
-        >>> output = input.relu()
-        >>> output
-        tensor([1., 0., 3.], dtype=oneflow.float32)
-
     """
     return flow.F.relu(input,inplace=inplace)
 
