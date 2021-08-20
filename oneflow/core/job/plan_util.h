@@ -37,6 +37,7 @@ struct PlanUtil {
   static void SetForceInplaceMemBlock(Plan* plan);
   static void DumpCtrlRegstInfoToPlan(Plan* plan);
   static void GenCollectiveBoxingPlan(Job* job, Plan* plan);
+  static void GenRegisterHint(Plan* plan);
   static const oneflow::OpAttribute& GetOpAttribute(const Plan* plan, int64_t job_id,
                                                     const oneflow::KernelConf& kernel_conf);
   // NOTE(chengcheng): recovery op_attr
