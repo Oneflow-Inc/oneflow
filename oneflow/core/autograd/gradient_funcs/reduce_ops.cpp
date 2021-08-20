@@ -107,12 +107,12 @@ Maybe<void> ReduceMaxOrMinOp::Apply(const ReduceMaxOrMinOpInterpState* ctx,
   const auto& bcast_like = JUST(functional::BroadcastLike(output, input, ctx->axis));
   const auto& bcast_eq = JUST(functional::BroadcastEqual(input, bcast_like));
   const auto& cast_like = JUST(functional::CastLike(bcast_eq, input));
-  const auto& reduce_sum_ = JUST(functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims));
-  const auto& bcast_div_ = JUST(functional::BroadcastDiv(dy, reduce_sum_));
-  const auto& bcast_like_div = JUST(functional::BroadcastLike(bcast_div_, input, ctx->axis));
+  const auto& reduce_sum = JUST(functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims));
+  const auto& div = JUST(functional::Div(dy, reduce_sum));
+  const auto& bcast_like_div = JUST(functional::BroadcastLike(div, input, ctx->axis));
 
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::Multiply(bcast_like_div, cast_like));
+  in_grads->at(0) = JUST(functional::Mul(bcast_like_div, cast_like));
   return Maybe<void>::Ok();
 }
 

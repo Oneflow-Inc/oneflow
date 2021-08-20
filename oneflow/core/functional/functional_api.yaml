@@ -23,45 +23,34 @@
 - name: "add"
   signature: [
     "Tensor (TensorTuple inputs, Bool inplace=False) => AddN",
-    "Tensor (Tensor x, Tensor y, Bool inplace=False) => Add",
-    "Tensor (Tensor x, Scalar alpha, Bool inplace=False) => ScalarAdd",
+    "Tensor (Tensor input, Tensor other, Bool inplace=False) => Add",
+    "Tensor (Tensor input, Scalar other, Bool inplace=False) => ScalarAdd",
   ]
   bind_python: true
 
-- name: "sub_scalar_by_tensor"
-  signature: "Tensor (Tensor x, Tensor scalar) => ScalarSubByTensor"
-  bind_python: False
-
-- name: "broadcast_sub"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastSub"
-  bind_python: False
+- name: "sub"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => Sub",
+    "Tensor (Tensor input, Scalar other) => ScalarSub",
+  ]
+  bind_python: true
 
 - name: "mul"
-  signature: "Tensor (Tensor x, Tensor y) => Multiply"
-  bind_python: False
+  signature: [
+    "Tensor (Tensor input, Tensor other) => Mul",
+    "Tensor (Tensor input, Scalar other) => ScalarMul",
+  ]
+  bind_python: true
 
-- name: "mul_scalar"
-  signature: "Tensor (Tensor x, Scalar alpha) => ScalarMul"
-  bind_python: False
+- name: "div"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => Div",
+    "Tensor (Tensor input, Scalar other) => ScalarDiv",
+  ]
+  bind_python: true
 
-- name: "mul_scalar_by_tensor"
-  signature: "Tensor (Tensor x, Tensor scalar) => ScalarMulByTensor"
-  bind_python: False
-
-- name: "broadcast_mul"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastMul"
-  bind_python: False
-
-- name: "div_scalar_by_tensor"
-  signature: "Tensor (Tensor x, Tensor scalar) => ScalarDivByTensor"
-  bind_python: False
-
-- name: "broadcast_div"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastDiv"
-  bind_python: False
-
-- name: "broadcast_div_grad"
-  signature: "Tensor (Tensor y, Tensor z, Tensor dz) => BroadcastDivGrad"
+- name: "div_grad"
+  signature: "Tensor (Tensor y, Tensor z, Tensor dz) => DivGrad"
   bind_python: False
 
 - name: "broadcast_equal"

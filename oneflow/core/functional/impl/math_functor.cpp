@@ -102,6 +102,14 @@ class ScalarAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ScalarSubFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
+                           bool inplace) const {
+    return ScalarAdd(x, Scalar(-1) * scalar, inplace);
+  }
+};
+
 class ScalarMulFunctor {
  public:
   ScalarMulFunctor() {
@@ -127,6 +135,13 @@ class ScalarMulFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarDivFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    return ScalarMul(x, Scalar(-1.0) / scalar);
+  }
 };
 
 class ScalarPowFunctor {
@@ -576,7 +591,9 @@ class ScalarLogicalLessEqualFunctor : public ScalarLogicalBaseFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddNFunctor>("AddN");
   m.add_functor<impl::ScalarAddFunctor>("ScalarAdd");
+  m.add_functor<impl::ScalarSubFunctor>("ScalarSub");
   m.add_functor<impl::ScalarMulFunctor>("ScalarMul");
+  m.add_functor<impl::ScalarDivFunctor>("ScalarDiv");
   m.add_functor<impl::ScalarPowFunctor>("ScalarPow");
   m.add_functor<impl::ReduceSumFunctor>("ReduceSum");
   m.add_functor<impl::ReduceMeanFunctor>("ReduceMean");

@@ -71,6 +71,11 @@ class Scalar {
   bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }
   bool IsUnsigned() const { return active_tag_ == HAS_U; }
 
+  Scalar operator+(const Scalar& other);
+  Scalar operator-(const Scalar& other);
+  Scalar operator*(const Scalar& other);
+  Scalar operator/(const Scalar& other);
+
   Scalar& operator+=(const Scalar& other);
   Scalar& operator-=(const Scalar& other);
   Scalar& operator*=(const Scalar& other);
@@ -85,6 +90,7 @@ class Scalar {
   } value_;
   enum { HAS_S, HAS_U, HAS_D, HAS_NONE } active_tag_;
 };
+
 
 }  // namespace functional
 }  // namespace one
