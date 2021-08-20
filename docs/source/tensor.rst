@@ -138,7 +138,6 @@ OneFlow Tensor Class
             topk, 
             transpose, 
             triu, 
-            type_as, 
             uniform_, 
             unsqueeze, 
             var, 
