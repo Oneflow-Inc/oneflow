@@ -27,51 +27,73 @@ namespace functional {
 
 namespace detail {
 
+// The argument parsing refers to the implementation of Pytorch.
 template<typename SchemaT>
 inline bool ParseArgs(const py::args& args, const py::kwargs& kwargs,
                       std::vector<PythonArg>* parsed_args, bool raise_exception) {
   const auto& function = SchemaT::function_def;
   bool treat_args_as_intlist = false;
   size_t nargs = args.size();
+  size_t remaining_kwargs = kwargs.size();
+
+  if (SchemaT::max_pos_args == 1) {
+    const auto& type = function.argument_def.at(0).type;
+    treat_args_as_intlist = (type == kINT32_LIST || type == kUINT32_LIST || type == kINT64_LIST
+                             || type == kUINT64_LIST);
+  }
   if (nargs > SchemaT::max_pos_args && !treat_args_as_intlist) {
-    CHECK_OR_THROW(!raise_exception) << function.name << "(): takes " << SchemaT::max_pos_args
-                                     << " positional arguments but " << nargs << " were given.";
+    if (raise_exception) {
+      THROW(TypeError) << function.name << "(): takes " << SchemaT::max_pos_args
+                       << " positional arguments but " << nargs << " were given.";
+    }
     return false;
   }
   int arg_pos = 0;
   for (int i = 0; i < function.argument_def.size(); ++i) {
     const auto& param = function.argument_def.at(i);
     py::object obj;
-    if (arg_pos == 0 && treat_args_as_intlist) {
+    if (arg_pos == 0 && treat_args_as_intlist && !param.keyword_only) {
       obj = args;
       arg_pos = nargs;
-    }
-    if (arg_pos < nargs) {
+    } else if (arg_pos < nargs) {
       if (param.keyword_only) {
-        CHECK_OR_THROW(!raise_exception)
-            << function.name << "(): argument '" << param.name << "' is keyword only.";
+        if (raise_exception) {
+          THROW(TypeError) << function.name << "(): argument '" << param.name
+                           << "' is keyword only.";
+        }
         return false;
       }
       obj = args[arg_pos++];
     } else {
-      if (kwargs.contains(param.name.c_str())) { obj = kwargs[param.name.c_str()]; }
+      if (kwargs.contains(param.name.c_str())) {
+        obj = kwargs[param.name.c_str()];
+        remaining_kwargs--;
+      }
     }
+
     if (!obj && !param.has_default_value) {
-      CHECK_OR_THROW(!raise_exception)
-          << function.name << "(): missing required argument " << param.name;
+      if (raise_exception) {
+        THROW(TypeError) << function.name << "(): missing required argument " << param.name;
+      }
       return false;
     } else if (obj) {
       PythonArg arg(obj);
       if (!PythonArgCheck(arg, param.type)) {
-        CHECK_OR_THROW(!raise_exception)
-            << function.name << "(): argument " << param.name << " must be " << param.type_name
-            << ", not " << Py_TYPE(obj.ptr())->tp_name;
+        if (raise_exception) {
+          THROW(TypeError) << function.name << "(): argument '" << param.name << "' must be "
+                           << ValueTypeName(param.type).GetOrThrow() << ", not "
+                           << Py_TYPE(obj.ptr())->tp_name;
+        }
         return false;
       }
       parsed_args->at(i) = std::move(arg);
     } else {
       parsed_args->at(i) = PythonArg(param.default_value);
     }
+  }
+  if (remaining_kwargs > 0) {
+    if (raise_exception) { THROW(TypeError); }
+    return false;
   }
   return true;
 }
@@ -93,8 +115,9 @@ struct PyFunctionImpl<1, SchemaT> {
   inline static py::object apply(const py::args& args, const py::kwargs& kwargs,
                                  bool raise_exception) {
     std::vector<PythonArg> parsed_args(SchemaT::max_args);
-    CHECK_OR_THROW(ParseArgs<SchemaT>(args, kwargs, &parsed_args, raise_exception))
-        << SchemaT::function_def.name << "(): no matching function to call.";
+    if (!ParseArgs<SchemaT>(args, kwargs, &parsed_args, raise_exception)) {
+      THROW(TypeError) << SchemaT::function_def.name << "(): no matching function to call.";
+    }
     return detail::unpack_call(*SchemaT::func, parsed_args);
   }
 };

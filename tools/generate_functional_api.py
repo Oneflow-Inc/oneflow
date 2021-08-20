@@ -386,8 +386,11 @@ class FunctionSignature:
     def num_of_args():
         return len(self._args)
 
-    def to_string(self, to_cpp=False):
-        fmt = "{0} {1}(".format(self._ret.to_string(to_cpp=to_cpp), self._name)
+    def to_string(self, to_cpp=False, drop_name=False):
+        if drop_name:
+            fmt = "{0} (".format(self._ret.to_string(to_cpp=to_cpp))
+        else:
+            fmt = "{0} {1}(".format(self._ret.to_string(to_cpp=to_cpp), self._name)
         keyword_start = False
         for i, arg in enumerate(self._args):
             if i > 0 and i < len(self._args):
@@ -492,7 +495,7 @@ class FunctionalGenerator:
                     signature._max_positional_args_count
                 )
                 schema_fmt += '  static constexpr char const* signature = "{0}";\n'.format(
-                    _escape_quote(signature.to_string())
+                    _escape_quote(signature.to_string(drop_name=True))
                 )
                 schema_fmt += "  static FunctionDef function_def;\n"
                 schema_fmt += "};\n"

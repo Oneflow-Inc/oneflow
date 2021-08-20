@@ -49,7 +49,6 @@ struct ArgumentDef {
   }
 
   std::string name;
-  std::string type_name;
   ValueType type;
 
   bool keyword_only;
