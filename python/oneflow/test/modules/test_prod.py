@@ -43,6 +43,8 @@ class TestReduceProd(flow.unittest.TestCase):
 
         y = torch.prod(x, dim)
 
+        y = torch.exp(y)
+
         return y
 
 
