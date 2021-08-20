@@ -97,7 +97,7 @@ def variance_op(input, dim=None, unbiased=True, keepdim=False):
 
     """
     input_shape = input.shape
-    axis = _check_axis(dim, input.shape)
+    axis = _check_axis(dim, input_shape)
     input_shape_dim = 1
     for x in axis:
         input_shape_dim *= input_shape[x]
