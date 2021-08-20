@@ -25,8 +25,14 @@ def _test_distribute_softmax_entropy_graph(test_case, device):
     np_logits = np.random.randn(5, 10)
     np_labels = np.random.randint(0, 2, size=(5,))
 
-    of_logits = flow.tensor(np_logits, device=device)
+    placement = flow.placement("cuda", {0: [0, 1]})
+    sbp = flow.sbp.split(1)
+
+    of_logits = flow.tensor(np_logits, placement=placement)
     of_labels = flow.tensor(np_labels, device=device, dtype=flow.int32)
+
+    c_x = of_logits.to_consistent(placement=placement, sbp=sbp)
+    c_y = of_labels.to_consistent(placement=placement, sbp=sbp)
 
     class DistributeSparseSoftmaxCrossEntropyMsGraph(flow.nn.Graph):
         def __init__(self):
@@ -38,18 +44,15 @@ def _test_distribute_softmax_entropy_graph(test_case, device):
 
     SSCE_g = DistributeSparseSoftmaxCrossEntropyMsGraph()
     SSCE_g.debug()
-    of_lazy_out = SSCE_g(of_logits, of_labels)
+    of_lazy_out = SSCE_g(c_x, c_y)
     print(of_lazy_out.numpy())
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@flow.unittest.skip_unless_1n1d()
+@flow.unittest.skip_unless_1n2d()
 class TestLinearGraph(oneflow.unittest.TestCase):
     def test_linear_graph_gpu(test_case):
         _test_distribute_softmax_entropy_graph(test_case, flow.device("cuda"))
-
-    def test_linear_graph_cpu(test_case):
-        _test_distribute_softmax_entropy_graph(test_case, flow.device("cpu"))
 
 
 if __name__ == "__main__":

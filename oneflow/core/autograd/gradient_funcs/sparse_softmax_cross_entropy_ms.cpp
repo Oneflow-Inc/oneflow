@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct SparseSoftmaxCrossEntropyMsInterpState : public OpExprInterpState {
+struct SparseSoftmaxCrossEntropyMsInterpState : public AutoGradCaptureState {
   bool requires_grad;
   int64_t depth;
 };
