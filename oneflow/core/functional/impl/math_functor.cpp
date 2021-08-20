@@ -105,7 +105,7 @@ class ScalarAddFunctor {
 class ScalarAdd2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(x, scalar, /*inplace*/false);
+    return ScalarAdd(x, scalar, /*inplace*/ false);
   }
 };
 
