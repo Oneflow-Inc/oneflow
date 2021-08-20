@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/rank_group_scope.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
@@ -228,7 +229,7 @@ Maybe<Tensor> ConsistentToConsistent(
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
-  if (tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
+  if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
     CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);
