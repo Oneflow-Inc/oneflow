@@ -24,6 +24,7 @@ from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow as flow
 import oneflow.unittest
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSinh(flow.unittest.TestCase):
     @autotest()

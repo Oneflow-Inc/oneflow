@@ -78,6 +78,7 @@ def variance_op(input, dim=None, unbiased=True, keepdim=False):
     Args:
         input (Tensor): the input tensor.
         dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
+        unbiased (bool, optional): whether to use Bessel’s correction (:math:`\delta N = 1`). Defaults to True.
         keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
 
     Returns:
@@ -97,14 +98,18 @@ def variance_op(input, dim=None, unbiased=True, keepdim=False):
     """
     input_shape = input.shape
     axis = _check_axis(dim, input.shape)
-    res = flow.sum(flow.square(input - flow.mean(input, dim=axis, keepdim=True)), dim=axis, keepdim=keepdim)
     input_shape_dim = 1
     for x in axis:
         input_shape_dim *= input_shape[x]
     if unbiased:
         input_shape_dim -= 1
-
+    res = flow.sum(
+        flow.square(input - flow.mean(input, dim=axis, keepdim=True)),
+        dim=axis,
+        keepdim=keepdim,
+    )
     return res / input_shape_dim
+
 
 @register_tensor_op("sub")
 def _sub(input, other):
