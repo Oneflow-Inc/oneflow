@@ -17,13 +17,10 @@ limitations under the License.
 import unittest
 
 import numpy as np
-from automated_test_util import *
 
+from automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
-
-
-
 
 @flow.unittest.skip_unless_1n1d()
 class TestDiv(flow.unittest.TestCase):
@@ -36,21 +33,29 @@ class TestDiv(flow.unittest.TestCase):
         return y
 
     
-    @autotest(auto_backward=False)
-    def test_div_with_0shape(test_case):
+    @autotest()
+    def test_div_with_scalar(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = random_pytorch_tensor(ndim=4).to(device)
+        z = torch.div(x,y)
+        return z
+    
+    @autotest()
+    def test_div_with_multi_shape(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim0=2, dim1=1, dim2=0, dim3=3).to(device)
         y = random_pytorch_tensor(ndim=4, dim0=2, dim1=1, dim2=0, dim3=3).to(device)
         z = torch.div(x,y)
         return z
     
-    @autotest(auto_backward=False)
-    def test_div_with_diff_shape(test_case):
+    @autotest()
+    def test_div_with_with_broadcast(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim0=3).to(device)
         y = random_pytorch_tensor(ndim=4).to(device)
         z = torch.div(x, y)
-        return z   
+        return z
 
 if __name__ == "__main__":
     unittest.main()

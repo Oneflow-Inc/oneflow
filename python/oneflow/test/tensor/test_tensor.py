@@ -1269,13 +1269,20 @@ class TestTensor(flow.unittest.TestCase):
         k = random(1,4).to(float)
         y = x.div(k)
         return y
-
     
-    @autotest(auto_backward=False)
-    def test_tensor_div_with_0shape(test_case):
+    @autotest()
+    def test_tensor_div_with_multi_shape(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim0=2, dim1=1, dim2=0, dim3=3).to(device)
         y = random_pytorch_tensor(ndim=4, dim0=2, dim1=1, dim2=0, dim3=3).to(device)
+        z = x.div(y)
+        return z
+    
+    @autotest()
+    def test_tensor_div_with_broadcast(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim0=4).to(device)
+        y = random_pytorch_tensor(ndim=4).to(device)
         z = x.div(y)
         return z
     
