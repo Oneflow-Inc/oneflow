@@ -241,6 +241,50 @@ class TestModule(flow.unittest.TestCase):
                 res2.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
             )
         )
+    
+    @flow.unittest.skip_unless_1n1d()
+    def test_module_cpu_cuda(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self, param1, param2):
+                super().__init__()
+                self.param1 = param1
+                self.param2 = param2
+
+        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3, device=flow.device("cpu")))
+        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3, device=flow.device("cpu")))
+        sub_module = CustomModule(tensor0, tensor1)
+        m = CustomModule(tensor1, sub_module)
+        m.cuda()
+        state_dict = m.state_dict()
+        test_case.assertEqual(state_dict["param2.param1"].device, flow.device("cuda:0"))
+        test_case.assertEqual(state_dict["param2.param2"].device, flow.device("cuda:0"))
+
+        m.cpu()
+        state_dict = m.state_dict()
+        test_case.assertEqual(state_dict["param2.param1"].device, flow.device("cpu"))
+        test_case.assertEqual(state_dict["param2.param2"].device, flow.device("cpu"))
+
+    
+    @flow.unittest.skip_unless_1n1d()
+    def test_module_float(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self, param1, param2):
+                super().__init__()
+                self.param1 = param1
+                self.param2 = param2
+
+        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3, dtype=flow.float64))
+        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3, dtype=flow.float64))
+        m = CustomModule(tensor0, tensor1)
+        m = m.float()
+        state_dict = m.state_dict()
+        test_case.assertEqual(state_dict["param1"].dtype, flow.float32)
+        test_case.assertEqual(state_dict["param2"].dtype, flow.float32)
+
+        m = m.double()
+        state_dict = m.state_dict()
+        test_case.assertEqual(state_dict["param1"].dtype, flow.float64)
+        test_case.assertEqual(state_dict["param2"].dtype, flow.float64)
 
 
 if __name__ == "__main__":
