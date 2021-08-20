@@ -241,7 +241,7 @@ class TestModule(flow.unittest.TestCase):
                 res2.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
             )
         )
-    
+
     @flow.unittest.skip_unless_1n1d()
     def test_module_cpu_cuda(test_case):
         class CustomModule(flow.nn.Module):
@@ -264,7 +264,6 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertEqual(state_dict["param2.param1"].device, flow.device("cpu"))
         test_case.assertEqual(state_dict["param2.param2"].device, flow.device("cpu"))
 
-    
     @flow.unittest.skip_unless_1n1d()
     def test_module_float(test_case):
         class CustomModule(flow.nn.Module):
