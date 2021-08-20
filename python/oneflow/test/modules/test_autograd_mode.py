@@ -27,41 +27,49 @@ class TestAutogradMode(oneflow.unittest.TestCase):
     def test_inference_mode(test_case):
         with flow.inference_mode(True):
             test_case.assertFalse(flow.is_grad_enabled())
+        test_case.assertTrue(flow.is_grad_enabled())
 
         @flow.inference_mode(True)
         def func():
             test_case.assertFalse(flow.is_grad_enabled())
 
         func()
+        test_case.assertTrue(flow.is_grad_enabled())
 
         with flow.inference_mode(False):
             test_case.assertTrue(flow.is_grad_enabled())
+        test_case.assertTrue(flow.is_grad_enabled())
 
         @flow.inference_mode(False)
         def func():
             test_case.assertTrue(flow.is_grad_enabled())
 
         func()
+        test_case.assertTrue(flow.is_grad_enabled())
 
     def test_grad_enable(test_case):
         with flow.grad_enable():
             test_case.assertTrue(flow.is_grad_enabled())
+        test_case.assertTrue(flow.is_grad_enabled())
 
         @flow.grad_enable()
         def func():
             test_case.assertTrue(flow.is_grad_enabled())
 
         func()
+        test_case.assertTrue(flow.is_grad_enabled())
 
     def test_no_grad(test_case):
         with flow.no_grad():
             test_case.assertFalse(flow.is_grad_enabled())
+        test_case.assertTrue(flow.is_grad_enabled())
 
         @flow.no_grad()
         def func():
             test_case.assertFalse(flow.is_grad_enabled())
 
         func()
+        test_case.assertTrue(flow.is_grad_enabled())
 
 
 if __name__ == "__main__":

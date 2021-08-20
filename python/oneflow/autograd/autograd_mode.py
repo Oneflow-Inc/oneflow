@@ -25,7 +25,7 @@ def is_grad_enabled():
     return oneflow._oneflow_internal.autograd.is_grad_enabled()
 
 
-class inference_mode(AutoGradMode):
+class inference_mode:
     r"""
     Context-manager that enables or disables inference mode
 
@@ -58,7 +58,6 @@ class inference_mode(AutoGradMode):
 
     def __init__(self, mode=True):
         self.infer_mode = mode
-        super().__init__(not mode)
 
     def __call__(self, func):
         def warpper(*args, **kwargs):
@@ -67,8 +66,15 @@ class inference_mode(AutoGradMode):
 
         return warpper
 
+    def __enter__(self):
+        self.grad_mode = AutoGradMode(not self.infer_mode)
+        return self
 
-class grad_enable(AutoGradMode):
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+class grad_enable:
     r"""
     Context-manager that enabled gradient calculation.
 
@@ -96,9 +102,6 @@ class grad_enable(AutoGradMode):
         True
     """
 
-    def __init__(self):
-        super().__init__(True)
-
     def __call__(self, func):
         def warpper(*args, **kwargs):
             with AutoGradMode(True):
@@ -106,8 +109,15 @@ class grad_enable(AutoGradMode):
 
         return warpper
 
+    def __enter__(self):
+        self.grad_mode = AutoGradMode(True)
+        return self
 
-class no_grad(AutoGradMode):
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+class no_grad:
     r"""
     Context-manager that disabled gradient calculation.
 
@@ -138,15 +148,19 @@ class no_grad(AutoGradMode):
         False
     """
 
-    def __init__(self):
-        super().__init__(False)
-
     def __call__(self, func):
         def warpper(*args, **kwargs):
             with AutoGradMode(False):
                 return func(*args, **kwargs)
 
         return warpper
+
+    def __enter__(self):
+        self.grad_mode = AutoGradMode(False)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
 
 if __name__ == "__main__":
