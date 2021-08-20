@@ -91,7 +91,7 @@ if __name__ == "__main__":
         downloaded = download(args.build_dir)
     promises = [
         run_command(
-            f"cd .. && git diff -U0 master | {downloaded[1]} -clang-tidy-binary {downloaded[0]} -path {args.build_dir} -quiet -j $(nproc) -p1"
+            f"cd .. && git diff -U0 master | {downloaded[1]} -clang-tidy-binary {downloaded[0]} -path {args.build_dir} -j $(nproc) -p1 -allow-enabling-alpha-checkers -extra-arg=-Xclang -extra-arg=-analyzer-config -extra-arg=-Xclang -extra-arg=aggressive-binary-operation-simplification=true"
         )
     ]
     loop.run_until_complete(asyncio.gather(*promises))

@@ -749,7 +749,7 @@ jobs:
         run: |
           git remote add upstream https://github.com/Oneflow-Inc/oneflow
           git fetch upstream
-      - name: Run Maybe-related checks by clang-tidy
+      - name: Run clang-tidy for modified files
         # use clang as compiler for correct compiler flags
         run: |
           cd build
