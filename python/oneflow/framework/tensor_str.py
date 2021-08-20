@@ -216,7 +216,7 @@ def _tensor_str(self, indent):
             and sbp != flow.sbp.split(0)
         )
 
-    # TODO: delete it when boxing on "CPU" and s1->b on "GPU" is ready
+    # TODO: delete it when boxing on "CPU" and s1->b on "GPU" are ready
     if self.is_consistent:
         self = self.to("cuda")
         if all(_cannot_print(sbp) for sbp in self.sbp):
