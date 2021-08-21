@@ -132,7 +132,7 @@ void JNICALL Java_org_oneflow_OneFlow_startLazyGlobalSession(JNIEnv* env, jobjec
 
 JNIEXPORT
 void JNICALL Java_org_oneflow_OneFlow_loadCheckpoint(JNIEnv* env, jobject obj, jobject path) {
-  std::string load_job_name = GetInterUserJobInfo().global_model_load_job_name();
+  std::string load_job_name = GetInterUserJobInfo()->global_model_load_job_name();
 
   int64_t path_length = (*env).GetDirectBufferCapacity(path);
   void* path_address = (*env).GetDirectBufferAddress(path);
@@ -209,7 +209,7 @@ void JNICALL Java_org_oneflow_OneFlow_setShuttingDown(JNIEnv* env, jobject obj) 
 JNIEXPORT
 jstring JNICALL Java_org_oneflow_OneFlow_getPushJobNames(JNIEnv* env, jobject obj) {
   std::string push_job_names;
-  auto input2push = GetInterUserJobInfo().input_or_var_op_name2push_job_name();
+  auto input2push = GetInterUserJobInfo()->input_or_var_op_name2push_job_name();
   for (auto iter = input2push.begin(); iter != input2push.end(); iter++) {
     push_job_names = push_job_names + iter->first + "," + iter->second + ",";
   }
@@ -221,7 +221,7 @@ jstring JNICALL Java_org_oneflow_OneFlow_getPushJobNames(JNIEnv* env, jobject ob
 JNIEXPORT
 jstring JNICALL Java_org_oneflow_OneFlow_getPullJobNames(JNIEnv* env, jobject obj) {
   std::string pull_job_names;
-  auto output2pull = GetInterUserJobInfo().output_or_var_op_name2pull_job_name();
+  auto output2pull = GetInterUserJobInfo()->output_or_var_op_name2pull_job_name();
   for (auto iter = output2pull.begin(); iter != output2pull.end(); iter++) {
     pull_job_names = pull_job_names + iter->first + "," + iter->second + ",";
   }

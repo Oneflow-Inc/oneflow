@@ -9,6 +9,7 @@
 #include <string>
 #include "oneflow/api/python/framework/framework.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
+#include "oneflow/core/common/global.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/scope_util.h"
@@ -250,11 +251,11 @@ inline void RunPullJobSync(const std::string& job_name, const std::string& op_na
   pull_tensor = tensor_future.get();
 }
 
-inline oneflow::InterUserJobInfo GetInterUserJobInfo() {
-  std::string inter_user_job_info = oneflow::GetSerializedInterUserJobInfo().GetOrThrow();
-  oneflow::InterUserJobInfo info;
-  info.ParseFromString(inter_user_job_info);
-  return info;
+inline oneflow::InterUserJobInfo* GetInterUserJobInfo() {
+  // CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
+  // CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
+  // CHECK_NOTNULL_OR_RETURN(Global<InterUserJobInfo>::Get());
+  return oneflow::Global<oneflow::InterUserJobInfo>::Get();
 }
 
 #endif  // ONEFLOW_API_JAVA_ENV_JOB_API_H_
