@@ -81,7 +81,12 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
                 # amp
                 self.config.enable_amp(True)
-                grad_scaler = flow.amp.GradScaler(3000, 2.0, 0.5, 1000)
+                grad_scaler = flow.amp.GradScaler(
+                    init_scale=3000,
+                    growth_factor=2.0,
+                    backoff_factor=0.5,
+                    growth_interval=1000,
+                )
                 self.set_grad_scaler(grad_scaler)
 
                 self.config.allow_fuse_model_update_ops(True)
