@@ -119,15 +119,23 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   }
   if (in_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1
       && (in_parallel_desc->device_type() == DeviceType::kGPU
-          && out_parallel_desc->device_type() == DeviceType::kGPU)) {
-    if (EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)) {
-      return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToBBoxingInterpreter());
-    } else if (EagerBoxingInterpreterUtil::IsPartialSumNdSbp(out_nd_sbp)) {
-      return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToPBoxingInterpreter());
-    } else if (EagerBoxingInterpreterUtil::IsSplitNdSbp(out_nd_sbp, 0)) {
-      return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToSBoxingInterpreter());
-    }
+          && out_parallel_desc->device_type() == DeviceType::kGPU)
+      && EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)) {
+    return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToBBoxingInterpreter());
   }
+  if (in_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1
+      && (in_parallel_desc->device_type() == DeviceType::kGPU
+          && out_parallel_desc->device_type() == DeviceType::kGPU)
+      && EagerBoxingInterpreterUtil::IsPartialSumNdSbp(out_nd_sbp)) {
+    return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToPBoxingInterpreter());
+  }
+  if (in_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1
+      && (in_parallel_desc->device_type() == DeviceType::kGPU
+          && out_parallel_desc->device_type() == DeviceType::kGPU)
+      && EagerBoxingInterpreterUtil::IsSplitNdSbp(out_nd_sbp, 0)) {
+    return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToSBoxingInterpreter());
+  }
+
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
                               << "consistent-to-consistent not supported"
                               << ". from_nd_sbp: " << *JUST(NdSbpToString(in_nd_sbp))
