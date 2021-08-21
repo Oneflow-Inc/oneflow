@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, Union
+from typing import Union
 
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
@@ -63,7 +63,6 @@ def int(input):
         >>> input = input.int()
         >>> input.dtype
         oneflow.int32
-
     """
     return input.to(dtype=flow.int32)
 
@@ -86,7 +85,6 @@ def long(input):
         >>> input = input.long()
         >>> input.dtype
         oneflow.int64
-
     """
     return input.to(dtype=flow.int64)
 
@@ -109,7 +107,6 @@ def float(input):
         >>> input = input.float()
         >>> input.dtype
         oneflow.float32
-
     """
     return input.to(dtype=flow.float32)
 
@@ -132,7 +129,6 @@ def double(input):
         >>> input = input.double()
         >>> input.dtype
         oneflow.float64
-
     """
     return input.to(dtype=flow.float64)
 
@@ -154,7 +150,6 @@ def is_floating_point(input):
         >>> output = flow.is_floating_point(input)
         >>> output
         False
-
     """
     if input.dtype in (flow.float, flow.float16, flow.float32, flow.float64):
         return True
@@ -176,7 +171,6 @@ def cpu(input):
         >>> output = input.cpu()
         >>> output.device
         device(type='cpu', index=0)
-
     """
     return input.to(device="cpu")
 
@@ -199,7 +193,6 @@ def cuda(input, device: Union[int, str, flow.device] = None):
         >>> output = input.cuda()
         >>> output.device
         device(type='cuda', index=0)
-
     """
     if device is None:
         device = "cuda"
