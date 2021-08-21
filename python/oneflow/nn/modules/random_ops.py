@@ -384,7 +384,7 @@ class RandPerm(Module):
         super().__init__()
         assert n >= 0
         self.n = n
-        self.dtype=None
+        self.dtype = None
 
     def forward(self, out=None):
         if self.placement is not None:
