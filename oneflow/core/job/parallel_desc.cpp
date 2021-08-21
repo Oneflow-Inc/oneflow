@@ -155,7 +155,8 @@ Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  const auto& device = JUST(Device::ThreadLocalGetOrNew(device_tag(), device_id));
+  const auto& device =
+      JUST(Device::ThreadLocalGetOrNew(Device::Type4DeviceTag(device_tag()), device_id));
   int64_t parallel_id_val = -1;
   if (TryGetParallelId(machine_id, device_id, &parallel_id_val)) {
     *parallel_id = parallel_id_val;
@@ -397,4 +398,58 @@ bool IsMirroredParallelContext(const ParallelContext& parallel_ctx) {
   return false;
 }
 
+namespace private_details {
+
+Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc> parallel_desc,
+                                                 DeviceType device_type) {
+  ParallelConf parallel_conf(parallel_desc->parallel_conf());
+  parallel_conf.set_device_tag(*JUST(DeviceTag4DeviceType(device_type)));
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
+Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
+  std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
+  std::vector<int64_t> sorted_node_ids;
+  HashMap<int64_t, std::vector<int64_t>> node_id2sorted_dev_phy_ids;
+  for (int64_t machine_id : placement->sorted_machine_ids()) {
+    int64_t node_id = GlobalProcessCtx::NodeId(machine_id);
+    if (!std::count(sorted_node_ids.begin(), sorted_node_ids.end(), node_id)) {
+      sorted_node_ids.push_back(node_id);
+    }
+    for (int64_t device_id : placement->sorted_dev_phy_ids(machine_id)) {
+      node_id2sorted_dev_phy_ids[node_id].push_back(device_id);
+    }
+  }
+  std::string machine_device_ids = "{";
+  int64_t node_idx = 0;
+  for (int64_t node_id : sorted_node_ids) {
+    std::string device_name = std::to_string(node_id) + " : [";
+    int64_t device_idx = 0;
+    for (int64_t device_id : node_id2sorted_dev_phy_ids.at(node_id)) {
+      device_name += std::to_string(device_id);
+      if (++device_idx != node_id2sorted_dev_phy_ids.at(node_id).size()) { device_name += ", "; }
+    }
+    device_name += "]";
+    if (++node_idx != sorted_node_ids.size()) { device_name += ", "; }
+    machine_device_ids += device_name;
+  }
+  machine_device_ids += "}";
+  std::string hierarchy = "(";
+  int32_t hierarchy_dim_idx = 0;
+  for (int64_t dim : placement->hierarchy()->dim_vec()) {
+    hierarchy += std::to_string(dim);
+    if (++hierarchy_dim_idx != placement->hierarchy()->dim_vec().size()) {
+      hierarchy += ", ";
+    } else if (placement->hierarchy()->dim_vec().size() == 1) {
+      hierarchy += ",";
+    }
+  }
+  hierarchy += ")";
+  std::string placement_str = "oneflow.placement(device_type=" + device_type
+                              + ", machine_device_ids=" + machine_device_ids
+                              + ", hierarchy=" + hierarchy + ")";
+  return placement_str;
+}
+
+}  // namespace private_details
 }  // namespace oneflow
