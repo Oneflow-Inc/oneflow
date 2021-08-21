@@ -32,7 +32,7 @@ def _test_linear_graph_train_with_cosine_lr(test_case, iter_num, device):
         of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001)
         alpha = 0.0005
         steps = 10
-        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
+        cosine_annealing_lr = flow.optim.lr_scheduler.CosineDecayLR(
             of_sgd, steps=steps, alpha=alpha
         )
 
@@ -75,7 +75,7 @@ def _test_linear_graph_train_with_cosine_lr(test_case, iter_num, device):
         of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001)
         alpha = 0.0005
         steps = 10
-        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
+        cosine_annealing_lr = flow.optim.lr_scheduler.CosineDecayLR(
             of_sgd, steps=steps, alpha=alpha
         )
 

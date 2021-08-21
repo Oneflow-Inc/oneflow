@@ -26,7 +26,7 @@ from oneflow.nn.parameter import Parameter
 class TestLrScheduler(flow.unittest.TestCase):
     base_lr = 1.0
 
-    def test_cosine_annealing_lr(test_case):
+    def test_cosine_decay_lr(test_case):
         optimizer = flow.optim.SGD(
             [{"params": [Parameter(flow.Tensor([1.0]))]}], lr=TestLrScheduler.base_lr
         )
@@ -41,7 +41,7 @@ class TestLrScheduler(flow.unittest.TestCase):
 
         alpha = 0.5
         steps = 10
-        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
+        cosine_annealing_lr = flow.optim.lr_scheduler.CosineDecayLR(
             optimizer, steps=steps, alpha=alpha
         )
         for i in range(1, 21):
