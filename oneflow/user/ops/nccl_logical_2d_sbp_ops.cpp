@@ -204,4 +204,36 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_reduce_scatter")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP("_nccl_logical_2D_same_dim0_reduce_scatter_noncontinuous")
+    .Input("in")
+    .Output("out")
+    .Attr<std::vector<std::string>>("in_distribution")
+    .Attr<std::vector<std::string>>("out_distribution")
+    .Attr<int64_t>("out_dim1_split_axis", -1)
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      cfg::ParallelDistribution* in_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      cfg::ParallelDistribution* out_distribution =
+          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
+
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("in_distribution"), in_distribution);
+      ParseParallelDistributionFromStringVec(
+          ctx->user_op_conf().attr<std::vector<std::string>>("out_distribution"), out_distribution);
+
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow

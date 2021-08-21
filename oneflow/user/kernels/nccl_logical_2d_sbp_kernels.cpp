@@ -181,6 +181,71 @@ class NcclLogical2DSameDim0ReduceScatter final : public user_op::OpKernel {
 };
 
 template<typename T>
+class NcclLogical2DSameDim0ReduceScatterNoncontinuous final : public user_op::OpKernel {
+ public:
+  NcclLogical2DSameDim0ReduceScatterNoncontinuous() = default;
+  ~NcclLogical2DSameDim0ReduceScatterNoncontinuous() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<NcclLogical2DSameDim0KernelCommState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
+    CHECK(nccl_comm != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const int64_t dtype_size = GetSizeOfDataType(in->data_type());
+    int64_t data_size = GetCudaAlignedSize(in->shape().elem_cnt() * dtype_size);
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(), data_size);
+
+    CHECK_EQ(in->data_type(), out->data_type());
+    const int64_t num_ranks = nccl_comm->num_ranks();
+    const int64_t elem_cnt = in->shape().elem_cnt();
+    const int64_t out_split_axis = ctx->Attr<int64_t>("out_dim1_split_axis");
+
+    DimVector logical_shape_dim_vec;
+    in->shape().ToDimVector(&logical_shape_dim_vec);
+
+    DimVector transpose_in_dim_vec = logical_shape_dim_vec;
+    CHECK_EQ(transpose_in_dim_vec.at(out_split_axis) % num_ranks, 0);
+    transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
+    transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
+    const Shape transpose_in_shape(transpose_in_dim_vec);
+    DimVector pack_to_dim_vec;
+    std::vector<int32_t> perm;
+    perm.push_back(out_split_axis);
+    pack_to_dim_vec.push_back(transpose_in_shape.At(out_split_axis));
+    FOR_RANGE(int64_t, i, 0, transpose_in_shape.NumAxes()) {
+      if (i != out_split_axis) {
+        perm.push_back(i);
+        pack_to_dim_vec.push_back(transpose_in_shape.At(i));
+      }
+    }
+    CHECK_EQ(elem_cnt, transpose_in_shape.elem_cnt());
+    const Shape pack_to_shape(pack_to_dim_vec);
+    CHECK_EQ(elem_cnt, pack_to_shape.elem_cnt());
+    NewKernelUtil<DeviceType::kGPU>::Transpose(
+        ctx->device_ctx(), transpose_in_shape.NumAxes(), transpose_in_shape, pack_to_shape, perm,
+        elem_cnt, in->dptr<T>(), reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()));
+
+    OF_NCCL_CHECK(ncclReduceScatter(tmp_buffer->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
+                                    GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
+                                    nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+size_t Infer2DSameDim0ReduceScatterNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* in_tensor = ctx->OutputTensorDesc("in", 0);
+  return GetCudaAlignedSize(in_tensor->shape().elem_cnt()
+                            * GetSizeOfDataType(in_tensor->data_type()));
+}
+
+template<typename T>
 class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKernel {
  public:
   NcclLogical2DSameDim0AllGatherNoncontinuous() = default;
@@ -489,6 +554,21 @@ REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(int64_t)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(float)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(double)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
+
+#define REGISTER_2D_SAME_DIM0_REDUCESCATTER_NONCONTINUOUS_KERNEL(dtype)                 \
+  REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_reduce_scatter_noncontinuous")       \
+      .SetCreateFn<NcclLogical2DSameDim0ReduceScatterNoncontinuous<dtype>>()            \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                               \
+                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(Infer2DSameDim0ReduceScatterNoncontinuousKernelTmpBufferSize);
+
+REGISTER_2D_SAME_DIM0_REDUCESCATTER_NONCONTINUOUS_KERNEL(int8_t)
+REGISTER_2D_SAME_DIM0_REDUCESCATTER_NONCONTINUOUS_KERNEL(int32_t)
+REGISTER_2D_SAME_DIM0_REDUCESCATTER_NONCONTINUOUS_KERNEL(int64_t)
+REGISTER_2D_SAME_DIM0_REDUCESCATTER_NONCONTINUOUS_KERNEL(float)
+REGISTER_2D_SAME_DIM0_REDUCESCATTER_NONCONTINUOUS_KERNEL(double)
+REGISTER_2D_SAME_DIM0_REDUCESCATTER_NONCONTINUOUS_KERNEL(float16)
 
 #define REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(dtype)                                     \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all2all")                            \

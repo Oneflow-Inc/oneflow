@@ -849,9 +849,10 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
   // LOG(INFO)<<"after InOutParallelDimReduce "<<" reduced_in_parallel_distribution
-  // "<<reduced_in_parallel_distribution.DebugString()<<" in_hierarchy "<<in_hierarchy->DebugStr()<<"
-  // reduced_out_parallel_distribution "<<reduced_out_parallel_distribution.DebugString()<<"
-  // in_hierarchy "<<out_hierarchy->DebugStr();
+  // "<<reduced_in_parallel_distribution.DebugString()<<" in_hierarchy
+  // "<<in_hierarchy->DebugStr()<<" reduced_out_parallel_distribution
+  // "<<reduced_out_parallel_distribution.DebugString()<<" in_hierarchy
+  // "<<out_hierarchy->DebugStr();
   if (IsDistributionEquals(reduced_in_parallel_desc, reduced_out_parallel_desc,
                            reduced_in_parallel_distribution, reduced_out_parallel_distribution,
                            logical_blob_desc.shape())) {

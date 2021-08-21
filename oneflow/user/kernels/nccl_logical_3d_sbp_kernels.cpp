@@ -280,6 +280,32 @@ class NcclLogical3DChangeDim2AllGather final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+class NcclLogical3DChangeDim1AllGather final : public user_op::OpKernel {
+ public:
+  NcclLogical3DChangeDim1AllGather() = default;
+  ~NcclLogical3DChangeDim1AllGather() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<NcclLogical3DChangeDim1KernelCommState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* nccl_comm = dynamic_cast<NcclLogical3DChangeDim1KernelCommState*>(state);
+    CHECK(nccl_comm != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(in->data_type(), out->data_type());
+    // const int64_t num_ranks = nccl_comm->num_ranks();
+    // CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
+    OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+                                GetNcclDataType(in->data_type()), nccl_comm->comm(),
+                                ctx->device_ctx()->cuda_stream()));
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 template<typename T>
 class NcclLogical3DChangeDim2AllGatherNoncontinuous final : public user_op::OpKernel {
  public:
@@ -509,6 +535,32 @@ class NcclLogical3DChangeDim2ReduceScatter final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+class NcclLogical3DChangeDim1ReduceScatter final : public user_op::OpKernel {
+ public:
+  NcclLogical3DChangeDim1ReduceScatter() = default;
+  ~NcclLogical3DChangeDim1ReduceScatter() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<NcclLogical3DChangeDim1KernelCommState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+    auto* nccl_comm = dynamic_cast<NcclLogical3DChangeDim1KernelCommState*>(state);
+    CHECK(nccl_comm != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(in->data_type(), out->data_type());
+    // const int64_t num_ranks = nccl_comm->num_ranks();
+    // CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt() * num_ranks);
+    OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
+                                    GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
+                                    nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 template<typename T>
 class NcclLogical3DChangeDim2ReduceScatterNoncontinuous final : public user_op::OpKernel {
  public:
@@ -573,6 +625,14 @@ size_t Infer3DChangeDim2ReduceScatterNoncontinuousKernelTmpBufferSize(user_op::I
   return GetCudaAlignedSize(in_tensor->shape().elem_cnt()
                             * GetSizeOfDataType(in_tensor->data_type()));
 }
+
+REGISTER_USER_KERNEL("_nccl_logical_3D_change_dim1_all_gather")
+    .SetCreateFn<NcclLogical3DChangeDim1AllGather>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
+
+REGISTER_USER_KERNEL("_nccl_logical_3D_change_dim1_reduce_scatter")
+    .SetCreateFn<NcclLogical3DChangeDim1ReduceScatter>()
+    .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
 
 REGISTER_USER_KERNEL("_nccl_logical_3D_change_dim2_all_gather")
     .SetCreateFn<NcclLogical3DChangeDim2AllGather>()

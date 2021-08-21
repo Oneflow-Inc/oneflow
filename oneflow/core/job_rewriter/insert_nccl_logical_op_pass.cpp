@@ -338,6 +338,22 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
             .Build()
             .op_conf();
     return true;
+  } else if ((src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_split_parallel())
+             && (dst_dim1_sbp.split_parallel().axis() > 0)
+             && (dim_vec.at(dst_dim1_sbp.split_parallel().axis()) % num_ranks == 0)) {
+    // (*, P) -> (*, S0) : ReduceScatter
+    *ret =
+        user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S0)2(*B)-" + NewUniqueId())
+            .Op("_nccl_logical_2D_same_dim0_reduce_scatter_noncontinuous")
+            .Input("in", lbn)
+            .Output("out")
+            .Attr<std::vector<std::string>>("in_distribution", src_sbp_str_vec)
+            .Attr<std::vector<std::string>>("out_distribution", dst_sbp_str_vec)
+            .Attr<int64_t>("out_dim1_split_axis", dst_dim1_sbp.split_parallel().axis())
+            .ScopeSymbolId(scope_symbol_id)
+            .Build()
+            .op_conf();
+    return true;
   }
   return false;
 }
@@ -428,6 +444,28 @@ bool TryBuildNcclBy3DHierarchyChangeDim1(OperatorConf* ret,
             .ScopeSymbolId(scope_symbol_id)
             .Build()
             .op_conf();
+    return true;
+  } else if (src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_broadcast_parallel()
+             && (src_dim1_sbp.split_parallel().axis() == 0)) {
+    // S(0)->B : AllGather
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
+               .Op("_nccl_logical_3D_change_dim1_all_gather")
+               .Input("in", lbn)
+               .Output("out")
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
+  } else if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_split_parallel()
+             && (dst_dim1_sbp.split_parallel().axis() == 0)) {
+    // P->S(0) : ReduceScatter
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
+               .Op("_nccl_logical_3D_change_dim1_reduce_scatter")
+               .Input("in", lbn)
+               .Output("out")
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
     return true;
   }
   return false;
@@ -1027,6 +1065,7 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
 
     // insert nccl ops after acc
     for (const auto& pair : mut_consumer_name2op) {
+      LOG(INFO) << "mut_consumer_name2op: " << pair.first;
       CHECK_JUST(job_builder->MutOpOnlyOnce(pair.second));
     }
     CHECK_EQ(after_acc_nccl_op_confs.size(), after_acc_nccl_parallel_confs.size());
