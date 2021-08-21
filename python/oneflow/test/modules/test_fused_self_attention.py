@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import os
 import unittest
 from collections import OrderedDict
 
@@ -87,6 +87,7 @@ def test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_si
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestFusedSelfAttention(flow.unittest.TestCase):
     def test_fused_self_attention(test_case):
         arg_dict = OrderedDict()
