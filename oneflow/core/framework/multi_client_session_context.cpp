@@ -81,7 +81,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
 
       // TODO(chengcheng, guoran): handle CollectiveBoxingExecutor for multi-runtime in
       // Multi-Client.
-      resource.clear_collective_boxing_conf();
+      // resource.clear_collective_boxing_conf();
     }
 
     // NOTE(chengcheng): detele first because in EnvGlobalObjectScope has created ResourceDesc.

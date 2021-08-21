@@ -26,13 +26,13 @@ from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph_block import Block, BlockType
-from oneflow.nn.graph_optimizer import OptDict, VariableConfig
+from oneflow.nn.graph.block import Block, BlockType
+from oneflow.nn.graph.optimizer import OptDict, VariableConfig
+from oneflow.nn.graph.amp import StaticLossScalePolicy, DynamicLossScalePolicy
+from oneflow.nn.graph.util import add_indent, sys_exc_error_msg, list_to_func_return
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
-from oneflow.nn.util import add_indent
-from oneflow.nn.util import add_indent, sys_exc_error_msg, list_to_func_return
 
 
 class Graph(object):
@@ -63,6 +63,16 @@ class Graph(object):
     @property
     def training(self):
         return self.config.training
+
+    @property
+    def _graph_conf_proto(self):
+        return self.config.proto
+
+    @property
+    def _backends_conf_proto(self):
+        session = session_ctx.GetDefaultSession()
+        assert type(session) is MultiClientSession
+        return session.resource
 
     @property
     def _graph_proto(self):
@@ -486,10 +496,17 @@ class GraphConfig(FunctionConfig):
             return False
         raise NotImplementedError
 
+    def enable_amp(self, mode: bool = True):
+        assert type(mode) is bool
+        self.enable_auto_mixed_precision(mode)
+
+    def amp_add_loss_scale_policy(self, policy):
+        assert isinstance(policy, (StaticLossScalePolicy, DynamicLossScalePolicy))
+        policy.generate_conf_for_graph(self.proto.mutable_train_conf())
+
     def _train(self, mode: bool = True):
         if mode:
             self.proto.mutable_train_conf()
-            self.proto.mutable_train_conf().set_loss_scale_factor(1.0)
         else:
             self.proto.mutable_predict_conf()
 
@@ -499,8 +516,3 @@ class GraphConfig(FunctionConfig):
         opt_dict.generate_optimizer_and_variable_configs(
             self.proto.mutable_train_conf(), variables_conf
         )
-
-
-from oneflow.nn.graph import Graph as Graph
-from oneflow.nn.graph_block import Block, BlockConfig
-from oneflow.nn.graph_optimizer import OptDict

@@ -13,9 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.optimizer.cosine_annealing_lr import CosineAnnealingLR
-from oneflow.nn.optimizer.lambda_lr import LambdaLR
-from oneflow.nn.optimizer.lr_scheduler import LrScheduler as _LRScheduler
-from oneflow.nn.optimizer.step_lr import StepLR
-from oneflow.nn.optimizer.constant_warmup_lr import ConstantWarmupLR
-from oneflow.nn.optimizer.linear_warmup_lr import LinearWarmupLR
+from oneflow.framework.config_util import (
+    api_reserved_device_mem_mbyte as reserved_mem_mbyte,
+)
