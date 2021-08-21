@@ -106,7 +106,7 @@ struct AdamUpdateFunctor {
     printf("%02X \n",  * (char*)(&amsgrad));
     
     T denom = 0; 
-    if(amsgrad == true){
+    if(amsgrad){
       const T next_max_v = std::max(*max_v, next_v); 
       *max_v = next_max_v; 
       // printf("next_max_v is: %f", next_max_v);
