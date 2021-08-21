@@ -156,7 +156,7 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kUINT64_LIST:
     case kBOOL_LIST: return PyLongSequenceCheck(object_);
     case kFLOAT:
-    case kDOUBLE: return PyFloat_Check(object_);
+    case kDOUBLE: return PyFloat_Check(object_) || PyLong_Check(object_);
     case kFLOAT_LIST:
     case kDOUBLE_LIST: return PyFloatSquenceCheck(object_);
     case kSTRING: return PyStringCheck(object_);
@@ -173,7 +173,7 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kSBP_PARALLEL: return PySbpParallelCheck(object_);
     case kSBP_PARALLEL_LIST: return PySbpParallelSequenceCheck(object_);
     default: {
-      THROW(TypeError) << "Can not check type " << JUST(ValueTypeName(type));
+      OF_UNIMPLEMENTED() << "Can not check type " << JUST(ValueTypeName(type));
     }
   }
   return false;
