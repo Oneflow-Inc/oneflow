@@ -106,11 +106,11 @@ Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* ctx, const Tensor
   const auto& output = ctx->SavedTensors().at(1);
   const auto& dy = out_grads.at(0);
 
-  const auto& mltply_dy_y = JUST(functional::Multiply(dy, output));
+  const auto& mltply_dy_y = JUST(functional::Mul(dy, output));
   const auto& bcast_like = JUST(functional::BroadcastLike(mltply_dy_y, input, ctx->axis));
 
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::BroadcastDiv(bcast_like, input));
+  in_grads->at(0) = JUST(functional::Div(bcast_like, input));
   return Maybe<void>::Ok();
 }
 

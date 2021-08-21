@@ -110,7 +110,7 @@
   bind_python: True
 
 - name: "reduce_prod"
-  signature: "Tensor ReduceProd(Tensor x, *, Int32List axis, Bool keepdims=False)"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceProd"
   bind_python: True
 
 - name: "transpose"
@@ -944,7 +944,7 @@
   bind_python: True
 
 - name: "to_consistent"
-  signature: "Tensor (Tensor x, *, Placement placement, SbpList sbp, SbpList grad_sbp) => ToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp) => ToConsistent"
   bind_python: True
 
 - name: "to_local"
@@ -1055,5 +1055,5 @@
   bind_python: True
 
 - name: "fused_scale_tril"
-  signature: "Tensor (Tensor x, *, Int64 diagonal=0, Scalar fill_value=0, Scalar scale=1) => FusedScaleTril"
+  signature: "Tensor (Tensor x, Int64 diagonal=0, Scalar fill_value=0, Scalar scale=1) => FusedScaleTril"
   bind_python: True
