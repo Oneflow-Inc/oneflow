@@ -93,7 +93,9 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
       return false;
     } else if (obj) {
       PythonArg arg(obj);
-      if (!PythonArgCheck(arg, param.type)) {
+      if ((obj == Py_None && param.optional) || PythonArgCheck(arg, param.type)) {
+        parsed_args->at(i) = std::move(arg);
+      } else {
         if (raise_exception) {
           THROW(TypeError) << function.name << "(): argument '" << param.name << "' must be "
                            << ValueTypeName(param.type).GetOrThrow() << ", not "
@@ -101,7 +103,6 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
         }
         return false;
       }
-      parsed_args->at(i) = std::move(arg);
     } else {
       parsed_args->at(i) = PythonArg(param.default_value);
     }

@@ -36,14 +36,21 @@ struct ReturnDef {
 };
 
 struct ArgumentDef {
-  ArgumentDef(const std::string& arg_name, const ValueType& arg_type, bool arg_keyword_only = false)
-      : name(arg_name), type(arg_type), keyword_only(arg_keyword_only), has_default_value(false) {}
+  ArgumentDef(const std::string& arg_name, const ValueType& arg_type, bool arg_keyword_only = false,
+              bool arg_optional = false)
+      : name(arg_name),
+        type(arg_type),
+        keyword_only(arg_keyword_only),
+        optional(arg_optional),
+        has_default_value(false) {}
 
   template<typename T>
-  ArgumentDef(const std::string& arg_name, const T& arg_val, bool arg_keyword_only = false)
+  ArgumentDef(const std::string& arg_name, const T& arg_val, bool arg_keyword_only = false,
+              bool arg_optional = false)
       : name(arg_name),
         type(ValueTypeOf<T>()),
         keyword_only(arg_keyword_only),
+        optional(arg_optional),
         has_default_value(true) {
     default_value = std::make_shared<detail::TypedImmediate<T>>(arg_val);
   }
@@ -52,6 +59,7 @@ struct ArgumentDef {
   ValueType type;
 
   bool keyword_only;
+  bool optional;
   bool has_default_value;
   std::shared_ptr<const detail::Immediate> default_value;
 };

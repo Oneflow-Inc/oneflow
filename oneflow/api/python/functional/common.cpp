@@ -29,7 +29,7 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-bool PySequenceCheck(PyObject* obj, std::function<bool(PyObject*)> item_check) {
+bool PySequenceCheck(PyObject* obj, const std::function<bool(PyObject*)>& item_check) {
   bool is_tuple = PyTuple_Check(obj);
   if (!is_tuple && !PyList_Check(obj)) { return false; }
   size_t size = is_tuple ? PyTuple_GET_SIZE(obj) : PyList_GET_SIZE(obj);

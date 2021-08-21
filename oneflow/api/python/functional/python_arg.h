@@ -62,6 +62,8 @@ class PythonArg {
 
   virtual ~PythonArg() = default;
 
+  PythonArg& operator=(const PythonArg&) = default;
+
   template<typename T>
   friend class ObjectAsHelper;
 

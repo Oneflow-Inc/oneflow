@@ -166,14 +166,14 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
     case kDTYPE: return PyDTypeCheck(object_);
     case kSHAPE: return PyShapeCheck(object_) || PyLongSequenceCheck(object_);
-    case kGENERATOR_REF: return PyGeneratorCheck(object_);
+    case kGENERATOR: return PyGeneratorCheck(object_);
     case kTENSOR_INDEX: return PyTensorIndexCheck(object_);
     case kDEVICE: return PyDeviceCheck(object_);
     case kPARALLEL_DESC: return PyParallelDescCheck(object_);
     case kSBP_PARALLEL: return PySbpParallelCheck(object_);
     case kSBP_PARALLEL_LIST: return PySbpParallelSequenceCheck(object_);
     default: {
-      UNIMPLEMENTED_THEN_RETURN() << "Unsupported value type: " << type;
+      THROW(TypeError) << "Can not check type " << JUST(ValueTypeName(type));
     }
   }
   return false;

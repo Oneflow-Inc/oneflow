@@ -68,7 +68,7 @@ T dereference(std::shared_ptr<T>&& val) {
 }
 
 bool PySequenceCheck(PyObject* obj);
-bool PySequenceCheck(PyObject* obj, std::function<bool(PyObject*)> item_check);
+bool PySequenceCheck(PyObject* obj, const std::function<bool(PyObject*)>& item_check);
 
 template<typename T, typename UnpackItemFunc>
 inline Maybe<std::vector<T>> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpack_item) {

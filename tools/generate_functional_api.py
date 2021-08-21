@@ -309,13 +309,13 @@ class Argument:
         self._type = _normalize(fmt[0:sp])
         assert self._type in types_allowed, "Unknow type: " + self._type
 
-        optional = False
+        self._optional = False
         self._name = _normalize(fmt[sp + 1 :])
         sp = self._name.find("=")
         if sp != -1:
             self._default_value = _normalize(self._name[sp + 1 :])
             if self._default_value == "None":
-                optional = True
+                self._optional = True
                 self._default_cpp_value = ""
             elif self._default_value in value_aliases:
                 self._default_cpp_value = value_aliases[self._default_value]
@@ -323,9 +323,9 @@ class Argument:
                 self._default_cpp_value = self._default_value
             self._name = _normalize(self._name[0:sp])
 
-        if not optional and self._type in argument_type_aliases:
+        if not self._optional and self._type in argument_type_aliases:
             self._cpp_type = argument_type_aliases[self._type]
-        elif optional and self._type in optional_argument_type_aliases:
+        elif self._optional and self._type in optional_argument_type_aliases:
             self._cpp_type = optional_argument_type_aliases[self._type]
         else:
             self._cpp_type = self._type
@@ -513,13 +513,15 @@ class FunctionalGenerator:
                 argument_def = []
                 for arg in signature._args:
                     keyword_only = "true" if arg._keyword_only else "false"
+                    optional = "true" if arg._optional else "false"
                     if arg.has_default_value:
                         argument_def.append(
-                            '  ArgumentDef(/*name*/"{0}", /*default_value*/{1}({2}), /*keyword_only*/{3})'.format(
+                            '  ArgumentDef(/*name*/"{0}", /*default_value*/{1}({2}), /*keyword_only*/{3}, /*optional*/{4})'.format(
                                 arg._name,
                                 _std_decay(arg._cpp_type),
                                 arg._default_cpp_value,
                                 keyword_only,
+                                optional,
                             )
                         )
                     else:
