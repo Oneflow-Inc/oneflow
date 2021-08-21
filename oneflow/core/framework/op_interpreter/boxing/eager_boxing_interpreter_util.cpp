@@ -46,4 +46,12 @@ bool EagerBoxingInterpreterUtil::IsBoxingB2P(const cfg::SbpParallel& src,
                                              const cfg::SbpParallel& dst) {
   return src.has_broadcast_parallel() && dst.has_partial_sum_parallel();
 }
+
+bool EagerBoxingInterpreterUtil::IsBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
+  }
+  return true;
+}
+
 }  // namespace oneflow

@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/boxing/naive_s2p_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/cuda_copy_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/cuda_based_cpu_mpi_boxing_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/boxing/naive_xtob_boxing_interpreter.h"
 
 namespace oneflow {
 
@@ -115,6 +116,13 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
     const auto& interpreter = TRY(GetCudaBasedCpuMpiBoxingInterpreter(
         in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
     if (interpreter.IsOk()) { return JUST(interpreter); }
+  }
+  if (in_parallel_desc->parallel_num() != out_parallel_desc->parallel_num()
+      && (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1)
+      && EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)
+      && (in_parallel_desc->device_type() == DeviceType::kGPU
+          && out_parallel_desc->device_type() == DeviceType::kGPU)) {
+    return std::shared_ptr<EagerBoxingInterpreter>(new NcclXToBBoxingInterpreter());
   }
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
                               << "consistent-to-consistent not supported"

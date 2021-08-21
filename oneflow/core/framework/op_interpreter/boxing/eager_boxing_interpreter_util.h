@@ -29,6 +29,7 @@ struct EagerBoxingInterpreterUtil {
   static bool IsBoxingP2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingB2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingB2P(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
+  static bool IsBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp);
 };
 
 }  // namespace oneflow

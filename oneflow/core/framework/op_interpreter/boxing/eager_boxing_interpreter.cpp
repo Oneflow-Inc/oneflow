@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <typeinfo>
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 
 namespace oneflow {
@@ -33,6 +34,7 @@ Maybe<one::Tensor> EagerBoxingInterpreter::Interpret(const std::shared_ptr<one::
                                                      Symbol<ParallelDesc> in_parallel_desc,
                                                      Symbol<ParallelDesc> out_parallel_desc) const {
   JUST(CheckEagerBoxingDataType(input->dtype()->data_type()));
+  DisableCheckConsistentTensorMetaScope disable_meta_check;
   const auto& tensor =
       JUST(InterpretImpl(input, in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
