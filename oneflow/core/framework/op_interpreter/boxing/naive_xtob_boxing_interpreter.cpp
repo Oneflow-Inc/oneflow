@@ -79,27 +79,29 @@ Maybe<one::Tensor> NcclXToBBoxingInterpreter::InterpretImpl(
     Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp));
-  CHECK_EQ_OR_RETURN(in_parallel_desc->device_tag(), "gpu");
-  CHECK_EQ_OR_RETURN(out_parallel_desc->device_tag(), "gpu");
   Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetBroadcastSumNdSbp());
+  const auto& new_tag_in_parallel_desc =
+      JUST(ReplaceDeviceType(in_parallel_desc, out_parallel_desc->device_type()));
   std::shared_ptr<one::Tensor> broadcast_input = JUST(one::functional::ToConsistent(
-      input, in_parallel_desc, *JUST(GetSbpList(broadcast_nd_sbp)), GetNoneSbpList()));
+      input, new_tag_in_parallel_desc, *JUST(GetSbpList(broadcast_nd_sbp)), GetNoneSbpList()));
   std::shared_ptr<one::Tensor> local_tensor = JUST(broadcast_input->cur_rank_phy_tensor());
   {
     const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
     if (out_parallel_id->has_value()) {
-      const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
-      if (!in_parallel_id->has_value()) {
-        std::string device_type =
-            Device::Type4DeviceTag(JUST(input->parallel_desc())->device_tag());
-        local_tensor = JUST(one::functional::Constant(*input->shape(), 0, input->dtype(),
-                                                      JUST(Device::New(device_type))));
+      const auto& new_in_parallel_id =
+          JUST(GetParallelId4CurrentProcessCtx(new_tag_in_parallel_desc));
+      if (!new_in_parallel_id->has_value()) {
+        std::string device_type = Device::Type4DeviceTag(new_tag_in_parallel_desc->device_tag());
+        local_tensor = JUST(one::functional::Empty(*input->shape(), input->dtype(),
+                                                   JUST(Device::New(device_type))));
       }
-      const auto& broadcast_grop = JUST(GetBroadcastGroup(in_parallel_desc, out_parallel_desc));
+      const auto& broadcast_grop =
+          JUST(GetBroadcastGroup(new_tag_in_parallel_desc, out_parallel_desc));
+
       Symbol<ParallelDesc> broadcast_parallel_desc_cur_rank =
           JUST(MapAt(*broadcast_grop, GlobalProcessCtx::Rank()));
       int64_t root =
-          JUST(CachedGetBroadcastRoot(in_parallel_desc, broadcast_parallel_desc_cur_rank));
+          JUST(CachedGetBroadcastRoot(new_tag_in_parallel_desc, broadcast_parallel_desc_cur_rank));
       std::shared_ptr<one::UserOpExpr> op_expr =
           JUST(CachedEagerNcclBroadcast(broadcast_parallel_desc_cur_rank, root));
       local_tensor = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}));
