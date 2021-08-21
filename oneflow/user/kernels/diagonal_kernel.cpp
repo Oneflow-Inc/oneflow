@@ -40,7 +40,7 @@ struct DiagonalGradFunctor<DeviceType::kCPU, T> final {
     std::cout<<size<<' '<<dim2<<std::endl;
      FOR_RANGE(int32_t, i, 0, size){
       FOR_RANGE(int32_t, j, 0, dim2){
-         dx_buf[i*dim2+j] = dy_buf[j*size+i];
+         dx_buf[i*(dim1+1)*dim2+j] = dy_buf[j*size+i];
       }
      }
   }
