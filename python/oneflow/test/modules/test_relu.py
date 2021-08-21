@@ -13,8 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.optimizer.cosine_annealing_lr import CosineAnnealingLR
-from oneflow.nn.optimizer.lambda_lr import LambdaLR
-from oneflow.nn.optimizer.lr_scheduler import LrScheduler as _LRScheduler
-from oneflow.nn.optimizer.step_lr import StepLR
-from oneflow.nn.optimizer.warm_up_lr import WarmUpLR
+
+import unittest
+
+import oneflow as flow
+import oneflow.unittest
+from automated_test_util import *
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestRelu(flow.unittest.TestCase):
+    @autotest()
+    def test_flow_relu_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        y = torch.relu(x)
+        return y
+
+
+if __name__ == "__main__":
+    unittest.main()
