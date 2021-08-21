@@ -37,7 +37,7 @@ T = TypeVar("T")
 
 
 class Sequential(Module):
-    r"""A sequential container.
+    """A sequential container.
     Modules will be added to it in the order they are passed in the constructor.
     Alternatively, an ordered dict of modules can also be passed in.
 
@@ -364,6 +364,7 @@ class ParameterList(Module):
         """Appends a given parameter at the end of the list.
 
         Arguments:
+
             parameter (nn.Parameter): parameter to append
         """
         self.register_parameter(str(len(self)), parameter)
@@ -373,6 +374,7 @@ class ParameterList(Module):
         """Appends parameters from a Python iterable to the end of the list.
 
         Arguments:
+
             parameters (iterable): iterable of parameters to append
         """
         if not isinstance(parameters, collections.abc.Iterable):
@@ -450,7 +452,9 @@ class ParameterDict(Module):
 
     def pop(self, key: str) -> "Parameter":
         r"""Remove key from the ParameterDict and return its parameter.
+
         Args:
+
             key (string): key to pop from the ParameterDict
         """
         v = self[key]
@@ -473,15 +477,18 @@ class ParameterDict(Module):
         return self._parameters.values()
 
     def update(self, parameters: Mapping[str, "Parameter"]) -> None:
-        r"""Update the :class:`~torch.nn.ParameterDict` with the key-value pairs from a
+        r"""Update the :class:`~flow.nn.ParameterDict` with the key-value pairs from a
         mapping or an iterable, overwriting existing keys.
+
         .. note::
-            If :attr:`parameters` is an ``OrderedDict``, a :class:`~torch.nn.ParameterDict`, or
+            If :attr:`parameters` is an ``OrderedDict``, a :class:`~flow.nn.ParameterDict`, or
             an iterable of key-value pairs, the order of new elements in it is preserved.
+     
         Args:
             parameters (iterable): a mapping (dictionary) from string to
-                :class:`~torch.nn.Parameter`, or an iterable of
-                key-value pairs of type (string, :class:`~torch.nn.Parameter`)
+                :class:`~flow.nn.Parameter`, or an iterable of
+                key-value pairs of type (string, :class:`~flow.nn.Parameter`)
+
         """
         if not isinstance(parameters, container_abcs.Iterable):
             raise TypeError(
