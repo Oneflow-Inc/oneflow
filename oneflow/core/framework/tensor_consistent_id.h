@@ -38,7 +38,7 @@ struct NonRecursiveInitConsistentId<Maybe<void>, Arg0, Arg1, TensorTuple*, Args.
   static Maybe<void> Call(Arg0 arg0, Arg1 arg1, TensorTuple* outputs, Args... args) {
     auto* recursive_depth = MutThreadLocalRecursiveDepth();
     ++*recursive_depth;
-    Maybe<void>&& ret = func(arg0, arg1, outputs, args...);
+    Maybe<void> ret = func(arg0, arg1, outputs, args...);
     --*recursive_depth;
     if (*recursive_depth == 0 && ret.IsOk()) { JUST(InitConsistentId(outputs)); }
     return ret;

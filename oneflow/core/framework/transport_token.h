@@ -93,7 +93,10 @@ class TransportToken final {
   TransportToken(TransportTokenType type, uint8_t thread_consistent_id, uint8_t rank_group_level)
       : type_(static_cast<uint8_t>(type)),
         thread_consistent_id_(thread_consistent_id),
-        rank_group_level_(rank_group_level) {}
+        rank_group_level_(rank_group_level),
+        src_rank_(0),
+        dst_rank_(0),
+        seq_id_(0) {}
 
   uint8_t type_;  // TransportTokenType
   uint8_t thread_consistent_id_ : kTransportTokenThreadConsistentIdBit;
