@@ -243,6 +243,7 @@ class TestModule(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n1d()
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_module_cpu_cuda(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self, param1, param2):
@@ -263,6 +264,7 @@ class TestModule(flow.unittest.TestCase):
         state_dict = m.state_dict()
         test_case.assertEqual(state_dict["param2.param1"].device, flow.device("cpu"))
         test_case.assertEqual(state_dict["param2.param2"].device, flow.device("cpu"))
+
 
     @flow.unittest.skip_unless_1n1d()
     def test_module_float(test_case):
