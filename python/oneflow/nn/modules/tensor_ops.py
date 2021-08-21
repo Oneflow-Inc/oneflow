@@ -21,7 +21,7 @@ from oneflow.framework.tensor import register_tensor_op
 
 @register_tensor_op("type_as")
 def type_as_op(input, target):
-    """Returns this tensor cast to the type of the given tensor.
+    r"""Returns this tensor cast to the type of the given tensor.
         This is a no-op if the tensor is already of the correct type.
 
     Args:
@@ -47,7 +47,7 @@ def type_as_op(input, target):
 
 @register_tensor_op("int")
 def int(input):
-    """`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
+    r"""`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
 
     Args:
         input  (Tensor): the input tensor.
@@ -70,7 +70,7 @@ def int(input):
 
 @register_tensor_op("long")
 def long(input):
-    """`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
+    r"""`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
 
     Args:
         input  (Tensor): the input tensor.
@@ -93,7 +93,7 @@ def long(input):
 
 @register_tensor_op("float")
 def float(input):
-    """`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
+    r"""`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
 
     Args:
         input  (Tensor): the input tensor.
@@ -116,7 +116,7 @@ def float(input):
 
 @register_tensor_op("double")
 def double(input):
-    """`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
+    r"""`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
 
     Args:
         input  (Tensor): the input tensor.
@@ -139,7 +139,7 @@ def double(input):
 
 @register_tensor_op("is_floating_point")
 def is_floating_point(input):
-    """Returns True if the data type of input is a floating point data type i.e., one of flow.float64, flow.float32, flow.float16.
+    r"""Returns True if the data type of input is a floating point data type i.e., one of flow.float64, flow.float32, flow.float16.
 
     Args:
         input  (Tensor): the input tensor.
@@ -163,7 +163,7 @@ def is_floating_point(input):
 
 @register_tensor_op("cpu")
 def cpu(input):
-    """Returns a copy of this object in CPU memory.
+    r"""Returns a copy of this object in CPU memory.
     If this object is already in CPU memory and on the correct device, then no copy is performed and the original object is returned.
 
     For example:
@@ -183,7 +183,7 @@ def cpu(input):
 
 @register_tensor_op("cuda")
 def cuda(input, device: Union[int, str, flow.device] = None):
-    """Returns a copy of this object in CUDA memory.
+    r"""Returns a copy of this object in CUDA memory.
     If this object is already in CUDA memory and on the correct device, then no copy is performed and the original object is returned.
 
     Args:
