@@ -29,6 +29,7 @@ namespace {
 Maybe<py::bytes> CpuBroadcast(py::bytes* in, int64_t root) {
   const auto& rank_group = JUST(RankGroup::DefaultRankGroup());
   const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(DeviceType::kCPU, rank_group));
+  int x;
   Py_ssize_t length;
   char* buffer;
   if (GlobalProcessCtx::Rank() == root) {
