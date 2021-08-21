@@ -19,11 +19,13 @@ import collections.abc
 import tempfile
 import unittest
 from itertools import repeat
-from typing import Tuple, Union
+from typing import Tuple, Union, List
+from collections import OrderedDict
 
 import numpy as np
 
 import oneflow as flow
+import oneflow.nn as nn
 import oneflow.unittest
 
 
@@ -266,7 +268,7 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertEqual(state_dict["param2.param2"].device, flow.device("cpu"))
 
     @flow.unittest.skip_unless_1n1d()
-    def test_module_float(test_case):
+    def test_module_float_double(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self, param1, param2):
                 super().__init__()
@@ -285,6 +287,28 @@ class TestModule(flow.unittest.TestCase):
         state_dict = m.state_dict()
         test_case.assertEqual(state_dict["param1"].dtype, flow.float64)
         test_case.assertEqual(state_dict["param2"].dtype, flow.float64)
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_moduledict(test_case):
+        class ModuleDict(nn.Module):
+            def __init__(self):
+                super(ModuleDict, self).__init__()
+                self.choices = nn.ModuleDict(
+                    {"conv": nn.Conv2d(10, 10, 3), "pool": nn.MaxPool2d(3)}
+                )
+                self.activations = nn.ModuleDict(
+                    {"relu": nn.ReLU(), "prelu": nn.PReLU()}
+                )
+
+            def forward(self, x, choice, act):
+                x = self.choices[choice](x)
+                x = self.activations[act](x)
+                return x
+
+        model = ModuleDict()
+        input = flow.tensor(np.random.randn(4, 10, 32, 32), dtype=flow.float32)
+        output = model(input, "conv", "relu")
+        test_case.assertEqual(output.shape, flow.Size([4, 10, 30, 30]))
 
 
 if __name__ == "__main__":
