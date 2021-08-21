@@ -109,6 +109,10 @@
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMean"
   bind_python: True
 
+- name: "reduce_prod"
+  signature: "Tensor ReduceProd(Tensor x, *, Int32List axis, Bool keepdims=False)"
+  bind_python: True
+
 - name: "transpose"
   signature: "Tensor (Tensor x, Int32List perm) => Transpose"
   bind_python: True
