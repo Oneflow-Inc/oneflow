@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections.abc
+import warnings
 import operator
-from collections import OrderedDict
+from collections import OrderedDict, abc as container_abcs
 from itertools import islice
 from typing import (
     Any,
@@ -126,155 +127,6 @@ class Sequential(Module):
         for module in self:
             input = module(input)
         return input
-
-
-class ParameterList(Module):
-    def __init__(self, parameters: Optional[Iterable["Parameter"]] = None) -> None:
-        super(ParameterList, self).__init__()
-        self._initialized = True
-        if parameters is not None:
-            self += parameters
-
-    def __setstate__(self, state):
-        state["_initialized"] = False
-        super(ParameterList, self).__setstate__(state)
-        self._initialized = True
-
-    def _get_abs_string_index(self, idx):
-        """Get the absolute index for the list of modules"""
-        idx = operator.index(idx)
-        if not -len(self) <= idx < len(self):
-            raise IndexError("index {} is out of range".format(idx))
-        if idx < 0:
-            idx += len(self)
-        return str(idx)
-
-    @overload
-    def __getitem__(self, idx: int) -> "Parameter":
-        ...
-
-    @overload
-    def __getitem__(self: T, idx: slice) -> T:
-        ...
-
-    def __getitem__(self, idx):
-        if isinstance(idx, slice):
-            return self.__class__(list(self._parameters.values())[idx])
-        else:
-            idx = self._get_abs_string_index(idx)
-            return self._parameters[str(idx)]
-
-    def __setitem__(self, idx: int, param: "Parameter") -> None:
-        idx = self._get_abs_string_index(idx)
-        return self.register_parameter(str(idx), param)
-
-    def __setattr__(self, key: Any, value: Any) -> None:
-        if getattr(self, "_initialized", False):
-            if not hasattr(self, key) and (not isinstance(value, flow.nn.Parameter)):
-                warnings.warn("Setting attributes on ParameterList is not supported.")
-        super(ParameterList, self).__setattr__(key, value)
-
-    def __len__(self) -> int:
-        return len(self._parameters)
-
-    def __iter__(self) -> Iterator["Parameter"]:
-        return iter(self._parameters.values())
-
-    def __iadd__(self: T, parameters: Iterable["Parameter"]) -> T:
-        return self.extend(parameters)
-
-    def __dir__(self):
-        keys = super(ParameterList, self).__dir__()
-        keys = [key for key in keys if not key.isdigit()]
-        return keys
-
-    def append(self: T, parameter: "Parameter") -> T:
-        """Appends a given parameter at the end of the list.
-
-        Arguments:
-            parameter (nn.Parameter): parameter to append
-        """
-        self.register_parameter(str(len(self)), parameter)
-        return self
-
-    def extend(self: T, parameters: Iterable["Parameter"]) -> T:
-        """Appends parameters from a Python iterable to the end of the list.
-
-        Arguments:
-            parameters (iterable): iterable of parameters to append
-        """
-        if not isinstance(parameters, collections.abc.Iterable):
-            raise TypeError(
-                "ParameterList.extend should be called with an iterable, but got "
-                + type(parameters).__name__
-            )
-        offset = len(self)
-        for (i, param) in enumerate(parameters):
-            self.register_parameter(str(offset + i), param)
-        return self
-
-    def extra_repr(self) -> str:
-        child_lines = []
-        for (k, p) in self._parameters.items():
-            size_str = "x".join((str(size) for size in p.size()))
-            device_str = "" if not p.is_cuda else " (GPU {})".format(p.get_device())
-            parastr = "Parameter containing: [{} of size {}{}]".format(
-                type(p), size_str, device_str
-            )
-            child_lines.append("  (" + str(k) + "): " + parastr)
-        tmpstr = "\n".join(child_lines)
-        return tmpstr
-
-    def __call__(self, input):
-        raise RuntimeError("ParameterList should not be called.")
-
-    def _replicate_for_data_parallel(self):
-        warnings.warn(
-            "nn.ParameterList is being used with DataParallel but this is not supported. This list will appear empty for the models replicated on each GPU except the original one."
-        )
-        return super(ParameterList, self)._replicate_for_data_parallel()
-
-
-class ParameterDict(Module):
-    def __init__(self, parameters: Optional[Mapping[str, "Parameter"]] = None) -> None:
-        super(ParameterDict, self).__init__()
-        self._initialized = True
-        if parameters is not None:
-            self.update(parameters)
-
-    def __setstate__(self, state):
-        state["_initialized"] = False
-        super(ParameterDict, self).__setstate__(state)
-        self._initialized = True
-
-    def __getitem__(self, key: str) -> "Parameter":
-        return self._parameters[key]
-
-    def __setitem__(self, key: str, parameter: "Parameter") -> None:
-        self.register_parameter(key, parameter)
-
-    def __delitem__(self, key: str) -> None:
-        del self._parameters[key]
-
-    def __setattr__(self, key: Any, value: Any) -> None:
-        if getattr(self, "_initialized", False):
-            if not hasattr(self, key) and (not isinstance(value, flow.nn.Parameter)):
-                warnings.warn("Setting attributes on ParameterDict is not supported.")
-        super(ParameterDict, self).__setattr__(key, value)
-
-    def __len__(self) -> int:
-        return len(self._parameters)
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._parameters.keys())
-
-    def __contains__(self, key: str) -> bool:
-        return key in self._parameters
-
-    def clear(self) -> None:
-        """Remove all items from the ParameterDict.
-        """
-        self._parameters.clear()
 
 
 class ModuleList(Module):
@@ -447,13 +299,162 @@ class ModuleDict(Module):
                     )
                 self[m[0]] = m[1]
 
-    def forward(self):
-        raise NotImplementedError()
 
-    def pop(self, key: str) -> "Parameter":
-        """Remove key from the ParameterDict and return its parameter.
+class ParameterList(Module):
+    def __init__(self, parameters: Optional[Iterable["Parameter"]] = None) -> None:
+        super(ParameterList, self).__init__()
+        self._initialized = True
+        if parameters is not None:
+            self += parameters
+
+    def __setstate__(self, state):
+        state["_initialized"] = False
+        super(ParameterList, self).__setstate__(state)
+        self._initialized = True
+
+    def _get_abs_string_index(self, idx):
+        """Get the absolute index for the list of modules"""
+        idx = operator.index(idx)
+        if not -len(self) <= idx < len(self):
+            raise IndexError("index {} is out of range".format(idx))
+        if idx < 0:
+            idx += len(self)
+        return str(idx)
+
+    @overload
+    def __getitem__(self, idx: int) -> "Parameter":
+        ...
+
+    @overload
+    def __getitem__(self: T, idx: slice) -> T:
+        ...
+
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            return self.__class__(list(self._parameters.values())[idx])
+        else:
+            idx = self._get_abs_string_index(idx)
+            return self._parameters[str(idx)]
+
+    def __setitem__(self, idx: int, param: "Parameter") -> None:
+        idx = self._get_abs_string_index(idx)
+        return self.register_parameter(str(idx), param)
+
+    def __setattr__(self, key: Any, value: Any) -> None:
+        if getattr(self, "_initialized", False):
+            if not hasattr(self, key) and (not isinstance(value, flow.nn.Parameter)):
+                warnings.warn("Setting attributes on ParameterList is not supported.")
+        super(ParameterList, self).__setattr__(key, value)
+
+    def __len__(self) -> int:
+        return len(self._parameters)
+
+    def __iter__(self) -> Iterator["Parameter"]:
+        return iter(self._parameters.values())
+
+    def __iadd__(self: T, parameters: Iterable["Parameter"]) -> T:
+        return self.extend(parameters)
+
+    def __dir__(self):
+        keys = super(ParameterList, self).__dir__()
+        keys = [key for key in keys if not key.isdigit()]
+        return keys
+
+    def append(self: T, parameter: "Parameter") -> T:
+        """Appends a given parameter at the end of the list.
 
         Arguments:
+
+            parameter (nn.Parameter): parameter to append
+        """
+        self.register_parameter(str(len(self)), parameter)
+        return self
+
+    def extend(self: T, parameters: Iterable["Parameter"]) -> T:
+        """Appends parameters from a Python iterable to the end of the list.
+
+        Arguments:
+
+            parameters (iterable): iterable of parameters to append
+        """
+        if not isinstance(parameters, collections.abc.Iterable):
+            raise TypeError(
+                "ParameterList.extend should be called with an iterable, but got "
+                + type(parameters).__name__
+            )
+        offset = len(self)
+        for (i, param) in enumerate(parameters):
+            self.register_parameter(str(offset + i), param)
+        return self
+
+    def extra_repr(self) -> str:
+        child_lines = []
+        for (k, p) in self._parameters.items():
+            size_str = "x".join((str(size) for size in p.size()))
+            device_str = "" if not p.is_cuda else " (GPU {})".format(p.get_device())
+            parastr = "Parameter containing: [{} of size {}{}]".format(
+                type(p), size_str, device_str
+            )
+            child_lines.append("  (" + str(k) + "): " + parastr)
+        tmpstr = "\n".join(child_lines)
+        return tmpstr
+
+    def __call__(self, input):
+        raise RuntimeError("ParameterList should not be called.")
+
+    def _replicate_for_data_parallel(self):
+        warnings.warn(
+            "nn.ParameterList is being used with DataParallel but this is not supported. This list will appear empty for the models replicated on each GPU except the original one."
+        )
+        return super(ParameterList, self)._replicate_for_data_parallel()
+
+
+class ParameterDict(Module):
+    def __init__(self, parameters: Optional[Mapping[str, "Parameter"]] = None) -> None:
+        super(ParameterDict, self).__init__()
+        self._initialized = True
+        if parameters is not None:
+            self.update(parameters)
+
+    def __setstate__(self, state):
+        state["_initialized"] = False
+        super(ParameterDict, self).__setstate__(state)
+        self._initialized = True
+
+    def __getitem__(self, key: str) -> "Parameter":
+        return self._parameters[key]
+
+    def __setitem__(self, key: str, parameter: "Parameter") -> None:
+        self.register_parameter(key, parameter)
+
+    def __delitem__(self, key: str) -> None:
+        del self._parameters[key]
+
+    def __setattr__(self, key: Any, value: Any) -> None:
+        if getattr(self, "_initialized", False):
+            if not hasattr(self, key) and (not isinstance(value, flow.nn.Parameter)):
+                warnings.warn("Setting attributes on ParameterDict is not supported.")
+        super(ParameterDict, self).__setattr__(key, value)
+
+    def __len__(self) -> int:
+        return len(self._parameters)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._parameters.keys())
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._parameters
+
+    def clear(self) -> None:
+        """Remove all items from the ParameterDict.
+        """
+        self._parameters.clear()
+
+    def pop(self, key: str) -> "Parameter":
+        r"""Remove key from the ParameterDict and return its parameter.
+
+        Args:
+
             key (string): key to pop from the ParameterDict
         """
         v = self[key]
@@ -461,55 +462,65 @@ class ModuleDict(Module):
         return v
 
     def keys(self) -> Iterable[str]:
-        """Return an iterable of the ParameterDict keys.
+        r"""Return an iterable of the ParameterDict keys.
         """
         return self._parameters.keys()
 
     def items(self) -> Iterable[Tuple[str, "Parameter"]]:
-        """Return an iterable of the ParameterDict key/value pairs.
+        r"""Return an iterable of the ParameterDict key/value pairs.
         """
         return self._parameters.items()
 
     def values(self) -> Iterable["Parameter"]:
-        """Return an iterable of the ParameterDict values.
+        r"""Return an iterable of the ParameterDict values.
         """
         return self._parameters.values()
 
     def update(self, parameters: Mapping[str, "Parameter"]) -> None:
-        if not isinstance(parameters, collections.abc.Iterable):
+        r"""Update the :class:`~flow.nn.ParameterDict` with the key-value pairs from a
+        mapping or an iterable, overwriting existing keys.
+
+        .. note::
+            If :attr:`parameters` is an ``OrderedDict``, a :class:`~flow.nn.ParameterDict`, or
+            an iterable of key-value pairs, the order of new elements in it is preserved.
+     
+        Args:
+            parameters (iterable): a mapping (dictionary) from string to
+                :class:`~flow.nn.Parameter`, or an iterable of
+                key-value pairs of type (string, :class:`~flow.nn.Parameter`)
+
+        """
+        if not isinstance(parameters, container_abcs.Iterable):
             raise TypeError(
-                "ParametersDict.update should be called with an iterable of key/value pairs, but got "
-                + type(parameters).__name__
+                "ParametersDict.update should be called with an "
+                "iterable of key/value pairs, but got " + type(parameters).__name__
             )
+
         if isinstance(parameters, (OrderedDict, ParameterDict)):
-            for (key, parameter) in parameters.items():
+            for key, parameter in parameters.items():
                 self[key] = parameter
-        elif isinstance(parameters, collections.abc.Mapping):
-            for (key, parameter) in sorted(parameters.items()):
+        elif isinstance(parameters, container_abcs.Mapping):
+            for key, parameter in sorted(parameters.items()):
                 self[key] = parameter
         else:
-            for (j, p) in enumerate(parameters):
-                if not isinstance(p, collections.abc.Iterable):
+            for j, p in enumerate(parameters):
+                if not isinstance(p, container_abcs.Iterable):
                     raise TypeError(
-                        "ParameterDict update sequence element #"
-                        + str(j)
-                        + " should be Iterable; is"
-                        + type(p).__name__
+                        "ParameterDict update sequence element "
+                        "#" + str(j) + " should be Iterable; is" + type(p).__name__
                     )
                 if not len(p) == 2:
                     raise ValueError(
-                        "ParameterDict update sequence element #"
-                        + str(j)
-                        + " has length "
-                        + str(len(p))
-                        + "; 2 is required"
+                        "ParameterDict update sequence element "
+                        "#" + str(j) + " has length " + str(len(p)) + "; 2 is required"
                     )
-                self[p[0]] = p[1]
+                # parameters as length-2 list too cumbersome to type, see ModuleDict.update comment
+                self[p[0]] = p[1]  # type: ignore[assignment]
 
     def extra_repr(self) -> str:
         child_lines = []
-        for (k, p) in self._parameters.items():
-            size_str = "x".join((str(size) for size in p.size()))
+        for k, p in self._parameters.items():
+            size_str = "x".join(str(size) for size in p.size())
             device_str = "" if not p.is_cuda else " (GPU {})".format(p.get_device())
             parastr = "Parameter containing: [{} of size {}{}]".format(
                 type(p), size_str, device_str
@@ -523,8 +534,11 @@ class ModuleDict(Module):
 
     def _replicate_for_data_parallel(self):
         warnings.warn(
-            "nn.ParameterDict is being used with DataParallel but this is not supported. This dict will appear empty for the models replicated on each GPU except the original one."
+            "nn.ParameterDict is being used with DataParallel but this is not "
+            "supported. This dict will appear empty for the models replicated "
+            "on each GPU except the original one."
         )
+
         return super(ParameterDict, self)._replicate_for_data_parallel()
 
 
