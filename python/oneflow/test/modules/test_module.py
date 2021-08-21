@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import collections.abc
 import tempfile
 import unittest
@@ -23,7 +24,6 @@ from typing import Tuple, Union
 import numpy as np
 
 import oneflow as flow
-import oneflow.typing as tp
 import oneflow.unittest
 
 
@@ -31,8 +31,8 @@ def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
 
 
-@flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n1d()
     def test_nested_module(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
@@ -48,6 +48,7 @@ class TestModule(flow.unittest.TestCase):
         y = m(x)
         test_case.assertTrue(np.array_equal(np_relu(x.numpy()), y.numpy()))
 
+    @flow.unittest.skip_unless_1n1d()
     def test_relu(test_case):
         relu = flow.nn.ReLU()
         x = flow.Tensor(2, 3)
@@ -55,6 +56,7 @@ class TestModule(flow.unittest.TestCase):
         y = relu(x)
         test_case.assertTrue(np.array_equal(np_relu(x.numpy()), y.numpy()))
 
+    @flow.unittest.skip_unless_1n1d()
     def test_load_state_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
@@ -71,6 +73,7 @@ class TestModule(flow.unittest.TestCase):
         y = m(x).numpy()
         test_case.assertTrue(np.array_equal(y, ones))
 
+    @flow.unittest.skip_unless_1n1d()
     def test_state_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self, param1, param2):
@@ -88,6 +91,7 @@ class TestModule(flow.unittest.TestCase):
             {"param2.param1": tensor0, "param2.param2": tensor1, "param1": tensor1},
         )
 
+    @flow.unittest.skip_unless_1n1d()
     def test_parameter(test_case):
         shape = (3, 4)
         t = flow.Tensor(*shape)
@@ -95,6 +99,7 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertEqual(type(p), flow.nn.Parameter)
         test_case.assertEqual(p.shape, shape)
 
+    @flow.unittest.skip_unless_1n1d()
     def test_module_forward(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self, w):
@@ -109,6 +114,7 @@ class TestModule(flow.unittest.TestCase):
         m = CustomModule(4)
         test_case.assertEqual(m(3), 7)
 
+    @flow.unittest.skip_unless_1n1d()
     def test_train_eval(test_case):
         m = flow.nn.Module()
         test_case.assertEqual(m.training, True)
@@ -117,6 +123,7 @@ class TestModule(flow.unittest.TestCase):
         m.eval()
         test_case.assertEqual(m.training, False)
 
+    @flow.unittest.skip_unless_1n1d()
     def test_module_setattr(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self, param1, param2):
@@ -130,17 +137,24 @@ class TestModule(flow.unittest.TestCase):
         m = CustomModule(param1, param2)
         params = list(m.parameters())
         test_case.assertEqual(len(params), 2)
-        test_case.assertEqual(params[0], param1)
-        test_case.assertEqual(params[1], param0)
+
+        test_case.assertTrue(
+            np.allclose(params[0].numpy(), param1.numpy(), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(params[1].numpy(), param0.numpy(), atol=1e-4, rtol=1e-4)
+        )
         children = list(m.children())
         test_case.assertEqual(len(children), 1)
         child = children[0]
         test_case.assertEqual(child, param2)
         child_params = list(child.parameters())
-        test_case.assertEqual(len(child_params), 2)
-        test_case.assertEqual(child_params[0], param0)
-        test_case.assertEqual(child_params[1], param1)
 
+        test_case.assertEqual(len(child_params), 2)
+        test_case.assertTrue(np.allclose(child_params[0].numpy(), param0.numpy()))
+        test_case.assertTrue(np.allclose(child_params[1].numpy(), param1.numpy()))
+
+    @flow.unittest.skip_unless_1n1d()
     def test_module_apply(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
@@ -158,6 +172,7 @@ class TestModule(flow.unittest.TestCase):
         net.apply(get_module_num)
         test_case.assertEqual(module_num, 2)
 
+    @flow.unittest.skip_unless_1n1d()
     def test_save_state_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
@@ -177,6 +192,55 @@ class TestModule(flow.unittest.TestCase):
             m.load_state_dict(loaded_state_dict)
         res2 = m()
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_save_and_load_consistent(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.param = flow.nn.Parameter(flow.randn(3, 32, 3, 3))
+
+            def forward(self):
+                return self.param
+
+        m = CustomModule()
+        m = m.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+        res1 = m()
+        state_dict = m.state_dict()
+
+        with tempfile.TemporaryDirectory() as f:
+            with test_case.assertRaises(Exception):
+                flow.save(state_dict, f)
+
+            consistent_src_dst_rank = 0
+            flow.save(state_dict, f, consistent_dst_rank=consistent_src_dst_rank)
+            rank = flow.framework.distribute.get_rank()
+            if rank != consistent_src_dst_rank:
+                test_case.assertEqual(len(os.listdir(f)), 0)
+
+            m = CustomModule()
+            m = m.to_consistent(
+                flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast
+            )
+
+            with test_case.assertRaises(Exception):
+                loaded_state_dict = flow.load(f)
+                m.load_state_dict(loaded_state_dict)
+
+            loaded_state_dict = flow.load(
+                f, consistent_src_rank=consistent_src_dst_rank
+            )
+            test_case.assertEqual(len(loaded_state_dict), 1)
+            test_case.assertEqual(list(loaded_state_dict.keys())[0], "param")
+            m.load_state_dict(loaded_state_dict)
+            res2 = m()
+
+        test_case.assertTrue(
+            np.array_equal(
+                res1.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+                res2.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+            )
+        )
 
 
 if __name__ == "__main__":

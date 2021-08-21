@@ -120,9 +120,9 @@ class GroupNorm(Module):
         normalized = flow.reshape(
             normalized, shape=[origin_shape[0], self.num_channels, -1]
         )
-        if self.weight:
+        if self.weight is not None:
             normalized = normalized * self.weight
-        if self.bias:
+        if self.bias is not None:
             normalized = normalized + self.bias
         res = flow.reshape(normalized, shape=tuple(input.shape))
         return res
@@ -267,12 +267,12 @@ class LayerNorm(Module):
             if len(mean.shape) == 1:
                 nd_params_shape = [1] * len(x.shape)
                 nd_params_shape[self.begin_norm_axis] = params_shape[0]
-                mean = mean.reshape(shape=nd_params_shape)
-                variance = variance.reshape(shape=nd_params_shape)
+                mean = flow.reshape(mean, shape=nd_params_shape)
+                variance = flow.reshape(variance, nd_params_shape)
                 if self.weight and params_shape[0] == self.weight.nelement():
-                    weight = self.weight.reshape(shape=nd_params_shape)
+                    weight = flow.reshape(self.weight, shape=nd_params_shape)
                 if self.bias and params_shape[0] == self.bias.nelement():
-                    bias = self.bias.reshape(shape=nd_params_shape)
+                    bias = flow.reshape(self.bias, shape=nd_params_shape)
             elif len(mean.shape) == len(x.shape):
                 pass
             else:
@@ -281,9 +281,9 @@ class LayerNorm(Module):
                 )
             variance += self.epsilon
             normalized = (x - mean) * variance.rsqrt()
-            if self.weight:
+            if self.weight is not None:
                 normalized = normalized * weight
-            if self.bias:
+            if self.bias is not None:
                 normalized = normalized + bias
             affined = normalized
             nd_params_shape = [1] * (len(x.shape) - len(params_shape)) + list(

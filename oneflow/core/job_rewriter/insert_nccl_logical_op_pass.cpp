@@ -52,7 +52,7 @@ class InsertNcclLogicalOpPass final : public JobPass {
 
 const std::string kNcclLogicalOpNamePrefix = "System-NCCL-Logical";
 
-std::string ParallelDistributionToString(const cfg::ParallelDistribution& nd_sbp) {
+std::string NdSbpToString(const cfg::NdSbp& nd_sbp) {
   std::string serialized_nd_sbp;
   const int64_t num_axes = nd_sbp.sbp_parallel_size();
   serialized_nd_sbp += "[";
@@ -150,7 +150,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
             });
 }
 
-bool ParallelDistributionAllSameSplitParallel(const cfg::ParallelDistribution& nd_sbp) {
+bool NdSbpAllSameSplitParallel(const cfg::NdSbp& nd_sbp) {
   CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
   const cfg::SbpParallel& first_sbp = nd_sbp.sbp_parallel(0);
   if (!first_sbp.has_split_parallel()) { return false; }
@@ -232,9 +232,8 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sb
   return false;
 }
 
-bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
-                                       const cfg::ParallelDistribution& src_nd_sbp,
-                                       const cfg::ParallelDistribution& dst_nd_sbp,
+bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_nd_sbp,
+                                       const cfg::NdSbp& dst_nd_sbp,
                                        const std::shared_ptr<Shape> hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
@@ -310,9 +309,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
   return false;
 }
 
-bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
-                                       const cfg::ParallelDistribution& src_nd_sbp,
-                                       const cfg::ParallelDistribution& dst_nd_sbp,
+bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret, const cfg::NdSbp& src_nd_sbp,
+                                       const cfg::NdSbp& dst_nd_sbp,
                                        const std::shared_ptr<Shape> hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
@@ -346,11 +344,10 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   // reduce hierarchy
   ParallelDesc src_parallel_desc = src_node->parallel_desc();
   ParallelDesc dst_parallel_desc = dst_node->parallel_desc();
-  cfg::ParallelDistribution src_nd_sbp;
-  cfg::ParallelDistribution dst_nd_sbp;
+  cfg::NdSbp src_nd_sbp;
+  cfg::NdSbp dst_nd_sbp;
   InOutParallelDimReduce(src_node->parallel_desc(), dst_node->parallel_desc(),
-                         src_node->ParallelDistribution4Lbi(lbi),
-                         dst_node->ParallelDistribution4Lbi(lbi), &src_parallel_desc,
+                         src_node->NdSbp4Lbi(lbi), dst_node->NdSbp4Lbi(lbi), &src_parallel_desc,
                          &dst_parallel_desc, &src_nd_sbp, &dst_nd_sbp);
 
   const int64_t parallel_num = src_parallel_desc.parallel_num();
@@ -376,8 +373,7 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
       return TryBuildNcclBy2DHierarchySameDim0(ret, src_nd_sbp, dst_nd_sbp, src_hierarchy, lbn,
                                                scope_symbol_id, logical_blob_desc);
     } else if (src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1)) {
-      if (!(ParallelDistributionAllSameSplitParallel(src_nd_sbp)
-            || ParallelDistributionAllSameSplitParallel(dst_nd_sbp))) {
+      if (!(NdSbpAllSameSplitParallel(src_nd_sbp) || NdSbpAllSameSplitParallel(dst_nd_sbp))) {
         return TryBuildNcclBy2DHierarchySameDim1(ret, src_nd_sbp, dst_nd_sbp, src_hierarchy, lbn,
                                                  scope_symbol_id, logical_blob_desc);
       }
@@ -434,12 +430,11 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
           LOG(INFO) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name
-                    << "](order=" << src_order << ", nd_sbp="
-                    << ParallelDistributionToString(src_node->ParallelDistribution4Lbi(lbi))
-                    << ")->[" << dst_op_name << "](order=" << node2subgraph_order.at(dst_node)
-                    << ", nd_sbp="
-                    << ParallelDistributionToString(dst_node->ParallelDistribution4Lbi(lbi))
-                    << ") and before: [" << next_op_name << "](order=" << src_order + 1 << ")\n";
+                    << "](order=" << src_order
+                    << ", nd_sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << ")->["
+                    << dst_op_name << "](order=" << node2subgraph_order.at(dst_node)
+                    << ", nd_sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << ") and before: ["
+                    << next_op_name << "](order=" << src_order + 1 << ")\n";
         }
         nccl_op_confs->push_back(nccl_op);
         nccl_op_parallel_confs->push_back(src_node->parallel_desc().parallel_conf());
@@ -579,9 +574,8 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
         nccl_op_info.order = op_node2global_order.at(src_node);
         nccl_op_info.debug_str =
             (" After ACC insert nccl op: " + nccl_op.name() + " from: [" + src_op_name + "]("
-             + ParallelDistributionToString(src_node->ParallelDistribution4Lbi(lbi)) + ")->["
-             + dst_op_name + "]("
-             + ParallelDistributionToString(dst_node->ParallelDistribution4Lbi(lbi))
+             + NdSbpToString(src_node->NdSbp4Lbi(lbi)) + ")->[" + dst_op_name + "]("
+             + NdSbpToString(dst_node->NdSbp4Lbi(lbi))
              + "), src_order = " + std::to_string(nccl_op_info.order) + "\n");
         nccl_op_infos.push_back(nccl_op_info);
       }
@@ -650,6 +644,10 @@ void InitInsertNcclSubGraphInfoFromSet(
   CHECK_LT(nccl_subgraph_info->begin_op_global_order, nccl_subgraph_info->end_op_global_order);
 }
 
+constexpr uint32_t kMaxNcclComputeStreamCount = 8;
+
+std::string GetStreamIndexName(uint32_t id) { return "NCCL_COMPUTE_" + std::to_string(id); }
+
 void InsertNcclLogicalOpsInSubGraph(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::vector<const OpNode*>& subgraph_order,
@@ -710,11 +708,11 @@ void InsertNcclLogicalOpsInSubGraph(
 
     int64_t nccl_compute_stream_id = *stream_offset;
     CudaStreamIndexGenerator stream_idx_gen;
-    if (nccl_compute_stream_id >= stream_idx_gen.GetNcclComputeStreamCount()) {
-      break;  // NOTE(chengcheng): ONLY support GetNcclComputeStreamCount() insert nccl subgraphs.
+    if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
+      break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
     }
-    int32_t stream_index =
-        static_cast<int32_t>(stream_idx_gen.GenerateNcclComputeStreamIndex(nccl_compute_stream_id));
+    int32_t stream_index = static_cast<int32_t>(
+        stream_idx_gen.GenerateNamedStreamIndex(GetStreamIndexName(nccl_compute_stream_id)));
 
     // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index.
     for (auto& pair : subgraph_op_name2conf) {

@@ -100,6 +100,7 @@ OneFlow Tensor Class
             permute, 
             placement, 
             pow, 
+            prod,
             reciprocal, 
             register_hook, 
             repeat, 

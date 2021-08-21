@@ -22,24 +22,9 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<cfg::ParallelDistribution>> FindOrCreateNdSbp(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
-  static thread_local auto* sbp_list2nd_sbp =
-      new HashMap<std::vector<Symbol<cfg::SbpParallel>>, Symbol<cfg::ParallelDistribution>>();
-  auto iter = sbp_list2nd_sbp->find(sbp_list);
-  if (iter == sbp_list2nd_sbp->end()) {
-    cfg::ParallelDistribution nd_sbp;
-    for (Symbol<cfg::SbpParallel> sbp_symbol : sbp_list) {
-      *(nd_sbp.mutable_sbp_parallel()->Add()) = *sbp_symbol;
-    }
-    iter = sbp_list2nd_sbp->emplace(sbp_list, SymbolOf(nd_sbp)).first;
-  }
-  return iter->second;
-}
-
-Maybe<std::vector<std::string>> FindOrCreateNdSbpString(Symbol<cfg::ParallelDistribution> nd_sbp) {
+Maybe<std::vector<std::string>> FindOrCreateNdSbpString(Symbol<cfg::NdSbp> nd_sbp) {
   static thread_local auto* nd_sbp2nd_sbp_str =
-      new HashMap<Symbol<cfg::ParallelDistribution>, std::shared_ptr<std::vector<std::string>>>();
+      new HashMap<Symbol<cfg::NdSbp>, std::shared_ptr<std::vector<std::string>>>();
   auto iter = nd_sbp2nd_sbp_str->find(nd_sbp);
   if (iter == nd_sbp2nd_sbp_str->end()) {
     std::shared_ptr<std::vector<std::string>> nd_sbp_str =
@@ -68,12 +53,11 @@ Maybe<void> GetDualSbpParallel(const cfg::SbpParallel& sbp_parallel,
 
 }  // namespace
 
-Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(Symbol<cfg::ParallelDistribution> nd_sbp) {
-  static thread_local HashMap<Symbol<cfg::ParallelDistribution>, Symbol<cfg::ParallelDistribution>>
-      map;
+Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+  static thread_local HashMap<Symbol<cfg::NdSbp>, Symbol<cfg::NdSbp>> map;
   auto iter = map.find(nd_sbp);
   if (iter == map.end()) {
-    cfg::ParallelDistribution dual_nd_sbp;
+    cfg::NdSbp dual_nd_sbp;
     auto* mut_sbp_parallel = dual_nd_sbp.mutable_sbp_parallel();
     for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
       JUST(GetDualSbpParallel(sbp_parallel, mut_sbp_parallel->Add()));
@@ -83,22 +67,67 @@ Maybe<Symbol<cfg::ParallelDistribution>> GetDualNdSbp(Symbol<cfg::ParallelDistri
   return iter->second;
 }
 
-Maybe<Symbol<cfg::ParallelDistribution>> GetNdSbp(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
-  return FindOrCreateNdSbp(sbp_list);
-}
-
 Maybe<std::vector<std::string>> GetNdSbpStrList(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
   return FindOrCreateNdSbpString(JUST(GetNdSbp(sbp_list)));
 }
 
-Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<cfg::ParallelDistribution> nd_sbp) {
+Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp) {
   return FindOrCreateNdSbpString(nd_sbp);
 }
 
-Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::ParallelDistribution> nd_sbp) {
+Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp) {
   return GetNdSbpStrList(JUST(GetDualNdSbp(nd_sbp)));
+}
+
+namespace private_details {
+
+Maybe<Symbol<cfg::NdSbp>> RawGetNdSbp(const std::vector<Symbol<cfg::SbpParallel>>& sbp_list) {
+  CHECK_OR_RETURN(!sbp_list.empty());
+  cfg::NdSbp nd_sbp;
+  for (const auto& sbp : sbp_list) { *(nd_sbp.mutable_sbp_parallel()->Add()) = *sbp; }
+  return SymbolOf(nd_sbp);
+}
+
+Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::NdSbp> nd_sbp) {
+  const auto& vec = std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>();
+  CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    vec->push_back(SymbolOf(sbp_parallel));
+  }
+  return vec;
+}
+
+}  // namespace private_details
+
+const std::vector<Symbol<cfg::SbpParallel>>& GetNoneSbpList() {
+  static thread_local std::vector<Symbol<cfg::SbpParallel>> none;
+  return none;
+}
+
+Maybe<std::string> SbpToString(Symbol<cfg::SbpParallel> sbp_sym) {
+  std::string sbp_str = "oneflow.sbp.";
+  if (sbp_sym->has_broadcast_parallel()) {
+    sbp_str += "broadcast";
+  } else if (sbp_sym->has_partial_sum_parallel()) {
+    sbp_str += "partial_sum";
+  } else if (sbp_sym->has_split_parallel()) {
+    sbp_str += "split(axis=" + std::to_string(sbp_sym->split_parallel().axis()) + ")";
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+  return sbp_str;
+}
+
+Maybe<std::string> NdSbpToString(Symbol<cfg::NdSbp> nd_sbp) {
+  std::string str = "(";
+  for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
+    if (i > 0) { str += ", "; }
+    str += *JUST(SbpToString(SymbolOf(nd_sbp->sbp_parallel(i))));
+  }
+  if (nd_sbp->sbp_parallel_size() == 1) { str += ","; }
+  str += ")";
+  return str;
 }
 
 }  // namespace oneflow

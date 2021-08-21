@@ -24,14 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-inline Maybe<void> CheckEagerBoxingDataType(DataType val) {
-  CHECK_OR_RETURN(val != DataType::kTensorBuffer && val != DataType::kOFRecord)
-      << "EagerBoxing only support POD data type.";
-  return Maybe<void>::Ok();
-}
-}  // namespace
-
 class EagerBoxingInterpreter {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerBoxingInterpreter);
@@ -39,20 +31,30 @@ class EagerBoxingInterpreter {
   virtual ~EagerBoxingInterpreter() = default;
 
   Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input,
-                               Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                               Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                               Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> in_parallel_desc,
-                               Symbol<ParallelDesc> out_parallel_desc) {
-    JUST(CheckEagerBoxingDataType(input->dtype()));
-    return InterpretImpl(input, in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc);
-  }
+                               Symbol<ParallelDesc> out_parallel_desc) const;
 
  protected:
   virtual Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                           Symbol<cfg::ParallelDistribution> in_nd_sbp,
-                                           Symbol<cfg::ParallelDistribution> out_nd_sbp,
+                                           Symbol<cfg::NdSbp> in_nd_sbp,
+                                           Symbol<cfg::NdSbp> out_nd_sbp,
                                            Symbol<ParallelDesc> in_parallel_desc,
                                            Symbol<ParallelDesc> out_parallel_desc) const = 0;
+};
+
+struct EagerBoxingCall {
+  static Maybe<EagerBoxingCall> New(Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
+                                    Symbol<ParallelDesc> in_parallel_desc,
+                                    Symbol<ParallelDesc> out_parallel_desc);
+
+  Maybe<one::Tensor> Apply(const std::shared_ptr<one::Tensor>& input) const;
+
+  const std::shared_ptr<const EagerBoxingInterpreter> boxing_interpreter;
+  const Symbol<cfg::NdSbp> in_nd_sbp;
+  const Symbol<cfg::NdSbp> out_nd_sbp;
+  const Symbol<ParallelDesc> in_parallel_desc;
+  const Symbol<ParallelDesc> out_parallel_desc;
 };
 
 }  // namespace oneflow
