@@ -35,6 +35,7 @@ oneflow
             cos, 
             cosh, 
             diag, 
+            diagonal,
             div, 
             eq, 
             equal, 

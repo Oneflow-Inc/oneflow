@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from python.oneflow.nn.modules.diagonal import diagonal_op
 import oneflow._oneflow_internal
 
 Size = oneflow._oneflow_internal.Size
@@ -289,6 +290,7 @@ from oneflow.compatible.single_client.ops.count_not_finite import (
     multi_count_not_finite,
 )
 from oneflow.compatible.single_client.ops.diag_ops import diag
+from oneflow.compatible.single_client.ops.diagonal_ops import diagonal
 from oneflow.compatible.single_client.ops.eager_nccl_ops import eager_nccl_all_reduce
 from oneflow.compatible.single_client.ops.get_variable import (
     api_get_variable as get_variable,

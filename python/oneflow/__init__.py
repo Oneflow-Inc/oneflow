@@ -123,6 +123,7 @@ import oneflow.nn.modules.atanh
 import oneflow.nn.modules.bmm
 import oneflow.nn.modules.constant
 import oneflow.nn.modules.diag
+import oneflow.nn.modules.diagonal
 import oneflow.nn.modules.flip
 import oneflow.nn.modules.floor
 import oneflow.nn.modules.greater
@@ -193,6 +194,7 @@ from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow.nn.modules.diag import diag_op as diag
+from oneflow.nn.modules.diagonal import diagonal_op as diagonal
 from oneflow.nn.modules.eq import eq_op as eq
 from oneflow.nn.modules.eq import eq_op as equal
 from oneflow.nn.modules.exp import exp_op as exp

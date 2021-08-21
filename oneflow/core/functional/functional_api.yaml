@@ -886,6 +886,14 @@
   signature: "Tensor DiagGrad(Tensor dy, Tensor in, *, Int32 diagonal=0)"
   bind_python: False
 
+- name: "diagonal"
+  signature: "Tensor Diagonal(Tensor x, Int32 offset=0)"
+  bind_python: True
+
+- name: "diagonal_grad"
+  signature: "Tensor DiagonalGrad(Tensor dy, Tensor in, Int32 offset=0)"
+  bind_python: False
+
 - name: "tensor_getitem"
   signature: "Tensor TensorGetItem(Tensor x, *, TensorIndex index)"
   bind_python: True

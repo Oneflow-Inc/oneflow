@@ -38,6 +38,7 @@ OneFlow Tensor Class
             detach, 
             device, 
             diag, 
+            diagonal,
             dim, 
             div, 
             dtype, 
