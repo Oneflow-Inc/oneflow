@@ -32,6 +32,11 @@ class ConsistentIdStorage final {
     return storage;
   }
 
+  size_t Size() const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return id2debug_string_.size();
+  }
+
   Maybe<void> Emplace(int64_t id, const std::string& debug_string) {
     std::unique_lock<std::mutex> lock(mutex_);
     for (const auto& pair : id2debug_string_) { CHECK_NE_OR_RETURN(debug_string, pair.second); }
@@ -65,6 +70,8 @@ std::unique_ptr<int64_t>* MutThreadLocalUniqueConsistentId() {
 }
 
 }  // namespace
+
+size_t GetThreadConsistentIdCount() { return ConsistentIdStorage::Singleton()->Size(); }
 
 Maybe<void> InitThisThreadUniqueConsistentId(int64_t id, const std::string& debug_string) {
   JUST(ConsistentIdStorage::Singleton()->Emplace(id, debug_string));

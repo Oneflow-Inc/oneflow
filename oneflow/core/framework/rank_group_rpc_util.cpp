@@ -29,7 +29,7 @@ namespace oneflow {
 
 Maybe<NaiveAsyncTransportCtx> CheckTransportToken(Symbol<RankGroup> rank_group) {
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdCheckRankGroupConsistency));
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckRankGroupConsistency));
   const auto& PrepareBuffer = [](void** buffer, std::size_t* size,
                                  std::function<void()>* Callback) -> Maybe<void> {
     const auto& placeholder = std::make_shared<uint32_t>();

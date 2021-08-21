@@ -28,12 +28,19 @@ namespace oneflow {
 
 namespace {
 
-static constexpr int kSchedulerThreadUniqueConsistentId =
-    (1 << kCtrlTransportTokenThreadConsistentUIdBit);
+Maybe<void> ForEachThreadCtx(vm::VirtualMachine* vm,
+                             const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
+    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
+    if (stream_type.SharingVirtualMachineThread()) { continue; }
+    JUST(DoEach(thread_ctx));
+  }
+  return Maybe<void>::Ok();
+}
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = []() {
-    CHECK_JUST(InitThisThreadUniqueConsistentId(kSchedulerThreadUniqueConsistentId, "scheduler"));
+  *Initializer = [&]() {
+    CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
   };
 }
 
@@ -55,34 +62,33 @@ std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
 //   gpu threads in all processes.
 void GetWorkerThreadInitializer(ObjectMsgPtr<vm::VirtualMachine> vm,
                                 std::function<void(vm::ThreadCtx*)>* Initializer) {
-  int64_t thread_consistent_id = kSchedulerThreadUniqueConsistentId + 1;
-  HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
+  std::set<std::type_index> stream_type_indexes;
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
-    const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
-    if (stream_type_index2consistent_id.count(stream_type_index) > 0) { continue; }
+    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
+    if (!stream_type.SupportingTransportInstructions()) { continue; }
+    stream_type_indexes.insert(GetStreamTypeIndex(thread_ctx));
+  }
+  HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
+  int64_t thread_consistent_id = kThreadConsistentIdScheduler + 1;
+  for (const auto& stream_type_index : stream_type_indexes) {
+    LOG(INFO) << "transport stream type: " << stream_type_index.name();
     stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
   }
   *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
     const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
-    int64_t thread_consistent_id = stream_type_index2consistent_id.at(stream_type_index);
-    CHECK_JUST(InitThisThreadConsistentId(thread_consistent_id, stream_type_index.name()));
+    const auto& iter = stream_type_index2consistent_id.find(stream_type_index);
+    if (iter != stream_type_index2consistent_id.end()) {
+      CHECK_JUST(InitThisThreadConsistentId(iter->second, stream_type_index.name()));
+    }
   };
-}
-
-Maybe<void> ForEachThreadCtx(vm::VirtualMachine* vm,
-                             const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
-  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
-    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
-    if (stream_type.SharingVirtualMachineThread()) { continue; }
-    JUST(DoEach(thread_ctx));
-  }
-  return Maybe<void>::Ok();
 }
 
 }  // namespace
 
 OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     : vm_(ObjectMsgPtr<vm::VirtualMachine>::New(vm::MakeVmDesc(resource, this_machine_id).Get())) {
+  std::function<void()> SchedulerInitializer;
+  GetSchedulerThreadInitializer(&SchedulerInitializer);
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
   GetWorkerThreadInitializer(vm_, &WorkerInitializer);
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
@@ -92,8 +98,6 @@ OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     return Maybe<void>::Ok();
   }));
   exiting_ = false;
-  std::function<void()> SchedulerInitializer;
-  GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&OneflowVM::Loop, this, SchedulerInitializer);
 }
 

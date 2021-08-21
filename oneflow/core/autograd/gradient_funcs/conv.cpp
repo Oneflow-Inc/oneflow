@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct ConvolutionNdInterpState : public OpExprInterpState {
+struct ConvolutionNdCaptureState : public AutoGradCaptureState {
   bool input_requires_grad = false;
   bool weight_requires_grad = false;
   size_t input_index;
@@ -37,12 +37,12 @@ struct ConvolutionNdInterpState : public OpExprInterpState {
   int32_t groups;
 };
 
-class ConvolutionNd : public OpExprGradFunction<ConvolutionNdInterpState> {
+class ConvolutionNd : public OpExprGradFunction<ConvolutionNdCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(ConvolutionNdInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ConvolutionNdCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const ConvolutionNdInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ConvolutionNdCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -56,7 +56,7 @@ Maybe<void> ConvolutionNd::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ConvolutionNd::Capture(ConvolutionNdInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> ConvolutionNd::Capture(ConvolutionNdCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
@@ -77,7 +77,7 @@ Maybe<void> ConvolutionNd::Capture(ConvolutionNdInterpState* ctx, const TensorTu
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ConvolutionNd::Apply(const ConvolutionNdInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> ConvolutionNd::Apply(const ConvolutionNdCaptureState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   in_grads->resize(2);
   size_t num_spatial_dims = ctx->kernel_size.size();

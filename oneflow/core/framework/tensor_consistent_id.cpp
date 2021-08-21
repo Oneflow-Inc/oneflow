@@ -20,6 +20,18 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<std::shared_ptr<TransportToken>> RawGetMetaTransportToken() {
+  const auto& token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeMeta));
+  return std::make_shared<TransportToken>(token);
+}
+static constexpr auto* GetMetaTransportToken = DECORATE(&RawGetMetaTransportToken, ThreadLocal);
+
+}  // namespace
+
+Maybe<TransportToken> NewTensorConsistentId() { return ++**JUST(GetMetaTransportToken()); }
+
 namespace one {
 
 int64_t* MutThreadLocalRecursiveDepth() {
@@ -28,11 +40,12 @@ int64_t* MutThreadLocalRecursiveDepth() {
 }
 
 Maybe<void> InitConsistentId(TensorTuple* outputs) {
-  for (int i = 0; i < outputs->size(); ++i) {
-    const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(outputs->at(i));
+  for (const auto& output : *outputs) {
+    CHECK_OR_RETURN(output);
+    const auto& consistent_tensor = JUST(output->AsConsistentTensor());
     CHECK_OR_RETURN(consistent_tensor)
         << Error::Unimplemented() << "consistent tensors suppported only.";
-    const auto& transport_token = JUST(TransportToken::NewMetaTransportToken());
+    const auto& transport_token = JUST(NewTensorConsistentId());
     JUST(consistent_tensor->mut_impl()->set_transport_token(transport_token));
   }
   return Maybe<void>::Ok();
