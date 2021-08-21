@@ -86,28 +86,36 @@ class WarmUpLrScheduler(LrScheduler):
     def __init__(
         self, lrsch_or_optimizer, last_step=-1, verbose=False,
     ):
-        self._lr_sch = None
-        assert isinstance(lrsch_or_optimizer, (LrScheduler, Optimizer))
+        self._inner_lr_sch = None
+        if not isinstance(lrsch_or_optimizer, (LrScheduler, Optimizer)):
+            raise TypeError(
+                f"{type(lrsch_or_optimizer).__name__} is not an Optimizer object or a LrScheduler object."
+            )
         if isinstance(lrsch_or_optimizer, LrScheduler):
-            self._lr_sch = lrsch_or_optimizer
-            if self._lr_sch.last_step != last_step + 1:
+            self._inner_lr_sch = lrsch_or_optimizer
+            # the _inner_lr_sch has called step() in it's __init__
+            if self._inner_lr_sch.last_step != last_step + 1:
                 raise ValueError(
                     "The last_step of this warmup lr scheduler must match that of the wrapped lr scheduler"
-                    f" ({last_step + 1} vs. {self._lr_sch.last_step})"
+                    f" ({last_step + 1} vs. {self._inner_lr_sch.last_step})"
                 )
 
-            for i, saved_lr in enumerate(self._lr_sch._saved_lr):
-                # WarmupLRScheduler will restore lr changed by step() in self._lr_sch.__init___()
-                self._lr_sch._optimizer.param_groups[i]["lr"] = saved_lr
+            for i, saved_lr in enumerate(self._inner_lr_sch._saved_lr):
+                # WarmUpLrScheduler will restore lr changed by step() in self._inner_lr_sch.__init___()
+                self._inner_lr_sch._optimizer.param_groups[i]["lr"] = saved_lr
 
             super().__init__(lrsch_or_optimizer._optimizer, last_step, verbose)
         else:
             super().__init__(lrsch_or_optimizer, last_step, verbose)
 
     def step(self):
-        if self.last_step + 1 < self.warmup_iters or self._lr_sch is None:
+        if self.last_step + 1 < self.warmup_iters or self._inner_lr_sch is None:
+            # warmup lr_scheduler step
             super().step()
         else:
-            self._lr_sch.last_step = self.last_step
-            self._lr_sch.step()
-            self.last_step = self._lr_sch.last_step
+            # sync right last_step to inner lr_scheduler
+            self._inner_lr_sch.last_step = self.last_step
+            # inner lr_scheduler step
+            self._inner_lr_sch.step()
+            # get right last_step from inner lr_scheduler
+            self.last_step = self._inner_lr_sch.last_step

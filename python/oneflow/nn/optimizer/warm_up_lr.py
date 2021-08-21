@@ -63,8 +63,8 @@ class WarmUpLR(WarmUpLrScheduler):
             )
 
     def generate_conf_for_graph(self, opt_confs):
-        if self._lr_sch is not None:
-            self._lr_sch.generate_conf_for_graph(opt_confs)
+        if self._inner_lr_sch is not None:
+            self._inner_lr_sch.generate_conf_for_graph(opt_confs)
         if self.warmup_method == "linear":
             for opt_conf in opt_confs:
                 warmup_conf = opt_conf.mutable_warmup_conf()
