@@ -881,6 +881,24 @@ class TestTensor(flow.unittest.TestCase):
         y = x.floor()
         return y
 
+    @autotest()
+    def test_tesnor_var_all_dim_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = x.var()
+        return y
+
+    @autotest()
+    def test_tesnor_var_one_dim_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = x.var(
+            dim=random(low=0, high=4).to(int),
+            unbiased=random().to(bool),
+            keepdim=random().to(bool),
+        )
+        return y
+
     @flow.unittest.skip_unless_1n1d()
     def test_norm_tensor_function(test_case):
         input = flow.Tensor(
