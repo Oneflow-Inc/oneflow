@@ -322,3 +322,4 @@ from . import (
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
+from oneflow.nn.modules.relu import relu_op as relu
