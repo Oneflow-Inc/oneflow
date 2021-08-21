@@ -43,7 +43,8 @@ bool PyLongSequenceCheck(PyObject* obj) {
 }
 
 bool PyFloatSquenceCheck(PyObject* obj) {
-  return PySequenceCheck(obj, [](PyObject* item) { return PyFloat_Check(item); });
+  return PySequenceCheck(obj,
+                         [](PyObject* item) { return PyFloat_Check(item) || PyLong_Check(item); });
 }
 
 bool PyStringCheck(PyObject* obj) { return PyBytes_Check(obj) || PyUnicode_Check(obj); }

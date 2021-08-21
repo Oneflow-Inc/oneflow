@@ -162,11 +162,13 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kSTRING: return PyStringCheck(object_);
     case kSTRING_LIST: return PyStringSequenceCheck(object_);
     case kSCALAR: return PyScalarCheck(object_);
+    case kTENSOR:
     case kTENSOR_REF: return PyTensorCheck(object_);
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
     case kDTYPE: return PyDTypeCheck(object_);
     case kSHAPE: return PyShapeCheck(object_) || PyLongSequenceCheck(object_);
-    case kGENERATOR: return PyGeneratorCheck(object_);
+    case kGENERATOR:
+    case kGENERATOR_REF: return PyGeneratorCheck(object_);
     case kTENSOR_INDEX: return PyTensorIndexCheck(object_);
     case kDEVICE: return PyDeviceCheck(object_);
     case kPARALLEL_DESC: return PyParallelDescCheck(object_);
