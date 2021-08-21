@@ -21,8 +21,8 @@ namespace oneflow {
 namespace one {
 
 struct FusedSelfAttentionInterpState : public AutoGradCaptureState {
-  bool input_requires_grad;
-  float alpha;
+  bool input_requires_grad = false;
+  float alpha = 1.0;
 };
 
 class FusedSelfAttention : public OpExprGradFunction<FusedSelfAttentionInterpState> {
