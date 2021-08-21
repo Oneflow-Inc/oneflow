@@ -34,17 +34,20 @@ template<typename... SchemaT>
 class PyFunctionDispatcher {
  public:
   static_assert(sizeof...(SchemaT) >= 1, "Requires 1 template argument at least.");
-  using T0 = typename std::tuple_element<0, std::tuple<SchemaT...>>::type;
 
-  PyFunctionDispatcher() : schema_size_(sizeof...(SchemaT)), func_name_(T0::function_def.name) {
+  template<size_t I>
+  using schema_t = typename std::tuple_element<I, std::tuple<SchemaT...>>::type;
+
+  PyFunctionDispatcher()
+      : schema_size_(sizeof...(SchemaT)), func_name_(schema_t<0>::function_def.name) {
     signatures_.resize(schema_size_);
-    RecursiveInit(std::make_index_sequence<sizeof...(SchemaT)>{});
+    InitSignatures(std::make_index_sequence<sizeof...(SchemaT)>{});
   }
 
   template<size_t I0, size_t... I>
   py::object call(const py::args& args, const py::kwargs& kwargs,
                   std::index_sequence<I0, I...>) const {
-    using T = typename std::tuple_element<I0, std::tuple<SchemaT...>>::type;
+    using T = schema_t<I0>;
     std::vector<PythonArg> parsed_args(T::max_args);
     if (ParseArgs(args, kwargs, &parsed_args, T::function_def, T::max_pos_args,
                   /*raise_exception*/ schema_size_ == 1)) {
@@ -65,13 +68,10 @@ class PyFunctionDispatcher {
   }
 
  private:
-  void RecursiveInit(std::index_sequence<>) {}
-
-  template<size_t I0, size_t... I>
-  void RecursiveInit(std::index_sequence<I0, I...>) {
-    using T = typename std::tuple_element<I0, std::tuple<SchemaT...>>::type;
-    signatures_[I0] = T::signature;
-    RecursiveInit(std::index_sequence<I...>{});
+  template<size_t... I>
+  void InitSignatures(std::index_sequence<I...>) {
+    __attribute__((__unused__)) int dummy[] = {
+        ((void)(signatures_[I] = schema_t<I>::signature), 0)...};
   }
 
  private:
