@@ -320,6 +320,9 @@ from . import (
     distributed,
     linalg,
     optim,
+    boxing,
+    backends,
+    amp,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
