@@ -82,6 +82,25 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(output.dtype, flow.float32)
         test_case.assertTrue(np.array_equal(output.numpy(), np_arr))
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_construct_from_wrong_kwargs(test_case):
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.ValueException
+        ) as context:
+            flow.Tensor([1, 2], device="cpu", dpye=flow.int32, requires_grad=True)
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.ValueException
+        ) as context:
+            flow.Tensor([1, 2], dtype=flow.int32, dpye=flow.int32, requires_grad=True)
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.ValueException
+        ) as context:
+            flow.Tensor([1, 2], dpye=flow.int32)
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.ValueException
+        ) as context:
+            flow.Tensor([1, 2], dtype=flow.int32, requires_grad=True, dpye=flow.int32)
+
     def _test_tensor_init_methods(test_case, tensor_creator, get_numpy):
         shape = (2, 3, 4, 5)
         x = tensor_creator(*shape)

@@ -262,7 +262,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
   PyObject* pyobj_kwargs = PyDict_Copy(kwargs.ptr());
   const auto& GetValues4Key = [&](const std::string& key) {
     const char* key_c_str = key.c_str();
-    if (PyDict_Contains(pyobj_kwargs, PyBytes_FromString(key_c_str))) {
+    if (PyDict_Contains(pyobj_kwargs, PyUnicode_FromString(key_c_str))) {
       PyDict_DelItemString(pyobj_kwargs, key_c_str);
     }
     return kwargs[key_c_str];
@@ -301,7 +301,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
   }
   PyObject *key, *value;
   Py_ssize_t pos = 0;
-  if (PyDict_Next(kwargs.ptr(), &pos, &key, &value)) {
+  if (PyDict_Next(pyobj_kwargs, &pos, &key, &value)) {
     return Error::ValueError("tensor() got an unexpected keyword argument \'"
                              + py::str(key).cast<std::string>() + "\'");
   }
