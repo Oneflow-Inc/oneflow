@@ -77,6 +77,7 @@ FLAT_MSG_BEGIN(FlatShapeAndDataType);
   // Fields
   FLAT_MSG_DEFINE_OPTIONAL(FlatShape, shape);
   FLAT_MSG_DEFINE_OPTIONAL(DataType, dtype);
+
 FLAT_MSG_END(FlatShapeAndDataType);
 // clang-format on
 
@@ -278,6 +279,32 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
 
 }  //  namespace
 
+class LocalToConsistentFunctor {
+ public:
+  LocalToConsistentFunctor() {
+    local_to_consistent_op_ =
+        CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           Symbol<ParallelDesc> parallel_desc,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                           const std::shared_ptr<const Shape>& shape,
+                           const Symbol<DType>& dtype) const {
+  Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  DataType dtype = x->dtype()->data_type();
+  MutableAttrMap attrs;
+  JUST(attrs.SetAttr<Shape>("shape", *shape));
+  JUST(attrs.SetAttr<DataType>("dtype", dtype));
+  const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op_, {x}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+    return tensor;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> local_to_consistent_op_;
+};
+
 class ToConsistentFunctor {
  public:
   ToConsistentFunctor() {
@@ -323,6 +350,7 @@ class ConsistentToLocalFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::LocalToConsistentFunctor>("LocalToConsistent");
   m.add_functor<impl::ToConsistentFunctor>("ToConsistent");
   m.add_functor<impl::ConsistentToLocalFunctor>("ConsistentToLocal");
 };

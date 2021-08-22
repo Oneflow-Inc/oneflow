@@ -116,6 +116,22 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
         in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
     if (interpreter.IsOk()) { return JUST(interpreter); }
   }
+  const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
+  const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
+  std::shared_ptr<BoxingFunctionT> BoxingFunction;
+
+#define TRY_BOXING_FUNCTION(boxing_function_name) \
+  do { \
+    BoxingFunction = TRY(GetBoxingFunction(boxing_function_name, in, out)); \
+  if (BoxingFunction.IsOk()) { \
+    return std::shared_ptr<EagerBoxingInterpreter>(new NaiveEagerBoxingInterpreter(JUST(BoxingFunction))); \
+  } \
+  } while (0)
+
+  TRY_BOXING_FUNCTION("flatten-hierarchy");
+
+#undef TRY_BOXING_FUNCTION
+
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
                               << "consistent-to-consistent not supported"
                               << ". from_nd_sbp: " << *JUST(NdSbpToString(in_nd_sbp))
