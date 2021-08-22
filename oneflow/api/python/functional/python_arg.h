@@ -50,28 +50,39 @@ struct TypedImmediate final : public Immediate {
 class PythonArg {
  public:
   PythonArg() = default;
-  PythonArg(const py::object& object) : object_(object.ptr()), active_tag_(HAS_OBJECT) {}
+  PythonArg(const py::object& object)
+      : object_(object.ptr()), immediate_(), active_tag_(HAS_OBJECT) {}
 
   PythonArg(const std::shared_ptr<const detail::Immediate>& value)
-      : immediate_(value), active_tag_(HAS_IMMEDIATE) {}
+      : object_(nullptr), immediate_(value), active_tag_(HAS_IMMEDIATE) {}
 
   template<typename T, typename std::enable_if<!py::detail::is_pyobject<T>::value, int>::type = 0>
   PythonArg(const T& value)
-      : immediate_(std::make_shared<detail::TypedImmediate<T>>(value)),
+      : object_(nullptr),
+        immediate_(std::make_shared<detail::TypedImmediate<T>>(value)),
         active_tag_(HAS_IMMEDIATE) {}
 
   virtual ~PythonArg() = default;
 
-  PythonArg(const PythonArg&) = default;
+  PythonArg(const PythonArg& other)
+      : object_(other.object_), immediate_(other.immediate_), active_tag_(other.active_tag_) {}
   PythonArg(PythonArg&& other)
       : object_(other.object_),
         immediate_(std::move(other.immediate_)),
         active_tag_(other.active_tag_) {}
 
-  PythonArg& operator=(const PythonArg&) = default;
-
-  template<typename T>
-  friend class ObjectAsHelper;
+  PythonArg& operator=(const PythonArg& other) {
+    object_ = other.object_;
+    immediate_ = other.immediate_;
+    active_tag_ = other.active_tag_;
+    return *this;
+  }
+  PythonArg& operator=(PythonArg&& other) {
+    object_ = other.object_;
+    immediate_ = std::move(other.immediate_);
+    active_tag_ = other.active_tag_;
+    return *this;
+  }
 
   template<typename T>
   struct ObjectAsHelper {
