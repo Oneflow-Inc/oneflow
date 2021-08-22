@@ -28,22 +28,29 @@ Maybe<void> SpinCounter::SpinWait(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds) {
+Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds,
+                                 HeartbeatCallbackType HeartbeatCallback,
+                                 int64_t heartbeat_interval_seconds) {
   const auto& start = std::chrono::steady_clock::now();
-  auto time_last_warning = std::chrono::steady_clock::now();
-  const int64_t stuck_alert_interval_seconds = 3;
+  auto time_last_heartbeat = std::chrono::steady_clock::now();
   while (NeedSpin()) {
     auto end = std::chrono::steady_clock::now();
-    if (std::chrono::duration<double>(end - time_last_warning).count()
-        >= stuck_alert_interval_seconds) {
-      LOG(ERROR) << "warning:";
-      time_last_warning = end;
+    if (heartbeat_interval_seconds > 0
+        && std::chrono::duration<double>(end - time_last_heartbeat).count()
+               >= heartbeat_interval_seconds) {
+      HeartbeatCallback();
+      time_last_heartbeat = end;
     }
     std::chrono::duration<double> elapsed_seconds = end - start;
     CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
         << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds) {
+  return SpinWaitUntilTimeout(
+      NeedSpin, seconds, [] {}, 0);
 }
 
 Maybe<void> SpinCounter::WaitUntilCntEqualZero() const {

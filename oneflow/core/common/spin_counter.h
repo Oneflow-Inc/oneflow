@@ -21,6 +21,10 @@ limitations under the License.
 
 namespace oneflow {
 
+using HeartbeatCallbackType = const std::function<void()>&;
+Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds,
+                                 HeartbeatCallbackType HeartbeatCallback,
+                                 int64_t heartbeat_interval_seconds);
 Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds);
 
 class SpinCounter final {
