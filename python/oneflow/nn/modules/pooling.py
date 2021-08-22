@@ -384,7 +384,6 @@ class AvgPool1d(Module):
         padding: _size_2_t = 0,
         ceil_mode: bool = False,
         count_include_pad: bool = True,
-        divisor_override: int = 0,
     ):
         super().__init__()
         self.kernel_size = _single(kernel_size)
@@ -395,7 +394,6 @@ class AvgPool1d(Module):
         self.stride = _single(stride) if (stride is not None) else _single(kernel_size)
         self.ceil_mode = ceil_mode
         self.count_include_pad = count_include_pad
-        self.divisor_override = int(divisor_override)
         self.padding = _single(padding)
 
     def forward(self, x):
@@ -406,7 +404,7 @@ class AvgPool1d(Module):
             padding=self.padding,
             ceil_mode=self.ceil_mode,
             count_include_pad=self.count_include_pad,
-            divisor_override=self.divisor_override,
+            divisor_override=0,
             data_format=self.channel_pos,
         )
 

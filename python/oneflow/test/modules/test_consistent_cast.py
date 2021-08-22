@@ -27,6 +27,19 @@ from test_util import GenArgList
 
 @flow.unittest.skip_unless_1n4d()
 class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
+    def test_to_consistent_fatten_hierarchy(test_case):
+        x = flow.ones((16, 16), dtype=flow.int32)
+        sbp = (flow.sbp.partial_sum,)
+        y = x.to_consistent(
+            placement=flow.placement("cpu", {0: range(4)}, hierarchy=(2, 2)),
+            sbp=(flow.sbp.partial_sum, flow.sbp.partial_sum),
+        )
+        placement = flow.placement("cpu", {0: range(4)})
+        y = y.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (16, 16))
+
     def test_to_consistent_broadcast_shape_dtype(test_case):
         if int(os.getenv("RANK")) < 2:
             x = flow.ones((16, 16), dtype=flow.int32)
@@ -73,6 +86,21 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
             np.array_equal(z.numpy(), np.ones((16, 16), dtype=np.int32))
         )
 
+    def test_cuda_consistent_to_consistent_cpu_s2b(test_case):
+        x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        placement = flow.placement("cpu", {0: range(2)})
+        y = x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        sbp = (flow.sbp.broadcast,)
+        y = y.to_consistent(sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
+        z = y.to_local()
+        test_case.assertTrue(
+            np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32))
+        )
+
     def test_cuda_consistent_to_consistent_s2b(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(2)})
@@ -87,6 +115,26 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
         test_case.assertTrue(
             np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32))
         )
+
+    def test_cuda_consistent_to_consistent_cpu_s2p(test_case):
+        x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        placement = flow.placement("cpu", {0: range(2)})
+        y = x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
+        sbp = (flow.sbp.partial_sum,)
+        y = y.to_consistent(sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
+        z = y.to_local()
+        if int(os.getenv("RANK")) == 0:
+            test_case.assertTrue(
+                np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32))
+            )
+        else:
+            test_case.assertTrue(
+                np.array_equal(z.numpy(), np.zeros((32, 16), dtype=np.int32))
+            )
 
     def test_cuda_consistent_to_consistent_s2p(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
@@ -143,6 +191,21 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
             np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32))
         )
 
+    def test_cuda_consistent_to_consistent_cpu_p2s(test_case):
+        x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        placement = flow.placement("cpu", {0: range(2)})
+        y = x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
+        sbp = (flow.sbp.split(0),)
+        y = y.to_consistent(sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
+        z = y.to_local()
+        test_case.assertTrue(
+            np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * 2)
+        )
+
     def test_cuda_consistent_to_consistent_p2s(test_case):
         x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", {0: range(2)})
@@ -156,6 +219,41 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
         z = y.to_local()
         test_case.assertTrue(
             np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * 2)
+        )
+
+    def test_cuda_consistent_to_consistent_cuda_h2d(test_case):
+        x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        placement = flow.placement("cpu", {0: range(2)})
+        cuda_placement = flow.placement("cuda", {0: range(2)})
+        y = x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
+        y = y.to_consistent(placement=cuda_placement, sbp=flow.sbp.partial_sum)
+        test_case.assertEqual(y.sbp, (flow.sbp.partial_sum,))
+        test_case.assertEqual(y.placement, cuda_placement)
+        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
+        z = y.to_local()
+        test_case.assertTrue(
+            np.array_equal(z.numpy(), np.ones((16, 16), dtype=np.int32))
+        )
+
+    def test_cuda_consistent_to_consistent_cpu_p2b(test_case):
+        x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        placement = flow.placement("cpu", {0: range(2)})
+        cuda_placement = flow.placement("cuda", {0: range(2)})
+        y = x.to_consistent(placement=placement, sbp=flow.sbp.partial_sum)
+        import time
+
+        y = y.to_consistent(placement=cuda_placement, sbp=flow.sbp.partial_sum)
+        sbp = (flow.sbp.broadcast,)
+        y = y.to_consistent(placement=cuda_placement, sbp=sbp)
+        y = y.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
+        z = y.to_local()
+        test_case.assertTrue(
+            np.array_equal(z.numpy(), np.ones((16, 16), dtype=np.int32) * 2)
         )
 
     def test_cuda_consistent_to_consistent_p2b(test_case):

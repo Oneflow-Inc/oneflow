@@ -36,7 +36,9 @@ PRINT_OPTS = __PrinterOptions()
 
 def _try_convert_to_local_tensor(tensor):
     if tensor.is_consistent:
-        tensor = tensor.to_consistent(sbp=flow.sbp.broadcast).to_local()
+        tensor = tensor.to_consistent(
+            placement=tensor.placement, sbp=flow.sbp.broadcast
+        ).to_local()
     return tensor
 
 
@@ -133,7 +135,7 @@ class _Formatter(object):
 
 
 def _scalar_str(self, formatter1):
-    return formatter1.format(self.tolist())
+    return formatter1.format(_try_convert_to_local_tensor(self).tolist())
 
 
 def _vector_str(self, indent, summarize, formatter1):
@@ -214,8 +216,9 @@ def _tensor_str(self, indent):
             and sbp != flow.sbp.split(0)
         )
 
-    # TODO: delete it when s1->b is ready
+    # TODO: delete it when boxing on "CPU" and s1->b on "GPU" are ready
     if self.is_consistent:
+        self = self.to("cuda")
         if all(_cannot_print(sbp) for sbp in self.sbp):
             return "[...]"
 
@@ -270,7 +273,7 @@ def _gen_tensor_str_template(tensor, is_meta):
     if tensor.is_consistent:
         suffixes.append(f"placement={str(tensor.placement)}")
         suffixes.append(f"sbp={str(tensor.sbp)}")
-    elif tensor.device.type == "cuda":
+    elif tensor.device.type == "cuda" or tensor.device.type == "gpu":
         suffixes.append("device='" + str(tensor.device) + "'")
     elif tensor.device.type != "cpu":
         raise RunTimeError("unknow device type")
