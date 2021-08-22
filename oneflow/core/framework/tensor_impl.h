@@ -112,11 +112,11 @@ class MirroredTensorImpl : public TensorImpl {
   }
   Maybe<Symbol<Device>*> mut_device() { return mut_tensor_meta()->mut_device(); }
   virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
-    OF_RUNTIMEERROR() << "ConsistentTensorImpl has no mut_eager_mirrored_tensor_impl property";
+    OF_RUNTIMEERROR() << "MirroredTensorImpl has no mut_eager_mirrored_tensor_impl property";
   }
 
   virtual Maybe<MirroredTensorImpl> detach() const {
-    OF_RUNTIMEERROR() << "ConsistentTensorImpl has no detach property";
+    OF_RUNTIMEERROR() << "MirroredTensorImpl has no detach property";
   }
 
  protected:
