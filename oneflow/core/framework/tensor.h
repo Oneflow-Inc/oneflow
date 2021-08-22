@@ -135,18 +135,18 @@ class StaticZerosTensor final : public Tensor {
     OF_RUNTIMEERROR() << "StaticZerosTensor has no mut_device property";
   }
   bool is_cuda() const {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have is_cuda property";
     return false;
   }
   bool is_consistent() const { return false; }
   bool is_local() const { return !is_consistent(); }
   bool is_lazy() const {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have is_lazy property";
     return false;
   }
   bool is_eager() const { return !is_lazy(); }
   const TensorMeta& tensor_meta() const {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have tensor_meta property";
     return *(TensorMeta*)nullptr;
   }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const {
@@ -189,19 +189,19 @@ class StaticZerosTensor final : public Tensor {
 
   // Getters for autograd
   bool requires_grad() const {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have requires_grad property";
     return false;
   }
   bool is_leaf() const {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have is_leaf property";
     return false;
   }
   bool retain_grad() const {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have retain_grad property";
     return false;
   }
   std::shared_ptr<const FunctionNode> grad_fn_node() const {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have grad_fn_node property";
     return nullptr;
   }
   Maybe<Tensor> acc_grad() const {
@@ -213,20 +213,20 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> detach() const { OF_RUNTIMEERROR() << "StaticZerosTensor has no detach property"; }
   Maybe<Tensor> clone() const { OF_RUNTIMEERROR() << "StaticZerosTensor has no clone property"; }
   std::shared_ptr<Tensor> data() const {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have data property";
     return nullptr;
   }
 
   // Setters for autograd
-  void set_requires_grad(bool requires_grad) { UNIMPLEMENTED() << __PRETTY_FUNCTION__; }
+  void set_requires_grad(bool requires_grad) { LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_requires_grad property"; }
   Maybe<void> set_retain_grad(bool retain_grad) {
     OF_RUNTIMEERROR() << "StaticZerosTensor has no retain_grad property";
   }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_grad_fn_node property";
   }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have mut_grad_fn_node property";
     return *(std::shared_ptr<FunctionNode>*)nullptr;
   }
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) {
@@ -235,21 +235,21 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> mut_acc_grad() {
     OF_RUNTIMEERROR() << "StaticZerosTensor has no mut_acc_grad property";
   }
-  void set_is_leaf(bool is_leaf) { UNIMPLEMENTED() << __PRETTY_FUNCTION__; }
+  void set_is_leaf(bool is_leaf) { LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_is_leaf property"; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have mut_autograd_meta property";
     return nullptr;
   }
   bool has_autograd_meta() const {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have has_autograd_meta property";
     return false;
   }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_autograd_meta property";
   }
 
   user_op::TensorDesc* mut_tensor_meta() {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have mut_tensor_meta property";
     return nullptr;
   }
 
