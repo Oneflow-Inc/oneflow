@@ -81,17 +81,6 @@ Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t 
   return Maybe<void>::Ok();
 }
 
-Symbol<ParallelDesc> RawGetParallelDesc(int64_t peer_process_id, DeviceType device_type) {
-  ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type)));
-  parallel_conf.add_device_name("@" + std::to_string(GlobalProcessCtx::Rank()) + ":"
-                                + std::to_string(GlobalProcessCtx::LocalRank()));
-  parallel_conf.add_device_name("@" + std::to_string(peer_process_id) + ":"
-                                + std::to_string(GlobalProcessCtx::LocalRank(peer_process_id)));
-  return SymbolOf(ParallelDesc(parallel_conf));
-}
-auto* GetParallelDesc = DECORATE(&RawGetParallelDesc, ThreadLocal);
-
 ncclComm_t RawGetNcclComm(int64_t peer_process_id) {
   std::set<std::pair<int64_t, int64_t>> device_set;
   device_set.emplace(GlobalProcessCtx::Rank(), GlobalProcessCtx::LocalRank());

@@ -1085,10 +1085,10 @@
   signature: "Tensor Recv(*, Int64 src, Tensor out=None)"
   bind_python: True
 
-- name: "send_with_meta"
-  signature: "Void SendWithMeta(*, Tensor input, Int64 dst)"
+- name: "send_without_meta"
+  signature: "Void SendWithoutMeta(*, Tensor input, Int64 dst)"
   bind_python: True
 
-- name: "recv_with_meta"
-  signature: "Tensor RecvWithMeta(*, Int64 src, Shape shape, DataType dtype, Device device, Tensor out=None)"
+- name: "recv_without_meta"
+  signature: "Tensor RecvWithoutMeta(*, Int64 src, Shape shape, DataType dtype, Device device, Tensor out=None)"
   bind_python: True

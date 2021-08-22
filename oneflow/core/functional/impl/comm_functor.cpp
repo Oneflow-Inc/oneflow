@@ -91,9 +91,9 @@ class AllReduceFunctor {
   }
 };
 
-class SendWithMetaFunctor {
+class SendWithoutMetaFunctor {
  public:
-  SendWithMetaFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
+  SendWithoutMetaFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr("dst_process_id", dst));
@@ -105,9 +105,9 @@ class SendWithMetaFunctor {
   std::shared_ptr<OpExpr> op_expr_;
 };
 
-class RecvWithMetaFunctor {
+class RecvWithoutMetaFunctor {
  public:
-  RecvWithMetaFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("recv").Output("out").Build()); }
+  RecvWithoutMetaFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("recv").Output("out").Build()); }
   Maybe<Tensor> operator()(int64_t src, const Shape& shape, Symbol<DType> dtype,
                            Symbol<Device> device, const Optional<one::Tensor>& out) const {
     MutableAttrMap attrs;
@@ -197,8 +197,8 @@ class RecvFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AllReduceFunctor>("AllReduce");
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
-  m.add_functor<impl::SendWithMetaFunctor>("SendWithMeta");
-  m.add_functor<impl::RecvWithMetaFunctor>("RecvWithMeta");
+  m.add_functor<impl::SendWithoutMetaFunctor>("SendWithoutMeta");
+  m.add_functor<impl::RecvWithoutMetaFunctor>("RecvWithoutMeta");
   m.add_functor<impl::SendFunctor>("Send");
   m.add_functor<impl::RecvFunctor>("Recv");
 };
