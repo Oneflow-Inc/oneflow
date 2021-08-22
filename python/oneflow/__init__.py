@@ -22,7 +22,6 @@ oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
-no_grad = oneflow._oneflow_internal.autograd.no_grad
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
@@ -114,6 +113,7 @@ from oneflow.framework.docstr.utils import register_docstr
 register_docstr()
 del register_docstr
 del docstr
+from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 import oneflow.nn.modules.acosh
 import oneflow.nn.modules.activation
@@ -262,6 +262,7 @@ from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min
 from oneflow.nn.modules.reduce_ops import _sum as sum
+from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
@@ -318,6 +319,10 @@ from . import (
     distributed,
     linalg,
     optim,
+    boxing,
+    backends,
+    amp,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
+from oneflow.nn.modules.relu import relu_op as relu
