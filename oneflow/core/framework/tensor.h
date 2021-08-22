@@ -218,7 +218,9 @@ class StaticZerosTensor final : public Tensor {
   }
 
   // Setters for autograd
-  void set_requires_grad(bool requires_grad) { LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_requires_grad property"; }
+  void set_requires_grad(bool requires_grad) {
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_requires_grad property";
+  }
   Maybe<void> set_retain_grad(bool retain_grad) {
     OF_RUNTIMEERROR() << "StaticZerosTensor has no retain_grad property";
   }
@@ -235,7 +237,9 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> mut_acc_grad() {
     OF_RUNTIMEERROR() << "StaticZerosTensor has no mut_acc_grad property";
   }
-  void set_is_leaf(bool is_leaf) { LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_is_leaf property"; }
+  void set_is_leaf(bool is_leaf) {
+    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_is_leaf property";
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() {
     LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have mut_autograd_meta property";
     return nullptr;
