@@ -163,10 +163,12 @@ class TestTensor(flow.unittest.TestCase):
             oneflow._oneflow_internal.exception.RuntimeException
         ):
             x.consistent_id()
+
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.RuntimeException
         ):
             x.sbp
+
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.RuntimeException
         ):

@@ -250,7 +250,9 @@ class StaticZerosTensor final : public Tensor {
   }
 
   Maybe<MirroredTensor> AsMirroredTensor();
-  Maybe<ConsistentTensor> AsConsistentTensor() { UNIMPLEMENTED_THEN_RETURN(); }
+  Maybe<ConsistentTensor> AsConsistentTensor() {
+    OF_RUNTIMEERROR() << "StaticZerosTensor has no AsConsistentTensor property";
+  }
 
  private:
   StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -369,14 +371,14 @@ class Parameter final : public TensorIf<Parameter> {
     if (const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor_)) {
       return mirrored_tensor;
     }
-    UNIMPLEMENTED_THEN_RETURN();
+    OF_RUNTIMEERROR() << "Parameter Tensor has no AsMirroredTensor property";
   }
 
   Maybe<ConsistentTensor> AsConsistentTensor() override {
     if (const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor_)) {
       return consistent_tensor;
     }
-    UNIMPLEMENTED_THEN_RETURN();
+    OF_RUNTIMEERROR() << "Parameter Tensor has no AsConsistentTensor property";
   }
 
  private:
@@ -464,7 +466,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
       const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf);
 
   Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
-  Maybe<ConsistentTensor> AsConsistentTensor() override { UNIMPLEMENTED_THEN_RETURN(); }
+  Maybe<ConsistentTensor> AsConsistentTensor() override {
+    OF_RUNTIMEERROR() << "MirroredTensor has no AsConsistentTensor property";
+  }
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
@@ -558,7 +562,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
-  Maybe<MirroredTensor> AsMirroredTensor() override { UNIMPLEMENTED_THEN_RETURN(); }
+  Maybe<MirroredTensor> AsMirroredTensor() override {
+    OF_RUNTIMEERROR() << "ConsistentTensor has no AsMirroredTensor property";
+  }
   Maybe<ConsistentTensor> AsConsistentTensor() override { return shared_from_this(); }
 
  private:

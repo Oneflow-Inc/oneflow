@@ -130,6 +130,11 @@ class TestTensor(flow.unittest.TestCase):
         ):
             b.device()
 
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.RuntimeException
+        ):
+            b._tensor_buffer_shapes_and_dtypes
+
 
 if __name__ == "__main__":
     unittest.main()
