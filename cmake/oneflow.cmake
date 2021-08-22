@@ -327,7 +327,7 @@ endif()
 
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
-# add_dependencies(oneflow_internal of_cfgobj)
+add_dependencies(oneflow_internal of_cfgobj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
