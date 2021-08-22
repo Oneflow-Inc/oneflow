@@ -135,18 +135,18 @@ class StaticZerosTensor final : public Tensor {
     OF_RUNTIMEERROR() << "StaticZerosTensor has no mut_device property";
   }
   bool is_cuda() const {
-    UNIMPLEMENTED() <<  __PRETTY_FUNCTION__;
+    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
     return false;
   }
   bool is_consistent() const { return false; }
   bool is_local() const { return !is_consistent(); }
   bool is_lazy() const {
-    UNIMPLEMENTED() <<  __PRETTY_FUNCTION__;
+    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
     return false;
   }
   bool is_eager() const { return !is_lazy(); }
   const TensorMeta& tensor_meta() const {
-    UNIMPLEMENTED() <<  __PRETTY_FUNCTION__;
+    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
     return *(TensorMeta*)nullptr;
   }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const {
@@ -189,19 +189,19 @@ class StaticZerosTensor final : public Tensor {
 
   // Getters for autograd
   bool requires_grad() const {
-    UNIMPLEMENTED() <<  __PRETTY_FUNCTION__;
+    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
     return false;
   }
   bool is_leaf() const {
-    UNIMPLEMENTED() <<  __PRETTY_FUNCTION__;
+    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
     return false;
   }
   bool retain_grad() const {
-    UNIMPLEMENTED() <<  __PRETTY_FUNCTION__;
+    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
     return false;
   }
   std::shared_ptr<const FunctionNode> grad_fn_node() const {
-    UNIMPLEMENTED() <<  __PRETTY_FUNCTION__;
+    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
     return nullptr;
   }
   Maybe<Tensor> acc_grad() const {
@@ -222,9 +222,11 @@ class StaticZerosTensor final : public Tensor {
   Maybe<void> set_retain_grad(bool retain_grad) {
     OF_RUNTIMEERROR() << "StaticZerosTensor has no retain_grad property";
   }
-  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) { UNIMPLEMENTED() << __PRETTY_FUNCTION__; }
+  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
+    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+  }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__ ;
+    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
     return *(std::shared_ptr<FunctionNode>*)nullptr;
   }
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) {
@@ -242,7 +244,9 @@ class StaticZerosTensor final : public Tensor {
     UNIMPLEMENTED() << __PRETTY_FUNCTION__;
     return false;
   }
-  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) { UNIMPLEMENTED() << __PRETTY_FUNCTION__; }
+  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
+    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+  }
 
   user_op::TensorDesc* mut_tensor_meta() {
     UNIMPLEMENTED() << __PRETTY_FUNCTION__;
