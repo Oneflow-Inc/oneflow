@@ -50,7 +50,7 @@ struct TypedImmediate final : public Immediate {
 class PythonArg {
  public:
   PythonArg() = default;
-  PythonArg(py::object object) : object_(object.ptr()), active_tag_(HAS_OBJECT) {}
+  PythonArg(const py::object& object) : object_(object.ptr()), active_tag_(HAS_OBJECT) {}
 
   PythonArg(const std::shared_ptr<const detail::Immediate>& value)
       : immediate_(value), active_tag_(HAS_IMMEDIATE) {}
@@ -61,6 +61,12 @@ class PythonArg {
         active_tag_(HAS_IMMEDIATE) {}
 
   virtual ~PythonArg() = default;
+
+  PythonArg(const PythonArg&) = default;
+  PythonArg(PythonArg&& other)
+      : object_(other.object_),
+        immediate_(std::move(other.immediate_)),
+        active_tag_(other.active_tag_) {}
 
   PythonArg& operator=(const PythonArg&) = default;
 
