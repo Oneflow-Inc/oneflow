@@ -119,9 +119,7 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   }
   if (in_parallel_desc->parallel_num() != out_parallel_desc->parallel_num()
       && (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1)
-      && EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)
-      && (in_parallel_desc->device_type() == DeviceType::kGPU
-          && out_parallel_desc->device_type() == DeviceType::kGPU)) {
+      && EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)) {
     return std::shared_ptr<EagerBoxingInterpreter>(new NcclXToBBoxingInterpreter());
   }
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
