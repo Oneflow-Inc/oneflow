@@ -46,8 +46,8 @@ class AddFunctor {
       CHECK_OR_RETURN(JUST(x->device()) == JUST(y->device()));
       CHECK_OR_RETURN(*x->shape() == *y->shape());
       CHECK_OR_RETURN(x->dtype() == y->dtype());
-      if (x_static_zeros) { return x; }
-      return y;
+      if (x_static_zeros) { return y; }
+      return x;
     }
 
     const OpExpr* op = nullptr;
