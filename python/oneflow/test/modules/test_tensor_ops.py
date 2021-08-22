@@ -42,6 +42,16 @@ def _test_is_floating_point(test_case, shape, device, dtype):
     else:
         test_case.assertEqual(output, False)
 
+@flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestCuda(flow.unittest.TestCase):
+    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4)
+    def test_cuda(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        x = x.cuda()
+        y = x.sum()
+        return y
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorOps(flow.unittest.TestCase):
@@ -50,14 +60,6 @@ class TestTensorOps(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         x = x.cpu()
-        y = x.sum()
-        return y
-
-    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4)
-    def test_cuda(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        x = x.cuda()
         y = x.sum()
         return y
 
