@@ -212,7 +212,7 @@ add_custom_target(of_format
 # clang tidy
 add_custom_target(of_tidy
   COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py --build_dir ${CMAKE_BINARY_DIR}
-  DEPENDS of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
+  DEPENDS of_git_version oneflow_deps of_cfgobj 
   )
 # generate version
 set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
@@ -254,7 +254,7 @@ add_dependencies(of_protoobj make_pyproto_dir protobuf)
 include(cfg)
 GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS CFG_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
-add_dependencies(of_cfgobj of_protoobj generate_cfg)
+add_dependencies(of_cfgobj of_protoobj)
 if (BUILD_SHARED_LIBS)
   target_link_libraries(of_protoobj protobuf_imported)
   target_link_libraries(of_cfgobj protobuf_imported)
@@ -288,7 +288,7 @@ endif()
 
 # cc obj lib
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
-add_dependencies(of_ccobj prepare_oneflow_third_party generate_functional)
+add_dependencies(of_ccobj prepare_oneflow_third_party)
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
@@ -327,7 +327,7 @@ endif()
 
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
-add_dependencies(oneflow_internal of_cfgobj generate_py_cfg)
+# add_dependencies(oneflow_internal of_cfgobj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
@@ -368,18 +368,9 @@ if(BUILD_TESTING)
 endif()
 
 # build include
-set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
-add_custom_target(of_third_party_include_copy DEPENDS
-  prepare_oneflow_third_party)
-foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-  set(oneflow_all_include_file)
-  file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
-  copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_third_party_include_copy)
-endforeach()
 add_custom_target(of_include_copy
   COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
 add_dependencies(of_include_copy oneflow_internal)
-add_dependencies(of_include_copy of_third_party_include_copy)
 
 foreach(of_include_src_dir ${CFG_INCLUDE_DIR})
   set(oneflow_all_include_file)
