@@ -28,7 +28,7 @@ namespace oneflow {
 
 template<typename T, typename Enabled = void>
 class Maybe;
-
+Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error);
 template<typename T>
 struct is_maybe {
   static const bool value = false;
@@ -61,7 +61,11 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
     return data_or_error_.template Get<cfg::ErrorProto>();
   }
 
-  std::string GetSerializedError() const { return this->error()->DebugString(); }
+  std::string GetSerializedError() const {
+    const auto& maybe_error = FormatErrorStr(this->error());
+    const auto& error_str = maybe_error.GetDataAndErrorProto(this->error()->DebugString());
+    return error_str.first;
+  }
 
   template<typename Type = T>
   Type GetDataAndSerializedErrorProto(std::string* error_str, const Type& default_for_error) const {
@@ -127,7 +131,9 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return this->error()->DebugString();
+    const auto& maybe_error = FormatErrorStr(this->error());
+    const auto& error_str = maybe_error.GetDataAndErrorProto(this->error()->DebugString());
+    return error_str.first;
   }
 
   void GetDataAndSerializedErrorProto(std::string* error_str) const {
@@ -186,7 +192,9 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return this->error()->DebugString();
+    const auto& maybe_error = FormatErrorStr(this->error());
+    const auto& error_str = maybe_error.GetDataAndErrorProto(this->error()->DebugString());
+    return error_str.first;
   }
 
   T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
@@ -243,7 +251,11 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   }
   std::shared_ptr<cfg::ErrorProto> error() const { return maybe_ptr_.error(); }
 
-  std::string GetSerializedError() const { return maybe_ptr_.GetSerializedError(); }
+  std::string GetSerializedError() const {
+    const auto& maybe_error = FormatErrorStr(this->error());
+    const auto& error_str = maybe_error.GetDataAndErrorProto(this->error()->DebugString());
+    return error_str.first;
+  }
 
   T GetDataAndSerializedErrorProto(std::string* error_str) const {
     return *maybe_ptr_.GetDataAndSerializedErrorProto(error_str, static_cast<PtrT>(nullptr));
