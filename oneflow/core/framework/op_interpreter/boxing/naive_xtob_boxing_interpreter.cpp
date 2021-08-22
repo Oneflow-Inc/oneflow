@@ -39,7 +39,7 @@ Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp() {
 
 auto* CachedGetBroadcastNdSbp = DECORATE(&GetBroadcastNdSbp, ThreadLocal);
 
-Maybe<int64_t> GetBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
+Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
                                 Symbol<ParallelDesc> dst_parallel_desc) {
   int64_t machine_id = -1;
   int64_t device_id = -1;
@@ -59,7 +59,7 @@ Maybe<int64_t> GetBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
   return machine_id;
 }
 
-auto* CachedGetBroadcastRoot = DECORATE(&GetBroadcastRoot, ThreadLocal);
+auto* CachedGetBroadcastRoot = DECORATE(&CalBroadcastRoot, ThreadLocal);
 
 Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root) {
   return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
