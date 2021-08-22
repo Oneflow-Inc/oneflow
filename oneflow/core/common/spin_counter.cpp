@@ -29,7 +29,7 @@ Maybe<void> SpinCounter::SpinWait(
 }
 
 Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds,
-                                 HeartbeatCallbackType HeartbeatCallback,
+                                 const std::function<void()>& HeartbeatCallback,
                                  int64_t heartbeat_interval_seconds) {
   const auto& start = std::chrono::steady_clock::now();
   auto time_last_heartbeat = std::chrono::steady_clock::now();
