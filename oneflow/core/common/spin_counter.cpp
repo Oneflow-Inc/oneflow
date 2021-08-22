@@ -30,8 +30,15 @@ Maybe<void> SpinCounter::SpinWait(
 
 Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds) {
   const auto& start = std::chrono::steady_clock::now();
+  auto time_last_warning = std::chrono::steady_clock::now();
+  const int64_t stuck_alert_interval_seconds = 3;
   while (NeedSpin()) {
     auto end = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(end - time_last_warning).count()
+        >= stuck_alert_interval_seconds) {
+      LOG(ERROR) << "warning:";
+      time_last_warning = end;
+    }
     std::chrono::duration<double> elapsed_seconds = end - start;
     CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
         << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
