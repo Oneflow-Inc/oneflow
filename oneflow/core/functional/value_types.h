@@ -64,7 +64,8 @@ enum ValueType {
   kDOUBLE,
   kBOOL,
   kSTRING,
-  kINT32_LIST,
+
+  kINT32_LIST = 50,
   kUINT32_LIST,
   kINT64_LIST,
   kUINT64_LIST,
@@ -72,9 +73,11 @@ enum ValueType {
   kDOUBLE_LIST,
   kBOOL_LIST,
   kSTRING_LIST,
-  kVOID_MAYBE,
+
+  kVOID_MAYBE = 100,
   kBOOL_MAYBE,
-  kSCALAR,
+
+  kSCALAR = 200,
   kTENSOR,
   kTENSOR_REF,
   kTENSOR_MAYBE,
@@ -150,6 +153,8 @@ VALUE_TYPE_OF_IMPL(Symbol<cfg::SbpParallel>, kSBP_PARALLEL);
 VALUE_TYPE_OF_IMPL(std::vector<Symbol<cfg::SbpParallel>>, kSBP_PARALLEL_LIST);
 
 #undef VALUE_TYPE_OF_IMPL
+
+Maybe<const std::string&> ValueTypeName(ValueType type);
 
 }  // namespace functional
 }  // namespace one
