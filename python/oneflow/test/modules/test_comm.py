@@ -72,9 +72,9 @@ class TestComm(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_send_recv_without_sending_meta(test_case):
         x0 = flow.tensor([[1, 2]])
-        test_case._test_send_recv_without_meta(x0)
+        test_case._test_send_recv_without_sending_meta(x0)
         x0 = x0.to("cuda")
-        test_case._test_send_recv_without_meta(x0)
+        test_case._test_send_recv_without_sending_meta(x0)
 
 
 if __name__ == "__main__":

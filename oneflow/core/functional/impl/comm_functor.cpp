@@ -127,11 +127,11 @@ class RecvFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr("src_process_id", src));
     Shape shape;
-    Symbol<DType> dtype;
+    DataType data_type = DataType::kInvalidDataType;
     Symbol<Device> device;
     if (optional_shape.has_value() && optional_dtype.has_value() && optional_device.has_value()) {
       shape = *JUST(optional_shape.value());
-      dtype = JUST(optional_dtype.value());
+      data_type = JUST(optional_dtype.value())->data_type();
       device = JUST(optional_device.value());
     } else if (!optional_shape.has_value() && !optional_dtype.has_value()
                && !optional_device.has_value()) {
@@ -140,10 +140,8 @@ class RecvFunctor {
                                        nullptr));
       shape = *JUST(flat_shape.ToShape());
 
-      DataType received_dtype = DataType::kInvalidDataType;
-      JUST(ccl::Recv<DeviceType::kCPU>(&received_dtype, sizeof(received_dtype), DataType::kChar,
-                                       src, nullptr));
-      dtype = JUST(DType::Get(received_dtype));
+      JUST(ccl::Recv<DeviceType::kCPU>(&data_type, sizeof(data_type), DataType::kChar, src,
+                                       nullptr));
 
       DeviceType device_type = DeviceType::kInvalidDevice;
       JUST(ccl::Recv<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, src,
@@ -151,10 +149,10 @@ class RecvFunctor {
       device = JUST(Device::New(Device::Type4DeviceTag(*JUST(DeviceTag4DeviceType(device_type)))));
     } else {
       UNIMPLEMENTED_THEN_RETURN()
-          << "shape, dtype and device must all have value or all not have value.";
+          << "All or none of shape, dtype and device should have value.";
     }
     JUST(attrs.SetAttr("shape", shape));
-    JUST(attrs.SetAttr("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr("dtype", data_type));
 
     OpExprInterpContext op_expr_interp_context(attrs, device);
 
