@@ -282,27 +282,26 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
 class LocalToConsistentFunctor {
  public:
   LocalToConsistentFunctor() {
-    local_to_consistent_op_ =
+    op_ =
         CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
-                           const std::shared_ptr<const Shape>& shape,
-                           const Symbol<DType>& dtype) const {
-  Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
-  DataType dtype = x->dtype()->data_type();
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<Shape>("shape", *shape));
-  JUST(attrs.SetAttr<DataType>("dtype", dtype));
-  const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op_, {x}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+                           const Shape& shape, const Symbol<DType>& dtype) const {
+    CHECK_OR_RETURN(x->is_local());
+    Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+        *op_, {x}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
     return tensor;
   }
 
  private:
-  std::shared_ptr<OpExpr> local_to_consistent_op_;
+  std::shared_ptr<OpExpr> op_;
 };
 
 class ToConsistentFunctor {

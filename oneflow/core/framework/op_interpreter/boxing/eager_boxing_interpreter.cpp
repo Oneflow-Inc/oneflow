@@ -81,24 +81,25 @@ HashMap<std::string, BoxingFunctionT>* MutName2BoxingFunction() {
   return &map;
 }
 
-}
+}  // namespace
 
-namespace  {
+namespace {
 
 Maybe<BoxingFunctionT> RawGetBoxingFunction(const std::string& method_name, Symbol<PlacedNdSbp> in,
-                              Symbol<PlacedNdSbp> out) {
+                                            Symbol<PlacedNdSbp> out) {
   const auto& Checker = JUST(MapAt(*MutName2BoxingChecker(), method_name));
   JUST(Checker(in, out));
   return JUST(MapAt(*MutName2BoxingFunction(), method_name));
 }
 
-}
+}  // namespace
 
-decltype(GetBoxingFunction) GetBoxingFunction = DECORATE(RawGetBoxingFunction, ThreadLocalCopiable);
+decltype(GetBoxingFunction) GetBoxingFunction =
+    DECORATE(&RawGetBoxingFunction, ThreadLocalCopiable);
 
-void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT& Check,
+void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT& Checker,
                             const BoxingFunctionT& BoxingFunction) {
-  CatchRegistryError([&]()->Maybe<void>{
+  CatchRegistryError([&]() -> Maybe<void> {
     CHECK_OR_RETURN(MutName2BoxingChecker()->emplace(method_name, Checker).second)
         << "boxing_method_name: " << method_name;
     CHECK_OR_RETURN(MutName2BoxingFunction()->emplace(method_name, BoxingFunction).second)
