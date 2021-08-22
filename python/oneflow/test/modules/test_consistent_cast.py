@@ -327,7 +327,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(1)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
-        new_placement = flow.placement("cuda", {0: range(4)})
+        new_placement = flow.placement("cuda", {0: range(2)})
         broadcast_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.broadcast
         )
@@ -357,7 +357,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(1)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
-        new_placement = flow.placement("cuda", {0: range(4)})
+        new_placement = flow.placement("cuda", {0: range(2)})
         partial_sum_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.partial_sum
         )
@@ -398,7 +398,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(1)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
-        new_placement = flow.placement("cuda", {0: range(4)})
+        new_placement = flow.placement("cuda", {0: range(2)})
         partial_sum_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.split(0)
         )

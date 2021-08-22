@@ -84,11 +84,9 @@ Maybe<one::Tensor> Nccl1ToBBoxingInterpreter::InterpretImpl(
         SymbolOf(tensor_meta), partial_sum_input->requires_grad(), false));
     output_tensor.reset(new one::ConsistentTensor(tensor_impl));
   }
-  if (out_parallel_id->has_value()) {
-    const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
-    output_tensor = JUST(one::functional::ToConsistent(partial_sum_input, out_parallel_desc,
-                                                       *sbp_list, GetNoneSbpList()));
-  }
+  const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
+  output_tensor = JUST(one::functional::ToConsistent(partial_sum_input, out_parallel_desc,
+                                                     *sbp_list, GetNoneSbpList()));
   CHECK_OR_RETURN(output_tensor->is_consistent());
   const auto& tensor_placement = JUST(output_tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == out_parallel_desc);
@@ -116,11 +114,9 @@ Maybe<one::Tensor> Nccl1ToSBoxingInterpreter::InterpretImpl(
         SymbolOf(tensor_meta), partial_sum_input->requires_grad(), false));
     output_tensor.reset(new one::ConsistentTensor(tensor_impl));
   }
-  if (out_parallel_id->has_value()) {
-    const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
-    output_tensor = JUST(one::functional::ToConsistent(partial_sum_input, out_parallel_desc,
-                                                       *sbp_list, GetNoneSbpList()));
-  }
+  const auto& sbp_list = JUST(GetSbpList(out_nd_sbp));
+  output_tensor = JUST(one::functional::ToConsistent(partial_sum_input, out_parallel_desc,
+                                                     *sbp_list, GetNoneSbpList()));
   CHECK_OR_RETURN(output_tensor->is_consistent());
   const auto& tensor_placement = JUST(output_tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == out_parallel_desc);
