@@ -943,6 +943,10 @@
   signature: "Tensor (TensorTuple inputs, Int64 dim=0) => Stack"
   bind_python: True
 
+- name: "local_to_consistent"
+  signature: "Tensor LocalToConsistent(Tensor x, *, Placement placement, SbpList sbp, Shape shape, DataType dtype)"
+  bind_python: False
+
 - name: "to_consistent"
   signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp) => ToConsistent"
   bind_python: True
