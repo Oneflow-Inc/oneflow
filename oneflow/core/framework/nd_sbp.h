@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_ND_SBP_H_
 
 #include <vector>
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/decorator.h"
@@ -32,6 +33,8 @@ Maybe<std::vector<std::string>> GetNdSbpStrList(
     const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
 
 Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
+
+Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
 
 Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
 

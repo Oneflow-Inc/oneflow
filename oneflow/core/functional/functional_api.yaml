@@ -128,6 +128,10 @@
   signature: "Tensor ReduceMean(Tensor x, *, Int32List axis, Bool keepdims=False)"
   bind_python: True
 
+- name: "reduce_prod"
+  signature: "Tensor ReduceProd(Tensor x, *, Int32List axis, Bool keepdims=False)"
+  bind_python: True
+
 - name: "transpose"
   signature: "Tensor Transpose(Tensor x, *, Int32List perm)"
   bind_python: True
@@ -1064,6 +1068,14 @@
 - name: "randperm"
   signature: "Tensor Randperm(Int32 n,*,Device device=None, Generator generator=None)"
   bind_python: True
+
+- name: "fused_self_attention"
+  signature: "TensorTuple FusedSelfAttention(Tensor hidden_states, *, Int64 head_size=8, Float alpha=1.0)"
+  bind_python: True
+
+- name: "fused_self_attention_grad"
+  signature: "Tensor FusedSelfAttentionGrad(Tensor query_mul_key_grad, Tensor value_grad, Tensor hidden_states, *, Float alpha=1.0)"
+  bind_python: False
 
 - name: "consistent_randperm"
   signature: "Tensor ConsistentRandperm(Int32 n,*, Placement placement, SbpList sbp_tuple, Generator generator=None)"
