@@ -944,7 +944,7 @@
   bind_python: True
 
 - name: "local_to_consistent"
-  signature: "Tensor (Tensor x, *, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"
   bind_python: False
 
 - name: "to_consistent"
@@ -1055,11 +1055,11 @@
   bind_python: True
 
 - name: "fused_self_attention"
-  signature: "TensorTuple (Tensor hidden_states, *, Int64 head_size=8, Float alpha=1.0) => FusedSelfAttention"
+  signature: "TensorTuple (Tensor hidden_states, Int64 head_size=8, Float alpha=1.0) => FusedSelfAttention"
   bind_python: True
 
 - name: "fused_self_attention_grad"
-  signature: "Tensor (Tensor query_mul_key_grad, Tensor value_grad, Tensor hidden_states, *, Float alpha=1.0) => FusedSelfAttentionGrad"
+  signature: "Tensor (Tensor query_mul_key_grad, Tensor value_grad, Tensor hidden_states, Float alpha=1.0) => FusedSelfAttentionGrad"
   bind_python: False
 
 - name: "consistent_randperm"
