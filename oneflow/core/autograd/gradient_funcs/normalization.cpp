@@ -120,7 +120,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
         in_grads->at(4) = results->at(2);  // beta_diff
       }
     } else {
-      // The normalization op has 5 inputs which are x, gamma and beta.
+      // The normalization op has 3 inputs which are x, gamma and beta.
       in_grads->resize(3);
       if (ctx->gamma_requires_grad) {
         in_grads->at(1) = results->at(1);  // gamma_diff;
