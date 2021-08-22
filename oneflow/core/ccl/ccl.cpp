@@ -105,8 +105,7 @@ Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dty
                                    DeviceCtx* ctx) {
   CHECK_OR_RETURN(IsPODDataType(dtype));
   size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-  TransportToken transport_token =
-      JUST(TransportToken::NewDataTransportToken(GetParallelDesc(dst, DeviceType::kCPU)));
+  TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
   NaiveAsyncTransportCtx transport_ctx(
       transport_token,
       [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
@@ -138,8 +137,7 @@ Maybe<void> Recv<DeviceType::kCPU>(void* out, size_t elem_cnt, DataType dtype, i
                                    DeviceCtx* ctx) {
   CHECK_OR_RETURN(IsPODDataType(dtype));
   size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-  TransportToken transport_token =
-      JUST(TransportToken::NewDataTransportToken(GetParallelDesc(src, DeviceType::kCPU)));
+  TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
   NaiveAsyncTransportCtx transport_ctx(
       transport_token,
       [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
