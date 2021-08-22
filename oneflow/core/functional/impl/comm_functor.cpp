@@ -91,60 +91,24 @@ class AllReduceFunctor {
   }
 };
 
-class SendWithoutMetaFunctor {
- public:
-  SendWithoutMetaFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
-  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr("dst_process_id", dst));
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_expr_, {x}, attrs));
-    return Maybe<void>::Ok();
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_expr_;
-};
-
-class RecvWithoutMetaFunctor {
- public:
-  RecvWithoutMetaFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("recv").Output("out").Build()); }
-  Maybe<Tensor> operator()(int64_t src, const Shape& shape, Symbol<DType> dtype,
-                           Symbol<Device> device, const Optional<one::Tensor>& out) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr("src_process_id", src));
-    JUST(attrs.SetAttr("shape", shape));
-    JUST(attrs.SetAttr("dtype", dtype->data_type()));
-
-    OpExprInterpContext op_expr_interp_context(attrs, device);
-
-    if (out.has_value()) {
-      std::shared_ptr<one::Tensor> out_tensor = JUST(out.value());
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = out_tensor;
-      JUST(OpInterpUtil::Dispatch(*op_expr_, {}, outputs.get(), op_expr_interp_context));
-      return outputs->at(0);
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op_expr_, {}, op_expr_interp_context);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_expr_;
-};
-
 class SendFunctor {
  public:
   SendFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
-  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst) const {
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool send_meta) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr("dst_process_id", dst));
-    std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
-    JUST(ccl::Send<DeviceType::kCPU>(flat_shape.get(), sizeof(*flat_shape), DataType::kChar, dst,
-                                     nullptr));
-    DeviceType device_type = JUST(x->device())->parallel_desc_ptr()->device_type();
-    JUST(ccl::Send<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, dst,
-                                     nullptr));
-    DataType dtype = x->dtype()->data_type();
-    JUST(ccl::Send<DeviceType::kCPU>(&dtype, sizeof(dtype), DataType::kChar, dst, nullptr));
+    if (send_meta) {
+      std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
+      JUST(ccl::Send<DeviceType::kCPU>(flat_shape.get(), sizeof(*flat_shape), DataType::kChar, dst,
+                                       nullptr));
+
+      DataType dtype = x->dtype()->data_type();
+      JUST(ccl::Send<DeviceType::kCPU>(&dtype, sizeof(dtype), DataType::kChar, dst, nullptr));
+
+      DeviceType device_type = JUST(x->device())->parallel_desc_ptr()->device_type();
+      JUST(ccl::Send<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, dst,
+                                       nullptr));
+    }
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_expr_, {x}, attrs));
     return Maybe<void>::Ok();
   }
@@ -156,31 +120,48 @@ class SendFunctor {
 class RecvFunctor {
  public:
   RecvFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("recv").Output("out").Build()); }
-  Maybe<Tensor> operator()(int64_t src, const Optional<one::Tensor>& out) const {
+  Maybe<Tensor> operator()(int64_t src, const Optional<Shape>& optional_shape,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<Symbol<Device>>& optional_device,
+                           const Optional<one::Tensor>& out) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr("src_process_id", src));
-    FlatShape flat_shape;
-    JUST(ccl::Recv<DeviceType::kCPU>(&flat_shape, sizeof(flat_shape), DataType::kChar, src,
-                                     nullptr));
-    DeviceType device_type;
-    JUST(ccl::Recv<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, src,
-                                     nullptr));
-    Symbol<Device> device =
-        JUST(Device::New(Device::Type4DeviceTag(*JUST(DeviceTag4DeviceType(device_type)))));
-    DataType dtype = DataType::kInvalidDataType;
-    JUST(ccl::Recv<DeviceType::kCPU>(&dtype, sizeof(dtype), DataType::kChar, src, nullptr));
-    JUST(attrs.SetAttr("shape", *JUST(flat_shape.ToShape())));
-    JUST(attrs.SetAttr("dtype", dtype));
+    Shape shape;
+    Symbol<DType> dtype;
+    Symbol<Device> device;
+    if (optional_shape.has_value() && optional_dtype.has_value() && optional_device.has_value()) {
+      shape = *JUST(optional_shape.value());
+      dtype = JUST(optional_dtype.value());
+      device = JUST(optional_device.value());
+    } else if (!optional_shape.has_value() && !optional_dtype.has_value()
+               && !optional_device.has_value()) {
+      FlatShape flat_shape{};
+      JUST(ccl::Recv<DeviceType::kCPU>(&flat_shape, sizeof(flat_shape), DataType::kChar, src,
+                                       nullptr));
+      shape = *JUST(flat_shape.ToShape());
+
+      DataType received_dtype = DataType::kInvalidDataType;
+      JUST(ccl::Recv<DeviceType::kCPU>(&received_dtype, sizeof(received_dtype), DataType::kChar,
+                                       src, nullptr));
+      dtype = JUST(DType::Get(received_dtype));
+
+      DeviceType device_type = DeviceType::kInvalidDevice;
+      JUST(ccl::Recv<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, src,
+                                       nullptr));
+      device = JUST(Device::New(Device::Type4DeviceTag(*JUST(DeviceTag4DeviceType(device_type)))));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN()
+          << "shape, dtype and device must all have value or all not have value.";
+    }
+    JUST(attrs.SetAttr("shape", shape));
+    JUST(attrs.SetAttr("dtype", dtype->data_type()));
 
     OpExprInterpContext op_expr_interp_context(attrs, device);
 
     if (out.has_value()) {
       std::shared_ptr<one::Tensor> out_tensor = JUST(out.value());
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
-      CHECK_EQ_OR_RETURN(out_tensor_device->parallel_desc_ptr()->device_type(), device_type);
-      if (device_type == DeviceType::kGPU) {
-        CHECK_EQ_OR_RETURN(out_tensor_device->device_id(), device->device_id());
-      }
+      CHECK_OR_RETURN(out_tensor_device == device);
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = out_tensor;
       JUST(OpInterpUtil::Dispatch(*op_expr_, {}, outputs.get(), op_expr_interp_context));
@@ -197,8 +178,6 @@ class RecvFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AllReduceFunctor>("AllReduce");
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
-  m.add_functor<impl::SendWithoutMetaFunctor>("SendWithoutMeta");
-  m.add_functor<impl::RecvWithoutMetaFunctor>("RecvWithoutMeta");
   m.add_functor<impl::SendFunctor>("Send");
   m.add_functor<impl::RecvFunctor>("Recv");
 };

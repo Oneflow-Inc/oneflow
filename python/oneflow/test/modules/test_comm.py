@@ -51,26 +51,26 @@ class TestComm(flow.unittest.TestCase):
         test_case._test_send_recv(x0)
 
     @flow.unittest.skip_unless_1n2d()
-    def _test_send_recv_without_meta(test_case, x0):
+    def _test_send_recv_without_sending_meta(test_case, x0):
         rank = flow.framework.distribute.get_rank()
         if rank == 0:
             x1 = x0
-            flow.F.send_without_meta(x1, 1)
+            flow.comm.send(x1, 1, send_meta=False)
 
             x2 = x0
-            flow.F.send_without_meta(x2, 1)
+            flow.comm.send(x2, 1, send_meta=False)
         elif rank == 1:
-            x1 = flow.F.recv_without_meta(0, x0.shape, x0.dtype, x0.device)
+            x1 = flow.comm.recv(0, shape=x0.shape, dtype=x0.dtype, device=x0.device)
             test_case.assertTrue(np.array_equal(x1.numpy(), x0.numpy()))
 
             x2 = flow.zeros_like(x0)
-            flow.F.recv_without_meta(0, x0.shape, x0.dtype, x0.device, out=x2)
+            flow.comm.recv(0, shape=x0.shape, dtype=x0.dtype, device=x0.device, out=x2)
             test_case.assertTrue(np.array_equal(x2.numpy(), x0.numpy()))
         else:
             raise ValueError()
 
     @flow.unittest.skip_unless_1n2d()
-    def test_send_recv_without_meta(test_case):
+    def test_send_recv_without_sending_meta(test_case):
         x0 = flow.tensor([[1, 2]])
         test_case._test_send_recv_without_meta(x0)
         x0 = x0.to("cuda")
