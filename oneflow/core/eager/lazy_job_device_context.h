@@ -31,25 +31,25 @@ class LazyJobDeviceCtx final : public DeviceCtx {
   ~LazyJobDeviceCtx() override = default;
 
 #ifdef WITH_CUDA
-  const cudaStream_t& cuda_stream() const override {
+  cudaStream_t cuda_stream() const override {
     UNIMPLEMENTED();
-    return *(const cudaStream_t*)nullptr;
+    return nullptr;
   }
-  const cublasHandle_t& cublas_pmh_handle() const override {
+  cublasHandle_t cublas_pmh_handle() const override {
     UNIMPLEMENTED();
-    return *(const cublasHandle_t*)nullptr;
+    return nullptr;
   }
-  const cublasHandle_t& cublas_tensor_op_math_handle() const override {
+  cublasHandle_t cublas_tensor_op_math_handle() const override {
     UNIMPLEMENTED();
-    return *(const cublasHandle_t*)nullptr;
+    return nullptr;
   }
-  const cublasHandle_t& cublas_pmd_handle() const override {
+  cublasHandle_t cublas_pmd_handle() const override {
     UNIMPLEMENTED();
-    return *(const cublasHandle_t*)nullptr;
+    return nullptr;
   }
-  const cudnnHandle_t& cudnn_handle() const override {
+  cudnnHandle_t cudnn_handle() const override {
     UNIMPLEMENTED();
-    return *(const cudnnHandle_t*)nullptr;
+    return nullptr;
   }
 #endif
 

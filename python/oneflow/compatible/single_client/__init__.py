@@ -19,7 +19,6 @@ import oneflow._oneflow_internal
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
-no_grad = oneflow._oneflow_internal.autograd.no_grad
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
@@ -44,7 +43,6 @@ from oneflow.compatible.single_client.framework import (
 from oneflow.core.job.job_conf_pb2 import JobConfigProto
 from oneflow.core.job.job_set_pb2 import ConfigProto
 
-oneflow._oneflow_internal.DestroyGlobalWatcher()
 oneflow._oneflow_internal.DestroyGlobalForeignCallback()
 oneflow._oneflow_internal.DestroyEnv()
 import time
@@ -116,6 +114,7 @@ def custom_exit(returncode):
 sys.exit = custom_exit
 del custom_exit
 del sys
+from oneflow.compatible.single_client.autograd import no_grad
 import oneflow.compatible.single_client.nn.modules.acosh
 import oneflow.compatible.single_client.nn.modules.activation
 import oneflow.compatible.single_client.nn.modules.argwhere

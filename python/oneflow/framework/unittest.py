@@ -34,18 +34,11 @@ import oneflow.sysconfig
 from oneflow.core.job.env_pb2 import EnvProto
 
 
-class _ClearDefaultSession(object):
-    def setUp(self):
-        oneflow.clear_default_session()
-        oneflow.enable_eager_execution(False)
-
-
 def register_test_cases(
     scope: Dict[str, Any],
     directory: str,
     filter_by_num_nodes: Callable[[bool], int],
     base_class: unittest.TestCase = unittest.TestCase,
-    test_case_mixin=_ClearDefaultSession,
 ) -> None:
     def FilterTestPyFile(f):
         return (
@@ -111,7 +104,7 @@ def has_node_list():
 def node_size():
     node_num_from_env = os.getenv("ONEFLOW_TEST_NODE_NUM", None)
     if node_num_from_env:
-        return node_num_from_env
+        return int(node_num_from_env)
     elif has_node_list():
         node_list_from_env = node_list()
         return len(node_list_from_env)
@@ -336,11 +329,8 @@ class TestCase(unittest.TestCase):
         if log_dir:
             oneflow.env.log_dir(log_dir)
         if _unittest_env_initilized == False:
-            oneflow.env.init()
+            env_util.api_env_init()
             _unittest_env_initilized = True
-        oneflow.clear_default_session()
-        oneflow.enable_eager_execution(eager_execution_enabled())
-        oneflow.experimental.enable_typing_check(typing_check_enabled())
 
 
 def skip_unless(n, d):

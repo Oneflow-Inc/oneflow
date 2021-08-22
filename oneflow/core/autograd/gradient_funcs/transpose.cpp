@@ -22,17 +22,17 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct TransposeInterpState : public OpExprInterpState {
+struct TransposeCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> perm;
   bool requires_grad;
 };
 
-class Transpose : public OpExprGradFunction<TransposeInterpState> {
+class Transpose : public OpExprGradFunction<TransposeCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(TransposeInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(TransposeCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const TransposeInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const TransposeCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -50,7 +50,7 @@ Maybe<void> Transpose::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Transpose::Capture(TransposeInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Transpose::Capture(TransposeCaptureState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -60,7 +60,7 @@ Maybe<void> Transpose::Capture(TransposeInterpState* ctx, const TensorTuple& inp
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Transpose::Apply(const TransposeInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Transpose::Apply(const TransposeCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);

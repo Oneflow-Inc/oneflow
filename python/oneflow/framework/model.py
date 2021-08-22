@@ -28,18 +28,13 @@ from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 
+import oneflow as flow
 import oneflow._oneflow_internal
 import oneflow.framework.dtype as dtype_util
-import oneflow.framework.typing as oneflow_typing
-from oneflow.framework.check_point_v2 import GetCheckpoint, LoadVariables, SaveVarDict
 from oneflow.framework.function_util import FunctionConfig as ExecutionConfig
-from oneflow.framework.function_util import api_oneflow_function
-from oneflow.framework.local_blob import LocalBlob
-from oneflow.framework.session_util import api_clear_default_session
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer as OOPOptimizer
-from oneflow.ops.optimizer import Optimizer
 
 
 class DataModule(Module):
@@ -76,9 +71,9 @@ class NumpyDataModule(DataModule):
                 item, np.ndarray
             ), "model.NumpyDataModule must return a tuple of numpy."
             of_dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(item.dtype)
-            numpy_placeholder = oneflow_typing.Numpy.Placeholder(
-                shape=item.shape, dtype=of_dtype
-            )
+            # numpy_placeholder = oneflow_typing.Numpy.Placeholder(
+            #    shape=item.shape, dtype=of_dtype
+            # )
             data_placeholder_list.append(numpy_placeholder)
         return data_placeholder_list
 
@@ -179,20 +174,14 @@ class Callback(ABC):
 
     def on_training_step_end(
         self,
-        outputs: Optional[
-            Union[LocalBlob, Tuple[LocalBlob, ...], Tensor, Tuple[Tensor, ...]]
-        ],
+        outputs: Optional[Union[Tensor, Tuple[Tensor, ...]]],
         step_idx: int = 0,
         optimizer_idx: int = 0,
     ):
         pass
 
     def on_validation_step_end(
-        self,
-        outputs: Optional[
-            Union[LocalBlob, Tuple[LocalBlob, ...], Tensor, Tuple[Tensor, ...]]
-        ],
-        step_idx: int = 0,
+        self, outputs: Optional[Union[Tensor, Tuple[Tensor, ...]]], step_idx: int = 0,
     ):
         pass
 
@@ -241,7 +230,6 @@ class Model(ABC, Module):
         """ Runs the full training and validation routine.
         """
         self._max_steps = max_steps
-        api_clear_default_session()
         self._sub_models = self._get_and_check_sub_models(
             training_config, validation_config, checkpoint_config, callbacks
         )
@@ -465,7 +453,7 @@ class TrainModel(SubModel):
         job.__name__ = (
             self._model.__class__.__name__ + "_Model_train_job_" + str(optimizer_idx)
         )
-        deco = api_oneflow_function(type="train", function_config=self._cfg.exe_cfg)
+        deco  # = api_oneflow_function(type="train", function_config=self._cfg.exe_cfg)
         return deco(job)
 
     def _construct_numpy_job(self, batch, optimizer_idx):
@@ -487,7 +475,7 @@ class TrainModel(SubModel):
             + "_Model_train_numpy_job_"
             + str(optimizer_idx)
         )
-        deco = api_oneflow_function(type="train", function_config=self._cfg.exe_cfg)
+        deco  # = api_oneflow_function(type="train", function_config=self._cfg.exe_cfg)
         return deco(job)
 
 
@@ -547,7 +535,7 @@ class ValidateModel(SubModel):
             return self._model.validation_step(batch)
 
         job.__name__ = self._model.__class__.__name__ + "_Model_eval_job"
-        deco = api_oneflow_function(type="predict", function_config=self._cfg.exe_cfg)
+        deco  # = api_oneflow_function(type="predict", function_config=self._cfg.exe_cfg)
         return deco(job)
 
     def _construct_numpy_job(self, batch: Tuple[np.ndarray, ...] = None):
@@ -556,7 +544,7 @@ class ValidateModel(SubModel):
 
         _infer_job_signature(self._cfg.data, batch, 0, job)
         job.__name__ = self._model.__class__.__name__ + "_Model_eval_numpy_job"
-        deco = api_oneflow_function(type="predict", function_config=self._cfg.exe_cfg)
+        deco  # = api_oneflow_function(type="predict", function_config=self._cfg.exe_cfg)
         return deco(job)
 
 
@@ -585,12 +573,14 @@ class CheckpointModel(SubModel):
     def _load_checkpoint(self, dirpath: str):
         """Load model states from a checkpoint.
         """
-        LoadVariables(GetCheckpoint(path=dirpath))
+        stat_dict = flow.load(path=dirpath)
+        self._model.load_state_dict(stat_dict)
 
     def _save_checkpoint(self, dirpath: str):
         """Save model states as a checkpoint.
         """
-        SaveVarDict(path=dirpath)
+        stat_dict = self._model.state_dict()
+        flow.save(stat_dict, dirpath)
 
 
 class TrainModelOOPStyle(SubModel):
@@ -715,14 +705,14 @@ class CheckpointModelOOPStyle(SubModel):
     def _load_checkpoint(self, dirpath: str):
         """Load model states from a checkpoint.
         """
-        stat_dict = GetCheckpoint(path=dirpath)
+        stat_dict = flow.load(path=dirpath)
         self._model.load_state_dict(stat_dict)
 
     def _save_checkpoint(self, dirpath: str):
         """Save model states as a checkpoint.
         """
         stat_dict = self._model.state_dict()
-        SaveVarDict(path=dirpath, var_dict=stat_dict)
+        flow.save(stat_dict, dirpath)
 
 
 def _infer_job_signature(data_module, batch, optimizer_idx, job):

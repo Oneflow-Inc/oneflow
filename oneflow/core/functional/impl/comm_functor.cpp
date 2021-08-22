@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
@@ -33,6 +34,19 @@ namespace one {
 namespace functional {
 
 namespace impl {
+class BroadcastFunctor {
+ public:
+  BroadcastFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    std::string device_type_str = JUST(x->device())->type();
+    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
+    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kGPU : DeviceType::kCPU;
+    const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
+    return one::Broadcast(x, parallel_desc);
+  }
+};
+
 class AllReduceFunctor {
  public:
   AllReduceFunctor() = default;
@@ -75,7 +89,10 @@ class AllReduceFunctor {
 };
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::AllReduceFunctor>("AllReduce"); };
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::AllReduceFunctor>("AllReduce");
+  m.add_functor<impl::BroadcastFunctor>("Broadcast");
+};
 
 }  // namespace functional
 }  // namespace one

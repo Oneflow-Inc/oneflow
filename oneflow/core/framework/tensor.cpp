@@ -32,8 +32,8 @@ namespace one {
 
 Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
-  return std::dynamic_pointer_cast<MirroredTensor>(
-      JUST(functional::Constant(*shape_, functional::Scalar(0), dtype_, device_)));
+  return std::dynamic_pointer_cast<MirroredTensor>(JUST(functional::Constant(
+      *shape_, functional::Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
 }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
@@ -50,17 +50,6 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
         std::make_shared<EagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<MirroredTensor>(impl);
   }
-}
-
-/* static */ Maybe<MirroredTensor> MirroredTensor::MakeEagerTensor(
-    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
-    const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf) {
-  const auto& blob_desc = eager_blob_object->blob_desc();
-  const auto& tensor_meta =
-      std::make_shared<MirroredTensorMeta>(blob_desc.shape_ptr(), blob_desc.data_type(), device);
-  auto* tensor_impl = new EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf);
-  JUST(tensor_impl->InitEagerBlobObjectAndTensorStorage(eager_blob_object, tensor_storage));
-  return std::make_shared<MirroredTensor>(std::shared_ptr<MirroredTensorImpl>(tensor_impl));
 }
 
 bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
@@ -83,13 +72,14 @@ Maybe<Tensor> MirroredTensor::clone() const {
   return JUST(functional::Copy(input, device_type, device_id));
 }
 
-Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
-    const std::shared_ptr<const Shape>& shape, DataType dtype,
-    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc,
-    bool is_lazy, bool requires_grad, bool is_leaf) {
+Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                                     DataType dtype, Symbol<cfg::NdSbp> nd_sbp,
+                                                     Symbol<ParallelDesc> parallel_desc,
+                                                     bool is_lazy, bool requires_grad,
+                                                     bool is_leaf) {
   std::shared_ptr<ConsistentTensorImpl> impl;
   Symbol<ConsistentTensorMeta> consistent_tensor_meta(
-      ConsistentTensorMeta(shape, dtype, parallel_distribution, parallel_desc));
+      ConsistentTensorMeta(shape, dtype, nd_sbp, parallel_desc));
   if (is_lazy) {
     impl =
         std::make_shared<LazyConsistentTensorImpl>(consistent_tensor_meta, requires_grad, is_leaf);

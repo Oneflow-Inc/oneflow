@@ -49,7 +49,7 @@ def api_get_variable(
     trainable: Optional[bool] = None,
     model_name: Optional[str] = None,
     random_seed: Optional[int] = None,
-    parallel_distribution: Optional[
+    nd_sbp: Optional[
         Union[
             Sequence[oneflow._oneflow_internal.distribute.Distribute],
             Sequence[str],
@@ -155,13 +155,13 @@ def api_get_variable(
 
     """
     if distribute is not None:
-        assert parallel_distribution is None
-        parallel_distribution = [distribute]
-    if parallel_distribution is None:
-        parallel_distribution = []
-    if isinstance(parallel_distribution, str):
-        parallel_distribution = parallel_distribution.split(",")
-    assert isinstance(parallel_distribution, (list, tuple))
+        assert nd_sbp is None
+        nd_sbp = [distribute]
+    if nd_sbp is None:
+        nd_sbp = []
+    if isinstance(nd_sbp, str):
+        nd_sbp = nd_sbp.split(",")
+    assert isinstance(nd_sbp, (list, tuple))
 
     def distribute_to_str(dist):
         if dist is None:
@@ -175,7 +175,7 @@ def api_get_variable(
         else:
             raise ValueError("unsupported distribute")
 
-    parallel_distribution = list(map(distribute_to_str, parallel_distribution))
+    nd_sbp = list(map(distribute_to_str, nd_sbp))
     api = enable_if.unique([get_lazy_variable, get_eager_variable])
     return api(
         name,
@@ -186,7 +186,7 @@ def api_get_variable(
         trainable=trainable,
         model_name=model_name,
         random_seed=random_seed,
-        parallel_distribution=parallel_distribution,
+        nd_sbp=nd_sbp,
         reuse=reuse,
     )
 
@@ -201,7 +201,7 @@ def get_eager_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    parallel_distribution=None,
+    nd_sbp=None,
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -228,7 +228,7 @@ def get_eager_variable(
             trainable=trainable,
             model_name=model_name,
             random_seed=random_seed,
-            parallel_distribution=parallel_distribution,
+            nd_sbp=nd_sbp,
         )
         op_attribute = compile_context.CurJobAddConsistentOp(op_conf)
         if var_blob is None:
@@ -257,7 +257,7 @@ def get_lazy_variable(
     trainable=None,
     model_name=None,
     random_seed=None,
-    parallel_distribution=None,
+    nd_sbp=None,
     reuse=True,
 ):
     assert isinstance(name, str)
@@ -284,7 +284,7 @@ def get_lazy_variable(
             trainable=trainable,
             model_name=model_name,
             random_seed=random_seed,
-            parallel_distribution=parallel_distribution,
+            nd_sbp=nd_sbp,
         )
         job_var_blob = _CreateVariableBlob(op_conf)
         assert isinstance(job_var_blob, oneflow._oneflow_internal.LazyConsistentBlob)
@@ -308,7 +308,7 @@ def GenerateVariableOpConf(
     trainable=None,
     model_name=None,
     random_seed=None,
-    parallel_distribution=None,
+    nd_sbp=None,
 ):
     op_conf = op_conf_util.OperatorConf()
     op_conf.name = name
@@ -339,9 +339,9 @@ def GenerateVariableOpConf(
         op_conf.variable_conf.trainable = trainable
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name
-    if parallel_distribution is None:
-        parallel_distribution = []
-    op_conf.variable_conf.parallel_distribution.extend(parallel_distribution)
+    if nd_sbp is None:
+        nd_sbp = []
+    op_conf.variable_conf.nd_sbp.extend(nd_sbp)
     if random_seed is not None:
         op_conf.variable_conf.random_seed = random_seed
     op_conf.variable_conf.out = "out"
