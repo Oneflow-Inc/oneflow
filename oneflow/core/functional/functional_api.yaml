@@ -944,7 +944,7 @@
   bind_python: True
 
 - name: "local_to_consistent"
-  signature: "Tensor LocalToConsistent(Tensor x, *, Placement placement, SbpList sbp, Shape shape, DataType dtype)"
+  signature: "Tensor (Tensor x, *, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"
   bind_python: False
 
 - name: "to_consistent"
