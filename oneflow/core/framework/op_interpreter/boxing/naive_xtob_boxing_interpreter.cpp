@@ -31,13 +31,13 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetBroadcastSumNdSbp() {
+Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp() {
   cfg::NdSbp broadcast_nd_sbp;
   broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
   return SymbolOf(broadcast_nd_sbp);
 }
 
-auto* CachedGetBroadcastSumNdSbp = DECORATE(&GetBroadcastSumNdSbp, ThreadLocal);
+auto* CachedGetBroadcastNdSbp = DECORATE(&GetBroadcastNdSbp, ThreadLocal);
 
 Maybe<int64_t> GetBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
                                 Symbol<ParallelDesc> dst_parallel_desc) {
@@ -79,7 +79,7 @@ Maybe<one::Tensor> NcclXToBBoxingInterpreter::InterpretImpl(
     Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp));
-  Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetBroadcastSumNdSbp());
+  Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetBroadcastNdSbp());
   const auto& new_tag_in_parallel_desc =
       JUST(ReplaceDeviceType(in_parallel_desc, out_parallel_desc->device_type()));
   std::shared_ptr<one::Tensor> broadcast_input = JUST(one::functional::ToConsistent(
