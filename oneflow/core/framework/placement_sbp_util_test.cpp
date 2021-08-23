@@ -27,6 +27,10 @@ namespace test {
 namespace {
 
 struct GlobaProcessCtxScope final {
+  GlobaProcessCtxScope(GlobaProcessCtxScope&) = default;
+  GlobaProcessCtxScope(GlobaProcessCtxScope&&) = default;
+  GlobaProcessCtxScope& operator=(GlobaProcessCtxScope&) = default;
+  GlobaProcessCtxScope& operator=(GlobaProcessCtxScope&&) = default;
   GlobaProcessCtxScope(int64_t node_size, int64_t world_size) {
     Global<ProcessCtx>::New();
     auto* ctx = Global<ProcessCtx>::Get();
