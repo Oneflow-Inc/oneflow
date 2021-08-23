@@ -131,8 +131,6 @@ def compare_with_numpy_adam(
     train_by_numpy()
 
     test_case.assertTrue(np.allclose(of_res_list, np_res_list, rtol=0.001, atol=0.001))
-    # print("oneflow out is: ", of_res_list)
-    # print("numpy out is: ", np_res_list)
 
 
 def compare_with_numpy_adam_clip_grad(
