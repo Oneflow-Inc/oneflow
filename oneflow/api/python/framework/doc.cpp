@@ -22,20 +22,21 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-py::object AddFunctionDoc(const py::object& f, const std::string& doc_string) {
+py::object AddFunctionDoc(py::object f, const std::string& doc_string) {
   static std::vector<std::string> all_doc_strings;
   all_doc_strings.emplace_back(doc_string);
   const char* doc_str = all_doc_strings.back().c_str();
-  PyObject* fptr = f.ptr();
-  if (PyCFunction_Check(fptr)) {
-    auto* f = (PyCFunctionObject*)fptr;
+  PyObject* obj = f.ptr();
+  if (PyCFunction_Check(obj)) {
+    auto* f = (PyCFunctionObject*)obj;
     if (f->m_ml->ml_doc) {
       THROW(RuntimeError) << "function " << f->m_ml->ml_name << " already has a docstring.";
     }
     f->m_ml->ml_doc = doc_str;
   } else {
-    THROW(RuntimeError) << "function is " << Py_TYPE(fptr)->tp_name << ", not a valid PyCFunction.";
+    THROW(RuntimeError) << "function is " << Py_TYPE(obj)->tp_name << ", not a valid PyCFunction.";
   }
+  f.inc_ref();
   return f;
 }
 
