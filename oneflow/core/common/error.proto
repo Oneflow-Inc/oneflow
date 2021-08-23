@@ -155,9 +155,8 @@ message ErrorProto {
     ValueError value_error = 27;
     IndexError index_error = 28;
     TypeError type_error = 29;
-	RuntimeError runtime_error = 30;
+    RuntimeError runtime_error = 30;
     TimeoutError timeout_error = 40;
-
     
     JobNameExistError job_name_exist_error = 100;
     JobNameEmptyError job_name_empty_error = 101;
