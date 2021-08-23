@@ -200,6 +200,26 @@ def reserved_device_mem_mbyte(val):
     sess.config_proto.resource.reserved_device_mem_mbyte = val
 
 
+def api_enable_cudnn_fused_normalization_add_relu(val: bool) -> None:
+    """Whether enable cudnn_fused_normalization_add_relu.
+
+    Args:
+        val (bool): whether enable or not
+    """
+    return enable_if.unique([enable_cudnn_fused_normalization_add_relu, do_nothing])(
+        val
+    )
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_cudnn_fused_normalization_add_relu(val):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.cudnn_conf.enable_cudnn_fused_normalization_add_relu = (
+        val
+    )
+
+
 def api_enable_debug_mode(val: bool) -> None:
     """Whether use debug mode or not.
 
