@@ -1268,11 +1268,12 @@ class TripletMarginLoss(Module):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> triplet_loss = flow.nn.TripletMarginLoss(margin=1.0, p=2)
-        >>> anchor = torch.randn(100, 128, requires_grad=True)
-        >>> positive = torch.randn(100, 128, requires_grad=True)
-        >>> negative = torch.randn(100, 128, requires_grad=True)
-        >>> output = triplet_loss(anchor, positive, negative)
+        >>> anchor = np.array([[1, -1, 1],[-1, 1, -1], [1, 1, 1]])
+        >>> positive = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        >>> negative = np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]])
+        >>> output = triplet_loss(flow.Tensor(anchor), flow.Tensor(positive), flow.Tensor(negative))
         >>> output
+        tensor(6.2971, dtype=oneflow.float32)
 
     """
     def __init__(self, margin: float=1.0, p: float=2.0, eps: float=1e-6, swap: bool=False, size_average=None, reduce=None, reduction: str="mean") -> None:
@@ -1291,10 +1292,10 @@ class TripletMarginLoss(Module):
 
     def p_norm(self, x, p=2.0):
         if p == 2.0:
-            norm = flow.sqrt(flow.sum(flow.square(flow.abs(x)), axis=1))
+            norm = flow.sqrt(flow.sum(flow.square(flow.abs(x)), dim=1))
         else:
             p_constant = flow.constant_like(like=(flow.abs(x)), value=p, dtype=flow.float32)
-            sum = flow.sum(flow.pow(flow.abs(x), p_constant), axis=1)
+            sum = flow.sum(flow.pow(flow.abs(x), p_constant), dim=1)
             norm = flow.pow(sum, flow.constant_like(sum, value=1.0 / p, dtype=flow.float32))
         return norm
 
@@ -1302,9 +1303,9 @@ class TripletMarginLoss(Module):
         da_p = self.p_norm(anchor - positive + self.eps, p=self.p)
         da_n = self.p_norm(anchor - negative + self.eps, p=self.p)
         if self.swap:
-            distance_swap = flow.sum(self.p_norm(positive - negative + self.eps, p=self.p), axis=1)
+            distance_swap = flow.sum(self.p_norm(positive - negative + self.eps, p=self.p), dim=1)
             da_n = flow.minimum(da_n, distance_swap)
-        triplet_loss = flow.clip(self.margin + da_p - da_n, min_value=0.0)
+        triplet_loss = flow.clip(self.margin + da_p - da_n, min=0.0)
 
         if self.reduction == "mean":
             return flow.mean(triplet_loss)
