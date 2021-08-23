@@ -55,6 +55,8 @@ class AdamW(Optimizer):
         eps (float, optional): term added to the denominator to improve
             numerical stability (default: 1e-8)
         weight_decay (float, optional): weight decay (L2 penalty) (In the equation is λ, default: 0)
+        amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
+        do_bias_correction (bool, optional): Whether do bias correction (default: True)
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980

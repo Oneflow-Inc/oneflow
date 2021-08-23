@@ -533,16 +533,6 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
 
-    /*
-    DeviceCtx* ctx, float beta1, float beta2, float epsilon, float weight_decay,
-                     bool amsgrad, bool do_bias_correction,
-                     float lr, int64_t train_step_val,
-                     int64_t num_instance, int64_t feature_size, int64_t lower_bound,
-                     int64_t upper_bound, const IDX* num_unique_instance,
-                     const float* learning_rate, const int64_t* train_step, const K* indices, const
-    T* values, T* model, T* m, T* v, T* max_v)
-    */
-
     MdUpdateUtilT::Update(
         ctx->device_ctx(), beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
         learning_rate_val, train_step_val, num_indices, feature_size, kernel_state->lower(),
