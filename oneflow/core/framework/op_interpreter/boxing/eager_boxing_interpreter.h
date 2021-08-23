@@ -63,8 +63,8 @@ using BoxingCheckerT = std::function<Maybe<void>(Symbol<PlacedNdSbp> in, Symbol<
 using BoxingFunctionT = std::function<Maybe<one::Tensor>(
     const std::shared_ptr<one::Tensor>& input, Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out)>;
 
-Maybe<BoxingFunctionT> GetBoxingFunction(const std::string& method_name,
-                                         Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out);
+Maybe<BoxingFunctionT> GetBoxingFunction(const std::string& method_name, Symbol<PlacedNdSbp> in,
+                                         Symbol<PlacedNdSbp> out);
 
 void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT& Check,
                             const BoxingFunctionT& BoxingFunction);
@@ -101,9 +101,10 @@ class BoxingExprIf {
   BoxingExprIf(const BoxingExprIf&) = default;
   BoxingExprIf(BoxingExprIf&&) = default;
   virtual ~BoxingExprIf() = default;
-  
+
   virtual Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const = 0;
-  virtual Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const = 0;
+  virtual Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
+                                                   Symbol<PlacedNdSbp> out) const = 0;
 
  protected:
   BoxingExprIf() = default;
@@ -116,10 +117,11 @@ class AtomicBoxingExpr final : public BoxingExprIf {
   ~AtomicBoxingExpr() override = default;
 
   explicit AtomicBoxingExpr(const std::string& boxing_name)
-    : BoxingExprIf(), boxing_name_(boxing_name) {}
+      : BoxingExprIf(), boxing_name_(boxing_name) {}
 
   Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
-  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
+                                           Symbol<PlacedNdSbp> out) const override;
 
  private:
   const std::string boxing_name_;
@@ -131,14 +133,17 @@ class DivideAndConquerBoxingExpr final : public BoxingExprIf {
   DivideAndConquerBoxingExpr(DivideAndConquerBoxingExpr&&) = delete;
   ~DivideAndConquerBoxingExpr() override = default;
 
-  explicit DivideAndConquerBoxingExpr(
-      const std::shared_ptr<BoxingDividor>& boxing_dividor,
-      const std::shared_ptr<BoxingExprIf>& lhs_conquer,
-      const std::shared_ptr<BoxingExprIf>& rhs_conquer)
-    : BoxingExprIf(), boxing_dividor_(boxing_dividor), lhs_conquer_(lhs_conquer), rhs_conquer_(rhs_conquer) {}
+  explicit DivideAndConquerBoxingExpr(const std::shared_ptr<BoxingDividor>& boxing_dividor,
+                                      const std::shared_ptr<BoxingExprIf>& lhs_conquer,
+                                      const std::shared_ptr<BoxingExprIf>& rhs_conquer)
+      : BoxingExprIf(),
+        boxing_dividor_(boxing_dividor),
+        lhs_conquer_(lhs_conquer),
+        rhs_conquer_(rhs_conquer) {}
 
   Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
-  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
+                                           Symbol<PlacedNdSbp> out) const override;
 
  private:
   const std::shared_ptr<BoxingDividor> boxing_dividor_;
@@ -152,13 +157,13 @@ class OrBoxingExpr final : public BoxingExprIf {
   OrBoxingExpr(OrBoxingExpr&&) = delete;
   ~OrBoxingExpr() override = default;
 
-  explicit OrBoxingExpr(
-      const std::shared_ptr<BoxingExprIf>& lhs_boxing,
-      const std::shared_ptr<BoxingExprIf>& rhs_boxing)
-    : BoxingExprIf(), lhs_boxing_(lhs_boxing), rhs_boxing_(rhs_boxing) {}
+  explicit OrBoxingExpr(const std::shared_ptr<BoxingExprIf>& lhs_boxing,
+                        const std::shared_ptr<BoxingExprIf>& rhs_boxing)
+      : BoxingExprIf(), lhs_boxing_(lhs_boxing), rhs_boxing_(rhs_boxing) {}
 
   Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
-  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
+                                           Symbol<PlacedNdSbp> out) const override;
 
  private:
   const std::shared_ptr<BoxingExprIf> lhs_boxing_;
@@ -166,16 +171,20 @@ class OrBoxingExpr final : public BoxingExprIf {
 };
 
 Maybe<BoxingExprIf> BoxingExpr(const std::string& boxing_name);
-Maybe<BoxingExprIf> BoxingExpr(const std::shared_ptr<BoxingDividor>& boxing_dividor, const std::string& lhs_conquer, const std::string& rhs_conquer);
-Maybe<BoxingExprIf> BoxingExpr(
-    const std::shared_ptr<BoxingDividor>& boxing_dividor, const std::shared_ptr<BoxingExprIf>& lhs_conquer, const std::string& rhs_conquer);
-Maybe<BoxingExprIf> BoxingExpr(
-    const std::shared_ptr<BoxingDividor>& boxing_dividor, const std::string& lhs_conquer, const std::shared_ptr<BoxingExprIf>& rhs_conquer);
-Maybe<BoxingExprIf> BoxingExpr(
-    const std::shared_ptr<BoxingDividor>& boxing_dividor, const std::shared_ptr<BoxingExprIf>& lhs_conquer, const std::shared_ptr<BoxingExprIf>& rhs_conquer);
+Maybe<BoxingExprIf> BoxingExpr(const std::shared_ptr<BoxingDividor>& boxing_dividor,
+                               const std::string& lhs_conquer, const std::string& rhs_conquer);
+Maybe<BoxingExprIf> BoxingExpr(const std::shared_ptr<BoxingDividor>& boxing_dividor,
+                               const std::shared_ptr<BoxingExprIf>& lhs_conquer,
+                               const std::string& rhs_conquer);
+Maybe<BoxingExprIf> BoxingExpr(const std::shared_ptr<BoxingDividor>& boxing_dividor,
+                               const std::string& lhs_conquer,
+                               const std::shared_ptr<BoxingExprIf>& rhs_conquer);
+Maybe<BoxingExprIf> BoxingExpr(const std::shared_ptr<BoxingDividor>& boxing_dividor,
+                               const std::shared_ptr<BoxingExprIf>& lhs_conquer,
+                               const std::shared_ptr<BoxingExprIf>& rhs_conquer);
 
-std::shared_ptr<BoxingExprIf> operator|(
-    const std::shared_ptr<BoxingExprIf>& lhs_boxing, const std::shared_ptr<BoxingExprIf>& rhs_boxing) ;
+std::shared_ptr<BoxingExprIf> operator|(const std::shared_ptr<BoxingExprIf>& lhs_boxing,
+                                        const std::shared_ptr<BoxingExprIf>& rhs_boxing);
 
 Maybe<BoxingExprIf> OptionalBoxing(const std::string& boxing_mame);
 

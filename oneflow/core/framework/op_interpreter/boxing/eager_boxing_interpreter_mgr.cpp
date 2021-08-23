@@ -72,21 +72,18 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
 namespace {
 
 Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_boxing_expr) {
-  return JUST(BoxingExpr(
-            JUST(ReplaceInDeviceType(DeviceType::kGPU)),
-            JUST(OptionalBoxing("cuda-copy-h2d")),
-            JUST(BoxingExpr(
-                JUST(ReplaceOutDeviceType(DeviceType::kGPU)),
-                  core_boxing_expr, JUST(OptionalBoxing("cuda-copy-d2h"))))));
+  return JUST(
+      BoxingExpr(JUST(ReplaceInDeviceType(DeviceType::kGPU)), JUST(OptionalBoxing("cuda-copy-h2d")),
+                 JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kGPU)), core_boxing_expr,
+                                 JUST(OptionalBoxing("cuda-copy-d2h"))))));
 }
 
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
-  const auto& core = JUST(BoxingExpr("identity"))
-                     | JUST(BoxingExpr("flatten-hierarchy"));
+  const auto& core = JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"));
   return core | JUST(OptionalCudaCopy(core));
 }
 
-}
+}  // namespace
 
 static constexpr auto* MainBoxingExpr = DECORATE(&RawMainBoxingExpr, ThreadLocal);
 

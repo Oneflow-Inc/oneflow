@@ -44,14 +44,14 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
   return lhs == JUST(ReplaceDeviceType(rhs, lhs->device_type()));
 }
 
-}
+}  // namespace
 
 Maybe<void> CheckCudaCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
   CHECK_OR_RETURN(equal);
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
   CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kGPU);
-  CHECK_EQ_OR_RETURN(in->nd_sbp(), out->nd_sbp());
+  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();
 }
 
@@ -60,12 +60,12 @@ Maybe<void> CheckCudaCopyD2H(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_OR_RETURN(equal);
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
   CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kCPU);
-  CHECK_EQ_OR_RETURN(in->nd_sbp(), out->nd_sbp());
+  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();
 }
 
-Maybe<one::Tensor> CudaCopy(const std::shared_ptr<one::Tensor>& tensor,
-                            Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> CudaCopy(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                            Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
