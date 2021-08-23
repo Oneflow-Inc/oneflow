@@ -1426,9 +1426,9 @@ class ElementwiseMaximumGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class BroadcastDivGradFunctor {
+class DivGradFunctor {
  public:
-  BroadcastDivGradFunctor() {
+  DivGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_div_grad")
                          .Input("dz")
                          .Input("z")
@@ -1613,7 +1613,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CastLikeFunctor>("CastLike");
   m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
   m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
-  m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
+  m.add_functor<impl::DivGradFunctor>("DivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
