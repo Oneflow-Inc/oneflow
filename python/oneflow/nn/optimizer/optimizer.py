@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, Union
 
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
+from oneflow.nn.utils.clip_grad import clip_grad_norm_
 
 
 class ParamGroup(object):
@@ -34,12 +35,20 @@ class ParamGroup(object):
         for key in self._options:
             if key in parameters:
                 self._options[key] = parameters[key]
+        self._enable_clip_grad = False
+        if "clip_grad_max_norm" in parameters and "clip_grad_norm_type" in parameters:
+            self._enable_clip_grad = True
+            self._options["clip_grad_max_norm"] = parameters["clip_grad_max_norm"]
+            self._options["clip_grad_norm_type"] = parameters["clip_grad_norm_type"]
 
     def __getitem__(self, key):
         return self._options[key]
 
     def __setitem__(self, key, value):
         self._options[key] = value
+
+    def __contains__(self, key):
+        return self._options.__contains__(key)
 
     @property
     def options(self):
@@ -70,6 +79,22 @@ class Optimizer(object):
 
     def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
         raise NotImplementedError()
+
+    def clip_grad(self):
+        r"""Clips the gradient of parameters in param_groups.
+        """
+        for param_group in self.param_groups:
+            if param_group._enable_clip_grad:
+                clip_grad_norm_(
+                    param_group.parameters,
+                    param_group["clip_grad_max_norm"],
+                    param_group["clip_grad_norm_type"],
+                    True,
+                )
+            else:
+                warnings.warn(
+                    "To enable clip_grad, passing the `clip_grad_max_norm` and `clip_grad_norm_type` parameters when instantializing the Optimizer."
+                )
 
     def zero_grad(self, set_to_none: bool = False):
         """Sets the gradients of all optimized torch.Tensor s to zero.
@@ -136,3 +161,17 @@ class Optimizer(object):
             raise TypeError(
                 f"params argument given to the optimizer should be an iterable of Tensors or dicts, but got {type(parameters)}"
             )
+
+    def _generate_grad_clip_conf_for_optim_conf(self, param_group, optimizer_conf):
+        if param_group._enable_clip_grad:
+            if (
+                param_group["clip_grad_max_norm"] == 1.0
+                and param_group["clip_grad_norm_type"] == 2.0
+            ):
+                optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm().set_clip_norm(
+                    param_group["clip_grad_max_norm"]
+                )
+            else:
+                warnings.warn(
+                    "For now, nn.Graph only support clip grad with `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`."
+                )

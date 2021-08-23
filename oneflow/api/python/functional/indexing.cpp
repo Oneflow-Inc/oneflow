@@ -34,7 +34,7 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
     *step = 1;
   } else {
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->step, step))
-        << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
+        << "Invalid slice " << JUST(PyStringAsString(PyObject_Repr(object)));
     CHECK_NE_OR_RETURN(*step, 0) << "slice step cannot be zero.";
     if (*step < -PY_SSIZE_T_MAX) *step = -PY_SSIZE_T_MAX;
   }
@@ -42,13 +42,13 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
     *start = *step < 0 ? PY_SSIZE_T_MAX : 0;
   } else {
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->start, start))
-        << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
+        << "Invalid slice " << JUST(PyStringAsString(PyObject_Repr(object)));
   }
   if (obj->stop == Py_None) {
     *stop = *step < 0 ? PY_SSIZE_T_MIN : PY_SSIZE_T_MAX;
   } else {
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->stop, stop))
-        << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
+        << "Invalid slice " << JUST(PyStringAsString(PyObject_Repr(object)));
   }
   return Maybe<void>::Ok();
 }
@@ -148,19 +148,20 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   const DataType dtype = JUST(InferScalarType(object));
   const auto& sizes = JUST(InferArraySizes(object));
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor = JUST(functional::Empty(*sizes, dtype, device));
+  const auto& tensor = JUST(functional::Empty(*sizes, CHECK_JUST(DType::Get(dtype)), device));
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
   auto handle = std::shared_ptr<PyObject>(PyObjectPtr(object));
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        JUST(tensor->AsMirroredTensor()),
-        [handle](uint64_t of_blob_ptr) {
-          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
-        },
-        "mut"));
-    return Maybe<void>::Ok();
+  const auto& callback =
+      std::make_shared<std::function<void(uint64_t)>>([handle](uint64_t of_blob_ptr) {
+        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
+      });
+  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(JUST(tensor->AsMirroredTensor()), sc, callback,
+                                               "mut");
+    });
   }));
   return tensor;
 }
@@ -180,7 +181,7 @@ Maybe<IndexItem> UnpackIndexItem(PyObject* object) {
     return std::make_shared<IndexItem>(NoneIndex{});
   } else if (PyTensorCheck(object)) {
     auto obj = py::reinterpret_borrow<py::object>(object);
-    return std::make_shared<IndexItem>(*JUST(detail::cast<std::shared_ptr<Tensor>>(obj)));
+    return std::make_shared<IndexItem>(py::cast<std::shared_ptr<Tensor>>(obj));
   } else if (PySequence_Check(object)) {
     return std::make_shared<IndexItem>(JUST(ConvertToIndexingTensor(object)));
   }
