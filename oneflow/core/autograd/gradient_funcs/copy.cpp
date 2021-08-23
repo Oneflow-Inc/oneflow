@@ -23,12 +23,12 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct CopyOpExprInterpState : public OpExprInterpState {
+struct CopyCaptureState : public AutoGradCaptureState {
   std::string device_type;
   int64_t device_id;
 };
 
-class Copy : public OpExprGradFunction<CopyOpExprInterpState> {
+class Copy : public OpExprGradFunction<CopyCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -38,14 +38,14 @@ class Copy : public OpExprGradFunction<CopyOpExprInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(CopyOpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+  Maybe<void> Capture(CopyCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
     ctx->device_type = JUST(inputs.at(0)->device())->type();
     ctx->device_id = JUST(inputs.at(0)->device())->device_id();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CopyOpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CopyCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
     MutableAttrMap attrs;

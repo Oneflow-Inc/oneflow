@@ -44,6 +44,7 @@ class Error final {
   static Error DeviceTagNotFoundError();
   static Error ValueError(const std::string& error_summary);
   static Error IndexError();
+  static Error TypeError();
   static Error TimeoutError();
   static Error JobNameExistError();
   static Error JobNameEmptyError();
@@ -109,6 +110,18 @@ Error& operator<<(Error& error, const T& x) {
 template<typename T>
 Error&& operator<<(Error&& error, const T& x) {
   error << x;
+  return std::move(error);
+}
+
+template<>
+inline Error&& operator<<(Error&& error, const std::stringstream& x) {
+  error << x.str();
+  return std::move(error);
+}
+
+template<>
+inline Error&& operator<<(Error&& error, const std::ostream& x) {
+  error << x.rdbuf();
   return std::move(error);
 }
 

@@ -118,12 +118,16 @@ class SGD(Optimizer):
             return loss
 
     def generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
-            lr = param_group["lr"]
+            lr = (
+                param_group["initial_lr"]
+                if "initial_lr" in param_group
+                else param_group["lr"]
+            )
             beta = param_group["momentum"]
             l2 = param_group["weight_decay"]
-            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
 
             optimizer_conf.set_base_learning_rate(lr)
             if beta == 0:
@@ -131,7 +135,12 @@ class SGD(Optimizer):
             else:
                 optimizer_conf.mutable_momentum_conf().set_beta(beta)
 
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
                 if param.requires_grad:
                     optimizer_conf.add_variable_op_names(vars_conf[param].name)
+
+            new_opt_confs.append(optimizer_conf)
+        return new_opt_confs
