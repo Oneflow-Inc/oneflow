@@ -34,7 +34,7 @@ class SpinCounter final {
   ~SpinCounter() = default;
 
   explicit SpinCounter(int64_t cnt_val)
-      : cnt_val_(cnt_val), timeout_seconds_(5 * 60), heartbeat_interval_seconds_(0) {}
+      : cnt_val_(cnt_val), timeout_seconds_(5 * 60), heartbeat_interval_seconds_(3) {}
   SpinCounter(int64_t cnt_val, int64_t timeout_seconds, int64_t heartbeat_interval_seconds)
       : cnt_val_(cnt_val),
         timeout_seconds_(timeout_seconds),
