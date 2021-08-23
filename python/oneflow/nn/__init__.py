@@ -90,6 +90,7 @@ from oneflow.nn.modules.loss import (
     NLLLoss,
     SmoothL1Loss,
     CombinedMarginLoss,
+    TripletMarginLoss,
 )
 from oneflow.nn.modules.normalization import GroupNorm, LayerNorm
 from oneflow.nn.modules.padding import (

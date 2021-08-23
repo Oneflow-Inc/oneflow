@@ -50,6 +50,7 @@ Operators for neural networks
         LogSoftmax,
         MSELoss,
         MarginRankingLoss,
+        TripletMarginLoss,
         MaxPool1d,
         MaxPool2d,
         MaxPool3d,
