@@ -23,18 +23,16 @@ import oneflow.unittest
 from oneflow.nn.parameter import Parameter
 
 
-def _test_linear_graph_train_with_cosine_lr(test_case, iter_num, device):
+def _test_linear_graph_train_with_lr_sch(
+    test_case, iter_num, device, get_opt_and_lr_sch
+):
     def train_with_module(iter_num=3):
         linear = flow.nn.Linear(3, 8)
         linear = linear.to(device)
         flow.nn.init.constant_(linear.weight, -0.68758)
         flow.nn.init.constant_(linear.bias, 0.23)
-        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001)
-        alpha = 0.0005
-        steps = 10
-        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
-            of_sgd, steps=steps, alpha=alpha
-        )
+
+        opt, lr_sch = get_opt_and_lr_sch(linear.parameters())
 
         x = flow.Tensor(
             [
@@ -56,9 +54,10 @@ def _test_linear_graph_train_with_cosine_lr(test_case, iter_num, device):
             of_out = of_out.sum()
 
             of_out.backward()
-            of_sgd.step()
-            cosine_annealing_lr.step()
-            of_sgd.zero_grad()
+            opt.step()
+            if lr_sch is not None:
+                lr_sch.step()
+            opt.zero_grad()
 
             return of_out.numpy(), linear.weight.numpy()
 
@@ -72,12 +71,8 @@ def _test_linear_graph_train_with_cosine_lr(test_case, iter_num, device):
         linear = linear.to(device)
         flow.nn.init.constant_(linear.weight, -0.68758)
         flow.nn.init.constant_(linear.bias, 0.23)
-        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001)
-        alpha = 0.0005
-        steps = 10
-        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
-            of_sgd, steps=steps, alpha=alpha
-        )
+
+        opt, lr_sch = get_opt_and_lr_sch(linear.parameters())
 
         x = flow.Tensor(
             [
@@ -98,7 +93,10 @@ def _test_linear_graph_train_with_cosine_lr(test_case, iter_num, device):
             def __init__(self):
                 super().__init__()
                 self.linear = linear
-                self.add_optimizer(of_sgd, lr_sch=cosine_annealing_lr)
+                if lr_sch is None:
+                    self.add_optimizer(opt)
+                else:
+                    self.add_optimizer(opt, lr_sch=lr_sch)
 
             def build(self, x):
                 out = self.linear(x)
@@ -140,14 +138,104 @@ def _test_linear_graph_train_with_cosine_lr(test_case, iter_num, device):
         )
 
 
+def _sgd_cosine_fn(parameters):
+    of_sgd = flow.optim.SGD(parameters, lr=0.001)
+    alpha = 0.5
+    decay_steps = 10
+    cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
+        of_sgd, decay_steps=decay_steps, alpha=alpha
+    )
+    return of_sgd, cosine_decay_lr
+
+
+def _sgd_cosine_constant_fn(parameters):
+    of_sgd = flow.optim.SGD(parameters, lr=0.001)
+    alpha = 0.5
+    decay_steps = 10
+    cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
+        of_sgd, decay_steps=decay_steps, alpha=alpha
+    )
+    constant_warmup_cosine_lr = flow.optim.lr_scheduler.WarmUpLR(
+        cosine_decay_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="constant"
+    )
+    return of_sgd, constant_warmup_cosine_lr
+
+
+def _sgd_constant_fn(parameters):
+    of_sgd = flow.optim.SGD(parameters, lr=0.001)
+    alpha = 0.5
+    steps = 10
+    constant_warmup_lr = flow.optim.lr_scheduler.WarmUpLR(
+        of_sgd, warmup_factor=0.5, warmup_iters=5, warmup_method="constant"
+    )
+    return of_sgd, constant_warmup_lr
+
+
+def _sgd_cosine_linear_fn(parameters):
+    of_sgd = flow.optim.SGD(parameters, lr=0.001)
+    alpha = 0.5
+    decay_steps = 10
+    cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
+        of_sgd, decay_steps=decay_steps, alpha=alpha
+    )
+    linear_warmup_cosine_lr = flow.optim.lr_scheduler.WarmUpLR(
+        cosine_decay_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
+    )
+    return of_sgd, linear_warmup_cosine_lr
+
+
+def _sgd_linear_fn(parameters):
+    of_sgd = flow.optim.SGD(parameters, lr=0.001)
+    alpha = 0.5
+    steps = 10
+    linear_warmup_lr = flow.optim.lr_scheduler.WarmUpLR(
+        of_sgd, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
+    )
+    return of_sgd, linear_warmup_lr
+
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestLinearGraphTrainWithCosineLrScheduler(flow.unittest.TestCase):
-    def test_graph_gpu(test_case):
-        _test_linear_graph_train_with_cosine_lr(test_case, 21, flow.device("cuda"))
+    def test_graph_cosine(test_case):
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cuda"), _sgd_cosine_fn
+        )
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cpu"), _sgd_cosine_fn
+        )
 
-    def test_graph_cpu(test_case):
-        _test_linear_graph_train_with_cosine_lr(test_case, 21, flow.device("cpu"))
+    def test_graph_cosine_constant(test_case):
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cuda"), _sgd_cosine_constant_fn
+        )
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cpu"), _sgd_cosine_constant_fn
+        )
+
+    def test_graph_constant(test_case):
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cuda"), _sgd_constant_fn
+        )
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cpu"), _sgd_constant_fn
+        )
+
+    def test_graph_cosine_linear(test_case):
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cuda"), _sgd_cosine_linear_fn
+        )
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cpu"), _sgd_cosine_linear_fn
+        )
+
+    def test_graph_linear(test_case):
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cuda"), _sgd_linear_fn
+        )
+        _test_linear_graph_train_with_lr_sch(
+            test_case, 21, flow.device("cpu"), _sgd_linear_fn
+        )
 
 
 if __name__ == "__main__":

@@ -342,6 +342,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   void Clear();
   void CopyFrom(const {{ util.class_name(cls) }}& other);
   {{ util.class_name(cls) }}& operator=(const {{ util.class_name(cls) }}& other);
+  {{ util.class_name(cls) }}& operator=({{ util.class_name(cls) }}&& other);
 
 {% for field in util.message_type_fields(cls) %}
 {% if util.field_has_required_or_optional_label(field) %}

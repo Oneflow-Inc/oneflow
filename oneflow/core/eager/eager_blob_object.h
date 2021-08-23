@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/eager/blob_object.h"
-#include "oneflow/core/framework/local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
@@ -90,7 +90,7 @@ class EagerBlobObject final : public BlobObject {
                   const Optional<LocalDepObject*>& dep_object);
 
   std::unique_ptr<Blob> blob_;
-  std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
+  std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   std::unique_ptr<MemoryAllocator> non_pod_initer_;
