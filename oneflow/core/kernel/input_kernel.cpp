@@ -31,10 +31,9 @@ class InputKernel final : public KernelIf<device_type> {
   ~InputKernel() = default;
 
  private:
-  void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
       const auto& job_name = this->job_desc().job_name();
       const auto& op_name = this->op_conf().name();
@@ -50,7 +49,7 @@ class InputKernel final : public KernelIf<device_type> {
     }
   }
   void ForwardHeader(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {}
 };
 
 }  // namespace

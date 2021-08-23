@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_name_scope.h"
+#include <cstdint>
 
 namespace oneflow {
 namespace one {
@@ -24,8 +25,8 @@ namespace one {
 }
 
 const std::string& TensorNameScope::Lookup(const std::shared_ptr<Tensor>& tensor) const {
-  std::lock_guard<std::mutex> lock(mutex_);
   uint64_t key = reinterpret_cast<uint64_t>(tensor.get());
+  std::lock_guard<std::mutex> lock(mutex_);
   const auto& it = tensor_names_.find(key);
   if (it != tensor_names_.end()) {
     return it->second;

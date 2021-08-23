@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -53,11 +54,7 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
     if (out_grads.empty()) {
       CHECK_OR_RETURN(IsScalarTensor(*outputs.at(i)))
           << "Grad can be implicitly created only for scalar outputs";
-      const auto& ones_like = JUST(op_expr_helper::OnesLikeOp());
-      const auto& interpreter = JUST(one::OpInterpUtil::GetInterpreter());
-      one::TensorTuple grad_output(1);
-      JUST(interpreter->Apply(*ones_like, one::TensorTuple{outputs.at(i)}, &grad_output));
-      gradients->at(i) = grad_output.at(0);
+      gradients->at(i) = JUST(one::functional::OnesLike(outputs.at(i)));
     } else {
       CHECK_OR_RETURN(*(outputs.at(i)->shape()) == *(out_grads.at(i)->shape()))
           << "out_grad's shape must be same as output's (" << outputs.at(i)->shape()->ToString()
@@ -74,7 +71,7 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
                                  bool retain_graph, bool create_graph) {
   if (create_graph) { retain_graph = true; }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensor(
+  JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensorIf(
       outputs, *gradients, retain_graph, create_graph));
   return std::make_shared<one::TensorTuple>(0);
 }
@@ -89,7 +86,7 @@ Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorT
       [](const std::shared_ptr<one::Tensor>& tensor) { return tensor->requires_grad(); }))
       << "All input tensors `.requires_grad` should be true";
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGrad(
+  return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGradIf(
       outputs, inputs, *gradients, retain_graph, create_graph);
 }
 

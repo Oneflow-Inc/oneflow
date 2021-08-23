@@ -17,8 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_
 
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/eager/blob_object.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
@@ -44,13 +45,18 @@ class EagerBlobObject final : public BlobObject {
   EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, nullptr) {}
+      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, Optional<LocalDepObject*>()) {}
+
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
-                  const std::shared_ptr<const ParallelDesc>& parallel_desc);
+                  LocalDepObject* dep_object)
+      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer,
+                        Optional<LocalDepObject*>(dep_object)) {}
+
   ~EagerBlobObject() override {
     non_pod_initer_.reset();
     tensor_buffer_.reset();
+    header_buffer_.reset();
     blob_.reset();
   }
 
@@ -68,7 +74,9 @@ class EagerBlobObject final : public BlobObject {
     return Maybe<void>::Ok();
   }
 
-  Maybe<VmLocalDepObject> compute_local_dep_object() const { return compute_local_dep_object_; }
+  Maybe<LocalDepObject*> compute_local_dep_object() const {
+    return compute_local_dep_object_.value();
+  }
 
   std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
 
@@ -77,12 +85,17 @@ class EagerBlobObject final : public BlobObject {
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
  private:
+  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
+                  const Optional<LocalDepObject*>& dep_object);
+
   std::unique_ptr<Blob> blob_;
+  std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   std::unique_ptr<MemoryAllocator> non_pod_initer_;
   std::atomic<bool> is_shape_synced_;
-  Maybe<VmLocalDepObject> compute_local_dep_object_;
+  Optional<LocalDepObject*> compute_local_dep_object_;
 };
 
 }  // namespace vm

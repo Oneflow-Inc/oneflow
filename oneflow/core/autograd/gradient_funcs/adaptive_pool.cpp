@@ -18,38 +18,42 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-struct AdaptivePoolInterpState : public OpExprInterpState {
+struct AdaptivePoolCaptureState : public AutoGradCaptureState {
   bool requires_grad;
 };
 
-class AdaptivePool : public OpExprGradFunction<AdaptivePoolInterpState> {
+class AdaptivePoolNdGrad : public OpExprGradFunction<AdaptivePoolCaptureState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(AdaptivePoolInterpState* ctx, const TensorTuple& inputs,
+  using OpExprGradFunction<AdaptivePoolCaptureState>::Init;
+
+  Maybe<void> Init(const OpExpr& op, std::string mode, const int& ndims);
+  Maybe<void> Capture(AdaptivePoolCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const AdaptivePoolInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AdaptivePoolCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_op_;
+  std::string mode_;
+  int32_t ndims_;
 };
 
-Maybe<void> AdaptivePool::Init(const OpExpr& op) {
+Maybe<void> AdaptivePoolNdGrad::Init(const OpExpr& op, std::string mode, const int& ndims) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  grad_op_ = JUST(op_expr_helper::AdaptivePoolGradOp(GradientOpName(op_name)));
+  mode_ = mode;
+  ndims_ = ndims;
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AdaptivePool::Capture(AdaptivePoolInterpState* ctx, const TensorTuple& inputs,
-                                  const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> AdaptivePoolNdGrad::Capture(AdaptivePoolCaptureState* ctx, const TensorTuple& inputs,
+                                        const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -57,18 +61,35 @@ Maybe<void> AdaptivePool::Capture(AdaptivePoolInterpState* ctx, const TensorTupl
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AdaptivePool::Apply(const AdaptivePoolInterpState* ctx, const TensorTuple& out_grads,
-                                TensorTuple* in_grads) const {
+Maybe<void> AdaptivePoolNdGrad::Apply(const AdaptivePoolCaptureState* ctx,
+                                      const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {x, out_grads.at(0)}));
+  in_grads->at(0) = JUST(functional::AdaptivePoolNdGrad(x, out_grads.at(0), mode_, ndims_));
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_avg_pool2d", AdaptivePool);
+class AdaptiveAvgPool1dGrad final : public AdaptivePoolNdGrad {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return AdaptivePoolNdGrad::Init(op, "avg", 1); }
+};
+
+class AdaptiveAvgPool2dGrad final : public AdaptivePoolNdGrad {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return AdaptivePoolNdGrad::Init(op, "avg", 2); }
+};
+
+class AdaptiveAvgPool3dGrad final : public AdaptivePoolNdGrad {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return AdaptivePoolNdGrad::Init(op, "avg", 3); }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_avg_pool1d", AdaptiveAvgPool1dGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_avg_pool2d", AdaptiveAvgPool2dGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("adaptive_avg_pool3d", AdaptiveAvgPool3dGrad);
 
 }  // namespace one
 }  // namespace oneflow

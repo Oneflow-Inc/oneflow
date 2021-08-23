@@ -23,7 +23,7 @@ namespace oneflow {
 class Throw final {
  public:
   Throw(const Error& error) : error_(error) {}
-  ~Throw() { ThrowError(error_.error_proto()); }
+  ~Throw() noexcept(false) { ThrowError(error_.error_proto()); }
 
   Error& error() { return error_; }
 
@@ -33,9 +33,14 @@ class Throw final {
 
 }  // namespace oneflow
 
-#define CHECK_OR_THROW(expr)                                                                      \
-  if (!(expr))                                                                                    \
-  Throw(oneflow::Error::CheckFailedError().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)).error() \
+#define THROW(err_type)                                                                     \
+  Throw(oneflow::Error::err_type().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)).error() \
+      << #err_type << ": "
+
+#define CHECK_OR_THROW(expr)                                                                \
+  if (!(expr))                                                                              \
+  Throw(oneflow::Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)) \
+          .error()                                                                          \
       << " Check failed: " << OF_PP_STRINGIZE(expr) << ": "
 
 #define CHECK_EQ_OR_THROW(lhs, rhs) \
@@ -65,8 +70,8 @@ class Throw final {
 #define CHECK_ISNULL_OR_THROW(ptr) CHECK_OR_THROW(ptr == nullptr)
 
 #define TODO_THEN_THROW() \
-  oneflow::Throw(oneflow::Error::Todo().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)).error()
+  oneflow::Throw(oneflow::Error::Todo().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)).error()
 #define UNIMPLEMENTED_THEN_THROW() \
-  Throw(oneflow::Error::Unimplemented().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)).error()
+  Throw(oneflow::Error::Unimplemented().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)).error()
 
 #endif  // ONEFLOW_API_PYTHON_FRAMEWORK_THROW_H_

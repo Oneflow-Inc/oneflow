@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
-#include "oneflow/core/actor/act_event.pb.h"
+#include "oneflow/core/actor/actor_base.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
@@ -30,22 +30,23 @@ limitations under the License.
 
 namespace oneflow {
 
-class Actor {
+class Actor : public ActorBase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
   virtual ~Actor() = default;
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
-  void Init(const JobDesc* job_desc, const TaskProto&, const ThreadCtx&);
+  void Init(const JobDesc* job_desc, const TaskProto&, const ThreadCtx&) override;
 
   // 1: success, and actor finish
   // 0: success, and actor not finish
-  int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
+  int ProcessMsg(const ActorMsg& msg) override { return (this->*msg_handler_)(msg); }
 
   int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
-  int64_t thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
+  int64_t thrd_id() const { return thrd_id_; }
   int64_t actor_id() const { return actor_id_; }
+  int64_t job_id() const { return job_id_; }
 
  protected:
   struct BlobInfo {
@@ -74,15 +75,11 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
-  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const;
   void ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)>) const;
 
-  int64_t act_id() const { return act_id_; }
   int64_t ReadingCnt4ProducedRegst(Regst* regst) const;
   void IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val);
   void IncreaseTotalReadingCnt(int64_t val) { total_reading_cnt_ += val; }
-  int64_t GetPieceId4NaiveCurReadableDataRegst() const;
-  int64_t GetPieceId4NaiveOrInplaceCurReadableDataRegst() const;
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -106,20 +103,10 @@ class Actor {
 
   // Util For Derived Actor to Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                              std::function<bool(int64_t)> IsAllowedActor);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
-  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer();
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                                std::function<bool(int64_t)> IsAllowedActor);
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
-  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedInplaceDataRegstToConsumer();
-  void AsyncSendRegstMsgToConsumer(Regst* regst);
-  void AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
-  void HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
+  void HandleConsumedNaiveDataRegstToProducer();
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -144,13 +131,9 @@ class Actor {
   }
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const;
   void ForEachProducedRegst(const std::function<void(Regst*)>&) const;
-  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
+  int64_t HandleRegstToConsumer(Regst* regst);
 
  protected:
-  int64_t GetGlobalWorkStreamId() const;
-  virtual bool NeedCollectActEvent() const {
-    return Global<RuntimeCtx>::Get()->NeedCollectActEvent();
-  }
   bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {
     return consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
   }
@@ -166,12 +149,6 @@ class Actor {
   // Act
   void ActUntilFail();
   virtual void Act() { UNIMPLEMENTED(); }
-  virtual int64_t ActNumForEachOutput(int64_t regst_desc_id) const { return 1; }
-  virtual bool CheckOutputActId(int64_t regst_desc_id) const {
-    return true;  // TODO(jiyuan): figure out the ActNumForEachOutput of the model regsts to MdSave
-                  // area
-  }
-  void TryLogActEvent(const std::function<void()>& Callback) const;
 
   // Ready
   bool IsReadReady() const;
@@ -219,7 +196,8 @@ class Actor {
 
   const JobDesc* job_desc_;
   int64_t actor_id_;
-  int64_t act_id_;
+  int64_t thrd_id_;
+  int64_t job_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<std::string, std::vector<int64_t>> name2regst_desc_id_;
@@ -229,7 +207,6 @@ class Actor {
   int64_t remaining_eord_cnt_;
 
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
-  HashMap<int64_t, int64_t> produced_regst2expected_act_id_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
   int64_t total_reading_cnt_;
 
@@ -251,10 +228,6 @@ class Actor {
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
 };
-
-std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
-
-#define REGISTER_ACTOR(task_type, ActorType) REGISTER_CLASS(int32_t, task_type, Actor, ActorType)
 
 }  // namespace oneflow
 

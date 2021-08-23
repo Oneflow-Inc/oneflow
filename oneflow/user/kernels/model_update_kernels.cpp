@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/model_update_kernel_util.h"
 #include "oneflow/user/kernels/indexed_slices_reduce_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -390,7 +391,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_MOMENTUM_UPDATE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 template<DeviceType device_type, typename T, typename G>
-class AdamUpdateKernel final : public user_op::OpKernel {
+class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AdamUpdateKernel() = default;
   ~AdamUpdateKernel() override = default;

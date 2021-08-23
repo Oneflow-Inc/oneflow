@@ -22,7 +22,7 @@ namespace oneflow {
 
 void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id) {
   *machine_id = Rank();
-  *device_id = *machine_id % NumOfProcessPerNode();
+  *device_id = LocalRank();
 }
 
 int64_t GlobalProcessCtx::Rank() {
@@ -45,13 +45,15 @@ int64_t GlobalProcessCtx::NodeSize() {
 
 int64_t GlobalProcessCtx::ThisNodeId() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return int64_t(Rank() / NumOfProcessPerNode());
+  return NodeId(Rank());
+}
+
+int64_t GlobalProcessCtx::NodeId(int64_t process_id) {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return process_id / NumOfProcessPerNode();
 }
 
 int64_t GlobalProcessCtx::NumOfProcessPerNode() {
-  if (Global<NumProcessPerNode>::Get() != nullptr) {
-    return int64_t(Global<NumProcessPerNode>::Get()->value());
-  }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   CHECK_EQ(WorldSize() % NodeSize(), 0);
   return int64_t(WorldSize() / NodeSize());
@@ -73,6 +75,10 @@ std::string GlobalProcessCtx::LogDirEntry() {
   const auto& addr = process_ctx.ctrl_addr(process_ctx.rank());
   CHECK(addr.has_host());
   return addr.host() + "-" + std::to_string(addr.port()) + "-" + std::to_string(process_ctx.rank());
+}
+
+/* static */ int64_t GlobalProcessCtx::LocalRank(int64_t rank) {
+  return rank % NumOfProcessPerNode();
 }
 
 }  // namespace oneflow

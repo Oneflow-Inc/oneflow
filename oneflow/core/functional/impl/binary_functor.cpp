@@ -31,15 +31,76 @@ namespace functional {
 
 namespace impl {
 
-class AddFunctor : public InplaceableBinaryFunctor {
+class AddFunctor {
  public:
-  AddFunctor() { op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build()); }
+  AddFunctor() {
+    add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
+    broadcast_add_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_add").Input("x").Input("y").Output("z").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y, bool inplace) const {
+    bool x_static_zeros = IsStaticZerosTensor(x);
+    if (x_static_zeros || IsStaticZerosTensor(y)) {
+      CHECK_OR_RETURN(JUST(x->device()) == JUST(y->device()));
+      CHECK_OR_RETURN(*x->shape() == *y->shape());
+      CHECK_OR_RETURN(x->dtype() == y->dtype());
+      if (x_static_zeros) { return y; }
+      return x;
+    }
+
+    const OpExpr* op = nullptr;
+    if (*x->shape() == *y->shape()) {
+      op = add_op_.get();
+    } else {
+      op = broadcast_add_op_.get();
+    }
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      JUST(CheckShapeCanExpandTo(*y->shape(), *x->shape()));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op, {x, y}, outputs.get()));
+      return outputs->at(0);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op, {x, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> add_op_;
+  std::shared_ptr<OpExpr> broadcast_add_op_;
 };
 
-class MultiplyFunctor : public BinaryFunctor {
+class SubFunctor : public BinaryFunctor {
  public:
-  MultiplyFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("multiply").Input("x").Input("y").Output("out").Build());
+  SubFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class MulFunctor {
+ public:
+  MulFunctor() {
+    mul_op_ = CHECK_JUST(one::OpBuilder("multiply").Input("x").Input("y").Output("out").Build());
+    broadcast_mul_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, {x, y}); }
+    return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, {x, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> mul_op_;
+  std::shared_ptr<OpExpr> broadcast_mul_op_;
+};
+
+class DivFunctor : public BinaryFunctor {
+ public:
+  DivFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_div").Input("x").Input("y").Output("z").Build());
   }
 };
 
@@ -50,31 +111,10 @@ class PowFunctor : public BinaryFunctor {
   }
 };
 
-class BroadcastAddFunctor : public InplaceableBinaryFunctor {
+class BroadcastFModFunctor : public BinaryFunctor {
  public:
-  BroadcastAddFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_add").Input("x").Input("y").Output("z").Build());
-  }
-};
-
-class BroadcastSubFunctor : public BinaryFunctor {
- public:
-  BroadcastSubFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
-  }
-};
-
-class BroadcastMulFunctor : public BinaryFunctor {
- public:
-  BroadcastMulFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
-  }
-};
-
-class BroadcastDivFunctor : public BinaryFunctor {
- public:
-  BroadcastDivFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("broadcast_div").Input("x").Input("y").Output("z").Build());
+  BroadcastFModFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_fmod").Input("x").Input("y").Output("z").Build());
   }
 };
 
@@ -105,6 +145,30 @@ class BroadcastGreaterEqualFunctor : public BinaryFunctor {
   BroadcastGreaterEqualFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("broadcast_greater_equal").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastLogicalAndFunctor : public BinaryFunctor {
+ public:
+  BroadcastLogicalAndFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_logical_and").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastLogicalOrFunctor : public BinaryFunctor {
+ public:
+  BroadcastLogicalOrFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_logical_or").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastLogicalXorFunctor : public BinaryFunctor {
+ public:
+  BroadcastLogicalXorFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_logical_xor").Input("x").Input("y").Output("z").Build());
   }
 };
 
@@ -155,26 +219,37 @@ class ScalarDivByTensorFunctor : public BinaryFunctor {
   }
 };
 
+class ReshapeLikeFunctor : public BinaryFunctor {
+ public:
+  ReshapeLikeFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("reshape_like").Input("in").Input("like").Output("out").Build());
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddFunctor>("Add");
-  m.add_functor<impl::MultiplyFunctor>("Multiply");
+  m.add_functor<impl::SubFunctor>("Sub");
+  m.add_functor<impl::MulFunctor>("Mul");
+  m.add_functor<impl::DivFunctor>("Div");
   m.add_functor<impl::PowFunctor>("Pow");
-  m.add_functor<impl::BroadcastAddFunctor>("BroadcastAdd");
-  m.add_functor<impl::BroadcastSubFunctor>("BroadcastSub");
-  m.add_functor<impl::BroadcastMulFunctor>("BroadcastMul");
-  m.add_functor<impl::BroadcastDivFunctor>("BroadcastDiv");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
   m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
   m.add_functor<impl::BroadcastGreaterEqualFunctor>("BroadcastGreaterEqual");
+  m.add_functor<impl::BroadcastLogicalAndFunctor>("BroadcastLogicalAnd");
+  m.add_functor<impl::BroadcastLogicalOrFunctor>("BroadcastLogicalOr");
+  m.add_functor<impl::BroadcastLogicalXorFunctor>("BroadcastLogicalXor");
   m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
   m.add_functor<impl::BroadcastLessEqualFunctor>("BroadcastLessEqual");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");
   m.add_functor<impl::ScalarSubByTensorFunctor>("ScalarSubByTensor");
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
+  m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
+  m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
 };
 
 }  // namespace functional

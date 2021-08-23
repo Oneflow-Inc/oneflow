@@ -22,9 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitModel = 0,     // MdUpdt Actor
-  kSendInitialModel,  // MdUpdt Actor
-  kStart,             // Source Actor
+  kStart = 0,  // Source Actor
   kStopThread,
   kConstructActor
 };
@@ -52,8 +50,6 @@ class ActorMsg final {
   ActorCmd actor_cmd() const;
   Regst* regst() const;
   int64_t regst_desc_id() const;
-  int64_t piece_id() const;
-  int64_t act_id() const;
   void* comm_net_token() const;
   void set_comm_net_token(void* token);
   bool has_sole_empty_blob() const;
@@ -62,6 +58,8 @@ class ActorMsg final {
   uint8_t user_data_size() const;
   const void* user_data() const;
   bool IsDataRegstMsgToConsumer() const;
+  int64_t comm_net_sequence_number() const;
+  void set_comm_net_sequence_number(int64_t sequence_number);
 
   // Serialize
   template<typename StreamT>
@@ -77,7 +75,8 @@ class ActorMsg final {
   struct RegstWrapper {
     Regst* regst;
     void* comm_net_token;
-    RegstStatus regst_status;
+    int64_t comm_net_sequence_number;
+    int64_t regst_desc_id;
     bool has_sole_empty_blob;
     bool is_data_regst_to_consumer;
   };

@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -158,41 +160,30 @@ struct PlacementSymbolExportUtil {
   }
 
   static std::string PlacementSymbol2String(Symbol<ParallelDesc> placement) {
-    std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
-    std::string machine_device_ids = "{";
-    std::string device_name;
-    int64_t machine_idx = 0;
-    for (int64_t machine_id : placement->sorted_machine_ids()) {
-      std::string device_name = std::to_string(machine_id) + " : [";
-      int64_t device_idx = 0;
-      for (int64_t device_id : placement->sorted_dev_phy_ids(machine_id)) {
-        device_name += std::to_string(device_id);
-        if (++device_idx != placement->sorted_dev_phy_ids(machine_id).size()) {
-          device_name += ", ";
-        }
-      }
-      device_name += "]";
-      if (++machine_idx != placement->sorted_machine_ids().size()) { device_name += ", "; }
-      machine_device_ids += device_name;
-    }
-    machine_device_ids += "}";
-    std::string hierarchy = "(";
-    int32_t hierarchy_dim_idx = 0;
-    for (int64_t dim : placement->hierarchy()->dim_vec()) {
-      hierarchy += std::to_string(dim);
-      if (++hierarchy_dim_idx != placement->hierarchy()->dim_vec().size()) {
-        hierarchy += ", ";
-      } else if (placement->hierarchy()->dim_vec().size() == 1) {
-        hierarchy += ",";
-      }
-    }
-    hierarchy += ")";
-    std::string placement_str = "oneflow.placement(device_type=" + device_type
-                                + ", machine_device_ids=" + machine_device_ids
-                                + ", hierarchy=" + hierarchy + ")";
-    return placement_str;
+    return *PlacementToString(placement).GetPtrOrThrow();
+  }
+
+  static Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
+                                                               const std::string& device_type) {
+    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
+    std::shared_ptr<cfg::ParallelConf> parallel_conf =
+        std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
+    parallel_conf->set_device_tag(JUST(MapAt(type2device_tag, device_type)));
+    std::shared_ptr<ParallelDesc> out_parallel_desc;
+    JUST(LogicalRun(
+        [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+          out_parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+          return Maybe<void>::Ok();
+        }));
+    return SymbolOf(*out_parallel_desc);
+  }
+
+  static Symbol<ParallelDesc> ApiReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
+                                                           const std::string& device_type) {
+    return ReplacePlacementDeviceTag(parallel_desc, device_type).GetOrThrow();
   }
 };
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
@@ -239,8 +230,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                              })
       .def_property_readonly("hierarchy", [](Symbol<ParallelDesc> p) { return p->hierarchy(); })
       .def("__str__", &PlacementSymbolExportUtil::PlacementSymbol2String)
-      .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String);
+      .def("__repr__", &PlacementSymbolExportUtil::PlacementSymbol2String)
+      .def(py::self == py::self)
+      .def(py::hash(py::self));
   m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);
+  m.def("_ReplacePlacementDeviceTag", &PlacementSymbolExportUtil::ApiReplacePlacementDeviceTag);
 }
 
 }  // namespace oneflow

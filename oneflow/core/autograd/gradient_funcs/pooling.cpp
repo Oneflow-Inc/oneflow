@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -26,7 +27,7 @@ namespace one {
 
 namespace {
 
-struct PoolingInterpState : public OpExprInterpState {
+struct PoolingCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   size_t input_index;
   size_t output_index;
@@ -41,13 +42,16 @@ struct PoolingInterpState : public OpExprInterpState {
   bool ceil_mode;
 };
 
-class PoolingNdGrad : public OpExprGradFunction<PoolingInterpState> {
+class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
  public:
   virtual ~PoolingNdGrad() = default;
+
+  using OpExprGradFunction<PoolingCaptureState>::Init;
+
   Maybe<void> Init(const OpExpr& op, const std::string& mode);
-  Maybe<void> Capture(PoolingInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(PoolingCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const PoolingInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const PoolingCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -63,7 +67,7 @@ Maybe<void> PoolingNdGrad::Init(const OpExpr& op, const std::string& mode) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PoolingNdGrad::Capture(PoolingInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> PoolingNdGrad::Capture(PoolingCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -83,7 +87,7 @@ Maybe<void> PoolingNdGrad::Capture(PoolingInterpState* ctx, const TensorTuple& i
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PoolingNdGrad::Apply(const PoolingInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> PoolingNdGrad::Apply(const PoolingCaptureState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_LE_OR_RETURN(out_grads.size(), 2);

@@ -15,18 +15,24 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/callback_notify_kernel.h"
 #include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/buffer_manager.h"
 
 namespace oneflow {
 
 template<typename T>
 void CallbackNotifyKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  T job_id = *BnInOp2Blob("in")->dptr<T>();
-  const auto& buffer_name = this->op_conf().callback_notify_conf().callback_buffer_name(job_id);
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+  std::string buffer_name;
+  if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
+    buffer_name = GetCallbackNotifierBufferName(this->job_desc().job_name());
+  } else {
+    T job_id = *BnInOp2Blob("in")->dptr<T>();
+    buffer_name = this->op_conf().callback_notify_conf().callback_buffer_name(job_id);
+  }
   std::shared_ptr<JobInstance> foreign_job_instance;
-  BufferStatus buffer_status = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get()
-                                   ->Get(buffer_name)
-                                   ->TryReceive(&foreign_job_instance);
+  BufferStatus buffer_status = buffer_mgr->Get(buffer_name)->TryReceive(&foreign_job_instance);
   CHECK_NE(buffer_status, kBufferStatusEmpty);
   if (buffer_status == kBufferStatusSuccess) { foreign_job_instance->Finish(); }
 }

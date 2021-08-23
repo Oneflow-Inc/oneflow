@@ -35,8 +35,8 @@ class Error final {
   void Assign(const Error& other) { error_proto_ = other.error_proto_; }
 
   // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
-  // "Bar") << "invalid value"` because operator<<() need r-value reference
-  Error&& AddStackFrame(const std::string& location, const std::string& function);
+  // ,"line", "Bar") << "invalid value"` because operator<<() need r-value reference
+  Error&& AddStackFrame(const std::string& file, const int64_t& line, const std::string& function);
 
   static Error Ok();
   static Error ProtoParseFailedError();
@@ -44,6 +44,8 @@ class Error final {
   static Error DeviceTagNotFoundError();
   static Error ValueError(const std::string& error_summary);
   static Error IndexError();
+  static Error TypeError();
+  static Error TimeoutError();
   static Error JobNameExistError();
   static Error JobNameEmptyError();
   static Error JobNameNotEqualError();
@@ -108,6 +110,18 @@ Error& operator<<(Error& error, const T& x) {
 template<typename T>
 Error&& operator<<(Error&& error, const T& x) {
   error << x;
+  return std::move(error);
+}
+
+template<>
+inline Error&& operator<<(Error&& error, const std::stringstream& x) {
+  error << x.str();
+  return std::move(error);
+}
+
+template<>
+inline Error&& operator<<(Error&& error, const std::ostream& x) {
+  error << x.rdbuf();
   return std::move(error);
 }
 

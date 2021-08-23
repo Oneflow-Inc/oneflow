@@ -40,17 +40,6 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-namespace {
-
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
-}
-
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
-
-}  // namespace
-
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
 class NoArgNoRetMockNNGraph : public NNGraphIf {
@@ -73,7 +62,6 @@ class NoArgNoRetMockNNGraph : public NNGraphIf {
 };
 
 TEST(RunLazyJobInstructionType, simple) {
-  InitNumProcessPerNode();
   vm::TestResourceDescScope resource_scope(0, 1);
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"RunLazyJob"});
@@ -108,7 +96,7 @@ TEST(RunLazyJobInstructionType, simple) {
     CHECK_JUST(instructions_builder.RunLazyJob(empty_list, empty_list, empty_list, nn_graph));
   }
   ASSERT_EQ(list.size(), 2);
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   auto* vm_ptr = vm.Mutable();
   std::thread scheduler_thread([vm_ptr]() {
     while (!vm_ptr->Empty()) {
@@ -122,11 +110,9 @@ TEST(RunLazyJobInstructionType, simple) {
   leave_thread.join();
   enter_thread.join();
   Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-  DestroyNumProcessPerNode();
 }
 
 TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
-  InitNumProcessPerNode();
   vm::TestResourceDescScope resource_scope(0, 1);
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"RunLazyJob"});
@@ -199,7 +185,7 @@ TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
     }
   }
   ASSERT_EQ(list.size(), num_job0_instance + num_job1_instance);
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   ASSERT_EQ(vm->pending_msg_list().size(), num_job0_instance + num_job1_instance);
   auto* vm_ptr = vm.Mutable();
   std::thread scheduler_thread([vm_ptr]() {
@@ -247,7 +233,6 @@ TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
   enter_thread0.join();
   enter_thread1.join();
   Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-  DestroyNumProcessPerNode();
 }
 
 }  // namespace test

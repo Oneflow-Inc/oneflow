@@ -27,8 +27,10 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
@@ -126,10 +128,17 @@ inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto
   return Maybe<void>::Ok();
 }
 
+inline Maybe<void> MultiClientSessionContextAddCGraph(
+    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+  JUST(Global<MultiClientSessionContext>::Get()->AddCGraph(c_graph_ptr));
+  return Maybe<void>::Ok();
+}
+
 inline Maybe<void> TryDestroyMultiClientSessionContext() {
   // Global<T>::Delete is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   if (Global<MultiClientSessionContext>::Get() != nullptr) {
+    JUST(Global<MultiClientSessionContext>::Get()->TryClose());
     delete Global<MultiClientSessionContext>::Get();
     Global<MultiClientSessionContext>::SetAllocated(nullptr);
   }

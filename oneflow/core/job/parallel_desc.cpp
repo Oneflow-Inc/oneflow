@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.cfg.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
@@ -111,6 +112,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
                                                        GlobalProcessCtx::NumOfProcessPerNode()));
     }
   }
+  containing_current_rank_ = machine_id2sorted_dev_phy_ids_->count(GlobalProcessCtx::Rank()) > 0;
   ClearUp();
   JUST(SanityCheck());
   return Maybe<void>::Ok();
@@ -148,16 +150,69 @@ Maybe<int64_t> ParallelDesc::ParallelId4MachineDeviceId(int64_t machine_id,
   return device_iter->second;
 }
 
-Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(int64_t* parallel_id) const {
+Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(
+    Optional<int64_t>* parallel_id) const {
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  if (TryGetParallelId(machine_id, device_id, parallel_id)) {
-    return Device::ThreadLocalGetOrNew(device_tag(), device_id);
+  const auto& device =
+      JUST(Device::ThreadLocalGetOrNew(Device::Type4DeviceTag(device_tag()), device_id));
+  int64_t parallel_id_val = -1;
+  if (TryGetParallelId(machine_id, device_id, &parallel_id_val)) {
+    *parallel_id = parallel_id_val;
   } else {
-    return Symbol<Device>();
+    *parallel_id = Optional<int64_t>();
+  }
+  return device;
+}
+
+Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
+                                                  Optional<int64_t>* parallel_id) {
+  static thread_local HashMap<Symbol<ParallelDesc>, Optional<int64_t>> parallel_desc2parallel_id;
+  static thread_local HashMap<Symbol<ParallelDesc>, Symbol<Device>> parallel_desc2device;
+  auto parallel_id_iter = parallel_desc2parallel_id.find(parallel_desc);
+  auto device_iter = parallel_desc2device.find(parallel_desc);
+  if (device_iter == parallel_desc2device.end()) {
+    CHECK_OR_RETURN(parallel_id_iter == parallel_desc2parallel_id.end());
+    Optional<int64_t> id_val;
+    const auto& device_symbol = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&id_val));
+    parallel_id_iter = parallel_desc2parallel_id.emplace(parallel_desc, id_val).first;
+    device_iter = parallel_desc2device.emplace(parallel_desc, device_symbol).first;
+  } else {
+    CHECK_OR_RETURN(parallel_id_iter != parallel_desc2parallel_id.end());
+  }
+  *parallel_id = parallel_id_iter->second;
+  return device_iter->second;
+}
+
+namespace private_details {
+
+Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  int64_t parallel_id = -1;
+  if (parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id)) {
+    return Optional<int64_t>(parallel_id);
+  } else {
+    return Optional<int64_t>();
   }
 }
+
+Maybe<const ParallelContext> CalcParallelContext4CurrentProcessCtx(
+    Symbol<ParallelDesc> parallel_desc) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  int64_t parallel_id_val = -1;
+  CHECK_OR_RETURN(parallel_desc->TryGetParallelId(machine_id, device_id, &parallel_id_val));
+  std::shared_ptr<ParallelContext> parallel_ctx = std::make_shared<ParallelContext>();
+  parallel_ctx->set_parallel_id(parallel_id_val);
+  parallel_ctx->set_parallel_num(parallel_desc->parallel_num());
+  return std::shared_ptr<const ParallelContext>(parallel_ctx);
+}
+
+}  // namespace private_details
 
 bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,
                                     int64_t* parallel_id) const {
@@ -335,4 +390,66 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   return parallel_conf;
 }
 
+bool IsMirroredParallelContext(const ParallelContext& parallel_ctx) {
+  if (CHECK_JUST(GlobalMultiClientEnv())) {
+    return parallel_ctx.parallel_id() == 0 && parallel_ctx.parallel_num() == 1
+           && GlobalProcessCtx::WorldSize() > 1;
+  }
+  return false;
+}
+
+namespace private_details {
+
+Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc> parallel_desc,
+                                                 DeviceType device_type) {
+  ParallelConf parallel_conf(parallel_desc->parallel_conf());
+  parallel_conf.set_device_tag(*JUST(DeviceTag4DeviceType(device_type)));
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
+Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
+  std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
+  std::vector<int64_t> sorted_node_ids;
+  HashMap<int64_t, std::vector<int64_t>> node_id2sorted_dev_phy_ids;
+  for (int64_t machine_id : placement->sorted_machine_ids()) {
+    int64_t node_id = GlobalProcessCtx::NodeId(machine_id);
+    if (!std::count(sorted_node_ids.begin(), sorted_node_ids.end(), node_id)) {
+      sorted_node_ids.push_back(node_id);
+    }
+    for (int64_t device_id : placement->sorted_dev_phy_ids(machine_id)) {
+      node_id2sorted_dev_phy_ids[node_id].push_back(device_id);
+    }
+  }
+  std::string machine_device_ids = "{";
+  int64_t node_idx = 0;
+  for (int64_t node_id : sorted_node_ids) {
+    std::string device_name = std::to_string(node_id) + " : [";
+    int64_t device_idx = 0;
+    for (int64_t device_id : node_id2sorted_dev_phy_ids.at(node_id)) {
+      device_name += std::to_string(device_id);
+      if (++device_idx != node_id2sorted_dev_phy_ids.at(node_id).size()) { device_name += ", "; }
+    }
+    device_name += "]";
+    if (++node_idx != sorted_node_ids.size()) { device_name += ", "; }
+    machine_device_ids += device_name;
+  }
+  machine_device_ids += "}";
+  std::string hierarchy = "(";
+  int32_t hierarchy_dim_idx = 0;
+  for (int64_t dim : placement->hierarchy()->dim_vec()) {
+    hierarchy += std::to_string(dim);
+    if (++hierarchy_dim_idx != placement->hierarchy()->dim_vec().size()) {
+      hierarchy += ", ";
+    } else if (placement->hierarchy()->dim_vec().size() == 1) {
+      hierarchy += ",";
+    }
+  }
+  hierarchy += ")";
+  std::string placement_str = "oneflow.placement(device_type=" + device_type
+                              + ", machine_device_ids=" + machine_device_ids
+                              + ", hierarchy=" + hierarchy + ")";
+  return placement_str;
+}
+
+}  // namespace private_details
 }  // namespace oneflow

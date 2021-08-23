@@ -40,17 +40,6 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-namespace {
-
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
-}
-
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
-
-}  // namespace
-
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
 int64_t NewJobDescSymbol(InstructionMsgList* list,
@@ -118,7 +107,6 @@ int64_t InitOpKernelObject(InstructionMsgList* list,
 }
 
 TEST(OpkernelInstructionType, new_opkernel) {
-  InitNumProcessPerNode();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -137,16 +125,14 @@ TEST(OpkernelInstructionType, new_opkernel) {
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 
 TEST(OpkernelInstructionType, delete_opkernel) {
-  InitNumProcessPerNode();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -168,16 +154,14 @@ TEST(OpkernelInstructionType, delete_opkernel) {
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 
 TEST(OpkernelInstructionType, call_opkernel) {
-  InitNumProcessPerNode();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -215,17 +199,15 @@ TEST(OpkernelInstructionType, call_opkernel) {
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", device_tag + ".CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 
 #ifdef WITH_CUDA
 TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
-  InitNumProcessPerNode();
   vm::TestResourceDescScope resource_scope(1, 1);
   InstructionMsgList list;
   int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
@@ -295,17 +277,15 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", "gpu.CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 #endif
 
 TEST(OpkernelInstructionType, stateless_call_opkernel) {
-  InitNumProcessPerNode();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -346,17 +326,15 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", device_tag + ".CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 
 #ifdef WITH_CUDA
 TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
-  InitNumProcessPerNode();
   vm::TestResourceDescScope resource_scope(1, 1);
   InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
@@ -425,12 +403,11 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "gpu.compute.UserStatelessCallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
 }
 #endif
 

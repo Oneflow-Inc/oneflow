@@ -32,9 +32,11 @@ namespace oneflow {
 class RegstMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstMgr);
-  RegstMgr() = delete;
+  RegstMgr() = default;
   ~RegstMgr() = default;
 
+  void AddPlan(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob);
+  void AddPlan(const Plan& plan);
   void NewRegsts(const RegstDescProto& regst_desc_proto, std::function<void(Regst*)> OneRegstDone);
   const RtRegstDesc& RegstDesc4RegstDescId(int64_t regst_desc_id) const;
   bool HasRegstDescId(int64_t regst_desc_id) const;
@@ -43,11 +45,9 @@ class RegstMgr final {
   Blob* Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id);
 
  private:
-  friend class Global<RegstMgr>;
-
-  explicit RegstMgr(const Plan& plan);
   void NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regst*, const RtRegstDesc*,
                           char* main_mem_ptr, char* separated_header_mem_ptr);
+
   HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
   HashMap<LogicalBlobId, HashMap<int64_t, Blob*>> lbi2parallel_id2blob_;
   HashMap<int64_t, char*> mem_block_id2ptr_;
