@@ -20,9 +20,9 @@ namespace oneflow {
 namespace one {
 
 struct FusedBiasAddGeluInterpState : public AutoGradCaptureState {
-  bool input_requires_grad;
-  bool bias_requires_grad;
-  int32_t axis;
+  bool input_requires_grad = true;
+  bool bias_requires_grad = true;
+  int32_t axis = 1;
 };
 
 class FusedBiasAddGelu : public OpExprGradFunction<FusedBiasAddGeluInterpState> {

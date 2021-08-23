@@ -24,10 +24,10 @@ namespace oneflow {
 namespace one {
 
 struct FusedBiasAddDropoutInterpState : public AutoGradCaptureState {
-  bool input_requires_grad;
-  bool bias_requires_grad;
-  int32_t axis;
-  float scale;
+  bool input_requires_grad = true;
+  bool bias_requires_grad = true;
+  int32_t axis = 1;
+  float scale = 1.0;
 };
 
 class FusedBiasAddDropout : public OpExprGradFunction<FusedBiasAddDropoutInterpState> {
