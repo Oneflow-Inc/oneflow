@@ -137,7 +137,7 @@ import oneflow.nn.modules.round
 import oneflow.nn.modules.sign
 import oneflow.nn.modules.sinh
 import oneflow.nn.modules.tan
-import oneflow.nn.modules.tensor_ops
+
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
@@ -156,6 +156,7 @@ from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import tensor as tensor
 from oneflow.framework.tensor import is_nonzero
 
+from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.abs import abs_op as abs
 from oneflow.nn.modules.acos import acos_op as acos
 from oneflow.nn.modules.acosh import acosh_op as acosh
@@ -262,6 +263,7 @@ from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min
 from oneflow.nn.modules.reduce_ops import _sum as sum
+from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
@@ -319,6 +321,10 @@ from . import (
     distributed,
     linalg,
     optim,
+    boxing,
+    backends,
+    amp,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
+from oneflow.nn.modules.relu import relu_op as relu
