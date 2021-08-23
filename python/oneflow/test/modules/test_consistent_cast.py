@@ -345,15 +345,16 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
             new_placement, flow.sbp.broadcast
         )
         test_case.assertTrue(broadcast_tensor.placement, new_placement)
-        test_case.assertTrue(
-            np.array_equal(
-                broadcast_tensor.to_local().numpy(),
-                np.array(
-                    [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
-                    dtype=np.float32,
-                ),
+        if flow.distributed.get_rank() < 2:
+            test_case.assertTrue(
+                np.array_equal(
+                    broadcast_tensor.to_local().numpy(),
+                    np.array(
+                        [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
+                        dtype=np.float32,
+                    ),
+                )
             )
-        )
 
     def test_consistent_to_consistent_1tp(test_case):
         if flow.distributed.get_rank() == 0:
@@ -385,7 +386,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
                     ),
                 )
             )
-        else:
+        elif flow.distributed.get_rank() == 1:
             test_case.assertTrue(
                 np.array_equal(
                     partial_sum_tensor.to_local().numpy(),
@@ -430,14 +431,14 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
                     np.array([[6, 2, 5, 7]], dtype=np.float32,),
                 )
             )
-        elif flow.distributed.get_rank() == 0:
+        elif flow.distributed.get_rank() == 2:
             test_case.assertTrue(
                 np.array_equal(
                     partial_sum_tensor.to_local().numpy(),
                     np.array([[3, 7, 5, 4]], dtype=np.float32,),
                 )
             )
-        elif flow.distributed.get_rank() == 0:
+        elif flow.distributed.get_rank() == 3:
             test_case.assertTrue(
                 np.array_equal(
                     partial_sum_tensor.to_local().numpy(),

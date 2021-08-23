@@ -65,13 +65,8 @@ Maybe<one::Tensor> NcclCollectiveAllGatherBoxingInterpreter::InterpretImpl(
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2B(in_nd_sbp->sbp_parallel(0),
                                                           out_nd_sbp->sbp_parallel(0)));
   CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
-  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
-  if (out_parallel_id->has_value()) {
-    const auto& op_expr = JUST(CachedEagerNcclAllGatherOpExpr(in_parallel_desc));
-    return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
-  } else {
-    return input;
-  }
+  const auto& op_expr = JUST(CachedEagerNcclAllGatherOpExpr(in_parallel_desc));
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
 Maybe<one::Tensor> NcclCollectiveAllReduceBoxingInterpreter::InterpretImpl(
@@ -81,13 +76,8 @@ Maybe<one::Tensor> NcclCollectiveAllReduceBoxingInterpreter::InterpretImpl(
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingP2B(in_nd_sbp->sbp_parallel(0),
                                                           out_nd_sbp->sbp_parallel(0)));
   CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
-  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
-  if (out_parallel_id->has_value()) {
-    const auto& op_expr = JUST(CachedEagerNcclAllReduceOpExpr(in_parallel_desc));
-    return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
-  } else {
-    return input;
-  }
+  const auto& op_expr = JUST(CachedEagerNcclAllReduceOpExpr(in_parallel_desc));
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
 Maybe<one::Tensor> NcclCollectiveReduceScatterBoxingInterpreter::InterpretImpl(
@@ -99,13 +89,8 @@ Maybe<one::Tensor> NcclCollectiveReduceScatterBoxingInterpreter::InterpretImpl(
                    || EagerBoxingInterpreterUtil::IsBoxingB2S(in_nd_sbp->sbp_parallel(0),
                                                               out_nd_sbp->sbp_parallel(0))));
   CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
-  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
-  if (out_parallel_id->has_value()) {
-    const auto& op_expr = JUST(CachedNcclReduceScatterOpExpr(in_parallel_desc, op_type_));
-    return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
-  } else {
-    return input;
-  }
+  const auto& op_expr = JUST(CachedNcclReduceScatterOpExpr(in_parallel_desc, op_type_));
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
 }  // namespace oneflow

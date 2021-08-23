@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/boxing/identity_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_b2p_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/naive_s2p_boxing_interpreter.h"
-#include "oneflow/core/framework/op_interpreter/boxing/naive_1ton_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/cuda_copy_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/cuda_based_cpu_mpi_boxing_interpreter.h"
 
@@ -117,24 +116,6 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
         in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
     if (interpreter.IsOk()) { return JUST(interpreter); }
   }
-  if (in_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1
-      && (in_parallel_desc->device_type() == DeviceType::kGPU
-          && out_parallel_desc->device_type() == DeviceType::kGPU)
-      && EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)) {
-    return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToBBoxingInterpreter());
-  }
-  if (in_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1
-      && (in_parallel_desc->device_type() == DeviceType::kGPU
-          && out_parallel_desc->device_type() == DeviceType::kGPU)
-      && EagerBoxingInterpreterUtil::IsPartialSumNdSbp(out_nd_sbp)) {
-    return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToPBoxingInterpreter());
-  }
-  if (in_parallel_desc->parallel_num() == 1 && out_nd_sbp->sbp_parallel_size() == 1
-      && (in_parallel_desc->device_type() == DeviceType::kGPU
-          && out_parallel_desc->device_type() == DeviceType::kGPU)
-      && EagerBoxingInterpreterUtil::IsSplitNdSbp(out_nd_sbp, 0)) {
-    return std::shared_ptr<EagerBoxingInterpreter>(new Nccl1ToSBoxingInterpreter());
-  }
 
   const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
   const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
@@ -149,6 +130,9 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   } while (0)
 
   TRY_BOXING_FUNCTION("flatten-hierarchy");
+  TRY_BOXING_FUNCTION("naive-1-to-p");
+  TRY_BOXING_FUNCTION("naive-1-to-b");
+  TRY_BOXING_FUNCTION("naive-1-to-s");
 
 #undef TRY_BOXING_FUNCTION
 
