@@ -44,7 +44,6 @@ public class InferenceSession {
         String version = option.getModelVersion();
         String savedModelPath = path + File.separator + version + File.separator;
         option.setModelProtoPath(savedModelPath + File.separator + option.getMetaFileBaseName());
-
         checkModelProtoFile();
         OneFlow.loadModel(option);
     }
