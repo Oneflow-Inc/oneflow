@@ -1313,6 +1313,9 @@ class TensorSetItemFunctor {
 
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
+    CHECK_EQ_OR_RETURN(tensor_indices.size(), 0)
+        << "Advanced indexing is not support for tensor setitem currently, please use basic "
+           "indexing instead.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
     if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
 
@@ -1413,9 +1416,9 @@ class ElementwiseMaximumGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class BroadcastDivGradFunctor {
+class DivGradFunctor {
  public:
-  BroadcastDivGradFunctor() {
+  DivGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_div_grad")
                          .Input("dz")
                          .Input("z")
@@ -1643,9 +1646,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CastLikeFunctor>("CastLike");
   m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
   m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
-  m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
   m.add_functor<impl::BroadcastPowXGradFunctor>("BroadcastPowXGrad");
   m.add_functor<impl::BroadcastPowYGradFunctor>("BroadcastPowYGrad");
+  m.add_functor<impl::DivGradFunctor>("DivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");

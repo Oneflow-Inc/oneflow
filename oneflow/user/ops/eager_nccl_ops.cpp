@@ -130,21 +130,21 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce_scatter")
     })
     .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
       const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+      cfg::NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
       CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
       for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
         CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel() || sbp_hint.has_broadcast_parallel());
       }
-      in_distribution->clear_sbp_parallel();
-      out_distribution->clear_sbp_parallel();
+      in_nd_sbp->clear_sbp_parallel();
+      out_nd_sbp->clear_sbp_parallel();
 
       // P2S or B2S
       const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
       CHECK_GE_OR_RETURN(parallel_hierarchy.NumAxes(), 1);
-      in_distribution->CopyFrom(in_dis_hint);
+      in_nd_sbp->CopyFrom(in_dis_hint);
       for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
-        out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
+        out_nd_sbp->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
       }
       return Maybe<void>::Ok();
     })
@@ -169,23 +169,64 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_gather")
     })
     .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
       const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+      cfg::NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
       CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
       for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
         CHECK_OR_RETURN(sbp_hint.has_split_parallel());
         CHECK_EQ_OR_RETURN(sbp_hint.split_parallel().axis(), 0);
       }
 
-      in_distribution->clear_sbp_parallel();
-      out_distribution->clear_sbp_parallel();
+      in_nd_sbp->clear_sbp_parallel();
+      out_nd_sbp->clear_sbp_parallel();
 
       // S(0)->B
       const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
       CHECK_GE_OR_RETURN(parallel_hierarchy.NumAxes(), 1);
       for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
-        in_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
-        out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+        in_nd_sbp->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
+        out_nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+
+REGISTER_NO_GRAD_USER_OP("eager_nccl_s2s")
+    .Input("in")
+    .Output("out")
+    .Attr<int64_t>("in_split_axis", -1)
+    .Attr<int64_t>("out_split_axis", -1)
+    .Attr<std::string>("parallel_conf")
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
+      const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_split_axis");
+      const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+      cfg::NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+      CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
+      for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
+        CHECK_OR_RETURN(sbp_hint.has_split_parallel());
+        CHECK_EQ_OR_RETURN(sbp_hint.split_parallel().axis(), in_split_axis);
+      }
+
+      in_nd_sbp->clear_sbp_parallel();
+      out_nd_sbp->clear_sbp_parallel();
+
+      // S(in)->S(out)
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      CHECK_GE_OR_RETURN(parallel_hierarchy.NumAxes(), 1);
+      for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+        in_nd_sbp->add_sbp_parallel()->mutable_split_parallel()->set_axis(in_split_axis);
+        out_nd_sbp->add_sbp_parallel()->mutable_split_parallel()->set_axis(out_split_axis);
       }
       return Maybe<void>::Ok();
     })
