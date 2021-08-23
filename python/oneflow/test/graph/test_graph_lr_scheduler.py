@@ -152,7 +152,7 @@ def _sgd_cosine_constant_fn(parameters):
     of_sgd = flow.optim.SGD(parameters, lr=0.001)
     alpha = 0.5
     steps = 10
-    cosine_decay_lr = flow.optim.lr_scheduler.CosinedecayLR(
+    cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
         of_sgd, steps=steps, alpha=alpha
     )
     constant_warmup_cosine_lr = flow.optim.lr_scheduler.WarmUpLR(
@@ -175,7 +175,7 @@ def _sgd_cosine_linear_fn(parameters):
     of_sgd = flow.optim.SGD(parameters, lr=0.001)
     alpha = 0.5
     steps = 10
-    cosine_decay_lr = flow.optim.lr_scheduler.CosinedecayLR(
+    cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
         of_sgd, steps=steps, alpha=alpha
     )
     linear_warmup_cosine_lr = flow.optim.lr_scheduler.WarmUpLR(

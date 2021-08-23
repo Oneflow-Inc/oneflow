@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.optimizer.cosine_decay_lr import CosineDecayLR
+from oneflow.nn.optimizer.cosine_annealing_lr import CosineAnnealingLR
 from oneflow.nn.optimizer.lambda_lr import LambdaLR
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler as _LRScheduler
 from oneflow.nn.optimizer.step_lr import StepLR

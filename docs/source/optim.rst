@@ -13,5 +13,6 @@ Optimizers
 
 .. automodule:: oneflow.optim.lr_scheduler
     :members: CosineDecayLR,
+            CosineAnnealingLR,
             LambdaLR,
             StepLR
