@@ -139,6 +139,7 @@ ExternalProject_Add(opencv
         -DBUILD_opencv_videostab:BOOL=OFF
         -DBUILD_opencv_imgproc:BOOL=ON
         -DBUILD_opencv_imgcodecs:BOOL=ON
+        -DENABLE_CXX11:BOOL=ON
         # -DLIB_SUFFIX:STRING=64
 )
 
