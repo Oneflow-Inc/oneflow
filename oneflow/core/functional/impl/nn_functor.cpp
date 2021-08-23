@@ -731,6 +731,51 @@ class L2NormalizeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedSelfAttentionFunctor {
+ public:
+  FusedSelfAttentionFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_self_attention_query_mul_key_and_value")
+                         .Input("hidden_states")
+                         .Output("query_mul_key")
+                         .Output("value")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& hidden_states,
+                                const int64_t& head_size, const float& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("head_size", head_size));
+    JUST(attrs.SetAttr<float>("alpha", alpha));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {hidden_states}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedSelfAttentionGradFunctor {
+ public:
+  FusedSelfAttentionGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_self_attention_query_mul_key_and_value_grad")
+                         .Input("query_mul_key_grad")
+                         .Input("value_grad")
+                         .Input("hidden_states")
+                         .Output("hidden_states_grad")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& query_mul_key_grad,
+                           const std::shared_ptr<one::Tensor>& value_grad,
+                           const std::shared_ptr<one::Tensor>& hidden_states,
+                           const float& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("alpha", alpha));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {query_mul_key_grad, value_grad, hidden_states},
+                                          attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class L2NormalizeGradFunctor {
  public:
   L2NormalizeGradFunctor() {
@@ -824,6 +869,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UnfoldFunctor>("Unfold");
   m.add_functor<impl::FoldFunctor>("Fold");
   m.add_functor<impl::OneHotFunctor>("OneHot");
+  m.add_functor<impl::FusedSelfAttentionFunctor>("FusedSelfAttention");
+  m.add_functor<impl::FusedSelfAttentionGradFunctor>("FusedSelfAttentionGrad");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");

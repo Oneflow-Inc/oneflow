@@ -91,7 +91,7 @@ std::vector<Argument> XrtGraph::Arguments() const {
   for (const XrtEdge* edge : edges_) {
     if (edge && edge->argument().initialized()) { arguments.push_back(edge->argument()); }
   }
-  return std::move(arguments);
+  return arguments;
 }
 
 std::string XrtGraph::ToDot() const {
