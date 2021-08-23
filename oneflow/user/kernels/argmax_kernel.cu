@@ -71,7 +71,7 @@ size_t InferTempStorageForArgMax(int32_t num_row, int32_t num_col) {
   MultiplyFunctor multiply_functor(num_col);
   SegmentOffsetIter segment_offset_iter(counting_iter, multiply_functor);
 
-  size_t temp_storage_bytes = -1;
+  size_t temp_storage_bytes = 0;
   auto err =
       cub::DeviceSegmentedReduce::ArgMax<T*, cub::KeyValuePair<int32_t, T>*, SegmentOffsetIter>(
           /* d_temp_storage */ nullptr, /* temp_storage_bytes */ temp_storage_bytes,

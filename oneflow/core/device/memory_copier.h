@@ -99,7 +99,7 @@ class CudaAsyncMemoryCopier final : public MemoryCopier {
 class DefaultMemoryCopierCreator final {
  public:
   using Func = std::function<MemoryCopier*()>;
-  OF_DISALLOW_COPY_AND_MOVE(DefaultMemoryCopierCreator)
+  OF_DISALLOW_COPY_AND_MOVE(DefaultMemoryCopierCreator);
   explicit DefaultMemoryCopierCreator(Func f) : func_(std::move(f)) {}
   ~DefaultMemoryCopierCreator() = default;
 

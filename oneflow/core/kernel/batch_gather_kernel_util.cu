@@ -21,13 +21,6 @@ namespace oneflow {
 
 namespace {
 
-Shape GetFlatShape(const ShapeView& shape, const int64_t axis) {
-  CHECK_GT(shape.NumAxes(), 0);
-  CHECK_GE(axis, 0);
-  CHECK_LT(axis, shape.NumAxes());
-  return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
-}
-
 template<typename K>
 __device__ int64_t GetInOffset(const int64_t out_offset, const K* indices,
                                const int64_t indices_num, const int64_t instance_size,

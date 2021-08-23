@@ -64,7 +64,7 @@ struct NdarrayDefaultReduce final {
 
  private:
 #define DEFINE_NDARRAY_REDUCE(func_name, NDIMS) func_name<NDIMS>
-  DEFINE_STATIC_SWITCH_FUNC(void, Reduce, DEFINE_NDARRAY_REDUCE, MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+  DEFINE_STATIC_SWITCH_FUNC(void, Reduce, DEFINE_NDARRAY_REDUCE, MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
 #undef DEFINE_NDARRAY_REDUCE
 
   template<int NDIMS>

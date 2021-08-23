@@ -154,7 +154,7 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
 
 class CudaCurrentDeviceGuard final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaCurrentDeviceGuard)
+  OF_DISALLOW_COPY_AND_MOVE(CudaCurrentDeviceGuard);
   explicit CudaCurrentDeviceGuard(int32_t dev_id);
   CudaCurrentDeviceGuard();
   ~CudaCurrentDeviceGuard();

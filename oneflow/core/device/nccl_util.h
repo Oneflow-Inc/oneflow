@@ -38,6 +38,7 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
     NCCL_DATA_TYPE_CASE(Float16);
     default: UNIMPLEMENTED();
   }
+  return ncclDataType_t::ncclFloat;
 }
 
 void NcclCheck(ncclResult_t error);

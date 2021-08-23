@@ -58,43 +58,39 @@ struct BinaryFuncTrait final {
 
 template<typename T>
 struct BinaryFuncAdd final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x + y; }
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x + y; }
 };
 template<typename T>
 struct BinaryFuncSum final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
-    return BinaryFuncAdd<T>::Invoke(x, y);
-  }
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return BinaryFuncAdd<T>::Invoke(x, y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAdd);
 
 template<typename T>
 struct BinaryFuncSub final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x - y; }
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x - y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncSub);
 
 template<typename T>
 struct BinaryFuncMul final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x * y; }
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x * y; }
 };
 template<typename T>
 struct BinaryFuncProd final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
-    return BinaryFuncMul<T>::Invoke(x, y);
-  }
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return BinaryFuncMul<T>::Invoke(x, y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMul);
 
 template<typename T>
 struct BinaryFuncDiv final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x / y; }
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x / y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncDiv);
 
 template<typename T>
 struct BinaryFuncFloorMod final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) {
 #if defined(__CUDACC__)
     T trunc_mod = x % y;
     return (trunc_mod != T(0)) && ((y < T(0)) != (trunc_mod < T(0))) ? trunc_mod + y : trunc_mod;
@@ -108,7 +104,7 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFloorMod);
 
 template<typename T>
 struct BinaryFuncFMod final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) {
 #if defined(__CUDACC__)
     T trunc_mod = x % y;
     return trunc_mod;
@@ -122,59 +118,59 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFMod);
 
 template<typename T>
 struct BinaryFuncMax final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x > y ? x : y; }
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x > y ? x : y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMax);
 
 template<typename T>
 struct BinaryFuncMin final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x < y ? x : y; }
+  static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x < y ? x : y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMin);
 
 template<typename T>
 struct BinaryFuncEQ final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x == y; }
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x == y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncEQ);
 
 template<typename T>
 struct BinaryFuncNE final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x != y; }
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x != y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncNE);
 
 template<typename T>
 struct BinaryFuncGT final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x > y; }
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x > y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncGT);
 
 template<typename T>
 struct BinaryFuncGE final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x >= y; }
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x >= y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncGE);
 
 template<typename T>
 struct BinaryFuncLT final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x < y; }
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x < y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLT);
 
 template<typename T>
 struct BinaryFuncLE final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x <= y; }
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x <= y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLE);
 
 template<typename T>
 struct BinaryFuncAND final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x && y; }
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x && y; }
 };
 template<typename T>
 struct BinaryFuncAll final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) {
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) {
     return BinaryFuncAND<T>::Invoke(x, y);
   }
 };
@@ -182,11 +178,11 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
 
 template<typename T>
 struct BinaryFuncOR final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return x || y; }
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x || y; }
 };
 template<typename T>
 struct BinaryFuncAny final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) {
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) {
     return BinaryFuncOR<T>::Invoke(x, y);
   }
 };
@@ -194,7 +190,7 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncOR);
 
 template<typename T>
 struct BinaryFuncXOR final {
-  static OF_DEVICE_FUNC const int8_t Invoke(const T x, const T y) { return (!x) != (!y); }
+  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return (!x) != (!y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
 
@@ -207,14 +203,12 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
 
 template<>
 struct BinaryFuncAdd<half> final {
-  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
-    return __hadd(x, y);
-  }
+  static __device__ __forceinline__ half Invoke(const half x, const half y) { return __hadd(x, y); }
 };
 
 template<>
 struct BinaryFuncSub<half> final {
-  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
     return __hsub(x, y);
 #else
@@ -225,7 +219,7 @@ struct BinaryFuncSub<half> final {
 
 template<>
 struct BinaryFuncMul<half> final {
-  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
     return __hmul(x, y);
 #else
@@ -236,7 +230,7 @@ struct BinaryFuncMul<half> final {
 
 template<>
 struct BinaryFuncDiv<half> final {
-  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     return __hdiv(x, y);
 #else
@@ -247,7 +241,7 @@ struct BinaryFuncDiv<half> final {
 
 template<>
 struct BinaryFuncMax<half> final {
-  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
     return __hgt(x, y) ? x : y;
 #else
@@ -258,7 +252,7 @@ struct BinaryFuncMax<half> final {
 
 template<>
 struct BinaryFuncMin<half> final {
-  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
     return __hlt(x, y) ? x : y;
 #else
@@ -273,7 +267,7 @@ struct BinaryFuncMin<half> final {
 
 template<>
 struct BinaryFuncFloorMod<float> final {
-  static __device__ __forceinline__ const float Invoke(const float x, const float y) {
+  static __device__ __forceinline__ float Invoke(const float x, const float y) {
     const float trunc_mod = fmodf(x, y);
     return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
@@ -281,7 +275,7 @@ struct BinaryFuncFloorMod<float> final {
 
 template<>
 struct BinaryFuncFloorMod<double> final {
-  static __device__ __forceinline__ const double Invoke(const double x, const double y) {
+  static __device__ __forceinline__ double Invoke(const double x, const double y) {
     const double trunc_mod = fmod(x, y);
     return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
@@ -289,7 +283,7 @@ struct BinaryFuncFloorMod<double> final {
 
 template<>
 struct BinaryFuncFloorMod<half> final {
-  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
     return __hne(trunc_mod, GetZeroVal<half>())
@@ -306,7 +300,7 @@ struct BinaryFuncFloorMod<half> final {
 
 template<>
 struct BinaryFuncFloorMod<float> final {
-  static inline const float Invoke(const float x, const float y) {
+  static inline float Invoke(const float x, const float y) {
     const float trunc_mod = std::fmod(x, y);
     return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
@@ -314,7 +308,7 @@ struct BinaryFuncFloorMod<float> final {
 
 template<>
 struct BinaryFuncFloorMod<double> final {
-  static inline const double Invoke(const double x, const double y) {
+  static inline double Invoke(const double x, const double y) {
     const double trunc_mod = std::fmod(x, y);
     return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
   }
@@ -322,7 +316,7 @@ struct BinaryFuncFloorMod<double> final {
 
 template<>
 struct BinaryFuncFloorMod<float16> final {
-  static inline const float16 Invoke(const float16 x, const float16 y) {
+  static inline float16 Invoke(const float16 x, const float16 y) {
     const float trunc_mod = std::fmod(static_cast<float>(x), static_cast<float>(y));
     return (trunc_mod != float(0)) && ((y < float(0)) != (trunc_mod < float(0)))
                ? static_cast<float16>(trunc_mod + y)
@@ -336,7 +330,7 @@ struct BinaryFuncFloorMod<float16> final {
 
 template<>
 struct BinaryFuncFMod<float> final {
-  static __device__ __forceinline__ const float Invoke(const float x, const float y) {
+  static __device__ __forceinline__ float Invoke(const float x, const float y) {
     const float trunc_mod = fmodf(x, y);
     return trunc_mod;
   }
@@ -344,7 +338,7 @@ struct BinaryFuncFMod<float> final {
 
 template<>
 struct BinaryFuncFMod<double> final {
-  static __device__ __forceinline__ const double Invoke(const double x, const double y) {
+  static __device__ __forceinline__ double Invoke(const double x, const double y) {
     const double trunc_mod = fmod(x, y);
     return trunc_mod;
   }
@@ -352,7 +346,7 @@ struct BinaryFuncFMod<double> final {
 
 template<>
 struct BinaryFuncFMod<half> final {
-  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
     return trunc_mod;
@@ -364,7 +358,7 @@ struct BinaryFuncFMod<half> final {
 #else
 template<>
 struct BinaryFuncFMod<float> final {
-  static inline const float Invoke(const float x, const float y) {
+  static inline float Invoke(const float x, const float y) {
     const float trunc_mod = std::fmod(x, y);
     return trunc_mod;
   }
@@ -372,7 +366,7 @@ struct BinaryFuncFMod<float> final {
 
 template<>
 struct BinaryFuncFMod<double> final {
-  static inline const double Invoke(const double x, const double y) {
+  static inline double Invoke(const double x, const double y) {
     const double trunc_mod = std::fmod(x, y);
     return trunc_mod;
   }
@@ -380,7 +374,7 @@ struct BinaryFuncFMod<double> final {
 
 template<>
 struct BinaryFuncFMod<float16> final {
-  static inline const float16 Invoke(const float16 x, const float16 y) {
+  static inline float16 Invoke(const float16 x, const float16 y) {
     const float trunc_mod = std::fmod(static_cast<float>(x), static_cast<float>(y));
     return static_cast<float16>(trunc_mod);
   }

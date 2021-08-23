@@ -83,14 +83,13 @@ struct NdarrayApplyBroadcastBinary<
  private:
 #define MAKE_NDARRAY_BROADCAST_BINARY(func_name, NDIMS) \
   NdarrayApplyBroadcastBinaryCoreWrapper<device_type, T, NDIMS, binary_func>::func_name
-  DEFINE_STATIC_SWITCH_FUNC(void, Apply, MAKE_NDARRAY_BROADCAST_BINARY,
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+  DEFINE_STATIC_SWITCH_FUNC(void, Apply, MAKE_NDARRAY_BROADCAST_BINARY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
 #undef MAKE_NDARRAY_BROADCAST_BINARY
 
 #define MAKE_NDARRAY_INPLACE_BROADCAST_BINARY(func_name, NDIMS) \
   NdarrayApplyBroadcastInplaceBinaryCoreWrapper<device_type, T, NDIMS, binary_func>::func_name
   DEFINE_STATIC_SWITCH_FUNC(void, InplaceApply, MAKE_NDARRAY_INPLACE_BROADCAST_BINARY,
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
 #undef MAKE_NDARRAY_INPLACE_BROADCAST_BINARY
 
   static void CheckBroadcastable(

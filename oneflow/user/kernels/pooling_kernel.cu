@@ -22,7 +22,7 @@ namespace oneflow {
 
 constexpr int kBlockSize = cuda::elementwise::kBlockSize;
 
-const int GetMinThreadNum(int64_t elem_num) { return std::min<int64_t>(elem_num, kBlockSize); }
+int GetMinThreadNum(int64_t elem_num) { return std::min<int64_t>(elem_num, kBlockSize); }
 
 int GetNumBlocks(int64_t elem_cnt) {
   int num_blocks = 0;

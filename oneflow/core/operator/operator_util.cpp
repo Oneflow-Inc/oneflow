@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-const size_t DhwOffset(const std::string& data_format) {
+size_t DhwOffset(const std::string& data_format) {
   if (data_format == "channels_first") {
     return 2;
   } else if (data_format == "channels_last") {

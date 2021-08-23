@@ -44,7 +44,7 @@ struct NdarrayApplyBroadcastUnary<
 #define DEFINE_NDARRAY_BROADCAST_UNARY(func_name, NDIMS) \
   NdarrayApplyBroadcastUnaryCoreWrapper<device_type, T, NDIMS, unary_func>::func_name
   DEFINE_STATIC_SWITCH_FUNC(void, Apply, DEFINE_NDARRAY_BROADCAST_UNARY,
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
 #undef DEFINE_NDARRAY_BROADCAST_UNARY
   static void CheckBroadcastable(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
