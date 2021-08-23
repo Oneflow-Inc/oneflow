@@ -31,22 +31,22 @@ class TestLrScheduler(flow.unittest.TestCase):
             [{"params": [Parameter(flow.Tensor([1.0]))]}], lr=TestLrScheduler.base_lr
         )
 
-        def cosine_decay_lr_step(base_lr, current_step, steps, alpha):
-            if current_step < steps:
-                cos_decay = 0.5 * (1 + math.cos(math.pi * current_step / steps))
+        def cosine_decay_lr_step(base_lr, current_step, decay_steps, alpha):
+            if current_step < decay_steps:
+                cos_decay = 0.5 * (1 + math.cos(math.pi * current_step / decay_steps))
                 decay_factor = (1 - alpha) * cos_decay + alpha
                 return base_lr * decay_factor
             else:
                 return base_lr * alpha
 
         alpha = 0.5
-        steps = 10
+        decay_steps = 10
         cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
-            optimizer, steps=steps, alpha=alpha
+            optimizer, decay_steps=decay_steps, alpha=alpha
         )
         for i in range(1, 21):
             cosine_decay_lr.step()
-            new_lr = cosine_decay_lr_step(TestLrScheduler.base_lr, i, steps, alpha)
+            new_lr = cosine_decay_lr_step(TestLrScheduler.base_lr, i, decay_steps, alpha)
             test_case.assertAlmostEqual(
                 cosine_decay_lr.get_last_lr()[0], new_lr, places=4
             )
