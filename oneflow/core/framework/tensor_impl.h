@@ -161,7 +161,7 @@ class ConsistentTensorImpl : public TensorImpl {
   void set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
 
   ConsistentTensorMeta* mut_tensor_meta() {
-    UNIMPLEMENTED() << __PRETTY_FUNCTION__;
+    LOG(FATAL) << "RuntimeError: ConsistentTensorImpl don't have mut_tensor_meta property";
     return nullptr;
   }
 
