@@ -77,7 +77,8 @@ oneflow
             empty,
             ones, 
             ones_like, 
-            pow, 
+            pow,
+            prod,  
             rand,
             randn,
             repeat, 
@@ -126,5 +127,6 @@ oneflow
             grad_enable,
             inference_mode,
             is_grad_enabled,
-
+            is_floating_point,
 .. autofunction:: oneflow.data.load_mnist(train_batch_size=100, test_batch_size=100, data_format='NCHW')
+.. autofunction:: oneflow.relu

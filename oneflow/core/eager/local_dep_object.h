@@ -43,6 +43,7 @@ OBJECT_MSG_END(LocalDepObject);
 // clang-format on
 
 Maybe<LocalDepObject*> GetLocalDepObject(Symbol<Device> device);
+Maybe<LocalDepObject*> FindOrCreateComputeLocalDepObject(const Device& device);
 
 }  // namespace oneflow
 

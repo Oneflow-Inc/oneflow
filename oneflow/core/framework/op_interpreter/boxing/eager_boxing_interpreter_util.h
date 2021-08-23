@@ -23,6 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 struct EagerBoxingInterpreterUtil {
+  static bool IsBoxingS2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingS2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingS2P(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingP2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);

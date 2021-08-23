@@ -124,6 +124,19 @@ if (THIRD_PARTY)
     )
   endforeach()
 
+  add_custom_command(TARGET tensorflow_symlink_headers
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+      ${GLOG_INCLUDE_DIR}/glog
+      ${TENSORFLOW_INSTALL_DIR}/include/tensorflow_inc/tensorflow/core/platform/google
+  )
+
+  add_custom_command(TARGET tensorflow_symlink_headers
+    COMMAND patch --forward
+    ${TENSORFLOW_INSTALL_DIR}/include/tensorflow_inc/tensorflow/stream_executor/platform/logging.h
+    ${CMAKE_SOURCE_DIR}/cmake/third_party/patches/tensorflow-logging.patch
+    || true
+  )
+
 endif(THIRD_PARTY)
 
 include_directories(${TENSORFLOW_XLA_INCLUDE_INSTALL_DIR})
