@@ -35,6 +35,10 @@ class SpinCounter final {
 
   explicit SpinCounter(int64_t cnt_val)
       : cnt_val_(cnt_val), timeout_seconds_(5 * 60), heartbeat_interval_seconds_(0) {}
+  SpinCounter(int64_t cnt_val, int64_t timeout_seconds, int64_t heartbeat_interval_seconds)
+      : cnt_val_(cnt_val),
+        timeout_seconds_(timeout_seconds),
+        heartbeat_interval_seconds_(heartbeat_interval_seconds) {}
   static Maybe<void> SpinWait(
       int64_t cnt, const std::function<Maybe<void>(const std::shared_ptr<SpinCounter>&)>& Callback);
   static Maybe<void> SpinWait(
