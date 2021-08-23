@@ -62,8 +62,8 @@ Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc,
   return one::OpBuilder("eager_nccl_s2s", *JUST(UniqueStr("eager_nccl_s2s")))
       .Input("in")
       .Output("out")
-      .Attr<int64_t>("in_split_axis", src_sbp.split_parallel().axis())
-      .Attr<int64_t>("out_split_axis", dst_sbp.split_parallel().axis())
+      .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
+      .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
