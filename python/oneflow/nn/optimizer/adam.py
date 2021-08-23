@@ -52,7 +52,8 @@ class Adam(Optimizer):
         eps (float, optional): term added to the denominator to improve
             numerical stability (default: 1e-8)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
-        do_bias_correction (bool, optional): Whether do bias correction (default: False)
+        amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
+        do_bias_correction (bool, optional): Whether do bias correction (default: True)
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
@@ -68,8 +69,8 @@ class Adam(Optimizer):
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-08,
         weight_decay: float = 0,
-        amsgrad: bool = False, 
-        do_bias_correction = True
+        amsgrad: bool = False,
+        do_bias_correction=True,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
@@ -89,9 +90,6 @@ class Adam(Optimizer):
         options["amsgrad"] = amsgrad
         options["do_bias_correction"] = do_bias_correction
         super().__init__(parameters, options)
-
-        # self.do_bias_correction = do_bias_correction
-        # self.amsgrad = amsgrad 
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
@@ -130,20 +128,22 @@ class Adam(Optimizer):
                     "l2": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
-                    "epsilon": param_group["eps"], 
-                    "do_bias_correction": param_group["do_bias_correction"], 
-                    "amsgrad": param_group["amsgrad"], 
+                    "epsilon": param_group["eps"],
+                    "do_bias_correction": param_group["do_bias_correction"],
+                    "amsgrad": param_group["amsgrad"],
                 }
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    self._state[param]["step"] += 1 
                     kwargs.update({"train_step_val": self._state[param]["step"]})
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
                     max_v_tensor = self._state[param]["max_exp_avg_sq"]
-                    self._op(param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs)
-            
+                    self._op(
+                        param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs
+                    )
+                    self._state[param]["step"] += 1
+
             return loss
 
     def generate_conf_for_graph(self, train_conf, vars_conf):
@@ -159,13 +159,14 @@ class Adam(Optimizer):
             epsilon = param_group["eps"]
             do_bias_correction = param_group["do_bias_correction"]
             amsgrad = param_group["amsgrad"]
-
             optimizer_conf.set_base_learning_rate(lr)
 
             optimizer_conf.mutable_adam_conf().set_beta1(beta1)
             optimizer_conf.mutable_adam_conf().set_beta2(beta2)
             optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
-            optimizer_conf.mutable_adam_conf().set_do_bias_correction(do_bias_correction)
+            optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+                do_bias_correction
+            )
             optimizer_conf.mutable_adam_conf().set_amsgrad(amsgrad)
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
