@@ -54,4 +54,16 @@ bool EagerBoxingInterpreterUtil::IsBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
   return true;
 }
 
+bool EagerBoxingInterpreterUtil::IsBroadcastSbp(const cfg::SbpParallel& sbp) {
+  return sbp.has_broadcast_parallel();
+}
+
+bool EagerBoxingInterpreterUtil::IsPartialSumSbp(const cfg::SbpParallel& sbp) {
+  return sbp.has_partial_sum_parallel();
+}
+
+bool EagerBoxingInterpreterUtil::IsSplitSbp(const cfg::SbpParallel& sbp, int64_t axis) {
+  return (sbp.has_split_parallel() && sbp.split_parallel().axis() == axis);
+}
+
 }  // namespace oneflow
