@@ -58,9 +58,9 @@ Maybe<one::Tensor> AsymXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<P
   std::shared_ptr<one::Tensor> broadcast_input =
       JUST(SymXToBBoxingFunction(tensor, in, broadcast_in_placed_nd_sbp));
 
-  const auto& AsymBoxingFunction =
+  const auto& AsymBroadcastBoxingFunction =
       *JUST(GetBoxingFunction("asymmetric-broadcast", broadcast_in_placed_nd_sbp, out));
-  return AsymBoxingFunction(broadcast_input, broadcast_in_placed_nd_sbp, out);
+  return AsymBroadcastBoxingFunction(broadcast_input, broadcast_in_placed_nd_sbp, out);
 }
 
 COMMAND(RegisterBoxingFunction("asymmetric-x-to-b", CheckAsymXToB, &AsymXToB));
