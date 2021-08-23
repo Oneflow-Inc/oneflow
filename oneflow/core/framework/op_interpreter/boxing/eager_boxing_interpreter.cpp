@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include <typeinfo>
 #include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/registry_error.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
 
@@ -67,6 +69,45 @@ Maybe<one::Tensor> EagerBoxingCall::Apply(const std::shared_ptr<one::Tensor>& in
   CHECK_OR_RETURN(input_parallel_desc == this->in_parallel_desc);
   return this->boxing_interpreter->Interpret(input, this->in_nd_sbp, this->out_nd_sbp,
                                              this->in_parallel_desc, this->out_parallel_desc);
+}
+
+namespace {
+
+HashMap<std::string, BoxingCheckerT>* MutName2BoxingChecker() {
+  static HashMap<std::string, BoxingCheckerT> map;
+  return &map;
+}
+
+HashMap<std::string, BoxingFunctionT>* MutName2BoxingFunction() {
+  static HashMap<std::string, BoxingFunctionT> map;
+  return &map;
+}
+
+}  // namespace
+
+namespace {
+
+Maybe<BoxingFunctionT> RawGetBoxingFunction(const std::string& method_name, Symbol<PlacedNdSbp> in,
+                                            Symbol<PlacedNdSbp> out) {
+  const auto& Checker = JUST(MapAt(*MutName2BoxingChecker(), method_name));
+  JUST(Checker(in, out));
+  return JUST(MapAt(*MutName2BoxingFunction(), method_name));
+}
+
+}  // namespace
+
+decltype(GetBoxingFunction) GetBoxingFunction =
+    DECORATE(&RawGetBoxingFunction, ThreadLocalCopiable);
+
+void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT& Checker,
+                            const BoxingFunctionT& BoxingFunction) {
+  CatchRegistryError([&]() -> Maybe<void> {
+    CHECK_OR_RETURN(MutName2BoxingChecker()->emplace(method_name, Checker).second)
+        << "boxing_method_name: " << method_name;
+    CHECK_OR_RETURN(MutName2BoxingFunction()->emplace(method_name, BoxingFunction).second)
+        << "boxing_method_name: " << method_name;
+    return Maybe<void>::Ok();
+  });
 }
 
 }  // namespace oneflow
