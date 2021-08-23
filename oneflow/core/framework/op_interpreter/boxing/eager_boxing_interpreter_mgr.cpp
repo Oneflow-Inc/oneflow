@@ -72,8 +72,6 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
                                                    Symbol<cfg::NdSbp> out_nd_sbp,
                                                    Symbol<ParallelDesc> in_parallel_desc,
                                                    Symbol<ParallelDesc> out_parallel_desc) {
-  const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
-  const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
   if (in_parallel_desc == out_parallel_desc
       && (in_parallel_desc->parallel_num() == 1 || in_nd_sbp == out_nd_sbp)) {
     return std::shared_ptr<EagerBoxingInterpreter>(new IdentityBoxingInterpreter());
@@ -125,14 +123,9 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
         in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
     if (interpreter.IsOk()) { return JUST(interpreter); }
   }
-  if (in_parallel_desc->parallel_num() != out_parallel_desc->parallel_num()
-      && (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1)
-      && EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out_nd_sbp)
-      && in_parallel_desc->device_type() == DeviceType::kGPU
-      && out_parallel_desc->device_type() == DeviceType::kGPU) {
-    const auto& BoxingFunction = JUST(GetBoxingFunction("asym_x_to_b", in, out));
-    return std::shared_ptr<EagerBoxingInterpreter>(new NaiveEagerBoxingInterpreter(BoxingFunction));
-  }
+
+  const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
+  const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
 
 #define TRY_BOXING_FUNCTION(boxing_function_name)                                       \
   do {                                                                                  \
@@ -144,6 +137,7 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   } while (0)
 
   TRY_BOXING_FUNCTION("flatten-hierarchy");
+  TRY_BOXING_FUNCTION("asym_x_to_b");
 
 #undef TRY_BOXING_FUNCTION
 
