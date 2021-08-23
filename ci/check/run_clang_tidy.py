@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -20,6 +20,7 @@ import asyncio
 import argparse
 import subprocess
 import os
+from typing import List, Optional
 
 
 def split_and_print(prefix, text):
@@ -55,7 +56,7 @@ async def run_command(cmd=None, dry=False, name=None):
     return process.returncode
 
 
-def download(build_dir, dry=False):
+def download(build_dir, dry=False) -> Optional[List[str]]:
     urls = [
         "https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage"
         if os.getenv("CI")
@@ -89,9 +90,10 @@ if __name__ == "__main__":
     downloaded = download(args.build_dir, dry=True)
     if downloaded is None:
         downloaded = download(args.build_dir)
-    promises = [
+    assert downloaded is not None
+    ret_code = loop.run_until_complete(
         run_command(
-            f"cd .. && git diff -U0 master | {downloaded[1]} -clang-tidy-binary {downloaded[0]} -path {args.build_dir} -quiet -j $(nproc) -p1"
+            f"cd .. && git diff -U0 master | {downloaded[1]} -clang-tidy-binary {downloaded[0]} -path {args.build_dir} -j $(nproc) -p1  -allow-enabling-alpha-checkers -extra-arg=-Xclang -extra-arg=-analyzer-config -extra-arg=-Xclang -extra-arg=aggressive-binary-operation-simplification=true -warnings-as-errors=*,-maybe-glog-fatal,-clang-analyzer-alpha.*"
         )
-    ]
-    loop.run_until_complete(asyncio.gather(*promises))
+    )
+    exit(ret_code)
