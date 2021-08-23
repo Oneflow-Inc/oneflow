@@ -50,6 +50,12 @@ class PyTorchDoesNotSupportError(Exception):
 
 call_tensor = None
 
+def get_tensor_shape(call_tensor):
+    shape_list = []
+    for i in range(len(call_tensor.shape)):
+        shape_list.append(call_tensor.shape[i])
+    return shape_list
+
 def get_args(callable, *args, **kwargs):
     try:
         spec = inspect.getfullargspec(callable)
@@ -119,10 +125,7 @@ def get_args(callable, *args, **kwargs):
             new_pytorch_kwargs[key] = value
 
         if call_tensor is not None:
-            shape_list = []
-            for i in range(len(call_tensor.shape)):
-                shape_list.append(call_tensor.shape[i])
-            note_pytorch_method_names.append(f"Tensor({shape_list}).{callable.__name__}")
+            note_pytorch_method_names.append(f"Tensor({get_tensor_shape(call_tensor)}).{callable.__name__}")
         else:
             note_pytorch_method_names.append(f"flow.{callable.__name__}")
         note_pytorch_args.append(new_pytorch_args)
