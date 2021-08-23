@@ -149,11 +149,16 @@ if (BUILD_CUDA)
   message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
   set(CUDA_SEPARABLE_COMPILATION OFF)
 
-  # example
-  # warning #177-D: parameter "args" was declared but never referenced
-  # warning #611-D: overloaded virtual function "oneflow::user_op::OpKernel::Compute" is only partially overridden in class "oneflow::DiagBackwardKernel<oneflow::kGPU, double>"
-  # warning #20012-D: __host__ annotation is ignored on a function("XpuVarNdarray") that is explicitly defaulted on its first declaration
-  list(APPEND CUDA_NVCC_FLAGS -Werror cross-execution-space-call -Wno-deprecated-gpu-targets --display-error-number --diag-suppress 177,611,20012)
+  list(APPEND CUDA_NVCC_FLAGS -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.2")
+    # example
+    # warning #177-D: parameter "args" was declared but never referenced
+    # warning #611-D: overloaded virtual function "oneflow::user_op::OpKernel::Compute" is only partially overridden in class "oneflow::DiagBackwardKernel<oneflow::kGPU, double>"
+    # warning #20012-D: __host__ annotation is ignored on a function("XpuVarNdarray") that is explicitly defaulted on its first declaration
+    list(APPEND CUDA_NVCC_FLAGS --display-error-number --diag-suppress 177,611,20012)
+  else()
+    list(APPEND CUDA_NVCC_FLAGS -w)
+  endif()
   #  half is not fully supported when __CUDA_ARCH__ < 530
   #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")
   #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_52,code=sm_52")
