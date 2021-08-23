@@ -178,7 +178,6 @@ struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
                      int64_t upper_bound, const IDX* num_unique_instance,
                      const float* learning_rate, const int64_t* train_step, const K* indices,
                      const T* values, T* model, T* m, T* v, T* max_v) {
-    // const float lr = *learning_rate;
     if (learning_rate != nullptr) { lr = *learning_rate; }
     if (train_step != nullptr) { train_step_val = *train_step; }
 
