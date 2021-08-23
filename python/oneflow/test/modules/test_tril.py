@@ -37,7 +37,7 @@ class TestTril(flow.unittest.TestCase):
         return y
 
     @autotest()
-    def TestTril_with_diag(test_case):
+    def test_tril_with_diag(test_case):
         device = random_device()
         diagonal = random(-3, 3).to(int)
         x = random_pytorch_tensor(
