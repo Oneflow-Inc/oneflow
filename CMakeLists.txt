@@ -150,7 +150,7 @@ if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION OFF)
 
   list(APPEND CUDA_NVCC_FLAGS -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.2")
+  if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "11.2")
     # example
     # warning #177-D: parameter "args" was declared but never referenced
     # warning #611-D: overloaded virtual function "oneflow::user_op::OpKernel::Compute" is only partially overridden in class "oneflow::DiagBackwardKernel<oneflow::kGPU, double>"
