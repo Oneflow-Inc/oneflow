@@ -78,6 +78,8 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
+  delete recv_msg_buf_;
+  delete send_msg_buf_;
   CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
   CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
   CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
@@ -141,8 +143,8 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   ibv_device_attr device_attr{};
   CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  recv_msg_buf_ = std::make_shared<MessagePool>(pd_,kDefaultMessagePoolSize);
-  send_msg_buf_ =  std::make_shared<MessagePool>(pd_,kDefaultMessagePoolSize);
+  recv_msg_buf_ = new MessagePool(pd_,kDefaultMessagePoolSize);
+  send_msg_buf_ = new MessagePool(pd_,kDefaultMessagePoolSize);
   CHECK(cq_);
   ibv_port_attr port_attr{};
   const uint8_t port = user_port == 0 ? 1 : user_port;
