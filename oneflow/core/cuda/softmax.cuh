@@ -31,12 +31,12 @@ constexpr int kWarpSize = 32;
 
 template<typename T>
 struct SumOp {
-  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return a + b; }
+  __device__ __forceinline__ T operator()(const T a, const T b) const { return a + b; }
 };
 
 template<typename T>
 struct MaxOp {
-  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return max(a, b); }
+  __device__ __forceinline__ T operator()(const T a, const T b) const { return max(a, b); }
 };
 
 template<template<typename> typename ReductionOp, typename T, int thread_group_width = kWarpSize>
@@ -189,23 +189,23 @@ enum class SoftmaxType {
 
 template<typename C, SoftmaxType T>
 struct SoftmaxWarpImplOperation {
-  __device__ void operator()(C* row_elem, C* warp_max_elem, C* thread_sum_elem) {
-    *row_elem = Exp(*row_elem - *warp_max_elem);
+  __device__ void operator()(C* row_elem,const C warp_max_elem, C* thread_sum_elem) {
+    *row_elem = Exp(*row_elem - warp_max_elem);
     *thread_sum_elem += *row_elem;
   }
-  __device__ void operator()(C* row_elem, C* warp_sum_elem) {
-    *row_elem = Div(*row_elem, *warp_sum_elem);
+  __device__ void operator()(C* row_elem,const C warp_sum_elem) {
+    *row_elem = Div(*row_elem, warp_sum_elem);
   }
 };
 
 template<typename C>
 struct SoftmaxWarpImplOperation<C, SoftmaxType::kLogSoftmax> {
-  __device__ void operator()(C* row_elem, C* warp_max_elem, C* thread_sum_elem) {
-    *row_elem -= *warp_max_elem;
+  __device__ void operator()(C* row_elem,const C warp_max_elem, C* thread_sum_elem) {
+    *row_elem -= warp_max_elem;
     *thread_sum_elem += Exp(*row_elem);
   }
-  __device__ void operator()(C* row_elem, C* warp_sum_elem) {
-    *row_elem -= SafeLog(*warp_sum_elem);
+  __device__ void operator()(C* row_elem, const C warp_sum_elem) {
+    *row_elem -= SafeLog(warp_sum_elem);
   }
 };
 
@@ -260,7 +260,7 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
       ComputeType* row_buf = buf[row_id];
 #pragma unroll
       for (int i = 0; i < cols_per_thread; ++i) {
-        f(&row_buf[i], &warp_max[row_id], &thread_sum[row_id]);
+        f(&row_buf[i], warp_max[row_id], &thread_sum[row_id]);
       }
     }
     ComputeType warp_sum[rows_per_access];
@@ -272,7 +272,7 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
     for (int row_id = 0; row_id < rows_per_access; ++row_id) {
       ComputeType* row_buf = buf[row_id];
 #pragma unroll
-      for (int i = 0; i < cols_per_thread; ++i) { f(&row_buf[i], &warp_sum[row_id]); }
+      for (int i = 0; i < cols_per_thread; ++i) { f(&row_buf[i], warp_sum[row_id]); }
 #pragma unroll
       for (int i = 0; i < num_packs; ++i) {
         const int col = (i * thread_group_width + lane_id) * pack_size;
@@ -440,25 +440,25 @@ struct DispatchSoftmaxWarpImplPackSize {
 
 template<typename C, SoftmaxType T>
 struct SoftmaxBlockSMemImplOperation {
-  __device__ void operator()(C* col_elem, const C& row_max, C* thread_sum) {
+  __device__ void operator()(C* col_elem, const C row_max, C* thread_sum) {
     const C exp_x = Exp(*col_elem - row_max);
     *col_elem = exp_x;
     *thread_sum += exp_x;
   }
-  __device__ void operator()(C* pack_elem, C* col_elem, const C& row_sum) {
-    *pack_elem = Div(*col_elem, row_sum);
+  __device__ void operator()(C* pack_elem,const C col_elem, const C row_sum) {
+    *pack_elem = Div(col_elem, row_sum);
   }
 };
 
 template<typename C>
 struct SoftmaxBlockSMemImplOperation<C, SoftmaxType::kLogSoftmax> {
-  __device__ void operator()(C* col_elem, const C& row_max, C* thread_sum) {
+  __device__ void operator()(C* col_elem, const C row_max, C* thread_sum) {
     const C x = *col_elem - row_max;
     *col_elem = x;
     *thread_sum += Exp(x);
   }
-  __device__ void operator()(C* pack_elem, C* col_elem, const C& row_sum) {
-    *pack_elem = *col_elem - SafeLog(row_sum);
+  __device__ void operator()(C* pack_elem,const C col_elem, const C row_sum) {
+    *pack_elem = col_elem - SafeLog(row_sum);
   }
 };
 
@@ -492,7 +492,7 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) { f(&pack[i], &buf[i * num_packs + pack_id], row_sum); }
+      for (int i = 0; i < pack_size; ++i) { f(&pack[i], buf[i * num_packs + pack_id], row_sum); }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
     }
   }
@@ -574,14 +574,14 @@ inline bool TryDispatchSoftmaxBlockSMemImpl(cudaStream_t stream, LOAD load, STOR
   __device__ typename std::enable_if<T == SoftmaxType::kLogSoftmax, void>::type
 
 template<typename C, SoftmaxType T>
-SoftmaxOperateReturnType SoftmaxBlockUncachedImplOperate(C* pack_elem, const C& row_max,
-                                                         const C& row_sum) {
+SoftmaxOperateReturnType SoftmaxBlockUncachedImplOperate(C* pack_elem, const C row_max,
+                                                         const C row_sum) {
   *pack_elem = Div(Exp(*pack_elem - row_max), row_sum);
 }
 
 template<typename C, SoftmaxType T>
-LogSoftmaxOperateReturnType SoftmaxBlockUncachedImplOperate(C* pack_elem, const C& row_max,
-                                                            const C& row_sum) {
+LogSoftmaxOperateReturnType SoftmaxBlockUncachedImplOperate(C* pack_elem, const C row_max,
+                                                            const C row_sum) {
   *pack_elem = (*pack_elem - row_max) - SafeLog(row_sum);
 }
 
