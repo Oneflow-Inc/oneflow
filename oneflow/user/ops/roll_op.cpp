@@ -50,22 +50,5 @@ REGISTER_USER_OP("roll")
         return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("roll").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
-    if(op.NeedGenGradTensor4OpInput("in", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper roll_grad_op = 
-            builder.Op("roll_grad")
-                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                .Attr<std::vector<int32_t>>("shifts", std::vector<int32_t>{1})
-                .Attr<std::vector<int32_t>>("dims", std::vector<int32_t>{0})
-                .Output("out")
-                .Build();
-        op.BindGradTensorWithOpInput(roll_grad_op.output("out", 0), "in", 0);
-        AddOp(roll_grad_op);
-    }
-    return Maybe<void>::Ok();                                                      
-    });
-
 }   // namespace
 }   // namespace oneflow
