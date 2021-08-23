@@ -703,3 +703,79 @@ jobs:
         if: always()
         run: |
           docker rm -f ${container_name} || true
+  
+  static_analysis_with_clang_on_diff:
+    name: Static analysis with clang on diff
+    runs-on: ubuntu-20.04
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    steps:
+      - name: Check out OneFlow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build ccache
+      - name: Download OneFlow custom clang-tidy
+        run: |
+          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage
+          wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
+          chmod +x clang-tidy-489012f-x86_64.AppImage clang-tidy-diff.py
+      - name: Cache third party dir
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: clang-tidy-diff-third-party-ccache-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}
+          restore-keys: |
+            clang-tidy-diff-third-party-ccache-${{ hashFiles('**/CMakeLists.txt') }}-
+            clang-tidy-diff-third-party-ccache-
+      - name: Build third party libs and generate files
+        run: |
+          export CCACHE_COMPRESS=true
+          export CCACHE_MAXSIZE=500M
+          mkdir build
+          cd build
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build . -j$(nproc) --target of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
+      - name: Fetch upstream
+        if: github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+        run: |
+          git remote add upstream https://github.com/Oneflow-Inc/oneflow
+          git fetch upstream
+      - name: Run clang-tidy for modified files
+        # use clang as compiler for correct compiler flags
+        run: |
+          cd build
+          rm CMakeCache.txt
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_C_COMPILER=clang-12 \
+            -DCMAKE_CXX_COMPILER=clang++-12 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cd ..
+          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="*,-maybe-glog-fatal,-clang-analyzer-alpha.*"
+      - name: Remove automerge
+        if: failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'automerge'
+            })
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'CI failed, removing label automerge'
+            })

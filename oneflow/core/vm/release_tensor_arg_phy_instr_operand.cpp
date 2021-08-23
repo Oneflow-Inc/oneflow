@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {
 
@@ -27,8 +27,7 @@ void ReleaseTensorArgPhyInstrOperand::ForEachConstMirroredObject(
 
 void ReleaseTensorArgPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
-  DoEach(nullptr, compute_local_dep_object->mut_mirrored_object());
+  DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object());
 }
 
 void ReleaseTensorArgPhyInstrOperand::ForEachMut2MirroredObject(
