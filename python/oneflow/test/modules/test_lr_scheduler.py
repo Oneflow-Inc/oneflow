@@ -83,7 +83,7 @@ class TestLrScheduler(flow.unittest.TestCase):
 
         gamma = 0.1
         milestones = [5, 11, 15]
-        multistep_lr = flow.optim.lr_scheduler.MultistepLR(
+        multistep_lr = flow.optim.lr_scheduler.MultiStepLR(
             optimizer, milestones=milestones, gamma=gamma
         )
         for i in range(1, 18):

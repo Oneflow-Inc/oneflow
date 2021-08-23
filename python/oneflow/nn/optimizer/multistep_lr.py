@@ -16,7 +16,7 @@ limitations under the License.
 from .lr_scheduler import LrScheduler
 
 
-class MultistepLR(LrScheduler):
+class MultiStepLR(LrScheduler):
     """
     Decays the learning rate of each parameter group by gamma once the number of step 
     reaches one of the milestones. Notice that such decay can happen simultaneously with 
@@ -36,7 +36,7 @@ class MultistepLR(LrScheduler):
         import oneflow as flow
 
         ...
-        multistep_lr = flow.optim.lr_scheduler.MultistepLR(optimizer, milestones=[30,80], gamma=0.1)
+        multistep_lr = flow.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30,80], gamma=0.1)
         for epoch in range(num_epoch):
             train(...)
             multistep_lr.step()
