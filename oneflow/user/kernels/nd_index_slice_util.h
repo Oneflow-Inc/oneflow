@@ -56,9 +56,9 @@ struct ScatterNdAddFunctor final {
 };
 
 template<DeviceType device_type, typename T, typename I>
-struct ZeroByNdIndexFunctor final {
-  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                  T* dense) const;
+struct FillByNdIndexFunctor final {
+  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices, T* dense,
+                  T value) const;
 };
 
 template<typename I>
@@ -102,11 +102,12 @@ OF_DEVICE_FUNC void DoScatterNdAdd(int64_t elem_cnt, int64_t slice_size, int64_t
 }
 
 template<typename T, typename I>
-OF_DEVICE_FUNC void DoZeroByNdIndex(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
-                                    const int64_t* dense_shape, const I* indices, T* dense) {
+OF_DEVICE_FUNC void DoFillByNdIndex(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
+                                    const int64_t* dense_shape, const I* indices, T* dense,
+                                    T value) {
   XPU_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t offset = OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
-    dense[offset] = static_cast<T>(0);
+    dense[offset] = value;
   }
 }
 
@@ -118,14 +119,14 @@ OF_DEVICE_FUNC void DoZeroByNdIndex(int64_t elem_cnt, int64_t slice_size, int64_
   template struct ScatterNdAddFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
                                       OF_PP_PAIR_FIRST(itype_pair)>;
 
-#define INSTANTIATE_ZERO_BY_ND_INDEX_FUNCTOR(device_type_v, dtype_pair, itype_pair) \
-  template struct ZeroByNdIndexFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
+#define INSTANTIATE_FILL_BY_ND_INDEX_FUNCTOR(device_type_v, dtype_pair, itype_pair) \
+  template struct FillByNdIndexFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \
                                        OF_PP_PAIR_FIRST(itype_pair)>;
 
 #define INSTANTIATE_ND_INDEX_SLICE_FUNCTORS(device_type_v, dtype_pair, itype_pair) \
   INSTANTIATE_GATHER_ND_FUNCTOR(device_type_v, dtype_pair, itype_pair)             \
   INSTANTIATE_SCATTER_ND_ADD_FUNCTOR(device_type_v, dtype_pair, itype_pair)        \
-  INSTANTIATE_ZERO_BY_ND_INDEX_FUNCTOR(device_type_v, dtype_pair, itype_pair)
+  INSTANTIATE_FILL_BY_ND_INDEX_FUNCTOR(device_type_v, dtype_pair, itype_pair)
 
 }  // namespace oneflow
 

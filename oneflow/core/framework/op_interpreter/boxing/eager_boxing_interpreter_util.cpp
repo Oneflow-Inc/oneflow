@@ -17,6 +17,11 @@ limitations under the License.
 
 namespace oneflow {
 
+bool EagerBoxingInterpreterUtil::IsBoxingS2S(const cfg::SbpParallel& src,
+                                             const cfg::SbpParallel& dst) {
+  return src.has_split_parallel() && dst.has_split_parallel();
+}
+
 bool EagerBoxingInterpreterUtil::IsBoxingS2B(const cfg::SbpParallel& src,
                                              const cfg::SbpParallel& dst) {
   return src.has_split_parallel() && dst.has_broadcast_parallel();

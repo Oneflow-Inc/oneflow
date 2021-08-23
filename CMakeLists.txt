@@ -148,7 +148,7 @@ if (BUILD_CUDA)
   message(STATUS "CUDA_VERSION: ${CUDA_VERSION}")
   message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
   set(CUDA_SEPARABLE_COMPILATION OFF)
-  list(APPEND CUDA_NVCC_FLAGS -w -Wno-deprecated-gpu-targets)
+  list(APPEND CUDA_NVCC_FLAGS -w -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
   #  half is not fully supported when __CUDA_ARCH__ < 530
   #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")
   #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_52,code=sm_52")
