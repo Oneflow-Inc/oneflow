@@ -70,6 +70,15 @@ class MessagePool final {
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
     MessagePool() = delete; //todo:这里可能要修改
     ~MessagePool() {
+      while(message_buf_.empty()) {
+        delete message_buf_.front();
+        message_buf_.pop_front();
+      }
+      while(mr_buf_.empty() == false) {
+        ibv_mr * mr = mr_buf_.front();
+        mr_buf_.pop_front();
+        CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
+      }
     }//todo:这里可能要修改
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
