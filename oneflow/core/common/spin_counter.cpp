@@ -59,12 +59,6 @@ Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t 
       NeedSpin, seconds, [] {}, 0);
 }
 
-Maybe<void> SpinCounter::WaitUntilCntEqualZero() const {
-  return Global<ForeignLockHelper>::Get()->WithScopedRelease([this]() -> Maybe<void> {
-    return SpinWaitUntilTimeout([&] { return cnt_val_ > 0; }, TimeoutSeconds());
-  });
-}
-
 Maybe<void> SpinCounter::WaitUntilCntEqualZero(
     const std::function<void()>& HeartbeatCallback) const {
   CHECK_LT_OR_RETURN(HearbeatIntervalSeconds(), 0);
@@ -73,6 +67,10 @@ Maybe<void> SpinCounter::WaitUntilCntEqualZero(
         return SpinWaitUntilTimeout([&] { return cnt_val_ > 0; }, TimeoutSeconds(),
                                     HeartbeatCallback, HearbeatIntervalSeconds());
       });
+}
+
+Maybe<void> SpinCounter::WaitUntilCntEqualZero() const {
+  return WaitUntilCntEqualZero([] {});
 }
 
 }  // namespace oneflow
