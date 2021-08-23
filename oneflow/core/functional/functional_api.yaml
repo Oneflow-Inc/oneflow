@@ -823,6 +823,11 @@
     "Tensor (Tensor x, Float p=0.5, Generator generator=None) => Dropout"
   bind_python: True
 
+- name: "dropout_grad"
+  signature:
+    "Tensor (Tensor dy, Tensor mask, Float scale) => DropoutGrad"
+  bind_python: False
+
 - name: "pad"
   signature: "Tensor (Tensor x, Int64List pad, String mode=\"constant\", Scalar value=0) => Pad"
   bind_python: True
@@ -1071,13 +1076,13 @@
   bind_python: True
 
 - name: "fused_bias_add_gelu"
-  signature: "Tensor FusedBiasAddGelu(Tensor a, Tensor b, *, Int32 axis)"
+  signature: "Tensor (Tensor a, Tensor b, *, Int32 axis) => FusedBiasAddGelu"
   bind_python: True
 
 - name: "fused_bias_add_gelu_grad"
-  signature: "Tensor FusedBiasAddGeluGrad(Tensor a, Tensor b, Tensor dy, Int32 axis)"
+  signature: "Tensor (Tensor a, Tensor b, Tensor dy, Int32 axis) => FusedBiasAddGeluGrad"
   bind_python: false
 
 - name: "fused_bias_add_dropout"
-  signature: "Tensor FusedBiasAddDropout(Tensor a, Tensor b, *, Float p=0.5, Int32 axis, Generator generator=None)"
+  signature: "Tensor (Tensor a, Tensor b, *, Float p=0.5, Int32 axis, Generator generator=None) => FusedBiasAddDropout"
   bind_python: True
