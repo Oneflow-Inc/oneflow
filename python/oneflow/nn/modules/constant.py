@@ -210,7 +210,7 @@ class Full(_ConstantBase):
 
 
 def full_op(
-    size: Union[_size_any_t, flow.Size, List[int]],
+    size: Union[_size_any_t, flow.Size],
     value: Union[float, int],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
@@ -223,13 +223,13 @@ def full_op(
     The tensor’s dtype is inferred from `value`.
 
     Args:
-        size(int...) - – a list, tuple, or torch.Size of integers defining the shape of the output tensor.
-        fill_value(Scalar) - the value to fill the output tensor with.
-        dtype (flow.dtype, optional) – the desired data type of returned tensor.
-        device (flow.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
-        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
+        size(int...): a list, tuple, or torch.Size of integers defining the shape of the output tensor.
+        fill_value(Scalar): the value to fill the output tensor with.
+        dtype (flow.dtype, optional): the desired data type of returned tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
 
@@ -246,7 +246,8 @@ def full_op(
 
     """
     size = _handle_size_arg(*size)
-    dtype = flow.tensor(value).dtype
+    if dtype is None:
+        dtype = flow.tensor(value).dtype
     return Full(size, value, dtype, device, placement, sbp, requires_grad)()
 
 
