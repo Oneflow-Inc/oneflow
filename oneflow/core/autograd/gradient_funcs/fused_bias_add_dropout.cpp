@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct FusedBiasAddDropoutInterpState : public OpExprInterpState {
+struct FusedBiasAddDropoutInterpState : public AutoGradCaptureState {
   bool input_requires_grad;
   bool bias_requires_grad;
   int32_t axis;
@@ -40,30 +40,27 @@ class FusedBiasAddDropout : public OpExprGradFunction<FusedBiasAddDropoutInterpS
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> dropout_grad_op_;
 };
 
 Maybe<void> FusedBiasAddDropout::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  dropout_grad_op_ = JUST(op_expr_helper::DropoutGradOp(/*scale=*/2.0, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* ctx,
                                          const TensorTuple& inputs, const TensorTuple& outputs,
                                          const AttrMap& attrs) const {
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  CHECK_EQ_OR_RETURN(inputs.size(), 3);
   ctx->input_requires_grad = inputs.at(0)->requires_grad();  // input
   ctx->bias_requires_grad = inputs.at(1)->requires_grad();   // bias
 
   if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->scale = JUST(composed_attrs.GetAttr<float>("scale"));
   ctx->axis = JUST(composed_attrs.GetAttr<int32_t>("axis"));
 
-  CHECK_EQ_OR_RETURN(inputs.size(), 3);
   ctx->SaveTensorForBackward(inputs.at(2));
 
   return Maybe<void>::Ok();
@@ -71,18 +68,15 @@ Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* ctx,
 
 Maybe<void> FusedBiasAddDropout::Apply(const FusedBiasAddDropoutInterpState* ctx,
                                        const TensorTuple& out_grads, TensorTuple* in_grads) const {
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
 
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<float>("scale", ctx->scale));
-  // mask hava no grad(reqiures_grad=False), but still take a place in in_grads
+  // mask have no grad(reqiures_grad=False), but still take a place in in_grads
   in_grads->resize(3);
 
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& dropout_grad =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {out_grads.at(0), mask}, attrs));
+      JUST(functional::DropoutGrad(out_grads.at(0), mask, ctx->scale));
 
   if (ctx->input_requires_grad) { in_grads->at(0) = dropout_grad; }
 

@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct FusedBiasAddGeluInterpState : public OpExprInterpState {
+struct FusedBiasAddGeluInterpState : public AutoGradCaptureState {
   bool input_requires_grad;
   bool bias_requires_grad;
   int32_t axis;
