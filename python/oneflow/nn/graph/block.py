@@ -23,7 +23,7 @@ from oneflow.framework.distribute import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
 from oneflow.nn.parameter import Parameter
-from oneflow.nn.util import add_indent
+from oneflow.nn.graph.util import add_indent
 
 
 class BlockType:

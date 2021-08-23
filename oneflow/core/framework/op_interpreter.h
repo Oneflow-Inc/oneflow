@@ -83,6 +83,7 @@ class OpExprInterpreter {
   _macro(VariableOp);                \
   _macro(CastToMirroredOp);          \
   _macro(CastFromMirroredOp);        \
+  _macro(ConsistentToConsistentOp);  \
   _macro(CastToConsistentOp);        \
   _macro(CastFromConsistentOp);      \
   _macro(DistributeSplitOp);         \

@@ -102,6 +102,28 @@ class ScalarAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ScalarAdd2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarAdd(x, scalar, /*inplace*/ false);
+  }
+};
+
+class ScalarSubFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
+                           bool inplace) const {
+    return ScalarAdd(x, Scalar(-1) * scalar, inplace);
+  }
+};
+
+class ScalarSub2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1))), scalar, /*inplace*/ false);
+  }
+};
+
 class ScalarMulFunctor {
  public:
   ScalarMulFunctor() {
@@ -127,6 +149,27 @@ class ScalarMulFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarMul2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarMul(x, scalar);
+  }
+};
+
+class ScalarDivFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    return ScalarMul(x, Scalar(1.0) / scalar);
+  }
+};
+
+class ScalarDiv2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return functional::ScalarMul(JUST(functional::ReciprocalNoNan(x)), scalar);
+  }
 };
 
 class ScalarPowFunctor {
@@ -184,6 +227,30 @@ class ReduceMeanFunctor {
     CHECK_GT_OR_RETURN(reduce_count, 0);
     return functional::ScalarMul(sum, 1.0 / reduce_count);
   }
+};
+
+class ReduceProdFunctor {
+ public:
+  ReduceProdFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_prod").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
+                           const bool& keepdims) const {
+    MutableAttrMap attrs;
+    if (axis.empty()) {
+      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    } else {
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    }
+    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class TransposeFunctor {
@@ -576,9 +643,16 @@ class ScalarLogicalLessEqualFunctor : public ScalarLogicalBaseFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddNFunctor>("AddN");
   m.add_functor<impl::ScalarAddFunctor>("ScalarAdd");
+  m.add_functor<impl::ScalarSubFunctor>("ScalarSub");
   m.add_functor<impl::ScalarMulFunctor>("ScalarMul");
+  m.add_functor<impl::ScalarDivFunctor>("ScalarDiv");
+  m.add_functor<impl::ScalarAdd2Functor>("ScalarAdd2");
+  m.add_functor<impl::ScalarSub2Functor>("ScalarSub2");
+  m.add_functor<impl::ScalarMul2Functor>("ScalarMul2");
+  m.add_functor<impl::ScalarDiv2Functor>("ScalarDiv2");
   m.add_functor<impl::ScalarPowFunctor>("ScalarPow");
   m.add_functor<impl::ReduceSumFunctor>("ReduceSum");
+  m.add_functor<impl::ReduceProdFunctor>("ReduceProd");
   m.add_functor<impl::ReduceMeanFunctor>("ReduceMean");
   m.add_functor<impl::TransposeFunctor>("Transpose");
   m.add_functor<impl::ArangeFunctor>("Arange");
