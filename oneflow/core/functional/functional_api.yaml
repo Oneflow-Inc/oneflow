@@ -102,15 +102,15 @@
   bind_python: False
 
 - name: "broadcast_pow"
-  signature: "Tensor BroadcastPow(Tensor x, Tensor y)"
+  signature: "Tensor (Tensor x, Tensor y) => BroadcastPow"
   bind_python: False
 
 - name: "broadcast_pow_x_grad"
-  signature: "Tensor BroadcastPowXGrad(Tensor dz, Tensor x, Tensor y, Tensor z)"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowXGrad"
   bind_python: False
 
 - name: "broadcast_pow_y_grad"
-  signature: "Tensor BroadcastPowYGrad(Tensor dz, Tensor x, Tensor y, Tensor z)"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowYGrad"
   bind_python: False
 
 - name: "reduce_sum"

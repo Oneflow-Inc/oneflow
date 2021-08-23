@@ -126,13 +126,19 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFMod);
 
 template<typename T>
 struct BinaryFuncPow final {
-  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return std::pow(x, y); }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
+#if defined(__CUDACC__)
+    return pow(x, y);
+#else
+    return std::pow(x, y);
+#endif
+  }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncPow);
 
 template<>
 struct BinaryFuncPow<float16> final {
-  static OF_DEVICE_FUNC const float16 Invoke(const float16 x, const float16 y) {
+  static inline const float16 Invoke(const float16 x, const float16 y) {
     return static_cast<float16>(std::pow(static_cast<float>(x), static_cast<float>(y)));
   }
 };
