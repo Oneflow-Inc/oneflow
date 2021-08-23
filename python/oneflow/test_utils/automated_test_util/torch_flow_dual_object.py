@@ -38,7 +38,6 @@ note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
 
-
 class PyTorchDoesNotSupportError(Exception):
     def __init__(self, exc):
         self.exc = exc
@@ -49,6 +48,7 @@ class PyTorchDoesNotSupportError(Exception):
     def __repr__(self):
         return f"PyTorch error: {str(self.exc)}"
 
+call_tensor = None
 
 def get_args(callable, *args, **kwargs):
     try:
@@ -117,7 +117,14 @@ def get_args(callable, *args, **kwargs):
             if type(value) is torch_original.Tensor:
                 continue
             new_pytorch_kwargs[key] = value
-        note_pytorch_method_names.append(callable.__name__)
+
+        if call_tensor is not None:
+            shape_list = []
+            for i in range(len(call_tensor.shape)):
+                shape_list.append(call_tensor.shape[i])
+            note_pytorch_method_names.append(f"Tensor({shape_list}).{callable.__name__}")
+        else:
+            note_pytorch_method_names.append(f"flow.{callable.__name__}")
         note_pytorch_args.append(new_pytorch_args)
         note_pytorch_kwargs.append(new_pytorch_kwargs)
 
@@ -167,6 +174,7 @@ def GetDualObject(name, pytorch, oneflow):
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
                         except Exception as e:
                             raise PyTorchDoesNotSupportError(e)
+
                         if name in postulate:
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
@@ -277,6 +285,11 @@ class DualObject:
         pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)
         new_name = f"{self.name}.{key}"
+        global call_tensor
+        if isinstance(self.pytorch, torch_original.Tensor):
+            call_tensor = self.pytorch
+        else:
+            call_tensor = None
         return GetDualObject(new_name, pytorch_attr, oneflow_attr)
 
 
