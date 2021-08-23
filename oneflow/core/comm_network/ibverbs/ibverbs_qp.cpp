@@ -72,21 +72,6 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
 }
 
 IBVerbsQP::~IBVerbsQP() {
-  while(recv_msg_buf_->IsEmpty() == false) {
-    delete recv_msg_buf_->GetMessage();
-
-  }
-  while(send_msg_buf_->IsEmpty() == false) {
-    delete send_msg_buf_->GetMessage();
-  }
-  while(recv_msg_buf_->MrBufIsEmpty() == false) {
-    ibv_mr * mr = recv_msg_buf_->GetMr();
-    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-  }
-  while(send_msg_buf_->MrBufIsEmpty() == false) {
-    ibv_mr * mr = send_msg_buf_->GetMr();
-    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-  }
   recv_msg_buf_.reset();
   send_msg_buf_.reset();
   CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
