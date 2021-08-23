@@ -79,6 +79,12 @@ Error Error::IndexError() {
   return error;
 }
 
+Error Error::TypeError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_type_error();
+  return error;
+}
+
 Error Error::TimeoutError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_timeout_error();
