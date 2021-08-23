@@ -236,10 +236,10 @@ inline void RunPullJobSync(const std::string& job_name, const std::string& op_na
     tensor->data_ = new unsigned char[element_number];
 
     if (of_blob->data_type() == kFloat) {
-      of_blob->AutoMemCopyTo((float*)tensor->data_, element_number / 4);
+      of_blob->AutoMemCopyTo(reinterpret_cast<float*>(tensor->data_), element_number / 4);
     }
     if (of_blob->data_type() == kInt32) {
-      of_blob->AutoMemCopyTo((int*)tensor->data_, element_number / 4);
+      of_blob->AutoMemCopyTo(reinterpret_cast<int*>(tensor->data_), element_number / 4);
     }
 
     tensor_promise.set_value(tensor);
