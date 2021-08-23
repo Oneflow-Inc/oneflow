@@ -21,9 +21,14 @@ def tril_op(input, diagonal=0):
     """Returns the lower triangular part of a matrix (2-D tensor) or batch of matrices input along the specified diagonal, 
     the other elements of the result tensor out are set to 0.
     
+    .. note::
+        if diagonal = 0, the diagonal of the returned tensor will be the main diagonal,
+        if diagonal > 0, the diagonal of the returned tensor will be above the main diagonal, 
+        if diagonal < 0, the diagonal of the returned tensor will be below the main diagonal.
+
     Args:
         input (Tensor): the input tensor. 
-        diagonal (int, optional): the diagonal to specify, if diagonal>0, 
+        diagonal (int, optional): the diagonal to specify. 
 
     For example:
 
@@ -37,14 +42,7 @@ def tril_op(input, diagonal=0):
         tensor([[1., 0., 0.],
                 [1., 1., 0.],
                 [1., 1., 1.]], dtype=oneflow.float32)
-        >>> x.tril(1)
-        tensor([[1., 1., 0.],
-                [1., 1., 1.],
-                [1., 1., 1.]], dtype=oneflow.float32)
-        >>> x.tril(-1)
-        tensor([[0., 0., 0.],
-                [1., 0., 0.],
-                [1., 1., 0.]], dtype=oneflow.float32)
+
     """
     return flow.F.tril(input, diagonal)
 

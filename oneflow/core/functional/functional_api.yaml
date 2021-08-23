@@ -791,7 +791,7 @@
   bind_python: False
 
 - name: "tril"
-  signature: "Tensor Tril(Tensor x, Int64 diagonal=0)"
+  signature: "Tensor (Tensor x, Int64 diagonal=0) => Tril"
   bind_python: True
 
 - name: "triu"

@@ -20,17 +20,17 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct TrilInterpState : public AutoGradCaptureState {
+struct TrilCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   int64_t diagonal;
 };
 
-class Tril : public OpExprGradFunction<TrilInterpState> {
+class Tril : public OpExprGradFunction<TrilCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(TrilInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(TrilCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override;
-  Maybe<void> Apply(const TrilInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const TrilCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -44,7 +44,7 @@ Maybe<void> Tril::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Tril::Capture(TrilInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Tril::Capture(TrilCaptureState* ctx, const TensorTuple& inputs,
                           const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -53,7 +53,7 @@ Maybe<void> Tril::Capture(TrilInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Tril::Apply(const TrilInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Tril::Apply(const TrilCaptureState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
