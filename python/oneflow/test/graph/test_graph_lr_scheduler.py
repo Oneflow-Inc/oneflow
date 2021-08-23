@@ -141,9 +141,9 @@ def _test_linear_graph_train_with_lr_sch(
 def _sgd_cosine_fn(parameters):
     of_sgd = flow.optim.SGD(parameters, lr=0.001)
     alpha = 0.5
-    steps = 10
+    decay_steps = 10
     cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
-        of_sgd, steps=steps, alpha=alpha
+        of_sgd, decay_steps=decay_steps, alpha=alpha
     )
     return of_sgd, cosine_decay_lr
 
@@ -151,9 +151,9 @@ def _sgd_cosine_fn(parameters):
 def _sgd_cosine_constant_fn(parameters):
     of_sgd = flow.optim.SGD(parameters, lr=0.001)
     alpha = 0.5
-    steps = 10
+    decay_steps = 10
     cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
-        of_sgd, steps=steps, alpha=alpha
+        of_sgd, decay_steps=decay_steps, alpha=alpha
     )
     constant_warmup_cosine_lr = flow.optim.lr_scheduler.WarmUpLR(
         cosine_decay_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="constant"
@@ -174,9 +174,9 @@ def _sgd_constant_fn(parameters):
 def _sgd_cosine_linear_fn(parameters):
     of_sgd = flow.optim.SGD(parameters, lr=0.001)
     alpha = 0.5
-    steps = 10
+    decay_steps = 10
     cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
-        of_sgd, steps=steps, alpha=alpha
+        of_sgd, decay_steps=decay_steps, alpha=alpha
     )
     linear_warmup_cosine_lr = flow.optim.lr_scheduler.WarmUpLR(
         cosine_decay_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
