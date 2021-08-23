@@ -425,11 +425,7 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("train_step", 0)) {
       const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
       train_step_ptr = train_step->dptr<int64_t>();
-      printf("In if has input train step is: %ld \n", *train_step_ptr);
     }
-    // printf("Out !!!! has input train step is: %ld \n", *train_step_ptr);
-    
-    printf("======= train step is: %d ======= \n", train_step_val); 
 
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {
@@ -444,24 +440,12 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
-    /*
-    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, 
-                     bool amsgrad, bool do_bias_correction, 
-                     float learning_rate_val, int64_t train_step_val, 
-                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const int64_t* train_step,
-                     const G* model_diff, T* model, T* m, T* v, T* max_v
-    */
 
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, weight_decay, 
-        amsgrad, do_bias_correction, 
-        learning_rate_val, train_step_val, 
-        learning_rate_ptr, scale_by_ptr, 
-        skip_if_ptr, train_step_ptr, 
-        model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), max_v->mut_dptr<T>());
+        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, train_step_val,
+        learning_rate_ptr, scale_by_ptr, skip_if_ptr, train_step_ptr, model_diff->dptr<G>(),
+        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), max_v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -502,7 +486,7 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();
     }
-    
+
     const int64_t train_step_val = ctx->Attr<int64_t>("train_step_val");
     const int64_t* train_step_ptr = nullptr;
     if (ctx->has_input("train_step", 0)) {
@@ -517,14 +501,13 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
     user_op::Tensor* v = ctx->Tensor4ArgNameAndIndex("v", 0);
     user_op::Tensor* max_v = ctx->Tensor4ArgNameAndIndex("max_v", 0);
-    
+
     const auto beta1 = ctx->Attr<float>("beta1");
     const auto beta2 = ctx->Attr<float>("beta2");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const bool amsgrad = ctx->Attr<bool>("amsgrad");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
-
 
     auto* kernel_state = dynamic_cast<IndexedSlicesUpdateOpKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
@@ -551,28 +534,21 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
 
     /*
-    DeviceCtx* ctx, float beta1, float beta2, float epsilon, float weight_decay, 
-                     bool amsgrad, bool do_bias_correction, 
-                     float lr, int64_t train_step_val, 
+    DeviceCtx* ctx, float beta1, float beta2, float epsilon, float weight_decay,
+                     bool amsgrad, bool do_bias_correction,
+                     float lr, int64_t train_step_val,
                      int64_t num_instance, int64_t feature_size, int64_t lower_bound,
                      int64_t upper_bound, const IDX* num_unique_instance,
-                     const float* learning_rate, const int64_t* train_step, const K* indices, const T* values, T* model, T* m,
-                     T* v, T* max_v)
+                     const float* learning_rate, const int64_t* train_step, const K* indices, const
+    T* values, T* model, T* m, T* v, T* max_v)
     */
 
-    MdUpdateUtilT::Update(ctx->device_ctx(), beta1, beta2, epsilon, weight_decay, 
-                          amsgrad, do_bias_correction, 
-                          learning_rate_val, train_step_val, 
-                          num_indices, feature_size, 
-                          kernel_state->lower(), kernel_state->upper(),
-                          buffer_manager.NumUniqueDiffIndicesPtr(), 
-                          learning_rate_ptr, 
-                          train_step_ptr, 
-                          buffer_manager.UniqueDiffIndicesPtr(),
-                          buffer_manager.UniqueDiffValuesPtr(), 
-                          model->mut_dptr<T>(),
-                          m->mut_dptr<T>(), v->mut_dptr<T>(), 
-                          max_v->mut_dptr<T>());
+    MdUpdateUtilT::Update(
+        ctx->device_ctx(), beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
+        learning_rate_val, train_step_val, num_indices, feature_size, kernel_state->lower(),
+        kernel_state->upper(), buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate_ptr,
+        train_step_ptr, buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
+        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), max_v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
