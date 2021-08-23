@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
-#include "oneflow/core/framework/local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {
 
