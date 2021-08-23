@@ -177,6 +177,37 @@ REGISTER_USER_OP_GRAD("broadcast_div")
       return Maybe<void>::Ok();
     });
 
+REGISTER_USER_OP_GRAD("broadcast_pow")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
+      const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_x_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("broadcast_pow_x_grad")
+                                                 .Input("x", op.input("x", 0))
+                                                 .Input("y", op.input("y", 0))
+                                                 .Input("z", op.output("z", 0))
+                                                 .Input("dz", dz_lbn)
+                                                 .Output("dx")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+        AddOp(grad_op);
+      }
+      if (op.NeedGenGradTensor4OpInput("y", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_y_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("broadcast_pow_y_grad")
+                                                 .Input("x", op.input("x", 0))
+                                                 .Input("y", op.input("y", 0))
+                                                 .Input("z", op.output("z", 0))
+                                                 .Input("dz", dz_lbn)
+                                                 .Output("dy")
+                                                 .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dy", 0), "y", 0);
+        AddOp(grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_USER_OP_GRAD("broadcast_floor_mod")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                user_op::AddOpFn AddOp) -> Maybe<void> {

@@ -65,7 +65,12 @@ class PowFunctor : public BinaryFunctor {
     op_ = CHECK_JUST(one::OpBuilder("pow").Input("x").Input("y").Output("z").Build());
   }
 };
-
+class BroadcastPowFunctor : public BinaryFunctor {
+ public:
+  BroadcastPowFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_pow").Input("x").Input("y").Output("z").Build());
+  }
+};
 class BroadcastAddFunctor : public InplaceableBroadcastBinaryFunctor {
  public:
   BroadcastAddFunctor() {
@@ -216,6 +221,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddFunctor>("Add");
   m.add_functor<impl::MultiplyFunctor>("Multiply");
   m.add_functor<impl::PowFunctor>("Pow");
+  m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");
   m.add_functor<impl::BroadcastAddFunctor>("BroadcastAdd");
   m.add_functor<impl::BroadcastSubFunctor>("BroadcastSub");
   m.add_functor<impl::BroadcastMulFunctor>("BroadcastMul");
