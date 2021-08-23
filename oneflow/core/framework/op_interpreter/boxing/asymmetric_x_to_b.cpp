@@ -54,15 +54,15 @@ Maybe<one::Tensor> AsymXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<P
   const auto& broadcast_in_placed_nd_sbp =
       JUST(PlacedNdSbp::New(broadcast_nd_sbp, tensor_placement));
   const auto& SymXToBBoxingFunction =
-      *JUST(GetBoxingFunction("sym_x_to_b", in, broadcast_in_placed_nd_sbp));
+      *JUST(GetBoxingFunction("sym-x-to-b", in, broadcast_in_placed_nd_sbp));
   std::shared_ptr<one::Tensor> broadcast_input =
       JUST(SymXToBBoxingFunction(tensor, in, broadcast_in_placed_nd_sbp));
 
   const auto& AsymBoxingFunction =
-      *JUST(GetBoxingFunction("asym_broadcast", broadcast_in_placed_nd_sbp, out));
+      *JUST(GetBoxingFunction("asym-broadcast", broadcast_in_placed_nd_sbp, out));
   return AsymBoxingFunction(broadcast_input, broadcast_in_placed_nd_sbp, out);
 }
 
-COMMAND(RegisterBoxingFunction("asym_x_to_b", CheckAsymXToB, &AsymXToB));
+COMMAND(RegisterBoxingFunction("asym-x-to-b", CheckAsymXToB, &AsymXToB));
 
 }  // namespace oneflow

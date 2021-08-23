@@ -429,7 +429,8 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
                     ),
                 )
             )
-    
+
+
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestConsistentCast_XToB(flow.unittest.TestCase):
@@ -571,7 +572,6 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
                 ),
             )
         )
-
 
 
 if __name__ == "__main__":

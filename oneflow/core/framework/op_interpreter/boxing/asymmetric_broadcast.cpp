@@ -110,6 +110,6 @@ Maybe<one::Tensor> AsymBroadcast(const std::shared_ptr<one::Tensor>& tensor, Sym
                                             *local_tensor->shape(), local_tensor->dtype());
 }
 
-COMMAND(RegisterBoxingFunction("asym_broadcast", RawCheckAsymBroadcast, &AsymBroadcast));
+COMMAND(RegisterBoxingFunction("asym-broadcast", RawCheckAsymBroadcast, &AsymBroadcast));
 
 }  // namespace oneflow
