@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct TrilInterpState : public OpExprInterpState {
+struct TrilInterpState : public AutoGradCaptureState {
   bool requires_grad;
   int64_t diagonal;
 };
