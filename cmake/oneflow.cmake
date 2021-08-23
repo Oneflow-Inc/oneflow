@@ -373,7 +373,7 @@ endif()
 
 # build include
 add_custom_target(of_include_copy)
-add_dependencies(of_include_copy oneflow_internal create_include_dir)
+add_dependencies(of_include_copy oneflow_internal)
 
 foreach(of_include_src_dir ${CFG_INCLUDE_DIR})
   set(oneflow_all_include_file)

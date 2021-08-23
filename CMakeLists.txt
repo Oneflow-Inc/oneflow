@@ -141,8 +141,6 @@ else()
 endif()
 
 set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
-add_custom_target(create_include_dir
-  COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
 include(third_party)
 
 if (BUILD_CUDA)

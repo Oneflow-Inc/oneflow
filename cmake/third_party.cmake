@@ -275,7 +275,6 @@ add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  add_dependencies(prepare_oneflow_third_party create_include_dir)
   foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
     set(oneflow_all_include_file)
     file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")

@@ -128,7 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-/oneflow/include
+/oneflow/include/*
+!/oneflow/include/.gitkeep
 /oneflow/core
 /oneflow/compatible/single_client/core
 /oneflow/version.py
