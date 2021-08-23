@@ -108,8 +108,8 @@ Maybe<one::Tensor> NcclCollectiveReduceScatterBoxingInterpreter::InterpretImpl(
 }
 
 Maybe<one::Tensor> NcclCollectiveS2SBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::ParallelDistribution> in_nd_sbp,
-    Symbol<cfg::ParallelDistribution> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2S(SymbolOf(in_nd_sbp->sbp_parallel(0)),
                                                           SymbolOf(out_nd_sbp->sbp_parallel(0))));

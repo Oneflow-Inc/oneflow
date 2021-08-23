@@ -33,22 +33,6 @@ namespace {
 using SbpPair2EagerBoxingInterpreter =
     HashMap<std::pair<cfg::SbpParallel, cfg::SbpParallel>, std::shared_ptr<EagerBoxingInterpreter>>;
 
-<<<<<<< HEAD
-std::string GetSupportedBoxingTypeInfo() {
-  static std::string supported_boxing_type_info =
-      "============ Supported eager boxing type============\n"
-      "\'[S(0)] -> [B]\' on GPU\n"
-      "\'[S(0)] -> [P]\' on GPU\n"
-      "\'[S(m)] -> [S(n)]\' on GPU\n"
-      "\'[P] -> [B]\' on GPU\n"
-      "\'[P] -> [S(0)]\' on GPU\n"
-      "\'[B] -> [S(0)]\' on GPU\n"
-      "\'[B] -> [P]\' on GPU or CPU";
-  return supported_boxing_type_info;
-}
-
-=======
->>>>>>> d62ad5d037c9c39b8d9050a5526017ab6261eb21
 Maybe<EagerBoxingInterpreter> GetOneDimNcclCollectiveEagerBoxingInterpreter(
     Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp) {
   static SbpPair2EagerBoxingInterpreter sbp_pair2eager_boxing_interpreter = {
