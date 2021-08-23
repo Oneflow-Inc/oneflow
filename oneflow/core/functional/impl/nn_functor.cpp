@@ -579,25 +579,6 @@ class DropoutFunctor {
   std::shared_ptr<OpExpr> dropout_op_;
 };
 
-// class DropoutGradFunctor{
-//   public:
-//     DropoutGradFunctor(){
-//       dropout_grad_op_ =
-//       CHECK_JUST(one::OpBuilder("dropout_grad").Input("dy").Input("mask").Output("dx").Build());
-//     }
-
-//     Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-//                              const std::shared_ptr<one::Tensor>& mask,
-//                              const float& scale){
-//       MutableAttrMap dropout_grad_attr;
-//       JUST(dropout_grad_attr.SetAttr<float>("scale", scale));
-//       return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, dropout_grad_attr);
-//     }
-
-//   private:
-//     std::shared_ptr<OpExpr> dropout_grad_op_;
-// };
-
 class DropoutGradFunctor {
  public:
   DropoutGradFunctor() {
