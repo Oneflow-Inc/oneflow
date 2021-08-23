@@ -30,15 +30,14 @@ struct WithDecorator final {
   template<typename T, typename... Args>
   struct Decorate<T (*)(Args...)> final {
     template<T (*func)(Args...)>
-    struct FuncPtr final {
-      static constexpr T (*value)(Args...) = &Decorator<T, Args...>::template Call<func>;
-    };
+    static T Call(Args... args) {
+      return Decorator<T, Args...>::template Call<func>(args...);
+    }
   };
 };
 
 #define DECORATE(fn_ptr, decorator) \
-  static_cast<decltype(fn_ptr)>(    \
-      WithDecorator<decorator>::Decorate<decltype(fn_ptr)>::FuncPtr<fn_ptr>::value)
+  (&WithDecorator<decorator>::Decorate<decltype(fn_ptr)>::Call<fn_ptr>)
 
 template<typename... Args>
 struct ThreadLocalCopiable;
