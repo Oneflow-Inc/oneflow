@@ -168,6 +168,7 @@ def build_third_party(
     bash_wrap,
     dry,
     use_system_proxy,
+    inplace,
 ):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
     cmake_cmd = " ".join(
@@ -192,6 +193,7 @@ make -j`nproc` prepare_oneflow_third_party
         cache_dir=cache_dir,
         current_dir=third_party_build_dir,
         use_system_proxy=use_system_proxy,
+        inplace=inplace,
     )
     docker_cmd = (
         f"docker run --network=host {extra_docker_args} --rm {common_docker_args}"
@@ -522,6 +524,7 @@ gcc --version
                     bash_wrap,
                     args.dry,
                     args.use_system_proxy,
+                    args.inplace,
                 )
             print(cuda_version.split("."))
             cuda_version_literal = "".join(cuda_version.split(".")[:2])
