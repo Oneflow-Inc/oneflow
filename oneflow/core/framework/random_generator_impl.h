@@ -20,7 +20,7 @@ limitations under the License.
 #include <random>
 #include <unordered_map>
 
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/maybe.h"
 #ifdef WITH_CUDA
 #include <curand.h>

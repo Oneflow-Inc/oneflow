@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 #define ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/job/placement.pb.h"

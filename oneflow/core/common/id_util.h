@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_ID_UTIL_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 

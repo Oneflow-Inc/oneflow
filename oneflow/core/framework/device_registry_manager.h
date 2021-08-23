@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_MANAGER_H_
 #define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_MANAGER_H_
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/framework/device_registry.h"
 
 namespace oneflow {

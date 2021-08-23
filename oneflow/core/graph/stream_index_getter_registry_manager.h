@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_STREAM_INDEX_GETTER_REGISTRY_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/graph/stream_index_getter_registry.h"
 #include "oneflow/core/device/cpu_stream_index.h"
 #ifdef WITH_CUDA

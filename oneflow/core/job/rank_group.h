@@ -24,7 +24,7 @@ limitations under the License.
 #include <memory>
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 
