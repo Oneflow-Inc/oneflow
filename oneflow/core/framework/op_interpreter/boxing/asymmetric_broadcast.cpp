@@ -95,10 +95,10 @@ Maybe<one::Tensor> AsymBroadcast(const std::shared_ptr<one::Tensor>& tensor, Sym
         local_tensor = JUST(one::functional::Empty(*tensor->shape(), tensor->dtype(),
                                                    JUST(Device::New(device_type))));
       }
-      const auto& broadcast_grop = JUST(GetBroadcastGroup(in_placement, out_placement));
+      const auto& broadcast_group = JUST(GetBroadcastGroup(in_placement, out_placement));
 
       Symbol<ParallelDesc> broadcast_placement_cur_rank =
-          JUST(MapAt(*broadcast_grop, GlobalProcessCtx::Rank()));
+          JUST(MapAt(*broadcast_group, GlobalProcessCtx::Rank()));
       int64_t root = JUST(CachedGetBroadcastRoot(in_placement, broadcast_placement_cur_rank));
       std::shared_ptr<one::UserOpExpr> op_expr =
           JUST(CachedEagerNcclBroadcast(broadcast_placement_cur_rank, root));
@@ -110,6 +110,6 @@ Maybe<one::Tensor> AsymBroadcast(const std::shared_ptr<one::Tensor>& tensor, Sym
                                             *local_tensor->shape(), local_tensor->dtype());
 }
 
-COMMAND(RegisterBoxingFunction("asym-broadcast", RawCheckAsymBroadcast, &AsymBroadcast));
+COMMAND(RegisterBoxingFunction("asym-broadcast", CheckAsymBroadcast, &AsymBroadcast));
 
 }  // namespace oneflow
