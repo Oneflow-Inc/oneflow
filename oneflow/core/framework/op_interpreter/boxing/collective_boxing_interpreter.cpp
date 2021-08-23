@@ -111,11 +111,12 @@ Maybe<one::Tensor> NcclCollectiveS2SBoxingInterpreter::InterpretImpl(
     const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
     Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
     Symbol<ParallelDesc> out_parallel_desc) const {
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2S(SymbolOf(in_nd_sbp->sbp_parallel(0)),
-                                                          SymbolOf(out_nd_sbp->sbp_parallel(0))));
-  CHECK_EQ_OR_RETURN(in_parallel_desc, out_parallel_desc);
-  const auto& op_expr = JUST(CachedEagerNcclS2SOpExpr(in_parallel_desc, in_nd_sbp->sbp_parallel(0),
-                                                      out_nd_sbp->sbp_parallel(0)));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2S(in_nd_sbp->sbp_parallel(0),
+                                                          out_nd_sbp->sbp_parallel(0)));
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
+  const auto& op_expr =
+      JUST(CachedEagerNcclS2SOpExpr(in_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)),
+                                    SymbolOf(out_nd_sbp->sbp_parallel(0))));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 }  // namespace oneflow
