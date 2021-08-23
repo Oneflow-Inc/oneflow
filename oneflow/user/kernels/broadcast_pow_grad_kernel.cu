@@ -13,12 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
-namespace oneflow {
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/ndarray/xpu_var_ndarray.h"
 
+namespace oneflow {
 namespace {
-template<DeviceType device>
-class BroadcastPowYGradKernel<device, float16> final : public user_op::OpKernel {
+template<typename T>
+__global__ void ComputeLogGpu(const int64_t len, T* out, const T* in) {
+  CUDA_1D_KERNEL_LOOP(i, len) { out[i] = SafeLog(in[i]); }
+}
+template<>
+__global__ void ComputeLogGpu<float16>(const int64_t len, float16* out, const float16* in) {
+  const half* _in = reinterpret_cast<const half*>(in);
+  half* _out = reinterpret_cast<half*>(out);
+  CUDA_1D_KERNEL_LOOP(i, len) { _out[i] = SafeLog(_in[i]); }
+}
+
+template<DeviceType device, typename T>
+class BroadcastPowYGradKernel final : public user_op::OpKernel {
  public:
   BroadcastPowYGradKernel() = default;
   ~BroadcastPowYGradKernel() = default;
@@ -33,23 +48,25 @@ class BroadcastPowYGradKernel<device, float16> final : public user_op::OpKernel 
 
     const int64_t num_axes = dz_tensor->shape().NumAxes();
     const int64_t elem_cnt = z_tensor->shape().elem_cnt();
-    Memset<device>(ctx->device_ctx(), tmp_buffer->mut_dptr<float16>(), 0,
+    Memset<device>(ctx->device_ctx(), tmp_buffer->mut_dptr<T>(), 0,
                    GetCudaAlignedSize(elem_cnt * sizeof(T)));
-    half* tmp_ptr = reinterpret_cast<half*>(tmp_buffer->mut_dptr<float16>());
-    XpuVarNdarray<const float16> z(z_tensor->shape(), z_tensor->dptr<float16>(), num_axes);
-    XpuVarNdarray<const float16> dz(dz_tensor->shape(), dz_tensor->dptr<float16>(), num_axes);
-    XpuVarNdarray<const float16> const_tmp(dz.shape(), tmp_buffer->dptr<float16>());
-    XpuVarNdarray<float16> tmp(dz.shape(), tmp_buffer->mut_dptr<float16>());
-    XpuVarNdarray<const float16> x(x_tensor->shape(), x_tensor->dptr<float16>(), num_axes);
-    XpuVarNdarray<float16> dy(dy_tensor->shape(), dy_tensor->mut_dptr<float16>(), num_axes);
-    NdarrayUtil<device, float16>::BroadcastAdd(ctx->device_ctx(), tmp, x, const_tmp);
-    FOR_RANGE(int64_t, i, 0, elem_cnt) { tmp_ptr[i] = SafeLog(tmp_ptr[i]); }
-    NdarrayUtil<device, float16>::BroadcastMul(ctx->device_ctx(), tmp, dz, const_tmp);
-    NdarrayUtil<device, float16>::BroadcastMul(ctx->device_ctx(), tmp, z, const_tmp);
-    NdarrayUtil<device, float16>::ReduceSum(ctx->device_ctx(), dy, const_tmp, tmp);
-  };
+    XpuVarNdarray<const T> z(z_tensor->shape(), z_tensor->dptr<T>(), num_axes);
+    XpuVarNdarray<const T> dz(dz_tensor->shape(), dz_tensor->dptr<T>(), num_axes);
+    XpuVarNdarray<const T> const_tmp(dz.shape(), tmp_buffer->dptr<T>());
+    XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
+    XpuVarNdarray<const T> x(x_tensor->shape(), x_tensor->dptr<T>(), num_axes);
+    XpuVarNdarray<T> dy(dy_tensor->shape(), dy_tensor->mut_dptr<T>(), num_axes);
+    NdarrayUtil<device, T>::BroadcastAdd(ctx->device_ctx(), tmp, x, const_tmp);
+    ComputeLogGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                       ctx->device_ctx()->cuda_stream()>>>(elem_cnt, tmp_buffer->mut_dptr<T>(),
+                                                           tmp_buffer->dptr<T>());
+    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, dz, const_tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, z, const_tmp);
+    NdarrayUtil<device, T>::ReduceSum(ctx->device_ctx(), dy, const_tmp, tmp);
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
 }  // namespace
 #define REGISTER_BROADCAST_POW_Y_GRAD_KERNEL(device, dtype_pair)                          \
   REGISTER_USER_KERNEL("broadcast_pow_y_grad")                                            \
@@ -62,6 +79,7 @@ class BroadcastPowYGradKernel<device, float16> final : public user_op::OpKernel 
         const int64_t elem_cnt = z.shape().elem_cnt();                                    \
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));               \
       });
+
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_Y_GRAD_KERNEL, (DeviceType::kGPU),
-                                 FLOAT16_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 }  // namespace oneflow

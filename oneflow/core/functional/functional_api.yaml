@@ -122,7 +122,7 @@
 
 - name: "broadcast_pow"
   signature: "Tensor BroadcastPow(Tensor x, Tensor y)"
-  bind_python: True
+  bind_python: False
 
 - name: "broadcast_pow_x_grad"
   signature: "Tensor BroadcastPowXGrad(Tensor dz, Tensor x, Tensor y, Tensor z)"
