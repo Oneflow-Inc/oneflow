@@ -86,6 +86,13 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   }
   if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
       && in_parallel_desc == out_parallel_desc
+      && in_parallel_desc->device_type() == DeviceType::kGPU
+      && EagerBoxingInterpreterUtil::IsBoxingS2S(in_nd_sbp->sbp_parallel(0),
+                                                 out_nd_sbp->sbp_parallel(0))) {
+    return std::shared_ptr<EagerBoxingInterpreter>(new NcclCollectiveS2SBoxingInterpreter());
+  }
+  if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
+      && in_parallel_desc == out_parallel_desc
       && in_parallel_desc->device_type() == DeviceType::kGPU) {
     const auto& gpu_boxing_interpreter =
         TRY(GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp));
