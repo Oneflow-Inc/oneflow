@@ -140,7 +140,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   InterfaceBlobConf* blob_conf = input_conf->mutable_blob_conf();
 
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
-  blob_conf->set_data_type(input_tensor->dtype());
+  blob_conf->set_data_type(input_tensor->dtype()->data_type());
   // NOTE(chengcheng): is_dynamic true has conflict in consistent lazy job even if world size 1.
   //     this flag will be removed in the future.
   // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
@@ -196,7 +196,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   VariableOpConf* var_conf = op_conf.mutable_variable_conf();
   var_conf->set_out("out");
   input_tensor->shape()->ToProto(var_conf->mutable_shape());
-  var_conf->set_data_type(input_tensor->dtype());
+  var_conf->set_data_type(input_tensor->dtype()->data_type());
   // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
   //   by EagerTensor.
   var_conf->mutable_initializer()->mutable_empty_conf();
@@ -263,7 +263,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   output_conf->set_out("out");
   InterfaceBlobConf* blob_conf = output_conf->mutable_blob_conf();
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
-  blob_conf->set_data_type(input_tensor->dtype());
+  blob_conf->set_data_type(input_tensor->dtype()->data_type());
   // NOTE(chengcheng): is_dynamic true has conflict in consistent lazy job even if world size 1.
   //     this flag will be removed in the future.
   // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
@@ -384,7 +384,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   VariableOpConf* var_conf = op_conf.mutable_variable_conf();
   var_conf->set_out("out");
   input_tensor->shape()->ToProto(var_conf->mutable_shape());
-  var_conf->set_data_type(input_tensor->dtype());
+  var_conf->set_data_type(input_tensor->dtype()->data_type());
   // NOTE(chengcheng): VariableOpConf initializer_conf is useless because variable is inited
   //   by EagerTensor.
   var_conf->mutable_initializer()->mutable_empty_conf();
@@ -438,16 +438,17 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
   if (input_tensor->is_local()) {
-    (*outputs)[0] = JUST(MirroredTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype(),
-                                                    JUST(Device::New(device_type, device_id)),
-                                                    /* is_lazy= */ true,
-                                                    /*requires_grad=*/false, /*is_leaf=*/true));
+    (*outputs)[0] =
+        JUST(MirroredTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
+                                        JUST(Device::New(device_type, device_id)),
+                                        /* is_lazy= */ true,
+                                        /*requires_grad=*/false, /*is_leaf=*/true));
   } else {
     ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
     parallel_conf.set_device_tag(GetDeviceTagByDeviceTypeStr(device_type));
     ParallelDesc parallel_desc(parallel_conf);
     (*outputs)[0] =
-        JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype(),
+        JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
                                           JUST(input_tensor->nd_sbp()), SymbolOf(parallel_desc),
                                           /* is_lazy= */ true,
                                           /*requires_grad=*/false, /*is_leaf=*/true));
@@ -581,9 +582,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   CHECK_OR_RETURN(input_tensor->is_lazy());
   CHECK_OR_RETURN(input_tensor->is_consistent());
 
-  bool identity_grad = JUST(ctx.attrs.GetAttr<bool>("identity_grad"));
-  const auto& grad_sbp_list = JUST(ctx.attrs.GetAttr<std::vector<std::string>>("grad_sbp"));
-
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
   const auto& parallel_desc_sym = JUST(ctx.parallel_desc.value());
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
@@ -601,32 +599,31 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
            ->EqualsIgnoringHierarchy(*parallel_desc_sym.shared_from_symbol())) {
     // NOTE(zwx): The input tensor's parallel_desc is not equal to that of op's,
     // create a proxy input with the parallel_desc that is the same as op's
-    input_proxy = JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype(),
-                                                    JUST(input_tensor->nd_sbp()), parallel_desc_sym,
-                                                    /* is_lazy= */ true,
-                                                    /*requires_grad=*/false, /*is_leaf=*/true));
+    input_proxy =
+        JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
+                                          JUST(input_tensor->nd_sbp()), parallel_desc_sym,
+                                          /* is_lazy= */ true,
+                                          /*requires_grad=*/false, /*is_leaf=*/true));
     TensorNameScope::Global()->Record(input_proxy, input_lbn);
   }
 
   // build parallel cast op expr
+  std::shared_ptr<std::vector<std::string>> sbp_list_ptr = JUST(GetNdSbpStrList(sbp_sym));
   std::string grad_mode;
-  std::vector<std::string> grad_parallel_distribution;
-  if (identity_grad) {
-    grad_mode = "identity";
-  } else if (grad_sbp_list.size() > 0) {
+  std::vector<std::string> grad_sbp_str_list;
+  if (op_expr.grad_nd_sbp().has_value()) {
     grad_mode = "manual";
-    grad_parallel_distribution = grad_sbp_list;
+    grad_sbp_str_list = *JUST(GetNdSbpStrList(JUST(op_expr.grad_nd_sbp().value())));
   } else {
-    grad_mode = "restore";
+    grad_mode = "identity";
   }
-  auto sbp_list_ptr = JUST(GetNdSbpStrList(sbp_sym));
   std::shared_ptr<UserOpExpr> parallel_cast_op_expr =
       JUST(OpBuilder("hierarchical_parallel_cast", "trivial_op_name")
                .Input("in")
                .Output("out")
                .Attr<std::vector<std::string>>("nd_sbp", *sbp_list_ptr)
                .Attr<std::string>("grad_mode", grad_mode)
-               .Attr<std::vector<std::string>>("grad_nd_sbp", grad_parallel_distribution)
+               .Attr<std::vector<std::string>>("grad_nd_sbp", grad_sbp_str_list)
                .Build());
 
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);

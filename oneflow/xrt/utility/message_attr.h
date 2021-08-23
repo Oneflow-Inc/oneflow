@@ -67,7 +67,7 @@ inline void GetMessage(const PbMessage& message, const std::string& attr_name, T
 inline std::string GetAttrAsString(const PbMessage& message, const std::string& attr_name) {
   std::string value;
   Attr<std::string>(message, attr_name, &value);
-  return std::move(value);
+  return value;
 }
 
 inline bool HasAttr(const PbMessage& message, const std::string& attr_name) {
@@ -113,7 +113,7 @@ class MessageAttr {
   T Attr(const std::string& attr_name) const {
     T value;
     util::Attr<T>(message_, attr_name, &value);
-    return std::move(value);
+    return value;
   }
 
   template<typename T>
@@ -126,7 +126,7 @@ class MessageAttr {
   std::string GetOneofType(const std::string& oneof_name) const {
     std::string oneof_type;
     util::GetOneofType(message_, oneof_name, &oneof_type);
-    return std::move(oneof_type);
+    return oneof_type;
   }
 
  private:

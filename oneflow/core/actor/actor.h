@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
+#include "oneflow/core/actor/actor_base.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
@@ -29,21 +30,21 @@ limitations under the License.
 
 namespace oneflow {
 
-class Actor {
+class Actor : public ActorBase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
   virtual ~Actor() = default;
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
-  void Init(const JobDesc* job_desc, const TaskProto&, const ThreadCtx&);
+  void Init(const JobDesc* job_desc, const TaskProto&, const ThreadCtx&) override;
 
   // 1: success, and actor finish
   // 0: success, and actor not finish
-  int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
+  int ProcessMsg(const ActorMsg& msg) override { return (this->*msg_handler_)(msg); }
 
   int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
-  int64_t thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
+  int64_t thrd_id() const { return thrd_id_; }
   int64_t actor_id() const { return actor_id_; }
   int64_t job_id() const { return job_id_; }
 
@@ -195,7 +196,7 @@ class Actor {
 
   const JobDesc* job_desc_;
   int64_t actor_id_;
-  int64_t global_work_stream_id_;
+  int64_t thrd_id_;
   int64_t job_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
@@ -227,10 +228,6 @@ class Actor {
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
 };
-
-std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
-
-#define REGISTER_ACTOR(task_type, ActorType) REGISTER_CLASS(int32_t, task_type, Actor, ActorType)
 
 }  // namespace oneflow
 
