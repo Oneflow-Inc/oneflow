@@ -22,17 +22,17 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct DropoutInterpState : public OpExprInterpState {
+struct DropoutCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float scale;
 };
 
-class Dropout : public OpExprGradFunction<DropoutInterpState> {
+class Dropout : public OpExprGradFunction<DropoutCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(DropoutInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(DropoutCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const DropoutInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const DropoutCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -49,7 +49,7 @@ Maybe<void> Dropout::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Dropout::Capture(DropoutInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Dropout::Capture(DropoutCaptureState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -62,7 +62,7 @@ Maybe<void> Dropout::Capture(DropoutInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Dropout::Apply(const DropoutInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Dropout::Apply(const DropoutCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);

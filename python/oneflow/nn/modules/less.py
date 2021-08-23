@@ -43,15 +43,7 @@ def less_op(input, other):
         tensor([0, 0, 1], dtype=oneflow.int8)
 
     """
-    if input.dtype != flow.float32:
-        input = flow.cast(input, flow.float32)
-    if isinstance(other, int) or isinstance(other, float):
-        other = flow.Tensor(
-            [float(other)], dtype=flow.float32, device=flow.device(input.device.type)
-        )
-    if other.dtype != flow.float32:
-        other = flow.cast(other, flow.float32)
-    return flow.F.broadcast_less(input, other)
+    return flow.F.less(input, other)
 
 
 if __name__ == "__main__":

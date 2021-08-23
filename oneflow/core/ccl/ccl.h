@@ -24,6 +24,7 @@ namespace oneflow {
 
 class DeviceCtx;
 class ParallelDesc;
+class TransportToken;
 
 // collective communication library
 namespace ccl {
@@ -32,7 +33,10 @@ template<DeviceType device_type>
 Maybe<void> Broadcast(const void* in, void* out, size_t elem_cnt, DataType dtype, int64_t root,
                       Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
 
-}
+Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t root,
+                         Symbol<ParallelDesc> parallel_desc, const TransportToken& transport_token);
+
+}  // namespace ccl
 
 }  // namespace oneflow
 

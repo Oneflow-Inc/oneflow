@@ -24,7 +24,6 @@ import oneflow.core.job.env_pb2 as env_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.hob as hob
-import oneflow.framework.placement_context as placement_ctx
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 import oneflow.support.enable_if as enable_if
@@ -324,15 +323,6 @@ def _FindFreePort():
         return s.getsockname()[1]
 
 
-def GetEnvDefaultParallelConf(device_tag):
-    if device_tag not in device_tag2default_parallel_conf:
-        parallel_conf = placement_ctx.MakeParallelConf4Resource(
-            device_tag, c_api_util.EnvResource()
-        )
-        device_tag2default_parallel_conf[device_tag] = parallel_conf
-    return device_tag2default_parallel_conf[device_tag]
-
-
 def HasAllMultiClientEnvVars():
     env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK"]
     has_all_env_vars = all([os.getenv(x) for x in env_var_names])
@@ -369,7 +359,7 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     if os.getenv("GLOG_log_dir"):
         cpp_logging_conf.log_dir = os.getenv("GLOG_log_dir")
     if os.getenv("GLOG_logtostderr"):
-        cpp_logging_conf.logtostderr = os.getenv("GLOG_logtostderr")
+        cpp_logging_conf.logtostderr = int(os.getenv("GLOG_logtostderr"))
     if os.getenv("GLOG_logbuflevel"):
         cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)

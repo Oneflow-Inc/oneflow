@@ -23,16 +23,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct FlattenInterpState : public OpExprInterpState {
+struct FlattenCaptureState : public AutoGradCaptureState {
   bool requires_grad;
 };
 
-class Flatten : public OpExprGradFunction<FlattenInterpState> {
+class Flatten : public OpExprGradFunction<FlattenCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(FlattenInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(FlattenCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const FlattenInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const FlattenCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -47,7 +47,7 @@ Maybe<void> Flatten::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Flatten::Capture(FlattenInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Flatten::Capture(FlattenCaptureState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -55,7 +55,7 @@ Maybe<void> Flatten::Capture(FlattenInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Flatten::Apply(const FlattenInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Flatten::Apply(const FlattenCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);

@@ -79,6 +79,12 @@ Error Error::IndexError() {
   return error;
 }
 
+Error Error::TypeError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_type_error();
+  return error;
+}
+
 Error Error::TimeoutError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_timeout_error();
@@ -274,19 +280,21 @@ Error Error::InputDeviceNotMatchError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   auto* input_device_not_match_error = error->mutable_input_device_not_match_error();
   input_device_not_match_error->add_info(
-      std::string("The devices of input tensors are inconsistent，please try to use tensor.to or "
+      std::string("The devices of input tensors are inconsistent, please try to use tensor.to or "
                   "module.to to correct it."));
   return error;
 }
 
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
-  FormatErrorStr(error);
+  const auto& maybe_error = TRY(FormatErrorStr(error));
+  const auto& error_str = maybe_error.GetDataAndErrorProto(error->DebugString());
+
   *MutThreadLocalError() = error;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
   switch (error->error_type_case()) {
 #define MAKE_ENTRY(cls)                                      \
   case cfg::ErrorProto::OF_PP_CAT(k, OF_PP_CAT(cls, Error)): \
-    throw OF_PP_CAT(cls, Exception)(GetErrorStr());
+    throw OF_PP_CAT(cls, Exception)(error_str.first);
 
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, EXCEPTION_SEQ)
 

@@ -30,8 +30,7 @@ class NcclCollectiveAllGatherBoxingInterpreter final : public EagerBoxingInterpr
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                   Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-                                   Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+                                   Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                    Symbol<ParallelDesc> in_parallel_desc,
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
 };
@@ -44,8 +43,7 @@ class NcclCollectiveAllReduceBoxingInterpreter final : public EagerBoxingInterpr
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                   Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-                                   Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+                                   Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                    Symbol<ParallelDesc> in_parallel_desc,
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
 };
@@ -58,12 +56,24 @@ class NcclCollectiveReduceScatterBoxingInterpreter final : public EagerBoxingInt
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                   Symbol<cfg::ParallelDistribution> in_parallel_distribution,
-                                   Symbol<cfg::ParallelDistribution> out_parallel_distribution,
+                                   Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
                                    Symbol<ParallelDesc> in_parallel_desc,
                                    Symbol<ParallelDesc> out_parallel_desc) const override;
 
   const std::string op_type_;
+};
+
+class NcclCollectiveS2SBoxingInterpreter final : public EagerBoxingInterpreter {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveS2SBoxingInterpreter);
+  NcclCollectiveS2SBoxingInterpreter() = default;
+  ~NcclCollectiveS2SBoxingInterpreter() override = default;
+
+ private:
+  Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
+                                   Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
+                                   Symbol<ParallelDesc> in_parallel_desc,
+                                   Symbol<ParallelDesc> out_parallel_desc) const override;
 };
 
 }  // namespace oneflow

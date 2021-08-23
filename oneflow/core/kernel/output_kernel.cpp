@@ -22,7 +22,7 @@ namespace oneflow {
 
 template<DeviceType device_type>
 void OutputKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     const auto& job_name = this->job_desc().job_name();
     const auto& op_name = this->op_conf().name();
@@ -42,7 +42,7 @@ void OutputKernel<device_type>::ForwardDataContent(
 
 template<DeviceType device_type>
 void OutputKernel<device_type>::ForwardHeader(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     // Do nothing.
   } else {

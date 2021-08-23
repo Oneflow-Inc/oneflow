@@ -1,6 +1,11 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.14.0)
 
+if (NOT CMAKE_BUILD_TYPE)
+  message(STATUS "No build type selected, default to Release")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
+endif()
+
 if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
   message(FATAL_ERROR "Expected CMAKE_BUILD_TYPE is Debug, Release, RelWithDebInfo or MinSizeRel, got ${CMAKE_BUILD_TYPE}")
 endif()
@@ -18,6 +23,7 @@ if (NOT THIRD_PARTY AND NOT ONEFLOW)
 endif()
 
 option(USE_CLANG_FORMAT "" OFF)
+option(USE_CLANG_TIDY "" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
 option(BUILD_TESTING "" OFF)
@@ -137,10 +143,12 @@ endif()
 include(third_party)
 
 if (BUILD_CUDA)
+  enable_language(CUDA)
+  include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
   message(STATUS "CUDA_VERSION: ${CUDA_VERSION}")
   message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
   set(CUDA_SEPARABLE_COMPILATION OFF)
-  list(APPEND CUDA_NVCC_FLAGS -w -Wno-deprecated-gpu-targets)
+  list(APPEND CUDA_NVCC_FLAGS -w -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
   #  half is not fully supported when __CUDA_ARCH__ < 530
   #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")
   #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_52,code=sm_52")
@@ -177,6 +185,7 @@ if (BUILD_CUDA)
     list(APPEND CUDA_NVCC_FLAGS -gencode ${CUDA_NVCC_GENCODE})
   endforeach()
   message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
+  list(JOIN CUDA_NVCC_FLAGS " " CMAKE_CUDA_FLAGS)
 endif()
 
 message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})

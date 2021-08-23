@@ -17,7 +17,8 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
 #include "oneflow/user/kernels/softmax_kernel_util.h"
-#include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 namespace user_op {
@@ -41,7 +42,8 @@ class SparseSoftmaxCrossEntropyOpKernelState final : public user_op::OpKernelSta
 }  // namespace
 
 template<DeviceType device_type, typename T, typename K>
-class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
+class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
  public:
   SparseSoftmaxCrossEntropyKernel() = default;
   ~SparseSoftmaxCrossEntropyKernel() = default;
@@ -116,7 +118,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
 #endif
 
 template<DeviceType device_type, typename T, typename K>
-class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
+class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel,
+                                                  public user_op::CudaGraphSupport {
  public:
   SparseSoftmaxCrossEntropyGradKernel() = default;
   ~SparseSoftmaxCrossEntropyGradKernel() = default;
@@ -147,14 +150,12 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
-      const cfg::ParallelDistribution& parallel_distribution =
-          ctx->ParallelDistribution4ArgNameAndIndex("prob", 0);
+      const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("prob", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       const TensorDesc* prob_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("prob", 0);
       const int64_t class_axis = prob_logical_desc->shape().NumAxes() - 1;
-      TensorSliceView view = GetTensorSliceView4ParallelId(hierarchy, parallel_distribution,
-                                                           prob_logical_desc->shape(),
-                                                           ctx->parallel_ctx().parallel_id());
+      TensorSliceView view = GetTensorSliceView4ParallelId(
+          hierarchy, nd_sbp, prob_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
       return std::make_shared<SparseSoftmaxCrossEntropyOpKernelState>(view.At(class_axis).begin(),
                                                                       view.At(class_axis).end());
     } else {
