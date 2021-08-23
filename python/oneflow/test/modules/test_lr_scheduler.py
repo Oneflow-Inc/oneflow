@@ -46,7 +46,9 @@ class TestLrScheduler(flow.unittest.TestCase):
         )
         for i in range(1, 21):
             cosine_decay_lr.step()
-            new_lr = cosine_decay_lr_step(TestLrScheduler.base_lr, i, decay_steps, alpha)
+            new_lr = cosine_decay_lr_step(
+                TestLrScheduler.base_lr, i, decay_steps, alpha
+            )
             test_case.assertAlmostEqual(
                 cosine_decay_lr.get_last_lr()[0], new_lr, places=4
             )
