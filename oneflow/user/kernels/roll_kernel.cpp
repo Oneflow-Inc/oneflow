@@ -24,28 +24,59 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/user/kernels/roll_kernel.h"
+#include "oneflow/core/kernel/kernel_util.h"
+
 
 namespace oneflow {
+template<DeviceType device_type, typename T>
+class RollKernel final : public user_op::OpKernel {
+public: 
+    RollKernel() = default;
+    ~RollKernel() override = default;
 
-template<typename T>
-struct RollChange<DeviceType::kCPU, T> {
-     static void Invoke(DeviceCtx *ctx, bool isPositive, int32_t cpyFirst, 
-                       int32_t cpySec, const T *x, T *y){
+private:
+    void Compute(user_op::KernelComputeContext* ctx) const override {
+        const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+        user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+        const user_op::TensorDesc* in_shape = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+        const oneflow::fixed_vector<long int, 20> in_dim_vec = in_shape->shape().dim_vec();
+        const std::vector<int32_t> move = ctx->Attr<std::vector<int32_t>>("shifts");
+        const std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
+        
+        int32_t len = in_dim_vec[0];
+        int32_t width = in_dim_vec[1]; 
+        int32_t shift, cpyFirst, cpySec;      
+        if(dims.empty()) {
+            len = width*len;
+            shift = move[0]%len;
+            cpySec = len-shift;
+            cpyFirst = shift;
+        } else {
+            shift = move[0]%len;
+            cpyFirst = width*(len-shift);
+            cpySec = width*shift;  
+        }
+        bool isPositive = (shift>=0); 
+        if(isPositive){
+            AutoMemcpy(ctx->device_ctx(), out->mut_dptr<T>(), in->dptr<T>()+cpySec,
+                       cpyFirst*sizeof(T), out->mem_case(), in->mem_case());
+        } else {
+            AutoMemcpy(ctx->device_ctx(), out->mut_dptr<T>(), in->dptr<T>()+cpyFirst,
+                       cpySec*sizeof(T), out->mem_case(), in->mem_case());            
+        }
+        
+    }
+    bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
 
-     if(isPositive) {
-         memcpy(y, x+cpySec, cpyFirst*sizeof(T));
-         memcpy(y+cpyFirst, x, cpySec*sizeof(T));     
-     } else {
-         memcpy(y, x+cpyFirst, cpySec*sizeof(T));
-         memcpy(y+cpySec, x, cpyFirst*sizeof(T));
-     }
-     // std::cout << "shift=" << shift << " width=" << width << " len="  << len << std::endl; 
-     }
-};    
-
+#define REGISTER_ROLL_USER_KERNEL(device, dtype)                                                             \
+  REGISTER_USER_KERNEL("roll")                                                                                     \
+      .SetCreateFn<RollKernel<device, dtype>>()                                                         \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device) & \
+                        user_op::HobDataType("in", 0) == GetDataType<dtype>::value);
 
 REGISTER_ROLL_USER_KERNEL(DeviceType::kCPU, float)
 REGISTER_ROLL_USER_KERNEL(DeviceType::kCPU, double)
-
+REGISTER_ROLL_USER_KERNEL(DeviceType::kGPU, float)
+REGISTER_ROLL_USER_KERNEL(DeviceType::kGPU, double)
 }   // namespace oneflow

@@ -33,11 +33,8 @@ REGISTER_USER_OP("roll")
         const std::vector<int32_t> dims_vector = ctx->Attr<std::vector<int32_t>>("dims");
         int64_t flag = 0;
         FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
-            for(auto dim_index : dims_vector) {
-                if(i == dim_index) {
-                    flag = 1;
-                    break;
-                }
+            if(std::find(dims_vector.begin(), dims_vector.end(), i) != dims_vector.end()) {
+                flag = 1;
             }
             if(flag) continue;
             ctx->NewBuilder()
