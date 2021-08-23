@@ -272,7 +272,6 @@ class RandInt(Module):
         size: tuple,
         generator: flow.Generator = None,
         dtype: Optional[flow.dtype] = None,
-        layout=None,
         device=None,
         placement=None,
         sbp=None,
@@ -300,15 +299,15 @@ class RandInt(Module):
             res = flow.F.consistent_randint(
                 self.low,
                 self.high,
-                self.size,
-                self.placement,
-                self.sbp,
-                self.dtype,
-                self.generator,
+                shape=self.size,
+                placement=self.placement,
+                sbp_tuple=self.sbp,
+                dtype=self.dtype,
+                generator=self.generator,
             )
         else:
             res = flow.F.randint(
-                self.low, self.high, self.size, self.dtype, self.device, self.generator
+                self.low, self.high, shape = self.size,dtype= self.dtype, device=self.device, generator=self.generator
             )
         res.requires_grad = self.requires_grad
         return res.to(dtype=self.dtype)
@@ -364,7 +363,7 @@ def randint_op(
     if generator is None:
         generator = flow.default_generator()
     return RandInt(
-        low, high, size, generator, dtype, layout, device, placement, sbp, requires_grad
+        low, high, size, generator, dtype, device, placement, sbp, requires_grad
     )()
 
 
@@ -407,6 +406,7 @@ def randperm_op(
     placement: flow.placement = None,
     sbp: flow._oneflow_internal.sbp.sbp = None,
     requires_grad: bool = False,
+    pin_memory:bool =False
 ) -> flow.Tensor:
     r"""
     Returns a random permutation of integers from ``0`` to ``n - 1``.
@@ -440,10 +440,11 @@ def randperm_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
+    assert pin_memory is None, "layout not supported yet"
     if generator is None:
         generator = flow.default_generator()
     return RandPerm(
-        n, generator, dtype, layout, device, placement, sbp, requires_grad, pin_memory
+        n, generator, dtype, layout, device, placement, sbp, requires_grad
     )(out)
 
 
