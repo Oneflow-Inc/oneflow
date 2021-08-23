@@ -56,6 +56,20 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
 }
 auto* CachedNcclReduceScatterOpExpr = DECORATE(&EagerNcclReduceScatter, ThreadLocalCopiable);
 
+Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc,
+                                    Symbol<cfg::SbpParallel> src_sbp,
+                                    Symbol<cfg::SbpParallel> dst_sbp) {
+  return one::OpBuilder("eager_nccl_s2s", *JUST(UniqueStr("eager_nccl_s2s")))
+      .Input("in")
+      .Output("out")
+      .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
+      .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
+
 }  // namespace
 
 Maybe<one::Tensor> NcclCollectiveAllGatherBoxingInterpreter::InterpretImpl(
@@ -93,4 +107,16 @@ Maybe<one::Tensor> NcclCollectiveReduceScatterBoxingInterpreter::InterpretImpl(
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
 }
 
+Maybe<one::Tensor> NcclCollectiveS2SBoxingInterpreter::InterpretImpl(
+    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
+    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    Symbol<ParallelDesc> out_parallel_desc) const {
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBoxingS2S(in_nd_sbp->sbp_parallel(0),
+                                                          out_nd_sbp->sbp_parallel(0)));
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
+  const auto& op_expr =
+      JUST(CachedEagerNcclS2SOpExpr(in_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)),
+                                    SymbolOf(out_nd_sbp->sbp_parallel(0))));
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {input}));
+}
 }  // namespace oneflow

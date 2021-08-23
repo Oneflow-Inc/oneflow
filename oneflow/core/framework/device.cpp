@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <sstream>
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -33,22 +33,6 @@ namespace {
 
 inline size_t HashDevice(const std::string& type, int64_t device_id) {
   return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
-}
-
-Maybe<LocalDepObject*> FindOrCreateComputeLocalDepObject(const Device& device) {
-  static std::mutex mutex;
-  static HashMap<Device, ObjectMsgPtr<LocalDepObject>> device2dep_object;
-  {
-    std::unique_lock<std::mutex> lock(mutex);
-    const auto& iter = device2dep_object.find(device);
-    if (iter != device2dep_object.end()) { return iter->second.Mutable(); }
-  }
-  auto dep_object = ObjectMsgPtr<LocalDepObject>::New();
-  JUST(dep_object.Mutable()->Init(device));
-  {
-    std::unique_lock<std::mutex> lock(mutex);
-    return device2dep_object.emplace(device, dep_object).first->second.Mutable();
-  }
 }
 
 }  // namespace
