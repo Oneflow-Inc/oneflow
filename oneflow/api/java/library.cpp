@@ -102,7 +102,8 @@ void JNICALL Java_org_oneflow_OneFlow_loadModel(JNIEnv* env, jobject obj, jobjec
   std::string signature_name_ = "";
   if (signature_name != nullptr) { signature_name_ = ConvertToString(env, signature_name); }
 
-  jstring device_tag = static_cast<jstring>(GetOptionField(env, option, "deviceTag", "Ljava/lang/String;"));
+  jstring device_tag =
+      static_cast<jstring>(GetOptionField(env, option, "deviceTag", "Ljava/lang/String;"));
   std::string device_tag_ = "";
   if (device_tag != nullptr) { device_tag_ = ConvertToString(env, device_tag); }
 

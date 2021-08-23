@@ -193,7 +193,9 @@ inline void RunPushJob(const std::string& job_name, const std::string& op_name, 
     of_blob->CopyShapeFrom(shape, shape_length);
 
     // Todo: support more data type
-    if (dtype_code == kFloat) { of_blob->AutoMemCopyFrom(static_cast<float*>(data), element_number); }
+    if (dtype_code == kFloat) {
+      of_blob->AutoMemCopyFrom(static_cast<float*>(data), element_number);
+    }
     if (dtype_code == kInt32) { of_blob->AutoMemCopyFrom(static_cast<int*>(data), element_number); }
   };
   const std::shared_ptr<oneflow::JobInstance> job_instance(new oneflow::JavaForeignJobInstance(
