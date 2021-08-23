@@ -21,11 +21,17 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> SpinCounter::SpinWait(
-    int64_t cnt, const std::function<Maybe<void>(const std::shared_ptr<SpinCounter>&)>& Callback) {
+    int64_t cnt, const std::function<Maybe<void>(const std::shared_ptr<SpinCounter>&)>& Callback,
+    const std::function<void()>& HeartbeatCallback) {
   const auto& spin_counter = std::make_shared<SpinCounter>(cnt);
   JUST(Callback(spin_counter));
-  JUST(spin_counter->WaitUntilCntEqualZero());
+  JUST(spin_counter->WaitUntilCntEqualZero(HeartbeatCallback));
   return Maybe<void>::Ok();
+}
+
+Maybe<void> SpinCounter::SpinWait(
+    int64_t cnt, const std::function<Maybe<void>(const std::shared_ptr<SpinCounter>&)>& Callback) {
+  return SpinWait(cnt, Callback, [] {});
 }
 
 Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds,
