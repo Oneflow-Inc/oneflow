@@ -62,11 +62,19 @@ using BoxingCheckerT = std::function<Maybe<void>(Symbol<PlacedNdSbp> in, Symbol<
 using BoxingFunctionT = std::function<Maybe<one::Tensor>(
     const std::shared_ptr<one::Tensor>& input, Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out)>;
 
-extern Maybe<BoxingFunctionT> (*GetBoxingFunction)(const std::string& method_name,
-                                                   Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out);
+Maybe<BoxingFunctionT> GetBoxingFunction(const std::string& method_name,
+                                         Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out);
 
 void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT& Check,
                             const BoxingFunctionT& BoxingFunction);
+
+using BoxingDividorT = Maybe<Symbol<PlacedNdSbp>(*)(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out);
+extern Maybe<BoxingDividorT> (*GetBoxingDividor)(const std::string& dividor_name);
+void RegisterBoxingDividor(const std::string& dividor_name, BoxingDividorT dividor);
+template<BoxingDividorT dividor>
+void RegisterBoxingDividor(const std::string& dividor_name) {
+  RegisterBoxingDividor(dividor_name, dividor);
+}
 
 inline void RegisterBoxingFunction(
     const std::string& method_name,
@@ -94,6 +102,89 @@ class NaiveEagerBoxingInterpreter : public EagerBoxingInterpreter {
 
   const std::shared_ptr<BoxingFunctionT> boxing_function_;
 };
+
+class BoxingExprIf {
+ public:
+  BoxingExprIf(const BoxingExprIf&) = default;
+  BoxingExprIf(BoxingExprIf&&) = default;
+  virtual ~BoxingExprIf() = default;
+  
+  virtual Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const = 0;
+  virtual Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const = 0;
+
+ protected:
+  BoxingExprIf() = default;
+};
+
+class AtomicBoxingExpr final : public BoxingExprIf {
+ public:
+  AtomicBoxingExpr(const AtomicBoxingExpr&) = delete;
+  AtomicBoxingExpr(AtomicBoxingExpr&&) = delete;
+  ~AtomicBoxingExpr() override = default;
+
+  explicit AtomicBoxingExpr(const std::string& boxing_name)
+    : BoxingExprIf(), boxing_name_(boxing_name) {}
+
+  Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+
+ private:
+  const std::string boxing_name_;
+};
+
+class DivideAndConquerBoxingExpr final : public BoxingExprIf {
+ public:
+  DivideAndConquerBoxingExpr(const DivideAndConquerBoxingExpr&) = delete;
+  DivideAndConquerBoxingExpr(DivideAndConquerBoxingExpr&&) = delete;
+  ~DivideAndConquerBoxingExpr() override = default;
+
+  explicit DivideAndConquerBoxingExpr(
+      BoxingDividorT boxing_dividor,
+      const std::shared_ptr<BoxingExprIf>& lhs_conquer,
+      const std::shared_ptr<BoxingExprIf>& rhs_conquer)
+    : BoxingExprIf(), boxing_dividor_(boxing_dividor), lhs_conquer_(lhs_conquer), rhs_conquer_(rhs_conquer) {}
+
+  Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+
+ private:
+  BoxingDividorT boxing_dividor_;
+  const std::shared_ptr<BoxingExprIf> lhs_conquer_;
+  const std::shared_ptr<BoxingExprIf> rhs_conquer_;
+};
+
+class OrBoxingExpr final : public BoxingExprIf {
+ public:
+  OrBoxingExpr(const OrBoxingExpr&) = delete;
+  OrBoxingExpr(OrBoxingExpr&&) = delete;
+  ~OrBoxingExpr() override = default;
+
+  explicit OrBoxingExpr(
+      const std::shared_ptr<BoxingExprIf>& lhs_boxing,
+      const std::shared_ptr<BoxingExprIf>& rhs_boxing)
+    : BoxingExprIf(), lhs_boxing_(lhs_boxing), rhs_boxing_(rhs_boxing) {}
+
+  Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
+
+ private:
+  const std::shared_ptr<BoxingExprIf> lhs_boxing_;
+  const std::shared_ptr<BoxingExprIf> rhs_boxing_;
+};
+
+Maybe<BoxingExprIf> BoxingExpr(const std::string& boxing_name);
+Maybe<BoxingExprIf> BoxingExpr(const std::string& dividor_name, const std::string& lhs_conquer, const std::string& rhs_conquer);
+Maybe<BoxingExprIf> BoxingExpr(
+    const std::string& dividor_name, const std::shared_ptr<BoxingExprIf>& lhs_conquer, const std::string& rhs_conquer);
+Maybe<BoxingExprIf> BoxingExpr(
+    const std::string& dividor_name, const std::string& lhs_conquer, const std::shared_ptr<BoxingExprIf>& rhs_conquer);
+Maybe<BoxingExprIf> BoxingExpr(
+    const std::string& dividor_name, const std::shared_ptr<BoxingExprIf>& lhs_conquer, const std::shared_ptr<BoxingExprIf>& rhs_conquer);
+
+std::shared_ptr<BoxingExprIf> operator|(
+    const std::shared_ptr<BoxingExprIf>& lhs_boxing, const std::shared_ptr<BoxingExprIf>& rhs_boxing) ;
+
+Maybe<BoxingExprIf> OptionalBoxing(const std::string& boxing_mame);
 
 }  // namespace oneflow
 

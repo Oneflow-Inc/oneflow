@@ -38,4 +38,22 @@ Maybe<one::Tensor> CudaCopyBoxingInterpreter::InterpretImpl(
   return tensor;
 }
 
+namespace {
+
+Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDesc> rhs) {
+  if (lhs == rhs) { return true; }
+  return lhs == JUST(ReplaceDeviceType(rhs, lhs->device_type()));
+}
+
+Maybe<void> CheckCudaCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
+  CHECK_OR_RETURN(equal);
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
+  CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kGPU);
+  CHECK_EQ_OR_RETURN(in->nd_sbp(), out->nd_sbp());
+  return Maybe<void>::Ok();
+}
+
+}
+
 }  // namespace oneflow
