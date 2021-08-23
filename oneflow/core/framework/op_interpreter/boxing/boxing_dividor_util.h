@@ -7,6 +7,7 @@ namespace oneflow {
 
 extern Maybe<BoxingDividor> (*ReplaceInDeviceType)(DeviceType device_type);
 extern Maybe<BoxingDividor> (*ReplaceOutDeviceType)(DeviceType device_type);
+extern Maybe<BoxingDividor> (*FlattenInHierarchy)();
 
 }
 

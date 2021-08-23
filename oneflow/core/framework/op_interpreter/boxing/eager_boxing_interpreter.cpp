@@ -108,31 +108,6 @@ void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT
   });
 }
 
-namespace {
-
-HashMap<std::string, BoxingDividorT>* MutName2BoxingDividor() {
-  static HashMap<std::string, BoxingDividorT> map;
-  return &map;
-};
-
-Maybe<BoxingDividorT> RawGetBoxingDividor(const std::string& dividor_name) {
-  return JUST_MSG(
-      MapAt(*MutName2BoxingDividor(), dividor_name),
-      std::stringstream() << "boxing dividor not found. dividor_name: " << dividor_name);
-}
-
-}
-
-typedef(GetBoxingDividor) GetBoxingDividor = DECORATE(RawGetBoxingDividor, ThreadLocalCopiable);
-
-void RegisterBoxingDividor(const std::string& dividor_name, BoxingDividorT dividor) {
-  CatchRegistryError([&]() -> Maybe<void> {
-    CHECK_OR_RETURN(MutName2BoxingDividor()->emplace(dividor_name, dividor).second)
-        << "boxing deividor exists. dividor_name: " << method_name;
-    return Maybe<void>::Ok();
-  });
-}
-
 Maybe<void> AtomicBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const {
   const auto& Checker = JUST_MSG(MapAt(*MutName2BoxingChecker(), boxing_name_),
     std::stringstream() << "boxing checker not found. checker_name: " << boxing_name_);
@@ -145,14 +120,14 @@ Maybe<BoxingFunctionT> AtomicBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> i
 }
 
 Maybe<void> DivideAndConquerBoxingExpr::Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const {
-  const auto& middle = JUST(boxing_dividor_(in, out));
+  const auto& middle = JUST((*boxing_dividor_)(in, out));
   JUST(lhs_conquer_->Check(in, middle));
   JUST(rhs_conquer_->Check(middle, out));
   return Maybe<void>::Ok();
 }
 
 Maybe<BoxingFunctionT> DivideAndConquerBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const {
-  const auto& middle = JUST(boxing_dividor_(in, out));
+  const auto& middle = JUST((*boxing_dividor_)(in, out));
   const auto& lhs_boxing_func = JUST(lhs_conquer_->Getboxingfunction(in, middle));
   const auto& rhs_boxing_func = JUST(rhs_conquer_->Getboxingfunction(middle, out));
   BoxingFunctionT boxing_function = [lhs_boxing_func, rhs_boxing_func, middle, in, out]
@@ -182,23 +157,22 @@ Maybe<BoxingExprIf> BoxingExpr(const std::string& boxing_name) {
   return std::shared_ptr<BoxingExprIf>(std::move(boxing_expr));
 }
 
-Maybe<BoxingExprIf> BoxingExpr(const std::string& dividor_name, const std::string& lhs_conquer, const std::string& rhs_conquer) {
-  return BoxingExpr(dividor_name, JUST(BoxingExpr(lhs_conquer)), JUST(BoxingExpr(rhs_conquer)));
+Maybe<BoxingExprIf> BoxingExpr(const std::shared_ptr<BoxingDividor>& boxing_dividor, const std::string& lhs_conquer, const std::string& rhs_conquer) {
+  return BoxingExpr(boxing_dividor, JUST(BoxingExpr(lhs_conquer)), JUST(BoxingExpr(rhs_conquer)));
 }
 
 Maybe<BoxingExprIf> BoxingExpr(
-    const std::string& dividor_name, const std::shared_ptr<BoxingExprIf>& lhs_conquer, const std::string& rhs_conquer) {
-  return BoxingExpr(dividor_name, lhs_conquer, JUST(BoxingExpr(rhs_conquer)));
+    const std::shared_ptr<BoxingDividor>& boxing_dividor, const std::shared_ptr<BoxingExprIf>& lhs_conquer, const std::string& rhs_conquer) {
+  return BoxingExpr(boxing_dividor, lhs_conquer, JUST(BoxingExpr(rhs_conquer)));
 }
 
 Maybe<BoxingExprIf> BoxingExpr(
-    const std::string& dividor_name, const std::string& lhs_conquer, const std::shared_ptr<BoxingExprIf>& rhs_conquer) {
-  return BoxingExpr(dividor_name, JUST(BoxingExpr(lhs_conquer)), rhs_conquer);
+    const std::shared_ptr<BoxingDividor>& boxing_dividor, const std::string& lhs_conquer, const std::shared_ptr<BoxingExprIf>& rhs_conquer) {
+  return BoxingExpr(boxing_dividor, JUST(BoxingExpr(lhs_conquer)), rhs_conquer);
 }
 
 Maybe<BoxingExprIf> BoxingExpr(
-    const std::string& dividor_name, const std::shared_ptr<BoxingExprIf>& lhs_conquer, const std::shared_ptr<BoxingExprIf>& rhs_conquer) {
-  BoxingDividorT boxing_dividor = JUST(GetBoxingDividor(dividor_name));
+    const std::shared_ptr<BoxingDividor>& boxing_dividor, const std::shared_ptr<BoxingExprIf>& lhs_conquer, const std::shared_ptr<BoxingExprIf>& rhs_conquer) {
   auto divide_and_conquer = std::make_unique<DivideAndConquerBoxingExpr>(boxing_dividor, lhs_conquer, rhs_conquer);
   return std::shared_ptr<BoxingExprIf>(std::move(divide_and_conquer));
 }
