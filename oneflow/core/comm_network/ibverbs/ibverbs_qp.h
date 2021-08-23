@@ -79,6 +79,7 @@ class MessagePool final {
         mr_buf_.pop_front();
         CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
       }
+      delete pd_;
     }//todo:这里可能要修改
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
