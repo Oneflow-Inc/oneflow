@@ -72,7 +72,8 @@ class Exception : public std::exception {
   OF_PP_MAKE_TUPLE_SEQ(Index)                     \
   OF_PP_MAKE_TUPLE_SEQ(Type)                      \
   OF_PP_MAKE_TUPLE_SEQ(Timeout)                   \
-  OF_PP_MAKE_TUPLE_SEQ(InputDeviceNotMatch)
+  OF_PP_MAKE_TUPLE_SEQ(InputDeviceNotMatch)       \
+  OF_PP_MAKE_TUPLE_SEQ(Runtime)
 
 #define DEFINE_EXCEPTION_CLASS(cls)                                         \
   class OF_PP_CAT(cls, Exception) : public Exception {                      \
