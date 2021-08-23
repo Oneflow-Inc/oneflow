@@ -368,9 +368,8 @@ if(BUILD_TESTING)
 endif()
 
 # build include
-add_custom_target(of_include_copy
-  COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
-add_dependencies(of_include_copy oneflow_internal)
+add_custom_target(of_include_copy)
+add_dependencies(of_include_copy oneflow_internal create_include_dir)
 
 foreach(of_include_src_dir ${CFG_INCLUDE_DIR})
   set(oneflow_all_include_file)
