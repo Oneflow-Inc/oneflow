@@ -64,6 +64,7 @@ from oneflow.nn.modules.dataset import (
     CropMirrorNormalize,
     OFRecordImageDecoder,
     OFRecordImageDecoderRandomCrop,
+    OFRecordImageGpuDecoderRandomCropResize,
     OfrecordRawDecoder,
     OfrecordReader,
     OFRecordBytesDecoder,
