@@ -53,7 +53,6 @@ class FusedBiasAddGelu : public OpExprGradFunction<FusedBiasAddGeluInterpState> 
     if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
 
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    MutableAttrMap attrs;
     const int64_t num_axes = out_grads.at(0)->shape()->NumAxes();
     in_grads->resize(2);
     const auto& a = ctx->SavedTensors().at(0);
