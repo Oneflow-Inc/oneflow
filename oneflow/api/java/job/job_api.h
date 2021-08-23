@@ -193,8 +193,8 @@ inline void RunPushJob(const std::string& job_name, const std::string& op_name, 
     of_blob->CopyShapeFrom(shape, shape_length);
 
     // Todo: support more data type
-    if (dtype_code == kFloat) { of_blob->AutoMemCopyFrom((float*)data, element_number); }
-    if (dtype_code == kInt32) { of_blob->AutoMemCopyFrom((int*)data, element_number); }
+    if (dtype_code == kFloat) { of_blob->AutoMemCopyFrom(static_cast<float*>(data), element_number); }
+    if (dtype_code == kInt32) { of_blob->AutoMemCopyFrom(static_cast<int*>(data), element_number); }
   };
   const std::shared_ptr<oneflow::JobInstance> job_instance(new oneflow::JavaForeignJobInstance(
       job_name, op_name, "", job_instance_fun, nullptr, nullptr));
@@ -252,6 +252,7 @@ inline void RunPullJobSync(const std::string& job_name, const std::string& op_na
 }
 
 inline oneflow::InterUserJobInfo* GetInterUserJobInfo() {
+  // framework.h:84
   // CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   // CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   // CHECK_NOTNULL_OR_RETURN(Global<InterUserJobInfo>::Get());

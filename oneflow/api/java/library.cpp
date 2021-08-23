@@ -94,20 +94,20 @@ void JNICALL Java_org_oneflow_OneFlow_initSession(JNIEnv* env, jobject obj, jstr
 JNIEXPORT
 void JNICALL Java_org_oneflow_OneFlow_loadModel(JNIEnv* env, jobject obj, jobject option) {
   jstring full_path_name =
-      (jstring)GetOptionField(env, option, "modelProtoPath", "Ljava/lang/String;");
+      static_cast<jstring>(GetOptionField(env, option, "modelProtoPath", "Ljava/lang/String;"));
   std::string full_path_name_ = ConvertToString(env, full_path_name);
 
   jstring signature_name =
-      (jstring)GetOptionField(env, option, "signatureName", "Ljava/lang/String;");
+      static_cast<jstring>(GetOptionField(env, option, "signatureName", "Ljava/lang/String;"));
   std::string signature_name_ = "";
   if (signature_name != nullptr) { signature_name_ = ConvertToString(env, signature_name); }
 
-  jstring device_tag = (jstring)GetOptionField(env, option, "deviceTag", "Ljava/lang/String;");
+  jstring device_tag = static_cast<jstring>(GetOptionField(env, option, "deviceTag", "Ljava/lang/String;"));
   std::string device_tag_ = "";
   if (device_tag != nullptr) { device_tag_ = ConvertToString(env, device_tag); }
 
   jstring machine_device_ids =
-      (jstring)GetOptionField(env, option, "machineDeviceIds", "Ljava/lang/String;");
+      static_cast<jstring>(GetOptionField(env, option, "machineDeviceIds", "Ljava/lang/String;"));
   std::string machine_device_ids_ = "";
   if (machine_device_ids != nullptr) {
     machine_device_ids_ = ConvertToString(env, machine_device_ids);
@@ -135,9 +135,9 @@ void JNICALL Java_org_oneflow_OneFlow_loadCheckpoint(JNIEnv* env, jobject obj, j
   std::string load_job_name = GetInterUserJobInfo()->global_model_load_job_name();
 
   int64_t path_length = (*env).GetDirectBufferCapacity(path);
-  void* path_address = (*env).GetDirectBufferAddress(path);
+  signed char* path_address = static_cast<signed char*>((*env).GetDirectBufferAddress(path));
 
-  return LoadCheckPoint(load_job_name, (signed char*)path_address, path_length);
+  return LoadCheckPoint(load_job_name, path_address, path_length);
 }
 
 JNIEXPORT
@@ -147,7 +147,7 @@ void JNICALL Java_org_oneflow_OneFlow_runSinglePushJob(JNIEnv* env, jobject obj,
   std::string job_name_ = ConvertToString(env, job_name);
   std::string op_name_ = ConvertToString(env, op_name);
   void* data_address = (*env).GetDirectBufferAddress(data);
-  long* shape_address = (long*)(*env).GetDirectBufferAddress(shape);
+  long* shape_address = static_cast<long*>((*env).GetDirectBufferAddress(shape));
   long shape_length = (*env).GetDirectBufferCapacity(shape);
 
   return RunPushJob(job_name_, op_name_, data_address, dtype_code, shape_address, shape_length);
