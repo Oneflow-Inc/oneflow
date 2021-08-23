@@ -70,7 +70,7 @@ class OFRecordDataLoader(flow.nn.Module):
         encoded = self.bytes_decoder(train_record)
         image = self.image_gpu_decoder(encoded)
         rng = self.flip()
-        # rng = rng.to("cuda")
+        rng = rng.to("cuda")
         image = self.crop_mirror_norm(image, rng)
         return image, label
 
