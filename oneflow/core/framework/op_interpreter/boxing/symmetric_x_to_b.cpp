@@ -76,6 +76,6 @@ Maybe<one::Tensor> SymXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-COMMAND(RegisterBoxingFunction("sym-x-to-b", CheckSymXToB, &SymXToB));
+COMMAND(RegisterBoxingFunction("symmetric-x-to-b", CheckSymXToB, &SymXToB));
 
 }  // namespace oneflow
