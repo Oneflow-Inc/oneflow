@@ -354,7 +354,7 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
 #define OF_UNIMPLEMENTED() \
   return Error::Unimplemented().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
-#define OF_RUNTIME_ERROR()                                                                         \
+#define OF_RUNTIME_ERROR()                                                                        \
   return Error::RuntimeError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) << "RuntimeError " \
                                                                                   ": "
 
