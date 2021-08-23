@@ -59,4 +59,14 @@ Maybe<void> SpinCounter::WaitUntilCntEqualZero() const {
   });
 }
 
+Maybe<void> SpinCounter::WaitUntilCntEqualZero(
+    const std::function<void()>& HeartbeatCallback) const {
+  CHECK_LT_OR_RETURN(HearbeatIntervalSeconds(), 0);
+  return Global<ForeignLockHelper>::Get()->WithScopedRelease(
+      [this, HeartbeatCallback]() -> Maybe<void> {
+        return SpinWaitUntilTimeout([&] { return cnt_val_ > 0; }, TimeoutSeconds(),
+                                    HeartbeatCallback, HearbeatIntervalSeconds());
+      });
+}
+
 }  // namespace oneflow

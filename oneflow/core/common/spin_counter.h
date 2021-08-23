@@ -33,18 +33,25 @@ class SpinCounter final {
   SpinCounter(SpinCounter&&) = delete;
   ~SpinCounter() = default;
 
-  SpinCounter(int64_t cnt_val) : cnt_val_(cnt_val) {}
-
+  explicit SpinCounter(int64_t cnt_val)
+      : cnt_val_(cnt_val), timeout_seconds_(5 * 60), heartbeat_interval_seconds_(0) {}
   static Maybe<void> SpinWait(
       int64_t cnt, const std::function<Maybe<void>(const std::shared_ptr<SpinCounter>&)>& Callback);
+  static Maybe<void> SpinWait(
+      int64_t cnt, const std::function<Maybe<void>(const std::shared_ptr<SpinCounter>&)>& Callback,
+      const std::function<void()>& HeartbeatCallback);
 
-  static int64_t TimeoutSeconds() { return 60 * 5; }
+  int64_t TimeoutSeconds() const { return timeout_seconds_; }
+  int64_t HearbeatIntervalSeconds() const { return heartbeat_interval_seconds_; }
 
   int64_t Decrease() { return --cnt_val_; }
   Maybe<void> WaitUntilCntEqualZero() const;
+  Maybe<void> WaitUntilCntEqualZero(const std::function<void()>& HeartbeatCallback) const;
 
  private:
   std::atomic<int64_t> cnt_val_;
+  int64_t timeout_seconds_;
+  int64_t heartbeat_interval_seconds_;
 };
 
 }  // namespace oneflow
