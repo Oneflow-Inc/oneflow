@@ -16,6 +16,7 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
+import os
 
 import numpy as np
 from test_util import GenArgList
@@ -75,6 +76,7 @@ def _test_fused_bias_add_dropout(test_case, channel, axis, drop_prob, seed):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedBiasAddDropout(flow.unittest.TestCase):
     def test_gather(test_case):
         arg_dict = OrderedDict()

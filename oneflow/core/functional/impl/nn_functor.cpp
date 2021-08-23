@@ -580,21 +580,22 @@ class DropoutFunctor {
 };
 
 // class DropoutGradFunctor{
-//   public: 
+//   public:
 //     DropoutGradFunctor(){
-//       dropout_grad_op_ = CHECK_JUST(one::OpBuilder("dropout_grad").Input("dy").Input("mask").Output("dx").Build()); 
+//       dropout_grad_op_ =
+//       CHECK_JUST(one::OpBuilder("dropout_grad").Input("dy").Input("mask").Output("dx").Build());
 //     }
 
-//     Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, 
-//                              const std::shared_ptr<one::Tensor>& mask, 
+//     Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+//                              const std::shared_ptr<one::Tensor>& mask,
 //                              const float& scale){
-//       MutableAttrMap dropout_grad_attr; 
-//       JUST(dropout_grad_attr.SetAttr<float>("scale", scale)); 
-//       return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, dropout_grad_attr);                           
+//       MutableAttrMap dropout_grad_attr;
+//       JUST(dropout_grad_attr.SetAttr<float>("scale", scale));
+//       return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, dropout_grad_attr);
 //     }
 
-//   private: 
-//     std::shared_ptr<OpExpr> dropout_grad_op_; 
+//   private:
+//     std::shared_ptr<OpExpr> dropout_grad_op_;
 // };
 
 class DropoutGradFunctor {
@@ -603,9 +604,8 @@ class DropoutGradFunctor {
     dropout_grad_op_ =
         CHECK_JUST(one::OpBuilder("dropout_grad").Input("dy").Input("mask").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, 
-                           const std::shared_ptr<one::Tensor>& mask, 
-                           const float& scale) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
     MutableAttrMap dropout_grad_attrs;
     JUST(dropout_grad_attrs.SetAttr<float>("scale", scale));
 
@@ -858,7 +858,7 @@ class FusedBiasAddDropoutFunctor {
  private:
   std::shared_ptr<OpExpr> random_mask_like_op_;
   std::shared_ptr<OpExpr> fused_bias_add_mask_scale_op_;
-}; 
+};
 
 class FusedScaleTrilFunctor {
  public:
