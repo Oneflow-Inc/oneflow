@@ -38,6 +38,7 @@ note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
 
+
 class PyTorchDoesNotSupportError(Exception):
     def __init__(self, exc):
         self.exc = exc
@@ -48,13 +49,16 @@ class PyTorchDoesNotSupportError(Exception):
     def __repr__(self):
         return f"PyTorch error: {str(self.exc)}"
 
+
 call_pytorch = None
+
 
 def get_tensor_shape(call_pytorch):
     shape_list = []
     for i in range(len(call_pytorch.shape)):
         shape_list.append(call_pytorch.shape[i])
     return shape_list
+
 
 def get_args(callable, *args, **kwargs):
     try:
@@ -121,13 +125,15 @@ def get_args(callable, *args, **kwargs):
             new_pytorch_args.append(x)
     for key, value in pytorch_kwargs.items():
         if type(value) is torch_original.Tensor:
-            new_pytorch_kwargs[key] = (f"Tensor({get_tensor_shape(x)})")
+            new_pytorch_kwargs[key] = f"Tensor({get_tensor_shape(x)})"
         else:
             new_pytorch_kwargs[key] = value
-    
+
     if not isinstance(callable, (torch_original.nn.Module)):
         if isinstance(call_pytorch, torch_original.Tensor):
-            note_pytorch_method_names.append(f"Tensor({get_tensor_shape(call_pytorch)}).{callable.__name__}")
+            note_pytorch_method_names.append(
+                f"Tensor({get_tensor_shape(call_pytorch)}).{callable.__name__}"
+            )
         elif isinstance(call_pytorch, torch_original.nn.Module):
             note_pytorch_method_names.append(f"Module.{callable.__name__}")
         else:
