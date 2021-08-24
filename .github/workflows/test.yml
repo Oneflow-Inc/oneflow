@@ -80,19 +80,51 @@ jobs:
         run: |
           python3 -m pip install black==19.10b0
           python3 ci/check/run_py_format.py --source_dir $PWD --fix
-      - name: Git push
-        id: git_push
-        if: ${{ failure() }}
+      - name: Setup Git
+        id: git_setup
+        if: failure()
         run: |
           git config --global user.email "ci-bot@oneflow.org"
           git config --global user.name "oneflow-ci-bot"
+      - name: Git push
+        id: git_push
+        if: github.event.pull_request.head.repo.owner.login == 'Oneflow-Inc' && failure()
+        run: |
           git add -u
           git commit -m "auto format by CI"
           git push
-      - name: Please request CI again
-        if: ${{ failure() }}
+      - name: Post Notice
+        if: github.event.pull_request.head.repo.owner.login == 'Oneflow-Inc' && failure()
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: "Oneflow-Inc",
+              repo: "oneflow",
+              body: "You code has been formatted by CI. Please pull from remote to update your local branch and request review from oneflow-ci-bot again if you still want to run CI."
+            })
+      - name: Git push (fork repo)
+        id: git_push_fork
+        if: github.event.pull_request.head.repo.owner.login != 'Oneflow-Inc' && failure()
         run: |
-          exit 1
+          set -x
+          git add -u
+          git commit -m "auto format by CI"
+          git remote add fork ${{ github.event.pull_request.head.repo.clone_url }}
+          git push -f fork ${{ github.event.pull_request.head.ref }}
+          echo "::set-output name=auto_format_branch::$auto_format_branch"
+      - name: Please request CI again
+        if: github.event.pull_request.head.repo.owner.login == 'Oneflow-Inc' && failure()
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.pulls.removeRequestedReviewers({
+              pull_number: context.issue.number,
+              owner: "Oneflow-Inc",
+              repo: "oneflow",
+              reviewers: ["oneflow-ci-bot"]
+            })
       - name: Check source code (prevent creating files at wrong places)
         run: |
           python3 tools/check_src.py
