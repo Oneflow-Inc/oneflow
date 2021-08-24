@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -65,7 +66,7 @@ __global__ void FusedCastScaleGpu<half, float>(const int64_t n, const half scale
 }
 
 template<typename T, typename U>
-class FusedCastScaleGpuKernel final : public user_op::OpKernel {
+class FusedCastScaleGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   FusedCastScaleGpuKernel() = default;
   ~FusedCastScaleGpuKernel() override = default;
