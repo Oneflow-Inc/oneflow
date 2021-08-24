@@ -50,3 +50,21 @@ def get_world_size():
 
 def is_multi_client():
     return oneflow._oneflow_internal.IsMultiClient()
+
+def split_sbp(axis: int) -> oneflow._oneflow_internal.sbp.sbp:
+    """Generate a split scheme in which op will be splitted at `axis`.
+
+    Args:
+        axis (int): At `axis` the op will be splitted.
+
+    Returns:
+        SbpParallel: Split scheme object, often required by `to_consistent` method of `Tensor`
+
+    Example::
+        array = numpy.array([[1.0, 2.0], [3.0, 4.0]])
+        t1 = flow.tensor(array)
+        ct2 = t1.to_consistent(sbp=flow.sbp.split(0), placement=("cuda", {0: [0, 1, 2, 3]}))
+
+    """
+    assert type(axis) is int
+    return oneflow._oneflow_internal.sbp.split(axis)
