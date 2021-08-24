@@ -117,12 +117,14 @@ def get_args(callable, *args, **kwargs):
         new_pytorch_kwargs = {}
         for x in pytorch_args:
             if type(x) is torch_original.Tensor:
-                continue
-            new_pytorch_args.append(x)
+                new_pytorch_args.append(f"Tensor({get_tensor_shape(x)})")
+            else:
+                new_pytorch_args.append(x)
         for key, value in pytorch_kwargs.items():
             if type(value) is torch_original.Tensor:
-                continue
-            new_pytorch_kwargs[key] = value
+                new_pytorch_kwargs[key] = (f"Tensor({get_tensor_shape(x)})")
+            else:
+                new_pytorch_kwargs[key] = value
 
         if call_tensor is not None:
             note_pytorch_method_names.append(f"Tensor({get_tensor_shape(call_tensor)}).{callable.__name__}")
@@ -213,12 +215,12 @@ def GetDualObject(name, pytorch, oneflow):
 
 def note_print_args(x, end=True):
     if end:
-        if isinstance(x, str):
+        if isinstance(x, str) and not x.startswith("Tensor"):
             print(f"\033[32m'{x}, '\033[0m", end="")
         else:
             print(f"\033[32m{x}, \033[0m", end="")
     else:
-        if isinstance(x, str):
+        if isinstance(x, str) and not x.startswith("Tensor"):
             print(f"\033[32m'{x}'\033[0m", end="")
         else:
             print(f"\033[32m{x}\033[0m", end="")
@@ -226,12 +228,12 @@ def note_print_args(x, end=True):
 
 def note_print_kwargs(x, y, end=True):
     if end:
-        if isinstance(y, str):
+        if isinstance(y, str) and not x.startswith("Tensor"):
             print(f"\033[32m{x}='{y}, '\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}, \033[0m", end="")
     else:
-        if isinstance(y, str):
+        if isinstance(y, str) and not x.startswith("Tensor"):
             print(f"\033[32m{x}='{y}'\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}\033[0m", end="")
