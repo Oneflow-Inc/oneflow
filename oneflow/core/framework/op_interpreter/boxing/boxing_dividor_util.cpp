@@ -92,7 +92,8 @@ Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithPartialSum(Symbol<PlacedNdSbp> pla
   return JUST(PlacedNdSbp::New(partial_sum_nd_sbp, placed_nd_sbp->placement()));
 }
 
-static constexpr auto* ReplaceNdSbpWithPartialSum = DECORATE(&RawReplaceNdSbpWithPartialSum, ThreadLocal);
+static constexpr auto* ReplaceNdSbpWithPartialSum =
+    DECORATE(&RawReplaceNdSbpWithPartialSum, ThreadLocal);
 
 Maybe<BoxingDividor> RawOutPlacementAndPartialSum() {
   return std::make_shared<BoxingDividor>(
