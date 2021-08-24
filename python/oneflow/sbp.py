@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow
-from oneflow.env import split_sbp as split
+from oneflow.framework.distribute import split_sbp as split
 import oneflow._oneflow_internal
 
 sbp = oneflow._oneflow_internal.sbp.sbp
