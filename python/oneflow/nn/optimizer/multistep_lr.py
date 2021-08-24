@@ -51,8 +51,10 @@ class MultiStepLR(LrScheduler):
         last_step=-1,
         verbose=False,
     ):
-        for i in range(1,len(milestones)):
-            assert milestones[i] > milestones[i-1], f"values in `list` milestone must be increasing, but got {milestones}"
+        for i in range(1, len(milestones)):
+            assert (
+                milestones[i] > milestones[i - 1]
+            ), f"values in `list` milestone must be increasing, but got {milestones}"
         assert gamma > 0.0, f"gamma must greater than zero, but got {gamma}"
         self.milestones = milestones
         self.gamma = gamma
