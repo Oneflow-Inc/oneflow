@@ -1236,7 +1236,7 @@ class TripletMarginLoss(Module):
 
     Args:
         margin (float, optional): Default: :math:`1`.
-        p (int, optional): The norm degree for pairwise distance. Default: :math:`2`.
+        p (float, optional): The norm degree for pairwise distance. Default: :math:`2.0`.
         swap (bool, optional): The distance swap is described in detail in the paper
             `Learning shallow convolutional feature descriptors with triplet losses` by
             V. Balntas, E. Riba et al. Default: ``False``.
@@ -1288,25 +1288,29 @@ class TripletMarginLoss(Module):
            "mean",
            None,
        ], "only 'sum', 'mean' and None supported by now"
-       self.reduction = reduction      
+       self.reduction = reduction
+       
 
     def p_norm(self, x, p=2.0):
         if p == 2.0:
-            norm = flow.sqrt(flow.sum(flow.square(flow.abs(x)), dim=1))
+            norm = flow.sqrt(flow.sum(flow.square(flow.abs(x)), dim=-1))
         else:
-            p_constant = flow.constant_like(like=(flow.abs(x)), value=p, dtype=flow.float32)
-            sum = flow.sum(flow.pow(flow.abs(x), p_constant), dim=1)
-            norm = flow.pow(sum, flow.constant_like(sum, value=1.0 / p, dtype=flow.float32))
+            p_constant = flow.mul(flow.ones(flow.abs(x).shape, dtype=flow.float32), p)
+            p_constant = p_constant.to(x.device)
+            sum = flow.sum(flow.pow(flow.abs(x), p_constant), dim=-1)
+            p_tmp = flow.mul(flow.ones(sum.shape, dtype=flow.float32), 1.0 / p)
+            p_tmp = p_tmp.to(sum.device)
+            norm = flow.pow(sum, p_tmp)
         return norm
 
     def forward(self, anchor, positive, negative):
         da_p = self.p_norm(anchor - positive + self.eps, p=self.p)
         da_n = self.p_norm(anchor - negative + self.eps, p=self.p)
         if self.swap:
-            distance_swap = flow.sum(self.p_norm(positive - negative + self.eps, p=self.p), dim=1)
+            distance_swap = self.p_norm(positive - negative + self.eps, p=self.p)
             da_n = flow.minimum(da_n, distance_swap)
         triplet_loss = flow.clip(self.margin + da_p - da_n, min=0.0)
-
+        
         if self.reduction == "mean":
             return flow.mean(triplet_loss)
         elif self.reduction == "sum":
