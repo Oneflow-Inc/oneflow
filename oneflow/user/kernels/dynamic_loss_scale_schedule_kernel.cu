@@ -44,6 +44,7 @@ class DynamicLossScaleScheduleGpuKernel final : public user_op::OpKernel {
   ~DynamicLossScaleScheduleGpuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* count_not_finite = ctx->Tensor4ArgNameAndIndex("count_not_finite", 0);
     user_op::Tensor* loss_scale = ctx->Tensor4ArgNameAndIndex("loss_scale", 0);

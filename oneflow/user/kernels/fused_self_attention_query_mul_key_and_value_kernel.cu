@@ -177,6 +177,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpK
   ~FusedSelfAttentionQueryMulKeyAndValueGpuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* h_tensor = ctx->Tensor4ArgNameAndIndex("hidden_states", 0);
     int64_t seq_len = h_tensor->shape().At(0);
@@ -219,6 +220,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel final : public user_op:
   ~FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* v_grad_tensor = ctx->Tensor4ArgNameAndIndex("value_grad", 0);
     const user_op::Tensor* qmk_grad_tensor = ctx->Tensor4ArgNameAndIndex("query_mul_key_grad", 0);

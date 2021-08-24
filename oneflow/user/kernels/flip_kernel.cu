@@ -59,6 +59,7 @@ class FlipGpuKernel final : public user_op::OpKernel {
   ~FlipGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -104,6 +105,7 @@ class FlipGrad1DGpuKernel final : public user_op::OpKernel {
   ~FlipGrad1DGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,

@@ -129,6 +129,7 @@ class TfGpuPReluKernel final : public user_op::OpKernel {
   ~TfGpuPReluKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
@@ -181,6 +182,7 @@ class TfGpuPReluGradKernel final : public user_op::OpKernel {
   ~TfGpuPReluGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);

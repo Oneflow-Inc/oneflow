@@ -41,6 +41,7 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel,
   ~MathUnaryElementwiseGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -64,6 +65,7 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel,
   ~MathUnaryElementwiseGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -109,6 +111,7 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel,
   ~MathUnaryElementwiseGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -132,6 +135,7 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel,
   ~MathUnaryElementwiseGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);

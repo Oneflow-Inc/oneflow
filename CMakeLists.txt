@@ -153,9 +153,8 @@ if (BUILD_CUDA)
   if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "11.2")
     # example
     # warning #177-D: parameter "args" was declared but never referenced
-    # warning #611-D: overloaded virtual function "oneflow::user_op::OpKernel::Compute" is only partially overridden in class "oneflow::DiagBackwardKernel<oneflow::kGPU, double>"
     # warning #20012-D: __host__ annotation is ignored on a function("XpuVarNdarray") that is explicitly defaulted on its first declaration
-    list(APPEND CUDA_NVCC_FLAGS --display-error-number --diag-suppress 177,611,20012)
+    list(APPEND CUDA_NVCC_FLAGS --display-error-number --diag-suppress 177,20012)
   else()
     list(APPEND CUDA_NVCC_FLAGS -w)
   endif()

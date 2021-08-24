@@ -51,6 +51,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
   ~SparseSoftmaxCrossEntropyKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);

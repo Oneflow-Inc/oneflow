@@ -61,6 +61,7 @@ class SigmoidCrossEntropyKernel final : public user_op::OpKernel {
   ~SigmoidCrossEntropyKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
@@ -89,6 +90,7 @@ class SigmoidCrossEntropyGradKernel final : public user_op::OpKernel {
   ~SigmoidCrossEntropyGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* loss_diff = ctx->Tensor4ArgNameAndIndex("loss_diff", 0);

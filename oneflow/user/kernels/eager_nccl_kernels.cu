@@ -75,6 +75,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -104,6 +105,7 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -138,6 +140,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -168,6 +171,7 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -203,6 +207,7 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -232,6 +237,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);

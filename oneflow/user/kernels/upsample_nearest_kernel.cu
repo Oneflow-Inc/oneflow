@@ -124,6 +124,7 @@ class UpsampleNearest1DGPUKernel final : public user_op::OpKernel {
   ~UpsampleNearest1DGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -155,6 +156,7 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
   ~UpsampleNearestGrad1DGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
@@ -202,6 +204,7 @@ class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
   ~UpsampleNearest2DGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -238,6 +241,7 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
   ~UpsampleNearest2DGradGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
@@ -289,6 +293,7 @@ class UpsampleNearest3DGPUKernel final : public user_op::OpKernel {
   ~UpsampleNearest3DGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -317,6 +322,7 @@ class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
   ~UpsampleNearestGrad3DGPUKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 

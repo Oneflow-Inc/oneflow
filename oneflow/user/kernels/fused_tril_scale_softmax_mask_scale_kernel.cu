@@ -146,6 +146,7 @@ class FusedTrilScaleSoftmaxMaskScaleKernel final : public user_op::OpKernel {
   ~FusedTrilScaleSoftmaxMaskScaleKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
@@ -187,6 +188,7 @@ class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel 
   ~FusedTrilScaleSoftmaxMaskScaleGradKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* softmax_y = ctx->Tensor4ArgNameAndIndex("softmax_y", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);

@@ -44,6 +44,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t* output = out->mut_dptr<int32_t>();

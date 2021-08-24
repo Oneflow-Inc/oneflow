@@ -324,6 +324,7 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
   ~FusedFusedBiasAddKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -359,6 +360,7 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
   ~FusedBiasAddMaskScaleKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -405,6 +407,7 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
   ~FusedFusedBiasAddGradKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);

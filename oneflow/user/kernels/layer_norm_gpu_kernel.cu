@@ -382,6 +382,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
   ~LayerNormGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -471,6 +472,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
   ~LayerNormGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -545,6 +547,7 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
   ~LayerNormParamGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     using NdUtil = NdarrayUtil<DeviceType::kGPU, T>;
@@ -641,6 +644,7 @@ class LayerNormParamGradGpuHalfKernel final : public user_op::OpKernel,
   ~LayerNormParamGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
     using NdUtil = NdarrayUtil<DeviceType::kGPU, float16>;
