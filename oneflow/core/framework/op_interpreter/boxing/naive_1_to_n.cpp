@@ -86,8 +86,6 @@ Maybe<one::Tensor> Naive1ToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<
                                                  tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("naive-1-to-p", CheckNaive1ToP, &Naive1ToP));
-
 Maybe<one::Tensor> Naive1ToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                              Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
@@ -108,8 +106,6 @@ Maybe<one::Tensor> Naive1ToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<
 
   return JUST(NcclPToBBoxingFunction(partial_sum_output, partial_sum_out_placed_nd_sbp, out));
 }
-
-COMMAND(RegisterBoxingFunction("naive-1-to-b", CheckNaive1ToB, &Naive1ToB));
 
 Maybe<one::Tensor> Naive1ToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                              Symbol<PlacedNdSbp> out) {
@@ -132,6 +128,8 @@ Maybe<one::Tensor> Naive1ToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   return JUST(NcclPToSBoxingFunction(partial_sum_output, partial_sum_out_placed_nd_sbp, out));
 }
 
+COMMAND(RegisterBoxingFunction("naive-1-to-p", CheckNaive1ToP, &Naive1ToP));
+COMMAND(RegisterBoxingFunction("naive-1-to-b", CheckNaive1ToB, &Naive1ToB));
 COMMAND(RegisterBoxingFunction("naive-1-to-s", CheckNaive1ToS, &Naive1ToS));
 
 }  // namespace oneflow

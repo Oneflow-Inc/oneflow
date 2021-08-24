@@ -94,8 +94,8 @@ Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
-static constexpr auto* CachedNcclAllGatherOpExpr =
-    DECORATE(&EagerNcclAllGather, ThreadLocalCopiable);
+
+static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
 
 }  // namespace
 
@@ -128,7 +128,7 @@ Maybe<one::Tensor> NcclS2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
-  const auto& op_expr = JUST(CachedNcclAllGatherOpExpr(in->placement()));
+  const auto& op_expr = JUST(CachedEagerNcclAllGatherOpExpr(in->placement()));
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
 }
 
