@@ -35,9 +35,7 @@ class ToConsistent(Module):
 
 
 @register_tensor_op("to_consistent")
-def to_consistent_op(
-    input, placement=None, sbp=None, identity_grad=False, grad_sbp=None
-):
+def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
     """Cast a local tensor to consistent tensor or cast a
     consistent tensor to another consistent tensor with 
     different sbp or placement
@@ -45,8 +43,8 @@ def to_consistent_op(
 
     Args:
         input (Tensor): the input tensor.
-        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own placement.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
+        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own placement.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
 
     For example:
 
@@ -90,9 +88,6 @@ def to_consistent_op(
 
         grad_sbp = _check_sbp(grad_sbp)
 
-        if identity_grad is True and grad_sbp is not None:
-            raise ValueError("If identity_grad is True, grad_sbp should not be set.")
-
     else:
         # local tensor to consistent tensor
         if placement is None or sbp is None:
@@ -106,7 +101,7 @@ def to_consistent_op(
     if grad_sbp is None:
         grad_sbp = tuple()
 
-    return flow.F.to_consistent(input, placement, sbp, identity_grad, grad_sbp)
+    return flow.F.to_consistent(input, placement, sbp, grad_sbp)
 
 
 class ToLocal(Module):

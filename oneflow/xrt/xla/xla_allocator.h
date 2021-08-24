@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_XRT_XLA_XLA_ALLOCATOR_H_
 #define ONEFLOW_XRT_XLA_XLA_ALLOCATOR_H_
 
+#include "oneflow/xrt/fix_ostream_nullptr.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/xrt/xla/memory/device_buffer_allocator.h"
 

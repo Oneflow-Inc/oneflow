@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -32,6 +32,11 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
+
+void TensorImpl::set_requires_grad(bool requires_grad) {
+  requires_grad_ = requires_grad;
+  if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+}
 
 Maybe<Tensor> TensorImpl::acc_grad() const {
   CHECK_NOTNULL_OR_RETURN(autograd_meta_);
@@ -92,28 +97,17 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   return Maybe<void>::Ok();
 }
 
-Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
+Maybe<LocalDepObject*> EagerMirroredTensorImpl::compute_local_dep_object() const {
   return JUST(eager_blob_object())->compute_local_dep_object();
 }
 
-Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
-    const std::shared_ptr<MemoryCase>& mem_case) {
-  const auto& tensor_device = device();
-  CHECK_OR_RETURN(static_cast<bool>(tensor_device));
+Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(LocalDepObject* dep_object) {
+  CHECK_OR_RETURN(static_cast<bool>(device()));
+  const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
   const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-      mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(),
-      tensor_device->parallel_desc_ptr());
+      mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(), dep_object);
   JUST(set_eager_blob_object(eager_blob_object));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObjectAndTensorStorage(
-    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-    const std::shared_ptr<TensorStorage>& tensor_storage) {
-  CHECK_OR_RETURN(eager_blob_object->tensor_buffer() == tensor_storage->buffer());
-  eager_blob_object_ = eager_blob_object;
-  tensor_storage_ = tensor_storage;
   return Maybe<void>::Ok();
 }
 
@@ -233,7 +227,8 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
       std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
   auto cur_rank_phy_tensor_impl =
       std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
-  JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(device->mem_case()));
+  const auto& dep_object = JUST(GetLocalDepObject(device));
+  JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
   const auto& cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
   auto* tensor_impl =
       new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
