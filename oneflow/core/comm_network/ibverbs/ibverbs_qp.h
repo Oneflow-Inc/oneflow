@@ -36,7 +36,7 @@ class ActorMsgMR final {
     mr_.reset(mr);
   }
   ~ActorMsgMR() {
-    
+    mr_.reset();
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }

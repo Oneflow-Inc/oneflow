@@ -75,25 +75,23 @@ void ParseUserDevicePort(std::string* device_name, int* port) {
 IBVerbsCommNet::~IBVerbsCommNet() {
   while (poll_exit_flag_.test_and_set() == true) {}
   poll_thread_.join();
-  for (IBVerbsQP* qp : qp_vec_) {
-    if (qp) { delete qp; }
-  }
-  while(recv_msg_buf_->IsEmpty() == false) {
+  while(recv_msg_buf_->IsEmpty() == false ) {
     delete recv_msg_buf_->GetMessage();
-
   }
-  while(send_msg_buf_->IsEmpty() == false) {
+  while(send_msg_buf_->IsEmpty() == false){
     delete send_msg_buf_->GetMessage();
+  }
+  while(recv_msg_buf_->MrBufIsEmpty() == false){
+    ibv_mr * mr = recv_msg_buf_->GetMr();
+    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
   }
   while(send_msg_buf_->MrBufIsEmpty() == false) {
     ibv_mr * mr = send_msg_buf_->GetMr();
     CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
   }
-  while(recv_msg_buf_->MrBufIsEmpty() == false) {
-    ibv_mr * mr = recv_msg_buf_->GetMr();
-    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
+  for (IBVerbsQP* qp : qp_vec_) {
+    if (qp) { delete qp; }
   }
-
   CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
   CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
   CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
