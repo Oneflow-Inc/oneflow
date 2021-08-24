@@ -84,6 +84,13 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   }
   if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
       && in_parallel_desc == out_parallel_desc
+      && in_parallel_desc->device_type() == DeviceType::kGPU
+      && EagerBoxingInterpreterUtil::IsBoxingS2S(in_nd_sbp->sbp_parallel(0),
+                                                 out_nd_sbp->sbp_parallel(0))) {
+    return std::shared_ptr<EagerBoxingInterpreter>(new NcclCollectiveS2SBoxingInterpreter());
+  }
+  if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
+      && in_parallel_desc == out_parallel_desc
       && in_parallel_desc->device_type() == DeviceType::kGPU) {
     const auto& gpu_boxing_interpreter =
         TRY(GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp));
@@ -116,6 +123,23 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
         in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
     if (interpreter.IsOk()) { return JUST(interpreter); }
   }
+  const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
+  const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
+
+#define TRY_BOXING_FUNCTION(boxing_function_name)                                       \
+  do {                                                                                  \
+    const auto& BoxingFunction = TRY(GetBoxingFunction(boxing_function_name, in, out)); \
+    if (BoxingFunction.IsOk()) {                                                        \
+      return std::shared_ptr<EagerBoxingInterpreter>(                                   \
+          new NaiveEagerBoxingInterpreter(JUST(BoxingFunction)));                       \
+    }                                                                                   \
+  } while (0)
+
+  TRY_BOXING_FUNCTION("flatten-hierarchy");
+  TRY_BOXING_FUNCTION("asymmetric-x-to-b");
+
+#undef TRY_BOXING_FUNCTION
+
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
                               << "consistent-to-consistent not supported"
                               << ". from_nd_sbp: " << *JUST(NdSbpToString(in_nd_sbp))

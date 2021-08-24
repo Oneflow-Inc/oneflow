@@ -61,11 +61,11 @@ Maybe<void> Multiply::Apply(const MultiplyCaptureState* ctx, const TensorTuple& 
   in_grads->resize(2);
   if (ctx->requires_grad_x) {
     const auto& y = ctx->SavedTensors().at(ctx->index_y);
-    in_grads->at(0) = JUST(functional::Multiply(out_grads.at(0), y));
+    in_grads->at(0) = JUST(functional::Mul(out_grads.at(0), y));
   }
   if (ctx->requires_grad_y) {
     const auto& x = ctx->SavedTensors().at(ctx->index_x);
-    in_grads->at(1) = JUST(functional::Multiply(out_grads.at(0), x));
+    in_grads->at(1) = JUST(functional::Mul(out_grads.at(0), x));
   }
   return Maybe<void>::Ok();
 }

@@ -61,7 +61,7 @@ inline XrtField MakeXrtField(const XrtDevice& device, const XrtEngine& engine) {
   XrtField field;
   field.set_device(device);
   field.set_engine(engine);
-  return std::move(field);
+  return field;
 }
 
 inline bool operator==(const XrtField& field1, const XrtField& field2) {
