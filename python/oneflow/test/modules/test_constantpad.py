@@ -60,6 +60,37 @@ def _np_constant_pad2d_grad(src, dest, padding):
     numpy_dest = Array2Numpy(array_dest, dest.shape)
     return numpy_dest
 
+def _test_Pad2d(test_case, shape, padding, value, device):
+    np_input = np.random.random(shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    if isinstance(padding, int):
+        np_boundary = ((0, 0), (0, 0), (padding, padding), (padding, padding))
+    elif isinstance(padding, (tuple, int)) and len(padding) == 4:
+        np_boundary = (
+            (0, 0),
+            (0, 0),
+            (padding[2], padding[3]),
+            (padding[0], padding[1]),
+        )
+    else:
+        raise ValueError("padding must be in or list or tuple!")
+
+
+    of_out = flow.pad(of_input, paddings=np_boundary, constant_value=value)
+    np_out = np.pad(np_input, np_boundary, mode="constant", constant_values=value)
+
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-04, 1e-04))
+    of_out = of_out.sum()
+    of_out.backward()
+    if isinstance(padding, int):
+        np_pading = [padding, padding, padding, padding]
+    else:
+        np_pading = padding
+    np_out_grad = _np_constant_pad2d_grad(np_out, np_input, np_pading)
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-04, 1e-04))
+
 
 def _test_ConstantPad2d(test_case, shape, padding, value, device):
     np_input = np.random.random(shape)
@@ -111,6 +142,7 @@ class TestConstantPad2d(flow.unittest.TestCase):
         arg_dict["value"] = [0.8, 1]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
+            _test_Pad2d(test_case, *arg)
             _test_ConstantPad2d(test_case, *arg)
 
     def test_with_random_data(test_case):

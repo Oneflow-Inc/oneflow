@@ -21,14 +21,11 @@ from oneflow.nn.common_types import _size_4_t
 from oneflow.nn.modules.utils import _quadruple
 
 
-def pad(
-    input,
-    paddings: Sequence[int],
-    constant_value: Union[int, float] = 0):
+def pad_op(input, paddings: Sequence[int] = 0, constant_value: Union[int, float] = 0):
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
-        assert len(paddings) == len(x.shape), ValueError(
+        assert len(paddings) == len(input.shape), ValueError(
             "paddings must be the same size of input dims"
         )
         for p in paddings:
@@ -39,6 +36,7 @@ def pad(
             padding_after.append(p[1])
     else:
         raise ValueError("paddings must be a tuple or a list.")
+
     if input.dtype in [flow.float32, flow.float16, flow.float64]:
         floating_constant_value = float(constant_value)
         integral_constant_value = int(0)
