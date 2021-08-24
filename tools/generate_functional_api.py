@@ -61,7 +61,6 @@ header_fmt = (
 #ifndef ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
 #define ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
 
-#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor.h"
