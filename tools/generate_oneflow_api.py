@@ -34,6 +34,7 @@ def dtype_related_symbols():
         """locals()["uint8"] = oneflow._oneflow_internal.uint8""",
         """locals()["record"] = oneflow._oneflow_internal.record""",
         """locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer""",
+        """locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16""",
     ]
 
 
