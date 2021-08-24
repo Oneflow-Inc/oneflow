@@ -95,21 +95,40 @@ class Adam(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                self._state[param]["step"] = 0
                 self._state[param]["exp_avg"] = flow.zeros_like(param)
                 self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
                 self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
-        self._op = (
-            flow.builtin_op("adam_update")
-            .Input("model")
-            .Input("model_diff")
-            .Input("m")
-            .Input("v")
-            .Input("max_v")
-            .Attr("l1", 0.0)
-            .Attr("weight_decay", 0.0)
-            .Build()
-        )
+
+        self._state["bias_correction1"] = flow.ones(1)
+        self._state["bias_correction2"] = flow.ones(1)
+
+        if do_bias_correction:
+            self._op = (
+                flow.builtin_op("adam_update")
+                .Input("model")
+                .Input("model_diff")
+                .Input("bias_correction1")
+                .Input("bias_correction2")
+                .Input("m")
+                .Input("v")
+                .Input("max_v")
+                .Attr("l1", 0.0)
+                .Attr("weight_decay", 0.0)
+                .Build()
+            ) 
+        else: 
+            self._op = (
+                flow.builtin_op("adam_update")
+                .Input("model")
+                .Input("model_diff")
+                .Input("m")
+                .Input("v")
+                .Input("max_v")
+                .Attr("l1", 0.0)
+                .Attr("weight_decay", 0.0)
+                .Build()
+            )
+            
 
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
@@ -122,6 +141,7 @@ class Adam(Optimizer):
             loss = None
             if closure is not None:
                 loss = closure()
+            
             for param_group in self.param_groups:
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
@@ -130,19 +150,32 @@ class Adam(Optimizer):
                     "beta2": param_group["betas"][1],
                     "epsilon": param_group["eps"],
                     "do_bias_correction": param_group["do_bias_correction"],
-                    "amsgrad": param_group["amsgrad"],
+                    "amsgrad": param_group["amsgrad"], 
+                    "train_step_val": self._state["step"]
                 }
+                if param_group["do_bias_correction"]: 
+                    self._state["bias_correction1"] = flow.tensor((1 - math.pow(param_group["betas"][0], self._state["step"]+1)))
+                    self._state["bias_correction2"] = flow.tensor((1 - math.pow(param_group["betas"][1], self._state["step"]+1)))
+                
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    kwargs.update({"train_step_val": self._state[param]["step"]})
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
                     max_v_tensor = self._state[param]["max_exp_avg_sq"]
-                    self._op(
-                        param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs
-                    )
-                    self._state[param]["step"] += 1
+                    if param_group["do_bias_correction"]: 
+                        bias_correction_tensor_a = self._state["bias_correction1"]
+                        bias_correction_tensor_b = self._state["bias_correction2"]
+                        # when set bias_correction tensor a as 1.0, it equal to no do bias correction. 
+                        self._op(
+                            param, param.grad, bias_correction_tensor_a, bias_correction_tensor_b, m_tensor, v_tensor, max_v_tensor, **kwargs
+                        )
+                    else: 
+                        self._op(
+                            param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs
+                        )
+
+            self._state["step"] += 1
 
             return loss
 

@@ -424,7 +424,22 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const int64_t* train_step_ptr = nullptr;
     if (ctx->has_input("train_step", 0)) {
       const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
+      CHECK_EQ(train_step->shape().elem_cnt(), 1);
       train_step_ptr = train_step->dptr<int64_t>();
+    }
+
+    const float* bias_correction1_ptr = nullptr;
+    if (ctx->has_input("bias_correction_1", 0)) {
+      const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction_1", 0);
+      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);
+      bias_correction1_ptr = bias_correction1->dptr<float>();
+    }
+
+    const float* bias_correction2_ptr = nullptr;
+    if (ctx->has_input("bias_correction_2", 0)) {
+      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction_2", 0);
+      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);
+      bias_correction2_ptr = bias_correction2->dptr<float>();
     }
 
     const T* scale_by_ptr = nullptr;
@@ -444,8 +459,10 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
         epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, train_step_val,
-        learning_rate_ptr, scale_by_ptr, skip_if_ptr, train_step_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), max_v->mut_dptr<T>());
+        learning_rate_ptr, scale_by_ptr, skip_if_ptr, train_step_ptr, 
+        bias_correction1_ptr, bias_correction2_ptr, 
+        model_diff->dptr<G>(), model->mut_dptr<T>(), 
+        m->mut_dptr<T>(), v->mut_dptr<T>(), max_v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -494,6 +511,20 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
       train_step_ptr = train_step->dptr<int64_t>();
     }
 
+    const float* bias_correction1_ptr = nullptr;
+    if (ctx->has_input("bias_correction_1", 0)) {
+      const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction_1", 0);
+      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);
+      bias_correction1_ptr = bias_correction1->dptr<float>();
+    }
+
+    const float* bias_correction2_ptr = nullptr;
+    if (ctx->has_input("bias_correction_2", 0)) {
+      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction_2", 0);
+      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);
+      bias_correction2_ptr = bias_correction2->dptr<float>();
+    }
+
     const user_op::Tensor* model_diff_indices =
         ctx->Tensor4ArgNameAndIndex("model_diff_indices", 0);
     const user_op::Tensor* model_diff_values = ctx->Tensor4ArgNameAndIndex("model_diff_values", 0);
@@ -537,7 +568,9 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
         ctx->device_ctx(), beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
         learning_rate_val, train_step_val, num_indices, feature_size, kernel_state->lower(),
         kernel_state->upper(), buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate_ptr,
-        train_step_ptr, buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
+        train_step_ptr, 
+        bias_correction1_ptr, bias_correction2_ptr, 
+        buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), max_v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
