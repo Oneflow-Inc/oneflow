@@ -155,4 +155,6 @@ OneFlow Tensor Class
             double, 
             type_as, 
             cpu, 
-            cuda 
+            cuda,
+            item,
+            tolist
