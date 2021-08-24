@@ -22,7 +22,9 @@ import unittest
 
 from automated_test_util import *
 
-
+@unittest.skip(
+    "this might cause'maximum recursion depth exceeded while calling a Python object'"
+)
 @flow.unittest.skip_unless_1n1d()
 class TestIndexSelect(flow.unittest.TestCase):
     @autotest()
