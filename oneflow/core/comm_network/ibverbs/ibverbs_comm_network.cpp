@@ -81,6 +81,8 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   send_msg_buf_->FreeActorMsgMR();
   send_msg_buf_->FreeMr();
   send_msg_buf_->FreeAddr();
+  delete recv_msg_buf_;
+  delete send_msg_buf_;
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
