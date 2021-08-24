@@ -95,7 +95,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
       },
       []() {
         LOG(ERROR) << "[rank=" << GlobalProcessCtx::Rank() << "]"
-                   << "blocking detected. Python stack:\n"
+                   << " blocking detected. Python stack:\n"
                    << blocking::GetStackInfoCallback()();
       }));
   return Maybe<void>::Ok();
