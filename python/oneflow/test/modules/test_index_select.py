@@ -22,6 +22,7 @@ import unittest
 
 from automated_test_util import *
 
+
 @unittest.skip(
     "this might cause'maximum recursion depth exceeded while calling a Python object'"
 )
