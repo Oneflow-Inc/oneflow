@@ -15,13 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 namespace {
 
 template<DeviceType device_type, typename T>
-class ReluKernel final : public user_op::OpKernel {
+class ReluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ReluKernel() = default;
   ~ReluKernel() = default;
@@ -56,7 +57,7 @@ REGISTER_RELU_KERNEL(DeviceType::kGPU, float16)
 #endif
 
 template<DeviceType device_type, typename T>
-class ReluGradKernel final : public user_op::OpKernel {
+class ReluGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ReluGradKernel() = default;
   ~ReluGradKernel() = default;
