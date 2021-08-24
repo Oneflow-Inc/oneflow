@@ -21,7 +21,7 @@ namespace {
 
 std::string CreateReduceSumLikeBlob(const std::string& in_lbn, const Shape& in_shape,
                                     const std::string& like_lbn, const Shape& like_shape,
-                                    const std::string& op_name, user_op::AddOpFn AddOp) {
+                                    const std::string& op_name, const user_op::AddOpFn& AddOp) {
   const Shape& left_extended_shape =
       CreateLeftExtendedShape(ShapeView(like_shape), in_shape.NumAxes());
   if (in_shape == like_shape) {
@@ -55,7 +55,7 @@ std::string CreateReduceSumLikeBlob(const std::string& in_lbn, const Shape& in_s
 
 REGISTER_USER_OP_GRAD("broadcast_add")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -77,7 +77,7 @@ REGISTER_USER_OP_GRAD("broadcast_add")
 
 REGISTER_USER_OP_GRAD("broadcast_sub")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -110,7 +110,7 @@ REGISTER_USER_OP_GRAD("broadcast_sub")
 
 REGISTER_USER_OP_GRAD("broadcast_mul")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -146,7 +146,7 @@ REGISTER_USER_OP_GRAD("broadcast_mul")
 
 REGISTER_USER_OP_GRAD("broadcast_div")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
@@ -179,7 +179,7 @@ REGISTER_USER_OP_GRAD("broadcast_div")
 
 REGISTER_USER_OP_GRAD("broadcast_pow")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_x_grad");
@@ -210,7 +210,7 @@ REGISTER_USER_OP_GRAD("broadcast_pow")
 
 REGISTER_USER_OP_GRAD("broadcast_floor_mod")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("z", 0), "x", 0);
       }
@@ -219,7 +219,7 @@ REGISTER_USER_OP_GRAD("broadcast_floor_mod")
 
 REGISTER_USER_OP_GRAD("broadcast_fmod")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("z", 0), "x", 0);
       }
