@@ -118,6 +118,26 @@ class BroadcastDiv : public BroadcastBinaryGrad {
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_div", BroadcastDiv);
 
+class BroadcastPow : public BroadcastBinaryGrad {
+ public:
+  Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const auto& x = ctx->SavedTensors().at(0);
+    const auto& y = ctx->SavedTensors().at(1);
+    const auto& z = ctx->SavedTensors().at(2);
+    in_grads->resize(2);
+    if (x->requires_grad()) {
+      in_grads->at(0) = JUST(functional::BroadcastPowXGrad(out_grads.at(0), x, y, z));
+    }
+    if (y->requires_grad()) {
+      in_grads->at(1) = JUST(functional::BroadcastPowYGrad(out_grads.at(0), x, y, z));
+    }
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_pow", BroadcastPow);
+
 class BroadcastMinMax : public BroadcastBinaryGrad {
  public:
   Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
