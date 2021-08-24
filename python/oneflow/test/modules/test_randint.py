@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import os
 import unittest
 from collections import OrderedDict
 
@@ -83,6 +83,7 @@ def _test_0rank(test_case, device, shape, low, high):
 
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestRandint(flow.unittest.TestCase):
     def test_consistent_naive(test_case):
         placement = flow.placement("cpu", {0: [0]})
