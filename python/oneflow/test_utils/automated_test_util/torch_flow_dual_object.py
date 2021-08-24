@@ -228,12 +228,12 @@ def note_print_args(x, end=True):
 
 def note_print_kwargs(x, y, end=True):
     if end:
-        if isinstance(y, str) and not x.startswith("Tensor"):
+        if isinstance(y, str) and not y.startswith("Tensor"):
             print(f"\033[32m{x}='{y}, '\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}, \033[0m", end="")
     else:
-        if isinstance(y, str) and not x.startswith("Tensor"):
+        if isinstance(y, str) and not y.startswith("Tensor"):
             print(f"\033[32m{x}='{y}'\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}\033[0m", end="")
