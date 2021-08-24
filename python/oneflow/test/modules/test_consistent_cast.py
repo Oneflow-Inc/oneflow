@@ -691,35 +691,35 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(1)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(4)})
-        partial_sum_tensor = consistent_tensor.to_consistent(
+        split_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.split(0)
         )
-        test_case.assertTrue(partial_sum_tensor.placement, new_placement)
+        test_case.assertTrue(split_tensor.placement, new_placement)
         if flow.distributed.get_rank() == 0:
             test_case.assertTrue(
                 np.array_equal(
-                    partial_sum_tensor.to_local().numpy(),
+                    split_tensor.to_local().numpy(),
                     np.array([[4, 6, 5, 20]], dtype=np.float32,),
                 )
             )
         elif flow.distributed.get_rank() == 1:
             test_case.assertTrue(
                 np.array_equal(
-                    partial_sum_tensor.to_local().numpy(),
+                    split_tensor.to_local().numpy(),
                     np.array([[6, 2, 5, 7]], dtype=np.float32,),
                 )
             )
         elif flow.distributed.get_rank() == 2:
             test_case.assertTrue(
                 np.array_equal(
-                    partial_sum_tensor.to_local().numpy(),
+                    split_tensor.to_local().numpy(),
                     np.array([[3, 7, 5, 4]], dtype=np.float32,),
                 )
             )
         elif flow.distributed.get_rank() == 3:
             test_case.assertTrue(
                 np.array_equal(
-                    partial_sum_tensor.to_local().numpy(),
+                    split_tensor.to_local().numpy(),
                     np.array([[6, 8, 9, 4]], dtype=np.float32,),
                 )
             )
