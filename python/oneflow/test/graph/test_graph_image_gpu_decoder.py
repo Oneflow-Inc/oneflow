@@ -27,7 +27,7 @@ class OFRecordDataLoader(flow.nn.Module):
         batch_size = 4
         image_size = 224
         self.train_record_reader = flow.nn.OfrecordReader(
-            "/dataset/imagenette/ofrecord",
+            "/home/chengcheng/dataset", # "/dataset/imagenette/ofrecord",
             batch_size=batch_size,
             data_part_num=1,
             part_name_suffix_length=5,
@@ -43,7 +43,7 @@ class OFRecordDataLoader(flow.nn.Module):
         self.bytes_decoder = flow.nn.OFRecordBytesDecoder("encoded")
         self.image_gpu_decoder = flow.nn.OFRecordImageGpuDecoderRandomCropResize(
             target_width=image_size, target_height=image_size, num_workers=3
-        )
+            )
 
         color_space = "RGB"
         output_layout = "NHWC"
@@ -70,7 +70,8 @@ class OFRecordDataLoader(flow.nn.Module):
         encoded = self.bytes_decoder(train_record)
         image = self.image_gpu_decoder(encoded)
         rng = self.flip()
-        rng = rng.to("cuda")
+        if image.is_cuda:
+            rng = rng.to("cuda")
         image = self.crop_mirror_norm(image, rng)
         return image, label
 
@@ -91,10 +92,8 @@ class TestImageGpuDecoderGraph(oneflow.unittest.TestCase):
 
         reader_g = GraphReader()
         image, label = reader_g()
-
-        print(image)
+        print(image.shape)
         print(label)
-
 
 if __name__ == "__main__":
     unittest.main()

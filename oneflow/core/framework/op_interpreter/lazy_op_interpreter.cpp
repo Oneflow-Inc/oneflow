@@ -298,7 +298,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LazyInterpreter::ApplyImpl(const ImageGpuDecoderOpExpr& op_expr,
+Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr& op_expr,
                                        const TensorTuple& inputs, TensorTuple* outputs,
                                        const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -307,14 +307,21 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ImageGpuDecoderOpExpr& op_expr,
   const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
 
+  auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
+  std::string device_tag;
+  if (IsCpuOnly(*op_conf)) {
+    device_tag = "cpu";
+  } else {
+    device_tag = "gpu";
+  }
+
   std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
   parallel_conf->InitFromProto(JUST(GetParallelDescOfTensor(input_tensor))->parallel_conf());
-  parallel_conf->set_device_tag("gpu");  // NOTE(chengcheng): only support gpu decode.
+  parallel_conf->set_device_tag(device_tag);  // NOTE(chengcheng): only support gpu decode.
   const auto& scope = JUST(NewScopeWithParallelConfAndCurScope(parallel_conf));
 
-  auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf->set_device_tag("gpu");
+  op_conf->set_device_tag(device_tag);
 
   // NOTE(chengcheng): replace right input_lbn and obn
   ReplaceInputLbnInOpCustomizedConf(op_conf.get(), /* ibn */ "in", input_lbn);

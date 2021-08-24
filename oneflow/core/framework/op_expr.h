@@ -227,7 +227,7 @@ using FeedVariableOpExpr = BuiltinOpExprImpl<FeedVariableOpConf>;
 using FetchOutputOpExpr = BuiltinOpExprImpl<FetchOutputOpConf>;
 
 // NOTE(chengcheng): Special SystemOp for image gpu decode.
-using ImageGpuDecoderOpExpr = BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>;
+using ImageDecoderRandomCropResizeOpExpr = BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>;
 
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
 using CastToMirroredOpExpr = BuiltinOpExprImpl<CastToMirroredOpConf>;

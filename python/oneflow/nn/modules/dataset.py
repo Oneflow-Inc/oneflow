@@ -384,13 +384,24 @@ class OFRecordImageGpuDecoderRandomCropResize(Module):
         if max_num_pixels is not None:
             gpu_decoder_conf.set_max_num_pixels(max_num_pixels)
 
-        self._op = flow._oneflow_internal.one.ImageGpuDecoderOpExpr(
+        self._op = flow._oneflow_internal.one.ImageDecoderRandomCropResizeOpExpr(
             id_util.UniqueStr("ImageGpuDecoder"), gpu_decoder_conf, ["in"], ["out"]
         )
         self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
 
     def forward(self, input):
+        if not input.is_lazy:
+            print(
+                "ERROR! oneflow.nn.OFRecordImageGpuDecoderRandomCropResize module ",
+                "NOT support run as eager module, please use it in nn.Graph.",
+            )
+            raise NotImplementedError
         res = self._op.apply([input], self.attrs)[0]
+        if not res.is_cuda:
+            print(
+                "WARNING! oneflow.nn.OFRecordImageGpuDecoderRandomCropResize ONLY support ",
+                "CUDA runtime version >= 10.2, so now it degenerates into CPU decode version.",
+            )
         return res
 
 
