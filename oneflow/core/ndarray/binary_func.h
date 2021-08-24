@@ -142,19 +142,19 @@ struct BinaryFuncPow<float16> final {
 #if defined(__CUDACC__)
 template<>
 struct BinaryFuncPow<double> final {
-  static OF_DEVICE_FUNC const double Invoke(const double x, const double y) { return pow(x, y); }
+  static OF_DEVICE_FUNC double Invoke(const double x, const double y) { return pow(x, y); }
 };
 
 template<>
 struct BinaryFuncPow<float> final {
-  static __device__ __forceinline__ const float Invoke(const float x, const float y) {
+  static __device__ __forceinline__ float Invoke(const float x, const float y) {
     return __powf(x, y);
   }
 };
 
 template<>
 struct BinaryFuncPow<half> final {
-  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+  static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
     return __float2half(__powf(__half2float(x), __half2float(y)));
 #else
