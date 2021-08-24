@@ -89,6 +89,8 @@ IBVerbsCommNet::~IBVerbsCommNet() {
     ibv_mr * mr = send_msg_buf_->GetMr();
     CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
   }
+  recv_msg_buf_->FreeAddr();
+  send_msg_buf_->FreeAddr();
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
