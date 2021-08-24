@@ -52,6 +52,19 @@ Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 
 static constexpr auto* CheckNcclP2S = DECORATE(&RawCheckNcclP2S, ThreadLocal);
 
+Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsSplitNdSbp(in->nd_sbp(), 0));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out->nd_sbp()));
+
+  CHECK_OR_RETURN(in->placement() == out->placement());
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
+  return Maybe<void>::Ok();
+}
+
+static constexpr auto* CheckNcclS2B = DECORATE(&RawCheckNcclS2B, ThreadLocal);
+
 Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
   return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
       .Input("in")
@@ -74,6 +87,16 @@ Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc
 static constexpr auto* CachedNcclReduceScatterOpExpr =
     DECORATE(&EagerNcclReduceScatter, ThreadLocalCopiable);
 
+Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
+  return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
+
 }  // namespace
 
 Maybe<one::Tensor> NcclP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -87,8 +110,6 @@ Maybe<one::Tensor> NcclP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
 }
 
-COMMAND(RegisterBoxingFunction("nccl-p-to-b", CheckNcclP2B, &NcclP2B));
-
 Maybe<one::Tensor> NcclP2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                            Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
@@ -100,6 +121,19 @@ Maybe<one::Tensor> NcclP2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
 }
 
+Maybe<one::Tensor> NcclS2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                           Symbol<PlacedNdSbp> out) {
+  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  const auto& tensor_placement = JUST(tensor->parallel_desc());
+  CHECK_OR_RETURN(tensor_placement == in->placement());
+
+  const auto& op_expr = JUST(CachedEagerNcclAllGatherOpExpr(in->placement()));
+  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+}
+
 COMMAND(RegisterBoxingFunction("nccl-p-to-s", CheckNcclP2S, &NcclP2S));
+COMMAND(RegisterBoxingFunction("nccl-p-to-b", CheckNcclP2B, &NcclP2B));
+COMMAND(RegisterBoxingFunction("nccl-s-to-b", CheckNcclS2B, &NcclS2B));
 
 }  // namespace oneflow

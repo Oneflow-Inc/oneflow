@@ -36,26 +36,6 @@ Maybe<void> RawCheckSymXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 
 static constexpr auto* CheckSymXToB = DECORATE(&RawCheckSymXToB, ThreadLocal);
 
-Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Build();
-}
-
-static constexpr auto* CachedEagerNcclAllReduceOpExpr = DECORATE(&EagerNcclAllReduce, ThreadLocal);
-
-Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Build();
-}
-
-static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
-
 }  // namespace
 
 Maybe<one::Tensor> SymXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -66,12 +46,12 @@ Maybe<one::Tensor> SymXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   CHECK_OR_RETURN(tensor_placement == in->placement());
   if (EagerBoxingInterpreterUtil::IsBroadcastSbp(tensor_nd_sbp->sbp_parallel(0))) { return tensor; }
   if (EagerBoxingInterpreterUtil::IsPartialSumSbp(tensor_nd_sbp->sbp_parallel(0))) {
-    const auto& op_expr = JUST(CachedEagerNcclAllReduceOpExpr(in->placement()));
-    return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+    const auto& NcclPToBBoxingFunction = *JUST(GetBoxingFunction("nccl-p-to-b", in, out));
+    return JUST(NcclPToBBoxingFunction(tensor, in, out));
   }
   if (EagerBoxingInterpreterUtil::IsSplitSbp(tensor_nd_sbp->sbp_parallel(0), 0)) {
-    const auto& op_expr = JUST(CachedEagerNcclAllGatherOpExpr(in->placement()));
-    return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+    const auto& NcclSToBBoxingFunction = *JUST(GetBoxingFunction("nccl-s-to-b", in, out));
+    return JUST(NcclSToBBoxingFunction(tensor, in, out));
   }
   UNIMPLEMENTED_THEN_RETURN();
 }

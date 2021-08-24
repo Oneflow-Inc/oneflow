@@ -142,7 +142,6 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   TRY_BOXING_FUNCTION("naive-1-to-b");
   TRY_BOXING_FUNCTION("naive-1-to-s");
 
-
 #undef TRY_BOXING_FUNCTION
 
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
