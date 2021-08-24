@@ -13,9 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.compatible.single_client.nn.optimizer.cosine_annealing_lr import (
-    CosineAnnealingLR,
-)
+from oneflow.compatible.single_client.nn.optimizer.cosine_decay_lr import CosineDecayLR
 from oneflow.compatible.single_client.nn.optimizer.lambda_lr import LambdaLR
 from oneflow.compatible.single_client.nn.optimizer.lr_scheduler import (
     LrScheduler as _LRScheduler,
