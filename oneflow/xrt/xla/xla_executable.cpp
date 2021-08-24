@@ -49,7 +49,7 @@ bool XlaExecutable::Run(const std::vector<Parameter>& inputs,
 
     auto result = executable_->RunAsync(input_buffers, options);
     if (block_until_done) { run_context.stream()->BlockHostUntilDone(); }
-    return std::move(result);
+    return result;
   }());
 
   // Result shape should be tuple

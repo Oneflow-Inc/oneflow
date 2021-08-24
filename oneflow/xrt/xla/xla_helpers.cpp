@@ -27,7 +27,7 @@ namespace mola {
 std::vector<long long> AsLLongVec(const Shape& shape) {
   std::vector<long long> llong_vec(shape.NumAxes());
   for (size_t i = 0; i < llong_vec.size(); ++i) { llong_vec[i] = shape.At(i); }
-  return std::move(llong_vec);
+  return llong_vec;
 }
 
 xla::XlaOp One(xla::XlaBuilder* builder, DataType data_type) {

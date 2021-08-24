@@ -48,6 +48,7 @@ class InplaceableBinaryFunctor {
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
     if (inplace) {
       JUST(CheckInplaceValid(x));
+      JUST(CheckShapeCanExpandTo(*y->shape(), *x->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x, y}, outputs.get()));
@@ -60,47 +61,6 @@ class InplaceableBinaryFunctor {
  protected:
   InplaceableBinaryFunctor() = default;
   virtual ~InplaceableBinaryFunctor() = default;
-
-  std::shared_ptr<OpExpr> op_;
-};
-
-class InplaceableBroadcastBinaryFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& y, bool inplace) const {
-    if (inplace) {
-      JUST(CheckInplaceValid(x));
-      // Check whether y can expand to x
-      const auto& x_shape = x->shape();
-      const auto& y_shape = y->shape();
-      CHECK_GE_OR_RETURN(x_shape->NumAxes(), y_shape->NumAxes())
-          << "Invalid shape to do inplace broadcast operator.";
-      int shift = x_shape->NumAxes() - y_shape->NumAxes();
-      for (int i = x_shape->NumAxes() - 1; i >= 0; --i) {
-        int index = i - shift;
-        if (index >= 0) {
-          int dim_a = x_shape->At(i);
-          int dim_b = y_shape->At(index);
-          CHECK_OR_RETURN(dim_a == dim_b || (dim_a > 0 && dim_b == 1))
-              << "Can't expand " << y_shape->ToString() << " to " << x_shape->ToString();
-        } else {
-          CHECK_GT_OR_RETURN(x_shape->At(i), 0)
-              << "Can't expand " << y_shape->ToString() << " to " << x_shape->ToString();
-        }
-      }
-
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x, y}, outputs.get()));
-      return outputs->at(0);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x, y});
-    }
-  }
-
- protected:
-  InplaceableBroadcastBinaryFunctor() = default;
-  virtual ~InplaceableBroadcastBinaryFunctor() = default;
 
   std::shared_ptr<OpExpr> op_;
 };

@@ -113,7 +113,7 @@ template<typename T>
 Any::AnyType Any::TypeInfo() const {
   Any::AnyType type;
   type.ptype_info = &typeid(T);
-  return std::move(type);
+  return type;
 }
 
 template<typename T>
