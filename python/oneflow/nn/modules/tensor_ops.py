@@ -200,6 +200,7 @@ def cuda(input, device: Union[int, str, flow.device] = None):
         device = "cuda:" + str(device)
     return input.to(device=device)
 
+
 @register_tensor_op("item")
 def item_op(input):
     r"""Returns the value of this tensor as a standard Python number. This only works for tensors with one element. 

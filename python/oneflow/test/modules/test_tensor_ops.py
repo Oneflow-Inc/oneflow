@@ -92,7 +92,7 @@ class TestTensorOps(flow.unittest.TestCase):
         x = random_pytorch_tensor(dtype=int).to(device)
         y = x.double()
         return y
-    
+
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
     def test_item(test_case):
         device = random_device()
