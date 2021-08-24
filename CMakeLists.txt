@@ -140,6 +140,7 @@ else()
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${EXTRA_CXX_FLAGS}")
 endif()
 
+set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 include(third_party)
 
 if (BUILD_CUDA)
@@ -199,11 +200,6 @@ endif()
 
 message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})
 
-if (THIRD_PARTY)
-  add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-else()
-  add_custom_target(prepare_oneflow_third_party ALL)
-endif()
 add_custom_target(oneflow_deps ALL DEPENDS prepare_oneflow_third_party)
 # skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src
 if (ONEFLOW)
