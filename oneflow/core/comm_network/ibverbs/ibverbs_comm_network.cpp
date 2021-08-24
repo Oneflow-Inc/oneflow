@@ -81,14 +81,14 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   while(send_msg_buf_->IsEmpty() == false){
     delete send_msg_buf_->GetMessage();
   }
-  while(recv_msg_buf_->MrBufIsEmpty() == false){
+  /*while(recv_msg_buf_->MrBufIsEmpty() == false){
     ibv_mr * mr = recv_msg_buf_->GetMr();
     CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
   }
   while(send_msg_buf_->MrBufIsEmpty() == false) {
     ibv_mr * mr = send_msg_buf_->GetMr();
     CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-  }
+  }*/
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
