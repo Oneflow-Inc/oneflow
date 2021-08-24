@@ -22,7 +22,7 @@ from oneflow.nn.modules.utils import _quadruple
 
 
 def pad_op(input, paddings: Sequence[int] = 0, constant_value: Union[int, float] = 0):
-    """This operator pads the input blob with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
+    """This operator pads the input Tensor with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
 
     Args:
         x (flow.Tensor): The input Tensor
