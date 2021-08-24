@@ -323,6 +323,13 @@ def _FindFreePort():
         return s.getsockname()[1]
 
 
+# proxy will interfere bootstrap
+def DeleteProxyEnvVars():
+    for proxy_env in ["http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY", "all_proxy", "ALL_PROXY"]:
+        if proxy_env in os.environ:
+            del os.environ[proxy_env]
+
+
 def HasAllMultiClientEnvVars():
     env_var_names = ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK"]
     has_all_env_vars = all([os.getenv(x) for x in env_var_names])
