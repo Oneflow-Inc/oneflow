@@ -61,6 +61,7 @@ Maybe<void> Unfold::Capture(UnfoldInterpState* ctx, const TensorTuple& inputs,
   ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
   ctx->padding = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding"));
   ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
+  // Only support 4-d Tensor Input.
   for (int i = 0; i < 2; i++) { out_shape.at(i) = (x->shape()->At(i + 2)); }
   ctx->output_size = out_shape;
   return Maybe<void>::Ok();
@@ -68,13 +69,12 @@ Maybe<void> Unfold::Capture(UnfoldInterpState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Unfold::Apply(const UnfoldInterpState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
-  if (ctx->requires_grad) {
-    in_grads->at(0) =
-        JUST(functional::Fold(out_grads.at(0), ctx->data_format, ctx->output_size, ctx->kernel_size,
-                              ctx->dilation_rate, ctx->padding, ctx->strides));
-  }
+  in_grads->at(0) =
+      JUST(functional::Fold(out_grads.at(0), ctx->data_format, ctx->output_size, ctx->kernel_size,
+                            ctx->dilation_rate, ctx->padding, ctx->strides));
   return Maybe<void>::Ok();
 }
 

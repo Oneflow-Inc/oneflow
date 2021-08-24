@@ -661,7 +661,7 @@ class FoldFunctor {
                            const std::vector<int32_t> padding,
                            const std::vector<int32_t> strides) const {
     const auto& x_shape = x->shape();
-    // Only Support 3d tensor fold now. format is
+    // Only Support 3d tensor fold now. format is (N, C*K*K, L)
     CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 3) << "Input Tensor dim should == 3";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));

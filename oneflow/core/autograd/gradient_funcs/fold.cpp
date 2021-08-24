@@ -63,12 +63,11 @@ Maybe<void> Fold::Capture(FoldInterpState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Fold::Apply(const FoldInterpState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const {
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
-  if (ctx->requires_grad) {
-    in_grads->at(0) = JUST(functional::Unfold(out_grads.at(0), ctx->data_format, ctx->kernel_size,
-                                              ctx->dilation_rate, ctx->padding, ctx->strides));
-  }
+  in_grads->at(0) = JUST(functional::Unfold(out_grads.at(0), ctx->data_format, ctx->kernel_size,
+                                            ctx->dilation_rate, ctx->padding, ctx->strides));
   return Maybe<void>::Ok();
 }
 
