@@ -29,3 +29,12 @@ import oneflow._oneflow_internal
 
 def get_local_rank():
     return oneflow._oneflow_internal.GetLocalRank()
+
+def get_rank():
+    """Returns the rank of current process group.
+
+    Returns:
+        The rank of the process group.
+
+    """
+    return oneflow._oneflow_internal.GetRank()

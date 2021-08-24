@@ -38,7 +38,7 @@ class TestDDP(flow.unittest.TestCase):
             def forward(self, x):
                 return x * self.w
 
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == 0:
             x = flow.Tensor([1, 1])
         elif rank == 1:
@@ -66,11 +66,11 @@ class TestDDP(flow.unittest.TestCase):
 
             def forward(self, x):
                 x = x * self.w
-                if flow.framework.distribute.get_rank() == 0:
+                if flow.env.get_rank() == 0:
                     x = x * self.used_only_in_rank0
                 return x
 
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == 0:
             x = flow.Tensor([1])
         elif rank == 1:
@@ -101,7 +101,7 @@ class TestDDP(flow.unittest.TestCase):
                 self.w3 = flow.nn.Parameter(flow.Tensor([3]))
 
             def forward(self, x):
-                if flow.framework.distribute.get_rank() == 0:
+                if flow.env.get_rank() == 0:
                     x *= self.w1
                     x *= self.w2
                     x *= self.w3
@@ -111,7 +111,7 @@ class TestDDP(flow.unittest.TestCase):
                     x *= self.w1
                 return x
 
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == 0:
             x = flow.Tensor([1])
         elif rank == 1:
@@ -130,7 +130,7 @@ class TestDDP(flow.unittest.TestCase):
         test_case.assertTrue(np_allclose_with_shape(m.w3.grad.numpy(), np.array([3])))
 
     def test_broadcast_buffer(test_case):
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
 
         class CustomModule(flow.nn.Module):
             def __init__(self):

@@ -23,14 +23,14 @@ import oneflow._oneflow_internal
 #     return oneflow._oneflow_internal.GetLocalRank()
 
 
-def get_rank():
-    """Returns the rank of current process group.
+# def get_rank():
+#     """Returns the rank of current process group.
 
-    Returns:
-        The rank of the process group.
+#     Returns:
+#         The rank of the process group.
 
-    """
-    return oneflow._oneflow_internal.GetRank()
+#     """
+#     return oneflow._oneflow_internal.GetRank()
 
 
 def get_world_size():

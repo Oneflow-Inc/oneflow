@@ -216,7 +216,7 @@ class TestModule(flow.unittest.TestCase):
 
             consistent_src_dst_rank = 0
             flow.save(state_dict, f, consistent_dst_rank=consistent_src_dst_rank)
-            rank = flow.framework.distribute.get_rank()
+            rank = flow.env.get_rank()
             if rank != consistent_src_dst_rank:
                 test_case.assertEqual(len(os.listdir(f)), 0)
 

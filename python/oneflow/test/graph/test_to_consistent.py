@@ -194,7 +194,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
     def test_fwd_P2B(test_case):
         """ compare eager fwd and lazy bwd
         """
-        rank = flow.distributed.get_rank()
+        rank = flow.env.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_fwd_P2B")
 
@@ -230,7 +230,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
     def test_bwd_P2B(test_case):
         """ compare eager bwd and lazy bwd
         """
-        rank = flow.distributed.get_rank()
+        rank = flow.env.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_bwd_P2B")
 
@@ -275,7 +275,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
     def test_multi_graph(test_case):
         """ compare two lazy fwd
         """
-        rank = flow.distributed.get_rank()
+        rank = flow.env.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_multi_graph")
 
@@ -370,7 +370,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
     # @unittest.skipIf(True, "")
     def test_to_placement(test_case):
-        rank = flow.distributed.get_rank()
+        rank = flow.env.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_to_placement")
 
