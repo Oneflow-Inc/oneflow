@@ -160,4 +160,11 @@ Maybe<const std::string&> ValueTypeName(ValueType type);
 }  // namespace one
 }  // namespace oneflow
 
+namespace std {
+template<>
+struct hash<oneflow::one::functional::ValueType> {
+  std::size_t operator()(oneflow::one::functional::ValueType v) const noexcept { return v; }
+};
+}  // namespace std
+
 #endif  // ONEFLOW_CORE_FUNCTIONAL_VALUE_TYPES_H_
