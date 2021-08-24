@@ -38,6 +38,8 @@ TensorDescInferFn UnfoldTensorDescInferFn() {
     const size_t c_dim = data_format == "channels_first" ? 1 : spatial_ndim + 1;
 
     CHECK_EQ_OR_RETURN(spatial_ndim, 2);  // only support 4-D tensor now.
+    CHECK_EQ_OR_RETURN(padding.size(), spatial_ndim);
+    for (int32_t pad : padding) { CHECK_GE_OR_RETURN(pad, 0); }
     CHECK_EQ_OR_RETURN(kernel_size.size(), spatial_ndim);
     for (int32_t kernel : kernel_size) { CHECK_GT_OR_RETURN(kernel, 0); }
     CHECK_EQ_OR_RETURN(strides.size(), spatial_ndim);
@@ -97,6 +99,8 @@ TensorDescInferFn FoldTensorDescInferFn() {
 
     CHECK_EQ_OR_RETURN(spatial_ndim, 2);  // only support 4-D tensor now.
     CHECK_EQ_OR_RETURN(output_size.size(), spatial_ndim);
+    CHECK_EQ_OR_RETURN(padding.size(), spatial_ndim);
+    for (int32_t pad : padding) { CHECK_GE_OR_RETURN(pad, 0); }
     CHECK_EQ_OR_RETURN(kernel_size.size(), spatial_ndim);
     for (int32_t kernel : kernel_size) { CHECK_GT_OR_RETURN(kernel, 0); }
     CHECK_EQ_OR_RETURN(strides.size(), spatial_ndim);
@@ -107,7 +111,6 @@ TensorDescInferFn FoldTensorDescInferFn() {
     CHECK_EQ_OR_RETURN(input_planes % (kernel_size[0] * kernel_size[1]),
                        0);  // C*K*K should be divided by K*K
 
-    // wrong
     const int32_t output_height =
         (output_size[0] + 2 * padding[0] - dilation_rate[0] * (kernel_size[0] - 1) - 1) / strides[0]
         + 1;
