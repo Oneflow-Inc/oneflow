@@ -456,14 +456,12 @@ class TestTopk(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @unittest.skip("topk has bug")
     @autotest(auto_backward=False)
     def test_topk_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
-        # values, indices = torch.topk(x, random(low=1, high=8).to(int), dim=random(low=1, high=4).to(int), largest=random_bool(), sorted=random_bool())
-        values, indices = torch.topk(x, constant(1), dim=constant(1), largest=constant(True), sorted=constant(True))
-        return values, indices
+        y = torch.topk(x, random(low=1, high=8).to(int), dim=random(low=1, high=4).to(int), largest=random_bool(), sorted=constant(True))
+        return y[0], y[1]
 
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
