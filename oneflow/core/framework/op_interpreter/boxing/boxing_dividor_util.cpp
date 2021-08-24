@@ -87,23 +87,23 @@ Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp() {
 
 auto* CachedGetPartialSumNdSbp = DECORATE(&GetPartialSumNdSbp, ThreadLocal);
 
-Maybe<Symbol<PlacedNdSbp>> RawWithPartialSum(Symbol<PlacedNdSbp> placed_nd_sbp) {
+Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithPartialSum(Symbol<PlacedNdSbp> placed_nd_sbp) {
   Symbol<cfg::NdSbp> partial_sum_nd_sbp = JUST(CachedGetPartialSumNdSbp());
   return JUST(PlacedNdSbp::New(partial_sum_nd_sbp, placed_nd_sbp->placement()));
 }
 
-static constexpr auto* WithPartialSum = DECORATE(&RawWithPartialSum, ThreadLocal);
+static constexpr auto* ReplaceNdSbpWithPartialSum = DECORATE(&RawReplaceNdSbpWithPartialSum, ThreadLocal);
 
-Maybe<BoxingDividor> RawWithPartialSumAsMidPlacedNdSbp() {
+Maybe<BoxingDividor> RawOutPlacementAndPartialSum() {
   return std::make_shared<BoxingDividor>(
-      "WithPartialSumAsMidPlacedNdSbp",
+      "OutPlacementAndPartialSum",
       [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
-        return WithPartialSum(out);
+        return ReplaceNdSbpWithPartialSum(out);
       });
 }
 
 }  // namespace
 
-decltype(WithPartialSumAsMidPlacedNdSbp) WithPartialSumAsMidPlacedNdSbp =
-    DECORATE(&RawWithPartialSumAsMidPlacedNdSbp, ThreadLocal);
+decltype(OutPlacementAndPartialSum) OutPlacementAndPartialSum =
+    DECORATE(&RawOutPlacementAndPartialSum, ThreadLocal);
 }  // namespace oneflow
