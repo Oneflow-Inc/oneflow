@@ -31,7 +31,7 @@ macro(copy_files file_paths source_dir dest_dir target)
     endforeach()
     add_custom_command(TARGET ${target} POST_BUILD
       COMMAND ${rsync}
-      ARGS -a --files-from=${CACHE_FILELIST} ${source_dir} ${dest_dir})
+      ARGS -a --inplace --files-from=${CACHE_FILELIST} ${source_dir} ${dest_dir})
   else()
     foreach(file ${file_paths})
       file(RELATIVE_PATH rel_path "${source_dir}" ${file})

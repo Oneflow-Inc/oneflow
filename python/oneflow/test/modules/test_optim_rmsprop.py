@@ -99,7 +99,7 @@ def compare_with_numpy_rmsprop(
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
     test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=2e-3, atol=2e-3)
     )
 
 
@@ -184,7 +184,7 @@ def compare_with_numpy_rmsprop_clip_grad(
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
     test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=2e-3, atol=2e-3)
     )
 
 

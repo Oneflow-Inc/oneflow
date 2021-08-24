@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace one {
 
-int64_t* MutThreadLocalRecursiveDepth() {
+int64_t* MutThreadLocalConsistentIdDepth() {
   static thread_local int64_t recursive_depth = 0;
   return &recursive_depth;
 }

@@ -63,6 +63,19 @@ class NcclCollectiveReduceScatterBoxingInterpreter final : public EagerBoxingInt
   const std::string op_type_;
 };
 
+class NcclCollectiveS2SBoxingInterpreter final : public EagerBoxingInterpreter {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveS2SBoxingInterpreter);
+  NcclCollectiveS2SBoxingInterpreter() = default;
+  ~NcclCollectiveS2SBoxingInterpreter() override = default;
+
+ private:
+  Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
+                                   Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
+                                   Symbol<ParallelDesc> in_parallel_desc,
+                                   Symbol<ParallelDesc> out_parallel_desc) const override;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_COLLECTIVE_BOXING_INTERPRETER_H_

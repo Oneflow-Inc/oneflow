@@ -65,9 +65,7 @@ __global__ void __launch_bounds__(kBlockSize)
 
 template<typename T>
 struct IsTrue {
-  CUB_RUNTIME_FUNCTION __forceinline__ bool operator()(const T& val) const {
-    return static_cast<bool>(val);
-  }
+  __device__ __forceinline__ bool operator()(const T& val) const { return static_cast<bool>(val); }
 };
 
 template<typename IN_T, typename OUT_T, typename OUT_ITER>
