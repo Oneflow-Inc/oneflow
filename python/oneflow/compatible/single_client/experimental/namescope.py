@@ -87,7 +87,7 @@ def GetJobNameScopePrefix(job_name):
         return ""
     if len(sess.job_name2name_scope_stack[job_name]) == 0:
         return ""
-    return "-".join(sess.job_name2name_scope_stack[job_name]) + "-"
+    return ".".join(sess.job_name2name_scope_stack[job_name]) + "."
 
 
 def PrependOpNamePrefixIfNeed(op_conf):

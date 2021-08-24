@@ -970,7 +970,7 @@ def _get_batch_normalization_variables(
 
     if beta_name is None:
         with flow.scope.namespace(name):
-            beta = get_beta_var("beta")
+            beta = get_beta_var("bias")
     else:
         beta = get_beta_var(beta_name)
 
@@ -992,7 +992,7 @@ def _get_batch_normalization_variables(
 
     if gamma_name is None:
         with flow.scope.namespace(name):
-            gamma = get_gamma_var("gamma")
+            gamma = get_gamma_var("weight")
     else:
         gamma = get_gamma_var(gamma_name)
 
@@ -1010,7 +1010,7 @@ def _get_batch_normalization_variables(
 
     if moving_mean_name is None:
         with flow.scope.namespace(name):
-            moving_mean = get_moving_mean_var("moving_mean")
+            moving_mean = get_moving_mean_var("running_mean")
     else:
         moving_mean = get_moving_mean_var(moving_mean_name)
 
@@ -1028,7 +1028,7 @@ def _get_batch_normalization_variables(
 
     if moving_variance_name is None:
         with flow.scope.namespace(name):
-            moving_variance = get_moving_variance_var("moving_variance")
+            moving_variance = get_moving_variance_var("running_var")
     else:
         moving_variance = get_moving_variance_var(moving_variance_name)
     return (beta, gamma, moving_mean, moving_variance)
