@@ -159,41 +159,14 @@ class TestSqrt(flow.unittest.TestCase):
         z = x.sqrt()
         return z
 
-
-def _test_rsqrt(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_arr = np.abs(np_arr)
-    np_out = 1 / np.sqrt(np_arr)
-    input = flow.Tensor(np_arr, device=flow.device(device))
-    of_out = input.rsqrt()
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
-def _test_rsqrt_backward(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    np_arr = np.abs(np_arr)
-    x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
-    y = flow.rsqrt(input=x)
-    z = y.sum()
-    z.backward()
-    np_grad = -1 / 2 * 1 / (x.numpy() * np.sqrt(x.numpy()))
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
-    )
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestRsqrt(flow.unittest.TestCase):
-    def test_rsqrt(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_rsqrt, _test_rsqrt_backward]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
+    @autotest()
+    def test_rsqrt_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        z = torch.rsqrt(x)
+        return z
 
 @flow.unittest.skip_unless_1n1d()
 class TestSquare(flow.unittest.TestCase):
@@ -308,7 +281,7 @@ class TestAtan(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n1d()
 class TestTopk(flow.unittest.TestCase):
     @autotest(auto_backward=False)
-    def test_topk_with_random_data(test_case):
+    def test_flow_topk_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
         y = torch.topk(x, random(low=1, high=8).to(int), dim=random(low=1, high=4).to(int), largest=random_bool(), sorted=constant(True))

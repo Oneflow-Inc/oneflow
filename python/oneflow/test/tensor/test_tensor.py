@@ -583,6 +583,13 @@ class TestTensor(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=3, dim1=2, dim2=3).to(device)
         return x.lt(y)
 
+    @autotest(auto_backward=False)
+    def test_tensor_topk_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
+        y = x.topk(random(low=1, high=8).to(int), dim=random(low=1, high=4).to(int), largest=random_bool(), sorted=constant(True))
+        return y[0], y[1]
+
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_slice(test_case):
         x = np.random.randn(2, 3, 4, 5).astype(np.float32)
