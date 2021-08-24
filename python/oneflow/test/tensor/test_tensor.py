@@ -153,6 +153,28 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(not x.is_cuda)
 
     @flow.unittest.skip_unless_1n1d()
+    def test_tensor_unsupported_property(test_case):
+
+        shape = (2, 3, 4, 5)
+        x = flow.Tensor(*shape)
+        test_case.assertTrue(x.is_local)
+
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.RuntimeException
+        ):
+            x.consistent_id()
+
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.RuntimeException
+        ):
+            x.sbp
+
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.RuntimeException
+        ):
+            x.placement
+
+    @flow.unittest.skip_unless_1n1d()
     def test_tensor_to_bool(test_case):
         x = flow.tensor([0.0])
         test_case.assertFalse(bool(x))
