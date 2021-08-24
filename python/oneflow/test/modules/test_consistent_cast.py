@@ -691,9 +691,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(1)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(4)})
-        split_tensor = consistent_tensor.to_consistent(
-            new_placement, flow.sbp.split(0)
-        )
+        split_tensor = consistent_tensor.to_consistent(new_placement, flow.sbp.split(0))
         test_case.assertTrue(split_tensor.placement, new_placement)
         if flow.distributed.get_rank() == 0:
             test_case.assertTrue(
