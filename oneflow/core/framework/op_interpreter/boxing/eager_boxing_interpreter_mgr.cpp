@@ -82,7 +82,7 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
   const auto& core =
       JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
       | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-1-to-p"))
-      | JUST(BoxingExpr(JUST(WithPartialSumAsMidPlacedNdSbp()), JUST(BoxingExpr("naive-1-to-p")),
+      | JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
                         JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))));
   return core | JUST(OptionalCudaCopy(core));
 }
