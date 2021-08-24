@@ -33,10 +33,10 @@ class ActorMsgMR final {
   ActorMsgMR() = delete;
   ActorMsgMR(ibv_mr *   mr, char * addr, size_t  size):size_(size){
     msg_ = reinterpret_cast<ActorMsg*>(addr); //这里没有问题
-    mr_.reset(mr);
+    mr_ = mr;
   }
   ~ActorMsgMR() {
-    mr_.reset();
+    delete mr_;
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
@@ -50,7 +50,7 @@ class ActorMsgMR final {
   }
  private:
     size_t size_;
-    std::shared_ptr<ibv_mr> mr_;
+    ibv_mr * mr_;
     ActorMsg *  msg_;
 };
 
