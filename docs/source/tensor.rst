@@ -136,7 +136,6 @@ OneFlow Tensor Class
             tanh, 
             tile, 
             to, 
-            tolist, 
             topk, 
             transpose, 
             triu, 

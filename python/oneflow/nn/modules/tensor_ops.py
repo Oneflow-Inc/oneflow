@@ -244,7 +244,7 @@ def tolist_op(input):
     """
     if input.numel() == 1 and input.ndim == 0:
         return input.item()
-    return input.numpy().tolist()
+    return input.tolist()
 
 
 if __name__ == "__main__":
