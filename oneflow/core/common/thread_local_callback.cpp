@@ -22,17 +22,29 @@ namespace blocking {
 
 using StackInfoCallbackType = std::function<std::string()>;
 
-thread_local StackInfoCallbackType StackInfoCallback;
-
-void RegisterStackInfoCallback(const StackInfoCallbackType& Callback) {
-  StackInfoCallback = Callback;
+StackInfoCallbackType GetDefaultStackInfoCallback() {
+  return []() {
+    return "[rank=" + std::to_string(GlobalProcessCtx::Rank()) + "]" + " Blocking detected.";
+  };
 }
-StackInfoCallbackType GetStackInfoCallback() { return StackInfoCallback; }
+
+StackInfoCallbackType* GetMutStackInfoCallback() {
+  static thread_local StackInfoCallbackType StackInfoCallback = GetDefaultStackInfoCallback();
+  return &StackInfoCallback;
+}
+
+StackInfoCallbackType GetStackInfoCallback() { return *GetMutStackInfoCallback(); }
+
 std::string GetStackInfo() {
   return "[rank=" + std::to_string(GlobalProcessCtx::Rank()) + "]"
-         + " blocking detected. Python stack:\n" + GetStackInfoCallback()();
+         + " Blocking detected. Python stack:\n" + GetStackInfoCallback()();
 }
-void ClearStackInfoCallback() {}
+
+void RegisterStackInfoCallback(const StackInfoCallbackType& Callback) {
+  *GetMutStackInfoCallback() = Callback;
+}
+
+void ClearStackInfoCallback() { *GetMutStackInfoCallback() = GetDefaultStackInfoCallback(); }
 
 }  // namespace blocking
 
