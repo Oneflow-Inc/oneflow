@@ -18,7 +18,6 @@ import numpy as np
 from typing import TypeVar, Optional, Iterator
 
 import oneflow as flow
-import oneflow.distributed as dist
 from oneflow.utils.data import Sampler, Dataset
 
 
