@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace {
 
-static const int kLimitParallelConfString = 1024 * 8;
+static const int kLimitParallelConfString = 1024 * 64;
 struct FlatParallelConf {
   size_t available_size() const {
     CHECK_GE(this->buffer_size, 0);
