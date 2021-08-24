@@ -76,19 +76,13 @@ jobs:
       fail-fast: true
       max-parallel: 3
       matrix:
-        test_suite: ["conda", "mac", "ubuntu"]
+        test_suite: ["mac"]
         cmake_generator: ["Ninja", "Unix Makefiles"]
         cmake_build_type: ["Debug", "Release"]
         build_shared_libs: ["ON", "OFF"]
         include:
-          - test_suite: conda
-            os: "ubuntu-20.04"
-            make_concurrency: 2
           - test_suite: mac
             os: "macos-10.15"
-            make_concurrency: 2
-          - test_suite: ubuntu
-            os: "ubuntu-20.04"
             make_concurrency: 2
         exclude:
           - test_suite: conda
