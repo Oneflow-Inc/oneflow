@@ -79,9 +79,11 @@ Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_b
 }
 
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
-  const auto& core = JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
-                     | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-1-to-p"))
-                     | JUST(BoxingExpr("naive-1-to-b")) | JUST(BoxingExpr("naive-1-to-s"));
+  const auto& core =
+      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
+      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-1-to-p"))
+      | JUST(BoxingExpr(JUST(WithPartialSumAsMidPlacedNdSbp()), JUST(BoxingExpr("naive-1-to-p")),
+                        JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))));
   return core | JUST(OptionalCudaCopy(core));
 }
 

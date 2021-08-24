@@ -25,14 +25,6 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp() {
-  cfg::NdSbp partial_sum_nd_sbp;
-  partial_sum_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
-  return SymbolOf(partial_sum_nd_sbp);
-}
-
-auto* CachedGetPartialSumNdSbp = DECORATE(&GetPartialSumNdSbp, ThreadLocal);
-
 Maybe<void> RawCheckNaive1ToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllPartialSumNdSbp(out->nd_sbp()));
@@ -41,26 +33,6 @@ Maybe<void> RawCheckNaive1ToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 }
 
 static constexpr auto* CheckNaive1ToP = DECORATE(&RawCheckNaive1ToP, ThreadLocal);
-
-Maybe<void> RawCheckNaive1ToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
-  CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
-  CHECK_OR_RETURN(out->placement()->Bigger(*in->placement()));
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
-  return Maybe<void>::Ok();
-}
-
-static constexpr auto* CheckNaive1ToB = DECORATE(&RawCheckNaive1ToB, ThreadLocal);
-
-Maybe<void> RawCheckNaive1ToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
-  CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllSplitNdSbp(out->nd_sbp(), 0));
-  CHECK_OR_RETURN(out->placement()->Bigger(*in->placement()));
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
-  return Maybe<void>::Ok();
-}
-
-static constexpr auto* CheckNaive1ToS = DECORATE(&RawCheckNaive1ToS, ThreadLocal);
 
 }  // namespace
 
@@ -77,7 +49,7 @@ Maybe<one::Tensor> Naive1ToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   if (root == GlobalProcessCtx::Rank() || !out_parallel_id->has_value()) {
     // do nothing
   } else {
-    std::string device_type = Device::Type4DeviceTag(tensor_placement->device_tag());
+    const std::string& device_type = Device::Type4DeviceTag(tensor_placement->device_tag());
     local_tensor = JUST(one::functional::Constant(*tensor->shape(), 0, tensor->dtype(),
                                                   JUST(Device::New(device_type))));
   }
@@ -86,50 +58,6 @@ Maybe<one::Tensor> Naive1ToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<
                                                  tensor->dtype()));
 }
 
-Maybe<one::Tensor> Naive1ToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                             Symbol<PlacedNdSbp> out) {
-  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
-  const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
-
-  Symbol<cfg::NdSbp> partial_sum_nd_sbp = JUST(CachedGetPartialSumNdSbp());
-  const auto& partial_sum_out_placed_nd_sbp =
-      JUST(PlacedNdSbp::New(partial_sum_nd_sbp, out->placement()));
-  const auto& Naive1ToPBoxingFunction =
-      *JUST(GetBoxingFunction("naive-1-to-p", in, partial_sum_out_placed_nd_sbp));
-  std::shared_ptr<one::Tensor> partial_sum_output =
-      JUST(Naive1ToPBoxingFunction(tensor, in, partial_sum_out_placed_nd_sbp));
-
-  const auto& NcclPToBBoxingFunction =
-      *JUST(GetBoxingFunction("nccl-p-to-b", partial_sum_out_placed_nd_sbp, out));
-
-  return JUST(NcclPToBBoxingFunction(partial_sum_output, partial_sum_out_placed_nd_sbp, out));
-}
-
-Maybe<one::Tensor> Naive1ToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                             Symbol<PlacedNdSbp> out) {
-  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
-  const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
-
-  Symbol<cfg::NdSbp> partial_sum_nd_sbp = JUST(CachedGetPartialSumNdSbp());
-  const auto& partial_sum_out_placed_nd_sbp =
-      JUST(PlacedNdSbp::New(partial_sum_nd_sbp, out->placement()));
-  const auto& Naive1ToPBoxingFunction =
-      *JUST(GetBoxingFunction("naive-1-to-p", in, partial_sum_out_placed_nd_sbp));
-  std::shared_ptr<one::Tensor> partial_sum_output =
-      JUST(Naive1ToPBoxingFunction(tensor, in, partial_sum_out_placed_nd_sbp));
-
-  const auto& NcclPToSBoxingFunction =
-      *JUST(GetBoxingFunction("nccl-p-to-s", partial_sum_out_placed_nd_sbp, out));
-
-  return JUST(NcclPToSBoxingFunction(partial_sum_output, partial_sum_out_placed_nd_sbp, out));
-}
-
 COMMAND(RegisterBoxingFunction("naive-1-to-p", CheckNaive1ToP, &Naive1ToP));
-COMMAND(RegisterBoxingFunction("naive-1-to-b", CheckNaive1ToB, &Naive1ToB));
-COMMAND(RegisterBoxingFunction("naive-1-to-s", CheckNaive1ToS, &Naive1ToS));
 
 }  // namespace oneflow

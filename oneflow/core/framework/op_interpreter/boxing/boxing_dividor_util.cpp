@@ -76,4 +76,34 @@ Maybe<BoxingDividor> RawFlattenInHierarchy() {
 }  // namespace
 
 decltype(FlattenInHierarchy) FlattenInHierarchy = DECORATE(&RawFlattenInHierarchy, ThreadLocal);
+
+namespace {
+
+Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp() {
+  cfg::NdSbp partial_sum_nd_sbp;
+  partial_sum_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
+  return SymbolOf(partial_sum_nd_sbp);
+}
+
+auto* CachedGetPartialSumNdSbp = DECORATE(&GetPartialSumNdSbp, ThreadLocal);
+
+Maybe<Symbol<PlacedNdSbp>> RawWithPartialSum(Symbol<PlacedNdSbp> placed_nd_sbp) {
+  Symbol<cfg::NdSbp> partial_sum_nd_sbp = JUST(CachedGetPartialSumNdSbp());
+  return JUST(PlacedNdSbp::New(partial_sum_nd_sbp, placed_nd_sbp->placement()));
+}
+
+static constexpr auto* WithPartialSum = DECORATE(&RawWithPartialSum, ThreadLocal);
+
+Maybe<BoxingDividor> RawWithPartialSumAsMidPlacedNdSbp() {
+  return std::make_shared<BoxingDividor>(
+      "WithPartialSumAsMidPlacedNdSbp",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return WithPartialSum(out);
+      });
+}
+
+}  // namespace
+
+decltype(WithPartialSumAsMidPlacedNdSbp) WithPartialSumAsMidPlacedNdSbp =
+    DECORATE(&RawWithPartialSumAsMidPlacedNdSbp, ThreadLocal);
 }  // namespace oneflow
