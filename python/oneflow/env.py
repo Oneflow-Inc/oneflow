@@ -30,6 +30,7 @@ import oneflow._oneflow_internal
 def get_local_rank():
     return oneflow._oneflow_internal.GetLocalRank()
 
+
 def get_rank():
     """Returns the rank of current process group.
 
@@ -39,6 +40,7 @@ def get_rank():
     """
     return oneflow._oneflow_internal.GetRank()
 
+
 def get_world_size():
     """Returns the number of processes in the current process group.
 
@@ -47,6 +49,7 @@ def get_world_size():
 
     """
     return oneflow._oneflow_internal.GetWorldSize()
+
 
 def is_multi_client():
     return oneflow._oneflow_internal.IsMultiClient()
