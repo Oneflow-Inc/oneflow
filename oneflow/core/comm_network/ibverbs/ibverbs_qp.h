@@ -121,10 +121,6 @@ class MessagePool final {
     return message_buf_.size();
   }
   
-  bool MrBufIsEmpty() {
-    std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-    return mr_buf_.empty() == true;
-  }
   void FreeAddr() {
     while(addr_buf_.empty() == false) {
       free(addr_buf_.front());
@@ -132,13 +128,21 @@ class MessagePool final {
     }
   }
 
-  ibv_mr * GetMr() {
-    std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-    ibv_mr * mr = mr_buf_.front();
-    mr_buf_.pop_front();
-    return mr;
+  void FreeMr() {
+    while(mr_buf_.empty() == false) {
+        ibv_mr * mr = mr_buf_.front();
+        mr_buf_.pop_front();
+        CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
+    }
   }
-  
+
+  void FreeActorMsgMR() {
+    while(message_buf_.empty() == false) {
+      delete message_buf_.front();
+      message_buf_.pop_front();
+    }
+  }
+
   private:
     ibv_pd * pd_;
     size_t  num_of_message_;

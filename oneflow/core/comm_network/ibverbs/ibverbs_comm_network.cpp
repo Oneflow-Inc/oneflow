@@ -75,21 +75,11 @@ void ParseUserDevicePort(std::string* device_name, int* port) {
 IBVerbsCommNet::~IBVerbsCommNet() {
   while (poll_exit_flag_.test_and_set() == true) {}
   poll_thread_.join();
-  while(recv_msg_buf_->IsEmpty() == false ) {
-    delete recv_msg_buf_->GetMessage();
-  }
-  while(send_msg_buf_->IsEmpty() == false){
-    delete send_msg_buf_->GetMessage();
-  }
-  while(recv_msg_buf_->MrBufIsEmpty() == false){
-    ibv_mr * mr = recv_msg_buf_->GetMr();
-    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-  }
-  while(send_msg_buf_->MrBufIsEmpty() == false) {
-    ibv_mr * mr = send_msg_buf_->GetMr();
-    CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-  }
+  recv_msg_buf_->FreeActorMsgMR();
+  recv_msg_buf_->FreeMr();
   recv_msg_buf_->FreeAddr();
+  send_msg_buf_->FreeActorMsgMR();
+  send_msg_buf_->FreeMr();
   send_msg_buf_->FreeAddr();
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
