@@ -60,7 +60,6 @@ Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t 
 
 Maybe<void> SpinCounter::WaitUntilCntEqualZero(
     const std::function<void()>& HeartbeatCallback) const {
-  CHECK_LT_OR_RETURN(HearbeatIntervalSeconds(), TimeoutSeconds());
   return Global<ForeignLockHelper>::Get()->WithScopedRelease(
       [this, HeartbeatCallback]() -> Maybe<void> {
         return SpinWaitUntilTimeout([&] { return cnt_val_ > 0; }, TimeoutSeconds(),
