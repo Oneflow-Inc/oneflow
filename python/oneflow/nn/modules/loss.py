@@ -931,8 +931,8 @@ class BCEWithLogitsLoss(Module):
 
     Args:
         weight (Tensor, optional): The manual rescaling weight to the loss. Default: ``None``
-        size_average (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
-        reduce (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
+        size_average (bool, optional): Deprecated (see :attr:`reduction`). Default: ``True``
+        reduce (bool, optional): Deprecated (see :attr:`reduction`). Default: ``True``
         reduction (str, optional): The reduce type, it can be one of ``"none"``, ``"mean"``, ``"sum"``.
             ``'none'``: no reduction will be applied, ``'mean'``: the sum of the output will be divided
             by the number of elements in the output, ``'sum'``: the output will be summed. Default: ``"mean"``
