@@ -49,8 +49,6 @@ struct NdarrayReduce<
       NdarrayMatrixRowReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
     } else if (NdarrayMatrixColReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayMatrixColReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
-    } else if (NdarrayXYZCubeYReduce<device_type, T, binary_func>::Matched(y, x)) {
-      NdarrayXYZCubeYReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
     } else if (NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayXYZCubeXZReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
     } else {
