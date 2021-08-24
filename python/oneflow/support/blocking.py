@@ -29,5 +29,4 @@ class BlockingInfoContext:
         pass
 
     def __exit__(self, exc_type, exc_value, traceback):
-        pass
-        # oneflow._oneflow_internal.blocking.clear_stack_info_callback()
+        oneflow._oneflow_internal.blocking.clear_stack_info_callback()

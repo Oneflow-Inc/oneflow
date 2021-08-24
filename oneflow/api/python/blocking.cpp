@@ -24,7 +24,7 @@ ONEFLOW_API_PYBIND11_MODULE("blocking", m) {
   m.def("register_stack_info_callback", [](const blocking::StackInfoCallbackType& Callback) {
     blocking::RegisterStackInfoCallback(Callback);
   });
-  m.def("clear_stack_info_callback", []() {});
+  m.def("clear_stack_info_callback", []() { blocking::ClearStackInfoCallback(); });
 }
 
 }  // namespace oneflow
