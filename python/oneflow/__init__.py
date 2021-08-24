@@ -104,6 +104,7 @@ class ExitHook:
         def exit(code=0):
             self.exit_code = code
             self._orig_exit(code)
+
         sys.exit = exit
 
         def exc_handler(exc_type, exc, *args):
