@@ -27,11 +27,37 @@ from test_util import GenArgList
 
 @flow.unittest.skip_unless_1n4d()
 class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
-    def test_to_consistent_fatten_hierarchy(test_case):
+    def test_to_consistent_flatten_hierarchy(test_case):
         x = flow.ones((16, 16), dtype=flow.int32)
         sbp = (flow.sbp.partial_sum,)
         y = x.to_consistent(
             placement=flow.placement("cpu", {0: range(4)}, hierarchy=(2, 2)),
+            sbp=(flow.sbp.partial_sum, flow.sbp.partial_sum),
+        )
+        placement = flow.placement("cpu", {0: range(4)})
+        y = y.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (16, 16))
+
+    def test_to_consistent_flatten_hierarchy_cpu_to_gpu(test_case):
+        x = flow.ones((16, 16), dtype=flow.int32)
+        sbp = (flow.sbp.partial_sum,)
+        y = x.to_consistent(
+            placement=flow.placement("cpu", {0: range(4)}, hierarchy=(2, 2)),
+            sbp=(flow.sbp.partial_sum, flow.sbp.partial_sum),
+        )
+        placement = flow.placement("cuda", {0: range(4)})
+        y = y.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (16, 16))
+
+    def test_to_consistent_flatten_hierarchy_gpu_to_cpu(test_case):
+        x = flow.ones((16, 16), dtype=flow.int32)
+        sbp = (flow.sbp.partial_sum,)
+        y = x.to_consistent(
+            placement=flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2)),
             sbp=(flow.sbp.partial_sum, flow.sbp.partial_sum),
         )
         placement = flow.placement("cpu", {0: range(4)})
