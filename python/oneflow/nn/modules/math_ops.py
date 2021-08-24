@@ -1242,6 +1242,7 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 
     Args:
         input (oneflow.Tensor): Input Tensor
+        k (int): the k in “top-k”
         dim (int, optional): the dimension to sort along. Defaults to the last dim (-1)
         largest (bool, optional): controls whether to return largest or smallest elements
         sorted (bool, optional): controls whether to return the elements in sorted order

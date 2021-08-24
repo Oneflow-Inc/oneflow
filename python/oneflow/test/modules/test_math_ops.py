@@ -441,22 +441,6 @@ def _test_topk_original(test_case, device):
             np.array_equal(of_indices.numpy().flatten(), np_indices.flatten())
         )
 
-
-@flow.unittest.skip_unless_1n1d()
-class TestPow(flow.unittest.TestCase):
-    def test_pow(test_case):
-        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
-        of_out = flow.pow(input, 2.1)
-        np_out = np.power(input.numpy(), 2.1)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-    def test_pow_tensor_function(test_case):
-        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
-        of_out = input.pow(2.1)
-        np_out = np.power(input.numpy(), 2.1)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestTopk(flow.unittest.TestCase):
     def test_topk(test_case):
@@ -472,6 +456,38 @@ class TestTopk(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skip("topk has bug")
+    @autotest(auto_backward=False)
+    def test_topk_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
+        # values, indices = torch.topk(x, random(low=1, high=8).to(int), dim=random(low=1, high=4).to(int), largest=random_bool(), sorted=random_bool())
+        values, indices = torch.topk(x, constant(1), dim=constant(1), largest=constant(True), sorted=constant(True))
+        return values, indices
+
+@flow.unittest.skip_unless_1n1d()
+class TestPow(flow.unittest.TestCase):
+    @autotest()
+    def test_pow_scalar_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = random().to(float)
+        return torch.pow(x, y)
+
+    @autotest()
+    def test_pow_elementwise_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        y = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        return torch.pow(x, y)
+
+    @unittest.skip("not support for broadcast currently")
+    @autotest()
+    def test_pow_broadcast_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        y = random_pytorch_tensor(ndim=2, dim1=1).to(device)
+        return torch.pow(x, y)
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),

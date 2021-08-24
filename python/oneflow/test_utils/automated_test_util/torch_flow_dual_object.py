@@ -163,6 +163,7 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_args,
                             oneflow_kwargs,
                         ) = get_args(pytorch, *args, **kwargs)
+
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
                         except Exception as e:
