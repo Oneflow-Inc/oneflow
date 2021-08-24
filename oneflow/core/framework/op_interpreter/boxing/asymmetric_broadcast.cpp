@@ -40,7 +40,8 @@ Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdS
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckAsymmetricBroadcast = DECORATE(&RawCheckAsymmetricBroadcast, ThreadLocal);
+static constexpr auto* CheckAsymmetricBroadcast =
+    DECORATE(&RawCheckAsymmetricBroadcast, ThreadLocal);
 
 Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
                                 Symbol<ParallelDesc> dst_parallel_desc) {
@@ -77,8 +78,8 @@ static constexpr auto* CachedEagerNcclBroadcast = DECORATE(&EagerNcclBroadcast, 
 
 }  // namespace
 
-Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                                 Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tensor,
+                                       Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   const auto& in_placement = in->placement();
   const auto& out_placement = out->placement();
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
@@ -110,6 +111,7 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
                                             *local_tensor->shape(), local_tensor->dtype());
 }
 
-COMMAND(RegisterBoxingFunction("asymmetric-broadcast", CheckAsymmetricBroadcast, &AsymmetricBroadcast));
+COMMAND(RegisterBoxingFunction("asymmetric-broadcast", CheckAsymmetricBroadcast,
+                               &AsymmetricBroadcast));
 
 }  // namespace oneflow
