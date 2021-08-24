@@ -39,7 +39,6 @@ class TmpBufferManager final {
   cub::KeyValuePair<int32_t, T>* KeyValueOutPtr() const { return key_value_out_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t KeyValueOutElemCnt() const { return key_value_out_elem_cnt_; }
   int32_t TempStorageBytes() const { return temp_storage_bytes_; }
 
  private:

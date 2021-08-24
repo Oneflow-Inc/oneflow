@@ -124,7 +124,6 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
     int64_t remain_size = ctx->inputs().size();
     int64_t input_id = 0;
     while (remain_size > 0) {
-      int64_t num_x = 0;
       if (remain_size > 128) {
         remain_size -= 128;
         para.num_x = 128;

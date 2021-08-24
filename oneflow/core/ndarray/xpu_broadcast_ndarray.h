@@ -29,7 +29,7 @@ class XpuBroadcastNdarray final : public XpuNdarrayBase<XpuBroadcastNdarray<T>, 
  public:
   OF_DEVICE_FUNC XpuBroadcastNdarray(const XpuShape& shape, const XpuVarNdarray<T>& var)
       : shape_(shape), var_(var) {}
-  OF_DEVICE_FUNC ~XpuBroadcastNdarray() = default;
+  ~XpuBroadcastNdarray() = default;
 
   template<int NDIMS>
   OF_DEVICE_FUNC T Get(int64_t offset) const {

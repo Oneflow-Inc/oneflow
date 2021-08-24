@@ -50,9 +50,6 @@ class TmpBufferManager final {
   int32_t* SortedIndicesPtr() const { return sorted_indices_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t SortedInElemCnt() const { return sorted_in_elem_cnt_; }
-  int32_t IndicesElemCnt() const { return indices_elem_cnt_; }
-  int32_t SortedIndicesElemCnt() const { return sorted_indices_elem_cnt_; }
   int32_t TempStorageBytes() const { return temp_storage_bytes_; }
 
  private:

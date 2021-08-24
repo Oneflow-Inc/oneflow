@@ -152,12 +152,7 @@ if (BUILD_CUDA)
 
   list(APPEND CUDA_NVCC_FLAGS -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
   if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "11.2")
-    # example
-    # warning #177-D: parameter "args" was declared but never referenced
-    # warning #20012-D: __host__ annotation is ignored on a function("XpuVarNdarray") that is explicitly defaulted on its first declaration
-    list(APPEND CUDA_NVCC_FLAGS --display-error-number --diag-suppress 177,20012)
-  else()
-    list(APPEND CUDA_NVCC_FLAGS -w)
+    list(APPEND CUDA_NVCC_FLAGS --display-error-number)
   endif()
   #  half is not fully supported when __CUDA_ARCH__ < 530
   #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")

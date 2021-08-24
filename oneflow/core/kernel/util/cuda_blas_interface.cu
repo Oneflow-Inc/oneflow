@@ -90,16 +90,6 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE tra
   }
 }
 
-std::tuple<int, int, int> CalcMNKForGemm(enum CBLAS_TRANSPOSE trans_a, const Blob* a,
-                                         const Blob* c) {
-  const auto& a_shape = a->shape_view();
-  const auto& c_shape = c->shape_view();
-  int m = c_shape.At(0);
-  int n = c_shape.Count(1);
-  int k = (trans_a == CblasNoTrans) ? a_shape.Count(1) : a_shape.At(0);
-  return std::make_tuple(m, n, k);
-}
-
 std::tuple<int, int, int, int, int, int, cublasOperation_t, cublasOperation_t>
 PrepareToCallBatchedGemm(const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
                          int batch_size, int m, int n, int k) {
@@ -118,11 +108,6 @@ PrepareToCallBatchedGemm(const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TR
 template<typename T>
 cudaDataType_t GetCudaDataType4BatchedGemm() {
   return CudaDataType<T>::value;
-}
-
-template<>
-cudaDataType_t GetCudaDataType4BatchedGemm<half>() {
-  return CUDA_R_16F;
 }
 
 template<typename T>

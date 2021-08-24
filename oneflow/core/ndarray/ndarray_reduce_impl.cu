@@ -272,11 +272,11 @@ template<typename T, template<typename> class binary_func>
 struct NdarrayXYZCubeYReduce<DeviceType::kGPU, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     return false;
-    if (y.shape().ElemNum() > GetMaxVal<int32_t>()) { return false; }
-    if (x.shape().NumAxes() != 3) { return false; }
-    if (y.shape().NumAxes() != 3) { return false; }
-    return x.shape().At(0) == y.shape().At(0) && y.shape().At(1) == 1
-           && x.shape().At(2) == y.shape().At(2);
+    // if (y.shape().ElemNum() > GetMaxVal<int32_t>()) { return false; }
+    // if (x.shape().NumAxes() != 3) { return false; }
+    // if (y.shape().NumAxes() != 3) { return false; }
+    // return x.shape().At(0) == y.shape().At(0) && y.shape().At(1) == 1
+    //        && x.shape().At(2) == y.shape().At(2);
   }
 
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,

@@ -33,7 +33,7 @@ class XpuShape final {
   explicit XpuShape(const ShapeView& shape);
   explicit XpuShape(const ShapeView& shape, int ndims_left_extend_to);
   OF_DEVICE_FUNC XpuShape(const int64_t dim[], int num_axes);
-  OF_DEVICE_FUNC XpuShape(const XpuShape&) = default;
+  XpuShape(const XpuShape&) = default;
 
   OF_DEVICE_FUNC int64_t At(int64_t dim) const { return dim_[dim]; }
   OF_DEVICE_FUNC int64_t DimElemNum(int64_t dim) const { return dim_elem_num_[dim]; }
