@@ -28,6 +28,29 @@ import oneflow._oneflow_internal
 from typing import Optional
 
 
+@oneflow_export("summa_broadcast_matmul")
+@stable_api
+def summa_broadcast_matmul(
+    a: oneflow._oneflow_internal.BlobDesc,
+    b: oneflow._oneflow_internal.BlobDesc,
+    alpha: float = 1.0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    if name is None:
+        name = id_util.UniqueStr("SummaBroadcastMatmul_")
+    return (
+        flow.user_op_builder(name)
+        .Op("summa_broadcast_matmul")
+        .Input("a", [a])
+        .Input("b", [b])
+        .Output("out")
+        .Attr("alpha", float(1))
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("matmul", "linalg.matmul")
 @stable_api
 def matmul(
