@@ -20,8 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-thread_local std::function<std::string()> StackInfoCallback;
-
 ONEFLOW_API_PYBIND11_MODULE("blocking", m) {
   m.def("register_stack_info_callback", [](const blocking::StackInfoCallbackType& Callback) {
     blocking::RegisterStackInfoCallback(Callback);
