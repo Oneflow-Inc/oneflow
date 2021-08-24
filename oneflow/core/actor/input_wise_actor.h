@@ -26,6 +26,8 @@ class InputWiseActor : public Actor {
   InputWiseActor() = default;
   ~InputWiseActor() = default;
 
+  using Actor::Init;
+
  protected:
   void Init(const TaskProto&);
   int64_t cur_processed_regst_desc_id() const { return cur_processed_regst_desc_id_; }

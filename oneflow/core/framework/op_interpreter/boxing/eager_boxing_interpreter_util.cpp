@@ -51,4 +51,24 @@ bool EagerBoxingInterpreterUtil::IsBoxingB2P(const cfg::SbpParallel& src,
                                              const cfg::SbpParallel& dst) {
   return src.has_broadcast_parallel() && dst.has_partial_sum_parallel();
 }
+
+bool EagerBoxingInterpreterUtil::IsBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool EagerBoxingInterpreterUtil::IsBroadcastSbp(const cfg::SbpParallel& sbp) {
+  return sbp.has_broadcast_parallel();
+}
+
+bool EagerBoxingInterpreterUtil::IsPartialSumSbp(const cfg::SbpParallel& sbp) {
+  return sbp.has_partial_sum_parallel();
+}
+
+bool EagerBoxingInterpreterUtil::IsSplitSbp(const cfg::SbpParallel& sbp, int64_t axis) {
+  return (sbp.has_split_parallel() && sbp.split_parallel().axis() == axis);
+}
+
 }  // namespace oneflow
