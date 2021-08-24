@@ -22,6 +22,50 @@ from oneflow.nn.modules.utils import _quadruple
 
 
 def pad_op(input, paddings: Sequence[int] = 0, constant_value: Union[int, float] = 0):
+    """This operator pads the input blob with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
+
+    Args:
+        x (flow.Tensor): The input Tensor
+        paddings (Sequence[int]): A list of integers to specify the padding width, its length must equal with the length of `x.shape`.
+        constant_value (Union[int, float], optional): The constant value to pad. Defaults to 0.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> output = flow.pad(input, paddings=((0,0), (1,1), (1,1), (1,1)), constant_value=1.0)
+        >>> output.shape
+        flow.Size([1, 4, 5, 5])
+        >>> output
+        tensor([[[[ 1.,  1.,  1.,  1.,  1.],
+                  [ 1.,  1.,  1.,  1.,  1.],
+                  [ 1.,  1.,  1.,  1.,  1.],
+                  [ 1.,  1.,  1.,  1.,  1.],
+                  [ 1.,  1.,  1.,  1.,  1.]],
+        <BLANKLINE>
+                 [[ 1.,  1.,  1.,  1.,  1.],
+                  [ 1.,  0.,  1.,  2.,  1.],
+                  [ 1.,  3.,  4.,  5.,  1.],
+                  [ 1.,  6.,  7.,  8.,  1.],
+                  [ 1.,  1.,  1.,  1.,  1.]],
+        <BLANKLINE>
+                 [[ 1.,  1.,  1.,  1.,  1.],
+                  [ 1.,  9., 10., 11.,  1.],
+                  [ 1., 12., 13., 14.,  1.],
+                  [ 1., 15., 16., 17.,  1.],
+                  [ 1.,  1.,  1.,  1.,  1.]],
+        <BLANKLINE>
+                 [[ 1.,  1.,  1.,  1.,  1.],
+                  [ 1.,  1.,  1.,  1.,  1.],
+                  [ 1.,  1.,  1.,  1.,  1.],
+                  [ 1.,  1.,  1.,  1.,  1.],
+                  [ 1.,  1.,  1.,  1.,  1.]]]], dtype=oneflow.float32)
+
+    """
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):

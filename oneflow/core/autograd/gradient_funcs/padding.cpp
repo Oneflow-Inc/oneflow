@@ -181,9 +181,9 @@ class LegacyPad2dGrad : public OpExprGradFunction<LegacyPad2dCaptureState> {
   AttrMap base_attrs_;
 };
 
+REGISTER_OP_EXPR_GRAD_FUNCTION("pad", LegacyPad2dGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad2d", ReflectionPad2d);
 REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPad2d);
-REGISTER_OP_EXPR_GRAD_FUNCTION("pad", LegacyPad2dGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad1d", ConstantPadNd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad2d", ConstantPadNd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("constant_pad3d", ConstantPadNd);
