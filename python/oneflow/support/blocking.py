@@ -1,11 +1,15 @@
 import traceback
+import oneflow._oneflow_internal
 
 
 class BlockingContext:
     def __init__(self, save_stack=True):
         print("__init__")
         self.save_stack_ = save_stack
-        "\n".join(traceback.format_stack(limit=5))
+        stack_info = "\n".join(traceback.format_stack(limit=5))
+        oneflow._oneflow_internal.blocking.register_stack_info_callback(
+            lambda: stack_info
+        )
 
     def __enter__(self):
         print("__enter__")

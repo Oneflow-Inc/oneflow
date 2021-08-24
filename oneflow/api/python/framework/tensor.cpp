@@ -42,6 +42,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/common/thread_local_callback.h"
 
 namespace py = pybind11;
 
@@ -92,7 +93,11 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
           return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
         });
       },
-      []() { LOG(ERROR) << "warning every 3 seconds"; }));
+      []() {
+        LOG(ERROR) << "[rank=" << GlobalProcessCtx::Rank() << "]"
+                   << "blocking detected. Python stack:\n"
+                   << blocking::GetStackInfoCallback()();
+      }));
   return Maybe<void>::Ok();
 }
 
