@@ -102,6 +102,28 @@ class ScalarAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ScalarAdd2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarAdd(x, scalar, /*inplace*/ false);
+  }
+};
+
+class ScalarSubFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
+                           bool inplace) const {
+    return ScalarAdd(x, Scalar(-1) * scalar, inplace);
+  }
+};
+
+class ScalarSub2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1))), scalar, /*inplace*/ false);
+  }
+};
+
 class ScalarMulFunctor {
  public:
   ScalarMulFunctor() {
@@ -127,6 +149,27 @@ class ScalarMulFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class ScalarMul2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarMul(x, scalar);
+  }
+};
+
+class ScalarDivFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
+    return ScalarMul(x, Scalar(1.0) / scalar);
+  }
+};
+
+class ScalarDiv2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return functional::ScalarMul(JUST(functional::ReciprocalNoNan(x)), scalar);
+  }
 };
 
 class ScalarPowFunctor {
@@ -600,7 +643,13 @@ class ScalarLogicalLessEqualFunctor : public ScalarLogicalBaseFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddNFunctor>("AddN");
   m.add_functor<impl::ScalarAddFunctor>("ScalarAdd");
+  m.add_functor<impl::ScalarSubFunctor>("ScalarSub");
   m.add_functor<impl::ScalarMulFunctor>("ScalarMul");
+  m.add_functor<impl::ScalarDivFunctor>("ScalarDiv");
+  m.add_functor<impl::ScalarAdd2Functor>("ScalarAdd2");
+  m.add_functor<impl::ScalarSub2Functor>("ScalarSub2");
+  m.add_functor<impl::ScalarMul2Functor>("ScalarMul2");
+  m.add_functor<impl::ScalarDiv2Functor>("ScalarDiv2");
   m.add_functor<impl::ScalarPowFunctor>("ScalarPow");
   m.add_functor<impl::ReduceSumFunctor>("ReduceSum");
   m.add_functor<impl::ReduceProdFunctor>("ReduceProd");
