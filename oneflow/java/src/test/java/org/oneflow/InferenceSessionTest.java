@@ -28,7 +28,7 @@ public class InferenceSessionTest {
     private final static int BUFFER_SIZE = 1024;
 
     private final static String ZIP_FILE = "mnist_test.zip";
-    private final static String ZIP_MD5 = "67a061f87d034d4d53ec572f512449ab";
+    private final static String ZIP_MD5 = "cf18aafc32e923d1289ed0ccfae96f7e";
     private final static String ZIP_URL =
             "https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/java-serving/mnist_test.zip";
     private final static String UNZIP_DIR = "mnist_test";
@@ -109,7 +109,7 @@ public class InferenceSessionTest {
      * unzip: https://www.baeldung.com/java-compress-and-uncompress
      * delete: https://www.baeldung.com/java-delete-directory
      */
-//    @BeforeClass
+    @BeforeClass
     public static void downloadResources() throws NoSuchAlgorithmException, IOException {
         boolean needDownload = true;
 
@@ -157,7 +157,7 @@ public class InferenceSessionTest {
         ZipInputStream zis = new ZipInputStream(new FileInputStream(testZip));
         ZipEntry zipEntry = zis.getNextEntry();
         while (zipEntry != null) {
-            File newFile = new File(unzipDir, String.valueOf(zipEntry));
+            File newFile = new File(String.valueOf(zipEntry));
             if (zipEntry.isDirectory()) {
                 if (!newFile.isDirectory() && !newFile.mkdirs()) {
                     throw new IOException("Failed to create directory " + newFile);
@@ -184,6 +184,34 @@ public class InferenceSessionTest {
         zis.close();
 
         System.out.println("Test resources ready!");
+    }
+
+
+    @Test
+    public void example() {
+        String jobName = "mlp_inference";
+
+        Option option = new Option();
+        option.setDeviceTag("gpu")
+                .setControlPort(11245)
+                .setSavedModelDir("mnist_test/models")
+                .setModelVersion("1");
+
+        InferenceSession inferenceSession = new InferenceSession(option);
+        inferenceSession.open();
+        float[] image = readImage("mnist_test/test_set/00000000_7.png");
+        Tensor imageTensor = Tensor.fromBlob(image, new long[]{ 1, 1, 28, 28 });
+        Tensor tagTensor = Tensor.fromBlob(new int[]{ 1 }, new long[]{ 1 });
+        Map<String, Tensor> tensorMap = new HashMap<>();
+        tensorMap.put("Input_14", imageTensor);
+        tensorMap.put("Input_15", tagTensor);
+
+        Map<String, Tensor> resultMap = inferenceSession.run(jobName, tensorMap);
+        for (Map.Entry<String, Tensor> entry : resultMap.entrySet()) {
+            Tensor resTensor = entry.getValue();
+            float[] resFloatArray = resTensor.getDataAsFloatArray();
+        }
+        inferenceSession.close();
     }
 
     /**
@@ -246,12 +274,11 @@ public class InferenceSessionTest {
     @Test
     public void noSignatureTest() {
         String jobName = "mlp_inference";
-        String savedModelDir = "mnist_test/models";
 
         Option option = new Option();
         option.setDeviceTag("gpu")
                 .setControlPort(11245)
-                .setSavedModelDir(savedModelDir)
+                .setSavedModelDir("mnist_test/models")
                 .setModelVersion("1");
 
         InferenceSession inferenceSession = new InferenceSession(option);
@@ -498,6 +525,81 @@ public class InferenceSessionTest {
         inferenceSession.close();
     }
 
+    class ServingThread extends Thread {
+
+        private final String jobName;
+        private final InferenceSession session;
+
+        public ServingThread(String jobName, InferenceSession session) {
+            this.jobName = jobName;
+            this.session = session;
+        }
+
+        @Override
+        public void run() {
+            for (int i = 0; i < IMAGE_FILES.length; i++) {
+//                long curTime = System.currentTimeMillis();
+
+                String imageFile = IMAGE_FILES[i];
+                float[] image = readImage("mnist_test/test_set/" + imageFile);
+                Tensor imageTensor = Tensor.fromBlob(image, new long[]{ 1, 1, 28, 28 });
+                Tensor tagTensor = Tensor.fromBlob(new int[]{ 1 }, new long[]{ 1 });
+                Map<String, Tensor> tensorMap = new HashMap<>();
+                tensorMap.put("Input_14", imageTensor);
+                tensorMap.put("Input_15", tagTensor);
+
+                Map<String, Tensor> resultMap = session.run(jobName, tensorMap);
+                for (Map.Entry<String, Tensor> entry : resultMap.entrySet()) {
+                    Tensor resTensor = entry.getValue();
+                    float[] resFloatArray = resTensor.getDataAsFloatArray();
+                    assertArrayEquals(IMAGE_MODEL1_LOGITS[i], resFloatArray, DELTA);
+                }
+
+//                System.out.println(getId() + ": " + (System.currentTimeMillis() - curTime) + "ms");
+            }
+        }
+    }
+
+    /**
+     * multi-thread test
+     */
+//    @Test
+    public void multiThreadTest() throws InterruptedException {
+        String jobName = "mlp_inference";
+
+        Option option = new Option();
+        option.setDeviceTag("gpu")
+                .setControlPort(11245)
+                .setSavedModelDir("mnist_test/models")
+                .setModelVersion("1");
+
+        InferenceSession inferenceSession = new InferenceSession(option);
+        inferenceSession.open();
+
+        Thread th0 = new ServingThread(jobName, inferenceSession);
+        Thread th1 = new ServingThread(jobName, inferenceSession);
+        Thread th2 = new ServingThread(jobName, inferenceSession);
+        Thread th3 = new ServingThread(jobName, inferenceSession);
+        Thread th4 = new ServingThread(jobName, inferenceSession);
+        Thread th5 = new ServingThread(jobName, inferenceSession);
+
+        th0.start();
+        th1.start();
+        th2.start();
+        th3.start();
+        th4.start();
+        th5.start();
+
+        th0.join();
+        th1.join();
+        th2.join();
+        th3.join();
+        th4.join();
+        th5.join();
+
+        inferenceSession.close();
+    }
+
     @Test
     public void predictImages() {
         String jobName = "mlp_inference";
@@ -544,6 +646,7 @@ public class InferenceSessionTest {
         inferenceSession.open();
 
         for (int i = 0; i < IMAGE_FILES.length; i++) {
+//            long curTime = System.currentTimeMillis();
             String imageFile = IMAGE_FILES[i];
             float[] image = readImage("mnist_test/test_set/" + imageFile);
             Tensor imageTensor = Tensor.fromBlob(image, new long[]{ 1, 1, 28, 28 });
@@ -556,6 +659,7 @@ public class InferenceSessionTest {
                 float[] resFloatArray = resTensor.getDataAsFloatArray();
                 assertArrayEquals(IMAGE_MODEL2_LOGITS[i], resFloatArray, DELTA);
             }
+//            System.out.println(System.currentTimeMillis() - curTime);
         }
         inferenceSession.close();
     }
