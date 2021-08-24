@@ -21,8 +21,8 @@ namespace oneflow {
 namespace one {
 
 struct TrilCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  int64_t diagonal;
+  bool requires_grad = false;
+  int64_t diagonal = 0;
 };
 
 class Tril : public OpExprGradFunction<TrilCaptureState> {
