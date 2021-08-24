@@ -22,11 +22,10 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow.framework.functional import Function
 
 
 def _is_oneflow_functional(object):
-    return isinstance(object, Function)
+    return isinstance(object, type(flow.F.abs))
 
 
 def _run_functional_doctest(
