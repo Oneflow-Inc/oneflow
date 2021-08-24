@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.support.blocking import BlockingContext
+from oneflow.support.blocking import BlockingInfoContext
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op, Tensor
 from oneflow.nn.module import Module
@@ -101,7 +101,7 @@ def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
 
     if grad_sbp is None:
         grad_sbp = tuple()
-    with BlockingContext() as ctx:
+    with BlockingInfoContext() as ctx:
         return flow.F.to_consistent(input, placement, sbp, grad_sbp)
 
 

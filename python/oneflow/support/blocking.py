@@ -17,7 +17,7 @@ import traceback
 import oneflow._oneflow_internal
 
 
-class BlockingContext:
+class BlockingInfoContext:
     def __init__(self, save_stack=True):
         self.save_stack_ = save_stack
         stack_info = "\n".join(traceback.format_stack(limit=5))
