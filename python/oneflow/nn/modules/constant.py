@@ -116,13 +116,13 @@ def ones_op(
     with the shape defined by the variable argument `size`.
 
     Args:
-        size (an integer or tuple of integer values) – defining the shape of the output tensor. Can be \\
+        size (an integer or tuple of integer values): defining the shape of the output tensor. Can be \\
          a variable number of arguments or a collection like a list or tuple.
-        dtype (flow.dtype, optional) – the desired data type of returned tensor.
-        device (flow.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
-        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
+        dtype (flow.dtype, optional): the desired data type of returned tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
 
@@ -171,11 +171,11 @@ def zeros_op(
     Args:
         size(an integer or tuple of integer values) - defining the shape of the output tensor. Can be \\
          a variable number of arguments or a collection like a list or tuple.
-        dtype (flow.dtype, optional) – the desired data type of returned tensor.
-        device (flow.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
-        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
+        dtype (flow.dtype, optional): the desired data type of returned tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
 
@@ -325,8 +325,8 @@ def new_ones_op(
         size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
         dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
         device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
-        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
