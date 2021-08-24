@@ -137,9 +137,11 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   } while (0)
 
   TRY_BOXING_FUNCTION("flatten-hierarchy");
+  TRY_BOXING_FUNCTION("asymmetric-x-to-b");
   TRY_BOXING_FUNCTION("naive-1-to-p");
   TRY_BOXING_FUNCTION("naive-1-to-b");
   TRY_BOXING_FUNCTION("naive-1-to-s");
+
 
 #undef TRY_BOXING_FUNCTION
 

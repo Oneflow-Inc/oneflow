@@ -33,6 +33,9 @@ struct EagerBoxingInterpreterUtil {
   static bool IsBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp);
   static bool IsPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp);
   static bool IsSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis);
+  static bool IsBroadcastSbp(const cfg::SbpParallel& sbp);
+  static bool IsPartialSumSbp(const cfg::SbpParallel& sbp);
+  static bool IsSplitSbp(const cfg::SbpParallel& sbp, int64_t axis);
 };
 
 }  // namespace oneflow
