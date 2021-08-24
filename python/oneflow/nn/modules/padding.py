@@ -13,12 +13,52 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Union
+from typing import Union, Sequence
 
 import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.nn.common_types import _size_4_t
 from oneflow.nn.modules.utils import _quadruple
+
+
+def pad(
+    input,
+    paddings: Sequence[int],
+    constant_value: Union[int, float] = 0):
+    padding_before = []
+    padding_after = []
+    if isinstance(paddings, (list, tuple)):
+        assert len(paddings) == len(x.shape), ValueError(
+            "paddings must be the same size of input dims"
+        )
+        for p in paddings:
+            assert isinstance(p, (list, tuple)) and len(p) == 2, ValueError(
+                "the elem of paddings must be a tuple or a list with length of 2"
+            )
+            padding_before.append(p[0])
+            padding_after.append(p[1])
+    else:
+        raise ValueError("paddings must be a tuple or a list.")
+    if input.dtype in [flow.float32, flow.float16, flow.float64]:
+        floating_constant_value = float(constant_value)
+        integral_constant_value = int(0)
+    else:
+        floating_constant_value = float(0)
+        integral_constant_value = int(constant_value)
+    
+    _op = (
+        flow.builtin_op("pad")
+        .Input("x")
+        .Output("y")
+        .Attr("padding_before", padding_before)
+        .Attr("padding_after", padding_after)
+        .Attr("floating_constant_value", floating_constant_value)
+        .Attr("integral_constant_value", integral_constant_value)
+        .Build()
+    )
+
+    return _op(input)[0]
+
 
 
 class ReplicationPad2d(Module):

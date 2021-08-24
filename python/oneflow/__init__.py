@@ -327,3 +327,4 @@ from . import (
 import oneflow.utils.data
 import oneflow.utils.vision
 from oneflow.nn.modules.relu import relu_op as relu
+from oneflow.nn.modules.pooling import pad
