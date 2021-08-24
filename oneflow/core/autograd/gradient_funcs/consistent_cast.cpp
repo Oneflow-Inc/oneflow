@@ -22,13 +22,13 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct CastConsistentOpExprInterpState : public OpExprInterpState {
+struct CastConsistentCaptureState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
-  Symbol<cfg::ParallelDistribution> parallel_distribution;
+  Symbol<cfg::NdSbp> nd_sbp;
   std::shared_ptr<const Shape> shape;
 };
 
-class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpState> {
+class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const CastToConsistentOpExpr*>(&op);
@@ -38,21 +38,21 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpSta
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(CastConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(CastConsistentCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
     ctx->parallel_desc = JUST(interp_ctx.parallel_desc.value());
-    ctx->parallel_distribution = JUST(interp_ctx.parallel_distribution.value());
+    ctx->nd_sbp = JUST(interp_ctx.nd_sbp.value());
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CastConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CastConsistentCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent());
-    const auto& bw_parallel_distribution = JUST(out_grad->parallel_distribution());
-    const auto& dual_parallel_distribution = JUST(GetDualNdSbp(ctx->parallel_distribution));
-    CHECK_OR_RETURN(bw_parallel_distribution == dual_parallel_distribution);
+    const auto& bw_nd_sbp = JUST(out_grad->nd_sbp());
+    const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
+    CHECK_OR_RETURN(bw_nd_sbp == dual_nd_sbp);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}));
     return Maybe<void>::Ok();
   }
@@ -63,7 +63,7 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpSta
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("cast_to_consistent", CastToConsistent);
 
-class CastFromConsistent : public OpExprGradFunction<CastConsistentOpExprInterpState> {
+class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const CastFromConsistentOpExpr*>(&op);
@@ -73,24 +73,23 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentOpExprInterpS
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(CastConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(CastConsistentCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     const auto& input = inputs.at(0);
     CHECK_OR_RETURN(input->is_consistent());
     ctx->parallel_desc = JUST(input->parallel_desc());
-    ctx->parallel_distribution = JUST(input->parallel_distribution());
+    ctx->nd_sbp = JUST(input->nd_sbp());
     ctx->shape = input->shape();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CastConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CastConsistentCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& dual_parallel_distribution = JUST(GetDualNdSbp(ctx->parallel_distribution));
+    const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", *ctx->shape));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *grad_op_, {out_grads.at(0)},
-        OpExprInterpContext(attrs, ctx->parallel_desc, dual_parallel_distribution)));
+        *grad_op_, {out_grads.at(0)}, OpExprInterpContext(attrs, ctx->parallel_desc, dual_nd_sbp)));
     return Maybe<void>::Ok();
   }
 

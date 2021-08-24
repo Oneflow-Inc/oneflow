@@ -32,11 +32,11 @@ limitations under the License.
 namespace oneflow {
 
 class MemoryCase;
-class VmLocalDepObject;
+class LocalDepObject;
 
 namespace cfg {
 
-class ParallelDistribution;
+class NdSbp;
 }
 
 class Shape;
@@ -62,7 +62,7 @@ class TensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
-  virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+  virtual Maybe<LocalDepObject*> compute_local_dep_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
@@ -78,7 +78,7 @@ class TensorImpl {
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad);
   Maybe<Tensor> mut_acc_grad();
-  void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
+  void set_requires_grad(bool requires_grad);
   Maybe<void> set_retain_grad(bool retain_grad);
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
@@ -111,9 +111,13 @@ class MirroredTensorImpl : public TensorImpl {
     return const_cast<MirroredTensorMeta*>(tensor_meta_.get());
   }
   Maybe<Symbol<Device>*> mut_device() { return mut_tensor_meta()->mut_device(); }
-  virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
+  virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
+    OF_RUNTIME_ERROR() << "MirroredTensorImpl has no mut_eager_mirrored_tensor_impl property";
+  }
 
-  virtual Maybe<MirroredTensorImpl> detach() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<MirroredTensorImpl> detach() const {
+    OF_RUNTIME_ERROR() << "MirroredTensorImpl has no detach property";
+  }
 
  protected:
   MirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
@@ -132,36 +136,39 @@ class ConsistentTensorImpl : public TensorImpl {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape_ptr(); }
   DataType dtype() const override { return tensor_meta_->dtype(); }
-  Symbol<cfg::ParallelDistribution> parallel_distribution() const {
-    return tensor_meta_->parallel_distribution();
-  }
+  Symbol<cfg::NdSbp> nd_sbp() const { return tensor_meta_->nd_sbp(); }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
-  const Optional<Symbol<cfg::ParallelDistribution>>& consumer_parallel_distribution_constraint()
-      const {
-    return consumer_parallel_distribution_constraint_;
+  const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint() const {
+    return consumer_nd_sbp_constraint_;
   }
-  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const {
+    OF_RUNTIME_ERROR() << "ConsistentTensorImpl has no cur_rank_phy_tensor property";
+  }
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
 
   // Getters valid only for EagerMirroredTensorImpl
-  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-
-  // Setters
-  void set_consumer_parallel_distribution_constraint(Symbol<cfg::ParallelDistribution> val) {
-    consumer_parallel_distribution_constraint_ = val;
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override {
+    OF_RUNTIME_ERROR() << "ConsistentTensorImpl has no eager_blob_object property";
+  }
+  Maybe<LocalDepObject*> compute_local_dep_object() const override {
+    OF_RUNTIME_ERROR() << "ConsistentTensorImpl has no compute_local_dep_object property";
+  }
+  Maybe<bool> has_eager_blob_object() const override {
+    OF_RUNTIME_ERROR() << "ConsistentTensorImpl has no has_eager_blob_object property";
   }
 
+  // Setters
+  void set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
+
   ConsistentTensorMeta* mut_tensor_meta() {
-    UNIMPLEMENTED();
+    LOG(FATAL) << "RuntimeError: ConsistentTensorImpl don't have mut_tensor_meta property";
     return nullptr;
   }
 
-  const Maybe<TransportToken> transport_token() const { return transport_token_; }
+  Maybe<TransportToken> transport_token() const { return transport_token_.value(); }
 
   Maybe<void> set_transport_token(const TransportToken& transport_token) {
-    CHECK_OR_RETURN(!transport_token_.IsOk()) << "transport_token_ is initiliazed";
+    CHECK_OR_RETURN(!transport_token_.has_value());
     transport_token_ = transport_token;
     return Maybe<void>::Ok();
   }
@@ -170,12 +177,12 @@ class ConsistentTensorImpl : public TensorImpl {
   ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta, bool requires_grad, bool is_leaf)
       : TensorImpl(requires_grad, is_leaf),
         tensor_meta_(tensor_meta),
-        consumer_parallel_distribution_constraint_(),
-        transport_token_(Error::ValueError("invalid rpc token")) {}
+        consumer_nd_sbp_constraint_(),
+        transport_token_() {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Optional<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint_;
-  Maybe<TransportToken> transport_token_;
+  Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint_;
+  Optional<TransportToken> transport_token_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
@@ -191,10 +198,18 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   bool is_lazy() const override { return true; }
 
   // Getters valid only for EagerMirroredTensorImpl
-  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<TensorStorage> tensor_storage() const override { OF_UNIMPLEMENTED(); }
-  Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override {
+    OF_RUNTIME_ERROR() << "LazyMirroredTensorImpl has no eager_blob_object property";
+  }
+  Maybe<LocalDepObject*> compute_local_dep_object() const override {
+    OF_RUNTIME_ERROR() << "LazyMirroredTensorImpl has no compute_local_dep_object property";
+  }
+  Maybe<TensorStorage> tensor_storage() const override {
+    OF_RUNTIME_ERROR() << "LazyMirroredTensorImpl has no tensor_storage property";
+  }
+  Maybe<bool> has_eager_blob_object() const override {
+    OF_RUNTIME_ERROR() << "LazyMirroredTensorImpl has no has_eager_blob_object property";
+  }
   Maybe<MirroredTensorImpl> detach() const override;
 };
 
@@ -219,7 +234,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
     CHECK_OR_RETURN(eager_blob_object_);
     return eager_blob_object_;
   }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override;
+  Maybe<LocalDepObject*> compute_local_dep_object() const override;
   Maybe<TensorStorage> tensor_storage() const override {
     CHECK_OR_RETURN(eager_blob_object_);
     return tensor_storage_;
@@ -231,10 +246,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
-  Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
-  Maybe<void> InitEagerBlobObjectAndTensorStorage(
-      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-      const std::shared_ptr<TensorStorage>& tensor_storage);
+  Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
  private:

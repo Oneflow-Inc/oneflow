@@ -48,6 +48,7 @@ class InplaceableBinaryFunctor {
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
     if (inplace) {
       JUST(CheckInplaceValid(x));
+      JUST(CheckShapeCanExpandTo(*y->shape(), *x->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x, y}, outputs.get()));

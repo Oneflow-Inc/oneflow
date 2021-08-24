@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/memory/chunk_manager.h"
 
 namespace oneflow {
 
@@ -43,12 +44,11 @@ void RegstMgr::AddPlan(const Plan& plan,
                        const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
 
-  // TODO(chengcheng): create chunk mgr for reuse memory between plans.
   HashMap<int64_t, char*> chunk_id2ptr;
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
     if (chunk.mem_size() == 0) { continue; }
-    char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
+    char* chunk_ptr = Global<ChunkMgr>::Get()->FindOrCreateChunk(chunk);
     CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
 

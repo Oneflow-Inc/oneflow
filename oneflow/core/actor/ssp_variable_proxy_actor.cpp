@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/compute_actor.h"
+#include "oneflow/core/actor/actor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
-class SspVariableProxyCompActor final : public CompActor {
+class SspVariableProxyActor final : public Actor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SspVariableProxyCompActor);
-  SspVariableProxyCompActor() = default;
-  ~SspVariableProxyCompActor() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(SspVariableProxyActor);
+  SspVariableProxyActor() = default;
+  ~SspVariableProxyActor() override = default;
 
  protected:
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
@@ -121,12 +121,12 @@ class SspVariableProxyCompActor final : public CompActor {
     inplace_produced_rs_.InitedDone();
   }
 
-  void VirtualCompActorInit(const TaskProto& task_proto) override {
+  void VirtualActorInit(const TaskProto& task_proto) override {
     CheckInplaceBetweenVarAndRef(task_proto);
     TakeOverVarRegst(task_proto.consumed_regst_desc_id());
     TakeOverRefRegst(task_proto.produced_regst_desc());
     TakeOverValueRegst(task_proto.produced_regst_desc());
-    OF_SET_MSG_HANDLER(&SspVariableProxyCompActor::HandlerNormal);
+    OF_SET_MSG_HANDLER(&SspVariableProxyActor::HandlerNormal);
   }
 
   bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override { return true; }
@@ -238,6 +238,6 @@ class SspVariableProxyCompActor final : public CompActor {
   std::vector<Regst*> value_regst_ring_buffer_;
 };
 
-REGISTER_ACTOR(TaskType::kSspVariableProxy, SspVariableProxyCompActor);
+REGISTER_ACTOR(TaskType::kSspVariableProxy, SspVariableProxyActor);
 
 }  // namespace oneflow

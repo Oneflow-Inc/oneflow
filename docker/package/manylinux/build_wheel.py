@@ -168,8 +168,23 @@ def build_third_party(
     bash_wrap,
     dry,
     use_system_proxy,
+    inplace,
 ):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
+    if inplace:
+        oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
+        inplace_arg = ""
+        oneflow_python_dir_cmd = ""
+    else:
+        oneflow_python_dir = os.path.join(cache_dir, "python")
+        inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
+        oneflow_python_dir_cmd = f"""
+        cp -r {oneflow_src_dir}/python {oneflow_python_dir}
+        cd {oneflow_python_dir}
+        git init
+        git clean -fXd
+        cd -
+        """
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -179,11 +194,14 @@ def build_third_party(
             "-DTHIRD_PARTY=ON -DONEFLOW=OFF",
             extra_oneflow_cmake_args,
             oneflow_src_dir,
+            inplace_arg,
         ]
     )
 
     bash_cmd = f"""set -ex
 export TEST_TMPDIR={cache_dir}/bazel_cache
+export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
+{oneflow_python_dir_cmd}
 {cmake_cmd}
 make -j`nproc` prepare_oneflow_third_party
 """
@@ -192,6 +210,7 @@ make -j`nproc` prepare_oneflow_third_party
         cache_dir=cache_dir,
         current_dir=third_party_build_dir,
         use_system_proxy=use_system_proxy,
+        inplace=inplace,
     )
     docker_cmd = (
         f"docker run --network=host {extra_docker_args} --rm {common_docker_args}"
@@ -230,19 +249,12 @@ def build_oneflow(
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
-    oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
-    inplace_arg = ""
-    oneflow_python_dir_cmd = ""
-    if inplace == False:
-        oneflow_python_dir = "/tmp/oneflow_python"
+    if inplace:
+        oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
+        inplace_arg = ""
+    else:
+        oneflow_python_dir = os.path.join(cache_dir, "python")
         inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
-        oneflow_python_dir_cmd = f"""
-        cp -r {oneflow_src_dir}/python {oneflow_python_dir}
-        cd {oneflow_python_dir}
-        git init
-        git clean -fXd
-        cd -
-        """
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -275,8 +287,6 @@ export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64:$LD_LIBRARY_PATH
 export ONEFLOW_SRC_DIR={oneflow_src_dir}
-export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
-{oneflow_python_dir_cmd}
 export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
 """
     if enter_bash:
@@ -373,6 +383,7 @@ if __name__ == "__main__":
         "--use_system_proxy", default=False, action="store_true", required=False
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
+    parser.add_argument("--gcc4", default=False, action="store_true", required=False)
     parser.add_argument("--gcc7", default=False, action="store_true", required=False)
     parser.add_argument("--gcc9", default=False, action="store_true", required=False)
     parser.add_argument(
@@ -381,19 +392,27 @@ if __name__ == "__main__":
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
     parser.add_argument("--bash", default=False, action="store_true", required=False)
     parser.add_argument("--inplace", default=False, action="store_true", required=False)
+    parser.add_argument(
+        "--shared_lib", default=False, action="store_true", required=False
+    )
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     if args.skip_img:
         "Arg skip_img is deprecated. Setting it has no effect. If you want to build image, use --build_img"
+    if args.skip_wheel:
+        args.skip_audit = True
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
     assert args.package_name
     extra_oneflow_cmake_args = " ".join(
         [" ".join(l) for l in args.extra_oneflow_cmake_args]
     )
-
+    if (not args.gcc4) and (not args.gcc7) and (not args.gcc9):
+        args.gcc7 = True
     cuda_versions = []
     if args.use_aliyun_mirror:
         extra_oneflow_cmake_args += " -DTHIRD_PARTY_MIRROR=aliyun"
+    if args.shared_lib:
+        extra_oneflow_cmake_args += " -DBUILD_SHARED_LIBS=ON"
     if args.cpu:
         extra_oneflow_cmake_args += " -DBUILD_CUDA=OFF"
         cuda_versions = ["10.2"]
@@ -465,7 +484,9 @@ if __name__ == "__main__":
             if args.xla:
                 bash_args = "-l"
             bash_wrap = ""
-            if args.xla or args.gcc7:
+            if args.gcc4:
+                bash_wrap = "gcc --version"
+            elif args.gcc7:
                 bash_wrap = """
 source scl_source enable devtoolset-7
 gcc --version
@@ -476,7 +497,7 @@ source scl_source enable devtoolset-9
 gcc --version
 """
             else:
-                bash_wrap = "gcc --version"
+                raise ValueError("either one in gcc4, gcc7, gcc9 must be enabled")
 
             global cache_dir
             if args.cache_dir:
@@ -486,6 +507,8 @@ gcc --version
                 sub_dir = cuda_version
                 if args.xla:
                     sub_dir += "-xla"
+                if args.gcc4:
+                    sub_dir += "-gcc4"
                 if args.gcc7:
                     sub_dir += "-gcc7"
                 if args.gcc9:
@@ -493,6 +516,8 @@ gcc --version
                 if args.cpu:
                     assert len(cuda_versions) == 1
                     sub_dir += "-cpu"
+                if args.shared_lib:
+                    sub_dir += "-shared"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.build_img:
                 return
@@ -507,6 +532,7 @@ gcc --version
                     bash_wrap,
                     args.dry,
                     args.use_system_proxy,
+                    args.inplace,
                 )
             print(cuda_version.split("."))
             cuda_version_literal = "".join(cuda_version.split(".")[:2])

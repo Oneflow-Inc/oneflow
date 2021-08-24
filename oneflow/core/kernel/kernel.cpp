@@ -41,7 +41,7 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
 }
 
 void Kernel::Launch(const KernelCtx& ctx,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Forward(ctx, BnInOp2Blob);
 }
 
@@ -50,14 +50,14 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
 }
 
 void Kernel::SetOutputBlobProducerInferAccessChecker(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   ForEachObnAndIsHeaderInferedBeforeCompute(BnInOp2Blob, [&](const std::string& obn, bool _) {
     BnInOp2Blob(obn)->set_blob_access_checker(Global<BlobAccessCheckerIf<true, false>>::Get());
   });
 }
 
 void Kernel::SetOutputBlobProducerComputeAccessChecker(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   ForEachObnAndIsHeaderInferedBeforeCompute(
       BnInOp2Blob, [&](const std::string& obn, bool is_header_infered_before_compute) {
         const BlobAccessChecker* checker = nullptr;
@@ -71,7 +71,7 @@ void Kernel::SetOutputBlobProducerComputeAccessChecker(
 }
 
 void Kernel::SetOutputBlobConsumerAccessChecker(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   ForEachObnAndIsMutableByConsumer(BnInOp2Blob, [&](const std::string& obn, bool is_mutable) {
     const BlobAccessChecker* checker = nullptr;
     if (is_mutable) {
@@ -84,11 +84,11 @@ void Kernel::SetOutputBlobConsumerAccessChecker(
 }
 
 void Kernel::Forward(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   if (!blob_access_checker_disabled_) { SetOutputBlobProducerInferAccessChecker(BnInOp2Blob); }
   ForwardHeader(ctx, BnInOp2Blob);
-  if (kernel_conf_.need_do_shape() && IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
-      && IsStateless()) {
+  if ((!kernel_conf_.all_blobs_are_static())
+      && IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) {
     return;
   }
   if (!blob_access_checker_disabled_) { SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob); }
@@ -99,12 +99,12 @@ void Kernel::Forward(const KernelCtx& ctx,
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
+                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  if (!kernel_conf_.all_blobs_are_static()) { ForwardShape(ctx, BnInOp2Blob); }
 }
 
 void Kernel::ForwardShape(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   return shape_infer_helper_->InferShape(BnInOp2Blob);
 }
 

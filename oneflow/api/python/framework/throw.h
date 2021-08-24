@@ -23,7 +23,7 @@ namespace oneflow {
 class Throw final {
  public:
   Throw(const Error& error) : error_(error) {}
-  ~Throw() { ThrowError(error_.error_proto()); }
+  ~Throw() noexcept(false) { ThrowError(error_.error_proto()); }
 
   Error& error() { return error_; }
 
@@ -32,6 +32,10 @@ class Throw final {
 };
 
 }  // namespace oneflow
+
+#define THROW(err_type)                                                                     \
+  Throw(oneflow::Error::err_type().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)).error() \
+      << #err_type << ": "
 
 #define CHECK_OR_THROW(expr)                                                                \
   if (!(expr))                                                                              \

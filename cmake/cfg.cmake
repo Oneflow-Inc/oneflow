@@ -25,8 +25,6 @@ execute_process(
 
 include_directories(${CFG_INCLUDE_DIR})
 
-list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${CFG_INCLUDE_DIR})
-
 function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   list(APPEND CFG_SOURCE_FILE_CONVERT_PROTO
       oneflow/core/common/error.proto
@@ -69,13 +67,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
 
   set(of_cfg_proto_python_dir "${PROJECT_BINARY_DIR}/of_cfg_proto_python")
 
-  add_custom_target(copy_pyproto ALL
-    COMMAND ${CMAKE_COMMAND} -E remove_directory "${of_cfg_proto_python_dir}"
-    COMMAND ${Python_EXECUTABLE} ${COPY_PYPROTO_PYTHON_SCRIPT} --of_proto_python_dir=${of_proto_python_dir}
-      --src_proto_files="${CFG_SOURCE_FILE_CONVERT_PROTO}" --dst_proto_python_dir=${of_cfg_proto_python_dir}
-    DEPENDS ${Python_EXECUTABLE} of_protoobj
-  )
-
   set(CFG_ARGS "")
   foreach(FIL ${CFG_SOURCE_FILE_CONVERT_PROTO})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
@@ -88,17 +79,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     list(APPEND ${SRCS} ${CFG_CPP_FIL})
     list(APPEND CFG_ARGS "--proto_file_path=${FIL}")
   endforeach()
-
-  add_custom_target(
-    generate_cfg
-    COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
-      ${CFG_ARGS}
-      --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
-      --project_build_dir=${PROJECT_BINARY_DIR}
-      --generate_file_type=cfg.cpp
-    DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
-    VERBATIM
-  )
 
   list(APPEND PYBIND11_FILE_CONVERT_PROTO
       oneflow/core/job/job_conf.proto
@@ -135,15 +115,23 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     list(APPEND PY_CFG_ARGS "--proto_file_path=${FIL}")
   endforeach()
 
-  add_custom_target(
-    generate_py_cfg
+  add_custom_command(
+    OUTPUT ${${HDRS}} ${${SRCS}} ${${PYBIND_SRCS}}
+    COMMAND ${CMAKE_COMMAND}
+    ARGS -E remove_directory "${of_cfg_proto_python_dir}"
+    COMMAND ${Python_EXECUTABLE} ${COPY_PYPROTO_PYTHON_SCRIPT} --of_proto_python_dir=${of_proto_python_dir}
+      --src_proto_files="${CFG_SOURCE_FILE_CONVERT_PROTO}" --dst_proto_python_dir=${of_cfg_proto_python_dir}
+    COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
+      ${CFG_ARGS}
+      --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
+      --project_build_dir=${PROJECT_BINARY_DIR}
+      --generate_file_type=cfg.cpp
     COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
       ${PY_CFG_ARGS}
       --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
       --project_build_dir=${PROJECT_BINARY_DIR}
       --generate_file_type=cfg.pybind.cpp
-    DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
-    VERBATIM
+    DEPENDS ${Python_EXECUTABLE} ${TEMPLATE_FILES} ${CFG_SOURCE_FILE_CONVERT_PROTO} ${PYBIND11_FILE_CONVERT_PROTO}
   )
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)

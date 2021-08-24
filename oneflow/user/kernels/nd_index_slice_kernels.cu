@@ -35,9 +35,10 @@ __global__ void CudaScatterNdAdd(NdIndexSliceArgs<T, I> args, const I* indices, 
 }
 
 template<typename T, typename I>
-__global__ void CudaZeroByNdIndex(NdIndexSliceArgs<T, I> args, const I* indices, T* dense) {
-  DoZeroByNdIndex(args.num_slices * args.slice_size, args.slice_size, args.index_ndims,
-                  args.dense_shape, indices, dense);
+__global__ void CudaFillByNdIndex(NdIndexSliceArgs<T, I> args, const I* indices, T* dense,
+                                  T value) {
+  DoFillByNdIndex(args.num_slices * args.slice_size, args.slice_size, args.index_ndims,
+                  args.dense_shape, indices, dense, value);
 }
 
 }  // namespace
@@ -61,11 +62,11 @@ struct ScatterNdAddFunctor<DeviceType::kGPU, T, I> final {
 };
 
 template<typename T, typename I>
-struct ZeroByNdIndexFunctor<DeviceType::kGPU, T, I> final {
-  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                  T* dense) const {
-    RUN_CUDA_KERNEL((CudaZeroByNdIndex<T, I>), ctx, args.num_slices * args.slice_size, args,
-                    indices, dense);
+struct FillByNdIndexFunctor<DeviceType::kGPU, T, I> final {
+  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices, T* dense,
+                  T value) const {
+    RUN_CUDA_KERNEL((CudaFillByNdIndex<T, I>), ctx, args.num_slices * args.slice_size, args,
+                    indices, dense, value);
   }
 };
 
@@ -84,7 +85,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GATHER_ND_FUNCTOR, (DeviceType::kGP
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SCATTER_ND_ADD_FUNCTOR, (DeviceType::kGPU),
                                  GPU_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ZERO_BY_ND_INDEX_FUNCTOR, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_FILL_BY_ND_INDEX_FUNCTOR, (DeviceType::kGPU),
                                  ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_ND_KERNELS, (DeviceType::kGPU),

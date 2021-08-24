@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
@@ -159,39 +160,7 @@ struct PlacementSymbolExportUtil {
   }
 
   static std::string PlacementSymbol2String(Symbol<ParallelDesc> placement) {
-    std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
-    std::string machine_device_ids = "{";
-    std::string device_name;
-    int64_t machine_idx = 0;
-    for (int64_t machine_id : placement->sorted_machine_ids()) {
-      std::string device_name = std::to_string(machine_id) + " : [";
-      int64_t device_idx = 0;
-      for (int64_t device_id : placement->sorted_dev_phy_ids(machine_id)) {
-        device_name += std::to_string(device_id);
-        if (++device_idx != placement->sorted_dev_phy_ids(machine_id).size()) {
-          device_name += ", ";
-        }
-      }
-      device_name += "]";
-      if (++machine_idx != placement->sorted_machine_ids().size()) { device_name += ", "; }
-      machine_device_ids += device_name;
-    }
-    machine_device_ids += "}";
-    std::string hierarchy = "(";
-    int32_t hierarchy_dim_idx = 0;
-    for (int64_t dim : placement->hierarchy()->dim_vec()) {
-      hierarchy += std::to_string(dim);
-      if (++hierarchy_dim_idx != placement->hierarchy()->dim_vec().size()) {
-        hierarchy += ", ";
-      } else if (placement->hierarchy()->dim_vec().size() == 1) {
-        hierarchy += ",";
-      }
-    }
-    hierarchy += ")";
-    std::string placement_str = "oneflow.placement(device_type=" + device_type
-                                + ", machine_device_ids=" + machine_device_ids
-                                + ", hierarchy=" + hierarchy + ")";
-    return placement_str;
+    return *PlacementToString(placement).GetPtrOrThrow();
   }
 
   static Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
