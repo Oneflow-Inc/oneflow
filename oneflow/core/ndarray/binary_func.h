@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 namespace oneflow {
 
-#define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)(Min)(Max)(FloorMod)(FMod)
+#define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)(Min)(Max)(FloorMod)(FMod)(Pow)
 #define LOGICAL_BINARY_FUNC_NAME_SEQ (EQ)(NE)(GT)(GE)(LT)(LE)(AND)(OR)(XOR)
 
 #define PREPEND_PREFIX_BINARY_FUNC(name) OF_PP_CAT(BinaryFunc, name)
@@ -41,6 +41,10 @@ namespace oneflow {
 #define REDUCE_BINARY_FUNC_SEQ \
   OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
 
+#define NO_HALF_UTIL_FOUND         \
+  printf("cuda arch must >= 530"); \
+  assert(false);                   \
+  return __float2half(0.0)
 template<template<typename> class BinaryFunc, typename T>
 struct BinaryFuncTrait final {
   typedef typename std::remove_const<decltype(
@@ -121,6 +125,50 @@ struct BinaryFuncFMod final {
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFMod);
 
 template<typename T>
+struct BinaryFuncPow final {
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
+#if defined(__CUDACC__)
+    return pow(x, y);
+#else
+    return std::pow(x, y);
+#endif
+  }
+};
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncPow);
+
+template<>
+struct BinaryFuncPow<float16> final {
+  static inline const float16 Invoke(const float16 x, const float16 y) {
+    return static_cast<float16>(std::pow(static_cast<float>(x), static_cast<float>(y)));
+  }
+};
+
+#if defined(__CUDACC__)
+template<>
+struct BinaryFuncPow<double> final {
+  static OF_DEVICE_FUNC const double Invoke(const double x, const double y) { return pow(x, y); }
+};
+
+template<>
+struct BinaryFuncPow<float> final {
+  static __device__ __forceinline__ const float Invoke(const float x, const float y) {
+    return __powf(x, y);
+  }
+};
+
+template<>
+struct BinaryFuncPow<half> final {
+  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+    return __float2half(__powf(__half2float(x), __half2float(y)));
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
+  }
+};
+#endif  // defined(__CUDACC__)
+
+template<typename T>
 struct BinaryFuncMax final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x > y ? x : y; }
 };
@@ -198,13 +246,7 @@ struct BinaryFuncXOR final {
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
 
-#define NO_HALF_UTIL_FOUND         \
-  printf("cuda arch must >= 530"); \
-  assert(false);                   \
-  return __float2half(0.0)
-
 #if defined(__CUDACC__)
-
 template<>
 struct BinaryFuncAdd<half> final {
   static __device__ __forceinline__ const half Invoke(const half x, const half y) {
