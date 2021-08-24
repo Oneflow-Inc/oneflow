@@ -18,4 +18,4 @@ import oneflow._oneflow_internal
 
 
 def add_docstr(fun, docstr: str):
-    oneflow._oneflow_internal.add_doc(fun, docstr)
+    return oneflow._oneflow_internal.add_doc(fun, docstr)
