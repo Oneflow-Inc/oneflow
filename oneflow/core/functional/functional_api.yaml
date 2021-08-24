@@ -101,6 +101,18 @@
   signature: "Tensor (Tensor x, Scalar alpha) => ScalarPow"
   bind_python: False
 
+- name: "broadcast_pow"
+  signature: "Tensor (Tensor x, Tensor y) => BroadcastPow"
+  bind_python: False
+
+- name: "broadcast_pow_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowXGrad"
+  bind_python: False
+
+- name: "broadcast_pow_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y, Tensor z) => BroadcastPowYGrad"
+  bind_python: False
+
 - name: "reduce_sum"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceSum"
   bind_python: True
