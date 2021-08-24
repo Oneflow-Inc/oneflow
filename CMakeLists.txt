@@ -153,6 +153,8 @@ if (BUILD_CUDA)
   list(APPEND CUDA_NVCC_FLAGS -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
   if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "11.2")
     list(APPEND CUDA_NVCC_FLAGS --display-error-number)
+    set(CUDA_NVCC_THREADS_NUMBER "1" CACHE STRING "")
+    list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
   endif()
   #  half is not fully supported when __CUDA_ARCH__ < 530
   #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")
