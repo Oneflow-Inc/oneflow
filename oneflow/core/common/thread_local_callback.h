@@ -11,6 +11,7 @@ using StackInfoCallbackType = std::function<std::string()>;
 
 void RegisterStackInfoCallback(const StackInfoCallbackType& Callback);
 StackInfoCallbackType GetStackInfoCallback();
+std::string GetStackInfo();
 void ClearStackInfoCallback();
 
 }  // namespace blocking

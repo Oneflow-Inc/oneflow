@@ -93,11 +93,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
           return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
         });
       },
-      []() {
-        LOG(ERROR) << "[rank=" << GlobalProcessCtx::Rank() << "]"
-                   << " blocking detected. Python stack:\n"
-                   << blocking::GetStackInfoCallback()();
-      }));
+      []() { LOG(ERROR) << blocking::GetStackInfo(); }));
   return Maybe<void>::Ok();
 }
 
