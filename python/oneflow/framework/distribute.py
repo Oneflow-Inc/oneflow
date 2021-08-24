@@ -19,8 +19,8 @@ from contextlib import contextmanager
 import oneflow._oneflow_internal
 
 
-def get_local_rank():
-    return oneflow._oneflow_internal.GetLocalRank()
+# def get_local_rank():
+#     return oneflow._oneflow_internal.GetLocalRank()
 
 
 def get_rank():
