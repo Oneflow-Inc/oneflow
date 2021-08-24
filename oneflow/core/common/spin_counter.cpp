@@ -41,9 +41,8 @@ Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t 
   auto time_last_heartbeat = std::chrono::steady_clock::now();
   while (NeedSpin()) {
     auto end = std::chrono::steady_clock::now();
-    if (heartbeat_interval_seconds > 0
-        && std::chrono::duration<double>(end - time_last_heartbeat).count()
-               >= heartbeat_interval_seconds) {
+    if (std::chrono::duration<double>(end - time_last_heartbeat).count()
+        >= heartbeat_interval_seconds) {
       HeartbeatCallback();
       time_last_heartbeat = end;
     }
@@ -56,7 +55,7 @@ Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t 
 
 Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds) {
   return SpinWaitUntilTimeout(
-      NeedSpin, seconds, [] {}, 0);
+      NeedSpin, seconds, [] {}, seconds);
 }
 
 Maybe<void> SpinCounter::WaitUntilCntEqualZero(
