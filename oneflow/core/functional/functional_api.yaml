@@ -1100,9 +1100,9 @@
   bind_python: True
 
 - name: "send"
-  signature: "Void Send(*, Tensor input, Int64 dst, Bool send_meta=True)"
+  signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"
   bind_python: True
 
 - name: "recv"
-  signature: "Tensor Recv(*, Int64 src, Shape shape=None, DataType dtype=None, Device device=None, Tensor out=None)"
+  signature: "Tensor (Int64 src, Shape shape=None, DataType dtype=None, Device device=None, *, Tensor out=None) => Recv"
   bind_python: True
