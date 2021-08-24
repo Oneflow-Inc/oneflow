@@ -30,9 +30,9 @@ struct EagerBoxingInterpreterUtil {
   static bool IsBoxingP2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingB2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
   static bool IsBoxingB2P(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
-  static bool IsBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp);
-  static bool IsPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp);
-  static bool IsSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis);
+  static bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp);
+  static bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp);
+  static bool IsAllSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis);
   static bool IsBroadcastSbp(const cfg::SbpParallel& sbp);
   static bool IsPartialSumSbp(const cfg::SbpParallel& sbp);
   static bool IsSplitSbp(const cfg::SbpParallel& sbp, int64_t axis);

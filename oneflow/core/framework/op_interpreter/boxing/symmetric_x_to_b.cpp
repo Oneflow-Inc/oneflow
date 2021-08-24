@@ -28,7 +28,7 @@ namespace {
 Maybe<void> RawCheckSymXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kGPU);
   return Maybe<void>::Ok();

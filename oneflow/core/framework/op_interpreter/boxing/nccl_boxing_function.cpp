@@ -29,8 +29,8 @@ namespace {
 Maybe<void> RawCheckNcclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsPartialSumNdSbp(in->nd_sbp()));
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllPartialSumNdSbp(in->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
@@ -42,8 +42,8 @@ static constexpr auto* CheckNcclP2B = DECORATE(&RawCheckNcclP2B, ThreadLocal);
 Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsPartialSumNdSbp(in->nd_sbp()));
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsSplitNdSbp(out->nd_sbp(), 0));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllPartialSumNdSbp(in->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllSplitNdSbp(out->nd_sbp(), 0));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
@@ -55,8 +55,8 @@ static constexpr auto* CheckNcclP2S = DECORATE(&RawCheckNcclP2S, ThreadLocal);
 Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsSplitNdSbp(in->nd_sbp(), 0));
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllSplitNdSbp(in->nd_sbp(), 0));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
