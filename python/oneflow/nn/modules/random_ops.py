@@ -307,7 +307,12 @@ class RandInt(Module):
             )
         else:
             res = flow.F.randint(
-                self.low, self.high, shape = self.size,dtype= self.dtype, device=self.device, generator=self.generator
+                self.low,
+                self.high,
+                shape=self.size,
+                dtype=self.dtype,
+                device=self.device,
+                generator=self.generator,
             )
         res.requires_grad = self.requires_grad
         return res.to(dtype=self.dtype)
@@ -406,7 +411,7 @@ def randperm_op(
     placement: flow.placement = None,
     sbp: flow._oneflow_internal.sbp.sbp = None,
     requires_grad: bool = False,
-    pin_memory:bool =False
+    pin_memory: bool = False,
 ) -> flow.Tensor:
     r"""
     Returns a random permutation of integers from ``0`` to ``n - 1``.
@@ -443,9 +448,9 @@ def randperm_op(
     assert pin_memory is None, "layout not supported yet"
     if generator is None:
         generator = flow.default_generator()
-    return RandPerm(
-        n, generator, dtype, layout, device, placement, sbp, requires_grad
-    )(out)
+    return RandPerm(n, generator, dtype, layout, device, placement, sbp, requires_grad)(
+        out
+    )
 
 
 if __name__ == "__main__":
