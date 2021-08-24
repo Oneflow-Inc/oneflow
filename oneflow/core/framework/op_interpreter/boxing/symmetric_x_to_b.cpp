@@ -25,7 +25,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckSymXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckSymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
@@ -34,11 +34,11 @@ Maybe<void> RawCheckSymXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymXToB = DECORATE(&RawCheckSymXToB, ThreadLocal);
+static constexpr auto* CheckSymmetricXToB = DECORATE(&RawCheckSymmetricXToB, ThreadLocal);
 
 }  // namespace
 
-Maybe<one::Tensor> SymXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+Maybe<one::Tensor> SymmetricXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                            Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
@@ -56,6 +56,6 @@ Maybe<one::Tensor> SymXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-COMMAND(RegisterBoxingFunction("symmetric-x-to-b", CheckSymXToB, &SymXToB));
+COMMAND(RegisterBoxingFunction("symmetric-x-to-b", CheckSymmetricXToB, &SymmetricXToB));
 
 }  // namespace oneflow
