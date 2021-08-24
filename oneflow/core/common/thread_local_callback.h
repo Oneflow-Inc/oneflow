@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_THREAD_LOCAL_CALLBACK_H_
 
 #include <functional>
+#include <string>
 
 namespace oneflow {
 
