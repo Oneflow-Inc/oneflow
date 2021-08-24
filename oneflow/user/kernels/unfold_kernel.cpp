@@ -60,23 +60,9 @@ class UnfoldKernel final : public OpKernel {
   ~UnfoldKernel() = default;
 
  private:
-  int GetSpatialDim(const std::string& data_format) const {
-    int spatial_dim = 0;
-    if (data_format == "channels_first") {
-      spatial_dim = 2;
-    } else if (data_format == "channels_last") {
-      spatial_dim = 1;
-    } else {
-      UNIMPLEMENTED();
-    }
-    return spatial_dim;
-  }
-
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* input = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* output = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const int spatial_ndim = input->shape().NumAxes() - 2;
-    const int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format"));
     const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     const std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
     const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");

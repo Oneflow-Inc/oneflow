@@ -27,7 +27,7 @@ typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn
 
 TensorDescInferFn UnfoldTensorDescInferFn() {
   return [](user_op::InferContext* ctx) -> Maybe<void> {
-    const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+    const Shape& x_shape = ctx->InputShape("x", 0);
     const int32_t spatial_ndim = x_shape.NumAxes() - 2;
     std::string data_format = ctx->Attr<std::string>("data_format");
     std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
@@ -62,8 +62,7 @@ TensorDescInferFn UnfoldTensorDescInferFn() {
         * std::accumulate(kernel_size.begin(), kernel_size.end(), 1, std::multiplies<int>());
     y_shape.at(2) = std::accumulate(dhw_shape.begin(), dhw_shape.end(), 1, std::multiplies<int>());
 
-    user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-    *y_desc->mut_shape() = Shape(y_shape);
+    *ctx->OutputShape("y", 0) = Shape(y_shape);
     return Maybe<void>::Ok();
   };
 }
@@ -82,7 +81,7 @@ Maybe<void> GetUnfoldSbpFn(user_op::SbpContext* ctx) {
 
 TensorDescInferFn FoldTensorDescInferFn() {
   return [](user_op::InferContext* ctx) -> Maybe<void> {
-    const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
+    const Shape& x_shape = ctx->InputShape("x", 0);
     const int32_t spatial_ndim = x_shape.NumAxes() - 1;  // (n, c*K*K, h*w)
 
     std::string data_format = ctx->Attr<std::string>("data_format");
@@ -125,8 +124,7 @@ TensorDescInferFn FoldTensorDescInferFn() {
     y_shape.at(2) = output_size[0];
     y_shape.at(3) = output_size[1];
 
-    user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-    *y_desc->mut_shape() = Shape(y_shape);
+    *ctx->OutputShape("y", 0) = Shape(y_shape);
     return Maybe<void>::Ok();
   };
 }
