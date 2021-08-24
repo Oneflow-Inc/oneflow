@@ -48,12 +48,12 @@ class PyTorchDoesNotSupportError(Exception):
     def __repr__(self):
         return f"PyTorch error: {str(self.exc)}"
 
-call_tensor = None
+call_pytorch = None
 
-def get_tensor_shape(call_tensor):
+def get_tensor_shape(call_pytorch):
     shape_list = []
-    for i in range(len(call_tensor.shape)):
-        shape_list.append(call_tensor.shape[i])
+    for i in range(len(call_pytorch.shape)):
+        shape_list.append(call_pytorch.shape[i])
     return shape_list
 
 def get_args(callable, *args, **kwargs):
@@ -112,26 +112,31 @@ def get_args(callable, *args, **kwargs):
         pytorch_kwargs[key] = get_pytorch_value(value)
         oneflow_kwargs[key] = get_oneflow_value(value)
 
-    if not isinstance(callable, (torch_original.nn.Module)):
-        new_pytorch_args = []
-        new_pytorch_kwargs = {}
-        for x in pytorch_args:
-            if type(x) is torch_original.Tensor:
-                new_pytorch_args.append(f"Tensor({get_tensor_shape(x)})")
-            else:
-                new_pytorch_args.append(x)
-        for key, value in pytorch_kwargs.items():
-            if type(value) is torch_original.Tensor:
-                new_pytorch_kwargs[key] = (f"Tensor({get_tensor_shape(x)})")
-            else:
-                new_pytorch_kwargs[key] = value
-
-        if call_tensor is not None:
-            note_pytorch_method_names.append(f"Tensor({get_tensor_shape(call_tensor)}).{callable.__name__}")
+    new_pytorch_args = []
+    new_pytorch_kwargs = {}
+    for x in pytorch_args:
+        if type(x) is torch_original.Tensor:
+            new_pytorch_args.append(f"Tensor({get_tensor_shape(x)})")
         else:
-            note_pytorch_method_names.append(f"flow.{callable.__name__}")
-        note_pytorch_args.append(new_pytorch_args)
-        note_pytorch_kwargs.append(new_pytorch_kwargs)
+            new_pytorch_args.append(x)
+    for key, value in pytorch_kwargs.items():
+        if type(value) is torch_original.Tensor:
+            new_pytorch_kwargs[key] = (f"Tensor({get_tensor_shape(x)})")
+        else:
+            new_pytorch_kwargs[key] = value
+    
+    if not isinstance(callable, (torch_original.nn.Module)):
+        if isinstance(call_pytorch, torch_original.Tensor):
+            note_pytorch_method_names.append(f"Tensor({get_tensor_shape(call_pytorch)}).{callable.__name__}")
+        elif isinstance(call_pytorch, torch_original.nn.Module):
+            note_pytorch_method_names.append(f"Module.{callable.__name__}")
+        else:
+            note_pytorch_method_names.append(f"{callable.__name__}")
+    else:
+        note_pytorch_method_names.append(repr(callable))
+
+    note_pytorch_args.append(new_pytorch_args)
+    note_pytorch_kwargs.append(new_pytorch_kwargs)
 
     return (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs)
 
@@ -290,11 +295,8 @@ class DualObject:
         pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)
         new_name = f"{self.name}.{key}"
-        global call_tensor
-        if isinstance(self.pytorch, torch_original.Tensor):
-            call_tensor = self.pytorch
-        else:
-            call_tensor = None
+        global call_pytorch
+        call_pytorch = self.pytorch
         return GetDualObject(new_name, pytorch_attr, oneflow_attr)
 
 
