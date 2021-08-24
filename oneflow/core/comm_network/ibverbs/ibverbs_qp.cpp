@@ -140,20 +140,14 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 void IBVerbsQP::PostAllRecvRequest() {
     if(recv_msg_buf_->IsEmpty()) {
       recv_msg_buf_->RegisterMessagePool();
-      size_t size = recv_msg_buf_->Size();
-      size_t i = 0;
-      while(recv_msg_buf_->IsEmpty() == false && i < size) {
+      while(recv_msg_buf_->IsEmpty() == false) {
         ActorMsgMR * msg_mr = recv_msg_buf_->GetMessage();
         PostRecvRequest(msg_mr);
-        i++;
       }
     } else {
-        size_t size = recv_msg_buf_->Size();
-        size_t i = 0;
-        while(recv_msg_buf_->IsEmpty() == false && i < size ) {
+        while(recv_msg_buf_->IsEmpty() == false  ) {
         ActorMsgMR * msg_mr = recv_msg_buf_->GetMessage();
         PostRecvRequest(msg_mr);
-        i++;
       }
     }
 }
