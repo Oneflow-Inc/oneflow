@@ -26,7 +26,6 @@ struct UnfoldKernelUtil<DeviceType::kCPU, T, INDEX_T, NDIM, SDIM> {
   using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
   static void Forward(DeviceCtx* ctx, const UnfoldParams<INDEX_T, NDIM, SDIM>* raw_params,
                       const T* input_ptr, T* output_ptr) {
-    // const auto* params = static_cast<const ParamType*>(raw_params);
     for (INDEX_T out_offset = 0; out_offset < raw_params->out_elem_cnt; ++out_offset) {
       using ParamType = UnfoldParams<INDEX_T, NDIM, SDIM>;
       INDEX_T in_index[ParamType::kInputNDim] = {0};
