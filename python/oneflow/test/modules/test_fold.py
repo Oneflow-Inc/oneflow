@@ -77,6 +77,24 @@ class TestFold(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(n=3, auto_backward=True, rtol=1e-4, atol=1e-4)
+    def test_fold_with_random_data_4(test_case):
+        m = torch.nn.Fold(
+            output_size=constant((8, 8)),
+            kernel_size=constant(3),
+            dilation=constant(2),
+            padding=constant(1),
+            stride=constant(2),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_pytorch_tensor(
+            ndim=3, dim0=constant(2), dim1=constant(9), dim2=constant(9)
+        ).to(device)
+        y = m(x)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
