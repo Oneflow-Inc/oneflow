@@ -47,3 +47,6 @@ def get_world_size():
 
     """
     return oneflow._oneflow_internal.GetWorldSize()
+
+def is_multi_client():
+    return oneflow._oneflow_internal.IsMultiClient()

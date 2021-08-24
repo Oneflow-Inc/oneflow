@@ -27,7 +27,7 @@ from oneflow.framework.multi_client_session import MultiClientSession
 @flow.unittest.skip_unless_1n1d()
 class TestMultiClientSession(unittest.TestCase):
     def test_case1(self):
-        self.assertTrue(flow.distributed.is_multi_client())
+        self.assertTrue(flow.env.is_multi_client())
         sess = session_ctx.GetDefaultSession()
         self.assertTrue(isinstance(sess, MultiClientSession))
         sess.TryInit()
@@ -35,7 +35,7 @@ class TestMultiClientSession(unittest.TestCase):
 
     def test_case2(self):
         print("test_case2")
-        self.assertTrue(flow.distributed.is_multi_client())
+        self.assertTrue(flow.env.is_multi_client())
         sess = session_ctx.GetDefaultSession()
         self.assertTrue(isinstance(sess, MultiClientSession))
         sess.TryInit()
