@@ -27,23 +27,30 @@ class Unfold(Module):
         kernel_size: _size_2_t,
         dilation: _size_2_t = 1,
         padding: _size_2_t = 0,
-        stride: _size_2_t = 1
+        stride: _size_2_t = 1,
     ) -> None:
         super(Unfold, self).__init__()
         self.kernel_size = _pair(kernel_size)
         self.dilation = _pair(dilation)
         self.padding = _pair(padding)
         self.stride = _pair(stride)
-        
-        print("Python attr here!: ", self.kernel_size, self.dilation, self.padding, self.stride)
 
-    def forward(self, input): 
-        print("Python input here!: ", input.shape)
-        return flow.F.unfold(input, "channels_first", self.kernel_size, self.dilation, self.padding, self.stride)
+    def forward(self, input):
+        return flow.F.unfold(
+            input,
+            "channels_first",
+            self.kernel_size,
+            self.dilation,
+            self.padding,
+            self.stride,
+        )
 
     def extra_repr(self) -> str:
-        return 'kernel_size={kernel_size}, dilation={dilation}, padding={padding},' \
-            ' stride={stride}'.format(**self.__dict__)
+        return (
+            "kernel_size={kernel_size}, dilation={dilation}, padding={padding},"
+            " stride={stride}".format(**self.__dict__)
+        )
+
 
 if __name__ == "__main__":
     import doctest

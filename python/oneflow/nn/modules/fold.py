@@ -28,7 +28,7 @@ class Fold(Module):
         kernel_size: _size_2_t,
         dilation: _size_2_t = 1,
         padding: _size_2_t = 0,
-        stride: _size_2_t = 1
+        stride: _size_2_t = 1,
     ) -> None:
         super(Fold, self).__init__()
         self.output_size = output_size
@@ -36,16 +36,27 @@ class Fold(Module):
         self.dilation = _pair(dilation)
         self.padding = _pair(padding)
         self.stride = _pair(stride)
-        
-    def forward(self, input): 
-        return flow.F.fold(input, "channels_first", self.output_size, self.kernel_size, self.dilation, self.padding, self.stride)
+
+    def forward(self, input):
+        return flow.F.fold(
+            input,
+            "channels_first",
+            self.output_size,
+            self.kernel_size,
+            self.dilation,
+            self.padding,
+            self.stride,
+        )
 
     def extra_repr(self) -> str:
-        return 'output_size={output_size}, kernel_size={kernel_size}, ' \
-            'dilation={dilation}, padding={padding}, stride={stride}'.format(
+        return (
+            "output_size={output_size}, kernel_size={kernel_size}, "
+            "dilation={dilation}, padding={padding}, stride={stride}".format(
                 **self.__dict__
             )
-    
+        )
+
+
 if __name__ == "__main__":
     import doctest
 

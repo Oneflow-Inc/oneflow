@@ -21,8 +21,8 @@ namespace oneflow {
 namespace one {
 
 struct UnfoldInterpState : public AutoGradCaptureState {
-  bool requires_grad;
-  std::string data_format;
+  bool requires_grad = true;
+  std::string data_format = "channels_first";
   std::vector<int32_t> output_size;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> dilation_rate;
@@ -50,35 +50,30 @@ Maybe<void> Unfold::Init(const OpExpr& op) {
 }
 
 Maybe<void> Unfold::Capture(UnfoldInterpState* ctx, const TensorTuple& inputs,
-                          const TensorTuple& outputs, const AttrMap& attrs) const {
+                            const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   std::vector<int32_t> out_shape(2);
-  const std::shared_ptr<Tensor>& x = inputs.at(0);  
+  const std::shared_ptr<Tensor>& x = inputs.at(0);
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
   ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
   ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
   ctx->padding = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding"));
   ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
-  for(int i = 0; i < 2; i++){
-    // out_shape.at(i) = (x->shape()->At(i+2)+ 2*ctx->padding[i]
-    //                 - ctx->dilation_rate[i] * (ctx->kernel_size[i] - 1) - 1) / ctx->strides[i]+ 1;
-    out_shape.at(i) = (x->shape()->At(i+2));
-    printf("out shape here is: %d", out_shape.at(i));
-  }
+  for (int i = 0; i < 2; i++) { out_shape.at(i) = (x->shape()->At(i + 2)); }
   ctx->output_size = out_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Unfold::Apply(const UnfoldInterpState* ctx, const TensorTuple& out_grads,
-                        TensorTuple* in_grads) const {
+                          TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
   if (ctx->requires_grad) {
-    in_grads->at(0) = JUST(functional::Fold(out_grads.at(0), ctx->data_format, ctx->output_size, 
-                                            ctx->kernel_size, ctx->dilation_rate, 
-                                            ctx->padding, ctx->strides));
+    in_grads->at(0) =
+        JUST(functional::Fold(out_grads.at(0), ctx->data_format, ctx->output_size, ctx->kernel_size,
+                              ctx->dilation_rate, ctx->padding, ctx->strides));
   }
   return Maybe<void>::Ok();
 }

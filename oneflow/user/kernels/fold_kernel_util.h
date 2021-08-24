@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #ifndef ONEFLOW_USER_KERNELS_FOLD_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_FOLD_KERNEL_UTIL_H_
 
@@ -10,25 +25,24 @@
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
 
-
 namespace oneflow {
 
 namespace user_op {
 
-namespace{
+namespace {
 
 template<typename T>
-struct XPUAdd{
-  OF_DEVICE_FUNC static void Invoke(const T* x, T* y){
-  #if defined(__CUDA_ARCH__)
+struct XPUAdd {
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
+#if defined(__CUDA_ARCH__)
     cuda::atomic::Add(y, *x);
-  #else
+#else
     *y += *x;
-  #endif
-  }; 
-}; 
+#endif
+  };
+};
 
-} // namespace
+}  // namespace
 
 // NDIM range: (1, 2, 3)
 // SDIM range: (1, 2), 1 indicates channels_last, 2 indicates channels_first
@@ -40,8 +54,9 @@ struct FoldParams {
   static constexpr int kOutputChannelDim = (2 - SDIM) * NDIM + 1;
   static_assert(kInputChannelDim < kInputNDim, "");
   static_assert(kOutputChannelDim < kOutputNDim, "");
-  FoldParams(const int64_t batch_size, const int64_t channels, const int32_t* output_size, const int64_t* spatial_dims,
-             const int32_t* kernel_size, const int32_t* padding, const int32_t* stride, const int32_t* dilation);
+  FoldParams(const int64_t batch_size, const int64_t channels, const int32_t* output_size,
+             const int64_t* spatial_dims, const int32_t* kernel_size, const int32_t* padding,
+             const int32_t* stride, const int32_t* dilation);
   INDEX_T in_elem_cnt;
   INDEX_T out_elem_cnt;
   INDEX_T dims[NDIM];
@@ -53,16 +68,16 @@ struct FoldParams {
 };
 
 template<typename INDEX_T, int NDIM, int SDIM>
-FoldParams<INDEX_T, NDIM, SDIM>::FoldParams(const int64_t batch_size, const int64_t channels_columns, 
-                                            const int32_t* output_size, 
-                                            const int64_t* spatial_dims,
-                                            const int32_t* kernel_size,
-                                            const int32_t* padding, const int32_t* stride,
-                                            const int32_t* dilation)
+FoldParams<INDEX_T, NDIM, SDIM>::FoldParams(const int64_t batch_size,
+                                            const int64_t channels_columns,
+                                            const int32_t* output_size, const int64_t* spatial_dims,
+                                            const int32_t* kernel_size, const int32_t* padding,
+                                            const int32_t* stride, const int32_t* dilation)
     : in_elem_cnt(0), out_elem_cnt(0), in_index_helper(0), out_index_helper(0) {
   INDEX_T input_dims[kInputNDim] = {0};
   INDEX_T output_dims[kOutputNDim] = {0};
-  const int32_t channels = channels_columns / (kernel_size[0]*kernel_size[1]); // channels_columns = C*K*K
+  const int32_t channels =
+      channels_columns / (kernel_size[0] * kernel_size[1]);  // channels_columns = C*K*K
   this->in_elem_cnt = batch_size * channels;
   this->out_elem_cnt = batch_size * channels;
   input_dims[0] = batch_size;
@@ -74,18 +89,18 @@ FoldParams<INDEX_T, NDIM, SDIM>::FoldParams(const int64_t batch_size, const int6
     this->padding[d] = padding[d];
     this->stride[d] = stride[d];
     this->dilation[d] = dilation[d];
-    // input_dims[SDIM + NDIM + d] = (output_size[d] - 1)*stride[d] + dilation[d]*(kernel_size[d]-1) + 1 - 2*padding[d]; 
-    input_dims[SDIM + NDIM + d] = (output_size[d] + 2*padding[d] 
-                                    - dilation[d] * (kernel_size[d] - 1) - 1)
-                                       / stride[d]
-                                   + 1;
+    // input_dims[SDIM + NDIM + d] = (output_size[d] - 1)*stride[d] + dilation[d]*(kernel_size[d]-1)
+    // + 1 - 2*padding[d];
+    input_dims[SDIM + NDIM + d] =
+        (output_size[d] + 2 * padding[d] - dilation[d] * (kernel_size[d] - 1) - 1) / stride[d] + 1;
     // printf("input dims[sdim+ndim+d] is %d", input_dims[SDIM + NDIM + d]);
     input_dims[SDIM + d] = kernel_size[d];
-    this->in_elem_cnt *= input_dims[SDIM + d] * input_dims[SDIM + NDIM + d]; // N,C*Kh*Kw, H*W
+    this->in_elem_cnt *= input_dims[SDIM + d] * input_dims[SDIM + NDIM + d];  // N,C*Kh*Kw, H*W
     output_dims[SDIM + d] = output_size[d];
     this->out_elem_cnt *= output_dims[SDIM + d];
   }
-  printf("input dims is %d %d %d %d %d %d", input_dims[0], input_dims[1], input_dims[2], input_dims[3], input_dims[4], input_dims[5]);
+  // printf("input dims is %d %d %d %d %d %d", input_dims[0], input_dims[1], input_dims[2],
+  // input_dims[3], input_dims[4], input_dims[5]);
 
   in_index_helper = NdIndexOffsetHelper<INDEX_T, kInputNDim>(input_dims);
   out_index_helper = NdIndexOffsetHelper<INDEX_T, kOutputNDim>(output_dims);
@@ -127,14 +142,14 @@ struct FoldKernelUtil {
 #define INSTANTIATE_FOLD_KERNEL_UTIL(device, dtype, itype, ndim, sdim) \
   template struct FoldKernelUtil<device, dtype, itype, ndim, sdim>;
 
-#define INSTANTIATE_FOLD_KERNEL_UTIL_WITH_TYPE_PAIR(device, dtype_pair, itype_pair, ndim, sdim) \
-  INSTANTIATE_FOLD_KERNEL_UTIL(device, OF_PP_PAIR_FIRST(dtype_pair),                            \
-                                 OF_PP_PAIR_FIRST(itype_pair), ndim, sdim)
+#define INSTANTIATE_FOLD_KERNEL_UTIL_WITH_TYPE_PAIR(device, dtype_pair, itype_pair, ndim, sdim)    \
+  INSTANTIATE_FOLD_KERNEL_UTIL(device, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(itype_pair), \
+                               ndim, sdim)
 
-#define INSTANTIATE_FOLD_KERNEL_UTIL_FOR_DEVICE(device)                                   \
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_FOLD_KERNEL_UTIL_WITH_TYPE_PAIR, (device), \
-                                   FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ,           \
-                                   SPATIAL_NDIM_SEQ, SPATIAL_DIM_SEQ)
+#define INSTANTIATE_FOLD_KERNEL_UTIL_FOR_DEVICE(device)                                           \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_FOLD_KERNEL_UTIL_WITH_TYPE_PAIR, (device),         \
+                                   FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, SPATIAL_NDIM_SEQ, \
+                                   SPATIAL_DIM_SEQ)
 
 }  // namespace user_op
 

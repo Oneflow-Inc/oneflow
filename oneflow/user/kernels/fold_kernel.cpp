@@ -1,3 +1,18 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/operator/operator_util.h"
@@ -9,16 +24,18 @@ namespace user_op {
 
 namespace {
 
+// NDIM range: (1, 2, 3)
+// SDIM range: (1, 2), 1 indicates channels_last, 2 indicates channels_first
 template<typename INDEX_T, int NDIM, int SDIM>
 class FoldOpKernelState : public OpKernelState {
  public:
   using ParamType = FoldParams<INDEX_T, NDIM, SDIM>;
-  FoldOpKernelState(const ShapeView& input_shape, const std::vector<int32_t>& output_size, 
-                    const std::vector<int32_t>& kernel_size, const std::vector<int32_t>& padding, 
+  FoldOpKernelState(const ShapeView& input_shape, const std::vector<int32_t>& output_size,
+                    const std::vector<int32_t>& kernel_size, const std::vector<int32_t>& padding,
                     const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation)
-      : params_(input_shape.At(0), input_shape.At(ParamType::kInputChannelDim), 
-                output_size.data(), input_shape.ptr() + SDIM, kernel_size.data(), padding.data(),
-                stride.data(), dilation.data()) {}
+      : params_(input_shape.At(0), input_shape.At(ParamType::kInputChannelDim), output_size.data(),
+                input_shape.ptr() + SDIM, kernel_size.data(), padding.data(), stride.data(),
+                dilation.data()) {}
   const ParamType& params() const { return params_; }
 
  private:
@@ -26,117 +43,53 @@ class FoldOpKernelState : public OpKernelState {
 };
 
 template<typename INDEX_T, int NDIM, int SDIM>
-std::shared_ptr<OpKernelState> CreateFoldOpKernelState(const ShapeView& input_shape, 
-                                                        const std::vector<int32_t>& output_size,
-                                                        const std::vector<int32_t>& kernel_size,
-                                                        const std::vector<int32_t>& padding,
-                                                        const std::vector<int32_t>& stride,
-                                                        const std::vector<int32_t>& dilation) {
-  return std::make_shared<FoldOpKernelState<INDEX_T, NDIM, SDIM>>(
-      input_shape, output_size, kernel_size, padding, stride, dilation);
+std::shared_ptr<FoldOpKernelState<INDEX_T, NDIM, SDIM>> CreateFoldOpKernelState(
+    const ShapeView& input_shape, const std::vector<int32_t>& output_size,
+    const std::vector<int32_t>& kernel_size, const std::vector<int32_t>& padding,
+    const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation) {
+  std::shared_ptr<FoldOpKernelState<INDEX_T, NDIM, SDIM>> state(
+      new FoldOpKernelState<INDEX_T, NDIM, SDIM>(input_shape, output_size, kernel_size, padding,
+                                                 stride, dilation));
+  return state;
 }
 
-template<typename INDEX_T, int NDIM, int SDIM>
-const void* GetFoldParams(OpKernelState* state) {
-  auto* fold_state = dynamic_cast<FoldOpKernelState<INDEX_T, NDIM, SDIM>*>(state);
-  CHECK_NOTNULL(fold_state);
-  return static_cast<const void*>(&fold_state->params());
-}
-
-#define SWITCH_ENTRY(func_name, itype, ndim, sdim) func_name<itype, ndim, sdim>
-#define DEFINE_FOLD_SWITCH_FUNC(ret_type, func_name)                                 \
-  DEFINE_STATIC_SWITCH_FUNC(                                                           \
-      ret_type, func_name, SWITCH_ENTRY, MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ), \
-      MAKE_NDIM_CTRV_SEQ(SPATIAL_NDIM_SEQ), MAKE_NDIM_CTRV_SEQ(SPATIAL_DIM_SEQ));
-DEFINE_FOLD_SWITCH_FUNC(std::shared_ptr<OpKernelState>, CreateFoldOpKernelState);
-DEFINE_FOLD_SWITCH_FUNC(const void*, GetFoldParams);
-#undef DEFINE_FOLD_SWITCH_FUNC
-#undef SWITCH_ENTRY
-
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename INDEX_T, int NDIM, int SDIM>
 class FoldKernel final : public OpKernel {
  public:
   FoldKernel() = default;
   ~FoldKernel() = default;
 
-  std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const override {
-    const TensorDesc* input_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-    if (input_desc->is_dynamic()) { return std::shared_ptr<OpKernelState>(nullptr); }
-    const std::string data_format = ctx->Attr<std::string>("data_format");
-    const std::vector<int32_t> output_size = ctx->Attr<std::vector<int32_t>>("output_size");
-    const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    const std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
-    const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
-    const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-    int spatial_ndim = 2; // Currently only support 4-d Tensor. 
-    int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format"));
-    DataType index_dtype = input_desc->shape().elem_cnt() < std::numeric_limits<int32_t>::max()
-                               ? DataType::kInt32
-                               : DataType::kInt64;
-    return SwitchCreateFoldOpKernelState(SwitchCase(index_dtype, spatial_ndim, spatial_dim),
-                                         ShapeView(input_desc->shape()), output_size, 
-                                         kernel_size, padding, stride, dilation);
-  }
-
  private:
-  int GetSpatialDim(const std::string& data_format) const {
-    int spatial_dim = 0;
-    if (data_format == "channels_first") {
-      spatial_dim = 2;
-    } else if (data_format == "channels_last") {
-      spatial_dim = 1;
-    } else {
-      UNIMPLEMENTED();
-    }
-    return spatial_dim;
-  }
-
-#define SWITCH_ENTRY(func_name, itype, ndim, sdim) \
-  FoldKernelUtil<device_type, T, itype, ndim, sdim>::func_name
-  DEFINE_STATIC_SWITCH_FUNC(void, Forward, SWITCH_ENTRY,
-                            MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ),
-                            MAKE_NDIM_CTRV_SEQ(SPATIAL_NDIM_SEQ),
-                            MAKE_NDIM_CTRV_SEQ(SPATIAL_DIM_SEQ));
-#undef SWITCH_ENTRY
-
   void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
     const Tensor* input = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* output = ctx->Tensor4ArgNameAndIndex("y", 0);
-    int spatial_ndim = 2; // Currently only support 4-d Tensor. 
-    int spatial_dim = GetSpatialDim(ctx->Attr<std::string>("data_format")); 
-    DataType index_dtype = input->shape().elem_cnt() < std::numeric_limits<int32_t>::max()
-                               ? DataType::kInt32
-                               : DataType::kInt64;
-    auto switch_case = SwitchCase(index_dtype, spatial_ndim, spatial_dim);
-    std::shared_ptr<OpKernelState> state_ptr(nullptr);
-    if (state == nullptr) {
-      const std::vector<int32_t> output_size = ctx->Attr<std::vector<int32_t>>("output_size");
-      const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-      const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-      const std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
-      const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
-      state_ptr = SwitchCreateFoldOpKernelState(switch_case, input->shape(), 
-                                                output_size, kernel_size,
-                                                padding, stride, dilation);
-      state = state_ptr.get();
-    }
+
+    const std::vector<int32_t> output_size = ctx->Attr<std::vector<int32_t>>("output_size");
+    const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+    const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
+    const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
+
+    const auto& state_ptr = CreateFoldOpKernelState<INDEX_T, NDIM, SDIM>(
+        input->shape(), output_size, kernel_size, padding, stride, dilation);
+    const FoldParams<INDEX_T, NDIM, SDIM> params = state_ptr->params();
     size_t out_bytes_size = output->shape().elem_cnt() * GetSizeOfDataType(output->data_type());
-    
     Memset<device_type>(ctx->device_ctx(), output->mut_dptr<T>(), 0, out_bytes_size);
-    const void* params = SwitchGetFoldParams(switch_case, state);
-    SwitchForward(switch_case, ctx->device_ctx(), params, input->dptr<T>(), output->mut_dptr<T>());
+    FoldKernelUtil<device_type, T, INDEX_T, NDIM, SDIM>::Forward(
+        ctx->device_ctx(), &params, input->dptr<T>(), output->mut_dptr<T>());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-
 }  // namespace
 
-#define REGISTER_FOLD_KERNEL(device, dtype)                                                \
-  REGISTER_USER_KERNEL("fold").SetCreateFn<FoldKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                    \
-      & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));                        
+// Currently support 4-D tensor and NCHW format
+#define REGISTER_FOLD_KERNEL(device, dtype)                    \
+  REGISTER_USER_KERNEL("fold")                                 \
+      .SetCreateFn<FoldKernel<device, dtype, int32_t, 2, 2>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)     \
+                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
 REGISTER_FOLD_KERNEL(DeviceType::kCPU, float)
 REGISTER_FOLD_KERNEL(DeviceType::kCPU, double)

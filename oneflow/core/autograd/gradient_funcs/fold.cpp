@@ -21,8 +21,8 @@ namespace oneflow {
 namespace one {
 
 struct FoldInterpState : public AutoGradCaptureState {
-  bool requires_grad;
-  std::string data_format;
+  bool requires_grad = true;
+  std::string data_format = "channels_first";
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> dilation_rate;
   std::vector<int32_t> padding;
@@ -66,9 +66,8 @@ Maybe<void> Fold::Apply(const FoldInterpState* ctx, const TensorTuple& out_grads
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
   if (ctx->requires_grad) {
-    in_grads->at(0) = JUST(functional::Unfold(out_grads.at(0), ctx->data_format, 
-                                              ctx->kernel_size, ctx->dilation_rate, 
-                                              ctx->padding, ctx->strides));
+    in_grads->at(0) = JUST(functional::Unfold(out_grads.at(0), ctx->data_format, ctx->kernel_size,
+                                              ctx->dilation_rate, ctx->padding, ctx->strides));
   }
   return Maybe<void>::Ok();
 }
