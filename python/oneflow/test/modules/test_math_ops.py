@@ -215,12 +215,32 @@ class TestSquare(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
     @autotest()
-    def test_flow_pow_with_random_data(test_case):
+    def test_pow_scalar_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = random().to(float)
-        z = torch.pow(x, y)
-        return z
+        return torch.pow(x, y)
+
+    @autotest()
+    def test_pow_elementwise_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        y = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        return torch.pow(x, y)
+
+    @autotest()
+    def test_pow_broadcast_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        y = random_pytorch_tensor(ndim=2, dim1=1).to(device)
+        return torch.pow(x, y)
+
+    @autotest()
+    def test_pow_broadcast_with_random_data_reverse(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=1).to(device)
+        y = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        return torch.pow(x, y)
 
 
 @flow.unittest.skip_unless_1n1d()

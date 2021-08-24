@@ -43,8 +43,8 @@ def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
 
     Args:
         input (Tensor): the input tensor.
-        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own placement.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
+        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own placement.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
 
     For example:
 
