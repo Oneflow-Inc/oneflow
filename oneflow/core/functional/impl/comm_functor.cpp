@@ -148,8 +148,7 @@ class RecvFunctor {
                                        nullptr));
       device = JUST(Device::New(Device::Type4DeviceTag(*JUST(DeviceTag4DeviceType(device_type)))));
     } else {
-      UNIMPLEMENTED_THEN_RETURN()
-          << "All or none of shape, dtype and device should have value.";
+      UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
     }
     JUST(attrs.SetAttr("shape", shape));
     JUST(attrs.SetAttr("dtype", data_type));
