@@ -284,17 +284,20 @@ void ParallelDesc::ClearUp() {
     hierarchy_.reset(new Shape({parallel_num_}));
     hierarchy_->ToProto(parallel_conf_.mutable_hierarchy());
   }
-  cfg_parallel_conf_.reset(new cfg::ParallelConf(parallel_conf_));
   SortAndRemoveDuplication(&sorted_machine_ids_);
+  parallel_conf_.clear_device_name();
   int64_t parallel_id = 0;
   for (int64_t machine_id : sorted_machine_ids_) {
     for (int64_t device_id : *machine_id2sorted_dev_phy_ids_->at(machine_id)) {
+      parallel_conf_.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
+                                     + std::to_string(device_id));
       parallel_id2machine_id_[parallel_id] = machine_id;
       parallel_id2device_id_[parallel_id] = device_id;
       machine_id2device_id2parallel_id_[machine_id][device_id] = parallel_id;
       parallel_id += 1;
     }
   }
+  cfg_parallel_conf_.reset(new cfg::ParallelConf(parallel_conf_));
 }
 
 void ParallelDesc::set_device_type(DeviceType device_type) {
