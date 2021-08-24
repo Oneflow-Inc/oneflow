@@ -1313,6 +1313,9 @@ class TensorSetItemFunctor {
 
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
+    CHECK_EQ_OR_RETURN(tensor_indices.size(), 0)
+        << "Advanced indexing is not support for tensor setitem currently, please use basic "
+           "indexing instead.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
     if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
 

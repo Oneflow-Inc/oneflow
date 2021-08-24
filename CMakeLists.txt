@@ -140,6 +140,7 @@ else()
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${EXTRA_CXX_FLAGS}")
 endif()
 
+set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
 include(third_party)
 
 if (BUILD_CUDA)
@@ -148,7 +149,7 @@ if (BUILD_CUDA)
   message(STATUS "CUDA_VERSION: ${CUDA_VERSION}")
   message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
   set(CUDA_SEPARABLE_COMPILATION OFF)
-  list(APPEND CUDA_NVCC_FLAGS -w -Wno-deprecated-gpu-targets)
+  list(APPEND CUDA_NVCC_FLAGS -w -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
   #  half is not fully supported when __CUDA_ARCH__ < 530
   #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")
   #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_52,code=sm_52")
@@ -190,11 +191,6 @@ endif()
 
 message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})
 
-if (THIRD_PARTY)
-  add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-else()
-  add_custom_target(prepare_oneflow_third_party ALL)
-endif()
 add_custom_target(oneflow_deps ALL DEPENDS prepare_oneflow_third_party)
 # skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src
 if (ONEFLOW)
