@@ -38,3 +38,12 @@ def get_rank():
 
     """
     return oneflow._oneflow_internal.GetRank()
+
+def get_world_size():
+    """Returns the number of processes in the current process group.
+
+    Returns:
+        The world size of the process group.
+
+    """
+    return oneflow._oneflow_internal.GetWorldSize()
