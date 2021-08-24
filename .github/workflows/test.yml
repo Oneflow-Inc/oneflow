@@ -162,25 +162,25 @@ jobs:
         include:
           - test_suite: cuda
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF
+            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
             os: [self-hosted, linux, build]
             allow_fail: false
             python_version: 3.6,3.7
           - test_suite: cpu
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF
+            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu
             os: [self-hosted, linux, build]
             allow_fail: false
             python_version: 3.6,3.7
           - test_suite: xla
             cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF
+            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
             os: [self-hosted, linux, build]
             allow_fail: true
             python_version: 3.6
           - test_suite: xla_cpu
             cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --cpu --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF
+            extra_flags: --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --cpu --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
             os: [self-hosted, linux, build]
             allow_fail: true
             python_version: 3.6
@@ -743,7 +743,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          cmake --build . -j$(nproc) --target of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
+          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj
       - name: Fetch upstream
         if: github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
         run: |
@@ -761,4 +761,21 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true"
+          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="*,-maybe-glog-fatal,-clang-analyzer-alpha.*"
+      - name: Remove automerge
+        if: failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'automerge'
+            })
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'CI failed, removing label automerge'
+            })
