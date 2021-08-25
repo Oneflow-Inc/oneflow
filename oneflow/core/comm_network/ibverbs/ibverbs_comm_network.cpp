@@ -76,8 +76,9 @@ void ParseUserDevicePort(std::string* device_name, int* port) {
 IBVerbsCommNet::~IBVerbsCommNet() {
   while (poll_exit_flag_.test_and_set() == true) {}
   poll_thread_.join();
-  msg_buf_->FreeActorMsgMR();
-  msg_buf_->FreeMr();
+  /*msg_buf_->FreeActorMsgMR();
+  msg_buf_->FreeMr();*/
+  msg_buf_.reset();
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
@@ -209,7 +210,6 @@ void IBVerbsCommNet::PollCQ() {
     CHECK_GE(found_wc_num, 0);
     FOR_RANGE(int32_t, i, 0, found_wc_num) {
       const ibv_wc& wc = wc_vec.at(i);
-    //  std::cout<<"In PollCQ,the wc.wr_id:"<< wc.wr_id << std::endl;
       WorkRequestId* wr_id = reinterpret_cast<WorkRequestId*>(wc.wr_id);
       CHECK_EQ(wc.status, IBV_WC_SUCCESS) << wc.opcode << "wc.wr_id" << wc.wr_id;
       IBVerbsQP* qp = wr_id->qp;

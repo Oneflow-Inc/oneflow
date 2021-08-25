@@ -65,9 +65,11 @@ struct WorkRequestId {
 class MessagePool final {
   public:
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
-    MessagePool() = delete; //todo:这里可能要修改
+    MessagePool() = delete; 
     ~MessagePool() {
-    }//todo:这里可能要修改
+      FreeActorMsgMR();
+      FreeMr();
+    }
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
       RegisterMessagePool();
