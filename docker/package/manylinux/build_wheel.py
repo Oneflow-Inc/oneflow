@@ -277,7 +277,7 @@ def build_oneflow(
             extra_oneflow_cmake_args,
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
             f"-DPython3_EXECUTABLE={python_bin}",
-            f"-DCFG_Python_EXECUTABLE={get_python_bin('3.6')}",
+            f"-DCODEGEN_PYTHON_EXECUTABLE={get_python_bin('3.6')}",
             oneflow_src_dir,
             inplace_arg,
         ]

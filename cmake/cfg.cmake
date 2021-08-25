@@ -115,20 +115,18 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     list(APPEND PY_CFG_ARGS "--proto_file_path=${FIL}")
   endforeach()
 
-  set(CFG_Python_EXECUTABLE ${Python_EXECUTABLE} CACHE STRING "Python executable to generate .cpp/.h files")
-
   add_custom_command(
     OUTPUT ${${HDRS}} ${${SRCS}} ${${PYBIND_SRCS}}
     COMMAND ${CMAKE_COMMAND}
     ARGS -E remove_directory "${of_cfg_proto_python_dir}"
-    COMMAND ${CFG_Python_EXECUTABLE} ${COPY_PYPROTO_PYTHON_SCRIPT} --of_proto_python_dir=${of_proto_python_dir}
+    COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${COPY_PYPROTO_PYTHON_SCRIPT} --of_proto_python_dir=${of_proto_python_dir}
       --src_proto_files="${CFG_SOURCE_FILE_CONVERT_PROTO}" --dst_proto_python_dir=${of_cfg_proto_python_dir}
-    COMMAND ${CFG_Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
+    COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
       ${CFG_ARGS}
       --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
       --project_build_dir=${PROJECT_BINARY_DIR}
       --generate_file_type=cfg.cpp
-    COMMAND ${CFG_Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
+    COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
       ${PY_CFG_ARGS}
       --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
       --project_build_dir=${PROJECT_BINARY_DIR}
