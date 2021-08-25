@@ -835,13 +835,13 @@
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Triu"
   bind_python: True
   
-- name: "clip"
+- name: "clamp"
   signature: [
     "Tensor (Tensor x, Scalar min=None, Scalar max=None) => Clip",
   ]
   bind_python: true
 
-- name: "clip_grad"
+- name: "clamp_grad"
   signature: "Tensor (Tensor dy, Tensor x, Scalar min=None, Scalar max=None) => ClipGrad"
   bind_python: False
 
