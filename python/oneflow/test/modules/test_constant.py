@@ -61,6 +61,7 @@ def _test_zeros_backward(test_case, device, shape):
     y.backward()
     test_case.assertTrue(np.array_equal(np.ones(shape), x.grad.numpy()))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
     def test_consistent_naive(test_case):
@@ -76,8 +77,12 @@ class TestConstantModule(flow.unittest.TestCase):
         device = random_device()
         y1 = torch.zeros((random().to(int))).to(device)
         y2 = torch.zeros((random().to(int), random().to(int))).to(device)
-        y3 = torch.zeros((random().to(int), random().to(int)), random().to(int)).to(device)
-        y4 = torch.zeros((random().to(int), random().to(int)), random().to(int), random().to(int)).to(device)
+        y3 = torch.zeros((random().to(int), random().to(int)), random().to(int)).to(
+            device
+        )
+        y4 = torch.zeros(
+            (random().to(int), random().to(int)), random().to(int), random().to(int)
+        ).to(device)
         return y1, y2, y3, y4
 
     @unittest.skip("ones has bug, not align with pytorch")
@@ -86,29 +91,37 @@ class TestConstantModule(flow.unittest.TestCase):
         device = random_device()
         y1 = torch.ones((random().to(int))).to(device)
         y2 = torch.ones((random().to(int), random().to(int))).to(device)
-        y3 = torch.ones((random().to(int), random().to(int)), random().to(int)).to(device)
-        y4 = torch.ones((random().to(int), random().to(int)), random().to(int), random().to(int)).to(device)
+        y3 = torch.ones((random().to(int), random().to(int)), random().to(int)).to(
+            device
+        )
+        y4 = torch.ones(
+            (random().to(int), random().to(int)), random().to(int), random().to(int)
+        ).to(device)
         return y1, y2, y3, y4
-    
+
     @autotest(auto_backward=False)
     def test_flow_zeros_like_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.zeros_like(x)
         return y
-    
+
     @autotest(auto_backward=False)
     def test_flow_ones_like_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = torch.ones_like(x)
         return y
-    
+
     @autotest(auto_backward=True)
     def test_flow_new_ones_list_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = x.new_ones((random().to(int), random().to(int), random().to(int)), device=device.value(), requires_grad=constant(True))
+        y = x.new_ones(
+            (random().to(int), random().to(int), random().to(int)),
+            device=device.value(),
+            requires_grad=constant(True),
+        )
         return y
 
     def test_cast(test_case):
