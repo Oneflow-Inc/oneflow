@@ -115,10 +115,10 @@ class _BatchNorm(_NormBase):
             variance = x.var(dim=reduce_axis, unbiased=False, keepdim=False)
             if self.training and self.track_running_stats:
                 running_mean = (
-                    self.momentum * self.running_mean + (1 - self.momentum) * mean
+                    (1 - self.momentum) * self.running_mean + self.momentum * mean
                 )
                 running_var = (
-                    self.momentum * self.running_var + (1 - self.momentum) * variance
+                    (1 - self.momentum) * self.running_var + self.momentum * variance
                 )
                 self.__setattr__("running_mean", running_mean)
                 self.__setattr__("running_var", running_var)
@@ -172,7 +172,7 @@ class _BatchNorm(_NormBase):
                 self.bias,
                 axis=1,
                 epsilon=self.eps,
-                momentum=self.momentum,
+                momentum=1 - self.momentum,
                 is_training=is_training,
             )
 
