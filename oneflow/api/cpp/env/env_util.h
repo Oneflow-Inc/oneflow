@@ -2,6 +2,7 @@
 #define ONEFLOW_API_CPP_ENV_ENV_UTIL_H_
 
 #include <string>
+#include <memory>
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/scope_util.h"
@@ -11,13 +12,13 @@
 
 namespace oneflow {
 
-std::shared_ptr<Scope> MakeInitialScope(cfg::JobConfigProto& job_conf, 
+std::shared_ptr<Scope> MakeInitialScope(std::shared_ptr<cfg::JobConfigProto> job_conf, 
                                                  std::string device_tag, 
                                                  std::vector<std::string> machine_device_ids, 
                                                  std::shared_ptr<Shape> hierarchy, 
-                                                 bool is_mirrored):
+                                                 bool is_mirrored) {
   std::shared_ptr<Scope> scope;
-  auto BuildInitialScope = [&scope, &job_conf](InstructionsBuilder* builder) mutable -> Maybe<void> {
+  auto BuildInitialScope = [&](InstructionsBuilder* builder) mutable -> Maybe<void> {
     // default configuration
     int session_id = GetDefaultSessionId().GetOrThrow();
     std::shared_ptr<Scope> initialScope = 

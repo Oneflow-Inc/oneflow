@@ -1,0 +1,1 @@
+add_library(oneflow SHARED inference_session.cpp)

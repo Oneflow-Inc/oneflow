@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_CPP_INFERENCE_SESSION_H_
 #define ONEFLOW_API_CPP_INFERENCE_SESSION_H_
 
+#include <future>
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/api/python/job_build/job_build_and_infer_api.h"
 
@@ -28,7 +29,7 @@ struct ModelVersionPolicy {
 
 struct SessionOption {
   SessionOption() : device_tag("gpu"), device_num(1), 
-                    is_mirrored_view(false), is_async(false) {}
+                    is_mirrored_view(false) {}
 
   std::string device_tag;
   int device_num;
@@ -43,23 +44,23 @@ class InferenceSession {
   ~InferenceSession();
 
   void Launch();
-  void Close();
+  Maybe<void> Close();
   void LoadModel(std::string saved_model_dir,
                  ModelVersionPolicy model_version_policy,
                  std::string saved_model_meta_file_basename,
                  std::string graph_name = "",
                  std::string signature_name = "");
 
-  std::map<std::string, Tensor> Run(std::string job_name, 
-                                    std::map<std::string, Tensor>& input_tensors);
+  std::map<std::string, std::shared_ptr<Tensor>> Run(std::string job_name, 
+                                    std::map<std::string, std::shared_ptr<Tensor>>& input_tensors);
 
  private:
   enum class SessionStatus { OPEN = 1, RUNNING = 2, CLOSED = 3 };
 
   Maybe<void> Init();
-  Maybe<void> OpenCtx(std::string job_name, JobSignatureDef signature, int batch_size);
+  Maybe<void> OpenCtx(std::string job_name, JobSignatureDef* signature, int batch_size);
   Maybe<void> CloseCtx();
-  Maybe<void> Compile(std::vector<OperatorConf> op_list);
+  Maybe<void> Compile(std::vector<OperatorConf>& op_list);
 
   Maybe<void> LoadModel_(std::string saved_model_dir,
                          ModelVersionPolicy model_version_policy,
@@ -67,7 +68,7 @@ class InferenceSession {
                          std::string graph_name = "",
                          std::string signature_name = "");
 
-  std::shared_ptr<JobConfProto> GetJobConf(std::string job_name);
+  std::shared_ptr<JobConfigProto> GetJobConf(std::string job_name);
   
   Maybe<void> RunJob(std::shared_ptr<CPPJobInstance> job_inst);
   Maybe<void> RunPushJobs(std::map<std::string, std::shared_ptr<Tensor>>& input_tensors);
@@ -77,7 +78,7 @@ class InferenceSession {
   void WaitForAllJobsFinished();
 
   void SetCheckpointPath(std::string checkpoint_path);
-  void SetJobSignature(std::string job_name, JobSignatureDef)
+  void SetJobSignature(std::string job_name, JobSignatureDef*);
   void SetJobBatchSize(std::string job_name, int batch_size);
 
   Maybe<void> CheckStatus(const std::vector<SessionStatus>& status);

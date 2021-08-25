@@ -5,6 +5,7 @@
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
+#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 

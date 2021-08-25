@@ -8,7 +8,7 @@
 
 namespace oneflow {
 
-inline InterUserJobInfo* GetInterUserJobInfo() {
+inline Maybe<InterUserJobInfo*> GetInterUserJobInfo() {
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   CHECK_NOTNULL_OR_RETURN(Global<InterUserJobInfo>::Get());

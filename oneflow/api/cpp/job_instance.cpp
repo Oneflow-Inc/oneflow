@@ -18,12 +18,12 @@ limitations under the License.
 
 namespace oneflow {
 
-explicit CPPJobInstance::CPPJobInstance(std::string job_name,
-                                        std::string sole_input_op_name_in_user_job,
-                                        std::string sole_output_op_name_in_user_job,
-                                        std::function<void(OfBlob*)> push_cb,
-                                        std::function<void(OfBlob*)> pull_cb,
-                                        std::function<void()> finish_cb) 
+CPPJobInstance::CPPJobInstance(std::string job_name,
+                                std::string sole_input_op_name_in_user_job,
+                                std::string sole_output_op_name_in_user_job,
+                                std::function<void(OfBlob*)> push_cb,
+                                std::function<void(OfBlob*)> pull_cb,
+                                std::function<void()> finish_cb) 
     : job_name_(job_name), 
       sole_input_op_name_in_user_job_(sole_input_op_name_in_user_job),
       sole_output_op_name_in_user_job_(sole_output_op_name_in_user_job),
@@ -33,25 +33,25 @@ explicit CPPJobInstance::CPPJobInstance(std::string job_name,
 
 ~CPPJobInstance::CPPJobInstance(){}
 
-std::string CPPJobInstance::job_name() override const { return this->job_name_; }
+std::string CPPJobInstance::job_name() const override { return this->job_name_; }
 
-std::string CPPJobInstance::sole_input_op_name_in_user_job() override const {
+std::string CPPJobInstance::sole_input_op_name_in_user_job() const override {
   return this->sole_input_op_name_in_user_job_;
 }
 
-std::string CPPJobInstance::sole_output_op_name_in_user_job() override const {
+std::string CPPJobInstance::sole_output_op_name_in_user_job() const override {
   return this->sole_output_op_name_in_user_job_;
 }
 
-void CPPJobInstance::PushBlob(uint64_t ofblob_ptr) override const {
+void CPPJobInstance::PushBlob(uint64_t ofblob_ptr) const override {
   this->push_cb_(reinterpret_cast<OfBlob*>(of_blob_ptr));
 }
 
-void CPPJobInstance::PullBlob(uint64_t ofblob_ptr) override const {
+void CPPJobInstance::PullBlob(uint64_t ofblob_ptr) const override {
   this->pull_cb_(reinterpret_cast<OfBlob*>(of_blob_ptr));
 }
 
-void CPPJobInstance::Finish() override const {
+void CPPJobInstance::Finish() const override {
   this->finish_cb_();
 
   for (auto& post_finish_cb : this->post_finish_cbs_)

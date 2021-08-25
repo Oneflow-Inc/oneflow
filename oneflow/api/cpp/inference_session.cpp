@@ -14,19 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <map>
+#include <algorithm>
 
 #include "oneflow/core/persistence/posix/posix_file_system.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/serving/saved_model.cfg.h"
+#include "oneflow/core/serving/saved_model.pb.h"
 
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/session/session.h"
+#include "oneflow/api/python/framework/framework.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 
 #include "oneflow/api/cpp/env/env_util.h"
 #include "oneflow/api/cpp/session/session_util.h"
 #include "oneflow/api/cpp/framework/framework_util.h"
+#include "oneflow/api/cpp/job_build/job_build_and_infer_util.h"
 #include "oneflow/api/cpp/tensor/tensor.h"
 #include "oneflow/api/cpp/job_instance.h"
 #include "oneflow/api/cpp/inference_session.h"
@@ -41,10 +47,10 @@ inline int FindModelLatestVersion(std::string saved_model_dir) {
         versions.push_back(std::stoi(f));
       } catch (...) {}
     }
-    return std::max(std::begin(versions), std::end(versions));
+    return *(std::max(std::begin(versions), std::end(versions)));
 }
 
-bool NeedCheckDeviceTag(OpConf& op_conf) {
+inline bool NeedCheckDeviceTag(OperatorConf& op_conf) {
   if (op_conf.has_return_conf()) {
     return false;
   }
@@ -52,7 +58,7 @@ bool NeedCheckDeviceTag(OpConf& op_conf) {
 }
 
 InferenceSession::InferenceSession(const SessionOption& option)
-  : option_(option), is_mirrored_(option.is_mirrored_view)
+  : option_(option), is_mirrored_(option.is_mirrored_view),
     checkpoint_path_(""), cur_job_name_("") {
   Init().GetOrThrow();
 }
@@ -105,11 +111,11 @@ Maybe<void> InferenceSession::Close() {
   this->status_ = SessionStatus::CLOSED;
 }
 
-Maybe<void> InferenceSession::OpenCtx(std::string job_name, JobSignatureDef& signature, int batch_size = 0) {
+Maybe<void> InferenceSession::OpenCtx(std::string job_name, JobSignatureDef* signature, int batch_size = 0) {
   JUST(this->CheckStatus(SessionStatus::OPEN));
   JUST(JobBuildAndInferCtx_Open(job_name));
 
-  if (!signature.empty()) {
+  if (!signature) {
     this->SetJobSignature(job_name, signature);
   }
 
@@ -117,8 +123,8 @@ Maybe<void> InferenceSession::OpenCtx(std::string job_name, JobSignatureDef& sig
     this->SetJobBatchSize(job_name, batch_size);
   }
 
-  JobConfigProto& job_conf = this->GetJobConf(job_name);
-  JUST(CurJobBuildAndInferCtx_SetJobConf(job_conf));
+  std::shared_ptr<JobConfigProto> job_conf = this->GetJobConf(job_name);
+  JUST(CurJobBuildAndInferCtx_SetJobConf(*job_conf));
 
   std::string device_tag;
   std::vector<std::string> device_ids;
@@ -139,11 +145,11 @@ Maybe<void> InferenceSession::OpenCtx(std::string job_name, JobSignatureDef& sig
     CHECK_OR_RETURN(false) << Error::Unimplemented();
   }
 
-  std::shared_ptr<Scope> scope = MakeInitialScope(job_conf, device_tag, 
-                                    device_ids, nullptr, this->is_mirrored_);
+  // std::shared_ptr<Scope> scope = MakeInitialScope(job_conf, device_tag, 
+  //                                   device_ids, nullptr, this->is_mirrored_);
 
-  JUST(ThreadLocalScopeStackPush(scope));
-  this->cur_job_name_ = job_name;
+  // JUST(ThreadLocalScopeStackPush(scope));
+  // this->cur_job_name_ = job_name;
   return Maybe<void>::Ok();
 }
 
@@ -159,12 +165,11 @@ Maybe<void> InferenceSession::Compile(std::vector<OperatorConf>& op_list) {
 
   std::shared_ptr<Scope> scope = GetCurrentScope().GetPtrOrThrow();
   for (auto& op_conf : op_list) {
-      op_conf.set_scope_symbol_id(scope->symbol_id().GetOrThrow());
-      if(!op_conf.has_device_tag()) {
-        op_conf.set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
-      }
-      JUST(CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf));
+    op_conf.set_scope_symbol_id(scope->symbol_id().GetOrThrow());
+    if(!op_conf.has_device_tag()) {
+      op_conf.set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
     }
+    JUST(CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf));
   }
 
   JUST(CurJobBuildAndInferCtx_Complete());
@@ -175,7 +180,7 @@ Maybe<void> InferenceSession::Compile(std::vector<OperatorConf>& op_list) {
 void InferenceSession::Launch() {
   this->CheckStatus(SessionStatus::OPEN).GetOrThrow();
   StartLazyGlobalSession().GetOrThrow();
-  this->inter_user_job_info_ = GetInterUserJobInfo();
+  this->inter_user_job_info_ = GetInterUserJobInfo().GetOrThrow();
   this->RunLoadCheckpointJob().GetOrThrow();
   this->status_ = SessionStatus::RUNNING;
 }
@@ -216,13 +221,14 @@ Maybe<void> InferenceSession::LoadModel_(std::string saved_model_dir,
   std::string saved_model_meta_pb_filename = saved_model_meta_file_basename + ".pb";
   std::string saved_model_meta_prototxt_filename = saved_model_meta_file_basename + ".prototxt";
   
-  std::shared_ptr<cfg::SavedModel> saved_model_proto;
-  if (std:::find(std::begin(subfiles), std::end(subfiles), 
+  // TODO: cfg or not?
+  cfg::SavedModel saved_model_proto;
+  if (std::find(std::begin(subfiles), std::end(subfiles), 
       saved_model_meta_pb_filename) != std::end(subfiles)) {
-      saved_model_proto = LoadSavedModel(saved_model_meta_pb_filename, false);
-  } else if (std:::find(std::begin(subfiles), std::end(subfiles), 
+      saved_model_proto = LoadSavedModel(saved_model_meta_pb_filename, false).GetOrThrow();
+  } else if (std::find(std::begin(subfiles), std::end(subfiles), 
       saved_model_meta_prototxt_filename) != std::end(subfiles)) {
-      saved_model_proto = LoadSavedModel(saved_model_meta_prototxt_filename, true);
+      saved_model_proto = LoadSavedModel(saved_model_meta_prototxt_filename, true).GetOrThrow();
   } else {
       CHECK_OR_RETURN(false) << Error::ValueError("saved model meta file" + 
         saved_model_meta_file_basename + " do not exist in " + saved_model_path);
@@ -232,28 +238,28 @@ Maybe<void> InferenceSession::LoadModel_(std::string saved_model_dir,
   this->SetCheckpointPath(JoinPath(saved_model_path, saved_model_proto.checkpoint_dir()));
 
   // get signature
-  JobSignatureDef signature;
+  JobSignatureDef* signature_ptr;
   if (graph_name.empty()) {
-    graph_name = saved_model_proto->default_graph_name();
+    graph_name = saved_model_proto.default_graph_name();
   } else {
-    CHECK_OR_RETURN(saved_model_proto->graphs().count(graph_name))
-      << ValueError("graph " + graph_name + "do not exist");
+    CHECK_OR_RETURN(saved_model_proto.graphs().count(graph_name))
+      << Error::ValueError("graph " + graph_name + "do not exist");
   }
 
-  GraphDef graph_def = saved_model_proto->mut_graphs()->at(graph_name);
+  cfg::GraphDef graph_def = saved_model_proto.mutable_graphs()->at(graph_name);
   if (signature_name.empty() && graph_def.has_default_signature_name()) {
       signature_name = graph_def.default_signature_name();
   }
 
   if (!signature_name.empty()) {
     CHECK_OR_RETURN(graph_def.signatures().count(signature_name))
-      << ValueError("signature " + signature_name + "do not exist");
-    signature = graph_def.mut_signatures()->at(signature_name);
+      << Error::ValueError("signature " + signature_name + "do not exist");
+    signature_ptr = &(graph_def.mutable_signatures()->at(signature_name));
   }
 
   // compile job
-  JUST(this->OpenCtx(graph_name, signature));
-  JUST(this->Compile(graph_def.op_list()));
+  JUST(this->OpenCtx(graph_name, signature_ptr));
+  JUST(this->Compile(*graph_def.mutable_op_list()));
   JUST(this->CloseCtx());
 
   return Maybe<void>::Ok();
@@ -265,7 +271,7 @@ std::map<std::string, std::shared_ptr<Tensor>> InferenceSession::Run(std::string
   this->RunPushJobs(input_tensors).GetOrThrow();
   auto job_inst = MakeUserJobInstance(job_name);
   this->RunJob(job_inst).GetOrThrow();
-  std::map<std::string, std::shared_ptr<Tensor>>> output_tensors;
+  std::map<std::string, std::shared_ptr<Tensor>> output_tensors;
   this->RunPullJobs(output_tensors).GetOrThrow();
   return output_tensors;
 }
@@ -282,21 +288,24 @@ void InferenceSession::SetCheckpointPath(std::string checkpoint_path) {
   this->checkpoint_path_ = checkpoint_path;
 }
 
-void InferenceSession::SetJobSignature(std::string job_name, JobSignatureDef& signature) {
+void InferenceSession::SetJobSignature(std::string job_name, JobSignatureDef* signature) {
   std::shared_ptr<JobConfigProto> job_conf = this->GetJobConf(job_name);
-  job_conf->set_signature(signature);
+  // TODO
+  job_conf->set_allocated_signature(signature);
 }
 
 void InferenceSession::SetJobBatchSize(std::string job_name, int batch_size) {
-  JUST(this->CheckStatus(SessionStatus::OPEN));
+  this->CheckStatus(SessionStatus::OPEN).GetOrThrow();
   std::shared_ptr<JobConfigProto> job_conf = this->GetJobConf(job_name);
-  for (auto& pair : job_conf->mutable_signature()->mutable_inputs()) {
+  for (auto& pair : *(job_conf->mutable_signature()->mutable_inputs())) {
     pair.second.mutable_blob_conf()->mutable_shape()->mutable_dim()->at(0) = batch_size;
   }
 }
 
 Maybe<void> InferenceSession::CheckStatus(SessionStatus status) {
   bool check_success = (status == this->status_);
+  // TODO
+  std::string caller_func_name = "";
   CHECK_OR_RETURN(check_success) 
     << Error::ValueError("The calling to " + caller_func_name + " is not allowed in current status");
 }
@@ -309,6 +318,8 @@ Maybe<void> InferenceSession::CheckStatus(const std::vector<SessionStatus>& stat
       break;
     }
   }
+  // TODO
+  std::string caller_func_name = "";
   CHECK_OR_RETURN(check_success) 
     << Error::ValueError("The calling to " + caller_func_name + " is not allowed in current status");
 }
@@ -317,25 +328,25 @@ Maybe<void> InferenceSession::MakeConfigProto() {
   this->config_proto_ = GetDefaultConfigProto();
 
   if(this->option_.device_tag == "gpu") {
-    this->config_proto_.mut_resource()->set_gpu_device_num(this->option_.device_num);
+    this->config_proto_.mutable_resource()->set_gpu_device_num(this->option_.device_num);
   } else if(this->option_.device_tag == "cpu") {
-    this->config_proto_.mut_resource()->set_cpu_device_num(this->option_.device_num);
-    this->config_proto_.mut_resource()->set_gpu_device_num(0);
+    this->config_proto_.mutable_resource()->set_cpu_device_num(this->option_.device_num);
+    this->config_proto_.mutable_resource()->set_gpu_device_num(0);
   } else {
     CHECK_OR_RETURN(false) << Error::Unimplemented()
         << "not supported device tag " << this->option_.device_tag;
   }
 
-  this->config_proto_.mut_resource()->set_enable_legacy_model_io(true);
+  this->config_proto_.mutable_resource()->set_enable_legacy_model_io(true);
   if (this->config_proto_.resource().machine_num() == 0) {
-    this->config_proto_.mut_resource()->set_machine_num(GetNodeSize());
+    this->config_proto_.mutable_resource()->set_machine_num(GetNodeSize().GetOrThrow());
   }
   return Maybe<void>::Ok();
 }
 
-std::shared_ptr<JobConfigProto>& InferenceSession::GetJobConf(std::string job_name) {
+std::shared_ptr<JobConfigProto> InferenceSession::GetJobConf(std::string job_name) {
   if (std::find(std::begin(this->job_name2job_conf_), std::end(this->job_name2job_conf_), 
-          job_name) != std::end(this->job_name2job_conf_) {
+          job_name) != std::end(this->job_name2job_conf_)) {
     return this->job_name2job_conf_[job_name];
   } else {
     std::shared_ptr<JobConfigProto> job_conf = std::make_shared<JobConfigProto>();
@@ -347,11 +358,11 @@ std::shared_ptr<JobConfigProto>& InferenceSession::GetJobConf(std::string job_na
 }
 
 Maybe<void> InferenceSession::RunJob(std::shared_ptr<CPPJobInstance> job_inst) {
-  std::shared_ptr<std::promise<void>> job_promise = std::make_shared_ptr<std::promise<void>>();
-  auto job_finish_cb = [&job_promise](){ job_promise->set_value(); };
+  std::shared_ptr<std::promise<void>> job_promise = std::make_shared<std::promise<void>>();
+  auto job_finish_cb = [&job_promise](JobInstance*){ job_promise->set_value(); };
   job_inst->AddPostFinishCallback(job_finish_cb);
   JUST(LaunchJob(job_inst));
-  this->job_promises_.append(job_promise);
+  this->job_promises_.push_back(job_promise);
   return Maybe<void>::Ok();
 }
 
@@ -391,9 +402,9 @@ Maybe<void> InferenceSession::RunPullJobs(std::map<std::string, std::shared_ptr<
       std::string pull_job_name = pair.second;
       std::promise<std::shared_ptr<Tensor>> pull_job_promise;
       auto pull_fn = [&pull_job_promise](OfBlob* ofblob) {
-        DataType dtype = ofblob->data_type();
+        DataType dtype = ofblob->blob().data_type();
         Shape shape = ofblob->blob().static_shape();
-        int64_t num_elems = shape->elem_cnt();
+        int64_t num_elems = shape.elem_cnt();
 
         std::shared_ptr<Tensor> tensor = std::make_shared<Tensor>(shape, dtype);
 
@@ -418,7 +429,7 @@ Maybe<void> InferenceSession::RunLoadCheckpointJob() {
     << Error::ValueError(std::string("checkpoint path not set")); 
 
   auto copy_model_load_path = [this](OfBlob* ofblob) -> void {
-    int64_t shape = new int64_t[1]{this->checkpoint_path_.size()};
+    int64_t* shape = new int64_t[1]{this->checkpoint_path_.size()};
     ofblob->CopyShapeFrom(shape, 1);
     ofblob->AutoMemCopyFrom(this->checkpoint_path_.data(), this->checkpoint_path_.size());
     delete[] shape;

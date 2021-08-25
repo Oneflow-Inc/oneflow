@@ -12,12 +12,12 @@ namespace oneflow {
 
 ConfigProto GetDefaultConfigProto() {
     ConfigProto config_proto;
-    config_proto.mut_resource()->set_machine_num(0);
+    config_proto.mutable_resource()->set_machine_num(0);
 #ifdef WITH_CUDA
-    config_proto.mut_resource()->set_gpu_device_num(1);
+    config_proto.mutable_resource()->set_gpu_device_num(1);
 #else
-    config_proto.mut_resource()->set_cpu_device_num(1);
-    config_proto.mut_resource()->set_gpu_device_num(0);
+    config_proto.mutable_resource()->set_cpu_device_num(1);
+    config_proto.mutable_resource()->set_gpu_device_num(0);
 #endif  // WITH_CUDA
     int session_id = GetDefaultSessionId().GetOrThrow();
     config_proto.set_session_id(session_id);
@@ -26,11 +26,11 @@ ConfigProto GetDefaultConfigProto() {
 
 void TryCompleteConfigProto(ConfigProto& config_proto) {
     if (config_proto.resource().machine_num() == 0) {
-        config_proto.mut_resource()->set_machine_num(GetNodeSize());
+        config_proto.mutable_resource()->set_machine_num(GetNodeSize().GetOrThrow());
     }
 }
 
-inline Maybe<void> InitLazyGlobalSession(const ConfigProto& config_proto) {
+inline Maybe<void> InitLazyGlobalSession(ConfigProto& config_proto) {
   CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
 

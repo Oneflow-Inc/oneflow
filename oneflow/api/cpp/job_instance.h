@@ -33,13 +33,13 @@ class CPPJobInstance : public JobInstance {
                           std::function<void()> finish_cb);
   ~CPPJobInstance();
 
-  std::string job_name() override const;
-  std::string sole_input_op_name_in_user_job() override const;
-  std::string sole_output_op_name_in_user_job() override const;
-  void PushBlob(uint64_t ofblob_ptr) override const;
-  void PullBlob(uint64_t ofblob_ptr) override const;
-  void Finish() override const;
-  void AddPostFinishCallback();
+  std::string job_name() const override;
+  std::string sole_input_op_name_in_user_job() const override;
+  std::string sole_output_op_name_in_user_job() const override;
+  void PushBlob(uint64_t ofblob_ptr) const override;
+  void PullBlob(uint64_t ofblob_ptr) const override;
+  void Finish() const override;
+  void AddPostFinishCallback(std::function<void(JobInstance*)> cb);
 
  private:
   int thisown;
