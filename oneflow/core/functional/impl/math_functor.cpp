@@ -610,15 +610,39 @@ class ScalarLogicalEqualFunctor : public ScalarLogicalBaseFunctor {
   ScalarLogicalEqualFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_equal") {}
 };
 
+// (scalar == x) = (x == scalar)
+class ScalarLogicalEqual2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalEqual(x, scalar);
+  }
+};
+
 class ScalarLogicalNotEqualFunctor : public ScalarLogicalBaseFunctor {
  public:
   ScalarLogicalNotEqualFunctor()
       : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_not_equal") {}
 };
 
+// (scalar != x) = (x != scalar)
+class ScalarLogicalNotEqual2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalNotEqual(x, scalar);
+  }
+};
+
 class ScalarLogicalGreaterFunctor : public ScalarLogicalBaseFunctor {
  public:
   ScalarLogicalGreaterFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_greater") {}
+};
+
+// (scalar > x) = (x < scalar)
+class ScalarLogicalGreater2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalLess(x, scalar);
+  }
 };
 
 class ScalarLogicalGreaterEqualFunctor : public ScalarLogicalBaseFunctor {
@@ -627,15 +651,39 @@ class ScalarLogicalGreaterEqualFunctor : public ScalarLogicalBaseFunctor {
       : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_greater_equal") {}
 };
 
+// (scalar >= x) = (x <= scalar)
+class ScalarLogicalGreaterEqual2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalLessEqual(x, scalar);
+  }
+};
+
 class ScalarLogicalLessFunctor : public ScalarLogicalBaseFunctor {
  public:
   ScalarLogicalLessFunctor() : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_less") {}
+};
+
+// (scalar < x) = (x > scalar)
+class ScalarLogicalLess2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalGreater(x, scalar);
+  }
 };
 
 class ScalarLogicalLessEqualFunctor : public ScalarLogicalBaseFunctor {
  public:
   ScalarLogicalLessEqualFunctor()
       : ScalarLogicalBaseFunctor(/*op_name=*/"scalar_logical_less_equal") {}
+};
+
+// (scalar <= x) = (x >= scalar)
+class ScalarLogicalLessEqual2Functor {
+ public:
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
+    return ScalarLogicalGreaterEqual(x, scalar);
+  }
 };
 
 }  // namespace impl
@@ -670,11 +718,17 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaximumFunctor>("Maximum");
   m.add_functor<impl::ScalarFModFunctor>("ScalarFMod");
   m.add_functor<impl::ScalarLogicalEqualFunctor>("ScalarLogicalEqual");
+  m.add_functor<impl::ScalarLogicalEqual2Functor>("ScalarLogicalEqual2");
   m.add_functor<impl::ScalarLogicalNotEqualFunctor>("ScalarLogicalNotEqual");
+  m.add_functor<impl::ScalarLogicalNotEqual2Functor>("ScalarLogicalNotEqual2");
   m.add_functor<impl::ScalarLogicalGreaterFunctor>("ScalarLogicalGreater");
+  m.add_functor<impl::ScalarLogicalGreater2Functor>("ScalarLogicalGreater2");
   m.add_functor<impl::ScalarLogicalGreaterEqualFunctor>("ScalarLogicalGreaterEqual");
+  m.add_functor<impl::ScalarLogicalGreaterEqual2Functor>("ScalarLogicalGreaterEqual2");
   m.add_functor<impl::ScalarLogicalLessFunctor>("ScalarLogicalLess");
+  m.add_functor<impl::ScalarLogicalLess2Functor>("ScalarLogicalLess2");
   m.add_functor<impl::ScalarLogicalLessEqualFunctor>("ScalarLogicalLessEqual");
+  m.add_functor<impl::ScalarLogicalLessEqual2Functor>("ScalarLogicalLessEqual2");
 };
 
 }  // namespace functional

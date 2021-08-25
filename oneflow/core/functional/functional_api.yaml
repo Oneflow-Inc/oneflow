@@ -57,49 +57,78 @@
   signature: "Tensor (Tensor y, Tensor z, Tensor dz) => DivGrad"
   bind_python: False
 
-- name: "broadcast_equal"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastEqual"
-  bind_python: True
+- name: "equal"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastEqual",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalEqual",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalEqual2",
+  ]
+  bind_python: true
 
-- name: "broadcast_not_equal"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastNotEqual"
-  bind_python: True
+- name: "not_equal"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastNotEqual",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalNotEqual",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalNotEqual2",
+  ]
+  bind_python: true
 
-- name: "broadcast_greater"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastGreater"
-  bind_python: True
+- name: "greater"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastGreater",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalGreater",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalGreater2",
+  ]
+  bind_python: true
 
-- name: "broadcast_greater_equal"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastGreaterEqual"
-  bind_python: True
+- name: "greater_equal"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastGreaterEqual",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalGreaterEqual",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalGreaterEqual2",
+  ]
+  bind_python: true
 
-- name: "broadcast_logical_and"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastLogicalAnd"
-  bind_python: True
+- name: "logical_and"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastLogicalAnd",
+  ]
+  bind_python: true
 
-- name: "broadcast_logical_or"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastLogicalOr"
+- name: "logical_or"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastLogicalOr",
+  ]
   bind_python: True
  
-- name: "broadcast_logical_xor"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastLogicalXor"
+- name: "logical_xor"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastLogicalXor",
+  ]
   bind_python: True
 
-- name: "broadcast_less"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastLess"
+- name: "less"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastLess",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalLess",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalLess2",
+  ]
   bind_python: True
 
-- name: "broadcast_less_equal"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastLessEqual"
+- name: "less_equal"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastLessEqual",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalLessEqual",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalLessEqual2",
+  ]
   bind_python: True
 
 - name: "pow"
-  signature: "Tensor (Tensor x, Tensor y) => Pow"
-  bind_python: False
-
-- name: "pow_scalar"
-  signature: "Tensor (Tensor x, Scalar alpha) => ScalarPow"
-  bind_python: False
+  signature: [
+    "Tensor (Tensor input, Tensor exponent) => Pow",
+    "Tensor (Tensor input, Scalar exponent) => ScalarPow",
+  ]
+  bind_python: True
 
 - name: "broadcast_pow"
   signature: "Tensor (Tensor x, Tensor y) => BroadcastPow"
@@ -1002,30 +1031,6 @@
 
 - name: "broadcast_reduce_sum_like"
   signature: "Tensor (Tensor in, Tensor like) => BroadcastReduceSumLike"
-  bind_python: False
-
-- name: "scalar_logical_equal"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalEqual"
-  bind_python: False
-
-- name: "scalar_logical_not_equal"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalNotEqual"
-  bind_python: False
-
-- name: "scalar_logical_greater"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalGreater"
-  bind_python: False
-
-- name: "scalar_logical_greater_equal"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalGreaterEqual"
-  bind_python: False
-
-- name: "scalar_logical_less"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalLess"
-  bind_python: False
-
-- name: "scalar_logical_less_equal"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalLessEqual"
   bind_python: False
 
 - name: "rand"
