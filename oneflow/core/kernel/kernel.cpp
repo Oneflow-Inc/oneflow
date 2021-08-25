@@ -108,14 +108,14 @@ void Kernel::Forward(const KernelCtx& ctx,
       } else if (check_code == -1) {
         LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", skip when not on gpu";
       } else if (check_code == -2) {
-        LOG(INFO) << "CheckBlobInfNan, op:" << op_conf().name() << ", obn: " << obn
+        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", obn: " << obn
                   << ", skip when dtype is not float";
       } else if (check_code == 1) {
-        LOG(INFO) << "CheckBlobInfNan, op:" << op_conf().name() << ", obn: " << obn << " has inf";
+        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", obn: " << obn << " has inf";
       } else if (check_code == 2) {
-        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << " obn: " << obn << " has nan";
+        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", obn: " << obn << " has nan";
       } else {
-        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << " obn: " << obn
+        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", obn: " << obn
                   << ", meet unexcepted check code: " << check_code;
       }
     }
