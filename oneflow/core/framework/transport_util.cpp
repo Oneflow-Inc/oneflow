@@ -33,7 +33,7 @@ namespace oneflow {
   bool printed = false;
   JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds,
                             [&printed] {
-                              LOG(ERROR) << blocking::GetStackInfo();
+                              if (!printed) { LOG(ERROR) << blocking::GetStackInfo(); }
                               printed = true;
                             },
                             3));

@@ -95,7 +95,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
         });
       },
       [&printed]() {
-        if (printed == false) {
+        if (!printed) {
           LOG(ERROR) << blocking::GetStackInfo();
           printed = true;
         }
