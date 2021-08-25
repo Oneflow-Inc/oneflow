@@ -312,7 +312,7 @@ cd -
 cmake --build . -j `nproc`
 """
     if skip_wheel or enter_bash:
-        pass
+        return
     else:
         bash_cmd += f"""
 cd {oneflow_python_dir}
