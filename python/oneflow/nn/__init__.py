@@ -107,6 +107,7 @@ from oneflow.nn.modules.pooling import (
     MaxPool1d,
     MaxPool2d,
     MaxPool3d,
+    LegacyMaxPool2d
 )
 from oneflow.nn.modules.sparse import Embedding
 from oneflow.nn.modules.upsampling import (
