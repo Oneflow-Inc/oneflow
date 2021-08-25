@@ -723,7 +723,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
             )
 
 
-@flow.unittest.skip_unless_1n2d()
+@flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestConsistentCast_NTo1(flow.unittest.TestCase):
     def test_consistent_to_consistent_bt1(test_case):

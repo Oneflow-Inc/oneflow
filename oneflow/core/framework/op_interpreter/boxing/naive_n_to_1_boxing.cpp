@@ -25,14 +25,6 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp() {
-  cfg::NdSbp broadcast_nd_sbp;
-  broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-  return SymbolOf(broadcast_nd_sbp);
-}
-
-auto* CachedGetBroadcastNdSbp = DECORATE(&GetBroadcastNdSbp, ThreadLocal);
-
 Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(in->nd_sbp()));
@@ -42,26 +34,6 @@ Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 }
 
 static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocal);
-
-Maybe<void> RawCheckNaivePTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
-  CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllPartialSumNdSbp(in->nd_sbp()));
-  CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));
-  CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kGPU);
-  return Maybe<void>::Ok();
-}
-
-static constexpr auto* CheckNaivePTo1 = DECORATE(&RawCheckNaivePTo1, ThreadLocal);
-
-Maybe<void> RawCheckNaiveSTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
-  CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllSplitNdSbp(in->nd_sbp(), 0));
-  CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));
-  CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kGPU);
-  return Maybe<void>::Ok();
-}
-
-static constexpr auto* CheckNaiveSTo1 = DECORATE(&RawCheckNaiveSTo1, ThreadLocal);
 
 }  // namespace
 
@@ -78,46 +50,6 @@ Maybe<one::Tensor> NaiveBTo1(const std::shared_ptr<one::Tensor>& tensor, Symbol<
                                                  tensor->dtype()));
 }
 
-Maybe<one::Tensor> NaivePTo1(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                             Symbol<PlacedNdSbp> out) {
-  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
-  const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
-
-  Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetBroadcastNdSbp());
-  const auto& broadcast_in_placed_nd_sbp =
-      JUST(PlacedNdSbp::New(broadcast_nd_sbp, in->placement()));
-  const auto& NcclPToBBoxingFunction =
-      *JUST(GetBoxingFunction("nccl-p-to-b", in, broadcast_in_placed_nd_sbp));
-  std::shared_ptr<one::Tensor> broadcast_input =
-      JUST(NcclPToBBoxingFunction(tensor, in, broadcast_in_placed_nd_sbp));
-
-  const auto& NaiveBTo1 = *JUST(GetBoxingFunction("naive-b-to-1", broadcast_in_placed_nd_sbp, out));
-  return JUST(NaiveBTo1(broadcast_input, broadcast_in_placed_nd_sbp, out));
-}
-
-Maybe<one::Tensor> NaiveSTo1(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                             Symbol<PlacedNdSbp> out) {
-  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
-  const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
-
-  Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetBroadcastNdSbp());
-  const auto& broadcast_in_placed_nd_sbp =
-      JUST(PlacedNdSbp::New(broadcast_nd_sbp, in->placement()));
-  const auto& NcclSToBBoxingFunction =
-      *JUST(GetBoxingFunction("nccl-s-to-b", in, broadcast_in_placed_nd_sbp));
-  std::shared_ptr<one::Tensor> broadcast_input =
-      JUST(NcclSToBBoxingFunction(tensor, in, broadcast_in_placed_nd_sbp));
-
-  const auto& NaiveBTo1 = *JUST(GetBoxingFunction("naive-b-to-1", broadcast_in_placed_nd_sbp, out));
-  return JUST(NaiveBTo1(broadcast_input, broadcast_in_placed_nd_sbp, out));
-}
-
 COMMAND(RegisterBoxingFunction("naive-b-to-1", CheckNaiveBTo1, &NaiveBTo1));
-COMMAND(RegisterBoxingFunction("naive-p-to-1", CheckNaivePTo1, &NaivePTo1));
-COMMAND(RegisterBoxingFunction("naive-s-to-1", CheckNaiveSTo1, &NaiveSTo1));
 
 }  // namespace oneflow
