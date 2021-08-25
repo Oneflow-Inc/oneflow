@@ -36,11 +36,11 @@ def async_allreduce(x, np_arr, test_case):
 class TestP2bOnGPU(flow.unittest.TestCase):
     def test_p2b(test_case):
         placement = flow.placement("cuda", {0: range(4)})
-        np_arr = np.array([1, 2])
+        np_arr = np.ones((3, 100, 100))
         x = flow.Tensor(np_arr * (flow.distributed.get_rank() + 1))
         x = x.to("cuda")
 
-        for i in range(1):
+        for i in range(1000):
             sync_allreduce(x, placement, np_arr, test_case)
             async_allreduce(x, np_arr, test_case)
 
