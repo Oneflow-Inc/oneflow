@@ -111,7 +111,7 @@ std::shared_ptr<user_op::OpKernelState> CreateIndexedSlicesUpdateOpKernelState(
 }
 
 template<DeviceType device_type, typename T, typename G>
-class SGDUpdateKernel final : public user_op::OpKernel {
+class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SGDUpdateKernel() = default;
   ~SGDUpdateKernel() override = default;
@@ -247,7 +247,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_INDEXED_SLICES_SGD_UPDATE_KERNEL, DEVI
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 template<DeviceType device_type, typename T, typename G>
-class MomentumUpdateKernel final : public user_op::OpKernel {
+class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   explicit MomentumUpdateKernel(user_op::KernelCreateContext* ctx) {
     learning_rate_val_ = ctx->Attr<float>("learning_rate_val");
@@ -562,7 +562,7 @@ class LambTmpBufferManager final {
 };
 
 template<DeviceType device_type, typename T, typename G>
-class LambUpdateKernel final : public user_op::OpKernel {
+class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   LambUpdateKernel() = default;
   ~LambUpdateKernel() = default;
@@ -633,7 +633,8 @@ REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type>
-class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel {
+class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel,
+                                                   public user_op::CudaGraphSupport {
  public:
   AdamBiasCorrectionLearningRateKernel() = default;
   ~AdamBiasCorrectionLearningRateKernel() override = default;
@@ -662,7 +663,7 @@ REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kGPU)
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename G>
-class RmsPropUpdateKernel final : public user_op::OpKernel {
+class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   RmsPropUpdateKernel() = default;
   ~RmsPropUpdateKernel() override = default;
@@ -763,7 +764,7 @@ class LarsTmpBufferManager final {
 };
 
 template<DeviceType device_type, typename T, typename G>
-class LarsUpdateKernel final : public user_op::OpKernel {
+class LarsUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   LarsUpdateKernel() = default;
   ~LarsUpdateKernel() override = default;
