@@ -89,6 +89,8 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(2)})
         sbp = (flow.sbp.split(0),)
         for i in range(1000):
+            if i % 100 == 0:
+                print(i)
             y = x.to_consistent(placement=placement, sbp=sbp)
             b = a.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
         test_case.assertEqual(y.sbp, sbp)

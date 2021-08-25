@@ -24,8 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 const static int kTransportTokenTypeBit = 8;
-const static int kTransportTokenThreadConsistentIdBit = 4;
-const static int kTransportTokenRankGroupLevelBit = 4;
+const static int kTransportTokenThreadConsistentIdBit = 8;
 
 const static int kDataTransportTokenThreadConsistentUIdBit = 8;
 
@@ -55,7 +54,7 @@ struct IsScalarType<TransportToken> final {
 
 class TransportToken final {
  public:
-  TransportToken() : TransportToken(kTransportTokenTypeInvalid, 0, 0) {}
+  TransportToken() : TransportToken(kTransportTokenTypeInvalid, 0) {}
   TransportToken(const TransportToken&) = default;
   TransportToken(TransportToken&) = default;
   ~TransportToken() = default;
@@ -67,7 +66,6 @@ class TransportToken final {
   }
 
   Maybe<void> CheckThreadConsistentId() const;
-  Maybe<void> CheckRankGroupLevel() const;
   bool operator==(const TransportToken& other) const {
     return static_cast<uint64_t>(*this) == static_cast<uint64_t>(other);
   }
@@ -75,7 +73,6 @@ class TransportToken final {
   // Getters
   TransportTokenType type() const { return static_cast<TransportTokenType>(type_); }
   int thread_consistent_id() const { return thread_consistent_id_; }
-  int rank_group_level() const { return rank_group_level_; }
   int seq_id() const { return seq_id_; }
 
   // Setters
@@ -90,19 +87,17 @@ class TransportToken final {
   }
 
  private:
-  TransportToken(TransportTokenType type, uint8_t thread_consistent_id, uint8_t rank_group_level)
-      : type_(static_cast<uint8_t>(type)),
-        thread_consistent_id_(thread_consistent_id),
-        rank_group_level_(rank_group_level),
-        src_rank_(0),
+  TransportToken(TransportTokenType type, uint8_t thread_consistent_id)
+      : src_rank_(0),
         dst_rank_(0),
+        type_(static_cast<uint8_t>(type)),
+        thread_consistent_id_(thread_consistent_id),
         seq_id_(0) {}
 
-  uint8_t type_;  // TransportTokenType
-  uint8_t thread_consistent_id_ : kTransportTokenThreadConsistentIdBit;
-  uint8_t rank_group_level_ : kTransportTokenRankGroupLevelBit;
   uint16_t src_rank_;
   uint16_t dst_rank_;
+  uint8_t type_;  // TransportTokenType
+  uint8_t thread_consistent_id_ : kTransportTokenThreadConsistentIdBit;
   uint16_t seq_id_;
 };
 static_assert(sizeof(TransportToken) == sizeof(uint64_t), "");

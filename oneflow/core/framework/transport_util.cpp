@@ -90,7 +90,6 @@ namespace {
 Maybe<std::shared_ptr<TransportToken>> RawGetTransportToken(const TransportToken& token) {
   CHECK_EQ_OR_RETURN(token.seq_id(), 0);
   JUST(token.CheckThreadConsistentId());
-  JUST(token.CheckRankGroupLevel());
   auto auto_token = std::make_shared<TransportToken>(token);
   return auto_token;
 }
