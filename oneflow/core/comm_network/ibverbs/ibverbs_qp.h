@@ -82,7 +82,6 @@ class MessagePool final {
           IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
       CHECK(mr);
       mr_buf_.push_front(mr);
-      addr_buf_.push_front(addr);
       for(size_t i = 0;  i < num_of_message_ ; i++){
           char * split_addr =addr + ActorMsgSize * i ; 
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
@@ -121,13 +120,6 @@ class MessagePool final {
     return message_buf_.size();
   }
   
-  void FreeAddr() {
-    while(addr_buf_.empty() == false) {
-      free(addr_buf_.front());
-      addr_buf_.pop_front();
-    }
-  }
-
   void FreeMr() {
     while(mr_buf_.empty() == false) {
         ibv_mr * mr = mr_buf_.front();
@@ -149,7 +141,6 @@ class MessagePool final {
     std::mutex message_buf_mutex_;
     std::deque<ActorMsgMR*> message_buf_;
     std::deque<ibv_mr*> mr_buf_;
-    std::deque<char*> addr_buf_;
 };
 
 struct IBVerbsCommNetRMADesc;

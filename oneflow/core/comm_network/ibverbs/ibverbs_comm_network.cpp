@@ -77,10 +77,8 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   poll_thread_.join();
   recv_msg_buf_->FreeActorMsgMR();
   recv_msg_buf_->FreeMr();
-  recv_msg_buf_->FreeAddr();
   send_msg_buf_->FreeActorMsgMR();
   send_msg_buf_->FreeMr();
-  send_msg_buf_->FreeAddr();
 
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
