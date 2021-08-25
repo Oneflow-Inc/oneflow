@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/kernel.h"
+#include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
@@ -42,7 +43,9 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
 
 void Kernel::Launch(const KernelCtx& ctx,
                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  Global<KernelObserver>::Get()->WillForward(ctx, this, BnInOp2Blob);
   Forward(ctx, BnInOp2Blob);
+  Global<KernelObserver>::Get()->DidForward(ctx, this, BnInOp2Blob);
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
@@ -93,14 +96,20 @@ void Kernel::Forward(const KernelCtx& ctx,
   }
   if (!blob_access_checker_disabled_) { SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob); }
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
+  Global<KernelObserver>::Get()->WillForwardDataContent(ctx, this, BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
+  Global<KernelObserver>::Get()->DidForwardDataContent(ctx, this, BnInOp2Blob);
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob));
   if (!blob_access_checker_disabled_) { SetOutputBlobConsumerAccessChecker(BnInOp2Blob); }
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_shape()) {
+    Global<KernelObserver>::Get()->WillForwardShape(ctx, this, BnInOp2Blob);
+    ForwardShape(ctx, BnInOp2Blob);
+    Global<KernelObserver>::Get()->DidForwardShape(ctx, this, BnInOp2Blob);
+  }
 }
 
 void Kernel::ForwardShape(const KernelCtx& ctx,
