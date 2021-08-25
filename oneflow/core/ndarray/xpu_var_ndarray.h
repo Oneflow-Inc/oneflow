@@ -38,7 +38,7 @@ class XpuVarNdarray final : public XpuNdarrayBase<XpuVarNdarray<T>, T> {
   XpuVarNdarray(const ShapeView& shape, T* ptr, int ndims_left_extend_to)
       : shape_(shape, ndims_left_extend_to), ptr_(ptr) {}
   ~XpuVarNdarray() = default;
-  OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const XpuVarNdarray&) = default;
+  ALWAYS_INLINE XpuVarNdarray(const XpuVarNdarray&) = default;
   OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const XpuShape& shape, T* ptr)
       : shape_(shape), ptr_(ptr) {}
 
