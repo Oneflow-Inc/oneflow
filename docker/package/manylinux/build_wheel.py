@@ -158,6 +158,15 @@ def get_common_docker_args(
     return f"-v {oneflow_src_dir}:{oneflow_src_dir}{inplace_attr} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir} --shm-size=8g"
 
 
+def get_python_dir(inplace=True, oneflow_src_dir=None, cache_dir=None):
+    if inplace:
+        assert oneflow_src_dir
+        return os.path.join(oneflow_src_dir, "python")
+    else:
+        assert cache_dir
+        return os.path.join(cache_dir, "python")
+
+
 def build_third_party(
     img_tag,
     oneflow_src_dir,
@@ -171,12 +180,13 @@ def build_third_party(
     inplace,
 ):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
+    oneflow_python_dir = get_python_dir(
+        inplace=inplace, oneflow_src_dir=oneflow_src_dir, cache_dir=cache_dir
+    )
     if inplace:
-        oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
         inplace_arg = ""
         oneflow_python_dir_cmd = ""
     else:
-        oneflow_python_dir = os.path.join(cache_dir, "python")
         inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
         oneflow_python_dir_cmd = f"""
         rm -rf {oneflow_python_dir}
@@ -250,11 +260,12 @@ def build_oneflow(
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
+    oneflow_python_dir = get_python_dir(
+        inplace=inplace, oneflow_src_dir=oneflow_src_dir, cache_dir=cache_dir
+    )
     if inplace:
-        oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
         inplace_arg = ""
     else:
-        oneflow_python_dir = os.path.join(cache_dir, "python")
         inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
     cmake_cmd = " ".join(
         [
