@@ -121,7 +121,11 @@ class SGD(Optimizer):
         new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
-            lr = param_group["lr"]
+            lr = (
+                param_group["initial_lr"]
+                if "initial_lr" in param_group
+                else param_group["lr"]
+            )
             beta = param_group["momentum"]
             l2 = param_group["weight_decay"]
 

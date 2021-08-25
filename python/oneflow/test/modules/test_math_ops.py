@@ -25,54 +25,6 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_variance_keepdim(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    of_out = flow.Tensor(np_arr, device=flow.device(device)).var(0, True)
-    np_out = np.var(np_arr, 0, keepdims=True)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-
-def _test_variance(test_case, shape, device):
-    np_arr = np.random.randn(*shape)
-    of_out = flow.var(flow.Tensor(np_arr, device=flow.device(device)), 1, False)
-    np_out = np.var(np_arr, 1, keepdims=False)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-
-def _test_variance_backward(test_case, shape, device):
-    np_arr = np.array(
-        [
-            [
-                [-0.436214, -1.11672411, 0.78394664, 2.0621712],
-                [0.7716703, -1.35367316, -0.40694879, -1.72392356],
-                [-1.08482436, -0.20731248, 1.39633697, 0.32614333],
-            ],
-            [
-                [-1.42467297, -1.78418015, 0.17861511, 0.12065858],
-                [2.03621124, -0.93674042, 0.1943963, 1.98559192],
-                [-0.00436223, 0.37788105, 0.47820872, 0.15467583],
-            ],
-        ]
-    )
-    x = flow.Tensor(np_arr, requires_grad=True, device=flow.device(device))
-    y = flow.var(x, False)
-    z = y.sum()
-    z.backward()
-    np_grad = 2 * (np_arr - np_arr.mean()) / np_arr.size
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
-
-
-@flow.unittest.skip_unless_1n1d()
-class TestVariance(flow.unittest.TestCase):
-    def test_variance(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_variance, _test_variance_keepdim]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestSinh(flow.unittest.TestCase):
     @autotest()
@@ -263,12 +215,32 @@ class TestSquare(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
     @autotest()
-    def test_flow_pow_with_random_data(test_case):
+    def test_pow_scalar_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         y = random().to(float)
-        z = torch.pow(x, y)
-        return z
+        return torch.pow(x, y)
+
+    @autotest()
+    def test_pow_elementwise_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        y = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        return torch.pow(x, y)
+
+    @autotest()
+    def test_pow_broadcast_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        y = random_pytorch_tensor(ndim=2, dim1=1).to(device)
+        return torch.pow(x, y)
+
+    @autotest()
+    def test_pow_broadcast_with_random_data_reverse(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim1=1).to(device)
+        y = random_pytorch_tensor(ndim=2, dim1=2).to(device)
+        return torch.pow(x, y)
 
 
 @flow.unittest.skip_unless_1n1d()

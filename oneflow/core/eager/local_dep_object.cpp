@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/decorator.h"
@@ -68,6 +68,22 @@ Maybe<LocalDepObject*> GetLocalDepObject(Symbol<Device> device) {
   size_t pool_size = local_dep_object_pool->size();
   static thread_local int64_t index = 0;
   return local_dep_object_pool->at(index++ % pool_size).Mutable();
+}
+
+Maybe<LocalDepObject*> FindOrCreateComputeLocalDepObject(const Device& device) {
+  static std::mutex mutex;
+  static HashMap<Device, ObjectMsgPtr<LocalDepObject>> device2dep_object;
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    const auto& iter = device2dep_object.find(device);
+    if (iter != device2dep_object.end()) { return iter->second.Mutable(); }
+  }
+  auto dep_object = ObjectMsgPtr<LocalDepObject>::New();
+  JUST(dep_object.Mutable()->Init(device));
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    return device2dep_object.emplace(device, dep_object).first->second.Mutable();
+  }
 }
 
 }  // namespace oneflow

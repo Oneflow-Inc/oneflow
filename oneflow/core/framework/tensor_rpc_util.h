@@ -28,7 +28,7 @@ namespace private_details {
 
 class CheckConsistencyAsyncTransportCtx;
 
-int64_t* MutThreadLocalDepth();
+int64_t* MutThreadLocalTensorMetaCheckDepth();
 
 Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
     const one::Tensor& tensor);
@@ -40,6 +40,10 @@ Maybe<void> RunCallback(const std::shared_ptr<one::Tensor>& tensor,
 
 }  // namespace private_details
 
+inline bool IsConsistentTensorMetaCheckDisabled() {
+  return *private_details::MutThreadLocalTensorMetaCheckDepth() > 1;
+}
+
 template<typename... Args>
 struct CheckConsistentTensorMeta;
 
@@ -49,7 +53,7 @@ struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args
   template<RetT (*func)(const std::shared_ptr<one::Tensor>&, Args...)>
   static RetT Call(const std::shared_ptr<one::Tensor>& tensor, Args... args) {
     std::shared_ptr<private_details::CheckConsistencyAsyncTransportCtx> ctx;
-    int64_t* depth = private_details::MutThreadLocalDepth();
+    int64_t* depth = private_details::MutThreadLocalTensorMetaCheckDepth();
     if (*depth == 0) { ctx = JUST(private_details::LaunchTensorMetaConsistencyCheck(*tensor)); }
     ++*depth;
     RetT ret = func(tensor, args...);
@@ -61,8 +65,12 @@ struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args
 };
 
 struct DisableCheckConsistentTensorMetaScope final {
-  DisableCheckConsistentTensorMetaScope() { ++*private_details::MutThreadLocalDepth(); }
-  ~DisableCheckConsistentTensorMetaScope() { --*private_details::MutThreadLocalDepth(); }
+  DisableCheckConsistentTensorMetaScope() {
+    ++*private_details::MutThreadLocalTensorMetaCheckDepth();
+  }
+  ~DisableCheckConsistentTensorMetaScope() {
+    --*private_details::MutThreadLocalTensorMetaCheckDepth();
+  }
 };
 
 static constexpr auto* WithConsistencyChecked =

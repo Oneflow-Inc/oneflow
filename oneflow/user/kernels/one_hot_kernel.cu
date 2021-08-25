@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -34,12 +35,13 @@ __global__ void OneHotEncodeGpu(int64_t elem_cnt, const int64_t depth, const T o
 }  // namespace
 
 template<typename T, typename K>
-class GpuOneHotKernel final : public user_op::OpKernel {
+class GpuOneHotKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   GpuOneHotKernel() = default;
   ~GpuOneHotKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

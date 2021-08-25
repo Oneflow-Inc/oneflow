@@ -13,26 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include <memory>
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/autograd/autograd_mode.h"
-
-namespace py = pybind11;
+#include "oneflow/core/actor/actor.h"
+#include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/job/runtime_job_descs.h"
 
 namespace oneflow {
 
-namespace autograd {
-
-ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
-  py::class_<NoGradGuard, std::shared_ptr<NoGradGuard>>(m, "no_grad")
-      .def(py::init([]() { return std::make_shared<NoGradGuard>(); }))
-      .def("__enter__", [](const NoGradGuard& no_grad_obj) {})
-      .def("__exit__", [](const NoGradGuard& no_grad_obj, const py::object& type,
-                          const py::object& value, const py::object& traceback) {});
+std::unique_ptr<ActorBase> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+  ActorBase* rptr = NewObj<int32_t, ActorBase>(task_proto.task_type());
+  const auto& job_descs = *Global<RuntimeJobDescs>::Get();
+  rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
+  return std::unique_ptr<ActorBase>(rptr);
 }
-
-}  // namespace autograd
 
 }  // namespace oneflow

@@ -252,9 +252,6 @@ Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& tr
 Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha);
 Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::string& name);
 
-Maybe<one::UserOpExpr> DropoutGradOp(const float& scale);
-Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name);
-
 Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
                                     const std::string& padding,
                                     const std::vector<int32_t>& padding_before,

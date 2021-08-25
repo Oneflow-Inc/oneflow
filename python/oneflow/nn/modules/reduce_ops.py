@@ -161,6 +161,45 @@ def _max(input, dim=None, keepdim=False):
     return Max(dim, keepdim)(input)
 
 
+def prod_op(input, dim=None, keepdim=False):
+    r"""Computes the product of row of elements in a tensor in the given axis.
+    
+    note: `if the dim is None, it will return a tensor with only one element whose value is the product of all elements of input.`
+
+    Args:
+        input (Tensor): the source tensor
+        dim (int): the axis along which to prod
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> flow.prod(input)
+        tensor(720., dtype=oneflow.float32)
+        >>> flow.prod(input, dim=0)
+        tensor([ 4., 10., 18.], dtype=oneflow.float32)
+        >>> flow.prod(input, dim=1)
+        tensor([  6., 120.], dtype=oneflow.float32)
+
+    """
+    axis_checked = _check_axis(dim, input.shape)
+    if len(axis_checked) == 0:
+        return input
+    return flow.F.reduce_prod(input, axis_checked, keepdim)
+
+
+@register_tensor_op("prod")
+def prod_tensor_op(input, dim=None, keepdim=False):
+    """
+    input.prod(dim, index) -> Tensor
+    See :func:`oneflow.prod`
+    """
+
+    return prod_op(input, dim, keepdim)
+
+
 if __name__ == "__main__":
     import doctest
 

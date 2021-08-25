@@ -25,8 +25,8 @@ def bernoulli(input, *, generator=None, out=None):
 
     Args:
         input(Tensor) - the input tensor of probability values for the Bernoulli distribution
-        generator: (optional) – a pseudorandom number generator for sampling
-        out (Tensor, optional) – the output tensor.
+        generator: (optional): a pseudorandom number generator for sampling
+        out (Tensor, optional): the output tensor.
 
     Shape:
         - Input: :math:`(*)`. Input can be of any shape
@@ -140,7 +140,7 @@ def rand_op(
         out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         layout (optional): The desired layout of returned Tensor.
-        generator (flow.Generator, optional) – a pseudorandom number generator for sampling
+        generator (flow.Generator, optional): a pseudorandom number generator for sampling
         device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
         placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
@@ -229,7 +229,7 @@ def randn_op(
         out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         layout (optional): The desired layout of returned Tensor.
-        generator (flow.Generator, optional) – a pseudorandom number generator for sampling
+        generator (flow.Generator, optional): a pseudorandom number generator for sampling
         device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
         placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/sbp_parallel.h"
 
@@ -244,8 +245,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   if (transposed_input->is_consistent()) {
     const auto& placement = JUST(transposed_input->parallel_desc());
     const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
-    packed_indices = JUST(ToConsistent(packed_indices, placement, {broadcast_sbp},
-                                       /*identity_grad=*/false, /*grad_sbp_parallels=*/{}));
+    packed_indices =
+        JUST(ToConsistent(packed_indices, placement, {broadcast_sbp}, GetNoneSbpList()));
   }
   Symbol<Device> device = JUST(transposed_input->device());
   if (JUST(packed_indices->device()) != device) {

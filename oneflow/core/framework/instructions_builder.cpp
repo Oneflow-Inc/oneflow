@@ -36,7 +36,7 @@ limitations under the License.
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/vm/soft_sync_stream_phy_instr_operand.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
-#include "oneflow/core/framework/local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
