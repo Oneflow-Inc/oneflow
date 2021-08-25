@@ -467,6 +467,26 @@
                                    Float m1, Float m2, Float m3, Int64 depth)"
   bind_python: False
 
+- name: "affine_grid"
+  signature:
+    "Tensor AffineGrid(Tensor theta, *, Shape size, Bool align_corners)"
+  bind_python: True
+
+- name: "affine_grid_grad"
+  signature:
+    "Tensor AffineGridGrad(Tensor dgrid, *, Shape size, Bool align_corners)"
+  bind_python: False
+
+- name: "grid_sample"
+  signature:
+    "Tensor GridSample(Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners)"
+  bind_python: True
+
+- name: "grid_sample_grad"
+  signature:
+    "TensorTuple GridSampleGrad(Tensor doutput, Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners)"
+  bind_python: False
+
 - name: "where"
   signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
   bind_python: False
