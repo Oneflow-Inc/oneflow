@@ -22,7 +22,8 @@ def grid_sample(
     grid,
     mode: str = "bilinear",
     padding_mode: str = "zeros",
-    align_corners: bool = False):
+    align_corners: bool = False,
+):
     """The interface is consistent with PyTorch.    
     The documentation is referenced from: 
     https://pytorch.org/docs/stable/generated/torch.nn.functional.grid_sample.html?highlight=grid_sample#torch.nn.functional.grid_sample

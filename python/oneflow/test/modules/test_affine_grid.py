@@ -27,26 +27,66 @@ import oneflow.unittest
 
 class TestAffineGrid(flow.unittest.TestCase):
     def test_affine_grid_2d(test_case):
-        input = flow.Tensor(np.arange(1., 7).reshape((1, 2, 3)), dtype=flow.float32)
-        output = flow.nn.functional.affine_grid(input, flow.Size([1, 1, 2, 2]), align_corners=True)
-        groundtruth = np.array([[[[0., -3.], [2., 5.]], [[4., 7.], [6., 15.]]]])
-        test_case.assertTrue(np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8))
+        input = flow.Tensor(np.arange(1.0, 7).reshape((1, 2, 3)), dtype=flow.float32)
+        output = flow.nn.functional.affine_grid(
+            input, flow.Size([1, 1, 2, 2]), align_corners=True
+        )
+        groundtruth = np.array([[[[0.0, -3.0], [2.0, 5.0]], [[4.0, 7.0], [6.0, 15.0]]]])
+        test_case.assertTrue(
+            np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8)
+        )
 
-        output = flow.nn.functional.affine_grid(input, flow.Size([1, 1, 2, 2]), align_corners=False)
+        output = flow.nn.functional.affine_grid(
+            input, flow.Size([1, 1, 2, 2]), align_corners=False
+        )
         groundtruth = np.array([[[[1.5, 1.5], [2.5, 5.5]], [[3.5, 6.5], [4.5, 10.5]]]])
-        test_case.assertTrue(np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8))
+        test_case.assertTrue(
+            np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8)
+        )
 
     def test_affine_grid_3d(test_case):
-        input = flow.Tensor(np.arange(1., 13).reshape((1, 3, 4)), dtype=flow.float32)
-        output = flow.nn.functional.affine_grid(input, flow.Size([1, 1, 2, 2, 2]), align_corners=True)
-        groundtruth = np.array([[[[[-2., -10., -18.], [0., 0., 0.]], [[2., 2., 2.], [4., 12., 20.]]],
-              [[[4., 4., 4.], [6., 14., 22.]], [[8., 16., 24.], [10., 26., 42.]]]]])
-        test_case.assertTrue(np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8))
+        input = flow.Tensor(np.arange(1.0, 13).reshape((1, 3, 4)), dtype=flow.float32)
+        output = flow.nn.functional.affine_grid(
+            input, flow.Size([1, 1, 2, 2, 2]), align_corners=True
+        )
+        groundtruth = np.array(
+            [
+                [
+                    [
+                        [[-2.0, -10.0, -18.0], [0.0, 0.0, 0.0]],
+                        [[2.0, 2.0, 2.0], [4.0, 12.0, 20.0]],
+                    ],
+                    [
+                        [[4.0, 4.0, 4.0], [6.0, 14.0, 22.0]],
+                        [[8.0, 16.0, 24.0], [10.0, 26.0, 42.0]],
+                    ],
+                ]
+            ]
+        )
+        test_case.assertTrue(
+            np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8)
+        )
 
-        output = flow.nn.functional.affine_grid(input, flow.Size([1, 1, 2, 2, 2]), align_corners=False)
-        groundtruth = np.array([[[[[1., -1., -3.], [2., 4., 6.]], [[3., 5., 7.], [4., 10., 16.]]],
-              [[[4., 6., 8.], [5., 11., 17.]], [[6., 12., 18.], [7., 17., 27.]]]]])
-        test_case.assertTrue(np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8))
+        output = flow.nn.functional.affine_grid(
+            input, flow.Size([1, 1, 2, 2, 2]), align_corners=False
+        )
+        groundtruth = np.array(
+            [
+                [
+                    [
+                        [[1.0, -1.0, -3.0], [2.0, 4.0, 6.0]],
+                        [[3.0, 5.0, 7.0], [4.0, 10.0, 16.0]],
+                    ],
+                    [
+                        [[4.0, 6.0, 8.0], [5.0, 11.0, 17.0]],
+                        [[6.0, 12.0, 18.0], [7.0, 17.0, 27.0]],
+                    ],
+                ]
+            ]
+        )
+        test_case.assertTrue(
+            np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8)
+        )
 
     @autotest()
     def test_flow_affine_grid_2d_with_random_data(test_case):
@@ -57,7 +97,9 @@ class TestAffineGrid(flow.unittest.TestCase):
         device = random_device()
         align_corners = choice([True, False])
         theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
-        output = torch.nn.functional.affine_grid(theta, (N, C, H, W), align_corners=align_corners).to(device)
+        output = torch.nn.functional.affine_grid(
+            theta, (N, C, H, W), align_corners=align_corners
+        ).to(device)
         return output
 
     @autotest(rtol=1e-03, atol=1e-03)
@@ -70,7 +112,9 @@ class TestAffineGrid(flow.unittest.TestCase):
         device = random_device()
         align_corners = choice([True, False])
         theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=3, dim2=4).to(device)
-        output = torch.nn.functional.affine_grid(theta, (N, C, D, H, W), align_corners=align_corners).to(device)
+        output = torch.nn.functional.affine_grid(
+            theta, (N, C, D, H, W), align_corners=align_corners
+        ).to(device)
         return output
 
 
