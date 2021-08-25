@@ -45,6 +45,7 @@ class GpuScalarPowKernel final : public OpKernel {
   ~GpuScalarPowKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -76,6 +77,7 @@ class GpuScalarPowGradKernel final : public OpKernel {
   ~GpuScalarPowGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);

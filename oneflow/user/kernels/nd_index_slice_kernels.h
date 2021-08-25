@@ -27,6 +27,7 @@ class GatherNdKernel final : public user_op::OpKernel {
   ~GatherNdKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -38,6 +39,7 @@ class ScatterNdKernel final : public user_op::OpKernel {
   ~ScatterNdKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -49,6 +51,7 @@ class TensorScatterNdUpdateKernel final : public user_op::OpKernel {
   ~TensorScatterNdUpdateKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -60,6 +63,7 @@ class TensorScatterNdAddKernel final : public user_op::OpKernel {
   ~TensorScatterNdAddKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

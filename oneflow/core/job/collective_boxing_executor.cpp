@@ -87,7 +87,7 @@ void CollectiveBoxingExecutorBackend::GroupRequests(
 
 class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBackend {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingExecutorBackend)
+  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingExecutorBackend);
   NcclCollectiveBoxingExecutorBackend();
   ~NcclCollectiveBoxingExecutorBackend() override;
 
