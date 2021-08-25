@@ -378,31 +378,6 @@ class TestSeluModule(flow.unittest.TestCase):
         return y
 
 
-def _np_softsign(x):
-    return x / (1.0 + np.abs(x))
-
-
-def _np_softsign_grad(x):
-    return 1.0 / (np.square(1.0 + np.abs(x)))
-
-
-def _test_softsign_impl(test_case, shape, device):
-    m = flow.nn.Softsign()
-    np_input = np.random.randn(*shape)
-    np_out = _np_softsign(np_input)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = m(of_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-3, 1e-3))
-
-    of_out = of_out.sum()
-    of_out.backward()
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), _np_softsign_grad(np_input), 1e-3, 1e-3)
-    )
-
-
 @unittest.skip("still have error in ci test")
 class TestSoftsignModule(flow.unittest.TestCase):
     @autotest(n=5)
@@ -414,15 +389,6 @@ class TestSoftsignModule(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         y = m(x)
         return y
-
-    def test_softsign(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_softsign_impl]
-        arg_dict["shape"] = [(3, 3), (2, 3, 3)]
-
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
