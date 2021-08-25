@@ -18,6 +18,21 @@ macro(write_file_if_different file_path content)
   endif()
 endmacro()
 
+macro(copy_all_files_in_dir source_dir dest_dir target)
+  find_program(rsync rsync)
+  if (rsync)
+    add_custom_command(TARGET ${target} POST_BUILD
+      COMMAND ${rsync}
+      # NOTE: the trailing slash of source_dir is needed.
+      # Reference: https://stackoverflow.com/a/56627246
+      ARGS -a --inplace ${source_dir}/ ${dest_dir})
+  else()
+    add_custom_command(TARGET ${target} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory
+      ${source_dir} ${dest_dir})
+  endif()
+endmacro()
+
 set(_COUNTER 0)
 macro(copy_files file_paths source_dir dest_dir target)
   find_program(rsync rsync)

@@ -141,12 +141,10 @@ del hook
 del ExitHook
 del atexit
 del oneflow
-import oneflow.framework.docstr as docstr
-from oneflow.framework.docstr.utils import register_docstr
 
-register_docstr()
-del register_docstr
-del docstr
+import oneflow.F
+import oneflow.framework.docstr as docstr
+
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 import oneflow.nn.modules.acosh
@@ -325,6 +323,7 @@ from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.transpose import transpose_op as transpose
+from oneflow.nn.modules.tril import tril_op as tril
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where

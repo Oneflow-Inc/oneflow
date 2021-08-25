@@ -46,6 +46,7 @@ class MathBinaryElementwiseGpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -67,6 +68,7 @@ class MathBinaryElementwiseXGradGpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseXGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -90,6 +92,7 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseYGradGpuKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -137,6 +140,7 @@ class MathBinaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -161,6 +165,7 @@ class MathBinaryElementwiseXGradGpuHalfKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseXGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -188,6 +193,7 @@ class MathBinaryElementwiseYGradGpuHalfKernel final : public user_op::OpKernel {
   ~MathBinaryElementwiseYGradGpuHalfKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
