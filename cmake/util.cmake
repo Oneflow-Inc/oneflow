@@ -29,8 +29,7 @@ macro(copy_all_files_in_dir source_dir dest_dir target)
   else()
     add_custom_command(TARGET ${target} POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_directory
-      ${source_dir}
-      ${dest_dir})
+      ${source_dir} ${dest_dir})
   endif()
 endmacro()
 
