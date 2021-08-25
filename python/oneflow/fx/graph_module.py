@@ -271,4 +271,166 @@ class {module_name}(flow.nn.Module):
                             f"saved as pickled files instead: {blobified_modules}")
 
     
+    def add_submodule(self, target: str, m: flow.nn.Module) -> bool:
+        """
+        Adds the given submodule to ``self``.
 
+        This installs empty Modules where none exist yet if they are
+        subpaths of ``target``.
+
+        Args:
+            target: The fully-qualified string name of the new submodule
+                (See example in ``nn.Module.get_submodule`` for how to
+                specify a fully-qualified string.)
+            m: The submodule itself; the actual object we want to
+                install in the current Module
+
+        Return:
+            bool: Whether or not the submodule could be inserted. For
+                this method to return True, each object in the chain
+                denoted by ``target`` must either a) not exist yet,
+                or b) reference an ``nn.Module`` (not a parameter or
+                other attribute)
+
+        """
+        *prefix, field = target.split('.')
+        mod: flow.nn.Module = self
+
+        for item in prefix:
+
+            submod = getattr(mod, item, None)
+
+            if submod is None:
+                submod = flow.nn.Module()
+                setattr(mod, item, submod)
+
+            if not isinstance(submod, flow.nn.Module):
+                return False
+
+            mod = submod
+
+        mod.add_module(field, m)
+        return True
+    
+    def delete_all_unused_submodules(self) -> None:
+        """
+        Deletes all unused submodules from ``self``.
+
+        A Module is considered "used" if any one of the following is
+        true:
+        1. It has children that are used
+        2. Its forward is called directly via a ``call_module`` node
+        3. It has a non-Module attribute that is used from a
+        ``get_attr`` node
+
+        This method can be called to clean up an ``nn.Module`` without
+        manually calling ``delete_submodule`` on each unused submodule.
+        """
+        used: List[str] = []
+
+        for node in self.graph.nodes:
+
+            if node.op == "call_module" or node.op == "get_attr":
+
+                # A list of strings representing the different parts
+                # of the path. For exmaple, `foo.bar.baz` gives us
+                # ["foo", "bar", "baz"]
+                fullpath = node.target.split(".")
+
+                # If we're looking at multiple parts of a path, join
+                # join them with a dot. Otherwise, return that single
+                # element without doing anything to it.
+                def join_fn(x: str, y: str) -> str:
+                    return '.'.join([x, y] if y else [x])
+
+                # Progressively collect all the names of intermediate
+                # modules. For example, if we have the target
+                # `foo.bar.baz`, we'll add `foo`, `foo.bar`, and
+                # `foo.bar.baz` to the list.
+                for path in itertools.accumulate(fullpath, join_fn):
+                    used.append(path)
+
+        to_delete = [name for name, _ in self.named_modules()
+                     if name not in used]
+
+        for name in to_delete:
+            self.delete_submodule(name)
+
+    @property
+    def code(self) -> str:
+        """
+        Return the Python code generated from the ``Graph`` underlying this
+        ``GraphModule``.
+        """
+        if not hasattr(self, '_code'):
+            raise RuntimeError('Code has not been generated! Please report a bug to OneFlow')
+        return self._code
+    
+    def recompile(self) -> PythonCode:
+        """
+        Recompile this GraphModule from its ``graph`` attribute. This should be
+        called after editing the contained ``graph``, otherwise the generated
+        code of this ``GraphModule`` will be out of date.
+        """
+        if self._graph._pytree_info is not None:
+            self._in_spec = self._graph._pytree_info.in_spec
+            self._out_spec = self._graph._pytree_info.out_spec
+        python_code = self._graph.python_code(root_module='self')
+        self._code = python_code.src
+
+        cls = type(self)
+        cls.forward = _forward_from_src(self._code, python_code.globals)
+
+        # Determine whether this class explicitly defines a __call__ implementation
+        # to wrap. If it does, save it in order to have wrapped_call invoke it.
+        # If it does not, wrapped_call can use a dynamic call to super() instead.
+        # In most cases, super().__call__ should be torch.nn.Module.__call__.
+        # We do not want to hold a reference to Module.__call__ here; doing so will
+        # bypass patching of torch.nn.Module.__call__ done while symbolic tracing.
+        cls_call = cls.__call__ if "__call__" in vars(cls) else None
+
+        # Previously, if an error occurred when valid
+        # symbolically-traced code was run with an invalid input, the
+        # user would see the source of the error as coming from
+        # `File "<eval_with_key_N">`, where N is some number. We use
+        # this function to generate a more informative error message. We
+        # return the traceback itself, a message explaining that the
+        # error occurred in a traced Module's generated forward
+        # function, and five lines of context surrounding the faulty
+        # line
+        def generate_error_message(frame_summary: traceback.FrameSummary) -> str:
+            # auxiliary variables (for readability)
+            err_lineno = frame_summary.lineno
+            err_line_len = len(frame_summary.line)
+            all_src_lines = linecache.getlines(frame_summary.filename)
+
+            # constituent substrings of the error message
+            tb_repr = traceback.format_exc()
+            custom_msg = ("Call using an FX-traced Module, "
+                          f"line {err_lineno} of the traced Module's "
+                          "generated forward function:")
+            before_err = "".join(all_src_lines[err_lineno - 2 : err_lineno])
+            marker = "~" * err_line_len + "~~~ <--- HERE"
+            err_and_after_err = "\n".join(all_src_lines[err_lineno : err_lineno + 2])
+
+            # joined message
+            return "\n".join([tb_repr, custom_msg, before_err, marker, err_and_after_err])
+
+        def wrapped_call(self, *args, **kwargs):
+            try:
+                if cls_call is not None:
+                    return cls_call(self, *args, **kwargs)
+                else:
+                    return super(type(self), self).__call__(*args, **kwargs)
+            except Exception as e:
+                assert e.__traceback__
+                topmost_framesummary: traceback.FrameSummary = \
+                    traceback.StackSummary.extract(traceback.walk_tb(e.__traceback__))[-1]  # type: ignore[arg-type]
+                if "eval_with_key" in topmost_framesummary.filename:
+                    print(generate_error_message(topmost_framesummary),
+                          file=sys.stderr)
+                raise e.with_traceback(None)
+
+        cls.__call__ = wrapped_call
+
+        return python_code
