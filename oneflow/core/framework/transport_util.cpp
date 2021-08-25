@@ -24,12 +24,15 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/common/thread_local_callback.h"
 
 namespace oneflow {
 
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
-  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds));
+  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds,
+                            [] { LOG(ERROR) << blocking::GetStackInfo(); },
+                            TransportUtil::BlockingWarningIntervalSeconds()));
   return Maybe<void>::Ok();
 }
 
@@ -90,7 +93,6 @@ namespace {
 Maybe<std::shared_ptr<TransportToken>> RawGetTransportToken(const TransportToken& token) {
   CHECK_EQ_OR_RETURN(token.seq_id(), 0);
   JUST(token.CheckThreadConsistentId());
-  JUST(token.CheckRankGroupLevel());
   auto auto_token = std::make_shared<TransportToken>(token);
   return auto_token;
 }

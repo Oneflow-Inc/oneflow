@@ -52,6 +52,23 @@ endif()
 
 project(oneflow C CXX)
 
+set(COMPILER_VERSION_ERROR_MSG "At least gcc 7, clang 5 or Apple clang 12 is supported.")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 7)
+    message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})
+  endif()
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 5)
+    message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})
+  endif()
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+  if("${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12)
+    message(FATAL_ERROR ${COMPILER_VERSION_ERROR_MSG})
+  endif()
+else()
+  message(WARNING "Unknown compiler \"${CMAKE_CXX_COMPILER_ID}\".")
+endif()
+
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
 get_filename_component(real_src_dir "${CMAKE_SOURCE_DIR}" REALPATH)
