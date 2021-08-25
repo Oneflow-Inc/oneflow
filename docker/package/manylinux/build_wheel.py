@@ -294,6 +294,7 @@ export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
         bash_cmd += "\nbash"
     else:
         bash_cmd += f"""
+git clean -nXd -e \!python/oneflow/include -e \!python/oneflow/include/**
 {cmake_cmd}
 cmake --build . -j `nproc`
 """
