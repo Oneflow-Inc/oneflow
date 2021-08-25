@@ -30,17 +30,18 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckAsymBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(in->nd_sbp()));
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(in->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
   CHECK_OR_RETURN(out->placement()->Bigger(*in->placement()))
       << "The output placement must contain the input placement";
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckAsymBroadcast = DECORATE(&RawCheckAsymBroadcast, ThreadLocal);
+static constexpr auto* CheckAsymmetricBroadcast =
+    DECORATE(&RawCheckAsymmetricBroadcast, ThreadLocal);
 
 Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
                                 Symbol<ParallelDesc> dst_parallel_desc) {
@@ -77,8 +78,8 @@ static constexpr auto* CachedEagerNcclBroadcast = DECORATE(&EagerNcclBroadcast, 
 
 }  // namespace
 
-Maybe<one::Tensor> AsymBroadcast(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                                 Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tensor,
+                                       Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   const auto& in_placement = in->placement();
   const auto& out_placement = out->placement();
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
@@ -110,6 +111,7 @@ Maybe<one::Tensor> AsymBroadcast(const std::shared_ptr<one::Tensor>& tensor, Sym
                                             *local_tensor->shape(), local_tensor->dtype());
 }
 
-COMMAND(RegisterBoxingFunction("asymmetric-broadcast", CheckAsymBroadcast, &AsymBroadcast));
+COMMAND(RegisterBoxingFunction("asymmetric-broadcast", CheckAsymmetricBroadcast,
+                               &AsymmetricBroadcast));
 
 }  // namespace oneflow
