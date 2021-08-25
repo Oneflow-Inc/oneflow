@@ -397,7 +397,7 @@ class RandPerm(Module):
             self.placement,
             self.sbp,
         ) = _rand_op_common_process((), device, generator, placement, sbp)
-        self.requires_grad=requires_grad;
+        self.requires_grad = requires_grad
 
     def forward(self, out=None):
         if self.placement is not None:
