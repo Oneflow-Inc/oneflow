@@ -111,7 +111,7 @@ template<typename T>
 struct TransposeUtil final {
 #define MAKE_TRANSPOSE_SWITCH_ENTRY(func_name, NDIMS) func_name<NDIMS, T>
   DEFINE_STATIC_SWITCH_FUNC(void, TransposeImpl, MAKE_TRANSPOSE_SWITCH_ENTRY,
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
 };
 
 }  // namespace
