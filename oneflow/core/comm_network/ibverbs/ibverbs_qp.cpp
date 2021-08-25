@@ -38,8 +38,8 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq,
-                     MessagePool * recv_msg_buf,
-                     MessagePool * send_msg_buf) {
+                     std::shared_ptr<MessagePool> recv_msg_buf,
+                     std::shared_ptr<MessagePool> send_msg_buf) {
   // ctx_, pd_
   ctx_ = ctx;
   pd_ = pd ;
@@ -66,9 +66,10 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK(qp_);
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
-  recv_msg_buf_.reset(recv_msg_buf); 
-  send_msg_buf_.reset(send_msg_buf); 
-  
+ // recv_msg_buf_.reset(recv_msg_buf); 
+ // send_msg_buf_.reset(send_msg_buf); 
+  recv_msg_buf_ = recv_msg_buf;
+  send_msg_buf_ = send_msg_buf;
 }
 
 IBVerbsQP::~IBVerbsQP() {
