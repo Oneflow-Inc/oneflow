@@ -23,9 +23,7 @@ namespace {
 
 constexpr int kBlockSize = cuda::elementwise::kBlockSize;
 
-const int GetMinThreadNum(const int64_t elem_num) {
-  return std::min<int64_t>(elem_num, kBlockSize);
-}
+int GetMinThreadNum(const int64_t elem_num) { return std::min<int64_t>(elem_num, kBlockSize); }
 
 int GetNumBlocks(int64_t elem_cnt) {
   int num_blocks = 0;
