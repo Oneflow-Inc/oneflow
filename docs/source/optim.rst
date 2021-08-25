@@ -15,4 +15,5 @@ Optimizers
     :members: CosineDecayLR,
             CosineAnnealingLR,
             LambdaLR,
-            StepLR
+            StepLR,
+            MultiStepLR
