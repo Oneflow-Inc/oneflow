@@ -651,6 +651,13 @@ class TestTensor(flow.unittest.TestCase):
         y = x.chunk(chunks=random(low=1, high=5).to(int), dim=dim)
         z = torch.cat(y, dim=dim)
         return z
+    
+    @autotest()
+    def test_tensor_reciprocal_list_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)).to(device)
+        y = x.reciprocal()
+        return y
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_slice(test_case):
