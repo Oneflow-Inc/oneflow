@@ -116,6 +116,7 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
@@ -171,6 +172,7 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
