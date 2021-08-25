@@ -338,9 +338,9 @@ class CastFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ClipFunctor {
+class ClampFunctor {
  public:
-  ClipFunctor() {
+  ClampFunctor() {
     clip_op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar").Input("x").Output("y").Build());
     clip_min_op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar_min").Input("x").Output("y").Build());
     clip_max_op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar_max").Input("x").Output("y").Build());
@@ -392,9 +392,9 @@ class ClipFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
-class ClipGradFunctor {
+class ClampGradFunctor {
  public:
-  ClipGradFunctor() {
+  ClampGradFunctor() {
     clip_op_ = CHECK_JUST(
         one::OpBuilder("clip_by_scalar_grad").Input("dy").Input("x").Output("dx").Build());
     clip_min_op_ = CHECK_JUST(
@@ -665,8 +665,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentArangeFunctor>("ConsistentArange");
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::CastFunctor>("Cast");
-  m.add_functor<impl::ClipFunctor>("Clip");
-  m.add_functor<impl::ClipGradFunctor>("ClipGrad");
+  m.add_functor<impl::ClampFunctor>("Clamp");
+  m.add_functor<impl::ClampGradFunctor>("ClampGrad");
   m.add_functor<impl::SelectFirstFunctor>("SelectFirst");
   m.add_functor<impl::MinimumFunctor>("Minimum");
   m.add_functor<impl::MaximumFunctor>("Maximum");

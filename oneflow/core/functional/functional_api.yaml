@@ -833,12 +833,12 @@
   
 - name: "clamp"
   signature: [
-    "Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clip",
+    "Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp",
   ]
   bind_python: true
 
 - name: "clamp_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Scalar min=None, Scalar max=None) => ClipGrad"
+  signature: "Tensor (Tensor dy, Tensor x, Scalar min=None, Scalar max=None) => ClampGrad"
   bind_python: False
 
 - name: "dropout"
