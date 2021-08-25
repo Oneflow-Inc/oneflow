@@ -26,24 +26,12 @@ namespace oneflow {
   int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
   CHECK_GE_OR_RETURN(thread_consistent_id, 0);
   CHECK_LT_OR_RETURN(thread_consistent_id, MaxNumberOfThreadConsistentUId());
-  int32_t rank_group_level = 0;
-  if (type != kTransportTokenTypeData) { rank_group_level = JUST(GetCurrentRankGroupLevel()); }
-  static const int kTransportTokenRankGroupLevelLimit = (1 << kTransportTokenRankGroupLevelBit);
-  CHECK_GE_OR_RETURN(rank_group_level, 0);
-  CHECK_LT_OR_RETURN(rank_group_level, kTransportTokenRankGroupLevelLimit);
-  return TransportToken(type, thread_consistent_id, rank_group_level);
+  return TransportToken(type, thread_consistent_id);
 }
 
 Maybe<void> TransportToken::CheckThreadConsistentId() const {
   int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
   CHECK_EQ_OR_RETURN(thread_consistent_id, this->thread_consistent_id());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> TransportToken::CheckRankGroupLevel() const {
-  int32_t rank_group_level = 0;
-  if (type() != kTransportTokenTypeData) { rank_group_level = JUST(GetCurrentRankGroupLevel()); }
-  CHECK_EQ_OR_RETURN(rank_group_level, this->rank_group_level());
   return Maybe<void>::Ok();
 }
 
