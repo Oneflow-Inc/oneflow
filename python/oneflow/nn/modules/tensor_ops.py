@@ -216,7 +216,7 @@ def item_op(input):
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> x = torch.tensor([1.0])
+        >>> x = flow.tensor([1.0])
         >>> x.item()
         1.0
     """
