@@ -27,13 +27,13 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestBatchNormModule(flow.unittest.TestCase):
-    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    @autotest(n=40, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_batchnorm1d_module_with_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
-        m = torch.nn.BatchNorm1d(num_features=channel, track_running_stats=False).to(
-            device
-        )
+        m = torch.nn.BatchNorm1d(
+            num_features=channel, track_running_stats=random().to(bool)
+        ).to(device)
         m.train(random())
         x = random_pytorch_tensor(
             ndim=3, dim0=random(1, 4), dim1=channel, requires_grad=True
@@ -41,13 +41,13 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    @autotest(n=40, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_batchnorm2d_module_with_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
-        m = torch.nn.BatchNorm2d(num_features=channel, track_running_stats=False).to(
-            device
-        )
+        m = torch.nn.BatchNorm2d(
+            num_features=channel, track_running_stats=random().to(bool)
+        ).to(device)
         m.train(random())
         x = random_pytorch_tensor(
             ndim=4, dim0=random(1, 4), dim1=channel, requires_grad=True
@@ -55,13 +55,14 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    @autotest(n=40, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_batchnorm3d_module_with_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
-        m = torch.nn.BatchNorm3d(num_features=channel, track_running_stats=False)
+        m = torch.nn.BatchNorm3d(
+            num_features=channel, track_running_stats=random().to(bool)
+        ).to(device)
         m.train(random())
-        m.to(device)
         x = random_pytorch_tensor(ndim=5, dim1=channel, requires_grad=True).to(device)
         y = m(x)
         return y

@@ -45,9 +45,13 @@ class _NormBase(Module):
         if self.track_running_stats:
             self.register_buffer("running_mean", flow.Tensor(num_features))
             self.register_buffer("running_var", flow.Tensor(num_features))
+            self.register_buffer(
+                "num_batches_tracked", flow.tensor(0, dtype=flow.int64)
+            )
         else:
             self.register_parameter("running_mean", None)
             self.register_parameter("running_var", None)
+            self.register_buffer("num_batches_tracked", None)
         self.reset_parameters()
 
     def reset_running_stats(self) -> None:
@@ -106,6 +110,7 @@ class _BatchNorm(_NormBase):
         # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
         # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
         # no device, however using `x.is_cuda` is not a good choice.
+        # TODO: support cpu batch norm kernel
         if not x.is_cuda:
             reduce_axis = []
             for dim in range(len(x.shape)):
@@ -114,14 +119,15 @@ class _BatchNorm(_NormBase):
             mean = x.mean(dim=reduce_axis, keepdim=False)
             variance = x.var(dim=reduce_axis, unbiased=False, keepdim=False)
             if self.training and self.track_running_stats:
-                running_mean = (
-                    self.momentum * self.running_mean + (1 - self.momentum) * mean
-                )
-                running_var = (
-                    self.momentum * self.running_var + (1 - self.momentum) * variance
-                )
-                self.__setattr__("running_mean", running_mean)
-                self.__setattr__("running_var", running_var)
+                # use unbiased variance to update running_var
+                unbiased_variance = x.var(dim=reduce_axis, unbiased=True, keepdim=False)
+                self.running_mean = (
+                    1.0 - self.momentum
+                ) * self.running_mean + self.momentum * mean
+                self.running_var = (
+                    1.0 - self.momentum
+                ) * self.running_var + self.momentum * unbiased_variance
+                self.num_batches_tracked += 1
             else:
                 mean = mean if self.running_mean is None else self.running_mean
                 variance = variance if self.running_var is None else self.running_var
@@ -158,6 +164,8 @@ class _BatchNorm(_NormBase):
         else:
             if self.training:
                 is_training = True
+                if self.track_running_stats:
+                    self.num_batches_tracked += 1
             else:
                 is_training = (self.running_mean is None) and (self.running_var is None)
             return flow.F.normalization(
