@@ -45,7 +45,7 @@ size_t InferTempStorageForSortPairsAscending(int32_t num_row, int32_t num_col) {
   MultiplyFunctor multiply_functor(num_col);
   SegmentOffsetIter segment_offset_iter(counting_iter, multiply_functor);
 
-  size_t temp_storage_bytes = -1;
+  size_t temp_storage_bytes = 0;
   auto err = cub::DeviceSegmentedRadixSort::SortPairs<KeyType, ValueType, SegmentOffsetIter>(
       /* d_temp_storage */ nullptr,
       /* temp_storage_bytes */ temp_storage_bytes,
@@ -74,7 +74,7 @@ size_t InferTempStorageForSortPairsDescending(int32_t num_row, int32_t num_col) 
   MultiplyFunctor multiply_functor(num_col);
   SegmentOffsetIter segment_offset_iter(counting_iter, multiply_functor);
 
-  size_t temp_storage_bytes = -1;
+  size_t temp_storage_bytes = 0;
   auto err =
       cub::DeviceSegmentedRadixSort::SortPairsDescending<KeyType, ValueType, SegmentOffsetIter>(
           /* d_temp_storage */ nullptr,
@@ -104,7 +104,7 @@ size_t InferTempStorageForSortKeysAscending(int32_t num_row, int32_t num_col) {
   MultiplyFunctor multiply_functor(num_col);
   SegmentOffsetIter segment_offset_iter(counting_iter, multiply_functor);
 
-  size_t temp_storage_bytes = -1;
+  size_t temp_storage_bytes = 0;
   auto err = cub::DeviceSegmentedRadixSort::SortKeys<KeyType, SegmentOffsetIter>(
       /* d_temp_storage */ nullptr,
       /* temp_storage_bytes */ temp_storage_bytes,
@@ -131,7 +131,7 @@ size_t InferTempStorageForSortKeysDescending(int32_t num_row, int32_t num_col) {
   MultiplyFunctor multiply_functor(num_col);
   SegmentOffsetIter segment_offset_iter(counting_iter, multiply_functor);
 
-  size_t temp_storage_bytes = -1;
+  size_t temp_storage_bytes = 0;
   auto err = cub::DeviceSegmentedRadixSort::SortKeysDescending<KeyType, SegmentOffsetIter>(
       /* d_temp_storage */ nullptr,
       /* temp_storage_bytes */ temp_storage_bytes,
