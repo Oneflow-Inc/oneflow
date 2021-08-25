@@ -168,6 +168,14 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean()
         return x
 
+    @autotest()
+    def test_0dim_two_inplace_add(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(2, 2, 3).to(device).mean()
+        y = random_pytorch_tensor(2, 2, 3).to(device)
+        x += y.mean()
+        return x
+
 
 if __name__ == "__main__":
     unittest.main()
