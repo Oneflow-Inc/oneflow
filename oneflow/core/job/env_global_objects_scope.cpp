@@ -203,7 +203,9 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
       if (Global<EpollCommNet>::Get() != static_cast<EpollCommNet*>(Global<CommNet>::Get())) {
+        std::cout<<"first Global<CommNet>::Delete();" << std::endl;
         Global<CommNet>::Delete();
+        std::cout<<"second Global<CommNet>::Delete();" << std::endl;
       }
     }
     Global<Transport>::Delete();
