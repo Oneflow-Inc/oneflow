@@ -594,7 +594,7 @@ class TestTensor(flow.unittest.TestCase):
             sorted=constant(True),
         )
         return y[0], y[1]
-    
+
     @autotest(auto_backward=False)
     def test_flow_fmod_element_with_random_data(test_case):
         device = random_device()
@@ -603,7 +603,7 @@ class TestTensor(flow.unittest.TestCase):
         input = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
         other = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
         return input.fmod(other)
-    
+
     @autotest(auto_backward=False)
     def test_flow_fmod_broadcast_with_random_data(test_case):
         device = random_device()
@@ -628,18 +628,22 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
         y = x.fmod(2)
         return y
-    
+
     @autotest()
     def test_tensor_flip_list_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)).to(device)
+        x = random_pytorch_tensor(
+            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+        ).to(device)
         y = x.flip(constant([0, 1, 2]))
         return y
-    
+
     @autotest()
     def test_tensor_flip_tuple_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)).to(device)
+        x = random_pytorch_tensor(
+            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+        ).to(device)
         y = x.flip(constant((0, 1, 2)))
         return y
 
@@ -647,15 +651,22 @@ class TestTensor(flow.unittest.TestCase):
     def test_tensor_chunk_list_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
-        x = random_pytorch_tensor(ndim=4, dim1=random(low=4, high=8).to(int), dim2=random(low=4, high=8).to(int), dim3=random(low=4, high=8).to(int)).to(device)
+        x = random_pytorch_tensor(
+            ndim=4,
+            dim1=random(low=4, high=8).to(int),
+            dim2=random(low=4, high=8).to(int),
+            dim3=random(low=4, high=8).to(int),
+        ).to(device)
         y = x.chunk(chunks=random(low=1, high=5).to(int), dim=dim)
         z = torch.cat(y, dim=dim)
         return z
-    
+
     @autotest()
     def test_tensor_reciprocal_list_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)).to(device)
+        x = random_pytorch_tensor(
+            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+        ).to(device)
         y = x.reciprocal()
         return y
 

@@ -24,6 +24,8 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+
+
 class TestFmodModule(flow.unittest.TestCase):
     @autotest(auto_backward=False)
     def test_flow_fmod_element_with_random_data(test_case):
@@ -33,7 +35,7 @@ class TestFmodModule(flow.unittest.TestCase):
         input = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
         other = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
         return torch.fmod(input, other)
-    
+
     @autotest(auto_backward=False)
     def test_flow_fmod_broadcast_with_random_data(test_case):
         device = random_device()

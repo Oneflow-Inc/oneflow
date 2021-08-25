@@ -13,27 +13,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from test_util import GenArgList
-from automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
+from oneflow.nn.common_types import _size_2_t
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestReciprocalModule(flow.unittest.TestCase):
-    @autotest()
-    def test_flow_reciprocal_list_with_random_data(test_case):
+class TestUnfold(flow.unittest.TestCase):
+    @autotest(n=50, auto_backward=True, rtol=1e-4, atol=1e-4)
+    def test_unfold_with_random_data(test_case):
+        m = torch.nn.Unfold(
+            kernel_size=random(1, 3).to(_size_2_t),
+            dilation=random(1, 2).to(_size_2_t) | nothing(),
+            padding=random(0, 1).to(_size_2_t) | nothing(),
+            stride=random(1, 2).to(_size_2_t) | nothing(),
+        )
+        m.train(random())
         device = random_device()
+        m.to(device)
         x = random_pytorch_tensor(
-            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+            ndim=4,
+            dim0=random(1, 5),
+            dim1=random(1, 5),
+            dim2=random(10, 20),
+            dim3=random(10, 20),
         ).to(device)
-        y = torch.reciprocal(x)
+        y = m(x)
         return y
 
 
