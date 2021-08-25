@@ -14,6 +14,3 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow._oneflow_internal.F import *
-
-# A function starting with _ to means it is protected and will not be included when from import * is used
-from oneflow._oneflow_internal.F import _local_all_reduce
