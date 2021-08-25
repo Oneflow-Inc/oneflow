@@ -28,41 +28,6 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
-  // Scatter(Tensor input, Int32 dim, Tensor index, Tensor src)
-  // Scatter(Tensor input, Int32 dim, Tensor index, float src)
-
-  PyObject* args = py_args.ptr();
-  size_t nargs = PyTuple_Size(args);
-  CHECK_EQ_OR_THROW(nargs, 4) << "4 positional inputs are required.";
-
-  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
-    PyObject* input = PyTuple_GetItem(args, 0);
-    PyObject* dim = PyTuple_GetItem(args, 1);
-    PyObject* index = PyTuple_GetItem(args, 2);
-    PyObject* src = PyTuple_GetItem(args, 3);
-
-    CHECK_OR_RETURN(PyTensorCheck(input)) << "input should be a Tensor.";
-    const auto& in = JUST(PyUnpackTensor(input));
-
-    CHECK_OR_RETURN(PyScalarCheck(dim)) << "dim should be a scalar.";
-    Scalar dim_scalar = *JUST(PyUnpackScalar(dim));
-    int32_t d = JUST(dim_scalar.As<int32_t>());
-
-    CHECK_OR_RETURN(PyTensorCheck(index)) << "index should be a Tensor.";
-    const auto& idx = JUST(PyUnpackTensor(index));
-
-    if (PyTensorCheck(src)) {
-      const auto& src_tensor = JUST(PyUnpackTensor(src));
-      return functional::DimScatter(in, idx, src_tensor, d);
-    }
-    CHECK_OR_RETURN(PyScalarCheck(src)) << "src should be a scalar or Tensor.";
-    Scalar src_scalar = *JUST(PyUnpackScalar(src));
-    return functional::DimScatterUpdateScalar(in, idx, JUST(src_scalar.As<float>()), d);
-  }();
-  return py::cast(result.GetPtrOrThrow());
-}
-
 py::object PyFmod(py::args py_args, py::kwargs py_kwargs) {
   // "broadcast_fmod(Tensor x, Tensor y)"
   // "scalar_fmod(Tensor in, Scalar scalar)"
@@ -149,7 +114,6 @@ py::object PyWhere(py::args py_args, py::kwargs py_kwargs) {
 namespace functional = one::functional;
 
 ONEFLOW_API_PYBIND11_MODULE("F", m) {
-  m.def("scatter", &functional::PyScatter);
   m.def("fmod", &functional::PyFmod);
   m.def("where", &functional::PyWhere);
 }
