@@ -380,7 +380,7 @@ class SparseSoftmaxCrossEntropyFunctor {
 class SoftmaxCrossEntropyFunctor {
  public:
   SoftmaxCrossEntropyFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy")
+    op_ = CHECK_JUST(one::OpBuilder("softmax_cross_entropy")
                          .Input("prediction")
                          .Input("label")
                          .Output("out")
