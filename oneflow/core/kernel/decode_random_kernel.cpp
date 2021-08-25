@@ -21,7 +21,7 @@ template<DeviceType device_type>
 class DecodeRandomKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DecodeRandomKernel);
-  DecodeRandomKernel() = default;
+  DecodeRandomKernel() : is_init_(false){};
   ~DecodeRandomKernel() = default;
 
   void Forward(const KernelCtx& ctx,
