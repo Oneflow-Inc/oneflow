@@ -13,25 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_VARIABLE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_VARIABLE_KERNEL_H_
-
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-class VariableKernel final : public KernelIf<device_type> {
+class NopKernel final : public Kernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(VariableKernel);
-  VariableKernel() = default;
-  ~VariableKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(NopKernel);
+  NopKernel() = default;
+  ~NopKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
                           const std::function<Blob*(const std::string&)>&) const override {}
 };
 
-}  // namespace oneflow
+REGISTER_KERNEL(OperatorConf::kVariableConf, NopKernel);
+REGISTER_KERNEL(OperatorConf::kTickConf, NopKernel);
+REGISTER_KERNEL(OperatorConf::kSinkTickConf, NopKernel);
+REGISTER_KERNEL(OperatorConf::kAccTickConf, NopKernel);
+REGISTER_KERNEL(OperatorConf::kCopyCommNetConf, NopKernel);
+REGISTER_KERNEL(OperatorConf::kDeviceTickConf, NopKernel);
+REGISTER_KERNEL(OperatorConf::kDstSubsetTickConf, NopKernel);
+REGISTER_KERNEL(OperatorConf::kSourceTickConf, NopKernel);
+REGISTER_KERNEL(OperatorConf::kSrcSubsetTickConf, NopKernel);
 
-#endif  // ONEFLOW_CORE_KERNEL_VARIABLE_KERNEL_H_
+}  // namespace oneflow
