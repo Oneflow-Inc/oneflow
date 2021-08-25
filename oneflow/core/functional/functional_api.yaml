@@ -802,6 +802,10 @@
     "Tensor (Tensor x, Tensor segment_ids, Tensor like, Int64 axis) => UnsortedSegmentSumLike"
   bind_python: False
 
+- name: "tril"
+  signature: "Tensor (Tensor x, Int64 diagonal=0) => Tril"
+  bind_python: True
+
 - name: "triu"
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Triu"
   bind_python: True
@@ -1053,6 +1057,19 @@
 
 - name: "consistent_randint"
   signature: "Tensor (Int64 low, Int64 high, Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None, Generator generator=None)=> ConsistentRandInt"
+  bind_python: True
+
+- name: "unfold"
+  signature: "Tensor (Tensor x, String data_format=\"channels_first\", Int32List kernel_size, 
+                            Int32List dilation_rate, Int32List padding, 
+                            Int32List strides) => Unfold"
+  bind_python: True
+
+- name: "fold"
+  signature: "Tensor (Tensor x, String data_format=\"channels_first\", 
+                          Int32List output_size, Int32List kernel_size, 
+                          Int32List dilation_rate, Int32List padding, 
+                          Int32List strides) => Fold"
   bind_python: True
 
 - name: "scalar_fmod"
