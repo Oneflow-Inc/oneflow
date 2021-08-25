@@ -15,4 +15,3 @@ limitations under the License.
 """
 from .graph import Graph
 from .block import Block, BlockConfig
-from .amp import *

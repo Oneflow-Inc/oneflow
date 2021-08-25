@@ -168,8 +168,24 @@ def build_third_party(
     bash_wrap,
     dry,
     use_system_proxy,
+    inplace,
 ):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
+    if inplace:
+        oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
+        inplace_arg = ""
+        oneflow_python_dir_cmd = ""
+    else:
+        oneflow_python_dir = os.path.join(cache_dir, "python")
+        inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
+        oneflow_python_dir_cmd = f"""
+        rm -rf {oneflow_python_dir}
+        cp -r {oneflow_src_dir}/python {oneflow_python_dir}
+        cd {oneflow_python_dir}
+        git init
+        git clean -fXd
+        cd -
+        """
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -179,11 +195,14 @@ def build_third_party(
             "-DTHIRD_PARTY=ON -DONEFLOW=OFF",
             extra_oneflow_cmake_args,
             oneflow_src_dir,
+            inplace_arg,
         ]
     )
 
     bash_cmd = f"""set -ex
 export TEST_TMPDIR={cache_dir}/bazel_cache
+export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
+{oneflow_python_dir_cmd}
 {cmake_cmd}
 make -j`nproc` prepare_oneflow_third_party
 """
@@ -192,6 +211,7 @@ make -j`nproc` prepare_oneflow_third_party
         cache_dir=cache_dir,
         current_dir=third_party_build_dir,
         use_system_proxy=use_system_proxy,
+        inplace=inplace,
     )
     docker_cmd = (
         f"docker run --network=host {extra_docker_args} --rm {common_docker_args}"
@@ -230,19 +250,12 @@ def build_oneflow(
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
-    oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
-    inplace_arg = ""
-    oneflow_python_dir_cmd = ""
-    if inplace == False:
-        oneflow_python_dir = "/tmp/oneflow_python"
+    if inplace:
+        oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
+        inplace_arg = ""
+    else:
+        oneflow_python_dir = os.path.join(cache_dir, "python")
         inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
-        oneflow_python_dir_cmd = f"""
-        cp -r {oneflow_src_dir}/python {oneflow_python_dir}
-        cd {oneflow_python_dir}
-        git init
-        git clean -fXd
-        cd -
-        """
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -275,14 +288,15 @@ export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64:$LD_LIBRARY_PATH
 export ONEFLOW_SRC_DIR={oneflow_src_dir}
-export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
-{oneflow_python_dir_cmd}
 export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
 """
     if enter_bash:
         bash_cmd += "\nbash"
     else:
         bash_cmd += f"""
+cd {oneflow_python_dir}
+git clean -nXd -e \!oneflow/include -e \!oneflow/include/**
+cd -
 {cmake_cmd}
 cmake --build . -j `nproc`
 """
@@ -522,6 +536,7 @@ gcc --version
                     bash_wrap,
                     args.dry,
                     args.use_system_proxy,
+                    args.inplace,
                 )
             print(cuda_version.split("."))
             cuda_version_literal = "".join(cuda_version.split(".")[:2])

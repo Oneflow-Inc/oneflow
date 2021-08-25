@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow._oneflow_internal
-import oneflow.framework.functional as functional
 import oneflow.framework.generator as generator
 import oneflow.framework.op_expr_util as op_expr_util
 import oneflow.framework.tensor as tensor_util
@@ -23,4 +22,3 @@ import oneflow.framework.tensor as tensor_util
 def RegisterMethod4Class():
     tensor_util.RegisterMethods()
     op_expr_util.RegisterMethod4UserOpExpr()
-    functional.RegisterFunctionalApis()

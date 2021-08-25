@@ -13,41 +13,46 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from test_util import GenArgList
 
 import oneflow as flow
+from oneflow.test_utils.automated_test_util.generators import random
 import oneflow.unittest
 from automated_test_util import *
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestPowModule(flow.unittest.TestCase):
+class TestVar(flow.unittest.TestCase):
     @autotest()
-    def test_pow_scalar_with_random_data(test_case):
+    def test_flow_var_all_dim_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = random().to(float)
-        return torch.pow(x, y)
+        y = torch.var(x)
+        return y
 
     @autotest()
-    def test_pow_elementwise_with_random_data(test_case):
+    def test_flow_var_one_dim_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
-        y = random_pytorch_tensor(ndim=2, dim1=2).to(device)
-        return torch.pow(x, y)
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = torch.var(
+            x,
+            dim=random(low=0, high=4).to(int),
+            unbiased=random().to(bool),
+            keepdim=random().to(bool),
+        )
+        return y
 
-    @unittest.skip("not support for broadcast currently")
+    @unittest.skip("var not support 0-shape tensor currently")
     @autotest()
-    def test_pow_broadcast_with_random_data(test_case):
+    def test_flow_var_0d_tensor_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=2, dim1=2).to(device)
-        y = random_pytorch_tensor(ndim=2, dim1=1).to(device)
-        return torch.pow(x, y)
+        x = random_pytorch_tensor(4, 2, 3, 0, 4).to(device)
+        y = torch.var(
+            x,
+            dim=random(low=0, high=4).to(int),
+            unbiased=random().to(bool),
+            keepdim=random().to(bool),
+        )
+        return y
 
 
 if __name__ == "__main__":

@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -77,6 +78,7 @@ FLAT_MSG_BEGIN(FlatShapeAndDataType);
   // Fields
   FLAT_MSG_DEFINE_OPTIONAL(FlatShape, shape);
   FLAT_MSG_DEFINE_OPTIONAL(DataType, dtype);
+
 FLAT_MSG_END(FlatShapeAndDataType);
 // clang-format on
 
@@ -228,7 +230,7 @@ Maybe<Tensor> ConsistentToConsistent(
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
-  if (!LazyMode::is_enabled() && tensor != x) {
+  if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
     CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);
@@ -278,6 +280,31 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
 
 }  //  namespace
 
+class LocalToConsistentFunctor {
+ public:
+  LocalToConsistentFunctor() {
+    op_ =
+        CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           Symbol<ParallelDesc> parallel_desc,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+                           const Shape& shape, const Symbol<DType>& dtype) const {
+    CHECK_OR_RETURN(x->is_local());
+    Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+        *op_, {x}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+    return tensor;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ToConsistentFunctor {
  public:
   ToConsistentFunctor() {
@@ -323,6 +350,7 @@ class ConsistentToLocalFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::LocalToConsistentFunctor>("LocalToConsistent");
   m.add_functor<impl::ToConsistentFunctor>("ToConsistent");
   m.add_functor<impl::ConsistentToLocalFunctor>("ConsistentToLocal");
 };
