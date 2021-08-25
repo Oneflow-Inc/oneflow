@@ -121,7 +121,11 @@ namespace functional {{
 namespace functional = one::functional;
 
 ONEFLOW_API_PYBIND11_MODULE("F", m) {{
+  py::options options;
+  options.disable_function_signatures();
+
 {1}
+  options.enable_function_signatures();
 }}
 
 }}  // namespace oneflow

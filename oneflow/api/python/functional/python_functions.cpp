@@ -51,9 +51,7 @@ py::object PyPow(py::args py_args, py::kwargs py_kwargs) {
       return functional::ScalarPow(in, exponent_scalar);
     } else if (is_exponent_tensor) {
       const auto& exp = JUST(PyUnpackTensor(exponent));
-      CHECK_OR_RETURN(*(exp->shape()) == *(in->shape()))
-          << "shape of input and exp should be same.";
-      return functional::Pow(in, exp);
+      return functional::BroadcastPow(in, exp);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "pow unimplemented branch.";
     }

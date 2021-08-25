@@ -47,4 +47,45 @@ Maybe<one::Tensor> CudaCopyBoxingInterpreter::InterpretImpl(
   return tensor;
 }
 
+namespace {
+
+Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDesc> rhs) {
+  return lhs == JUST(ReplaceDeviceType(rhs, lhs->device_type()));
+}
+
+}  // namespace
+
+Maybe<void> CheckCudaCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
+  CHECK_OR_RETURN(equal);
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
+  CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kGPU);
+  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CheckCudaCopyD2H(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
+  CHECK_OR_RETURN(equal);
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
+  CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kCPU);
+  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
+  return Maybe<void>::Ok();
+}
+
+Maybe<one::Tensor> CudaCopy(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                            Symbol<PlacedNdSbp> out) {
+  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  const auto& tensor_placement = JUST(tensor->parallel_desc());
+  CHECK_OR_RETURN(tensor_placement == in->placement());
+  const auto& local_tensor = JUST(tensor->cur_rank_phy_tensor());
+  const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
+  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
+                                                 *tensor->shape(), tensor->dtype()));
+}
+
+COMMAND(RegisterBoxingFunction("cuda-copy-h2d", &CheckCudaCopyH2D, &CudaCopy));
+COMMAND(RegisterBoxingFunction("cuda-copy-d2h", &CheckCudaCopyD2H, &CudaCopy));
+
 }  // namespace oneflow

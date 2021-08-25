@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +12,26 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
+*/
+#ifndef ONEFLOW_CORE_COMMON_THREAD_LOCAL_CALLBACK_H_
+#define ONEFLOW_CORE_COMMON_THREAD_LOCAL_CALLBACK_H_
 
-import oneflow._oneflow_internal
+#include <functional>
+#include <string>
 
+namespace oneflow {
 
-def add_docstr(fun, docstr: str):
-    return oneflow._oneflow_internal.add_doc(fun, docstr)
+namespace blocking {
+
+using StackInfoCallbackType = std::function<std::string()>;
+
+void RegisterStackInfoCallback(const StackInfoCallbackType& Callback);
+StackInfoCallbackType GetStackInfoCallback();
+std::string GetStackInfo();
+void ClearStackInfoCallback();
+
+}  // namespace blocking
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_THREAD_LOCAL_CALLBACK_H_
