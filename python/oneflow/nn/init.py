@@ -54,6 +54,9 @@ def kaiming_normal_(
     with flow.no_grad():
         return tensor.kaiming_normal_(a, mode, nonlinearity, data_format=data_format)
 
+def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
+    with flow.no_grad():
+        return tensor.trunc_normal_(mean, std, a, b)
 
 def constant_(tensor, val):
     with flow.no_grad():

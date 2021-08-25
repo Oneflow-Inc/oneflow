@@ -180,6 +180,8 @@ class ReLU6(Module):
         self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("ReLU6 module do not support inplace now")
         return flow.F.hardtanh(x, min_val=0.0, max_val=6.0)
 
     def extra_repr(self):
@@ -302,6 +304,8 @@ class ELU(Module):
         self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("ELU module do not support inplace now")
         return flow.F.elu(x, alpha=self.alpha)
 
     def extra_repr(self):
@@ -483,6 +487,8 @@ class Hardsigmoid(Module):
         self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("Hardsigmoid module do not support inplace now")
         return flow.F.hardsigmoid(x)
 
     def extra_repr(self):
@@ -747,6 +753,8 @@ class Hardswish(Module):
         self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("Hardswish module do not support inplace now")
         return flow.F.hardswish(x)
 
     def extra_repr(self):
@@ -824,6 +832,8 @@ class Hardtanh(Module):
         self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("Hardtanh module do not support inplace now")
         return flow.F.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
 
     def extra_repr(self):
@@ -871,6 +881,8 @@ class LeakyReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
+        if self.inplace:
+            warnings.warn("LeakyReLU module do not support inplace now")
         return flow.F.leaky_relu(x, alpha=self.negative_slope)
 
     def extra_repr(self):
