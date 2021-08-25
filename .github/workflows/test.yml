@@ -659,6 +659,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
       - name: Remove automerge
+        continue-on-error: true
         if: contains(fromJson('["cuda_new_interface", "cpu_new_interface", "cpu", "cuda", "cuda_op"]'), matrix.test_suite) && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
         uses: actions/github-script@v4
         with:
@@ -703,7 +704,7 @@ jobs:
         if: always()
         run: |
           docker rm -f ${container_name} || true
-  
+
   static_analysis_with_clang_on_diff:
     name: Static analysis with clang on diff
     runs-on: ubuntu-20.04
@@ -764,6 +765,7 @@ jobs:
           git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="*,-maybe-glog-fatal,-clang-analyzer-alpha.*"
       - name: Remove automerge
         if: failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
+        continue-on-error: true
         uses: actions/github-script@v4
         with:
           script: |
