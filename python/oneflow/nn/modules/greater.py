@@ -42,7 +42,7 @@ def greater_op(input, other):
         flow.Size([2, 6, 5, 3])
 
     """
-    return flow.F.greater(input, other)
+    return flow._C.greater(input, other)
 
 
 @register_tensor_op("gt")

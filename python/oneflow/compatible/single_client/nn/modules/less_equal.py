@@ -31,7 +31,7 @@ class LessEqual(Module):
             )
         if y.dtype != flow.float32:
             y = flow.experimental.cast(y, flow.float32)
-        return flow.F.broadcast_less_equal(x, y)
+        return flow._C.broadcast_less_equal(x, y)
 
 
 @register_tensor_op("le")

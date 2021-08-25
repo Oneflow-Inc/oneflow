@@ -23,7 +23,7 @@ class Atanh(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.atanh(x)
+        return flow._C.atanh(x)
 
 
 def atanh_op(input):

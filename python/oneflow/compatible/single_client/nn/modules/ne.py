@@ -38,7 +38,7 @@ class Ne(Module):
             raise NotImplementedError(
                 "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
             )
-        return flow.F.broadcast_not_equal(input, other)
+        return flow._C.broadcast_not_equal(input, other)
 
 
 @register_tensor_op("ne")

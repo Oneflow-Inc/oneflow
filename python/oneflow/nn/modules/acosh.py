@@ -43,7 +43,7 @@ def acosh_op(input):
         tensor([0.9624, 1.6094, 1.9827], device='cuda:0', dtype=oneflow.float32)
 
     """
-    return flow.F.acosh(input)
+    return flow._C.acosh(input)
 
 
 @register_tensor_op("acosh")
@@ -55,7 +55,7 @@ def acosh_op_tensor(input):
     See :func:`oneflow.acosh`
 
     """
-    return flow.F.acosh(input)
+    return flow._C.acosh(input)
 
 
 def arccosh_op(input):
@@ -64,7 +64,7 @@ def arccosh_op(input):
     See :func:`oneflow.acosh`
 
     """
-    return flow.F.acosh(input)
+    return flow._C.acosh(input)
 
 
 @register_tensor_op("arccosh")
@@ -76,7 +76,7 @@ def arccosh_op_tensor(input):
     See :func:`oneflow.acosh`
 
     """
-    return flow.F.acosh(input)
+    return flow._C.acosh(input)
 
 
 if __name__ == "__main__":

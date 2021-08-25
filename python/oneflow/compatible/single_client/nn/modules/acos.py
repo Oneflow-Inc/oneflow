@@ -23,7 +23,7 @@ class Acos(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.acos(x)
+        return flow._C.acos(x)
 
 
 @register_tensor_op("acos")

@@ -35,7 +35,7 @@ class TestAllReduce(flow.unittest.TestCase):
         else:
             raise ValueError
         x = x.to("cuda")
-        y = flow.F.all_reduce(x)
+        y = flow._C.all_reduce(x)
         test_case.assertTrue(np.allclose(y.numpy(), arr_rank1 + arr_rank2))
 
     @flow.unittest.skip_unless_2n2d()
@@ -43,7 +43,7 @@ class TestAllReduce(flow.unittest.TestCase):
         np_arr = np.array([1, 2])
         x = flow.Tensor(np_arr * (flow.distributed.get_rank() + 1))
         x = x.to("cuda")
-        y = flow.F.all_reduce(x)
+        y = flow._C.all_reduce(x)
         test_case.assertTrue(np.allclose(y.numpy(), np_arr * 10))
 
 

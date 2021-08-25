@@ -46,7 +46,7 @@ class Flatten(Module):
         self.end_dim = end_dim
 
     def forward(self, input):
-        return flow.F.flatten(input, start_dim=self.start_dim, end_dim=self.end_dim)
+        return flow._C.flatten(input, start_dim=self.start_dim, end_dim=self.end_dim)
 
 
 @register_tensor_op("flatten")

@@ -40,7 +40,7 @@ class Gather(Module):
                 assert (
                     input.shape[i] == index.shape[i]
                 ), "Dimensions of input and index should be same except at dim"
-        return flow.F.dim_gather(input, index, dim=self.dim)
+        return flow._C.dim_gather(input, index, dim=self.dim)
 
 
 @register_tensor_op("gather")

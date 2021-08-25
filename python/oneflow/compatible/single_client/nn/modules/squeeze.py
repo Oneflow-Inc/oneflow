@@ -29,7 +29,7 @@ class Squeeze(Module):
     def forward(self, x):
         if self.dim is None:
             return x
-        return flow.F.squeeze(x, dim=self.dim)
+        return flow._C.squeeze(x, dim=self.dim)
 
 
 @register_tensor_op("squeeze")

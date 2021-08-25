@@ -42,7 +42,7 @@ def negative_op(input):
         tensor([-1.0000,  1.0000, -2.3000], dtype=oneflow.float32)
 
     """
-    return flow.F.negative(input)
+    return flow._C.negative(input)
 
 
 if __name__ == "__main__":

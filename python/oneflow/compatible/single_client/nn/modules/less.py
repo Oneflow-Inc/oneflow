@@ -31,7 +31,7 @@ class Less(Module):
             )
         if y.dtype != flow.float32:
             y = flow.experimental.cast(y, flow.float32)
-        return flow.F.broadcast_less(x, y)
+        return flow._C.broadcast_less(x, y)
 
 
 @register_tensor_op("lt")

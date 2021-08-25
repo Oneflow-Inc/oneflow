@@ -43,7 +43,7 @@ def less_equal_op(input, other):
         tensor([1, 0, 1], dtype=oneflow.int8)
 
     """
-    return flow.F.less_equal(input, other)
+    return flow._C.less_equal(input, other)
 
 
 if __name__ == "__main__":

@@ -54,7 +54,7 @@ class Expand(Module):
                     new_stride.insert(0, new_stride[0])
                 else:
                     new_stride.insert(0, 0)
-        return flow.F.expand(
+        return flow._C.expand(
             x, in_shape=list(x.shape), out_shape=new_size, stride=new_stride
         )
 

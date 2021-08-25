@@ -23,7 +23,7 @@ class Acosh(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.acosh(x)
+        return flow._C.acosh(x)
 
 
 def acosh_op(x):

@@ -46,7 +46,7 @@ def eq_op(input, other):
         tensor([1, 1, 1, 0], dtype=oneflow.int8)
 
     """
-    return flow.F.equal(input, other)
+    return flow._C.equal(input, other)
 
 
 if __name__ == "__main__":

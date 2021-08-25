@@ -68,11 +68,11 @@ class _ConstantBase(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow.F.consistent_constant(
+            res = flow._C.consistent_constant(
                 self.shape, self.value, self.dtype, self.placement, self.sbp,
             )
         else:
-            res = flow.F.constant(self.shape, self.value, self.dtype, self.device,)
+            res = flow._C.constant(self.shape, self.value, self.dtype, self.device,)
         res.requires_grad = self.requires_grad
         return res
 
@@ -215,7 +215,7 @@ def zeros_like_op(other):
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
     """
-    return flow.F.zeros_like(other)
+    return flow._C.zeros_like(other)
 
 
 def ones_like_op(other):
@@ -238,7 +238,7 @@ def ones_like_op(other):
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 
     """
-    return flow.F.ones_like(other)
+    return flow._C.ones_like(other)
 
 
 class NewOnes(Module):
@@ -304,11 +304,11 @@ class NewOnes(Module):
             new_requires_grad, bool
         ), f"requires_grad parameter not correct, please check!"
         if self.placement is not None:
-            res = flow.F.consistent_constant(
+            res = flow._C.consistent_constant(
                 new_size, 1.0, new_dtype, self.placement, self.sbp
             )
         else:
-            res = flow.F.constant(new_size, 1.0, new_dtype, new_device)
+            res = flow._C.constant(new_size, 1.0, new_dtype, new_device)
         res.requires_grad = new_requires_grad
         return res
 

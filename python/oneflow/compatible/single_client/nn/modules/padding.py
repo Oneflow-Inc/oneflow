@@ -97,7 +97,7 @@ class ReplicationPad2d(Module):
             and (self.padding[0] < w)
             and (self.padding[1] < w)
         ):
-            return flow.F.pad(x, pad=self.padding, mode="replicate")
+            return flow._C.pad(x, pad=self.padding, mode="replicate")
         else:
             raise AssertionError(
                 "Padding size should be less than the corresponding input dimension. Please check."
@@ -170,7 +170,7 @@ class ReflectionPad2d(Module):
             and (self.padding[0] < W)
             and (self.padding[1] < W)
         ):
-            return flow.F.pad(x, pad=self.padding, mode="reflect")
+            return flow._C.pad(x, pad=self.padding, mode="reflect")
         else:
             raise ValueError(
                 "padding size should be less than the corresponding input dimension!"

@@ -50,9 +50,9 @@ class MaskedSelect(Module):
                 mask, broadcast_like_tensor, broadcast_axes=tuple(broadcast_mask_axes)
             )
         mask = mask.to(dtype=x.dtype)
-        res = flow.F.mul(x, mask)
+        res = flow._C.mul(x, mask)
         indices = flow.experimental.argwhere(res)
-        gather_res = flow.F.gather_nd(res, indices)
+        gather_res = flow._C.gather_nd(res, indices)
         return gather_res.flatten()
 
 

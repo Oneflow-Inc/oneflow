@@ -34,7 +34,7 @@ class ScalarMul(Module):
         self.alpha = alpha
 
     def forward(self, x):
-        return flow.F.mul_scalar(x, self.alpha)
+        return flow._C.mul_scalar(x, self.alpha)
 
 
 class ScalarMulByTensor(Module):
@@ -42,7 +42,7 @@ class ScalarMulByTensor(Module):
         super().__init__()
 
     def forward(self, x, y):
-        return flow.F.mul_scalar_by_tensor(x, y)
+        return flow._C.mul_scalar_by_tensor(x, y)
 
 
 class ElementwiseMul(Module):
@@ -50,7 +50,7 @@ class ElementwiseMul(Module):
         super().__init__()
 
     def forward(self, x, y):
-        return flow.F.mul(x, y)
+        return flow._C.mul(x, y)
 
 
 class BroadcastMul(Module):
@@ -58,7 +58,7 @@ class BroadcastMul(Module):
         super().__init__()
 
     def forward(self, x, y):
-        return flow.F.broadcast_mul(x, y)
+        return flow._C.broadcast_mul(x, y)
 
 
 @register_tensor_op("mul")
@@ -172,7 +172,7 @@ class ScalarSubByTensor(Module):
         super().__init__()
 
     def forward(self, x, y):
-        return flow.F.sub_scalar_by_tensor(x, y)
+        return flow._C.sub_scalar_by_tensor(x, y)
 
 
 class BroadcastSub(Module):
@@ -180,7 +180,7 @@ class BroadcastSub(Module):
         super().__init__()
 
     def forward(self, x, y):
-        return flow.F.broadcast_sub(x, y)
+        return flow._C.broadcast_sub(x, y)
 
 
 class ScalarAdd(Module):
@@ -191,7 +191,7 @@ class ScalarAdd(Module):
         self.alpha = alpha
 
     def forward(self, x):
-        return flow.F.add_scalar(x, self.alpha)
+        return flow._C.add_scalar(x, self.alpha)
 
 
 @register_tensor_op("sub")
@@ -249,7 +249,7 @@ class BroadcastDiv(Module):
         super().__init__()
 
     def forward(self, x, y):
-        return flow.F.broadcast_div(x, y)
+        return flow._C.broadcast_div(x, y)
 
 
 class ScalarDivByTensor(Module):
@@ -257,7 +257,7 @@ class ScalarDivByTensor(Module):
         super().__init__()
 
     def forward(self, x, scalar):
-        return flow.F.div_scalar_by_tensor(x, scalar)
+        return flow._C.div_scalar_by_tensor(x, scalar)
 
 
 @register_tensor_op("div")
@@ -323,7 +323,7 @@ class Reciprocal(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.reciprocal_no_nan(x)
+        return flow._C.reciprocal_no_nan(x)
 
 
 @register_tensor_op("reciprocal")
@@ -353,7 +353,7 @@ class ScalarAddByTensor(Module):
         super().__init__()
 
     def forward(self, x, y):
-        return flow.F.add_scalar_by_tensor(x, y)
+        return flow._C.add_scalar_by_tensor(x, y)
 
 
 class ElementwiseAdd(Module):
@@ -361,7 +361,7 @@ class ElementwiseAdd(Module):
         super().__init__()
 
     def forward(self, x, y):
-        return flow.F.add(x, y)
+        return flow._C.add(x, y)
 
 
 class BroadcastAdd(Module):
@@ -369,7 +369,7 @@ class BroadcastAdd(Module):
         super().__init__()
 
     def forward(self, x, y):
-        return flow.F.broadcast_add(x, y)
+        return flow._C.broadcast_add(x, y)
 
 
 @register_tensor_op("add")
@@ -429,7 +429,7 @@ class Asin(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.asin(x)
+        return flow._C.asin(x)
 
 
 def asin_op(input):
@@ -497,7 +497,7 @@ class Asinh(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.asinh(x)
+        return flow._C.asinh(x)
 
 
 def asinh_op(input):
@@ -567,7 +567,7 @@ class Sin(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.sin(x)
+        return flow._C.sin(x)
 
 
 def sin_op(tensor):
@@ -618,7 +618,7 @@ class Cos(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.cos(x)
+        return flow._C.cos(x)
 
 
 @register_tensor_op("cos")
@@ -652,7 +652,7 @@ class Atan(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.atan(x)
+        return flow._C.atan(x)
 
 
 def atan_op(tensor):
@@ -714,7 +714,7 @@ class Log(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.log(x)
+        return flow._C.log(x)
 
 
 @register_tensor_op("log")
@@ -768,7 +768,7 @@ class Sqrt(Module):
         super().__init__()
 
     def forward(self, input):
-        return flow.F.sqrt(input)
+        return flow._C.sqrt(input)
 
 
 @register_tensor_op("rsqrt")
@@ -803,7 +803,7 @@ class Rsqrt(Module):
         super().__init__()
 
     def forward(self, input):
-        return flow.F.rsqrt(input)
+        return flow._C.rsqrt(input)
 
 
 @register_tensor_op("sqrt")
@@ -838,7 +838,7 @@ class Square(Module):
         super().__init__()
 
     def forward(self, input):
-        return flow.F.square(input)
+        return flow._C.square(input)
 
 
 @register_tensor_op("square")
@@ -946,9 +946,9 @@ class Pow(Module):
 
     def forward(self, x, y):
         if isinstance(y, (int, float)):
-            return flow.F.pow_scalar(x, alpha=y)
+            return flow._C.pow_scalar(x, alpha=y)
         else:
-            return flow.F.pow(x, y)
+            return flow._C.pow(x, y)
 
 
 @register_tensor_op("pow")
@@ -1204,7 +1204,7 @@ class Cosh(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.cosh(x)
+        return flow._C.cosh(x)
 
 
 @register_tensor_op("cosh")
@@ -1241,7 +1241,7 @@ class Erf(Module):
         super().__init__()
 
     def forward(self, input):
-        return flow.F.erf(input)
+        return flow._C.erf(input)
 
 
 @register_tensor_op("erf")
@@ -1373,7 +1373,7 @@ class Ceil(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.ceil(x)
+        return flow._C.ceil(x)
 
 
 def ceil_op(x):
@@ -1447,7 +1447,7 @@ class Expm1(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.expm1(x)
+        return flow._C.expm1(x)
 
 
 def expm1_op(x):
@@ -1547,13 +1547,13 @@ class Topk(Module):
             return (flow.experimental.gather(input, indices, dim=axis), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = flow.F.transpose(input, perm=perm)
+            x = flow._C.transpose(input, perm=perm)
             if self.largest:
                 indices = self._op_topk_last_dim(x)[0]
             else:
                 neg_input = flow.experimental.mul(x, -1)
                 indices = self._op_topk_last_dim(neg_input)[0]
-            indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
+            indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.experimental.gather(input, indices, dim=axis), indices)
 
 

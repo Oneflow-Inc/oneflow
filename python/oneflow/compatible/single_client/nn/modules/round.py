@@ -23,7 +23,7 @@ class Round(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.round(x)
+        return flow._C.round(x)
 
 
 def round_op(x):

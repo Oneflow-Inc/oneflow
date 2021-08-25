@@ -137,7 +137,7 @@ class AvgPool2d(Module):
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        res = flow.F.avg_pool_2d(
+        res = flow._C.avg_pool_2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -412,7 +412,7 @@ class MaxPool2d(Module):
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        return flow.F.max_pool_2d(
+        return flow._C.max_pool_2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.strides,

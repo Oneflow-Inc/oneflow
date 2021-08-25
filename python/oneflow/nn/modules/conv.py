@@ -212,7 +212,7 @@ class Conv1d(Module):
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
-                    flow.F.conv1d(
+                    flow._C.conv1d(
                         in_split_list[i],
                         self.weight[
                             i
@@ -236,7 +236,7 @@ class Conv1d(Module):
                 )
             res = flow.cat(out_list, dim=in_channel_axis)
         else:
-            res = flow.F.conv1d(
+            res = flow._C.conv1d(
                 x,
                 self.weight,
                 self.bias,
@@ -433,7 +433,7 @@ class Conv2d(Module):
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
-                    flow.F.conv2d(
+                    flow._C.conv2d(
                         in_split_list[i],
                         self.weight[
                             i
@@ -458,7 +458,7 @@ class Conv2d(Module):
                 )
             res = flow.cat(out_list, dim=in_channel_axis)
         else:
-            res = flow.F.conv2d(
+            res = flow._C.conv2d(
                 x,
                 self.weight,
                 self.bias,
@@ -630,7 +630,7 @@ class Conv3d(Module):
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
-                    flow.F.conv3d(
+                    flow._C.conv3d(
                         in_split_list[i],
                         self.weight[
                             i
@@ -655,7 +655,7 @@ class Conv3d(Module):
                 )
             res = flow.cat(out_list, dim=in_channel_axis)
         else:
-            res = flow.F.conv3d(
+            res = flow._C.conv3d(
                 x,
                 self.weight,
                 self.bias,

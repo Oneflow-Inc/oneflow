@@ -296,7 +296,7 @@ class LayerNorm(Module):
             return affined
         else:
             if self.elementwise_affine:
-                res = flow.F.layer_norm_affine(
+                res = flow._C.layer_norm_affine(
                     x,
                     self.weight,
                     self.bias,
@@ -305,7 +305,7 @@ class LayerNorm(Module):
                     epsilon=self.epsilon,
                 )
             else:
-                res = flow.F.layer_norm(
+                res = flow._C.layer_norm(
                     x,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,

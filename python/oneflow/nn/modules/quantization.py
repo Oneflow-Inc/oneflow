@@ -102,7 +102,7 @@ class Quantization(Module):
         self.quantization_scheme = quantization_scheme
 
     def forward(self, input, scale, zero_point):
-        return flow.F.quantization(
+        return flow._C.quantization(
             input,
             scale,
             zero_point,

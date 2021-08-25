@@ -26,7 +26,7 @@ class MatMul(Module):
         super().__init__()
 
     def forward(self, a, b):
-        return flow.F.matmul(a, b)
+        return flow._C.matmul(a, b)
 
 
 @register_tensor_op("matmul")
@@ -54,7 +54,7 @@ def matmul_op(a, b):
         flow.Size([2, 5])
 
     """
-    return flow.F.matmul(a, b)
+    return flow._C.matmul(a, b)
 
 
 if __name__ == "__main__":

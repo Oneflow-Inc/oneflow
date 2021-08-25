@@ -25,7 +25,7 @@ class LogicalAnd(Module):
     def forward(self, input, other):
         if other.dtype != input.dtype:
             other = flow.cast(other, input.dtype)
-        return flow.F.logical_and(input, other)
+        return flow._C.logical_and(input, other)
 
 
 def logical_and_op(input, other):

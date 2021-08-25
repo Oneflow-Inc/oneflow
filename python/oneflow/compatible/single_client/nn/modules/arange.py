@@ -41,7 +41,7 @@ class Arange(Module):
         self.requires_grad = requires_grad
 
     def forward(self):
-        tmp = flow.F.range(
+        tmp = flow._C.range(
             start=self.start, limit=self.end, delta=self.step, dtype=flow.int64
         )
         tmp.requires_grad = self.requires_grad

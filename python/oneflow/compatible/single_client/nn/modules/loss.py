@@ -183,7 +183,7 @@ class CrossEntropyLoss(Module):
         input_shape_len = len(input.shape)
         if input_shape_len == 3:
             (b, c, h) = (input.shape[0], input.shape[1], input.shape[2])
-            input = flow.F.transpose(input, perm=(0, 2, 1))
+            input = flow._C.transpose(input, perm=(0, 2, 1))
             input = input.reshape(shape=[-1, input.shape[2]])
             target = target.flatten()
         elif input_shape_len == 4:
@@ -193,12 +193,12 @@ class CrossEntropyLoss(Module):
                 input.shape[2],
                 input.shape[3],
             )
-            input = flow.F.transpose(input, perm=(0, 2, 3, 1))
+            input = flow._C.transpose(input, perm=(0, 2, 3, 1))
             input = input.reshape(shape=[-1, input.shape[3]])
             target = target.flatten()
         elif input_shape_len >= 5:
             raise NotImplemented
-        out = flow.F.sparse_softmax_cross_entropy(
+        out = flow._C.sparse_softmax_cross_entropy(
             input, target, depth=input.shape[len(input.shape) - 1]
         )
         if self.ignore_index is not None:
@@ -418,9 +418,9 @@ class NLLLoss(Module):
         self.reduction = reduction
 
     def nllloss_1d(self, input, target):
-        target = flow.F.reshape(target, shape=(target.shape[0], 1))
-        res = flow.F.dim_gather(input, target, dim=1)
-        res = flow.F.squeeze(res, dim=[1])
+        target = flow._C.reshape(target, shape=(target.shape[0], 1))
+        res = flow._C.dim_gather(input, target, dim=1)
+        res = flow._C.squeeze(res, dim=[1])
         return res
 
     def forward(self, input, target):
@@ -431,7 +431,7 @@ class NLLLoss(Module):
             res = self.nllloss_1d(input, target)
         elif len(input.shape) == 3:
             (b, c, h) = (input.shape[0], input.shape[1], input.shape[2])
-            input = flow.F.transpose(input, perm=(0, 2, 1))
+            input = flow._C.transpose(input, perm=(0, 2, 1))
             input = input.reshape(shape=[-1, input.shape[2]])
             target = target.flatten()
             res = self.nllloss_1d(input, target)
@@ -443,7 +443,7 @@ class NLLLoss(Module):
                 input.shape[2],
                 input.shape[3],
             )
-            input = flow.F.transpose(input, perm=(0, 2, 3, 1))
+            input = flow._C.transpose(input, perm=(0, 2, 3, 1))
             input = input.reshape(shape=[-1, input.shape[3]])
             target = target.flatten()
             res = self.nllloss_1d(input, target)

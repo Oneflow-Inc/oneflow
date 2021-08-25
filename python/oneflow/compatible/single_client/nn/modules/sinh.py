@@ -23,7 +23,7 @@ class Sinh(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.sinh(x)
+        return flow._C.sinh(x)
 
 
 def sinh_op(x):

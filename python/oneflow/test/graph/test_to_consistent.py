@@ -104,7 +104,7 @@ class MyModule1(flow.nn.Module):
         # print(
         #     f"weight shape: {self.weight.shape}, placement: {self.weight.placement}, sbp: {self.weight.sbp}"
         # )
-        y = flow.F.matmul(x, self.weight, transpose_b=True)
+        y = flow._C.matmul(x, self.weight, transpose_b=True)
         # print(f"y shape: {y.shape}, placement: {y.placement}, sbp: {y.sbp}")
         if y.is_consistent:
             y = y.to_consistent(sbp=flow.sbp.broadcast)
@@ -123,7 +123,7 @@ class MyModule2(flow.nn.Module):
         # print(f"weight shape: {self.weight.shape}, placement: {self.weight.placement}, sbp: {self.weight.sbp}")
         if self.weight.is_consistent:
             y = self.weight.to_consistent(grad_sbp=flow.sbp.broadcast)
-        z = flow.F.matmul(y, x, transpose_b=True)
+        z = flow._C.matmul(y, x, transpose_b=True)
         return self.activation(z)
 
 
@@ -135,7 +135,7 @@ class MyModule3(flow.nn.Module):
         self.transpose_b = transpose_b
 
     def forward(self, x, y):
-        z = flow.F.matmul(x, y, self.transpose_a, self.transpose_b)
+        z = flow._C.matmul(x, y, self.transpose_a, self.transpose_b)
         if z.is_consistent:
             z = z.to_consistent(sbp=flow.sbp.broadcast)
         return self.activation(z)
@@ -161,7 +161,7 @@ class FreeTensorModule(flow.nn.Module):
         y = flow.ones(
             self.shape, dtype=flow.float32, placement=self.placement, sbp=self.sbp
         )
-        return flow.F.matmul(x, y, transpose_b=True)
+        return flow._C.matmul(x, y, transpose_b=True)
 
 
 class ToPlacementModule(flow.nn.Module):
@@ -201,12 +201,12 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
         local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
-        z = flow.F.matmul(
+        z = flow._C.matmul(
             flow.cat([local_x, local_x], dim=1),
             flow.cat([local_y, local_y], dim=1),
             transpose_b=True,
         )
-        z = flow.F.relu(z)
+        z = flow._C.relu(z)
         # print(f"z shape: {z.shape}, device: {z.device}")
         # print(z.numpy())
 
@@ -237,10 +237,10 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
         local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
-        z = flow.F.matmul(
+        z = flow._C.matmul(
             local_y, flow.cat([local_x, local_x], dim=0), transpose_b=True,
         )
-        z = flow.F.relu(z)
+        z = flow._C.relu(z)
 
         placement = flow.placement("cuda", {0: [0, 1]})
         c_x = local_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
@@ -445,7 +445,7 @@ class MyModule5(flow.nn.Module):
         self.sbp = sbp
 
     def forward(self, x, y):
-        z = flow.F.matmul(x, y, self.transpose_a, self.transpose_b)
+        z = flow._C.matmul(x, y, self.transpose_a, self.transpose_b)
         assert z.is_consistent
         assert len(z.sbp) == len(self.sbp)
         return z.to_consistent(sbp=self.sbp)
@@ -463,7 +463,7 @@ class ToConsistent2DGraphTestCase(oneflow.unittest.TestCase):
         y = flow.ones(
             (4, 6), placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.split(1)]
         )
-        z = flow.F.matmul(x, y, transpose_b=True)
+        z = flow._C.matmul(x, y, transpose_b=True)
         print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
 
         # m = MyModule5(transpose_b=True, sbp=[flow.sbp.split(0), flow.sbp.broadcast])

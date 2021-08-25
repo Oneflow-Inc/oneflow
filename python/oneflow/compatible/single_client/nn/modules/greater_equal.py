@@ -31,7 +31,7 @@ class GreaterEqual(Module):
             )
         if y.dtype != flow.float32:
             y = flow.experimental.cast(y, flow.float32)
-        return flow.F.broadcast_greater_equal(x, y)
+        return flow._C.broadcast_greater_equal(x, y)
 
 
 def greater_equal_op(x, y):

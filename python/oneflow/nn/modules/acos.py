@@ -42,7 +42,7 @@ def acos_op(input):
         tensor([1.0472, 0.9273, 0.7954], dtype=oneflow.float32)
 
     """
-    return flow.F.acos(input)
+    return flow._C.acos(input)
 
 
 if __name__ == "__main__":

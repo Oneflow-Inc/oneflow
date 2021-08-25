@@ -24,7 +24,7 @@ class Cast(Module):
         self.dtype = dtype
 
     def forward(self, x):
-        return flow.F.cast(x, dtype=self.dtype)
+        return flow._C.cast(x, dtype=self.dtype)
 
 
 @register_tensor_op("cast")

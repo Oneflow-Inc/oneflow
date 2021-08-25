@@ -33,14 +33,14 @@ def _test_fused_bias_add_gelu(test_case, channel, axis):
     fused_x_tensor.requires_grad = True
     fused_bias_tensor = flow.Tensor(bias).to("cuda")
     fused_bias_tensor.requires_grad = True
-    fused_out = flow.F.fused_bias_add_gelu(fused_x_tensor, fused_bias_tensor, axis=axis)
+    fused_out = flow._C.fused_bias_add_gelu(fused_x_tensor, fused_bias_tensor, axis=axis)
 
     origin_x_tensor = flow.Tensor(x).to("cuda")
     origin_x_tensor.requires_grad = True
     origin_bias_tensor = flow.Tensor(bias).to("cuda")
     origin_bias_tensor.requires_grad = True
     origin_out = flow.gelu(
-        flow.F.bias_add(origin_x_tensor, origin_bias_tensor, axis=axis)
+        flow._C.bias_add(origin_x_tensor, origin_bias_tensor, axis=axis)
     )
 
     total_out = fused_out.sum() + origin_out.sum()

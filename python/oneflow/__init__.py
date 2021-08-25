@@ -142,7 +142,7 @@ del ExitHook
 del atexit
 del oneflow
 
-import oneflow.F
+import oneflow._C
 import oneflow.framework.docstr as docstr
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled

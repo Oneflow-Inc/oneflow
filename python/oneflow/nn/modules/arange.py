@@ -65,7 +65,7 @@ def arange_op(
     if placement is None:
         if isinstance(device, str):
             device = flow.device(device)
-        res = flow.F.arange(start, end, step, dtype, device)
+        res = flow._C.arange(start, end, step, dtype, device)
     else:
         assert isinstance(
             placement, flow._oneflow_internal.placement
@@ -77,7 +77,7 @@ def arange_op(
             for elem in sbp:
                 assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
         assert len(sbp) == len(placement.hierarchy)
-        res = flow.F.consistent_arange(start, end, step, dtype, placement, sbp)
+        res = flow._C.consistent_arange(start, end, step, dtype, placement, sbp)
 
     res.requires_grad = requires_grad
     return res

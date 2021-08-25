@@ -91,7 +91,7 @@ class ReplicationPad2d(Module):
         self.padding = boundary
 
     def forward(self, x):
-        return flow.F.pad(x, pad=self.padding, mode="replicate")
+        return flow._C.pad(x, pad=self.padding, mode="replicate")
 
     def extra_repr(self) -> str:
         return "{}".format(self.padding)
@@ -162,7 +162,7 @@ class ReflectionPad2d(Module):
             and (self.padding[0] < W)
             and (self.padding[1] < W)
         ):
-            return flow.F.pad(x, pad=self.padding, mode="reflect")
+            return flow._C.pad(x, pad=self.padding, mode="reflect")
         else:
             raise ValueError(
                 "padding size should be less than the corresponding input dimension!"
@@ -228,7 +228,7 @@ class ConstantPad1d(Module):
             self.value = float(self.value)
         else:
             self.value = int(self.value)
-        return flow.F.pad(x, pad=self.padding, mode="constant", value=self.value)
+        return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 
 class ConstantPad2d(Module):
@@ -312,7 +312,7 @@ class ConstantPad2d(Module):
             self.value = float(self.value)
         else:
             self.value = int(self.value)
-        return flow.F.pad(x, pad=self.padding, mode="constant", value=self.value)
+        return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 
 class ConstantPad3d(Module):
@@ -395,7 +395,7 @@ class ConstantPad3d(Module):
             self.value = float(self.value)
         else:
             self.value = int(self.value)
-        return flow.F.pad(x, pad=self.padding, mode="constant", value=self.value)
+        return flow._C.pad(x, pad=self.padding, mode="constant", value=self.value)
 
 
 if __name__ == "__main__":

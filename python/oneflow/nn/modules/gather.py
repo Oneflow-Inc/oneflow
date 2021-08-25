@@ -65,7 +65,7 @@ def gather_op(input, index, dim=0, sparse_grad=False):
             assert (
                 input.shape[i] == index.shape[i]
             ), "Dimensions of input and index should be same except at dim"
-    return flow.F.dim_gather(input, index, dim=dim)
+    return flow._C.dim_gather(input, index, dim=dim)
 
 
 if __name__ == "__main__":

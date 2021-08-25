@@ -44,9 +44,9 @@ class Sort(Module):
             return (flow.experimental.gather(input, indices, dim), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_dims, dim)
-            x = flow.F.transpose(input, perm=perm)
+            x = flow._C.transpose(input, perm=perm)
             indices = self._argsort_op(x)[0]
-            indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
+            indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.experimental.gather(input, indices, dim), indices)
 
 

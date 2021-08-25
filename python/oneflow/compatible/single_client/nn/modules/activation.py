@@ -130,7 +130,7 @@ class ReLU(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.relu(x)
+        return flow._C.relu(x)
 
 
 class ReLU6(Module):
@@ -174,7 +174,7 @@ class ReLU6(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.hardtanh(x, min_val=0.0, max_val=6.0)
+        return flow._C.hardtanh(x, min_val=0.0, max_val=6.0)
 
 
 class Tanh(Module):
@@ -213,7 +213,7 @@ class Tanh(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.tanh(x)
+        return flow._C.tanh(x)
 
 
 @register_tensor_op("tanh")
@@ -294,7 +294,7 @@ class ELU(Module):
         self.alpha = alpha
 
     def forward(self, x):
-        return flow.F.elu(x, alpha=self.alpha)
+        return flow._C.elu(x, alpha=self.alpha)
 
 
 class GELU(Module):
@@ -333,7 +333,7 @@ class GELU(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.gelu(x)
+        return flow._C.gelu(x)
 
 
 @register_tensor_op("gelu")
@@ -401,7 +401,7 @@ class Sigmoid(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.sigmoid(x)
+        return flow._C.sigmoid(x)
 
 
 @register_tensor_op("sigmoid")
@@ -474,7 +474,7 @@ class Hardsigmoid(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.hardsigmoid(x)
+        return flow._C.hardsigmoid(x)
 
 
 class Softmax(Module):
@@ -485,10 +485,10 @@ class Softmax(Module):
     def forward(self, x):
         (need_transpose, permute) = _softmax_need_transpose(x, self.axis)
         if need_transpose:
-            x = flow.F.transpose(x, perm=permute)
-        res = flow.F.softmax(x)
+            x = flow._C.transpose(x, perm=permute)
+        res = flow._C.softmax(x)
         if need_transpose:
-            res = flow.F.transpose(res, perm=permute)
+            res = flow._C.transpose(res, perm=permute)
         return res
 
 
@@ -591,11 +591,11 @@ class LogSoftmax(Module):
     def forward(self, x):
         (need_transpose, permute) = _softmax_need_transpose(x, self.dim)
         if need_transpose:
-            x = flow.F.transpose(x, perm=permute)
+            x = flow._C.transpose(x, perm=permute)
         x = x.softmax()
         res = x.log()
         if need_transpose:
-            res = flow.F.transpose(res, perm=permute)
+            res = flow._C.transpose(res, perm=permute)
         return res
 
     def extra_repr(self):
@@ -735,7 +735,7 @@ class Hardswish(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.hardswish(x)
+        return flow._C.hardswish(x)
 
 
 class Hardtanh(Module):
@@ -808,7 +808,7 @@ class Hardtanh(Module):
         self.max_val = max_val
 
     def forward(self, x):
-        return flow.F.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
+        return flow._C.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
 
 
 class LeakyReLU(Module):
@@ -850,7 +850,7 @@ class LeakyReLU(Module):
         self.negative_slope = negative_slope
 
     def forward(self, x):
-        return flow.F.leaky_relu(x, alpha=self.negative_slope)
+        return flow._C.leaky_relu(x, alpha=self.negative_slope)
 
 
 class Mish(Module):

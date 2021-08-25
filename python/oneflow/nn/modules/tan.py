@@ -39,7 +39,7 @@ def tan_op(input):
         tensor([-1.,  0.,  1.], dtype=oneflow.float32)
 
     """
-    return flow.F.tan(input)
+    return flow._C.tan(input)
 
 
 @register_tensor_op("tan")
@@ -49,7 +49,7 @@ def tan_op_tensor(input):
     See :func:`oneflow.tan`
 
     """
-    return flow.F.tan(input)
+    return flow._C.tan(input)
 
 
 if __name__ == "__main__":

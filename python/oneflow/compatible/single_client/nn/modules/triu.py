@@ -24,7 +24,7 @@ class Triu(Module):
         self.diagonal = diagonal
 
     def forward(self, x):
-        return flow.F.triu(x, self.diagonal)
+        return flow._C.triu(x, self.diagonal)
 
 
 @register_tensor_op("triu")

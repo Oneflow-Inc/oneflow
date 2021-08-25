@@ -39,7 +39,7 @@ def atanh_op(input):
         tensor([0.5493, 0.6931, 0.8673], dtype=oneflow.float32)
 
     """
-    return flow.F.atanh(input)
+    return flow._C.atanh(input)
 
 
 @register_tensor_op("atanh")
@@ -49,7 +49,7 @@ def atanh_op_tensor(input):
     See :func:`oneflow.atanh`
 
     """
-    return flow.F.atanh(input)
+    return flow._C.atanh(input)
 
 
 def arctanh_op(input):
@@ -57,7 +57,7 @@ def arctanh_op(input):
 
     Alias for :func:`oneflow.atanh`
     """
-    return flow.F.atanh(input)
+    return flow._C.atanh(input)
 
 
 @register_tensor_op("arctanh")
@@ -66,7 +66,7 @@ def arctanh_op_tensor(input):
 
     Alias for :func:`oneflow.atanh`
     """
-    return flow.F.atanh(input)
+    return flow._C.atanh(input)
 
 
 if __name__ == "__main__":

@@ -55,7 +55,7 @@ def bernoulli(input, *, generator=None, out=None):
 
 
     """
-    return flow.F.bernoulli(input, flow.float32, generator)
+    return flow._C.bernoulli(input, flow.float32, generator)
 
 
 def _rand_op_common_process(
@@ -109,11 +109,11 @@ class Rand(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow.F.consistent_rand(
+            res = flow._C.consistent_rand(
                 self.size, self.placement, self.sbp, self.dtype, self.generator
             )
         else:
-            res = flow.F.rand(self.size, self.dtype, self.device, self.generator)
+            res = flow._C.rand(self.size, self.dtype, self.device, self.generator)
         res.requires_grad = self.requires_grad
         return res
 
@@ -198,11 +198,11 @@ class RandN(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow.F.consistent_randn(
+            res = flow._C.consistent_randn(
                 self.size, self.placement, self.sbp, self.dtype, self.generator
             )
         else:
-            res = flow.F.randn(self.size, self.dtype, self.device, self.generator)
+            res = flow._C.randn(self.size, self.dtype, self.device, self.generator)
         res.requires_grad = self.requires_grad
         return res
 
@@ -292,11 +292,11 @@ class Randperm(Module):
 
     def forward(self, out=None):
         if self.placement is not None:
-            res = flow.F.consistent_randperm(
+            res = flow._C.consistent_randperm(
                 self.n, self.placement, self.sbp, self.generator
             )
         else:
-            res = flow.F.randperm(self.n, self.device, self.generator)
+            res = flow._C.randperm(self.n, self.device, self.generator)
         res.requires_grad = self.requires_grad
         return res.to(dtype=self.dtype)
 

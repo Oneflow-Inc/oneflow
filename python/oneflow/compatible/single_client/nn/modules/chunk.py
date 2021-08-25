@@ -69,7 +69,7 @@ class Chunk(Module):
                         tup_list, input.shape
                     )
                     splits.append(
-                        flow.F.slice(
+                        flow._C.slice(
                             input, start=start_tup, stop=stop_tup, step=step_tup
                         )
                     )

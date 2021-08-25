@@ -35,7 +35,7 @@ class Permute(Module):
                 x.shape
             ), "Invalid dim0 {}, len(shape): {}".format(dim, len(x.shape))
             new_perm.append(dim)
-        return flow.F.transpose(x, perm=new_perm)
+        return flow._C.transpose(x, perm=new_perm)
 
 
 @register_tensor_op("permute")

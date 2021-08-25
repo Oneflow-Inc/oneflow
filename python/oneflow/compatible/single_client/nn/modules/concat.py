@@ -44,7 +44,7 @@ class Cat(Module):
                     dynamic_dim_size += input.shape[i]
                 else:
                     assert input.shape[i] == first_input_shape[i]
-        return flow.F.concat(inputs, axis=axis, max_dim_size=dynamic_dim_size)
+        return flow._C.concat(inputs, axis=axis, max_dim_size=dynamic_dim_size)
 
 
 def concat_op(inputs, dim=0):

@@ -78,7 +78,7 @@ class Fold(Module):
         self.stride = _pair(stride)
 
     def forward(self, input):
-        return flow.F.fold(
+        return flow._C.fold(
             input,
             "channels_first",
             self.output_size,

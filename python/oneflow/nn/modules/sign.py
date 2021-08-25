@@ -43,7 +43,7 @@ def sign_op(input):
         array([-1., -1.,  1.], dtype=float32)
 
     """
-    return flow.F.sign(input)
+    return flow._C.sign(input)
 
 
 @register_tensor_op("sign")
@@ -55,7 +55,7 @@ def sign_op_tensor(input):
     See :func:`oneflow.sign`
 
     """
-    return flow.F.sign(input)
+    return flow._C.sign(input)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ class Exp(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.exp(x)
+        return flow._C.exp(x)
 
 
 @register_tensor_op("exp")

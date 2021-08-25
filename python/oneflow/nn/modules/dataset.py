@@ -607,7 +607,7 @@ class ImageFlip(Module):
         self.flip_code = flip_code
 
     def forward(self, images):
-        return flow.F.image_flip(images, flip_code=self.flip_code)
+        return flow._C.image_flip(images, flip_code=self.flip_code)
 
 
 class ImageDecode(Module):

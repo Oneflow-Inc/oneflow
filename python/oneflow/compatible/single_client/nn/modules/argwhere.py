@@ -30,7 +30,7 @@ class Argwhere(Module):
         self.dtype = dtype
 
     def forward(self, x):
-        (res, size) = flow.F.argwhere(x, dtype=self.dtype)
+        (res, size) = flow._C.argwhere(x, dtype=self.dtype)
         slice_tup_list = [[0, int(size.numpy()), 1]]
         return flow.experimental.slice(res, slice_tup_list=slice_tup_list)
 

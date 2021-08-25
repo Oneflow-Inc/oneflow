@@ -42,7 +42,7 @@ def greater_equal_op(input, other):
         tensor([1, 1, 0], dtype=oneflow.int8)
 
     """
-    return flow.F.greater_equal(input, other)
+    return flow._C.greater_equal(input, other)
 
 
 @register_tensor_op("ge")

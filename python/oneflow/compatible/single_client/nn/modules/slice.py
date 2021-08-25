@@ -35,7 +35,7 @@ class Slice(Module):
         self.step = step
 
     def forward(self, x):
-        return flow.F.slice(x, start=self.start, stop=self.stop, step=self.step)
+        return flow._C.slice(x, start=self.start, stop=self.stop, step=self.step)
 
 
 def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
@@ -75,7 +75,7 @@ class SliceUpdate(Module):
         self.step = step
 
     def forward(self, x, update):
-        return flow.F.slice_update(
+        return flow._C.slice_update(
             x, update, start=self.start, stop=self.stop, step=self.step
         )
 
@@ -118,7 +118,7 @@ class LogicalSliceAssign(Module):
     def forward(self, x, update):
         if update.dtype != x.dtype:
             update = update.to(dtype=x.dtype)
-        return flow.F.logical_slice_assign(
+        return flow._C.logical_slice_assign(
             x, update, start=self.start, stop=self.stop, step=self.step
         )
 

@@ -43,9 +43,9 @@ class Argsort(Module):
             return self._argsort_op(input)[0]
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_dims, dim)
-            x = flow.F.transpose(input, perm=perm)
+            x = flow._C.transpose(input, perm=perm)
             x = self._argsort_op(x)[0]
-            return flow.F.transpose(x, perm=get_inversed_perm(perm))
+            return flow._C.transpose(x, perm=get_inversed_perm(perm))
 
 
 @register_tensor_op("argsort")

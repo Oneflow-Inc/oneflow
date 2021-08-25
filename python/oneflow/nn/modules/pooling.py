@@ -95,7 +95,7 @@ class MaxPool1d(Module):
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        y, indice = flow.F.maxpool_1d(
+        y, indice = flow._C.maxpool_1d(
             x,
             data_format=self.channel_pos,
             padding=self.padding,
@@ -202,7 +202,7 @@ class MaxPool2d(Module):
         self.padding = _pair(padding)
 
     def forward(self, x):
-        y, indice = flow.F.maxpool_2d(
+        y, indice = flow._C.maxpool_2d(
             x,
             data_format=self.channel_pos,
             padding=self.padding,
@@ -316,7 +316,7 @@ class MaxPool3d(Module):
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        y, indice = flow.F.maxpool_3d(
+        y, indice = flow._C.maxpool_3d(
             x,
             data_format=self.channel_pos,
             padding=self.padding,
@@ -397,7 +397,7 @@ class AvgPool1d(Module):
         self.padding = _single(padding)
 
     def forward(self, x):
-        return flow.F.avgpool_1d(
+        return flow._C.avgpool_1d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -470,7 +470,7 @@ class AvgPool2d(Module):
         self.padding = _pair(padding)
 
     def forward(self, x):
-        return flow.F.avgpool_2d(
+        return flow._C.avgpool_2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -563,7 +563,7 @@ class AvgPool3d(Module):
         self.padding = _triple(padding)
 
     def forward(self, x):
-        return flow.F.avgpool_3d(
+        return flow._C.avgpool_3d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,

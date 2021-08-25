@@ -128,7 +128,7 @@ class Upsample(Module):
                 self.width_scale = 1.0 * self.size / w
             else:
                 self.width_scale = 1.0 * self.size[1] / w
-        res = flow.F.upsample(
+        res = flow._C.upsample(
             x,
             height_scale=self.height_scale,
             width_scale=self.width_scale,

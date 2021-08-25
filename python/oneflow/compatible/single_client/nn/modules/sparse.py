@@ -100,7 +100,7 @@ class Embedding(Module):
                 self.weight[self.padding_idx].fill_(0)
 
     def forward(self, indices):
-        res = flow.F.gather(self.weight, indices, axis=0)
+        res = flow._C.gather(self.weight, indices, axis=0)
         return res
 
 

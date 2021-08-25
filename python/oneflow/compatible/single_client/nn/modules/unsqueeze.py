@@ -29,7 +29,7 @@ class Unsqueeze(Module):
         ), "dim should within the range [-input.ndimension() - 1, input.ndimension() + 1)"
         if self.dim < 0:
             self.dim = 1 + input.ndimension() + self.dim
-        return flow.F.expand_dims(input, axis=self.dim)
+        return flow._C.expand_dims(input, axis=self.dim)
 
 
 @register_tensor_op("unsqueeze")

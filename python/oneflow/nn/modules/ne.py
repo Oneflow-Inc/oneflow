@@ -46,7 +46,7 @@ def ne_op(input, other):
         tensor([0, 0, 0, 1], dtype=oneflow.int8)
 
     """
-    return flow.F.not_equal(input, other)
+    return flow._C.not_equal(input, other)
 
 
 if __name__ == "__main__":

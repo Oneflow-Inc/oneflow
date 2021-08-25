@@ -45,7 +45,7 @@ def sinh_op(input):
         array([ 1.1752012,  0.       , -1.1752012], dtype=float32)
 
     """
-    return flow.F.sinh(input)
+    return flow._C.sinh(input)
 
 
 @register_tensor_op("sinh")
@@ -57,7 +57,7 @@ def sinh_op_tensor(input):
     See :func:`oneflow.sinh`
 
     """
-    return flow.F.sinh(input)
+    return flow._C.sinh(input)
 
 
 if __name__ == "__main__":

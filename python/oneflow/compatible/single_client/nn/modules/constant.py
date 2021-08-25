@@ -48,7 +48,7 @@ class _ConstantBase(Module):
         self.dtype = dtype
 
     def forward(self):
-        res = flow.F.constant(self.shape, self.value, self.dtype)
+        res = flow._C.constant(self.shape, self.value, self.dtype)
         res = res.to(device=self.device)
         res.requires_grad = self.requires_grad
         return res
@@ -133,7 +133,7 @@ class ZerosLike(Module):
         super().__init__()
 
     def forward(self, other):
-        return flow.F.zeros_like(other)
+        return flow._C.zeros_like(other)
 
 
 def zeros_like_op(other):
@@ -164,7 +164,7 @@ class OnesLike(Module):
         super().__init__()
 
     def forward(self, other):
-        return flow.F.ones_like(other)
+        return flow._C.ones_like(other)
 
 
 def ones_like_op(other):
@@ -229,7 +229,7 @@ class NewOnes(Module):
         assert isinstance(
             new_requires_grad, bool
         ), f"requires_grad parameter not correct, please check!"
-        res = flow.F.constant(new_size, 1.0, new_dtype)
+        res = flow._C.constant(new_size, 1.0, new_dtype)
         res = res.to(new_device)
         res.requires_grad = new_requires_grad
         return res

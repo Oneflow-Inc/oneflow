@@ -23,7 +23,7 @@ class Negative(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.negative(x)
+        return flow._C.negative(x)
 
 
 @register_tensor_op("negative")

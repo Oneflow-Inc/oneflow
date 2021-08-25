@@ -26,7 +26,7 @@ class Reshape(Module):
         self.shape = shape
 
     def forward(self, x):
-        return flow.F.reshape(x, shape=self.shape)
+        return flow._C.reshape(x, shape=self.shape)
 
 
 @register_tensor_op("reshape")

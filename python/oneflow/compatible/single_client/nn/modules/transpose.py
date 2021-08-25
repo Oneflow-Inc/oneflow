@@ -50,7 +50,7 @@ class Transpose(Module):
         for i in range(len(x_shape)):
             perm.append(i)
         (perm[dim0], perm[dim1]) = (perm[dim1], perm[dim0])
-        return flow.F.transpose(x, perm=perm)
+        return flow._C.transpose(x, perm=perm)
 
 
 @register_tensor_op("transpose")

@@ -23,7 +23,7 @@ class Sign(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.sign(x)
+        return flow._C.sign(x)
 
 
 def sign_op(x):

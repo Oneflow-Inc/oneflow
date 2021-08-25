@@ -29,10 +29,10 @@ class To(Module):
         result = x
         if device is not None:
             if x.device != device or self.copy:
-                result = flow.F.copy(x, device_type=device.type, device_id=device.index)
+                result = flow._C.copy(x, device_type=device.type, device_id=device.index)
         if dtype is not None:
             if x.dtype != dtype or self.copy:
-                result = flow.F.cast(result, dtype=dtype)
+                result = flow._C.cast(result, dtype=dtype)
         return result
 
 

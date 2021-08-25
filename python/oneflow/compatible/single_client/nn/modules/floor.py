@@ -27,7 +27,7 @@ class Floor(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.floor(x)
+        return flow._C.floor(x)
 
 
 def floor_op(x):

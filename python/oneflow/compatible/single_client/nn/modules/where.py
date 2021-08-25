@@ -78,7 +78,7 @@ class Where(Module):
             broadcast_y = flow.experimental.broadcast_like(
                 y, broadcast_like_tensor, broadcast_axes=tuple(broadcast_y_axes)
             )
-        return flow.F.where(broadcast_cond, broadcast_x, broadcast_y)
+        return flow._C.where(broadcast_cond, broadcast_x, broadcast_y)
 
 
 @register_tensor_op("where")

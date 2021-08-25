@@ -27,7 +27,7 @@ class MaskedFill(Module):
         in_shape = tuple(input.shape)
         value_like_x = flow.Tensor(*in_shape, device=input.device)
         value_like_x.fill_(self.value)
-        return flow.F.where(mask, value_like_x, input)
+        return flow._C.where(mask, value_like_x, input)
 
 
 @register_tensor_op("masked_fill")

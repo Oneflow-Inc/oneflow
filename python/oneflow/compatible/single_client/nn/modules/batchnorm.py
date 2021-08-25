@@ -163,7 +163,7 @@ class _BatchNorm(_NormBase):
                 affined = affined + bias
             return affined.to(dtype=self.dtype)
         else:
-            res = flow.F.normalization(
+            res = flow._C.normalization(
                 x,
                 self.running_mean if self.track_running_stats else mean,
                 self.running_var if self.track_running_stats else variance,

@@ -23,7 +23,7 @@ class Abs(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.abs(x)
+        return flow._C.abs(x)
 
 
 @register_tensor_op("abs")

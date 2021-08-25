@@ -52,7 +52,7 @@ def gather_nd_op(input, index):
         tensor([3., 8.], dtype=oneflow.float32)
 
     """
-    return flow.F.gather_nd(input, index)
+    return flow._C.gather_nd(input, index)
 
 
 if __name__ == "__main__":
