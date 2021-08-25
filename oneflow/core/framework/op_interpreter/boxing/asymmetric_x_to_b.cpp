@@ -22,16 +22,16 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckAsymXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckAsymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
   CHECK_OR_RETURN(out->placement()->Bigger(*in->placement()));
   CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kGPU);
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckAsymXToB = DECORATE(&RawCheckAsymXToB, ThreadLocal);
+static constexpr auto* CheckAsymmetricXToB = DECORATE(&RawCheckAsymmetricXToB, ThreadLocal);
 
 Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp() {
   cfg::NdSbp broadcast_nd_sbp;
@@ -43,8 +43,8 @@ auto* CachedGetBroadcastNdSbp = DECORATE(&GetBroadcastNdSbp, ThreadLocal);
 
 }  // namespace
 
-Maybe<one::Tensor> AsymXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                            Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> AsymmetricXToB(const std::shared_ptr<one::Tensor>& tensor,
+                                  Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
@@ -63,6 +63,6 @@ Maybe<one::Tensor> AsymXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<P
   return AsymBroadcastBoxingFunction(broadcast_input, broadcast_in_placed_nd_sbp, out);
 }
 
-COMMAND(RegisterBoxingFunction("asymmetric-x-to-b", CheckAsymXToB, &AsymXToB));
+COMMAND(RegisterBoxingFunction("asymmetric-x-to-b", CheckAsymmetricXToB, &AsymmetricXToB));
 
 }  // namespace oneflow
