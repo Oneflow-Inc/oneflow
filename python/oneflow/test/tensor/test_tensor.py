@@ -587,7 +587,12 @@ class TestTensor(flow.unittest.TestCase):
     def test_tensor_topk_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
-        y = x.topk(random(low=1, high=8).to(int), dim=random(low=1, high=4).to(int), largest=random_bool(), sorted=constant(True))
+        y = x.topk(
+            random(low=1, high=8).to(int),
+            dim=random(low=1, high=4).to(int),
+            largest=random_bool(),
+            sorted=constant(True),
+        )
         return y[0], y[1]
 
     @flow.unittest.skip_unless_1n1d()

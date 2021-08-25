@@ -377,6 +377,7 @@ class TestSeluModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+
 @unittest.skip("still have error in ci test")
 class TestSoftsignModule(flow.unittest.TestCase):
     @autotest(n=5)
