@@ -13,13 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-_function_docstr = {}
+
+import oneflow._oneflow_internal
 
 
 def add_docstr(fun, docstr: str):
-    _function_docstr[fun] = docstr
-
-
-def register_docstr():
-    for (fun, docstr) in _function_docstr.items():
-        setattr(fun, "__doc__", docstr)
+    return oneflow._oneflow_internal.add_doc(fun, docstr)
