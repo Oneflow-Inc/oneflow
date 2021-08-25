@@ -628,6 +628,20 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
         y = x.fmod(2)
         return y
+    
+    @autotest()
+    def test_tensor_flip_list_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)).to(device)
+        y = x.flip(constant([0, 1, 2]))
+        return y
+    
+    @autotest()
+    def test_tensor_flip_tuple_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)).to(device)
+        y = x.flip(constant((0, 1, 2)))
+        return y
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_slice(test_case):
