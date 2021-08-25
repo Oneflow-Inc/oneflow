@@ -290,7 +290,7 @@ class RandInt(Module):
             self.placement,
             self.sbp,
         ) = _rand_op_common_process(size, device, generator, placement, sbp)
-        self.dtype = None
+        self.dtype = dtype
         self.low = low
         self.high = high
 
@@ -389,7 +389,7 @@ class RandPerm(Module):
         super().__init__()
         assert n >= 0
         self.n = n
-        self.dtype = None
+        self.dtype = dtype
         (
             _,
             self.device,
@@ -397,7 +397,7 @@ class RandPerm(Module):
             self.placement,
             self.sbp,
         ) = _rand_op_common_process((), device, generator, placement, sbp)
-        self.requires_grad = requires_grad
+        self.requires_grad=requires_grad;
 
     def forward(self, out=None):
         if self.placement is not None:
