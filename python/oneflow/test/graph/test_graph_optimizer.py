@@ -50,8 +50,8 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 }
             ]
         )
-        cosine_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
-            sgd0, steps=100, alpha=0.1
+        cosine_lr = flow.optim.lr_scheduler.CosineDecayLR(
+            sgd0, decay_steps=100, alpha=0.1
         )
 
         class CustomGraph0(flow.nn.Graph):
@@ -119,14 +119,14 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 },
             ]
         )
-        cosine_lr0 = flow.optim.lr_scheduler.CosineAnnealingLR(
-            sgd0, steps=10, alpha=0.01
+        cosine_lr0 = flow.optim.lr_scheduler.CosineDecayLR(
+            sgd0, decay_steps=10, alpha=0.01
         )
         constant_warmup_cosine_lr0 = flow.optim.lr_scheduler.WarmUpLR(
             cosine_lr0, warmup_factor=0.5, warmup_iters=5, warmup_method="constant"
         )
-        cosine_lr1 = flow.optim.lr_scheduler.CosineAnnealingLR(
-            sgd1, steps=100, alpha=0.1
+        cosine_lr1 = flow.optim.lr_scheduler.CosineDecayLR(
+            sgd1, decay_steps=100, alpha=0.1
         )
         linear_warmup_cosine_lr1 = flow.optim.lr_scheduler.WarmUpLR(
             cosine_lr1, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"

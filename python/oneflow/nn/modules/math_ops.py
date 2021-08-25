@@ -591,7 +591,7 @@ def rsqrt_op(input):
             \\text{out}_{i} = \\frac{1}{\\sqrt{\\text{input}_{i}}}
 
         Args:
-            input (Tensor) – the input tensor.
+            input (Tensor): the input tensor.
 
          For example:
 

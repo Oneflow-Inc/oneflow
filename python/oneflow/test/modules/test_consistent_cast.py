@@ -27,11 +27,37 @@ from test_util import GenArgList
 
 @flow.unittest.skip_unless_1n4d()
 class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
-    def test_to_consistent_fatten_hierarchy(test_case):
+    def test_to_consistent_flatten_hierarchy(test_case):
         x = flow.ones((16, 16), dtype=flow.int32)
         sbp = (flow.sbp.partial_sum,)
         y = x.to_consistent(
             placement=flow.placement("cpu", {0: range(4)}, hierarchy=(2, 2)),
+            sbp=(flow.sbp.partial_sum, flow.sbp.partial_sum),
+        )
+        placement = flow.placement("cpu", {0: range(4)})
+        y = y.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (16, 16))
+
+    def test_to_consistent_flatten_hierarchy_cpu_to_gpu(test_case):
+        x = flow.ones((16, 16), dtype=flow.int32)
+        sbp = (flow.sbp.partial_sum,)
+        y = x.to_consistent(
+            placement=flow.placement("cpu", {0: range(4)}, hierarchy=(2, 2)),
+            sbp=(flow.sbp.partial_sum, flow.sbp.partial_sum),
+        )
+        placement = flow.placement("cuda", {0: range(4)})
+        y = y.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (16, 16))
+
+    def test_to_consistent_flatten_hierarchy_gpu_to_cpu(test_case):
+        x = flow.ones((16, 16), dtype=flow.int32)
+        sbp = (flow.sbp.partial_sum,)
+        y = x.to_consistent(
+            placement=flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2)),
             sbp=(flow.sbp.partial_sum, flow.sbp.partial_sum),
         )
         placement = flow.placement("cpu", {0: range(4)})
@@ -481,6 +507,272 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
                         ],
                         dtype=np.float32,
                     ),
+                )
+            )
+
+
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestConsistentCast_XToB(flow.unittest.TestCase):
+    def test_consistent_to_consistent_btb_gpu_to_gpu(test_case):
+        if flow.distributed.get_rank() == 0:
+            np_arr = np.array(
+                [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+                dtype=np.float32,
+            )
+        elif flow.distributed.get_rank() == 1:
+            np_arr = np.array(
+                [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
+                dtype=np.float32,
+            )
+        elif flow.distributed.get_rank() == 2:
+            np_arr = np.array(
+                [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+                dtype=np.float32,
+            )
+        elif flow.distributed.get_rank() == 3:
+            np_arr = np.array(
+                [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+                dtype=np.float32,
+            )
+        device = flow.device("cuda")
+        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        placement = flow.placement("cuda", {0: range(2)})
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
+        new_placement = flow.placement("cuda", {0: range(3)})
+        broadcast_tensor = consistent_tensor.to_consistent(
+            new_placement, flow.sbp.broadcast
+        )
+        test_case.assertTrue(broadcast_tensor.placement, new_placement)
+        if flow.distributed.get_rank() != 3:
+            test_case.assertTrue(
+                np.array_equal(
+                    broadcast_tensor.to_local().numpy(),
+                    np.array(
+                        [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+                        dtype=np.float32,
+                    ),
+                )
+            )
+
+    def test_consistent_to_consistent_stb_gpu_to_gpu(test_case):
+        if flow.distributed.get_rank() == 0:
+            np_arr = np.array(
+                [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+                dtype=np.float32,
+            )
+        elif flow.distributed.get_rank() == 1:
+            np_arr = np.array(
+                [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
+                dtype=np.float32,
+            )
+        elif flow.distributed.get_rank() == 2:
+            np_arr = np.array(
+                [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+                dtype=np.float32,
+            )
+        elif flow.distributed.get_rank() == 3:
+            np_arr = np.array(
+                [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+                dtype=np.float32,
+            )
+        device = flow.device("cuda")
+        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        placement = flow.placement("cuda", {0: range(3)})
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
+        new_placement = flow.placement("cuda", {0: range(4)})
+        broadcast_tensor = consistent_tensor.to_consistent(
+            new_placement, flow.sbp.broadcast
+        )
+        test_case.assertTrue(broadcast_tensor.placement, new_placement)
+        test_case.assertTrue(
+            np.array_equal(
+                broadcast_tensor.to_local().numpy(),
+                np.array(
+                    [
+                        [4, 6, 5, 20],
+                        [6, 8, 9, 0],
+                        [3, 7, 5, 0],
+                        [6, 8, 9, 0],
+                        [2, 10, 10, 7],
+                        [3, 9, 10, 5],
+                        [4, 6, 6, 9],
+                        [6, 8, 6, 4],
+                        [9, 6, 5, 8],
+                        [4, 9, 7, 0],
+                        [2, 5, 7, 9],
+                        [6, 8, 10, 0],
+                    ],
+                    dtype=np.float32,
+                ),
+            )
+        )
+
+    def test_consistent_to_consistent_ptb_gpu_to_gpu(test_case):
+        if flow.distributed.get_rank() == 0:
+            np_arr = np.array(
+                [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+                dtype=np.float32,
+            )
+        elif flow.distributed.get_rank() == 1:
+            np_arr = np.array(
+                [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
+                dtype=np.float32,
+            )
+        elif flow.distributed.get_rank() == 2:
+            np_arr = np.array(
+                [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+                dtype=np.float32,
+            )
+        elif flow.distributed.get_rank() == 3:
+            np_arr = np.array(
+                [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+                dtype=np.float32,
+            )
+        device = flow.device("cuda")
+        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        placement = flow.placement("cuda", {0: range(3)})
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.partial_sum)
+        new_placement = flow.placement("cuda", {0: range(4)})
+        broadcast_tensor = consistent_tensor.to_consistent(
+            new_placement, flow.sbp.broadcast
+        )
+        test_case.assertTrue(broadcast_tensor.placement, new_placement)
+        test_case.assertTrue(
+            np.array_equal(
+                broadcast_tensor.to_local().numpy(),
+                np.array(
+                    [
+                        [15, 22, 20, 35],
+                        [13, 26, 26, 5],
+                        [9, 18, 18, 18],
+                        [18, 24, 25, 4],
+                    ],
+                    dtype=np.float32,
+                ),
+            )
+        )
+
+
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestConsistentCast_1ToN(flow.unittest.TestCase):
+    def test_consistent_to_consistent_1tb(test_case):
+        if flow.distributed.get_rank() == 0:
+            np_arr = np.array(
+                [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
+                dtype=np.float32,
+            )
+        else:
+            np_arr = np.array(
+                [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
+                dtype=np.float32,
+            )
+        device = flow.device("cuda")
+        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        placement = flow.placement("cuda", {0: range(1)})
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
+        new_placement = flow.placement("cuda", {0: range(2)})
+        broadcast_tensor = consistent_tensor.to_consistent(
+            new_placement, flow.sbp.broadcast
+        )
+        test_case.assertTrue(broadcast_tensor.placement, new_placement)
+        if flow.distributed.get_rank() < 2:
+            test_case.assertTrue(
+                np.array_equal(
+                    broadcast_tensor.to_local().numpy(),
+                    np.array(
+                        [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
+                        dtype=np.float32,
+                    ),
+                )
+            )
+
+    def test_consistent_to_consistent_1tp(test_case):
+        if flow.distributed.get_rank() == 0:
+            np_arr = np.array(
+                [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
+                dtype=np.float32,
+            )
+        else:
+            np_arr = np.array(
+                [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
+                dtype=np.float32,
+            )
+        device = flow.device("cuda")
+        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        placement = flow.placement("cuda", {0: range(1)})
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
+        new_placement = flow.placement("cuda", {0: range(2)})
+        partial_sum_tensor = consistent_tensor.to_consistent(
+            new_placement, flow.sbp.partial_sum
+        )
+        test_case.assertTrue(partial_sum_tensor.placement, new_placement)
+        if flow.distributed.get_rank() == 0:
+            test_case.assertTrue(
+                np.array_equal(
+                    partial_sum_tensor.to_local().numpy(),
+                    np.array(
+                        [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
+                        dtype=np.float32,
+                    ),
+                )
+            )
+        elif flow.distributed.get_rank() == 1:
+            test_case.assertTrue(
+                np.array_equal(
+                    partial_sum_tensor.to_local().numpy(),
+                    np.array(
+                        [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+                        dtype=np.float32,
+                    ),
+                )
+            )
+
+    def test_consistent_to_consistent_1ts(test_case):
+        if flow.distributed.get_rank() == 0:
+            np_arr = np.array(
+                [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
+                dtype=np.float32,
+            )
+        else:
+            np_arr = np.array(
+                [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
+                dtype=np.float32,
+            )
+        device = flow.device("cuda")
+        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        placement = flow.placement("cuda", {0: range(1)})
+        consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
+        new_placement = flow.placement("cuda", {0: range(4)})
+        split_tensor = consistent_tensor.to_consistent(new_placement, flow.sbp.split(0))
+        test_case.assertTrue(split_tensor.placement, new_placement)
+        if flow.distributed.get_rank() == 0:
+            test_case.assertTrue(
+                np.array_equal(
+                    split_tensor.to_local().numpy(),
+                    np.array([[4, 6, 5, 20]], dtype=np.float32,),
+                )
+            )
+        elif flow.distributed.get_rank() == 1:
+            test_case.assertTrue(
+                np.array_equal(
+                    split_tensor.to_local().numpy(),
+                    np.array([[6, 2, 5, 7]], dtype=np.float32,),
+                )
+            )
+        elif flow.distributed.get_rank() == 2:
+            test_case.assertTrue(
+                np.array_equal(
+                    split_tensor.to_local().numpy(),
+                    np.array([[3, 7, 5, 4]], dtype=np.float32,),
+                )
+            )
+        elif flow.distributed.get_rank() == 3:
+            test_case.assertTrue(
+                np.array_equal(
+                    split_tensor.to_local().numpy(),
+                    np.array([[6, 8, 9, 4]], dtype=np.float32,),
                 )
             )
 

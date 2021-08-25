@@ -148,7 +148,7 @@ Maybe<void> CheckConsistencyAsyncTransportCtx::Check() const {
   return Maybe<void>::Ok();
 }
 
-int64_t* MutThreadLocalDepth() {
+int64_t* MutThreadLocalTensorMetaCheckDepth() {
   static thread_local int64_t depth = 0;
   return &depth;
 }

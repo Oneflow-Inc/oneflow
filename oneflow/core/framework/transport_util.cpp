@@ -24,12 +24,14 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/common/thread_local_callback.h"
 
 namespace oneflow {
 
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
-  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds));
+  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds,
+                            [] { LOG(ERROR) << blocking::GetStackInfo(); }, 3));
   JUST(ctx.transport_token().TryReleaseCtrlTransportTokenLock());
   return Maybe<void>::Ok();
 }
