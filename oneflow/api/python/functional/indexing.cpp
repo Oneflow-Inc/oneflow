@@ -34,7 +34,7 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
     *step = 1;
   } else {
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->step, step))
-        << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
+        << "Invalid slice " << JUST(PyStringAsString(PyObject_Repr(object)));
     CHECK_NE_OR_RETURN(*step, 0) << "slice step cannot be zero.";
     if (*step < -PY_SSIZE_T_MAX) *step = -PY_SSIZE_T_MAX;
   }
@@ -42,13 +42,13 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
     *start = *step < 0 ? PY_SSIZE_T_MAX : 0;
   } else {
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->start, start))
-        << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
+        << "Invalid slice " << JUST(PyStringAsString(PyObject_Repr(object)));
   }
   if (obj->stop == Py_None) {
     *stop = *step < 0 ? PY_SSIZE_T_MIN : PY_SSIZE_T_MAX;
   } else {
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->stop, stop))
-        << "Invalid slice " << PyStringAsString(PyObject_Repr(object));
+        << "Invalid slice " << JUST(PyStringAsString(PyObject_Repr(object)));
   }
   return Maybe<void>::Ok();
 }
@@ -181,7 +181,7 @@ Maybe<IndexItem> UnpackIndexItem(PyObject* object) {
     return std::make_shared<IndexItem>(NoneIndex{});
   } else if (PyTensorCheck(object)) {
     auto obj = py::reinterpret_borrow<py::object>(object);
-    return std::make_shared<IndexItem>(*JUST(detail::cast<std::shared_ptr<Tensor>>(obj)));
+    return std::make_shared<IndexItem>(py::cast<std::shared_ptr<Tensor>>(obj));
   } else if (PySequence_Check(object)) {
     return std::make_shared<IndexItem>(JUST(ConvertToIndexingTensor(object)));
   }

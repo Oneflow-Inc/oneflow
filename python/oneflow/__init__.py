@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import sys
 import collections
 
 import oneflow._oneflow_internal
@@ -22,7 +23,6 @@ oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
 device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
-no_grad = oneflow._oneflow_internal.autograd.no_grad
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
@@ -93,27 +93,59 @@ del python_callback
 del register_python_callback
 
 
-def _SyncOnMasterFn():
-    if not oneflow._oneflow_internal.IsEnvInited():
-        return
-    if oneflow.framework.distribute.is_multi_client():
-        oneflow._oneflow_internal.eager.multi_client.Sync()
-    elif oneflow.framework.distribute.get_rank() == 0:
-        oneflow._oneflow_internal.eager.single_client.Sync()
+class ExitHook:
+    def __init__(self):
+        self.exit_code = None
+        self.exception = None
+
+        self._orig_exit = sys.exit
+        self._orig_excepthook = sys.excepthook
+
+        def exit(code=0):
+            self.exit_code = code
+            self._orig_exit(code)
+
+        sys.exit = exit
+
+        def exc_handler(exc_type, exc, *args):
+            self.exception = exc
+            self._orig_excepthook(exc_type, exc, *args)
+
+        sys.excepthook = exc_handler
+
+    def is_normal_exit(self):
+        if self.exit_code is not None:
+            return self.exit_code == 0
+        return self.exception is None
 
 
-atexit.register(oneflow._oneflow_internal.SetShuttingDown)
-atexit.register(oneflow._oneflow_internal.DestroyEnv)
-atexit.register(oneflow.framework.session_context.TryCloseDefaultSession)
-atexit.register(_SyncOnMasterFn)
+hook = ExitHook()
+
+
+def atexit_hook(hook):
+    if hook.is_normal_exit():
+        if oneflow._oneflow_internal.IsEnvInited():
+            if oneflow.framework.distribute.is_multi_client():
+                oneflow._oneflow_internal.eager.multi_client.Sync()
+            elif oneflow.framework.distribute.get_rank() == 0:
+                oneflow._oneflow_internal.eager.single_client.Sync()
+    oneflow.framework.session_context.TryCloseDefaultSession()
+    if hook.is_normal_exit():
+        oneflow._oneflow_internal.DestroyEnv()
+    oneflow._oneflow_internal.SetShuttingDown()
+
+
+atexit.register(atexit_hook, hook)
+del atexit_hook
+del hook
+del ExitHook
 del atexit
 del oneflow
-import oneflow.framework.docstr as docstr
-from oneflow.framework.docstr.utils import register_docstr
 
-register_docstr()
-del register_docstr
-del docstr
+import oneflow.F
+import oneflow.framework.docstr as docstr
+
+from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 import oneflow.nn.modules.acosh
 import oneflow.nn.modules.activation
@@ -137,7 +169,7 @@ import oneflow.nn.modules.round
 import oneflow.nn.modules.sign
 import oneflow.nn.modules.sinh
 import oneflow.nn.modules.tan
-import oneflow.nn.modules.tensor_ops
+
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
@@ -156,6 +188,7 @@ from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import tensor as tensor
 from oneflow.framework.tensor import is_nonzero
 
+from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.abs import abs_op as abs
 from oneflow.nn.modules.acos import acos_op as acos
 from oneflow.nn.modules.acosh import acosh_op as acosh
@@ -262,6 +295,7 @@ from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min
 from oneflow.nn.modules.reduce_ops import _sum as sum
+from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
@@ -318,6 +352,10 @@ from . import (
     distributed,
     linalg,
     optim,
+    boxing,
+    backends,
+    amp,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision
+from oneflow.nn.modules.relu import relu_op as relu

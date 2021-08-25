@@ -23,27 +23,27 @@ import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.distribute import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
-from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
-from oneflow.nn.graph_block import Block, BlockType
-from oneflow.nn.graph_optimizer import OptDict, VariableConfig
+from oneflow.nn.graph.block import Block, BlockType
+from oneflow.nn.graph.config import GraphConfig
+from oneflow.nn.graph.optimizer import OptDict, VariableConfig
+from oneflow.amp import GradScaler
+from oneflow.nn.graph.util import add_indent, sys_exc_error_msg, list_to_func_return
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
-from oneflow.nn.util import add_indent
-from oneflow.nn.util import add_indent, sys_exc_error_msg, list_to_func_return
 
 
 class Graph(object):
     _child_init_cnt = dict()
 
     def __init__(self):
-        self.config = GraphConfig()
         self._generate_name()
-        self.config.proto.set_job_name(self._name)
+        self.config = GraphConfig()
         self._blocks = OrderedDict()
         self._opts = []
+        self._grad_scaler = None
         self._variables_conf = OrderedDict()
         self._is_compiled = False
         self._job_proto = None
@@ -63,6 +63,16 @@ class Graph(object):
     @property
     def training(self):
         return self.config.training
+
+    @property
+    def _config_proto(self):
+        return self.config.proto
+
+    @property
+    def _optimization_conf_proto(self):
+        session = session_ctx.GetDefaultSession()
+        assert type(session) is MultiClientSession
+        return session.resource
 
     @property
     def _graph_proto(self):
@@ -98,6 +108,10 @@ class Graph(object):
             opt_dict["lr_sch"] = lr_sch
         self._opts.append(opt_dict)
 
+    def set_grad_scaler(self, grad_scaler: GradScaler = None):
+        assert isinstance(grad_scaler, GradScaler)
+        self._grad_scaler = grad_scaler
+
     def _generate_name(self):
         child_name = self.__class__.__name__
         if Graph._child_init_cnt.get(child_name) is None:
@@ -114,7 +128,14 @@ class Graph(object):
             for bu in bu_gen:
                 yield bu
 
-    def _generate_optimizer_and_variable_configs(self):
+    def _generate_config_proto(self):
+        self.config.proto.set_job_name(self._name)
+
+        if self._grad_scaler is not None:
+            self._grad_scaler.generate_conf_for_graph(
+                self.config.proto.mutable_train_conf()
+            )
+
         if len(self._opts) > 0:
             self.config._train(True)
         for state_block in self._state():
@@ -172,10 +193,9 @@ class Graph(object):
         return eager_outputs
 
     def _build_forward_graph(self, *args):
-        self._generate_optimizer_and_variable_configs()
-
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
+        self._generate_config_proto()
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             arg_op_names, lazy_args, self._args_repr = self._build_io(
@@ -467,40 +487,3 @@ class Graph(object):
     def _shallow_repr(self):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
-
-
-class GraphConfig(FunctionConfig):
-    def __init__(self):
-        super().__init__()
-        self._train(False)
-
-    @property
-    def proto(self):
-        return self.function_desc.job_config_proto
-
-    @property
-    def training(self):
-        if self.proto.has_train_conf():
-            return True
-        if self.proto.has_predict_conf():
-            return False
-        raise NotImplementedError
-
-    def _train(self, mode: bool = True):
-        if mode:
-            self.proto.mutable_train_conf()
-            self.proto.mutable_train_conf().set_loss_scale_factor(1.0)
-        else:
-            self.proto.mutable_predict_conf()
-
-    def _generate_optimizer_and_variable_configs(
-        self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
-    ):
-        opt_dict.generate_optimizer_and_variable_configs(
-            self.proto.mutable_train_conf(), variables_conf
-        )
-
-
-from oneflow.nn.graph import Graph as Graph
-from oneflow.nn.graph_block import Block, BlockConfig
-from oneflow.nn.graph_optimizer import OptDict

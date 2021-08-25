@@ -22,9 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitModel = 0,     // MdUpdt Actor
-  kSendInitialModel,  // MdUpdt Actor
-  kStart,             // Source Actor
+  kStart = 0,  // Source Actor
   kStopThread,
   kConstructActor
 };

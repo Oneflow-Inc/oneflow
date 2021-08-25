@@ -47,6 +47,9 @@ class ParamGroup(object):
     def __setitem__(self, key, value):
         self._options[key] = value
 
+    def __contains__(self, key):
+        return self._options.__contains__(key)
+
     @property
     def options(self):
         return self._options

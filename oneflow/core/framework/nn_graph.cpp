@@ -66,6 +66,7 @@ Maybe<void> NNGraph::RegisterOutputOpNames(const std::vector<std::string>& outpu
 Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     const std::vector<std::string>& variable_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
+  JUST(vm::MultiClientSync());
   CHECK_EQ_OR_RETURN(variable_op_names.size(), variable_tensors.size());
   CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
@@ -88,6 +89,7 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
 }
 
 Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
+  JUST(vm::MultiClientSync());
   const auto& free_eager_tensors =
       Global<MultiClientSessionContext>::Get()->GetFreeEagerTensorNamePairByGraphName(name_);
   for (const auto& pair : free_eager_tensors) {

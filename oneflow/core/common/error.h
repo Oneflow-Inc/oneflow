@@ -44,6 +44,7 @@ class Error final {
   static Error DeviceTagNotFoundError();
   static Error ValueError(const std::string& error_summary);
   static Error IndexError();
+  static Error TypeError();
   static Error TimeoutError();
   static Error JobNameExistError();
   static Error JobNameEmptyError();
@@ -64,6 +65,7 @@ class Error final {
   static Error CheckFailedError();
   static Error Todo();
   static Error Unimplemented();
+  static Error RuntimeError();
   static Error BoxingNotSupportedError();
   static Error MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
                                           uint64_t available, const std::string& device_type);
@@ -109,6 +111,12 @@ Error& operator<<(Error& error, const T& x) {
 template<typename T>
 Error&& operator<<(Error&& error, const T& x) {
   error << x;
+  return std::move(error);
+}
+
+template<>
+inline Error&& operator<<(Error&& error, const std::stringstream& x) {
+  error << x.str();
   return std::move(error);
 }
 
