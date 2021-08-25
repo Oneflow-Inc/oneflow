@@ -23,10 +23,8 @@ limitations under the License.
 
 namespace oneflow {
 
-const static int kTransportTokenTypeBit = 8;
-const static int kTransportTokenThreadConsistentIdBit = 8;
-
-const static int kDataTransportTokenThreadConsistentUIdBit = 8;
+const static int kTransportTokenTypeBit = 5;
+const static int kTransportTokenThreadConsistentIdBit = 3;
 
 enum TransportTokenType {
   // Begin
@@ -73,7 +71,7 @@ class TransportToken final {
   // Getters
   TransportTokenType type() const { return static_cast<TransportTokenType>(type_); }
   int thread_consistent_id() const { return thread_consistent_id_; }
-  int seq_id() const { return seq_id_; }
+  int32_t seq_id() const { return seq_id_; }
 
   // Setters
   Maybe<void> set_src_rank(int64_t val);
@@ -96,9 +94,9 @@ class TransportToken final {
 
   uint16_t src_rank_;
   uint16_t dst_rank_;
-  uint8_t type_;  // TransportTokenType
+  uint8_t type_ : kTransportTokenTypeBit;  // TransportTokenType
   uint8_t thread_consistent_id_ : kTransportTokenThreadConsistentIdBit;
-  uint16_t seq_id_;
+  uint32_t seq_id_ : (32 - kTransportTokenTypeBit - kTransportTokenThreadConsistentIdBit);
 };
 static_assert(sizeof(TransportToken) == sizeof(uint64_t), "");
 
