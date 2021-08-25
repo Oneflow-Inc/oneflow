@@ -972,13 +972,25 @@
   signature: "Tensor (Tensor x) => ConsistentToLocal"
   bind_python: True
 
-- name: "all_reduce"
-  signature: "Tensor (Tensor x) => AllReduce"
-  bind_python: True
-
 - name: "broadcast"
   signature: "Tensor (Tensor x) => Broadcast"
   bind_python: True
+
+- name: "_local_all_reduce"
+  signature: "Tensor (Tensor x) => LocalAllReduce"
+  bind_python: True
+
+- name: "consistent_all_reduce"
+  signature: "Tensor (Tensor x) => ConsistentAllReduce"
+  bind_python: False
+
+- name: "consistent_reduce_scatter"
+  signature: "Tensor (Tensor x, String op_type) => ConsistentReduceScatter"
+  bind_python: False
+
+- name: "consistent_all_gather"
+  signature: "Tensor (Tensor x) => ConsistentAllGather"
+  bind_python: False
 
 - name: "select_first"
   signature: "Tensor (TensorTuple inputs) => SelectFirst"
