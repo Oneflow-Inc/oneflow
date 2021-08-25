@@ -100,15 +100,15 @@ def compare_with_numpy_adam(
         beta1 = betas[0]
         beta2 = betas[1]
 
-        def train_one_iter(iter, grad):
+        def np_train_one_iter(step, grad):
             grad = grad + weight_decay * x
 
             bias_correction1 = 1.0
             bias_correction2 = 1.0
 
             if do_bias_correction:
-                bias_correction1 = 1.0 - np.power(beta1, iter + 1)
-                bias_correction2 = 1.0 - np.power(beta2, iter + 1)
+                bias_correction1 = 1.0 - np.power(beta1, step)
+                bias_correction2 = 1.0 - np.power(beta2, step)
 
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
@@ -123,8 +123,8 @@ def compare_with_numpy_adam(
             param = x - ((learning_rate / bias_correction1) * v / denom)
             return (param, v, s, max_s)
 
-        for i in range(train_iters):
-            (x, vt, st, max_st) = train_one_iter(i, random_grad_seq[i])
+        for i in range(1, train_iters + 1):
+            (x, vt, st, max_st) = np_train_one_iter(i, random_grad_seq[i - 1])
             np_res_list.append(x)
         return x
 
@@ -214,7 +214,7 @@ def compare_with_numpy_adam_clip_grad(
         beta1 = betas[0]
         beta2 = betas[1]
 
-        def train_one_iter(iter, grad):
+        def np_train_one_iter(step, grad):
             total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
@@ -224,8 +224,8 @@ def compare_with_numpy_adam_clip_grad(
             bias_correction2 = 1.0
 
             if do_bias_correction:
-                bias_correction1 = 1.0 - np.power(beta1, iter + 1)
-                bias_correction2 = 1.0 - np.power(beta2, iter + 1)
+                bias_correction1 = 1.0 - np.power(beta1, step)
+                bias_correction2 = 1.0 - np.power(beta2, step)
 
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
@@ -240,8 +240,8 @@ def compare_with_numpy_adam_clip_grad(
             param = x - ((learning_rate / bias_correction1) * v / denom)
             return (param, v, s, max_s)
 
-        for i in range(train_iters):
-            (x, vt, st, max_st) = train_one_iter(i, random_grad_seq[i])
+        for i in range(1, train_iters + 1):
+            (x, vt, st, max_st) = np_train_one_iter(i, random_grad_seq[i - 1])
             np_res_list.append(x)
         return x
 

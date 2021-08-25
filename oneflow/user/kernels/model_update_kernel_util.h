@@ -150,6 +150,18 @@ struct BiasCorrectionFactorKernelUtil {
                                           float* out);
 };
 
+// Use in bias correction compute.
+template<typename T>
+T Fastpow(T a, int64_t b) {
+  T ans = static_cast<T>(1);
+  while (b) {
+    if (b & 1) { ans *= a; }
+    a *= a;
+    b >>= 1;
+  }
+  return ans;
+}
+
 template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta,

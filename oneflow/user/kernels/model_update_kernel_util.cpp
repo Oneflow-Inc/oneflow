@@ -196,8 +196,9 @@ struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
       if (instance_id >= lower_bound && instance_id < upper_bound) {
         const IDX model_idx = (instance_id - lower_bound) * feature_size + inner_idx;
         AdamUpdateFunctor<T, T>()(values + i, model + model_idx, m + model_idx, v + model_idx,
-                                  max_v + i, 1, 0, 0, beta1, beta2, epsilon, weight_decay, amsgrad,
-                                  bias_correction1, bias_correction2, lr);
+                                  max_v + i, /*scale=*/1.0, /*l1=*/0.0, /*l2=*/0.0, beta1, beta2,
+                                  epsilon, weight_decay, amsgrad, bias_correction1,
+                                  bias_correction2, lr);
       }
     }
   }
@@ -256,8 +257,7 @@ struct BiasCorrectionFactorKernelUtil<DeviceType::kCPU> {
 
 void BiasCorrectionFactorKernelUtil<DeviceType::kCPU>::BiasCorrectionFactorCompute(
     DeviceCtx* ctx, float beta, const int64_t* train_step, float* out) {
-  const auto exponent = static_cast<double>(*train_step + 1);
-  const float bias_correction_factor = 1.0 - static_cast<float>(std::pow(beta, exponent));
+  const float bias_correction_factor = 1.0 - Fastpow<float>(beta, *train_step + 1);
   *out = bias_correction_factor;
 }
 
