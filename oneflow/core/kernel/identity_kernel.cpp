@@ -13,9 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/identity_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/kernel_context.h"
 
 namespace oneflow {
+
+template<DeviceType device_type>
+class IdentityKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(IdentityKernel);
+  IdentityKernel() = default;
+  ~IdentityKernel() = default;
+
+ private:
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardHeader(const KernelCtx& ctx,
+                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+};
 
 template<DeviceType device_type>
 void IdentityKernel<device_type>::ForwardDataContent(

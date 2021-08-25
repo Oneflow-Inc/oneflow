@@ -13,12 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/callback_notify_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/buffer_manager.h"
 
 namespace oneflow {
+
+template<typename T>
+class CallbackNotifyKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CallbackNotifyKernel);
+  CallbackNotifyKernel() = default;
+  ~CallbackNotifyKernel() = default;
+
+ private:
+  bool IsStateless() const override { return false; }
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+};
 
 template<typename T>
 void CallbackNotifyKernel<T>::ForwardDataContent(
