@@ -64,6 +64,7 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel {
   std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn;  // The functor
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
@@ -105,6 +106,7 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel {
   std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn;  // The functor
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
     const user_op::Tensor* input_b_tensor = ctx->Tensor4ArgNameAndIndex(input_b_name, 0);
