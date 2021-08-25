@@ -118,7 +118,7 @@ class PowFunctor : public BinaryFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    if (*x->shape() != *y->shape()) { BroadcastPow(x, y); }
+    if (*x->shape() != *y->shape()) { return BroadcastPow(x, y); }
     return BinaryFunctor::operator()(x, y);
   }
 };
