@@ -81,5 +81,6 @@ class Testrandperm(flow.unittest.TestCase):
         x2 = flow.randperm(n, device=device)
         test_case.assertTrue(not np.all(x1.numpy() == x2.numpy()))
 
+
 if __name__ == "__main__":
     unittest.main()
