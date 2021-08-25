@@ -36,11 +36,11 @@ __global__ void CheckInfNan(size_t elem_cnt, const T* elem, int* ret_code) {
 
 }  // namespace
 
-int CheckKernelOutputInfNan(DeviceCtx* ctx, Blob* blob) {
+int CheckBlobInfNan(DeviceCtx* ctx, Blob* blob) {
   if (!dynamic_cast<CudaDeviceCtx*>(ctx)) { return -1; }
 
   int* ret_code = nullptr;
-  cudaMallocHost(&ret_code, sizeof(int));
+  OF_CUDA_CHECK(cudaMallocHost(&ret_code, sizeof(int)));
   Memset<DeviceType::kCPU>(ctx, ret_code, 0, sizeof(int));
 
   size_t elem_cnt = blob->shape().elem_cnt();
@@ -54,9 +54,9 @@ int CheckKernelOutputInfNan(DeviceCtx* ctx, Blob* blob) {
       *ret_code = -2;
     }
   }
-
+  OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
   int ret = *ret_code;
-  cudaFreeHost(ret_code);
+  OF_CUDA_CHECK(cudaFreeHost(ret_code));
   return ret;
 }
 

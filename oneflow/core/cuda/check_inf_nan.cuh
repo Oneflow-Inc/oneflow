@@ -21,7 +21,7 @@ namespace oneflow {
 class DeviceCtx;
 class Blob;
 
-int CheckKernelOutputInfNan(DeviceCtx* ctx, Blob* blob);
+int CheckBlobInfNan(DeviceCtx* ctx, Blob* blob);
 
 }  // namespace oneflow
 

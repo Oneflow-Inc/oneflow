@@ -100,18 +100,21 @@ void Kernel::Forward(const KernelCtx& ctx,
 
   for (const std::string& obn : this->op_attribute().output_bns()) {
     Blob* blob = BnInOp2Blob(obn);
-    int check_code = CheckKernelOutputInfNan(ctx.device_ctx, blob);
-    if (check_code == -1) {
-      LOG(ERROR) << "op kernel: " << op_conf().name() << " is not on gpu, skip check";
+    int check_code = CheckBlobInfNan(ctx.device_ctx, blob);
+    if (check_code == 0) {
+      LOG(ERROR) << "CheckBlobInfNan, op: " << op_conf().name() << ", check not completed";
+    } else if (check_code == -1) {
+      LOG(ERROR) << "CheckBlobInfNan, op: " << op_conf().name() << ", skip when not on gpu";
     } else if (check_code == -2) {
-      LOG(ERROR) << "Skip check inf/nan with op: " << this->op_conf().name() << ", obn: " << obn;
+      LOG(ERROR) << "CheckBlobInfNan, op:" << op_conf().name() << ", obn: " << obn
+                 << ", skip when dtype is not float";
     } else if (check_code == 1) {
-      LOG(ERROR) << "op kernel: " << op_conf().name() << " output: " << obn << " has inf";
+      LOG(ERROR) << "CheckBlobInfNan, op:" << op_conf().name() << ", obn: " << obn << " has inf";
     } else if (check_code == 2) {
-      LOG(ERROR) << "op kernel: " << op_conf().name() << " output: " << obn << " has nan";
+      LOG(ERROR) << "CheckBlobInfNan, op: " << op_conf().name() << " obn: " << obn << " has nan";
     } else {
-      LOG(ERROR) << "op kernel: " << op_conf().name() << " output: " << obn
-                 << " meet unexcepted check code";
+      LOG(ERROR) << "CheckBlobInfNan, op: " << op_conf().name() << " obn: " << obn
+                 << ", meet unexcepted check code: " << check_code;
     }
   }
 
