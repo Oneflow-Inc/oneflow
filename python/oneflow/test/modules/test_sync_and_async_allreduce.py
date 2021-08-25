@@ -20,23 +20,14 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _p2b_to_consistent(test_case):
-    x = flow.ones(
-        (10, 10),
-        placement=flow.placement("cuda", {0: range(4)}),
-        sbp=flow.sbp.partial_sum,
-    )
+def sync_allreduce(x, placement, np_arr, test_case):
     y = x.to_consistent(
-        placement=flow.placement("cuda", {0: range(4)}), sbp=flow.sbp.broadcast
-    )
-    test_case.assertTrue(y.sbp[0] == flow.sbp.broadcast)
-    test_case.assertTrue(y.placement == flow.placement("cuda", {0: range(4)}))
+        placement=placement, sbp=flow.sbp.partial_sum
+    ).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+    test_case.assertTrue(np.allclose(y.to_local().numpy(), np_arr * 10))
 
 
-def _all_reduce(test_case):
-    np_arr = np.array([1, 2])
-    x = flow.Tensor(np_arr * (flow.distributed.get_rank() + 1))
-    x = x.to("cuda")
+def async_allreduce(x, np_arr, test_case):
     y = flow.F.all_reduce(x)
     test_case.assertTrue(np.allclose(y.numpy(), np_arr * 10))
 
@@ -44,9 +35,14 @@ def _all_reduce(test_case):
 @flow.unittest.skip_unless_1n4d()
 class TestP2bOnGPU(flow.unittest.TestCase):
     def test_p2b(test_case):
+        placement = flow.placement("cuda", {0: range(4)})
+        np_arr = np.array([1, 2])
+        x = flow.Tensor(np_arr * (flow.distributed.get_rank() + 1))
+        x = x.to("cuda")
+
         for i in range(1):
-            _p2b_to_consistent(test_case)
-            _all_reduce(test_case)
+            sync_allreduce(x, placement, np_arr, test_case)
+            async_allreduce(x, np_arr, test_case)
 
 
 if __name__ == "__main__":
