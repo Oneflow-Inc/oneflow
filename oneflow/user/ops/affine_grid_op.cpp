@@ -63,15 +63,15 @@ REGISTER_USER_OP("affine_grid")
       //              grid  = { N, D, H, W, 3 }
       bool is_2d_grid = true;
       if (theta.shape().At(1) == 2) {
-        CHECK_OR_RETURN(theta.shape().At(2) == 3) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
-        CHECK_OR_RETURN(size.NumAxes() == 4) << "Dimension of size MUST be 4, when 2d affine grid";
-        CHECK_OR_RETURN(theta.shape().At(0) == size.At(0))
+        CHECK_EQ_OR_RETURN(theta.shape().At(2), 3) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
+        CHECK_EQ_OR_RETURN(size.NumAxes(), 4) << "Dimension of size MUST be 4, when 2d affine grid";
+        CHECK_EQ_OR_RETURN(theta.shape().At(0), size.At(0))
             << "Theta and size MUST have same batch dimension";
         is_2d_grid = true;
       } else if (theta.shape().At(1) == 3) {
-        CHECK_OR_RETURN(theta.shape().At(2) == 4) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
-        CHECK_OR_RETURN(size.NumAxes() == 5) "Dimension of size MUST be 4, when 3d affine grid";
-        CHECK_OR_RETURN(theta.shape().At(0) == size.At(0))
+        CHECK_EQ_OR_RETURN(theta.shape().At(2), 4) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
+        CHECK_EQ_OR_RETURN(size.NumAxes(), 5) "Dimension of size MUST be 4, when 3d affine grid";
+        CHECK_EQ_OR_RETURN(theta.shape().At(0), size.At(0))
             << "Theta and size MUST have same batch dimension";
         is_2d_grid = false;
       } else {

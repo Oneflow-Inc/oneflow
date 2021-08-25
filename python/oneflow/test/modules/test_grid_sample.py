@@ -27,7 +27,7 @@ import oneflow.unittest
 
 class TestGridSample(flow.unittest.TestCase):
     def test_grid_sample_4d(test_case):
-        input = flow.Tensor(
+        input = flow.tensor(
             np.arange(1.0, 11).reshape((1, 1, 2, 5)), dtype=flow.float32
         )
         np_grid = np.array(
@@ -36,7 +36,7 @@ class TestGridSample(flow.unittest.TestCase):
                 [[-1.0, -0.5], [0, 0.3333], [1, -1], [-0.200, 1e-6], [1.5, 0.5]],
             ]
         ).reshape(1, 2, 5, 2)
-        grid = flow.Tensor(np_grid)
+        grid = flow.tensor(np_grid, dtype=flow.float32)
         groundtruth = np.reshape(
             np.array([[0.0, 8.0, 5.0, 7.0, 9.0], [1.0, 8.0, 5.0, 8.0, 0.0]]),
             (1, 1, 2, 5),
@@ -49,7 +49,7 @@ class TestGridSample(flow.unittest.TestCase):
         )
 
     @autotest()
-    def test_flow_affine_grid_cudnn_with_random_data(test_case):
+    def test_flow_grid_sample_cudnn_with_random_data(test_case):
         # cudnn only support 4D input, with mode = 'bilinear' && padding_mode = 'zeros' && align_corners
         N = randint(1, 8)
         C = randint(1, 8)
@@ -78,7 +78,7 @@ class TestGridSample(flow.unittest.TestCase):
         return output
 
     @autotest()
-    def test_flow_affine_grid_4d_with_random_data(test_case):
+    def test_flow_grid_sample_4d_with_random_data(test_case):
         N = randint(1, 8)
         C = randint(1, 8)
         in_H = randint(1, 8)
@@ -106,7 +106,7 @@ class TestGridSample(flow.unittest.TestCase):
         return output
 
     @autotest(rtol=1e-03, atol=1e-03)
-    def test_flow_affine_grid_5d_with_random_data(test_case):
+    def test_flow_grid_sample_5d_with_random_data(test_case):
         N = randint(1, 8)
         C = randint(1, 8)
         in_D = randint(1, 8)

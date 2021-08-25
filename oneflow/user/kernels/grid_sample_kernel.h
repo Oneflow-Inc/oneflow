@@ -142,10 +142,10 @@ static OF_DEVICE_FUNC scalar_t ReflectCoordinates(scalar_t in, int twice_low, in
   if (twice_low == twice_high) { return static_cast<scalar_t>(0); }
   scalar_t min = static_cast<scalar_t>(twice_low) / 2;
   scalar_t span = static_cast<scalar_t>(twice_high - twice_low) / 2;
-  in = ::fabs(in - min);
+  in = fabs(in - min);
   // `fmod` returns same sign as `in`, which is positive after the `fabs` above.
-  scalar_t extra = ::fmod(in, span);
-  int flips = static_cast<int>(::floor(in / span));
+  scalar_t extra = fmod(in, span);
+  int flips = static_cast<int>(floor(in / span));
   if (flips % 2 == 0) {
     return extra + min;
   } else {
@@ -175,8 +175,8 @@ static OF_DEVICE_FUNC scalar_t ReflectCoordinatesSetGrad(scalar_t in, int twice_
     grad_in_mult_ = 1;
   }
   // `fmod` returns same sign as `in`, which is positive after the `if` above.
-  scalar_t extra = ::fmod(in, span);
-  int flips = static_cast<int>(::floor(in / span));
+  scalar_t extra = fmod(in, span);
+  int flips = static_cast<int>(floor(in / span));
   if (flips % 2 == 0) {
     *grad_in = static_cast<scalar_t>(grad_in_mult_);
     return extra + min;
@@ -192,7 +192,7 @@ static __device__ __forceinline__ scalar_t safe_downgrade_to_int_range(scalar_t 
   // -100.0 does not have special meaning. This is just to make sure
   // it's not WithinBounds2D or WithinBounds3D, and does not cause
   // undefined behavior. See #35506.
-  if (x > INT_MAX - 1 || x < INT_MIN || !::isfinite(static_cast<double>(x)))
+  if (x > INT_MAX - 1 || x < INT_MIN || !isfinite(static_cast<double>(x)))
     return static_cast<scalar_t>(-100.0);
   return x;
 }

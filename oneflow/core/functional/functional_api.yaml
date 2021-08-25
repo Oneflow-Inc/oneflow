@@ -468,22 +468,22 @@
 
 - name: "affine_grid"
   signature:
-    "Tensor AffineGrid(Tensor theta, *, Shape size, Bool align_corners)"
+    "Tensor (Tensor theta, *, Shape size, Bool align_corners) => AffineGrid"
   bind_python: True
 
 - name: "affine_grid_grad"
   signature:
-    "Tensor AffineGridGrad(Tensor dgrid, *, Shape size, Bool align_corners)"
+    "Tensor (Tensor dgrid, *, Shape size, Bool align_corners) => AffineGridGrad"
   bind_python: False
 
 - name: "grid_sample"
   signature:
-    "Tensor GridSample(Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners)"
+    "Tensor (Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners) => GridSample"
   bind_python: True
 
 - name: "grid_sample_grad"
   signature:
-    "TensorTuple GridSampleGrad(Tensor doutput, Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners)"
+    "TensorTuple (Tensor doutput, Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners) => GridSampleGrad"
   bind_python: False
 
 - name: "where"

@@ -29,8 +29,6 @@ class AffineGridKernel final : public user_op::OpKernel, public user_op::CudaGra
   AffineGridKernel() = default;
   ~AffineGridKernel() = default;
 
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* theta = ctx->Tensor4ArgNameAndIndex("theta", 0);
@@ -75,6 +73,7 @@ class AffineGridKernel final : public user_op::OpKernel, public user_op::CudaGra
       }
     }
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_AFFINE_GRID_KERNEL(device, dtype)                                        \
@@ -100,8 +99,6 @@ class AffineGridGradKernel final : public user_op::OpKernel, public user_op::Cud
  public:
   AffineGridGradKernel() = default;
   ~AffineGridGradKernel() = default;
-
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -146,6 +143,7 @@ class AffineGridGradKernel final : public user_op::OpKernel, public user_op::Cud
       }
     }
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_AFFINE_GRID_GRAD_KERNEL(device, dtype)                                   \

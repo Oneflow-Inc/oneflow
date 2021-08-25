@@ -21,19 +21,18 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct GirdSampleInterpState : public AutoGradCaptureState {
-  Shape size;
+struct GridSampleInterpState : public AutoGradCaptureState {
   std::string interpolation_mode;
   std::string padding_mode;
   bool align_corners;
   size_t input_index;
-  size_t gird_index;
+  size_t grid_index;
   bool input_requires_grad;
-  bool gird_requires_grad;
+  bool grid_requires_grad;
   bool requires_grad;
 };
 
-class GirdSample : public OpExprGradFunction<GirdSampleInterpState> {
+class GridSample : public OpExprGradFunction<GridSampleInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -42,16 +41,16 @@ class GirdSample : public OpExprGradFunction<GirdSampleInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(GirdSampleInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(GridSampleInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->input_requires_grad = inputs.at(0)->requires_grad();
-    ctx->gird_requires_grad = inputs.at(1)->requires_grad();
-    ctx->requires_grad = ctx->input_requires_grad || ctx->gird_requires_grad;
+    ctx->grid_requires_grad = inputs.at(1)->requires_grad();
+    ctx->requires_grad = ctx->input_requires_grad || ctx->grid_requires_grad;
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ctx->input_index = ctx->SaveTensorForBackward(inputs.at(0));  // input
-    ctx->gird_index = ctx->SaveTensorForBackward(inputs.at(1));   // gird
+    ctx->grid_index = ctx->SaveTensorForBackward(inputs.at(1));   // grid
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->interpolation_mode = JUST(composed_attrs.GetAttr<std::string>("interpolation_mode"));
@@ -60,21 +59,20 @@ class GirdSample : public OpExprGradFunction<GirdSampleInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const GirdSampleInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const GridSampleInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
-    if (ctx->requires_grad) {
-      const auto& input = ctx->SavedTensors().at(ctx->input_index);
-      const auto& gird = ctx->SavedTensors().at(ctx->gird_index);
-      const auto& results =
-          JUST(functional::GridSampleGrad(out_grads.at(0), input, gird, ctx->interpolation_mode,
-                                          ctx->padding_mode, ctx->align_corners));
-
-      in_grads->resize(2);
-      if (ctx->input_requires_grad) { in_grads->at(0) = results->at(0); }
-      if (ctx->gird_requires_grad) { in_grads->at(1) = results->at(1); }
-    }
+    const auto& input = ctx->SavedTensors().at(ctx->input_index);
+    const auto& grid = ctx->SavedTensors().at(ctx->grid_index);
+    const auto& results =
+        JUST(functional::GridSampleGrad(out_grads.at(0), input, grid, ctx->interpolation_mode,
+                                        ctx->padding_mode, ctx->align_corners));
+    in_grads->resize(2);
+    if (ctx->input_requires_grad) { in_grads->at(0) = results->at(0); }
+    if (ctx->grid_requires_grad) { in_grads->at(1) = results->at(1); }
     return Maybe<void>::Ok();
   }
 
@@ -82,7 +80,7 @@ class GirdSample : public OpExprGradFunction<GirdSampleInterpState> {
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("grid_sample", GirdSample);
+REGISTER_OP_EXPR_GRAD_FUNCTION("grid_sample", GridSample);
 
 }  // namespace one
 }  // namespace oneflow

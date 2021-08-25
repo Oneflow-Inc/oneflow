@@ -821,7 +821,6 @@ class GridSampleGpuKernel final : public user_op::OpKernel {
       }
     }
   }
-
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -905,7 +904,6 @@ class GridSampleGradGpuKernel final : public user_op::OpKernel {
       }
     }
   }
-
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 

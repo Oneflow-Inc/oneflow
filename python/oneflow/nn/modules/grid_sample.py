@@ -35,9 +35,9 @@ def grid_sample(
     supported.
 
     In the spatial (4-D) case, for :attr:`input` with shape
-    :math:`(N, C, H_\text{in}, W_\text{in})` and :attr:`grid` with shape
-    :math:`(N, H_\text{out}, W_\text{out}, 2)`, the output will have shape
-    :math:`(N, C, H_\text{out}, W_\text{out})`.
+    :math:`(N, C, H_{in}, W_{in})` and :attr:`grid` with shape
+    :math:`(N, H_{out}, W_{out}, 2)`, the output will have shape
+    :math:`(N, C, H_{out}, W_{out})`.
 
     For each output location ``output[n, :, h, w]``, the size-2 vector
     ``grid[n, h, w]`` specifies :attr:`input` pixel locations ``x`` and ``y``,
@@ -73,10 +73,10 @@ def grid_sample(
         NaN values in :attr:`grid` would be interpreted as ``-1``.
 
     Args:
-        input (Tensor): input of shape :math:`(N, C, H_\text{in}, W_\text{in})` (4-D case)
-                        or :math:`(N, C, D_\text{in}, H_\text{in}, W_\text{in})` (5-D case)
-        grid (Tensor): flow-field of shape :math:`(N, H_\text{out}, W_\text{out}, 2)` (4-D case)
-                       or :math:`(N, D_\text{out}, H_\text{out}, W_\text{out}, 3)` (5-D case)
+        input (Tensor): input of shape :math:`(N, C, H_{in}, W_{in})` (4-D case)
+                        or :math:`(N, C, D_{in}, H_{in}, W_{in})` (5-D case)
+        grid (Tensor): flow-field of shape :math:`(N, H_{out}, W_{out}, 2)` (4-D case)
+                       or :math:`(N, D_{out}, H_{out}, W_{out}, 3)` (5-D case)
         mode (str): interpolation mode to calculate output values
             ``'bilinear'`` | ``'nearest'`` | ``'bicubic'``. Default: ``'bilinear'``
             Note: ``mode='bicubic'`` supports only 4-D input.
@@ -103,12 +103,12 @@ def grid_sample(
         https://arxiv.org/abs/1506.02025
 
     .. note::
-        ``mode='bicubic'`` is implemented using the `cubic convolution algorithm`_ with :math:`\alpha=-0.75`.
-        The constant :math:`\alpha` might be different from packages to packages.
+        ``mode='bicubic'`` is implemented using the `cubic convolution algorithm`_ with :math:`\\alpha=-0.75`.
+        The constant :math:`\\alpha` might be different from packages to packages.
         For example, `PIL`_ and `OpenCV`_ use -0.5 and -0.75 respectively.
         This algorithm may "overshoot" the range of values it's interpolating.
         For example, it may produce negative values or values greater than 255 when interpolating input in [0, 255].
-        Clamp the results with :func: `torch.clamp` to ensure they are within the valid range.
+        Clamp the results with :func: `flow.clamp` to ensure they are within the valid range.
     .. _`cubic convolution algorithm`: https://en.wikipedia.org/wiki/Bicubic_interpolation
     .. _`PIL`: https://github.com/python-pillow/Pillow/blob/4634eafe3c695a014267eefdce830b4a825beed7/src/libImaging/Resample.c#L51
     .. _`OpenCV`: https://github.com/opencv/opencv/blob/f345ed564a06178670750bad59526cfa4033be55/modules/imgproc/src/resize.cpp#L908
@@ -117,19 +117,25 @@ def grid_sample(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.arange(1., 11).reshape((1, 1, 2, 5)), dtype=flow.float32)
+        >>> input = flow.tensor(np.arange(1., 11).reshape((1, 1, 2, 5)), dtype=flow.float32)
         >>> np_grid = np.array(
         ...     [[[-0.9, -4.1], [0, 0.2000], [1, -1], [-0.333, 1e-6], [0.5, 1.0]],
         ...      [[-1.0, -0.5], [0, 0.3333], [1, -1], [-0.200, 1e-6], [1.5, 0.5]]]
         ... ).reshape(1, 2, 5, 2)
-        >>> grid = flow.Tensor(np_grid)
+        >>> grid = flow.tensor(np_grid, dtype=flow.float32)
         >>> output = flow.nn.functional.grid_sample(input, grid, mode='nearest', padding_mode='zeros',
         ...                                        align_corners=True)
         >>> output
         tensor([[[[0., 8., 5., 7., 9.],
                   [1., 8., 5., 8., 0.]]]], dtype=oneflow.float32)
     """
-    y = flow.F.grid_sample(input, grid, mode, padding_mode, align_corners)
+    y = flow.F.grid_sample(
+        input,
+        grid,
+        interpolation_mode=mode,
+        padding_mode=padding_mode,
+        align_corners=align_corners,
+    )
     return y
 
 

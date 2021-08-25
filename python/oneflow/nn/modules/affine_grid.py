@@ -13,10 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import List
+
 import oneflow as flow
 
 
-def affine_grid(theta, size: flow.Size, align_corners: bool = False):
+def affine_grid(theta, size: List[int], align_corners: bool = False):
     """The interface is consistent with PyTorch.    
     The documentation is referenced from: 
     https://pytorch.org/docs/stable/generated/torch.nn.functional.affine_grid.html?highlight=affine_grid#torch.nn.functional.affine_grid
@@ -30,12 +32,12 @@ def affine_grid(theta, size: flow.Size, align_corners: bool = False):
 
     Args:
         theta (Tensor): input batch of affine matrices with shape
-            (:math:`N \times 2 \times 3`) for 2D or
-            (:math:`N \times 3 \times 4`) for 3D
-        size (torch.Size): the target output image size.
-            (:math:`N \times C \times H \times W` for 2D or
-            :math:`N \times C \times D \times H \times W` for 3D)
-            Example: torch.Size((32, 3, 24, 24))
+            (:math:`N, 2, 3`) for 2D or
+            (:math:`N, 3, 4`) for 3D
+        size (flow.Size): the target output image size.
+            (:math:`N, C, H, W` for 2D or
+            :math:`N, C, D, H, W` for 3D)
+            Example: flow.Size((32, 3, 24, 24))
         align_corners (bool): if ``True``, consider ``-1`` and ``1``
             to refer to the centers of the corner pixels rather than the image corners.
             Refer to :func:`grid_sample` for a more complete description.
@@ -44,7 +46,7 @@ def affine_grid(theta, size: flow.Size, align_corners: bool = False):
             Default: ``False``
 
     Returns:
-        output (Tensor): output Tensor of size (:math:`N \times H \times W \times 2`)
+        output (Tensor): output Tensor of size (:math:`N, H, W, 2`)
 
     .. _`Spatial Transformer Networks`:
         https://arxiv.org/abs/1506.02025
@@ -53,7 +55,7 @@ def affine_grid(theta, size: flow.Size, align_corners: bool = False):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.arange(1., 7).reshape((1, 2, 3)), dtype=flow.float32)
+        >>> input = flow.tensor(np.arange(1., 7).reshape((1, 2, 3)), dtype=flow.float32)
         >>> output = flow.nn.functional.affine_grid(input, flow.Size([1, 1, 2, 2]), align_corners=True)
         >>> output
         tensor([[[[ 0., -3.],

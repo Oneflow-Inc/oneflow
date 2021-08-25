@@ -50,13 +50,12 @@ class AffineGrid : public OpExprGradFunction<AffineGridInterpState> {
 
   Maybe<void> Apply(const AffineGridInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
-
-    if (ctx->requires_grad) {
-      in_grads->at(0) =
-          JUST(functional::AffineGridGrad(out_grads.at(0), ctx->size, ctx->align_corners));
-    }
+    in_grads->at(0) =
+        JUST(functional::AffineGridGrad(out_grads.at(0), ctx->size, ctx->align_corners));
     return Maybe<void>::Ok();
   }
 

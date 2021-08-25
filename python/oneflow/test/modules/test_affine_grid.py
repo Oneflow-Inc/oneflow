@@ -27,7 +27,7 @@ import oneflow.unittest
 
 class TestAffineGrid(flow.unittest.TestCase):
     def test_affine_grid_2d(test_case):
-        input = flow.Tensor(np.arange(1.0, 7).reshape((1, 2, 3)), dtype=flow.float32)
+        input = flow.tensor(np.arange(1.0, 7).reshape((1, 2, 3)), dtype=flow.float32)
         output = flow.nn.functional.affine_grid(
             input, flow.Size([1, 1, 2, 2]), align_corners=True
         )
@@ -45,7 +45,7 @@ class TestAffineGrid(flow.unittest.TestCase):
         )
 
     def test_affine_grid_3d(test_case):
-        input = flow.Tensor(np.arange(1.0, 13).reshape((1, 3, 4)), dtype=flow.float32)
+        input = flow.tensor(np.arange(1.0, 13).reshape((1, 3, 4)), dtype=flow.float32)
         output = flow.nn.functional.affine_grid(
             input, flow.Size([1, 1, 2, 2, 2]), align_corners=True
         )

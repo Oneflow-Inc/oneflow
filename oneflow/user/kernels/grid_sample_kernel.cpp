@@ -693,8 +693,6 @@ class GridSampleKernel final : public user_op::OpKernel, public user_op::CudaGra
   GridSampleKernel() = default;
   ~GridSampleKernel() = default;
 
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
@@ -740,6 +738,7 @@ class GridSampleKernel final : public user_op::OpKernel, public user_op::CudaGra
       }
     }
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_SAMPLE_KERNEL(data_type)                            \
@@ -756,8 +755,6 @@ class GridSampleGradKernel final : public user_op::OpKernel, public user_op::Cud
  public:
   GridSampleGradKernel() = default;
   ~GridSampleGradKernel() = default;
-
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -812,6 +809,7 @@ class GridSampleGradKernel final : public user_op::OpKernel, public user_op::Cud
       }
     }
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GRID_SAMPLE_KERNEL(data_type)                       \

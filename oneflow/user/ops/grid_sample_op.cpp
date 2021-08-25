@@ -60,24 +60,24 @@ REGISTER_USER_OP("grid_sample")
       const user_op::TensorDesc& grid = ctx->InputTensorDesc("grid", 0);
       user_op::TensorDesc& output = *(ctx->OutputTensorDesc("output", 0));
       // Only support 4D or 5D input with NCHW layout
-      // For 4D grid: input = { N, C, H_in, W_in },
-      //              grid  = { N, H_out, W_out, 2 }
-      //              output  = { N, C, H_out, W_out }
-      // For 5D grid: input = { N, C, D_in, H_in, W_in },
-      //              grid  = { N, D_out, H_out, W_out, 3 }
-      //              output  = { N, C, D_out, H_out, W_out }
+      // For 4D grid: input  = { N, C, H_in, W_in },
+      //              grid   = { N, H_out, W_out, 2 }
+      //              output = { N, C, H_out, W_out }
+      // For 5D grid: input  = { N, C, D_in, H_in, W_in },
+      //              grid   = { N, D_out, H_out, W_out, 3 }
+      //              output = { N, C, D_out, H_out, W_out }
       const Shape& input_shape = input.shape();
       const Shape& grid_shape = grid.shape();
       Shape& output_shape = *(output.mut_shape());
 
       bool is_4d_input = true;
       if (input_shape.NumAxes() == 4) {
-        CHECK_OR_RETURN(grid_shape.NumAxes() == 4) << "Grid and input MUST have same dimention";
-        CHECK_OR_RETURN(grid_shape.At(3) == 2) << "Grid shape MUST (N, H_out, W_out, 2)";
+        CHECK_EQ_OR_RETURN(grid_shape.NumAxes(), 4) << "Grid and input MUST have same dimention";
+        CHECK_EQ_OR_RETURN(grid_shape.At(3), 2) << "Grid shape MUST (N, H_out, W_out, 2)";
         is_4d_input = true;
       } else if (input_shape.NumAxes() == 5) {
-        CHECK_OR_RETURN(grid_shape.NumAxes() == 5) << "Grid and input MUST have same dimention";
-        CHECK_OR_RETURN(grid_shape.At(4) == 3) << "Grid shape MUST (N, H_out, W_out, 3)";
+        CHECK_EQ_OR_RETURN(grid_shape.NumAxes(), 5) << "Grid and input MUST have same dimention";
+        CHECK_EQ_OR_RETURN(grid_shape.At(4), 3) << "Grid shape MUST (N, H_out, W_out, 3)";
         if (ctx->Attr<std::string>("interpolation_mode") == "bicubic") {
           oneflow::Error::CheckFailedError() << "Mode='bicubic' supports only 4-D input";
         }
@@ -123,12 +123,8 @@ REGISTER_USER_OP("grid_sample_grad")
     .Attr<bool>("align_corners")
     .SetCheckAttrFn(CheckAttr)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& input = ctx->InputTensorDesc("input", 0);
-      const user_op::TensorDesc& grid = ctx->InputTensorDesc("grid", 0);
-      user_op::TensorDesc* dinput = ctx->OutputTensorDesc("dinput", 0);
-      user_op::TensorDesc* dgrid = ctx->OutputTensorDesc("dgrid", 0);
-      *(dinput->mut_shape()) = input.shape();
-      *(dgrid->mut_shape()) = grid.shape();
+      *(ctx->OutputTensorDesc("dinput", 0)->mut_shape()) = ctx->InputTensorDesc("input", 0).shape();
+      *(ctx->OutputTensorDesc("dgrid", 0)->mut_shape()) = ctx->InputTensorDesc("grid", 0).shape();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -142,9 +138,9 @@ REGISTER_USER_OP("grid_sample_grad")
       ctx->NewBuilder()
           .Split(user_op::OpArg("doutput", 0), 1)
           .Split(user_op::OpArg("input", 0), 1)
-          .Split(user_op::OpArg("grid", 0), 1)
+          .Broadcast(user_op::OpArg("grid", 0))
           .Split(user_op::OpArg("dinput", 0), 1)
-          .Split(user_op::OpArg("dgrid", 0), 1)
+          .Broadcast(user_op::OpArg("dgrid", 0))
           .Build();
       return Maybe<void>::Ok();
     })
