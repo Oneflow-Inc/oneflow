@@ -103,7 +103,6 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
 }
 
 IBVerbsQP::~IBVerbsQP() {
-  msg_buf_.reset();
   CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
   std::cout<<"IBVerbsQP::~IBVerbsQP  done" << std::endl;
 }
