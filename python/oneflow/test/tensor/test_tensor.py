@@ -643,6 +643,15 @@ class TestTensor(flow.unittest.TestCase):
         y = x.flip(constant((0, 1, 2)))
         return y
 
+    @autotest()
+    def test_tensor_chunk_list_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_pytorch_tensor(ndim=4, dim1=random(low=4, high=8).to(int), dim2=random(low=4, high=8).to(int), dim3=random(low=4, high=8).to(int)).to(device)
+        y = x.chunk(chunks=random(low=1, high=5).to(int), dim=dim)
+        z = torch.cat(y, dim=dim)
+        return z
+
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_slice(test_case):
         x = np.random.randn(2, 3, 4, 5).astype(np.float32)
