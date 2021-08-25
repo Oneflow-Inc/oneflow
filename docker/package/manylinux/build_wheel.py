@@ -179,6 +179,7 @@ def build_third_party(
         oneflow_python_dir = os.path.join(cache_dir, "python")
         inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
         oneflow_python_dir_cmd = f"""
+        rm -rf {oneflow_python_dir}
         cp -r {oneflow_src_dir}/python {oneflow_python_dir}
         cd {oneflow_python_dir}
         git init
