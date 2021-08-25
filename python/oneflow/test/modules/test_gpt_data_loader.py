@@ -68,7 +68,7 @@ class DataLoaderGraph(flow.nn.Graph):
 @flow.unittest.skip_unless_1n2d()
 class GPTDataLoaderDistributedTestCase(oneflow.unittest.TestCase):
     def test_case1(test_case):
-        rank = flow.env.get_rank()()
+        rank = flow.env.get_rank()
         # print(
         #     f"GPTDataLoaderDistributedTestCase.test_case1 on rank {rank} {os.getpid()}"
         # )
