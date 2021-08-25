@@ -389,7 +389,7 @@ class RandPerm(Module):
         super().__init__()
         assert n >= 0
         self.n = n
-        self.dtype = None
+        self.dtype = dtype
         (
             _,
             self.device,
