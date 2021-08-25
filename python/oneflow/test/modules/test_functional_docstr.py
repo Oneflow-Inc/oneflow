@@ -22,11 +22,6 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow.framework.functional import Function
-
-
-def _is_oneflow_functional(object):
-    return isinstance(object, Function)
 
 
 def _run_functional_doctest(
@@ -44,7 +39,7 @@ def _run_functional_doctest(
         runner = doctest.DebugRunner(verbose=verbose, optionflags=optionflags)
     else:
         runner = doctest.DocTestRunner(verbose=verbose, optionflags=optionflags)
-    r = inspect.getmembers(flow.F, _is_oneflow_functional)
+    r = inspect.getmembers(flow.F)
     for (name, fun) in r:
         if fun.__doc__ is not None:
             print("test on docstr of: ", ".".join([module.__name__, name]))
