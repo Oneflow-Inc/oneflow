@@ -1051,6 +1051,19 @@
                       Generator generator=None) => ConsistentRandN"
   bind_python: True
 
+- name: "unfold"
+  signature: "Tensor (Tensor x, String data_format=\"channels_first\", Int32List kernel_size, 
+                            Int32List dilation_rate, Int32List padding, 
+                            Int32List strides) => Unfold"
+  bind_python: True
+  
+- name: "fold"
+  signature: "Tensor (Tensor x, String data_format=\"channels_first\", 
+                          Int32List output_size, Int32List kernel_size, 
+                          Int32List dilation_rate, Int32List padding, 
+                          Int32List strides) => Fold"
+  bind_python: True
+  
 - name: "scalar_fmod"
   signature: "Tensor (Tensor in, Scalar scalar) => ScalarFMod"
   bind_python: False
