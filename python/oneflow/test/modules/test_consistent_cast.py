@@ -742,7 +742,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
             )
 
 
-@flow.unittest.skip_unless_1n2d()
+@flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestConsistentCast_1To1(flow.unittest.TestCase):
     def test_consistent_to_consistent_1to1_gpu_to_gpu(test_case):
@@ -789,10 +789,10 @@ class TestConsistentCast_1To1(flow.unittest.TestCase):
         local_tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cpu", {0: [0]})
         x = local_tensor.to_consistent(placement, flow.sbp.split(0))
-        new_placement = flow.placement("cpu", {0: [1]})
+        new_placement = flow.placement("cpu", {0: [2]})
         y = x.to_consistent(new_placement, flow.sbp.broadcast)
         test_case.assertTrue(y.placement, new_placement)
-        if flow.distributed.get_rank() == 1:
+        if flow.distributed.get_rank() == 2:
             test_case.assertTrue(
                 np.array_equal(
                     y.to_local().numpy(),
