@@ -18,6 +18,9 @@ limitations under the License.
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/kernel.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/cuda/check_inf_nan.cuh"
+#endif
 
 namespace oneflow {
 
@@ -94,6 +97,24 @@ void Kernel::Forward(const KernelCtx& ctx,
   if (!blob_access_checker_disabled_) { SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob); }
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
   ForwardDataContent(ctx, BnInOp2Blob);
+
+  for (const std::string& obn : this->op_attribute().output_bns()) {
+    Blob* blob = BnInOp2Blob(obn);
+    int check_code = CheckKernelOutputInfNan(ctx.device_ctx, blob);
+    if (check_code == -1) {
+      LOG(ERROR) << "op kernel: " << op_conf().name() << " is not on gpu, skip check";
+    } else if (check_code == -2) {
+      LOG(ERROR) << "Skip check inf/nan with op: " << this->op_conf().name() << ", obn: " << obn;
+    } else if (check_code == 1) {
+      LOG(ERROR) << "op kernel: " << op_conf().name() << " output: " << obn << " has inf";
+    } else if (check_code == 2) {
+      LOG(ERROR) << "op kernel: " << op_conf().name() << " output: " << obn << " has nan";
+    } else {
+      LOG(ERROR) << "op kernel: " << op_conf().name() << " output: " << obn
+                 << " meet unexcepted check code";
+    }
+  }
+
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob));
   if (!blob_access_checker_disabled_) { SetOutputBlobConsumerAccessChecker(BnInOp2Blob); }
 }
