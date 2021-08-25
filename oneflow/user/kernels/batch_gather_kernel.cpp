@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/batch_gather_kernel_util.h"
+#include "oneflow/user/kernels/batch_gather_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
