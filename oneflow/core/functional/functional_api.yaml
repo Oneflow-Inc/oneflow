@@ -447,6 +447,14 @@
   signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropy"
   bind_python: True
 
+- name: "softmax_cross_entropy"
+  signature: "Tensor (Tensor logits, Tensor label) => SoftmaxCrossEntropy"
+  bind_python: True
+
+- name: "softmax_cross_entropy_grad"
+  signature: "Tensor (Tensor dy, Tensor label, Tensor prob) => SoftmaxCrossEntropyGrad"
+  bind_python: True
+
 - name: "smooth_l1_loss"
   signature: "Tensor (Tensor logits, Tensor label, Float beta) => SmoothL1Loss"
   bind_python: True
