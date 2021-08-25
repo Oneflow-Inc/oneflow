@@ -183,8 +183,11 @@
   bind_python: True
 
 - name: "fmod"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastFMod"
-  bind_python: False
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastFMod",
+    "Tensor (Tensor input, Scalar other) => ScalarFMod",
+  ]
+  bind_python: true
 
 - name: "log"
   signature: "Tensor (Tensor x) => Log"
@@ -496,20 +499,13 @@
   bind_python: False
 
 - name: "where"
-  signature: "Tensor (Tensor condition, Tensor x, Tensor y) => Where"
-  bind_python: false
-
-- name: "where_scalar_x"
-  signature: "Tensor (Tensor condition, Scalar scalar, Tensor y) => WhereScalarX"
-  bind_python: False
-
-- name: "where_scalar_y"
-  signature: "Tensor (Tensor condition, Tensor x, Scalar scalar) => WhereScalarY"
-  bind_python: False
-
-- name: "where_scalar_xy"
-  signature: "Tensor (Tensor condition, Scalar x_scalar, Scalar y_scalar) => WhereScalarXY"
-  bind_python: False
+  signature: [
+    "Tensor (Tensor condition, Tensor x, Tensor y) => Where",
+    "Tensor (Tensor condition, Scalar x, Tensor y) => WhereScalarX",
+    "Tensor (Tensor condition, Tensor x, Scalar y) => WhereScalarY",
+    "Tensor (Tensor condition, Scalar x, Scalar y) => WhereScalarXY",
+  ]
+  bind_python: true
 
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
@@ -1035,10 +1031,6 @@
   signature: "Tensor (Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None,
                       Generator generator=None) => ConsistentRandN"
   bind_python: True
-
-- name: "scalar_fmod"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarFMod"
-  bind_python: False
 
 - name: "split"
   signature: "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split"
