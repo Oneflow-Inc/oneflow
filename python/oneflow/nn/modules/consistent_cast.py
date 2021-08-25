@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from oneflow.support.blocking import BlockingInfoContext
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op, Tensor
 from oneflow.nn.module import Module
@@ -37,7 +38,7 @@ class ToConsistent(Module):
 @register_tensor_op("to_consistent")
 def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
     """Cast a local tensor to consistent tensor or cast a
-    consistent tensor to another consistent tensor with 
+    consistent tensor to another consistent tensor with
     different sbp or placement
 
 
@@ -100,8 +101,8 @@ def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
 
     if grad_sbp is None:
         grad_sbp = tuple()
-
-    return flow.F.to_consistent(input, placement, sbp, grad_sbp)
+    with BlockingInfoContext() as ctx:
+        return flow.F.to_consistent(input, placement, sbp, grad_sbp)
 
 
 class ToLocal(Module):
