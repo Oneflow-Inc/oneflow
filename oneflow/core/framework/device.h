@@ -54,7 +54,7 @@ class Device final {
 
   static Maybe<Symbol<Device>> ThreadLocalGetOrNew(const std::string& type, int64_t device_id);
   static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
-  static Maybe<Symbol<Device>> New(const std::string& typed);
+  static Maybe<Symbol<Device>> New(const std::string& type);
 
   static Maybe<Symbol<Device>> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;

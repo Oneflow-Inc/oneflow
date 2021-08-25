@@ -13,19 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_BOXING_DIVIDOR_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_BOXING_DIVIDOR_UTIL_H_
 
-#include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/framework/op_interpreter/boxing/boxing_dividor.h"
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/thread_local_callback.h"
+#include <pybind11/functional.h>
 
 namespace oneflow {
 
-extern Maybe<BoxingDividor> (*ReplaceInDeviceType)(DeviceType device_type);
-extern Maybe<BoxingDividor> (*ReplaceOutDeviceType)(DeviceType device_type);
-extern Maybe<BoxingDividor> (*FlattenInHierarchy)();
-extern Maybe<BoxingDividor> (*OutPlacementAndPartialSum)();
+ONEFLOW_API_PYBIND11_MODULE("blocking", m) {
+  m.def("register_stack_info_callback", [](const blocking::StackInfoCallbackType& Callback) {
+    blocking::RegisterStackInfoCallback(Callback);
+  });
+  m.def("clear_stack_info_callback", []() { blocking::ClearStackInfoCallback(); });
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_BOXING_DIVIDOR_UTIL_H_

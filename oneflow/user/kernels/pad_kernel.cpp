@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -64,7 +65,7 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 }  // namespace
 
 template<DeviceType device_type, typename T>
-class PadKernel final : public user_op::OpKernel {
+class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   PadKernel() = default;
   ~PadKernel() = default;
@@ -126,7 +127,7 @@ REGISTER_PAD_KERNEL(DeviceType::kCPU, int64_t)
 REGISTER_PAD_KERNEL(DeviceType::kCPU, int8_t)
 
 template<DeviceType device_type, typename T>
-class PadGradKernel final : public user_op::OpKernel {
+class PadGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   PadGradKernel() = default;
   ~PadGradKernel() = default;
