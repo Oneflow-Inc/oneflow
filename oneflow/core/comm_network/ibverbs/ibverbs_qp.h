@@ -68,8 +68,6 @@ class MessagePool final {
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
     MessagePool() = delete; 
     ~MessagePool() {
-      FreeActorMsgMR();
-      FreeMr();
     }
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
