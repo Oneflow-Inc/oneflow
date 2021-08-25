@@ -39,6 +39,7 @@ class CTCGreedyDecoderKernel final : public user_op::OpKernel {
   ~CTCGreedyDecoderKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* log_probs = ctx->Tensor4ArgNameAndIndex("log_probs", 0);
     const user_op::Tensor* input_lengths = ctx->Tensor4ArgNameAndIndex("input_lengths", 0);
