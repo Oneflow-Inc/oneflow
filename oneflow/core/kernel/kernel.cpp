@@ -96,24 +96,28 @@ void Kernel::Forward(const KernelCtx& ctx,
   }
   if (!blob_access_checker_disabled_) { SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob); }
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
+
   ForwardDataContent(ctx, BnInOp2Blob);
-  for (const std::string& obn : this->op_attribute().output_bns()) {
-    Blob* blob = BnInOp2Blob(obn);
-    int check_code = CheckBlobInfNan(ctx.device_ctx, blob);
-    if (check_code == 0) {
-      LOG(ERROR) << "CheckBlobInfNan, op: " << op_conf().name() << ", check not completed";
-    } else if (check_code == -1) {
-      LOG(ERROR) << "CheckBlobInfNan, op: " << op_conf().name() << ", skip when not on gpu";
-    } else if (check_code == -2) {
-      LOG(ERROR) << "CheckBlobInfNan, op:" << op_conf().name() << ", obn: " << obn
-                 << ", skip when dtype is not float";
-    } else if (check_code == 1) {
-      LOG(ERROR) << "CheckBlobInfNan, op:" << op_conf().name() << ", obn: " << obn << " has inf";
-    } else if (check_code == 2) {
-      LOG(ERROR) << "CheckBlobInfNan, op: " << op_conf().name() << " obn: " << obn << " has nan";
-    } else {
-      LOG(ERROR) << "CheckBlobInfNan, op: " << op_conf().name() << " obn: " << obn
-                 << ", meet unexcepted check code: " << check_code;
+
+  if (std::getenv("ONEFLOW_CHECK_INF_NAN") != nullptr) {
+    for (const std::string& obn : this->op_attribute().output_bns()) {
+      Blob* blob = BnInOp2Blob(obn);
+      int check_code = CheckBlobInfNan(ctx.device_ctx, blob);
+      if (check_code == 0) {
+        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", check not completed";
+      } else if (check_code == -1) {
+        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", skip when not on gpu";
+      } else if (check_code == -2) {
+        LOG(INFO) << "CheckBlobInfNan, op:" << op_conf().name() << ", obn: " << obn
+                  << ", skip when dtype is not float";
+      } else if (check_code == 1) {
+        LOG(INFO) << "CheckBlobInfNan, op:" << op_conf().name() << ", obn: " << obn << " has inf";
+      } else if (check_code == 2) {
+        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << " obn: " << obn << " has nan";
+      } else {
+        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << " obn: " << obn
+                  << ", meet unexcepted check code: " << check_code;
+      }
     }
   }
   OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob));
