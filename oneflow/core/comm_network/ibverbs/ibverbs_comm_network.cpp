@@ -150,7 +150,8 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
   recv_msg_buf_ = std::make_shared<MessagePool>(pd_,kDefaultMessagePoolSize);
   //send_msg_buf_ = new MessagePool(pd_,kDefaultMessagePoolSize);
-  send_msg_buf_ = std::make_shared<MessagePool>(pd_,kDefaultMessagePoolSize);
+  send_msg_buf_ = recv_msg_buf_;
+  //send_msg_buf_ = std::make_shared<MessagePool>(pd_,kDefaultMessagePoolSize);
   CHECK(cq_);
   ibv_port_attr port_attr{};
   const uint8_t port = user_port == 0 ? 1 : user_port;
