@@ -73,13 +73,15 @@ class TestConvertDependency(flow.unittest.TestCase):
                 if size_attr[-2] == ",":
                     size_attr = size_attr.replace(",", "")
                 if type_attr[-1] == ",":
-                    type_str = type_attr.replace(",", "")
+                    type_attr = type_attr.replace(",", "")
+                    test_case.assertEqual(type_attr, "oneflow.float32")
 
                 data_size = tuple(map(int, size_attr[1:-1].split(", ")))
                 node_name = attrs[1]
             num_nodes[t] = cnt
 
         test_case.assertEqual(num_nodes["INPUT"]!=0, True)
+        test_case.assertEqual(num_nodes["PARAMETER"]==16, True)
         test_case.assertEqual(num_nodes["OUTPUT"]!=0, True)
 
         # get graph proto, if you don't _compile the graph, the _graph_proto will be None
