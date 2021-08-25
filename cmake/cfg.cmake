@@ -131,7 +131,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
       --project_build_dir=${PROJECT_BINARY_DIR}
       --generate_file_type=cfg.pybind.cpp
-    DEPENDS ${Python_EXECUTABLE} ${TEMPLATE_FILES} ${CFG_SOURCE_FILE_CONVERT_PROTO} ${PYBIND11_FILE_CONVERT_PROTO}
+    DEPENDS ${TEMPLATE_FILES} ${CFG_SOURCE_FILE_CONVERT_PROTO} ${PYBIND11_FILE_CONVERT_PROTO}
   )
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)
