@@ -163,7 +163,7 @@ class IBVerbsQP final {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
   IBVerbsQP() = delete;
   IBVerbsQP(ibv_context *, ibv_pd*, uint8_t port_num, ibv_cq * send_cq, ibv_cq* recv_cq,
-            MessagePool * recv_msg_buf, MessagePool * send_msg_buf);
+            MessagePool * msg_buf);
 
   IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq,

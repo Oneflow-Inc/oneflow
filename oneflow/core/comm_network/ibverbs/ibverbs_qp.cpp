@@ -69,7 +69,41 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   std::cout<<"IBVerbsQP::IBVerbsQP msg_buf_ done" << std::endl;
 }
 
+IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
+                     ibv_cq* recv_cq,
+                     MessagePool * msg_buf) {
+  // ctx_, pd_
+  ctx_ = ctx;
+  pd_ = pd ;
+  port_num_ = port_num;
+  // qp_
+  ibv_device_attr device_attr{};
+  CHECK_EQ(ibv::wrapper.ibv_query_device(ctx, &device_attr), 0);
+  const int64_t user_queue_depth =
+      ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_QUEUE_DEPTH", kDefaultQueueDepth);
+  const uint32_t queue_depth = std::min<uint32_t>(device_attr.max_qp_wr, user_queue_depth);
+  ibv_qp_init_attr qp_init_attr{};
+  qp_init_attr.qp_context = nullptr;
+  qp_init_attr.send_cq = send_cq;
+  qp_init_attr.recv_cq = recv_cq;
+  qp_init_attr.srq = nullptr;
+  qp_init_attr.cap.max_send_wr = queue_depth;
+  qp_init_attr.cap.max_recv_wr = queue_depth;
+  qp_init_attr.cap.max_send_sge = 1;
+  qp_init_attr.cap.max_recv_sge = 1;
+  qp_init_attr.cap.max_inline_data = 0;
+  qp_init_attr.qp_type = IBV_QPT_RC;
+  qp_init_attr.sq_sig_all = 1;
+  qp_ = ibv::wrapper.ibv_create_qp(pd, &qp_init_attr);
+  CHECK(qp_);
+  num_outstanding_send_wr_ = 0;
+  max_outstanding_send_wr_ = queue_depth;
+  msg_buf_.reset(msg_buf);
+  std::cout<<"IBVerbsQP::IBVerbsQP msg_buf_ done" << std::endl;
+}
+
 IBVerbsQP::~IBVerbsQP() {
+  msg_buf_.reset();
   CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
   std::cout<<"IBVerbsQP::~IBVerbsQP  done" << std::endl;
 }
