@@ -29,7 +29,6 @@ Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(in->nd_sbp()));
   CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));
-  CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kGPU);
   return Maybe<void>::Ok();
 }
 
