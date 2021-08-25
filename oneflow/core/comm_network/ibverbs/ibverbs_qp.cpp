@@ -69,8 +69,6 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
 }
 
 IBVerbsQP::~IBVerbsQP() {
-//  recv_msg_buf_.reset();
-//  send_msg_buf_.reset();
   CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
 }
 
