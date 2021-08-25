@@ -354,6 +354,7 @@ def randint_op(
     For example:
 
     .. code-block:: python
+
         >>> import oneflow as flow
         >>> generator = flow.Generator()
         >>> generator.manual_seed(0)
@@ -389,14 +390,22 @@ class RandPerm(Module):
         assert n >= 0
         self.n = n
         self.dtype = None
+        (
+            _,
+            self.device,
+            self.generator,
+            self.placement,
+            self.sbp,
+        ) = _rand_op_common_process((), device, generator, placement, sbp)
+        self.requires_grad = requires_grad
 
     def forward(self, out=None):
         if self.placement is not None:
             res = flow.F.consistent_randperm(
-                self.n, self.placement, self.sbp, self.dtype, self.generator
+                self.n, self.placement, self.sbp, self.generator
             )
         else:
-            res = flow.F.randperm(self.n, self.dtype, self.device, self.generator)
+            res = flow.F.randperm(self.n, self.device, self.generator)
         res.requires_grad = self.requires_grad
         return res.to(dtype=self.dtype)
 
@@ -445,7 +454,7 @@ def randperm_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    assert pin_memory is None, "layout not supported yet"
+    assert pin_memory is False, "pin_memory not supported yet"
     if generator is None:
         generator = flow.default_generator()
     return RandPerm(n, generator, dtype, layout, device, placement, sbp, requires_grad)(
