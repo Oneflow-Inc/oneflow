@@ -118,11 +118,7 @@ inline void CurJobAddOp(oneflow::OperatorConf& op_conf) {
 
 inline oneflow::SavedModel LoadModel(std::string full_path_name) {
   oneflow::SavedModel saved_model;
-  std::ifstream file;
-  file.open(full_path_name, std::ios::in);
-  std::istream* file_istream = &file;
-  saved_model.ParseFromIstream(file_istream);
-  file.close();
+  oneflow::TryParseProtoFromPbFile(full_path_name, &saved_model);
   return saved_model;
 }
 

@@ -62,7 +62,7 @@ public class InferenceSession {
         OneFlow.loadCheckpoint(checkpointBuffer);
     }
 
-    public Map<String, Tensor> run(String jobName, Map<String, Tensor> tensorMap) throws RuntimeException {
+    public synchronized Map<String, Tensor> run(String jobName, Map<String, Tensor> tensorMap) throws RuntimeException {
         checkStatus(OPEN);
         // push job names: [job, op, job, op, ...]
         String[] pushJobNames = OneFlow.getPushJobNames().split(",");

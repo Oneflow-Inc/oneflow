@@ -563,7 +563,7 @@ public class InferenceSessionTest {
     /**
      * multi-thread test
      */
-//    @Test
+    @Test
     public void multiThreadTest() throws InterruptedException {
         String jobName = "mlp_inference";
 
