@@ -66,10 +66,12 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
   msg_buf_ = msg_buf;
+  std::cout<<"IBVerbsQP::IBVerbsQP msg_buf_ done" << std::endl;
 }
 
 IBVerbsQP::~IBVerbsQP() {
   CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
+  std::cout<<"IBVerbsQP::~IBVerbsQP  done" << std::endl;
 }
 
 void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
@@ -137,15 +139,19 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 void IBVerbsQP::PostAllRecvRequest() {
     if(msg_buf_->IsEmpty()) {
       msg_buf_->RegisterMessagePool();
+      std::cout<<"first IBVerbsQP::PostAllRecvRequest done" << std::endl;
       while(msg_buf_->IsEmpty() == false) {
         ActorMsgMR * msg_mr = msg_buf_->GetMessage();
         PostRecvRequest(msg_mr);
+        
       }
+      std::cout<<"second IBVerbsQP::PostAllRecvRequest done" << std::endl;
     } else {
         while(msg_buf_->IsEmpty() == false  ) {
         ActorMsgMR * msg_mr = msg_buf_->GetMessage();
         PostRecvRequest(msg_mr);
       }
+      std::cout<<"third IBVerbsQP::PostAllRecvRequest done" << std::endl;
     }
 }
 
@@ -179,6 +185,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   ActorMsgMR * msg_mr = msg_buf_->GetMessage();
+  std::cout<<"IBVerbsQP::PostSendRequest done" << std::endl;
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
@@ -223,6 +230,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
   {
     msg_buf_->PutMessage(wr_id->msg_mr);
+    std::cout<<" IBVerbsQP::SendDone Done" << std::endl;
   }
   DeleteWorkRequestId(wr_id);
   PostPendingSendWR();
@@ -234,6 +242,7 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
   msg_buf_->PutMessage(wr_id->msg_mr);
+  std::cout<<" IBVerbsQP::RecvDone Done" << std::endl;
   DeleteWorkRequestId(wr_id);
 }
 

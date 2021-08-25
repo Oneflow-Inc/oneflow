@@ -76,15 +76,15 @@ void ParseUserDevicePort(std::string* device_name, int* port) {
 IBVerbsCommNet::~IBVerbsCommNet() {
   while (poll_exit_flag_.test_and_set() == true) {}
   poll_thread_.join();
-  /*msg_buf_->FreeActorMsgMR();
-  msg_buf_->FreeMr();*/
   msg_buf_.reset();
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
+
   CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
   CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
   CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
+  std::cout<<"IBVerbsCommNet::~IBVerbsCommNet done" << std::endl;
 }
 
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
@@ -146,6 +146,7 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
   msg_buf_.reset(new MessagePool(pd_,kDefaultMessagePoolSize));
+  std::cout<<"IBVerbsCommNet msg_buf_ Done" << std::endl;
   CHECK(cq_);
   ibv_port_attr port_attr{};
   const uint8_t port = user_port == 0 ? 1 : user_port;

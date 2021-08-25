@@ -36,6 +36,7 @@ class ActorMsgMR final {
     mr_ = mr;
   }
   ~ActorMsgMR() {
+    std::cout<<"ActorMsgMR::~ActorMsgMR done "<< std::endl;
   }
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
@@ -72,6 +73,7 @@ class MessagePool final {
     }
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
+      index_ = 0;
       RegisterMessagePool();
     }
     void RegisterMessagePool() {
@@ -89,13 +91,17 @@ class MessagePool final {
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
           message_buf_.push_front(msg_mr);
       }
+      std::cout<<"index_:" << index_ << " and RegisterMessagePool Done" << std::endl;
+      index_++;
     }
 
   ActorMsgMR *  GetMessage() {
         if(IsEmpty() == false)  {
+            std::cout<<"GetMessage first Done" << std::endl;
             return GetMessageFromBuf();
         } else {
             RegisterMessagePool();
+            std::cout<<"GetMessage second Done" << std::endl;
             return GetMessageFromBuf();
       }
   }
@@ -104,12 +110,14 @@ class MessagePool final {
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       ActorMsgMR * msg_mr = message_buf_.front();
       message_buf_.pop_front();
+        std::cout<<"GetMessageFromBuf  Done" << std::endl;
       return msg_mr;
   }
 
   void PutMessage(ActorMsgMR * msg_mr) {
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
       message_buf_.push_front(msg_mr);
+      std::cout<<"PutMessage Done" << std::endl;
   }
 
   bool IsEmpty() {
@@ -128,6 +136,7 @@ class MessagePool final {
         mr_buf_.pop_front();
         CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
     }
+    std::cout<<"FreeMr done" << std::endl; 
   }
 
   void FreeActorMsgMR() {
@@ -135,6 +144,7 @@ class MessagePool final {
       delete message_buf_.front();
       message_buf_.pop_front();
     }
+    std::cout<<"FreeActorMsgMR done" << std::endl;
   }
 
   private:
@@ -143,6 +153,7 @@ class MessagePool final {
     std::mutex message_buf_mutex_;
     std::deque<ActorMsgMR*> message_buf_;
     std::deque<ibv_mr*> mr_buf_;
+    size_t index_ ; 
 };
 
 struct IBVerbsCommNetRMADesc;
