@@ -161,7 +161,8 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 };
 
 inline const std::shared_ptr<cfg::ErrorProto>& UninitializedValueError() {
-  static thread_local const auto& error = Error::ValueError("uninitialized value").error_proto();
+  static thread_local const auto& error =
+      Error::InvalidValueError("uninitialized value").error_proto();
   return error;
 }
 
@@ -350,16 +351,16 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
 
 }  // namespace oneflow
 
-#define OF_TODO() return Error::Todo().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
+#define OF_TODO() return Error::TodoError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 #define OF_UNIMPLEMENTED() \
-  return Error::Unimplemented().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
+  return Error::UnimplementedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
 #define OF_RUNTIME_ERROR()                                                                        \
   return Error::RuntimeError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) << "RuntimeError " \
                                                                                   ": "
 
-#define OF_COMPLIE_OPTION_ERROR()                                                    \
-  return Error::CompileOptionWrong().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
+#define OF_COMPLIE_OPTION_ERROR()                                                         \
+  return Error::CompileOptionWrongError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << " Compile option wrong: "
 
 #define CHECK_OR_RETURN(expr)                                                      \

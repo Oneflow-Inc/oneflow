@@ -48,7 +48,7 @@ Maybe<NaiveAsyncTransportCtx> CheckTransportToken(Symbol<RankGroup> rank_group) 
 Maybe<int64_t> GetCurrentRankGroupLevel() {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& root_rank_group = JUST(RankGroupScope::RootRankGroup());
-  CHECK_OR_RETURN(rank_group == root_rank_group) << Error::Unimplemented();
+  CHECK_OR_RETURN(rank_group == root_rank_group) << Error::UnimplementedError();
   return static_cast<int64_t>(0);
 }
 
