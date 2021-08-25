@@ -31,9 +31,6 @@ REGISTER_USER_OP("view_copy")
       *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn([](user_op::DeviceInferContext* ctx) -> Maybe<Symbol<Device>> {
-      return ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-    })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
