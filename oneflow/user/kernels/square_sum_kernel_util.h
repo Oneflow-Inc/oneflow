@@ -13,10 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/device_tick_kernel.h"
+#ifndef ONEFLOW_USER_KERNELS_SQUARE_SUM_KERNEL_UTIL_H_
+#define ONEFLOW_USER_KERNELS_SQUARE_SUM_KERNEL_UTIL_H_
+
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDeviceTickConf, DeviceTickKernel);
+template<typename T>
+struct SquareSumParam {
+  const T* ptr;
+  int64_t count;
+};
+
+template<DeviceType device_type, typename T>
+struct SquareSumKernelUtil {
+  static void SquareSum(DeviceCtx* ctx, int64_t n, const T* x, T* y);
+  static void MultiSquareSum(DeviceCtx* ctx, const std::vector<SquareSumParam<T>>& params, T* y);
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_USER_KERNELS_SQUARE_SUM_KERNEL_UTIL_H_
