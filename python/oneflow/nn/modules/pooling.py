@@ -196,6 +196,7 @@ class LegacyMaxPool2d(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
+
         >>> kernel_size, stride, padding = (4, 4), (1, 1), (1, 2)
         >>> m = flow.nn.LagacyMaxPool2d(kernel_size, stride, padding)
         >>> x = flow.Tensor(np.random.rand(6, 4, 7, 9))
@@ -230,24 +231,8 @@ class LegacyMaxPool2d(Module):
         self.padding_before = [pad[0] for pad in pads_list]
         self.padding_after = [pad[1] for pad in pads_list]
 
-        # self._op = (
-        #     flow.builtin_op("max_pool_2d")
-        #     .Attr("data_format", channel_pos)
-        #     .Attr("pool_size", kernel_size)
-        #     .Attr("strides", stride)
-        #     .Attr("ceil_mode", ceil_mode)
-        #     .Attr("padding", padding_type)
-        #     .Attr("padding_before", padding_before)
-        #     .Attr("padding_after", padding_after)
-        #     .Input("x")
-        #     .Output("y")
-        #     .Build()
-        # )
-
     def forward(self, x):
-        # return self._op(x)[0]
-
-        y = flow.F.max_pool_2d(
+        return flow.F.max_pool_2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.strides,
@@ -257,7 +242,83 @@ class LegacyMaxPool2d(Module):
             data_format=self.channel_pos,
             ceil_mode=self.ceil_mode
         )
-        return y
+
+
+class LegacyAvgPool2d(Module):
+    r"""Performs the 2d-average pooling on the input.
+    In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
+    output :math:`(N, C, H_{out}, W_{out})` and `kernel_size` :math:`(kH, kW)`
+    can be precisely described as:
+
+    .. math::
+        out(N_i, C_j, h, w)  = \frac{1}{kH * kW} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1}
+                               input(N_i, C_j, stride[0] \times h + m, stride[1] \times w + n)
+
+    Args:
+        kernel_size (Union[int, Tuple[int, int]]):  An int or list of ints that has length 1, 2. The size of the window for each dimension of the input Tensor.
+        strides (Union[int, Tuple[int, int]]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input Tensor.
+        padding (Tuple[int, int]): An int or list of ints that has length 1, 2. Implicit zero padding to be added on both sides.
+        ceil_mode (bool, default to False): When True, will use ceil instead of floor to compute the output shape.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> m = flow.nn.LegacyAvgPool2d(
+        ...     kernel_size=(3, 2),
+        ...     padding=0,
+        ...     stride=(2, 1),
+        ... )
+        >>> x = flow.Tensor(shape=(1, 1, 10, 10))
+        >>> y = m(x)   
+        
+    """
+
+    def __init__(
+        self,
+        kernel_size: _size_2_t,
+        stride: Optional[_size_2_t] = None,
+        padding: _size_2_t = 0,
+        ceil_mode: bool = False,
+        count_include_pad: Optional[bool] = None,
+        divisor_override: Optional[int] = None,
+        name: Optional[str] = None,
+    ):
+        super().__init__()
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride) if (stride is not None) else kernel_size
+
+        assert isinstance(padding, int) or isinstance(
+            padding, tuple
+        ), "padding can only int int or tuple of 2 ints."
+        padding = _pair(padding)
+        padding = [0, 0, *padding]
+
+        assert count_include_pad is None, "count_include_pad not supported yet"
+        assert divisor_override is None, "divisor_override not supported yet"
+
+        self._channel_pos = "channels_first"
+        # TODO(yaochi): align with pytorch when padding is asymmetric
+        self._padding_type, _pads_list = calc_pool_padding(
+            padding, get_dhw_offset(self._channel_pos), 2
+        )
+        self._padding_before = [pad[0] for pad in _pads_list]
+        self._padding_after = [pad[1] for pad in _pads_list]
+        self.ceil_mode = ceil_mode
+
+    def forward(self, x):
+        return flow.F.avg_pool_2d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self._padding_type,
+            padding_before=self._padding_before,
+            padding_after=self._padding_after,
+            ceil_mode=self.ceil_mode,
+            data_format=self._channel_pos,
+        )
 
 
 class MaxPool2d(Module):
