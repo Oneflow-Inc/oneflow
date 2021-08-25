@@ -81,13 +81,16 @@ Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t 
   return Maybe<void>::Ok();
 }
 
-ncclComm_t RawGetNcclComm(int64_t peer_process_id) {
+std::pair<ncclComm_t, int64_t> RawGetNcclCommAndNcclRank(int64_t peer_process_id) {
   std::set<std::pair<int64_t, int64_t>> device_set;
-  device_set.emplace(GlobalProcessCtx::Rank(), GlobalProcessCtx::LocalRank());
+  const int64_t& rank = GlobalProcessCtx::Rank();
+  const int64_t peer_nccl_rank = (peer_process_id > rank) ? 1 : 0;
+  device_set.emplace(rank, GlobalProcessCtx::LocalRank());
   device_set.emplace(peer_process_id, GlobalProcessCtx::LocalRank(peer_process_id));
-  return CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+  return {CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set),
+          peer_nccl_rank};
 }
-auto* GetNcclComm = DECORATE(&RawGetNcclComm, ThreadLocal);
+auto* GetNcclCommAndNcclRank = DECORATE(&RawGetNcclCommAndNcclRank, ThreadLocal);
 
 template<>
 Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
@@ -115,9 +118,9 @@ template<>
 Maybe<void> Send<DeviceType::kGPU>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
                                    DeviceCtx* ctx) {
   CHECK_OR_RETURN(IsPODDataType(dtype));
-  const auto& comm = GetNcclComm(dst);
-  OF_NCCL_CHECK_OR_RETURN(
-      ncclSend(in, elem_cnt, GetNcclDataType(dtype), dst, comm, ctx->cuda_stream()));
+  const auto& comm_and_rank = GetNcclCommAndNcclRank(dst);
+  OF_NCCL_CHECK_OR_RETURN(ncclSend(in, elem_cnt, GetNcclDataType(dtype), comm_and_rank.second,
+                                   comm_and_rank.first, ctx->cuda_stream()));
   return Maybe<void>::Ok();
 }
 
@@ -147,9 +150,9 @@ template<>
 Maybe<void> Recv<DeviceType::kGPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
                                    DeviceCtx* ctx) {
   CHECK_OR_RETURN(IsPODDataType(dtype));
-  const auto& comm = GetNcclComm(src);
-  OF_NCCL_CHECK_OR_RETURN(
-      ncclRecv(out, elem_cnt, GetNcclDataType(dtype), src, comm, ctx->cuda_stream()));
+  const auto& comm_and_rank = GetNcclCommAndNcclRank(src);
+  OF_NCCL_CHECK_OR_RETURN(ncclRecv(out, elem_cnt, GetNcclDataType(dtype), comm_and_rank.second,
+                                   comm_and_rank.first, ctx->cuda_stream()));
   return Maybe<void>::Ok();
 }
 
