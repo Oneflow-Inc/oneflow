@@ -141,12 +141,10 @@ del hook
 del ExitHook
 del atexit
 del oneflow
-import oneflow.framework.docstr as docstr
-from oneflow.framework.docstr.utils import register_docstr
 
-register_docstr()
-del register_docstr
-del docstr
+import oneflow.F
+import oneflow.framework.docstr as docstr
+
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 import oneflow.nn.modules.acosh
