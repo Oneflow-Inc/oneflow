@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/boxing_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -21,6 +21,22 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 
 namespace oneflow {
+
+template<typename T>
+class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
+  BoxingKernel() = default;
+  ~BoxingKernel() = default;
+
+ private:
+  void VirtualKernelInit() override;
+  void ForwardDataContent(const KernelCtx&,
+                          const std::function<Blob*(const std::string&)>&) const override;
+
+  PbRpf<std::string> ibn_0_;
+  PbRpf<std::string> obn_0_;
+};
 
 namespace {
 
