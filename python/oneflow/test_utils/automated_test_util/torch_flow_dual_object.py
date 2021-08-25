@@ -186,6 +186,7 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_args,
                             oneflow_kwargs,
                         ) = get_args(pytorch, *args, **kwargs)
+
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
                         except Exception as e:
@@ -343,6 +344,8 @@ def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05):
 @equality_checker(torch_original.Tensor, flow._oneflow_internal.Tensor)
 def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     if torch_tensor.grad is not None:
+        if flow_tensor.grad is None:
+            print_note_fake_program()
         assert (
             flow_tensor.grad is not None
         ), f"OneFlow tensor doesn't have grad while PyTorch tensor has one, PyTorch tensor is\n {torch_tensor}\n, OneFlow tensor is\n{flow_tensor} "
