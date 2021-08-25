@@ -214,7 +214,7 @@ export TEST_TMPDIR={cache_dir}/bazel_cache
 export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
 {oneflow_python_dir_cmd}
 {cmake_cmd}
-make -j`nproc` prepare_oneflow_third_party
+cmake --build . -j `nproc` --target oneflow_deps
 """
     common_docker_args = get_common_docker_args(
         oneflow_src_dir=oneflow_src_dir,
@@ -277,6 +277,7 @@ def build_oneflow(
             extra_oneflow_cmake_args,
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
             f"-DPython3_EXECUTABLE={python_bin}",
+            f"-DCFG_Python_EXECUTABLE={get_python_bin('3.6')}",
             oneflow_src_dir,
             inplace_arg,
         ]
