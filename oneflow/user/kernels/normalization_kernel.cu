@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -172,7 +173,8 @@ size_t InferGradTmpSize(user_op::InferContext* ctx) {
 }
 
 template<typename T>
-class NormalizationInferenceKernel final : public user_op::OpKernel {
+class NormalizationInferenceKernel final : public user_op::OpKernel,
+                                           public user_op::CudaGraphSupport {
  public:
   NormalizationInferenceKernel() = default;
   ~NormalizationInferenceKernel() override = default;
@@ -349,7 +351,7 @@ void ReluBackward<float16>(DeviceCtx* device_ctx, int64_t n, const int32_t* mask
 }
 
 template<typename T>
-class NormalizationTrainKernel final : public user_op::OpKernel {
+class NormalizationTrainKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   NormalizationTrainKernel() = default;
   ~NormalizationTrainKernel() override = default;
@@ -493,7 +495,8 @@ REGISTER_BN_ADD_RELU_KERNEL(float)
 REGISTER_BN_ADD_RELU_KERNEL(double)
 
 template<typename T>
-class NormalizationGradUserKernel final : public user_op::OpKernel {
+class NormalizationGradUserKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
  public:
   NormalizationGradUserKernel() = default;
   ~NormalizationGradUserKernel() override = default;
@@ -674,7 +677,8 @@ size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
 }
 
 template<typename T>
-class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
+class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
  public:
   FusedNormalizationAddReluKernel() = default;
   ~FusedNormalizationAddReluKernel() override = default;
@@ -760,7 +764,8 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
 REGISTER_FUSED_BN_ADD_RELU_KERNEL(float16)
 
 template<typename T>
-class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
+class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
+                                                      public user_op::CudaGraphSupport {
  public:
   FusedNormalizationAddReluGradUserKernel() = default;
   ~FusedNormalizationAddReluGradUserKernel() override = default;

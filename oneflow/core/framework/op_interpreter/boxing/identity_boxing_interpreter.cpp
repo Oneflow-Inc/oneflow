@@ -31,4 +31,28 @@ Maybe<one::Tensor> IdentityBoxingInterpreter::InterpretImpl(
                                        GetNoneSbpList());
 }
 
+namespace {
+
+Maybe<void> RawCheckIdentity(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  CHECK_OR_RETURN(in->placement() == out->placement());
+  CHECK_OR_RETURN(in->placement()->parallel_num() == 1 || in->nd_sbp() == out->nd_sbp());
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+Maybe<one::Tensor> GetIdentity(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                               Symbol<PlacedNdSbp> out) {
+  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  const auto& tensor_placement = JUST(tensor->parallel_desc());
+  CHECK_OR_RETURN(tensor_placement == in->placement());
+  if (tensor_nd_sbp == out->nd_sbp()) { return tensor; }
+  const auto& local_tensor = JUST(tensor->cur_rank_phy_tensor());
+  const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
+  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
+                                                 *tensor->shape(), tensor->dtype()));
+}
+
+COMMAND(RegisterBoxingFunction("identity", DECORATE(&RawCheckIdentity, ThreadLocal), &GetIdentity));
 }  // namespace oneflow
