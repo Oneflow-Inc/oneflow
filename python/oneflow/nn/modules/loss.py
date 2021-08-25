@@ -204,7 +204,7 @@ class CrossEntropyLoss(Module):
             ones = flow.ones(
                 condition.shape, dtype=condition.dtype, device=condition.device
             )
-            condition = ones.sub(condition).reshape(tuple(out.shape))
+            condition = ones.sub(condition)
             out = flow.where(condition, out, zeros)
             if self.reduction == "mean":
                 reduce_sum = out.sum()
@@ -216,9 +216,9 @@ class CrossEntropyLoss(Module):
             return out.sum()
         else:
             if input_shape_len == 3:
-                out = out.reshape((b, -1))
+                out = out.reshape(b, -1)
             if input_shape_len == 4:
-                out = out.reshape((b, h, w))
+                out = out.reshape(b, h, w)
             return out
 
 
