@@ -35,7 +35,7 @@ auto* CachedGetBroadcastNdSbp = DECORATE(&GetBroadcastNdSbp, ThreadLocal);
 
 Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(in->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(in->nd_sbp()));
   CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));
   CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kGPU);
   return Maybe<void>::Ok();
@@ -45,7 +45,7 @@ static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocal
 
 Maybe<void> RawCheckNaivePTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsPartialSumNdSbp(in->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllPartialSumNdSbp(in->nd_sbp()));
   CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));
   CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kGPU);
   return Maybe<void>::Ok();
@@ -55,7 +55,7 @@ static constexpr auto* CheckNaivePTo1 = DECORATE(&RawCheckNaivePTo1, ThreadLocal
 
 Maybe<void> RawCheckNaiveSTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsSplitNdSbp(in->nd_sbp(), 0));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllSplitNdSbp(in->nd_sbp(), 0));
   CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));
   CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kGPU);
   return Maybe<void>::Ok();
