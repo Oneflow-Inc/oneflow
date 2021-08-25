@@ -13,9 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import traceback
 import oneflow._oneflow_internal
 
 
-def add_docstr(fun, docstr: str):
-    return oneflow._oneflow_internal.add_doc(fun, docstr)
+class BlockingInfoContext:
+    def __init__(self, save_stack=True):
+        self.save_stack_ = save_stack
+        stack_info = "".join(traceback.format_stack(limit=5))
+        oneflow._oneflow_internal.blocking.register_stack_info_callback(
+            lambda: stack_info
+        )
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        oneflow._oneflow_internal.blocking.clear_stack_info_callback()
