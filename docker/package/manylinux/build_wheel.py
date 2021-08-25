@@ -302,7 +302,6 @@ cmake --build . -j `nproc`
     else:
         bash_cmd += f"""
 cd {oneflow_python_dir}
-rm _oneflow_internal.*.so
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --package_name {package_name}
 cd -
 """
