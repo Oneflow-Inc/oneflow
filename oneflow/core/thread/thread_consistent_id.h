@@ -21,10 +21,17 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> SetThisThreadConsistentUniqueId(int64_t thread_consistent_uid,
-                                            const std::string& debug_string);
-Maybe<int64_t> GetThisThreadConsistentUniqueId();
-Maybe<const std::string&> GetThreadConsistentUniqueIdDebugString(int64_t thread_consistent_uid);
+const static int kThreadConsistentIdMain = 0;
+const static int kThreadConsistentIdHook = 1;
+const static int kThreadConsistentIdScheduler = 2;
+
+size_t GetThreadConsistentIdCount();
+
+Maybe<void> InitThisThreadUniqueConsistentId(int64_t thread_consistent_id,
+                                             const std::string& debug_string);
+Maybe<void> InitThisThreadConsistentId(int64_t thread_consistent_id,
+                                       const std::string& debug_string);
+Maybe<int64_t> GetThisThreadConsistentId();
 
 }  // namespace oneflow
 
