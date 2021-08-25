@@ -131,9 +131,6 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         linear_warmup_cosine_lr1 = flow.optim.lr_scheduler.WarmUpLR(
             cosine_lr1, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
         )
-        linear_warmup_cosine_lr1 = flow.optim.lr_scheduler.LinearWarmupLR(
-            cosine_lr1, steps=17, start_multiplier=0.6
-        )
 
         class CustomGraph0(flow.nn.Graph):
             def __init__(self):
