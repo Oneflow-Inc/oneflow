@@ -137,18 +137,18 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-    if(msg_buf_->IsEmpty()) {
-      msg_buf_->RegisterMessagePool();
+    if(msg_Pool_buf_->IsEmpty()) {
+      msg_Pool_buf_->RegisterMessagePool();
       std::cout<<"first IBVerbsQP::PostAllRecvRequest done" << std::endl;
-      while(msg_buf_->IsEmpty() == false) {
-        ActorMsgMR * msg_mr = msg_buf_->GetMessage();
+      while(msg_Pool_buf_->IsEmpty() == false) {
+        ActorMsgMR * msg_mr = msg_Pool_buf_->GetMessage();
         PostRecvRequest(msg_mr);
         
       }
       std::cout<<"second IBVerbsQP::PostAllRecvRequest done" << std::endl;
     } else {
-        while(msg_buf_->IsEmpty() == false  ) {
-        ActorMsgMR * msg_mr = msg_buf_->GetMessage();
+        while(msg_Pool_buf_->IsEmpty() == false  ) {
+        ActorMsgMR * msg_mr = msg_Pool_buf_->GetMessage();
         PostRecvRequest(msg_mr);
       }
       std::cout<<"third IBVerbsQP::PostAllRecvRequest done" << std::endl;
@@ -184,7 +184,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 }
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
-  ActorMsgMR * msg_mr = msg_buf_->GetMessage();
+  ActorMsgMR * msg_mr = msg_Pool_buf_->GetMessage();
   std::cout<<"IBVerbsQP::PostSendRequest done" << std::endl;
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
@@ -229,7 +229,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
   {
-    msg_buf_->PutMessage(wr_id->msg_mr);
+    msg_Pool_buf_->PutMessage(wr_id->msg_mr);
     std::cout<<" IBVerbsQP::SendDone Done" << std::endl;
   }
   DeleteWorkRequestId(wr_id);
@@ -241,7 +241,7 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   CHECK(ibv_comm_net != nullptr);
   ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
-  msg_buf_->PutMessage(wr_id->msg_mr);
+  msg_Pool_buf_->PutMessage(wr_id->msg_mr);
   std::cout<<" IBVerbsQP::RecvDone Done" << std::endl;
   DeleteWorkRequestId(wr_id);
 }
