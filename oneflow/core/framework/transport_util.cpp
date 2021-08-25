@@ -30,8 +30,13 @@ namespace oneflow {
 
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
+  bool printed = false;
   JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds,
-                            [] { LOG(ERROR) << blocking::GetStackInfo(); }, 3));
+                            [&printed] {
+                              LOG(ERROR) << blocking::GetStackInfo();
+                              printed = true;
+                            },
+                            3));
   JUST(ctx.transport_token().TryReleaseCtrlTransportTokenLock());
   return Maybe<void>::Ok();
 }
