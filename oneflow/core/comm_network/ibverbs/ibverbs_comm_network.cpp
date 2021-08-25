@@ -75,16 +75,11 @@ void ParseUserDevicePort(std::string* device_name, int* port) {
 IBVerbsCommNet::~IBVerbsCommNet() {
   while (poll_exit_flag_.test_and_set() == true) {}
   poll_thread_.join();
-  recv_msg_buf_->FreeActorMsgMR();
-  recv_msg_buf_->FreeMr();
-  send_msg_buf_->FreeActorMsgMR();
-  send_msg_buf_->FreeMr();
-
+  msg_buf_->FreeActorMsgMR();
+  msg_buf_->FreeMr();
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
-  //delete recv_msg_buf_;
- // delete send_msg_buf_;
   CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
   CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
   CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
@@ -148,9 +143,9 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   ibv_device_attr device_attr{};
   CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  recv_msg_buf_ = std::make_shared<MessagePool>(pd_,kDefaultMessagePoolSize);
+  msg_buf_ = std::make_shared<MessagePool>(pd_,kDefaultMessagePoolSize);
   //send_msg_buf_ = new MessagePool(pd_,kDefaultMessagePoolSize);
-  send_msg_buf_ = recv_msg_buf_;
+ // send_msg_buf_ = recv_msg_buf_;
   //send_msg_buf_ = std::make_shared<MessagePool>(pd_,kDefaultMessagePoolSize);
   CHECK(cq_);
   ibv_port_attr port_attr{};
@@ -164,7 +159,7 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   qp_vec_.assign(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
-    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, port, cq_,cq_,recv_msg_buf_, send_msg_buf_);
+    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, port, cq_,cq_,msg_buf_);
     qp_vec_.at(peer_id) = cur_qp;
     IBVerbsConnectionInfo conn_info;
     conn_info.set_lid(port_attr.lid);

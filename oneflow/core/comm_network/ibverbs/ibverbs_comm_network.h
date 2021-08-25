@@ -68,8 +68,8 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
 
 //  MessagePool * recv_msg_buf_;
 //  MessagePool * send_msg_buf_;
-  std::shared_ptr<MessagePool> recv_msg_buf_;
-  std::shared_ptr<MessagePool> send_msg_buf_;
+  std::shared_ptr<MessagePool> msg_buf_;
+  //std::shared_ptr<MessagePool> send_msg_buf_;
 }; 
 
 }  // namespace oneflow

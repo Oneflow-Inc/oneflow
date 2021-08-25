@@ -38,8 +38,7 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq,
-                     std::shared_ptr<MessagePool> recv_msg_buf,
-                     std::shared_ptr<MessagePool> send_msg_buf) {
+                     std::shared_ptr<MessagePool> msg_buf) {
   // ctx_, pd_
   ctx_ = ctx;
   pd_ = pd ;
@@ -66,10 +65,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK(qp_);
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
- // recv_msg_buf_.reset(recv_msg_buf); 
- // send_msg_buf_.reset(send_msg_buf); 
-  recv_msg_buf_ = recv_msg_buf;
-  send_msg_buf_ = send_msg_buf;
+  msg_buf_ = msg_buf;
 }
 
 IBVerbsQP::~IBVerbsQP() {
@@ -141,15 +137,15 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-    if(recv_msg_buf_->IsEmpty()) {
-      recv_msg_buf_->RegisterMessagePool();
-      while(recv_msg_buf_->IsEmpty() == false) {
-        ActorMsgMR * msg_mr = recv_msg_buf_->GetMessage();
+    if(msg_buf_->IsEmpty()) {
+      msg_buf_->RegisterMessagePool();
+      while(msg_buf_->IsEmpty() == false) {
+        ActorMsgMR * msg_mr = msg_buf_->GetMessage();
         PostRecvRequest(msg_mr);
       }
     } else {
-        while(recv_msg_buf_->IsEmpty() == false  ) {
-        ActorMsgMR * msg_mr = recv_msg_buf_->GetMessage();
+        while(msg_buf_->IsEmpty() == false  ) {
+        ActorMsgMR * msg_mr = msg_buf_->GetMessage();
         PostRecvRequest(msg_mr);
       }
     }
@@ -184,7 +180,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 }
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
-  ActorMsgMR * msg_mr = send_msg_buf_->GetMessage();
+  ActorMsgMR * msg_mr = msg_buf_->GetMessage();
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
@@ -228,7 +224,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
   {
-    send_msg_buf_->PutMessage(wr_id->msg_mr);
+    msg_buf_->PutMessage(wr_id->msg_mr);
   }
   DeleteWorkRequestId(wr_id);
   PostPendingSendWR();
@@ -239,7 +235,7 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   CHECK(ibv_comm_net != nullptr);
   ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
-  recv_msg_buf_->PutMessage(wr_id->msg_mr);
+  msg_buf_->PutMessage(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
 }
 
