@@ -76,7 +76,7 @@ void ParseUserDevicePort(std::string* device_name, int* port) {
 IBVerbsCommNet::~IBVerbsCommNet() {
   while (poll_exit_flag_.test_and_set() == true) {}
   poll_thread_.join();
-  msg_buf_.reset();
+  //msg_buf_.reset();
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
