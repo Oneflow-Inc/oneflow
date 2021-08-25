@@ -28,41 +28,6 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-py::object PyClamp(py::args py_args, py::kwargs py_kwargs) {
-  PyObject* args = py_args.ptr();
-  size_t nargs = PyTuple_Size(args);
-  CHECK_EQ_OR_THROW(nargs, 3) << "3 positional inputs are required.";
-
-  const auto& result = [&]() -> Maybe<Tensor> {  // NOLINT
-    PyObject* input = PyTuple_GetItem(args, 0);
-    PyObject* min = PyTuple_GetItem(args, 1);
-    PyObject* max = PyTuple_GetItem(args, 2);
-
-    CHECK_OR_RETURN(PyTensorCheck(input)) << "input type should be a Tensor.";
-    const auto& in = JUST(PyUnpackTensor(input));
-
-    bool has_min_bound = (min != Py_None);
-    bool has_max_bound = (max != Py_None);
-    if (has_min_bound) { CHECK_OR_RETURN(PyScalarCheck(min)) << "min should be scalar or None."; }
-    if (has_max_bound) { CHECK_OR_RETURN(PyScalarCheck(max)) << "max should be scalar or None."; }
-    if (has_min_bound && has_max_bound) {
-      Scalar min_value = *JUST(PyUnpackScalar(min));
-      Scalar max_value = *JUST(PyUnpackScalar(max));
-      return functional::ClipByScalar(in, min_value, max_value);
-    } else if (has_min_bound && !has_max_bound) {
-      Scalar min_value = *JUST(PyUnpackScalar(min));
-      return functional::ClipByScalarMin(in, min_value);
-    } else if (!has_min_bound && has_max_bound) {
-      Scalar max_value = *JUST(PyUnpackScalar(max));
-      return functional::ClipByScalarMax(in, max_value);
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "min and max cannot be None at the same time.";
-    }
-  }();
-
-  return py::cast(result.GetPtrOrThrow());
-}
-
 py::object PyScatter(py::args py_args, py::kwargs py_kwargs) {
   // Scatter(Tensor input, Int32 dim, Tensor index, Tensor src)
   // Scatter(Tensor input, Int32 dim, Tensor index, float src)
@@ -184,7 +149,6 @@ py::object PyWhere(py::args py_args, py::kwargs py_kwargs) {
 namespace functional = one::functional;
 
 ONEFLOW_API_PYBIND11_MODULE("F", m) {
-  m.def("clamp", &functional::PyClamp);
   m.def("scatter", &functional::PyScatter);
   m.def("fmod", &functional::PyFmod);
   m.def("where", &functional::PyWhere);

@@ -835,28 +835,14 @@
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Triu"
   bind_python: True
   
-- name: "clip_by_scalar"
-  signature: "Tensor (Tensor x, Scalar min, Scalar max) => ClipByScalar"
-  bind_python: false
+- name: "clip"
+  signature: [
+    "Tensor (Tensor x, Scalar min=None, Scalar max=None) => Clip",
+  ]
+  bind_python: true
 
-- name: "clip_by_scalar_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Scalar min, Scalar max) => ClipByScalarGrad"
-  bind_python: False
-
-- name: "clip_by_scalar_min"
-  signature: "Tensor (Tensor x, Scalar min) => ClipByScalarMin"
-  bind_python: false
-
-- name: "clip_by_scalar_min_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Scalar min) => ClipByScalarMinGrad"
-  bind_python: False
-
-- name: "clip_by_scalar_max"
-  signature: "Tensor (Tensor x, Scalar max) => ClipByScalarMax"
-  bind_python: false
-
-- name: "clip_by_scalar_max_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Scalar max) => ClipByScalarMaxGrad"
+- name: "clip_grad"
+  signature: "Tensor (Tensor dy, Tensor x, Scalar min=None, Scalar max=None) => ClipGrad"
   bind_python: False
 
 - name: "dropout"
