@@ -52,10 +52,10 @@ def compare_with_numpy_adam(
                     "betas": betas,
                     "eps": eps,
                     "weight_decay": weight_decay,
-                    "do_bias_correction": do_bias_correction,
-                    "amsgrad": amsgrad,
                 }
             ],
+            do_bias_correction=do_bias_correction,
+            amsgrad=amsgrad,
         )
 
         def train_one_iter(grad):
@@ -79,7 +79,7 @@ def compare_with_numpy_adam(
         beta1 = betas[0]
         beta2 = betas[1]
 
-        def train_one_iter(iter, grad):
+        def np_train_one_iter(iter, grad):
             grad = grad + weight_decay * x
 
             bias_correction1 = 1.0
@@ -103,7 +103,7 @@ def compare_with_numpy_adam(
             return (param, v, s, max_s)
 
         for i in range(train_iters):
-            (x, vt, st, max_st) = train_one_iter(i, random_grad_seq[i])
+            (x, vt, st, max_st) = np_train_one_iter(i, random_grad_seq[i])
         return x
 
     oneflow_res = train_by_oneflow().numpy()
@@ -142,12 +142,12 @@ def compare_with_numpy_adam_clip_grad(
                     "betas": betas,
                     "eps": eps,
                     "weight_decay": weight_decay,
-                    "amsgrad": amsgrad,
-                    "do_bias_correction": do_bias_correction,
                     "clip_grad_max_norm": clip_grad_max_norm,
                     "clip_grad_norm_type": clip_grad_norm_type,
                 }
             ],
+            do_bias_correction=do_bias_correction,
+            amsgrad=amsgrad,
         )
 
         def train_one_iter(grad):
@@ -232,7 +232,7 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9)]
-        arg_dict["weight_decay"] = [0.1]
+        arg_dict["weight_decay"] = [0.1, 0.000]
         arg_dict["eps"] = [1e-08]
         arg_dict["do_bias_correction"] = [True, False]
         arg_dict["amsgrad"] = [True, False]

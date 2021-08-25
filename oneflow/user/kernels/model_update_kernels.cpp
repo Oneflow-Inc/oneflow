@@ -420,25 +420,20 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();
     }
-    const int64_t train_step_val = ctx->Attr<int64_t>("train_step_val");
-    const int64_t* train_step_ptr = nullptr;
-    if (ctx->has_input("train_step", 0)) {
-      const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
-      CHECK_EQ(train_step->shape().elem_cnt(), 1);
-      train_step_ptr = train_step->dptr<int64_t>();
-    }
 
     const float* bias_correction1_ptr = nullptr;
-    if (ctx->has_input("bias_correction_1", 0)) {
-      const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction_1", 0);
-      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);
+    if (ctx->has_input("bias_correction1", 0)) {
+      const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
+      // CHECK_EQ(bias_correction1->shape().elem_cnt(), 1); // todo(zzk): In eager it need
+      // consistent tensor. if use ones_like, it will not equal to 1.
       bias_correction1_ptr = bias_correction1->dptr<float>();
     }
 
     const float* bias_correction2_ptr = nullptr;
-    if (ctx->has_input("bias_correction_2", 0)) {
-      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction_2", 0);
-      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);
+    if (ctx->has_input("bias_correction2", 0)) {
+      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
+      // CHECK_EQ(bias_correction2->shape().elem_cnt(), 1); // todo(zzk): In eager it need
+      // consistent tensor. if use ones_like, it will not equal to 1.
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }
 
@@ -449,6 +444,7 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
@@ -458,11 +454,10 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, train_step_val,
-        learning_rate_ptr, scale_by_ptr, skip_if_ptr, train_step_ptr, 
-        bias_correction1_ptr, bias_correction2_ptr, 
-        model_diff->dptr<G>(), model->mut_dptr<T>(), 
-        m->mut_dptr<T>(), v->mut_dptr<T>(), max_v->mut_dptr<T>());
+        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, learning_rate_ptr,
+        scale_by_ptr, skip_if_ptr, bias_correction1_ptr, bias_correction2_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(),
+        max_v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -496,7 +491,6 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
   using ReduceSumUtilT = IndexedSlicesReduceSumKernelUtil<device_type, K, T, int32_t>;
   using MdUpdateUtilT = IndexedSlicesAdamMdUpdateKernelUtil<device_type, T, K, int32_t>;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    // const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float* learning_rate_ptr = nullptr;
     if (ctx->has_input("learning_rate", 0)) {
@@ -504,24 +498,19 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
       learning_rate_ptr = learning_rate->dptr<float>();
     }
 
-    const int64_t train_step_val = ctx->Attr<int64_t>("train_step_val");
-    const int64_t* train_step_ptr = nullptr;
-    if (ctx->has_input("train_step", 0)) {
-      const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
-      train_step_ptr = train_step->dptr<int64_t>();
-    }
-
     const float* bias_correction1_ptr = nullptr;
-    if (ctx->has_input("bias_correction_1", 0)) {
-      const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction_1", 0);
-      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);
+    if (ctx->has_input("bias_correction1", 0)) {
+      const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
+      // CHECK_EQ(bias_correction1->shape().elem_cnt(), 1); // todo(zzk): In eager it need
+      // consistent tensor. if use ones_like, it will not equal to 1.
       bias_correction1_ptr = bias_correction1->dptr<float>();
     }
 
     const float* bias_correction2_ptr = nullptr;
-    if (ctx->has_input("bias_correction_2", 0)) {
-      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction_2", 0);
-      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);
+    if (ctx->has_input("bias_correction2", 0)) {
+      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
+      // CHECK_EQ(bias_correction2->shape().elem_cnt(), 1); // todo(zzk): In eager it need
+      // consistent tensor. if use ones_like, it will not equal to 1.
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }
 
@@ -566,12 +555,11 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
 
     MdUpdateUtilT::Update(
         ctx->device_ctx(), beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
-        learning_rate_val, train_step_val, num_indices, feature_size, kernel_state->lower(),
-        kernel_state->upper(), buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate_ptr,
-        train_step_ptr, 
-        bias_correction1_ptr, bias_correction2_ptr, 
-        buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
-        model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(), max_v->mut_dptr<T>());
+        learning_rate_val, num_indices, feature_size, kernel_state->lower(), kernel_state->upper(),
+        buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate_ptr, bias_correction1_ptr,
+        bias_correction2_ptr, buffer_manager.UniqueDiffIndicesPtr(),
+        buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
+        v->mut_dptr<T>(), max_v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -699,32 +687,29 @@ REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type>
-class AdamBiasCorrectionLearningRateKernel final : public user_op::OpKernel {
+class BiasCorrectionFactorKernel final : public user_op::OpKernel {
  public:
-  AdamBiasCorrectionLearningRateKernel() = default;
-  ~AdamBiasCorrectionLearningRateKernel() override = default;
+  BiasCorrectionFactorKernel() = default;
+  ~BiasCorrectionFactorKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const auto beta1 = ctx->Attr<float>("beta1");
-    const auto beta2 = ctx->Attr<float>("beta2");
-    AdamBiasCorrectionLearningRateKernelUtil<device_type>::AdamBiasCorrectionLearningRate(
-        ctx->device_ctx(), beta1, beta2, learning_rate->dptr<float>(), train_step->dptr<int64_t>(),
-        out->mut_dptr<float>());
+    const auto beta = ctx->Attr<float>("beta");
+    BiasCorrectionFactorKernelUtil<device_type>::BiasCorrectionFactorCompute(
+        ctx->device_ctx(), beta, train_step->dptr<int64_t>(), out->mut_dptr<float>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(device) \
-  REGISTER_USER_KERNEL("adam_bias_correction_learning_rate")       \
-      .SetCreateFn<AdamBiasCorrectionLearningRateKernel<device>>() \
+#define REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(device) \
+  REGISTER_USER_KERNEL("adam_bias_correction_factor")       \
+      .SetCreateFn<BiasCorrectionFactorKernel<device>>()    \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device));
-REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kCPU)
+REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_ADAM_BIAS_CORRECTION_LEARNING_RATE_KERNEL(DeviceType::kGPU)
+REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kGPU)
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T, typename G>

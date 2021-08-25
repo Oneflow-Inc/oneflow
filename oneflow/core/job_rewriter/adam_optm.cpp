@@ -18,6 +18,32 @@ limitations under the License.
 
 namespace oneflow {
 
+struct BiasCorrectionFactorCacheKey {
+  float beta;
+  ParallelConf parallel_conf;
+};
+
+bool operator==(const BiasCorrectionFactorCacheKey& lhs, const BiasCorrectionFactorCacheKey& rhs) {
+  return (lhs.beta == rhs.beta) && (lhs.parallel_conf == rhs.parallel_conf);
+}
+
+}  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::BiasCorrectionFactorCacheKey> {
+  size_t operator()(const oneflow::BiasCorrectionFactorCacheKey& key) const {
+    const auto& float_hash = std::hash<float>();
+    const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
+    return float_hash(key.beta) ^ parallel_conf_hash(key.parallel_conf);
+  }
+};
+
+}  // namespace std
+
+namespace oneflow {
+
 namespace {
 
 std::string GenVariableOutputLbn(const OperatorConf& op_conf) {
@@ -36,6 +62,31 @@ OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::s
   helper_variable_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
   return helper_variable_op;
 }
+
+class BiasCorrectionFactorState final : public JobPassState {
+ public:
+  BiasCorrectionFactorState() {}
+  ~BiasCorrectionFactorState() override = default;
+
+  std::string GetLbn(
+      float beta, std::string bias_correction_name, ParallelConf parallel_conf,
+      std::function<std::string(float beta_val, std::string op_name)> BiasCorrectionFactorStateOp) {
+    BiasCorrectionFactorCacheKey cache_key;
+    cache_key.beta = beta;
+    cache_key.parallel_conf = parallel_conf;
+    const auto& iter = key2lbn_.find(cache_key);
+    if (iter != key2lbn_.end()) {
+      return iter->second;
+    } else {
+      std::string lbn = BiasCorrectionFactorStateOp(beta, bias_correction_name);
+      key2lbn_.emplace(cache_key, lbn);
+      return lbn;
+    }
+  }
+
+ private:
+  HashMap<BiasCorrectionFactorCacheKey, std::string> key2lbn_;
+};
 
 void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
                              const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf,
@@ -75,21 +126,76 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   const std::string& train_step_lbn = job_builder->job().job_conf().train_conf().train_step_lbn();
   const std::string& learning_rate_lbn = optimizer_conf.learning_rate_lbn();
 
-  adam_update_op_builder.OpTypeName("adam_update")
-      .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
-      .Input("model_diff", model_diff_lbn)
-      .Input("learning_rate", learning_rate_lbn)
-      .Input("train_step", train_step_lbn)
-      .Input("m", GenVariableOutputLbn(m_var))
-      .Input("v", GenVariableOutputLbn(v_var))
-      .Input("max_v", GenVariableOutputLbn(max_v_var))
-      .Attr<float>("beta1", beta1)
-      .Attr<float>("beta2", beta2)
-      .Attr<float>("epsilon", epsilon)
-      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
-      .Attr<bool>("amsgrad", amsgrad)
-      .Attr<bool>("do_bias_correction", do_bias_correction)
-      .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+  if (do_bias_correction) {
+    const std::string& job_pass_state_key = "adam_bias_correction_factor";
+    const bool has_state = CHECK_JUST(ctx->HasState<BiasCorrectionFactorState>(job_pass_state_key));
+    if (!has_state) {
+      CHECK_JUST(
+          ctx->ResetState(job_pass_state_key, std::make_unique<BiasCorrectionFactorState>()));
+    }
+    auto* state = CHECK_JUST(ctx->MutableState<BiasCorrectionFactorState>(job_pass_state_key));
+    ParallelConf bias_correction_parallel_conf;
+    const auto& lr_parallel_conf =
+        job_builder->ParallelConf4Lbi(GenLogicalBlobId(learning_rate_lbn));
+    const auto& train_step_parallel_conf =
+        job_builder->ParallelConf4Lbi(GenLogicalBlobId(train_step_lbn));
+    if (lr_parallel_conf == train_step_parallel_conf) {
+      bias_correction_parallel_conf = lr_parallel_conf;
+    } else {
+      bias_correction_parallel_conf = var_op_node.parallel_desc().parallel_conf();
+    }
+    auto AddAdamBiasCorrectionFactorOp = [&](float beta_val, std::string op_name) -> std::string {
+      user_op::UserOpConfWrapperBuilder op_builder(var_op->op_name() + op_name);
+      const auto adam_bias_correction_factor_op =
+          op_builder.OpTypeName("adam_bias_correction_factor")
+              .Input("train_step", train_step_lbn)
+              .Attr<float>("beta", beta_val)
+              .Output("out")
+              .ScopeSymbolId(var_op->op_conf().scope_symbol_id())
+              .Build();
+
+      job_builder->AddOps(bias_correction_parallel_conf,
+                          {adam_bias_correction_factor_op.op_conf()});
+      return adam_bias_correction_factor_op.output("out", 0);
+    };
+    const std::string bias_correction1_lbn =
+        state->GetLbn(beta1, "adam_bias_correction_factor1", bias_correction_parallel_conf,
+                      AddAdamBiasCorrectionFactorOp);
+    const std::string bias_correction2_lbn =
+        state->GetLbn(beta2, "adam_bias_correction_factor2", bias_correction_parallel_conf,
+                      AddAdamBiasCorrectionFactorOp);
+    adam_update_op_builder.OpTypeName("adam_update")
+        .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
+        .Input("model_diff", model_diff_lbn)
+        .Input("learning_rate", learning_rate_lbn)
+        .Input("bias_correction1", bias_correction1_lbn)
+        .Input("bias_correction2", bias_correction2_lbn)
+        .Input("m", GenVariableOutputLbn(m_var))
+        .Input("v", GenVariableOutputLbn(v_var))
+        .Input("max_v", GenVariableOutputLbn(max_v_var))
+        .Attr<float>("beta1", beta1)
+        .Attr<float>("beta2", beta2)
+        .Attr<float>("epsilon", epsilon)
+        .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
+        .Attr<bool>("amsgrad", amsgrad)
+        .Attr<bool>("do_bias_correction", do_bias_correction)
+        .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+  } else {
+    adam_update_op_builder.OpTypeName("adam_update")
+        .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
+        .Input("model_diff", model_diff_lbn)
+        .Input("learning_rate", learning_rate_lbn)
+        .Input("m", GenVariableOutputLbn(m_var))
+        .Input("v", GenVariableOutputLbn(v_var))
+        .Input("max_v", GenVariableOutputLbn(max_v_var))
+        .Attr<float>("beta1", beta1)
+        .Attr<float>("beta2", beta2)
+        .Attr<float>("epsilon", epsilon)
+        .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
+        .Attr<bool>("amsgrad", amsgrad)
+        .Attr<bool>("do_bias_correction", do_bias_correction)
+        .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+  }
   SetDynamicLossScaleSkipIf(ctx, &adam_update_op_builder);
   const auto adam_update_op = adam_update_op_builder.Build();
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {adam_update_op.op_conf()});

@@ -53,10 +53,10 @@ def compare_with_numpy_adamw(
                     "betas": betas,
                     "eps": eps,
                     "weight_decay": weight_decay,
-                    "do_bias_correction": do_bias_correction,
-                    "amsgrad": amsgrad,
                 }
-            ]
+            ],
+            do_bias_correction=do_bias_correction,
+            amsgrad=amsgrad,
         )
 
         def train_one_iter(grad):
@@ -144,12 +144,12 @@ def compare_with_numpy_adamw_clip_grad(
                     "betas": betas,
                     "eps": eps,
                     "weight_decay": weight_decay,
-                    "do_bias_correction": do_bias_correction,
-                    "amsgrad": amsgrad,
                     "clip_grad_max_norm": clip_grad_max_norm,
                     "clip_grad_norm_type": clip_grad_norm_type,
                 }
-            ]
+            ],
+            do_bias_correction=do_bias_correction,
+            amsgrad=amsgrad,
         )
 
         def train_one_iter(grad):

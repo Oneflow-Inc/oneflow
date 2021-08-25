@@ -524,14 +524,12 @@ REGISTER_NO_GRAD_USER_OP("adam_update")
     .OptionalInput("learning_rate")
     .OptionalInput("scale_by_tensor")
     .OptionalInput("skip_if")
-    .OptionalInput("train_step")
     .OptionalInput("bias_correction1")
     .OptionalInput("bias_correction2")
     .Input("m")
     .Input("v")
     .Input("max_v")
     .Attr<float>("learning_rate_val", 0.0)
-    .Attr<int64_t>("train_step_val", 0)
     .Attr<double>("scale", 1.0)
     .Attr<float>("l1", 0.0)
     .Attr<float>("l2", 0.0)
@@ -563,12 +561,12 @@ REGISTER_NO_GRAD_USER_OP("indexed_slices_adam_update")
     .Input("model_diff_indices")
     .Input("model_diff_values")
     .Input("learning_rate")
-    .OptionalInput("train_step")
+    .OptionalInput("bias_correction1")
+    .OptionalInput("bias_correction2")
     .Input("m")
     .Input("v")
     .Input("max_v")
     .Attr<float>("learning_rate_val", 0.0)
-    .Attr<int64_t>("train_step_val", 0)
     .Attr<float>("beta1", 0.9)
     .Attr<float>("beta2", 0.999)
     .Attr<float>("epsilon", 1e-8)
@@ -628,19 +626,18 @@ REGISTER_NO_GRAD_USER_OP("lamb_update")
     .SetDataTypeInferFn(InferLambUpdateDataType)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_NO_GRAD_USER_OP("adam_bias_correction_learning_rate")
-    .Input("learning_rate")
+REGISTER_NO_GRAD_USER_OP("adam_bias_correction_factor")
     .Input("train_step")
     .Output("out")
-    .Attr<float>("beta1", 0.9)
-    .Attr<float>("beta2", 0.999)
+    .Attr<float>("beta", 0.9)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("learning_rate", 0);
-      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("learning_rate", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("train_step", 0);
+      // *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("train_step", 0); // todo: whether
+      // the check is needed?
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("learning_rate", 0);
+      *ctx->OutputDType("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);

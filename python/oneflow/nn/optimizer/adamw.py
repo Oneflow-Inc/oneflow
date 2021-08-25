@@ -84,7 +84,6 @@ class AdamW(Optimizer):
             betas[1] >= 0.0 and betas[1] < 1.0
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
-        assert amsgrad is False, "Not support AMSGrad now!"
         options = dict()
         options["lr"] = lr
         options["eps"] = eps
@@ -98,22 +97,39 @@ class AdamW(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                self._state[param]["step"] = 0
                 self._state[param]["exp_avg"] = flow.zeros_like(param)
                 self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
                 self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
 
-        self._op = (
-            flow.builtin_op("adam_update")
-            .Input("model")
-            .Input("model_diff")
-            .Input("m")
-            .Input("v")
-            .Input("max_v")
-            .Attr("l1", 0.0)
-            .Attr("l2", 0.0)
-            .Build()
-        )
+        self._state["bias_correction1"] = flow.ones_like(param)
+        self._state["bias_correction2"] = flow.ones_like(param)
+
+        if options["do_bias_correction"]:
+            self._op = (
+                flow.builtin_op("adam_update")
+                .Input("model")
+                .Input("model_diff")
+                .Input("bias_correction1")
+                .Input("bias_correction2")
+                .Input("m")
+                .Input("v")
+                .Input("max_v")
+                .Attr("l1", 0.0)
+                .Attr("l2", 0.0)
+                .Build()
+            )
+        else:
+            self._op = (
+                flow.builtin_op("adam_update")
+                .Input("model")
+                .Input("model_diff")
+                .Input("m")
+                .Input("v")
+                .Input("max_v")
+                .Attr("l1", 0.0)
+                .Attr("l2", 0.0)
+                .Build()
+            )
 
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
@@ -136,19 +152,51 @@ class AdamW(Optimizer):
                     "do_bias_correction": param_group["do_bias_correction"],
                     "amsgrad": param_group["amsgrad"],
                 }
+
+                if param_group["do_bias_correction"]:
+                    self._state["bias_correction1"] = self._state[
+                        "bias_correction1"
+                    ].fill_(
+                        (1 - math.pow(param_group["betas"][0], self._state["step"] + 1))
+                    )
+                    self._state["bias_correction2"] = self._state[
+                        "bias_correction2"
+                    ].fill_(
+                        (1 - math.pow(param_group["betas"][1], self._state["step"] + 1))
+                    )
+
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    # todo: set it in here or out of param group?
-                    kwargs.update({"train_step_val": self._state[param]["step"]})
+
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
                     max_v_tensor = self._state[param]["max_exp_avg_sq"]
-                    self._op(
-                        param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs
-                    )
-                    self._state[param]["step"] += 1
+                    if param_group["do_bias_correction"]:
+                        bias_correction_tensor_a = self._state["bias_correction1"]
+                        bias_correction_tensor_b = self._state["bias_correction2"]
+                        # when set bias_correction tensor a as 1.0, it equal to no do bias correction.
+                        self._op(
+                            param,
+                            param.grad,
+                            bias_correction_tensor_a,
+                            bias_correction_tensor_b,
+                            m_tensor,
+                            v_tensor,
+                            max_v_tensor,
+                            **kwargs,
+                        )
+                    else:
+                        self._op(
+                            param,
+                            param.grad,
+                            m_tensor,
+                            v_tensor,
+                            max_v_tensor,
+                            **kwargs,
+                        )
 
+            self._state["step"] += 1
             return loss
 
     def generate_conf_for_graph(self, train_conf, vars_conf):

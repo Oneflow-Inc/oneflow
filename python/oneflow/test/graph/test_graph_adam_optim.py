@@ -255,7 +255,7 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
 
-        arg_dict["x_shape"] = [(1,)]
+        arg_dict["x_shape"] = [(10,)]
         arg_dict["learning_rate"] = [1, 1e-3]
 
         arg_dict["train_iters"] = [5]
