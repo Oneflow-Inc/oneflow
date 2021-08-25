@@ -312,21 +312,22 @@ cd -
 cmake --build . -j `nproc`
 """
     if skip_wheel or enter_bash:
-        return
+        pass
     else:
         bash_cmd += f"""
 cd {oneflow_python_dir}
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --package_name {package_name}
 cd -
 """
-    if skip_audit:
-        bash_cmd += f"""
-cp /tmp/tmp_wheel/*.whl {house_dir}
-"""
-    else:
-        bash_cmd += f"""
-auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
-"""
+    if skip_wheel == False:
+        if skip_audit:
+            bash_cmd += f"""
+    cp /tmp/tmp_wheel/*.whl {house_dir}
+    """
+        else:
+            bash_cmd += f"""
+    auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
+    """
     return create_tmp_bash_and_run(
         docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry
     )
