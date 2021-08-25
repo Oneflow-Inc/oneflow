@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/square_sum_kernel_util.h"
+#include "oneflow/user/kernels/square_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
