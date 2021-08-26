@@ -82,9 +82,10 @@ Maybe<const std::string&> Device::of_type() const {
 }
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
+  // gpu.LocalCallOpKernel is shared between device `cuda` and device `cuda_h2d`.
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},           {"cuda", "gpu.LocalCallOpKernel"},
-      {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
+      {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "gpu.LocalCallOpKernel"},
       {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"}, {"nccl", "async.gpu.LocalCallOpKernel"},
   };
   return MapAt(type2instr_name, type);

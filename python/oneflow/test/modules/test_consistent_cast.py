@@ -120,10 +120,6 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         test_case.assertEqual(y.dtype, flow.int32)
         sbp = (flow.sbp.split(0), flow.sbp.split(0))
         y = y.to_consistent(sbp=sbp)
-        test_case.assertEqual(y.sbp, sbp)
-        test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
-        test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
         if int(os.getenv("RANK")) < 2:
             scale = 2
@@ -132,6 +128,25 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         test_case.assertTrue(
             np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * scale)
         )
+
+    def test_to_consistent_loop_broadcast_shape_dtype(test_case):
+        if int(os.getenv("RANK")) < 2:
+            x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+            a = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        else:
+            x = flow.zeros((1,), dtype=flow.float)
+            a = flow.zeros((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        placement = flow.placement("cuda", {0: range(2)})
+        sbp = (flow.sbp.split(0),)
+        for i in range(1000):
+            if i % 100 == 0:
+                print(i)
+            y = x.to_consistent(placement=placement, sbp=sbp)
+            b = a.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        test_case.assertEqual(y.sbp, sbp)
+        test_case.assertEqual(y.placement, placement)
+        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(y.dtype, flow.int32)
 
 
 @flow.unittest.skip_unless_1n2d()

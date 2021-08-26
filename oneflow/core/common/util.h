@@ -71,14 +71,14 @@ namespace oneflow {
 
 #define OF_DISALLOW_COPY(ClassName)     \
   ClassName(const ClassName&) = delete; \
-  ClassName& operator=(const ClassName&) = delete;
+  ClassName& operator=(const ClassName&) = delete
 
 #define OF_DISALLOW_MOVE(ClassName) \
   ClassName(ClassName&&) = delete;  \
-  ClassName& operator=(ClassName&&) = delete;
+  ClassName& operator=(ClassName&&) = delete
 
 #define OF_DISALLOW_COPY_AND_MOVE(ClassName) \
-  OF_DISALLOW_COPY(ClassName)                \
+  OF_DISALLOW_COPY(ClassName);               \
   OF_DISALLOW_MOVE(ClassName)
 
 #define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"

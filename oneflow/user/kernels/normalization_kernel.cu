@@ -180,6 +180,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel,
   ~NormalizationInferenceKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const bool training = ctx->Attr<bool>("training");
     CHECK(!training);
@@ -357,6 +358,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
   ~NormalizationTrainKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     if (ctx->op_type_name() == "normalization") { CHECK(ctx->Attr<bool>("training")); }
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -502,6 +504,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel,
   ~NormalizationGradUserKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -684,6 +687,7 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
   ~FusedNormalizationAddReluKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -771,6 +775,7 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
   ~FusedNormalizationAddReluGradUserKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
