@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <typeinfo>
 #include "oneflow/core/vm/oneflow_vm.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
@@ -20,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/framework/transport_token.h"
 
 namespace oneflow {
 
@@ -35,17 +38,69 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachine* vm,
   return Maybe<void>::Ok();
 }
 
+void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
+  *Initializer = [&]() {
+    if (!CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return; }
+    CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
+  };
+}
+
+std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
+  const auto& stream_rt_desc = thread_ctx->stream_rt_desc();
+  const auto& stream_type_id = stream_rt_desc.stream_type_id();
+  const auto& stream_type = stream_type_id.stream_type();
+  return typeid(stream_type);
+}
+
+// Threads with the same stream_type share a thread_consistent_id.
+// e.g.
+//   Given there are 8 gpu thread in a single process.
+//   thread #0 is active in process #0, while others are not.
+//   thread #1 is active in process #1, while others are not.
+//   ...
+//   thread #7 is active in process #7, while others are not.
+//   to make them communicate with each other, we can allocate thread_consistent_id 1 to all those
+//   gpu threads in all processes.
+void GetWorkerThreadInitializer(ObjectMsgPtr<vm::VirtualMachine> vm,
+                                std::function<void(vm::ThreadCtx*)>* Initializer) {
+  std::set<std::type_index> stream_type_indexes;
+  OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm->mut_thread_ctx_list(), thread_ctx) {
+    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
+    if (!stream_type.SupportingTransportInstructions()) { continue; }
+    stream_type_indexes.insert(GetStreamTypeIndex(thread_ctx));
+  }
+  HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
+  int64_t thread_consistent_id = kThreadConsistentIdScheduler + 1;
+  for (const auto& stream_type_index : stream_type_indexes) {
+    LOG(INFO) << "transport stream type: " << stream_type_index.name();
+    stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
+  }
+  *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
+    if (!CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) { return; }
+    const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
+    const auto& iter = stream_type_index2consistent_id.find(stream_type_index);
+    if (iter != stream_type_index2consistent_id.end()) {
+      CHECK_JUST(InitThisThreadConsistentId(iter->second, stream_type_index.name()));
+    }
+  };
+}
+
 }  // namespace
 
 OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     : vm_(ObjectMsgPtr<vm::VirtualMachine>::New(vm::MakeVmDesc(resource, this_machine_id).Get())) {
+  std::function<void()> SchedulerInitializer;
+  GetSchedulerThreadInitializer(&SchedulerInitializer);
+  std::function<void(vm::ThreadCtx*)> WorkerInitializer;
+  GetWorkerThreadInitializer(vm_, &WorkerInitializer);
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
-    auto thread = std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx);
+    auto thread =
+        std::make_unique<std::thread>(&vm::ThreadCtx::LoopRun, thread_ctx, WorkerInitializer);
     worker_threads_.push_back(std::move(thread));
     return Maybe<void>::Ok();
   }));
   exiting_ = false;
-  schedule_thread_ = std::thread(&OneflowVM::Loop, this);
+  schedule_thread_ = std::thread(&OneflowVM::Loop, this, SchedulerInitializer);
 }
 
 namespace {
@@ -76,7 +131,8 @@ OneflowVM::~OneflowVM() {
   CHECK(!vm_);
 }
 
-void OneflowVM::Loop() {
+void OneflowVM::Loop(const std::function<void()>& Initializer) {
+  Initializer();
   auto* vm = mut_vm();
   while (!exiting_) { vm->Schedule(); }
   while (!mut_vm()->Empty()) { vm->Schedule(); }

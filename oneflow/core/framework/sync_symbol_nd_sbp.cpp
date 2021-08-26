@@ -139,7 +139,7 @@ namespace {}
 Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id, Symbol<cfg::NdSbp> symbol) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncSymbolNdSbp));
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncSymbolNdSbp));
   FlatNdSbpAsyncTransportCtx ctx(transport_token, symbol_id, symbol);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
