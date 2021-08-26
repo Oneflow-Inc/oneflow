@@ -104,6 +104,28 @@ class TestLrScheduler(flow.unittest.TestCase):
             new_lr = step_lr_step(TestLrScheduler.base_lr, i, step_size, gamma)
             test_case.assertAlmostEqual(step_lr.get_last_lr()[0], new_lr, places=5)
 
+    def test_multistep_lr(test_case):
+        optimizer = flow.optim.SGD(
+            [{"params": [Parameter(flow.Tensor([1.0]))]}], lr=TestLrScheduler.base_lr
+        )
+
+        def multistep_lr_step(base_lr, current_step, milestones, gamma):
+            count = 0
+            for step in milestones:
+                if current_step >= step:
+                    count += 1
+            return base_lr * gamma ** count
+
+        gamma = 0.1
+        milestones = [5, 11, 15]
+        multistep_lr = flow.optim.lr_scheduler.MultiStepLR(
+            optimizer, milestones=milestones, gamma=gamma
+        )
+        for i in range(1, 18):
+            multistep_lr.step()
+            new_lr = multistep_lr_step(TestLrScheduler.base_lr, i, milestones, gamma)
+            test_case.assertAlmostEqual(multistep_lr.get_last_lr()[0], new_lr, places=5)
+
     def test_lambda_lr(test_case):
         optimizer = flow.optim.SGD(
             [
