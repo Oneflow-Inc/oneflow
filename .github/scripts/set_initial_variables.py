@@ -51,19 +51,18 @@ def check_include(include_key=None, matrix: dict = None):
     }
 
 
-def check_bool_flag(flag):
-    assert flag in "true", "false"
-
-
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--only_clang", type=str, required=False)
+    parser.add_argument(
+        "--only_clang",
+        type=lambda x: (str(x).lower() in ["true", "1", "yes"]),
+        required=True,
+    )
     parser.add_argument("--out", type=str, required=False)
     args = parser.parse_args()
-
-    if args.only_clang == "true":
+    if args.only_clang:
         print_result(
             build_matrix={
                 "test_suite": ["cpu-clang"],
@@ -73,7 +72,6 @@ if __name__ == "__main__":
             out=args.out,
         )
     else:
-        assert args.only_clang == "false"
         full_build_matrix = {
             "test_suite": ["cuda", "cpu", "xla", "xla_cpu", "cpu-clang"],
             "include": [
