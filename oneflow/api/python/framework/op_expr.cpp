@@ -124,6 +124,9 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   PybindExportOpExpr<one::FeedInputOpExpr, cfg::FeedInputOpConf>(m, "FeedInputOpExpr");
   PybindExportOpExpr<one::FeedVariableOpExpr, cfg::FeedVariableOpConf>(m, "FeedVariableOpExpr");
   PybindExportOpExpr<one::FetchOutputOpExpr, cfg::FetchOutputOpConf>(m, "FetchOutputOpExpr");
+  PybindExportOpExpr<one::ImageDecoderRandomCropResizeOpExpr,
+                     cfg::ImageDecoderRandomCropResizeOpConf>(m,
+                                                              "ImageDecoderRandomCropResizeOpExpr");
 }
 
 }  // namespace oneflow
