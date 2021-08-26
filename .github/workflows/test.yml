@@ -15,7 +15,8 @@ jobs:
     if: ${{ github.repository_owner == 'Oneflow-Inc' }}
     runs-on: ubuntu-20.04
     outputs:
-      generated: ${{ steps.generating.outputs.generated }}
+      build_matrix: ${{ steps.generating.outputs.build_matrix }}
+      test_matrix: ${{ steps.generating.outputs.test_matrix }}
     steps:
       - name: Clone pytorch/pytorch
         uses: actions/checkout@v2
@@ -23,6 +24,9 @@ jobs:
         id: generating
         run: |
           python3 .github/scripts/set_initial_variables.py --only_clang=${{ contains(github.event.pull_request.labels.*.name, 'need-clang-only') }} --out initial-variables.json
+      - name: Print initial-variables.json
+        run: |
+          cat initial-variables.json
       - name: Upload initial-variables.json
         uses: actions/upload-artifact@v2
         with:
@@ -177,7 +181,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
     strategy:
       max-parallel: 5
-      matrix: ${{ fromJson(needs.set-initial-variables.generated.build_matrix) }}
+      matrix: ${{ fromJson(needs.set-initial-variables.outputs.build_matrix) }}
     steps:
       - name: Install Conda
         run: |
@@ -189,6 +193,8 @@ jobs:
               wget https://oneflow-static.oss-cn-beijing.aliyuncs.com/downloads/conda-installers/Miniconda3-py39_4.10.3-Linux-x86_64.sh
               bash Miniconda3-py39_4.10.3-Linux-x86_64.sh -b -u -p ${CONDA}
           fi
+          cp ci/conda/tuna.condarc $HOME/.condarc
+          conda clean -i
       - name: Download conda environment.yml # TODO: remove this step if migrated to generated matrix
         if: matrix.test_suite == 'cpu-clang'
         run: |
@@ -346,7 +352,7 @@ jobs:
     continue-on-error: ${{ matrix.allow_fail }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     strategy:
-      matrix: ${{ fromJson(needs.set-initial-variables.generated.test_matrix) }}
+      matrix: ${{ fromJson(needs.set-initial-variables.outputs.test_matrix) }}
     steps:
       - name: Fix permissions
         run: |

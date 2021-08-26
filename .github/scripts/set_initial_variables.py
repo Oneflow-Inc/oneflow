@@ -21,18 +21,34 @@ def print_github_action_output(name=None, value=None):
 
 
 def print_result(build_matrix=None, test_matrix=None, out=None):
+    check_include(include_key="test_suite", matrix=build_matrix)
+    if test_matrix != {}:
+        check_include(include_key="test_suite", matrix=test_matrix)
     assert build_matrix
-    assert test_matrix
+    assert test_matrix != None
     root = {
         "build_matrix": build_matrix,
         "test_matrix": test_matrix,
     }
-    print_github_action_output(
-        name="generated", value=json.dumps(root),
-    )
+    for k, v in root.items():
+        print_github_action_output(
+            name=k, value=json.dumps(v),
+        )
     if out:
         with open(out, "w+") as f:
             f.write(json.dumps(root, indent=4))
+
+
+def check_include(include_key=None, matrix: dict = None):
+    assert include_key in matrix
+    in_declare = set(matrix[include_key])
+    in_include = set()
+    for include_value in matrix["include"]:
+        in_include.add(include_value[include_key])
+    assert in_declare == in_include, {
+        "in_declare": in_declare,
+        "in_include": in_include,
+    }
 
 
 if __name__ == "__main__":
