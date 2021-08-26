@@ -51,6 +51,10 @@ def check_include(include_key=None, matrix: dict = None):
     }
 
 
+def check_bool_flag(flag):
+    assert flag in "true", "false"
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -58,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument("--only_clang", type=str, required=False)
     parser.add_argument("--out", type=str, required=False)
     args = parser.parse_args()
+
     if args.only_clang == "true":
         print_result(
             build_matrix={
