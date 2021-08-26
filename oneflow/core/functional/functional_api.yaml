@@ -282,6 +282,14 @@
   signature: "Tensor (Tensor x, DataType dtype) => Cast"
   bind_python: True
 
+- name: "tensor"
+  signature: ["Tensor (Shape shape, *, DataType dtype=None, Device device=None, Placement placement=None, 
+                      Sbp sbp=None, SbpList sbp_tuple=None, Bool requires_grad=None) => InitTensorFromShape",
+              "Tensor (Tensor tensor, *, DataType dtype=None, Device device=None, Placement placement=None,
+                      Sbp sbp=None, SbpList sbp_tuple=None, Bool requires_grad=None) => InitTensorFromTensor",
+  ]
+  bind_python: True
+
 - name: "constant"
   signature: "Tensor (Shape shape, Scalar value, DataType dtype, Device device=None) => Constant"
   bind_python: True

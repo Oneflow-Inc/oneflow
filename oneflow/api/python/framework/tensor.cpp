@@ -259,17 +259,9 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
   Symbol<Device> device;
   Symbol<ParallelDesc> placement;
   std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;
-  PyObject* pyobj_kwargs = PyDict_Copy(kwargs.ptr());
-  const auto& GetValues4Key = [&](const std::string& key) {
-    const char* key_c_str = key.c_str();
-    if (PyDict_Contains(pyobj_kwargs, PyUnicode_FromString(key_c_str))) {
-      PyDict_DelItemString(pyobj_kwargs, key_c_str);
-    }
-    return kwargs[key_c_str];
-  };
   if (kwargs.contains("device")) {
     CHECK_OR_RETURN(!kwargs.contains("placement"));
-    const auto& device_kwarg = GetValues4Key("device");
+    const auto& device_kwarg = kwargs["device"];
     CHECK_OR_RETURN(py::isinstance<Symbol<Device>>(device_kwarg)
                     || py::isinstance<py::str>(device_kwarg));
 
@@ -280,11 +272,11 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
     }
   } else if (kwargs.contains("placement")) {
     // Get placement
-    const auto& placement_kwarg = GetValues4Key("placement");
+    const auto& placement_kwarg = kwargs["placement"];
     CHECK_OR_RETURN(py::isinstance<Symbol<ParallelDesc>>(placement_kwarg));
     placement = py::cast<Symbol<ParallelDesc>>(placement_kwarg);
     // Get SBP
-    const auto& sbp_kwarg = GetValues4Key("sbp");
+    const auto& sbp_kwarg = kwargs["sbp"];
     if (py::isinstance<Symbol<cfg::SbpParallel>>(sbp_kwarg)) {
       sbp_tuple.push_back(py::cast<Symbol<cfg::SbpParallel>>(sbp_kwarg));
     } else {
@@ -293,18 +285,10 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
     CHECK_OR_RETURN(sbp_tuple.size() == placement->hierarchy()->NumAxes());
   }
 
-  if (kwargs.contains("dtype")) { desired_dtype = GetValues4Key("dtype").cast<Symbol<DType>>(); }
+  if (kwargs.contains("dtype")) { desired_dtype = kwargs["dtype"].cast<Symbol<DType>>(); }
 
   bool requires_grad = false;
-  if (kwargs.contains("requires_grad")) {
-    requires_grad = GetValues4Key("requires_grad").cast<bool>();
-  }
-  PyObject *key, *value;
-  Py_ssize_t pos = 0;
-  if (PyDict_Next(pyobj_kwargs, &pos, &key, &value)) {
-    return Error::ValueError("tensor() got an unexpected keyword argument \'"
-                             + py::str(key).cast<std::string>() + "\'");
-  }
+  if (kwargs.contains("requires_grad")) { requires_grad = kwargs["requires_grad"].cast<bool>(); }
 
   // Constructs from Tensor or ndarray
   if (args.size() == 1) {

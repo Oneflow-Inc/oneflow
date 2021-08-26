@@ -156,6 +156,7 @@ types_allowed = {
     "Placement",
     "Sbp",
     "SbpList",
+    "Object",
 }
 
 generic_type_aliases = {
@@ -210,7 +211,7 @@ optional_argument_type_aliases = {
     "TensorIndex": "const Optional<TensorIndex>&",
     "Device": "const Optional<Symbol<Device>>&",
     "Placement": "const Optional<Symbol<ParallelDesc>>&",
-    "Sbp": "const Optional<Symbol<SbpParallel>>&",
+    "Sbp": "const Optional<Symbol<cfg::SbpParallel>>&",
     "SbpList": "const Optional<std::vector<Symbol<cfg::SbpParallel>>>&",
     **{k: "const Optional<{0}>".format(v) for k, v in generic_type_aliases.items()},
 }

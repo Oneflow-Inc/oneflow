@@ -102,6 +102,97 @@ class ConstantFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InitTensorFromShapeFunctor {
+ public:
+  InitTensorFromShapeFunctor() {}
+  Maybe<Tensor> operator()(const Shape& shape, const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<Symbol<ParallelDesc>>& placement,
+                           const Optional<Symbol<cfg::SbpParallel>>& sbp,
+                           const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp_tuple,
+                           const Optional<bool>& requires_grad) const {
+    // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
+    //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
+    //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
+    auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
+    std::shared_ptr<Tensor> tensor;
+    std::vector<Symbol<cfg::SbpParallel>> _sbp_tuple;
+    if (!dtype.has_value()) { return Error::ValueError("Dtype is null"); }
+    if (placement.has_value()) {
+      CHECK_OR_RETURN(!device.has_value());
+      CHECK_OR_RETURN(sbp.has_value() || sbp_tuple.has_value());
+      if (sbp.has_value()) {
+        _sbp_tuple.push_back(JUST(sbp.value()));
+      } else if (sbp_tuple.has_value()) {
+        _sbp_tuple = *JUST(sbp_tuple.value());
+      }
+      CHECK_OR_RETURN(_sbp_tuple.size() == JUST(placement.value())->hierarchy()->NumAxes());
+      // Shape -> ConsistentTensor
+      tensor = JUST(functional::ConsistentEmpty(shape, JUST(dtype.value()), JUST(placement.value()),
+                                                _sbp_tuple));
+    } else {
+      Symbol<Device> _device = device.has_value() ? JUST(device.value()) : JUST(Device::New("cpu"));
+      // Shape -> LocalTensor
+      tensor = JUST(functional::Empty(shape, JUST(dtype.value()), _device));
+    }
+    if (requires_grad.has_value()) { tensor->set_requires_grad(JUST(requires_grad.value())); }
+    return tensor;
+  }
+};
+
+class InitTensorFromTensorFunctor {
+ public:
+  InitTensorFromTensorFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input_tensor,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<Symbol<ParallelDesc>>& placement,
+                           const Optional<Symbol<cfg::SbpParallel>>& sbp,
+                           const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp_tuple,
+                           const Optional<bool>& requires_grad) const {
+    // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
+    //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
+    //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
+    auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
+    std::shared_ptr<Tensor> tensor;
+    std::vector<Symbol<cfg::SbpParallel>> _sbp_tuple;
+    if (sbp.has_value()) {
+      _sbp_tuple.push_back(JUST(sbp.value()));
+    } else if (sbp_tuple.has_value()) {
+      _sbp_tuple = *JUST(sbp_tuple.value());
+    }
+    Symbol<Device> _device = device.has_value() ? JUST(device.value()) : JUST(Device::New("cpu"));
+    if (input_tensor->is_local()) {
+      if (placement.has_value()) {
+        CHECK_OR_RETURN(!device.has_value());
+        CHECK_OR_RETURN(sbp.has_value() || sbp_tuple.has_value());
+        CHECK_OR_RETURN(_sbp_tuple.size() == JUST(placement.value())->hierarchy()->NumAxes());
+        // LocalTensor -> ConsistentTensor
+        tensor = JUST(functional::ToConsistent(input_tensor, JUST(placement.value()), _sbp_tuple,
+                                               GetNoneSbpList()));
+      } else {
+        // LocalTensor -> LocalTensor
+        tensor = JUST(functional::Copy(input_tensor, _device->type(), _device->device_id()));
+      }
+    } else {
+      if (placement.has_value()) {
+        CHECK_OR_RETURN(_sbp_tuple.size() == JUST(placement.value())->hierarchy()->NumAxes());
+        // ConsistentTensor -> ConsistentTensor
+        tensor = JUST(functional::ToConsistent(input_tensor, JUST(placement.value()), _sbp_tuple,
+                                               GetNoneSbpList()));
+      } else {
+        // ConsistentTensor -> LocalTensor
+        tensor = JUST(functional::ConsistentToLocal(input_tensor));
+        if (_device && (*_device != *JUST(tensor->device()))) {
+          tensor = JUST(functional::Copy(tensor, JUST(_device->of_type()), _device->device_id()));
+        }
+      }
+    }
+    if (dtype.has_value()) { tensor = JUST(functional::Cast(tensor, JUST(dtype.value()))); }
+    return tensor;
+  }
+};
+
 class EmptyFunctor {
  public:
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
@@ -1537,6 +1628,8 @@ class SplitWithSizeFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::InitTensorFromShapeFunctor>("InitTensorFromShape");
+  m.add_functor<impl::InitTensorFromTensorFunctor>("InitTensorFromTensor");
   m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
   m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
