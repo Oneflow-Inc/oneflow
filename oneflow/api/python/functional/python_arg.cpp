@@ -32,33 +32,33 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-#define INSTANCE_OBJECT_AS_INTEGER(T)                                                            \
-  template<>                                                                                     \
-  Maybe<T> PythonArg::ObjectAs<T>() const {                                                      \
-    return static_cast<T>(PyLong_AsLongLong(object_));                                           \
-  }                                                                                              \
-  template<>                                                                                     \
-  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                            \
-    if (size_ > 0 && PyLong_Check(object_)) {                                                    \
+#define INSTANCE_OBJECT_AS_INTEGER(T)                                                             \
+  template<>                                                                                      \
+  Maybe<T> PythonArg::ObjectAs<T>() const {                                                       \
+    return static_cast<T>(PyLong_AsLongLong(object_));                                            \
+  }                                                                                               \
+  template<>                                                                                      \
+  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                             \
+    if (size_ > 0 && PyLong_Check(object_)) {                                                     \
       return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyLong_AsLongLong(object_))); \
-    }                                                                                            \
-    return PyUnpackLongSequence<T>(object_);                                                     \
+    }                                                                                             \
+    return PyUnpackLongSequence<T>(object_);                                                      \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_TYPE_SEQ)
 #undef INSTANCE_OBJECT_AS_INTEGER
 
-#define INSTANCE_OBJECT_AS_FLOAT(T)                                                             \
-  template<>                                                                                    \
-  Maybe<T> PythonArg::ObjectAs<T>() const {                                                     \
-    return static_cast<T>(PyFloat_AsDouble(object_));                                           \
-  }                                                                                             \
-  template<>                                                                                    \
-  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                           \
-    if (size_ > 0 && PyFloat_Check(object_)) {                                                  \
+#define INSTANCE_OBJECT_AS_FLOAT(T)                                                              \
+  template<>                                                                                     \
+  Maybe<T> PythonArg::ObjectAs<T>() const {                                                      \
+    return static_cast<T>(PyFloat_AsDouble(object_));                                            \
+  }                                                                                              \
+  template<>                                                                                     \
+  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                            \
+    if (size_ > 0 && PyFloat_Check(object_)) {                                                   \
       return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyFloat_AsDouble(object_))); \
-    }                                                                                           \
-    return PyUnpackFloatSequence<T>(object_);                                                   \
+    }                                                                                            \
+    return PyUnpackFloatSequence<T>(object_);                                                    \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_FLOAT, FLOATING_TYPE_SEQ)
