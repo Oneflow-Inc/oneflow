@@ -23,58 +23,73 @@ import oneflow.unittest
 
 
 class TestComm(flow.unittest.TestCase):
-    def _test_send_recv(test_case, x0):
+    def _test_send_recv(test_case, x0, src, dst):
         rank = flow.framework.distribute.get_rank()
-        if rank == 0:
+        if rank == src:
             x1 = x0
-            flow.comm.send(x1, 1)
+            flow.comm.send(x1, dst)
 
             x2 = x0
-            flow.comm.send(x2, 1)
-        elif rank == 1:
-            x1 = flow.comm.recv(0)
+            flow.comm.send(x2, dst)
+        elif rank == dst:
+            x1 = flow.comm.recv(src)
             test_case.assertTrue(np.array_equal(x1.numpy(), x0.numpy()))
             test_case.assertEqual(x1.device, x0.device)
 
             x2 = flow.zeros_like(x0)
-            flow.comm.recv(0, out=x2)
+            flow.comm.recv(src, out=x2)
             test_case.assertTrue(np.array_equal(x2.numpy(), x0.numpy()))
             test_case.assertEqual(x2.device, x0.device)
         else:
-            raise ValueError()
+            # do nothing
+            pass
 
     @flow.unittest.skip_unless_1n2d()
-    def test_send_recv(test_case):
+    def test_send_recv_2_devices(test_case):
         x0 = flow.tensor([[1, 2]])
-        test_case._test_send_recv(x0)
+        test_case._test_send_recv(x0, 0, 1)
         x0 = x0.to("cuda")
-        test_case._test_send_recv(x0)
+        test_case._test_send_recv(x0, 1, 0)
 
-    @flow.unittest.skip_unless_1n2d()
-    def _test_send_recv_without_sending_meta(test_case, x0):
+    @flow.unittest.skip_unless_1n4d()
+    def test_send_recv_4_devices(test_case):
+        x0 = flow.tensor([[1, 2]])
+        test_case._test_send_recv(x0, 3, 1)
+        x0 = x0.to("cuda")
+        test_case._test_send_recv(x0, 0, 3)
+
+    def _test_send_recv_without_sending_meta(test_case, x0, src, dst):
         rank = flow.framework.distribute.get_rank()
-        if rank == 0:
+        if rank == src:
             x1 = x0
-            flow.comm.send(x1, 1, send_meta=False)
+            flow.comm.send(x1, dst, send_meta=False)
 
             x2 = x0
-            flow.comm.send(x2, 1, send_meta=False)
-        elif rank == 1:
-            x1 = flow.comm.recv(0, shape=x0.shape, dtype=x0.dtype, device=x0.device)
+            flow.comm.send(x2, dst, send_meta=False)
+        elif rank == dst:
+            x1 = flow.comm.recv(src, shape=x0.shape, dtype=x0.dtype, device=x0.device)
             test_case.assertTrue(np.array_equal(x1.numpy(), x0.numpy()))
 
             x2 = flow.zeros_like(x0)
-            flow.comm.recv(0, shape=x0.shape, dtype=x0.dtype, device=x0.device, out=x2)
+            flow.comm.recv(src, shape=x0.shape, dtype=x0.dtype, device=x0.device, out=x2)
             test_case.assertTrue(np.array_equal(x2.numpy(), x0.numpy()))
         else:
-            raise ValueError()
+            # do nothing
+            pass
 
     @flow.unittest.skip_unless_1n2d()
-    def test_send_recv_without_sending_meta(test_case):
+    def test_send_recv_without_sending_meta_2_devices(test_case):
         x0 = flow.tensor([[1, 2]])
-        test_case._test_send_recv_without_sending_meta(x0)
+        test_case._test_send_recv_without_sending_meta(x0, 1, 0)
         x0 = x0.to("cuda")
-        test_case._test_send_recv_without_sending_meta(x0)
+        test_case._test_send_recv_without_sending_meta(x0, 0, 1)
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_send_recv_without_sending_meta_4_devices(test_case):
+        x0 = flow.tensor([[1, 2]])
+        test_case._test_send_recv_without_sending_meta(x0, 2, 3)
+        x0 = x0.to("cuda")
+        test_case._test_send_recv_without_sending_meta(x0, 3, 1)
 
 
 if __name__ == "__main__":
