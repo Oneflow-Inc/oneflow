@@ -184,7 +184,7 @@ jobs:
             os: [self-hosted, linux, build]
             allow_fail: true
             python_version: 3.6
-          - test_suite: conda
+          - test_suite: cpu-clang
             cuda_version: 10.2 # unused
             extra_flags: "" # unused
             os: [self-hosted, linux, build]
@@ -201,6 +201,17 @@ jobs:
               wget https://oneflow-static.oss-cn-beijing.aliyuncs.com/downloads/conda-installers/Miniconda3-py39_4.10.3-Linux-x86_64.sh
               bash Miniconda3-py39_4.10.3-Linux-x86_64.sh -b -u -p ${CONDA}
           fi
+      - name: Download conda environment.yml # TODO: remove this step if migrated to generated matrix
+        if: matrix.test_suite == 'cpu-clang'
+        run: |
+          wget https://github.com/Oneflow-Inc/conda-env/blob/550506c70b96f0d001ec131fe66773fe6cf539a2/dev/clang10/environment-v2.yml -O environment.yml
+      - uses: conda-incubator/setup-miniconda@v2
+        if: matrix.test_suite == 'cpu-clang'
+        name: Activate Conda environment
+        with:
+          activate-environment: oneflow-dev-clang10-v2
+          environment-file: environment.yml
+          auto-activate-base: false
       - name: Set environments from secrets
         if: contains(${{ github.repository }}, "Oneflow-Inc")
         run: |
@@ -256,6 +267,19 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
         if: env.is_built != '1'
+      - name: Build with Conda
+        if: matrix.test_suite == 'cpu-clang'
+        run: |
+          set -x
+          mkdir -p build
+          cd build
+          cmake .. -C ../cmake/caches/cn/fast/cpu-clang.cmake
+          cmake --build . -j $(nproc)
+          cd -
+          cd python
+          python setup.py bdist_wheel
+          echo "wheelhouse_dir=$PWD/dist" >> $GITHUB_ENV
+        shell: bash -l {0}
       - name: Build OneFlow
         timeout-minutes: 45
         if: env.is_built != '1' && ((contains(fromJson('["cuda", "cpu"]'), matrix.test_suite) || (contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1')))
