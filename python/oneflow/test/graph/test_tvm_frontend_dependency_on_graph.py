@@ -26,7 +26,7 @@ from alexnet_model import alexnet
 class Graph(flow.nn.Graph):
     def __init__(self, module):
         self.m = module
-    
+
     def build(self, x):
         out = self.m(x)
         return out
@@ -83,9 +83,8 @@ class TestConvertDependency(flow.unittest.TestCase):
         model = flow.load(model_dir_path)
         for layer_name in model:
             layer = model[layer_name]
-            layer_path = layer.file_path     # get path
-            test_case.assertEqual(layer_path!=None, True)
-
+            layer_path = layer.file_path  # get path
+            test_case.assertEqual(layer_path != None, True)
 
     def test_infos_of_nodes(test_case):
         alexnet_module = alexnet()
@@ -102,15 +101,15 @@ class TestConvertDependency(flow.unittest.TestCase):
         num_nodes = {}
 
         for t in types:
-            data = re.finditer(t+":.*", graph_str)
+            data = re.finditer(t + ":.*", graph_str)
             cnt = 0
             for i in data:
                 cnt += 1
                 attrs = i.group().split(":")
                 size_strs = re.findall(p_size, attrs[size_where])
                 type_strs = re.findall(p_type, attrs[size_where])
-                test_case.assertEqual(size_strs!=[], True)
-                test_case.assertEqual(type_strs!=[], True)
+                test_case.assertEqual(size_strs != [], True)
+                test_case.assertEqual(type_strs != [], True)
 
                 size_attr = size_strs[0].replace("size=", "")
                 type_attr = type_strs[0].replace("dtype=", "")
@@ -127,18 +126,19 @@ class TestConvertDependency(flow.unittest.TestCase):
                     test_case.assertEqual(data_size, (1000, 4096))
             num_nodes[t] = cnt
 
-        test_case.assertEqual(num_nodes["INPUT"]!=0, True)
+        test_case.assertEqual(num_nodes["INPUT"] != 0, True)
         test_case.assertEqual(num_nodes["BUFFER"], 0)
         test_case.assertEqual(num_nodes["PARAMETER"], 16)
-        test_case.assertEqual(num_nodes["OUTPUT"]!=0, True)
+        test_case.assertEqual(num_nodes["OUTPUT"] != 0, True)
 
         # get graph proto, if you don't _compile the graph, the _graph_proto will be None
         graph_input = re.search(r"INPUT:.*", graph_str).group().split(":")
         shape_input = tuple(
             map(
-                int, re.findall(
-                    p_size, graph_input[size_where]
-                )[0].replace("size=", "")[1:-1].split(", ")
+                int,
+                re.findall(p_size, graph_input[size_where])[0]
+                .replace("size=", "")[1:-1]
+                .split(", "),
             )
         )
         if not graph._is_compiled:
@@ -167,7 +167,6 @@ class TestConvertDependency(flow.unittest.TestCase):
         test_case.assertEqual(op_attrs[0]["strides"], (4, 4))
         test_case.assertEqual(op_attrs[0]["padding_before"], (2, 2))
 
-
     def test_buffer_convert_dependence(test_case):
         class SubModule(flow.nn.Module):
             def __init__(self):
@@ -179,7 +178,7 @@ class TestConvertDependency(flow.unittest.TestCase):
                 x = self.fc1(x)
                 x += self.dummy_buff
                 return x
-        
+
         sub_module = SubModule()
         sub_graph = Graph(sub_module)
         graph_str = repr(sub_graph)
