@@ -55,14 +55,29 @@ SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncNegative);
 
 template<typename T>
 struct UnaryFuncExp final {
-  static OF_DEVICE_FUNC const T Invoke(const T x) { return std::exp(x); }
+  static OF_DEVICE_FUNC const T Invoke(const T x) {
+#if defined(__CUDA_ARCH__)
+    if (std::is_same<T, double>::value) {
+      return static_cast<T>(exp(static_cast<double>(x)));
+    } else {
+      return static_cast<T>(exp(static_cast<float>(x)));
+    }
+#else
+    return std::exp(x);
+#endif  // defined(__CUDA_ARCH__)
+  }
 };
 SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncExp);
 
 template<>
 struct UnaryFuncExp<float16> final {
   static OF_DEVICE_FUNC const float16 Invoke(const float16 x) {
+#if defined(__CUDA_ARCH__)
+    half res = static_cast<half>(exp(static_cast<float>(*reinterpret_cast<const half*>(&x))));
+    return *reinterpret_cast<float16*>(&res);
+#else
     return float16(std::exp(static_cast<float>(x)));
+#endif  // defined(__CUDA_ARCH__)
   }
 };
 #define NO_HALF_UTIL_FOUND         \

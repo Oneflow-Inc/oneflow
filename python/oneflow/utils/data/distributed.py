@@ -125,12 +125,9 @@ class DistributedSampler(Sampler[T_co]):
     def __iter__(self) -> Iterator[T_co]:
         if self.shuffle:
             # deterministically shuffle based on epoch and seed
-            # TODO:replace with flow.randperm
             g = flow.Generator()
             g.manual_seed(self.seed + self.epoch)
-            # indices = flow.randperm(len(self.dataset), generator=g).tolist()
-            indices = np.random.permutation(len(self.dataset)).tolist()
-
+            indices = flow.randperm(len(self.dataset), generator=g).tolist()
         else:
             indices = list(range(len(self.dataset)))
 

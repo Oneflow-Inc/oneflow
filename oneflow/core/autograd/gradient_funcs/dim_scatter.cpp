@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct DimScatterInterpState : public OpExprInterpState {
+struct DimScatterCaptureState : public AutoGradCaptureState {
   int32_t dim;
   bool input_requires_grad;
   bool src_requires_grad;
@@ -32,14 +32,14 @@ struct DimScatterInterpState : public OpExprInterpState {
 enum SCATTER_TYPE { SCATTER_UPDATE, SCATTER_ADD };
 
 template<SCATTER_TYPE T>
-class DimScatter : public OpExprGradFunction<DimScatterInterpState> {
+class DimScatter : public OpExprGradFunction<DimScatterCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(DimScatterInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(DimScatterCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const DimScatterInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const DimScatterCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
-  Maybe<void> ApplyCommon(const DimScatterInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> ApplyCommon(const DimScatterCaptureState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const;
 
  private:
@@ -55,7 +55,7 @@ Maybe<void> DimScatter<T>::Init(const OpExpr& op) {
 }
 
 template<SCATTER_TYPE T>
-Maybe<void> DimScatter<T>::Capture(DimScatterInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> DimScatter<T>::Capture(DimScatterCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 3);
   CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -72,7 +72,7 @@ Maybe<void> DimScatter<T>::Capture(DimScatterInterpState* ctx, const TensorTuple
 }
 
 template<SCATTER_TYPE T>
-Maybe<void> DimScatter<T>::ApplyCommon(const DimScatterInterpState* ctx,
+Maybe<void> DimScatter<T>::ApplyCommon(const DimScatterCaptureState* ctx,
                                        const TensorTuple& out_grads, TensorTuple* in_grads) const {
   const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
 
@@ -85,7 +85,7 @@ Maybe<void> DimScatter<T>::ApplyCommon(const DimScatterInterpState* ctx,
 }
 
 template<>
-Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_UPDATE>::Apply(const DimScatterInterpState* ctx,
+Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_UPDATE>::Apply(const DimScatterCaptureState* ctx,
                                                             const TensorTuple& out_grads,
                                                             TensorTuple* in_grads) const {
   if ((!ctx->input_requires_grad) && (!ctx->src_requires_grad)) { return Maybe<void>::Ok(); }
@@ -95,13 +95,13 @@ Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_UPDATE>::Apply(const DimScatterInte
   if (ctx->input_requires_grad) {
     const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
     in_grads->at(0) =
-        JUST(functional::DimScatterUpdateScalar(out_grads.at(0), index, 0.0f, ctx->dim));
+        JUST(functional::DimScatterUpdateScalar(out_grads.at(0), ctx->dim, index, 0.0f));
   }
   return Maybe<void>::Ok();
 }
 
 template<>
-Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_ADD>::Apply(const DimScatterInterpState* ctx,
+Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_ADD>::Apply(const DimScatterCaptureState* ctx,
                                                          const TensorTuple& out_grads,
                                                          TensorTuple* in_grads) const {
   if ((!ctx->input_requires_grad) && (!ctx->src_requires_grad)) { return Maybe<void>::Ok(); }
@@ -114,12 +114,12 @@ Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_ADD>::Apply(const DimScatterInterpS
   return Maybe<void>::Ok();
 }
 
-class DimScatterUpdateScalar : public OpExprGradFunction<DimScatterInterpState> {
+class DimScatterUpdateScalar : public OpExprGradFunction<DimScatterCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(DimScatterInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(DimScatterCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const DimScatterInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const DimScatterCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -134,7 +134,7 @@ Maybe<void> DimScatterUpdateScalar::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DimScatterUpdateScalar::Capture(DimScatterInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> DimScatterUpdateScalar::Capture(DimScatterCaptureState* ctx, const TensorTuple& inputs,
                                             const TensorTuple& outputs,
                                             const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
@@ -150,7 +150,7 @@ Maybe<void> DimScatterUpdateScalar::Capture(DimScatterInterpState* ctx, const Te
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DimScatterUpdateScalar::Apply(const DimScatterInterpState* ctx,
+Maybe<void> DimScatterUpdateScalar::Apply(const DimScatterCaptureState* ctx,
                                           const TensorTuple& out_grads,
                                           TensorTuple* in_grads) const {
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
@@ -163,7 +163,7 @@ Maybe<void> DimScatterUpdateScalar::Apply(const DimScatterInterpState* ctx,
   JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
   JUST(attrs.SetAttr<float>("src_scalar", 0.0f));
   in_grads->at(0) =
-      JUST(functional::DimScatterUpdateScalar(out_grads.at(0), index, 0.0f, ctx->dim););
+      JUST(functional::DimScatterUpdateScalar(out_grads.at(0), ctx->dim, index, 0.0f));
 
   return Maybe<void>::Ok();
 }

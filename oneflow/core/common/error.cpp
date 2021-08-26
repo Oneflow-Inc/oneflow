@@ -79,6 +79,12 @@ Error Error::IndexError() {
   return error;
 }
 
+Error Error::TypeError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_type_error();
+  return error;
+}
+
 Error Error::TimeoutError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_timeout_error();
@@ -199,6 +205,12 @@ Error Error::Unimplemented() {
   return error;
 }
 
+Error Error::RuntimeError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_runtime_error();
+  return error;
+}
+
 Error Error::BoxingNotSupportedError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_boxing_not_supported_error();
@@ -274,7 +286,7 @@ Error Error::InputDeviceNotMatchError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   auto* input_device_not_match_error = error->mutable_input_device_not_match_error();
   input_device_not_match_error->add_info(
-      std::string("The devices of input tensors are inconsistent，please try to use tensor.to or "
+      std::string("The devices of input tensors are inconsistent, please try to use tensor.to or "
                   "module.to to correct it."));
   return error;
 }

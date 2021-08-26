@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/shut_down_util.h"
 
 namespace oneflow {

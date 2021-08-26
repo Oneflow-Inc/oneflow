@@ -49,12 +49,11 @@ Maybe<one::UserOpExpr> FindOrCreatHierarchicalParallelCastOpExpr(Symbol<cfg::NdS
 
 }  // namespace
 
-struct HerarchicalParallelCastOpExprInterpState : public OpExprInterpState {
+struct HerarchicalParallelCastCaptureState : public AutoGradCaptureState {
   Symbol<cfg::NdSbp> nd_sbp;
 };
 
-class HerarchicalParallelCast
-    : public OpExprGradFunction<HerarchicalParallelCastOpExprInterpState> {
+class HerarchicalParallelCast : public OpExprGradFunction<HerarchicalParallelCastCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -62,14 +61,14 @@ class HerarchicalParallelCast
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(HerarchicalParallelCastOpExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(HerarchicalParallelCastCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->nd_sbp = JUST(inputs.at(0)->nd_sbp());
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const HerarchicalParallelCastOpExprInterpState* ctx,
-                    const TensorTuple& out_grads, TensorTuple* in_grads) const override {
+  Maybe<void> Apply(const HerarchicalParallelCastCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
     const auto& grad_op = JUST(FindOrCreatHierarchicalParallelCastOpExpr(ctx->nd_sbp));
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);

@@ -178,7 +178,7 @@ class MyGraph(flow.nn.Graph):
         super().__init__()
         self.module = module
         if optimizer is not None:
-            self.add_optimizer("sgd", optimizer)
+            self.add_optimizer(optimizer)
 
     def build(self, *arg):
         y = self.module(*arg)
@@ -370,9 +370,6 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
     # @unittest.skipIf(True, "")
     def test_to_placement(test_case):
-        """ Since there's no way to construct asymmetric consistent tensor,
-            skip test of to_consistent for changing placement.
-        """
         rank = flow.distributed.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_to_placement")
@@ -408,6 +405,36 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         test_case.assertTrue(y2.placement == p2)
         test_case.assertTrue(y2.sbp[0] == flow.sbp.broadcast)
         test_case.assertTrue(y2.to_local().numpy().mean() == 1.0)
+
+    # @unittest.skipIf(True, "")
+    def test_to_dtype(test_case):
+        x = flow.ones((2, 3), dtype=flow.int32, device="cpu")
+
+        placement = flow.placement("cpu", {0: [0, 1]})
+        c_x = flow.ones(
+            (2, 3), dtype=flow.int32, placement=placement, sbp=flow.sbp.broadcast
+        )
+
+        class CastModule(flow.nn.Module):
+            def __init__(self, dtype):
+                super().__init__()
+                self.dtype = dtype
+
+            def forward(self, x):
+                return x.to(dtype=self.dtype)
+
+        m = CastModule(flow.float32)
+        g = MyGraph(m)
+
+        e_x = m(x)
+        e_c_x = m(c_x)
+        g_x = g(x)
+        g_c_x = g(c_x)
+
+        test_case.assertTrue(e_x.dtype == flow.float32)
+        test_case.assertTrue(g_x.dtype == flow.float32)
+        test_case.assertTrue(e_c_x.dtype == flow.float32)
+        test_case.assertTrue(g_c_x.dtype == flow.float32)
 
 
 class MyModule5(flow.nn.Module):

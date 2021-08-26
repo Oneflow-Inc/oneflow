@@ -87,8 +87,8 @@ void Kernel::Forward(const KernelCtx& ctx,
                      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   if (!blob_access_checker_disabled_) { SetOutputBlobProducerInferAccessChecker(BnInOp2Blob); }
   ForwardHeader(ctx, BnInOp2Blob);
-  if (kernel_conf_.need_do_shape() && IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
-      && IsStateless()) {
+  if ((!kernel_conf_.all_blobs_are_static())
+      && IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) {
     return;
   }
   if (!blob_access_checker_disabled_) { SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob); }
@@ -100,7 +100,7 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  if (kernel_conf_.need_do_shape()) { ForwardShape(ctx, BnInOp2Blob); }
+  if (!kernel_conf_.all_blobs_are_static()) { ForwardShape(ctx, BnInOp2Blob); }
 }
 
 void Kernel::ForwardShape(const KernelCtx& ctx,

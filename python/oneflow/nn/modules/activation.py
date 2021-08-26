@@ -499,7 +499,7 @@ class Hardsigmoid(Module):
 class Softmax(Module):
     def __init__(self, dim: Optional[int] = None):
         super().__init__()
-        self.axis = -1 if dim is None else dim
+        self.axis = 1 if dim is None else dim
 
     def forward(self, x):
         (need_transpose, permute) = _softmax_need_transpose(x, self.axis)

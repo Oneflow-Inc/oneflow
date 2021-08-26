@@ -33,6 +33,10 @@ class Throw final {
 
 }  // namespace oneflow
 
+#define THROW(err_type)                                                                     \
+  Throw(oneflow::Error::err_type().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)).error() \
+      << #err_type << ": "
+
 #define CHECK_OR_THROW(expr)                                                                \
   if (!(expr))                                                                              \
   Throw(oneflow::Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)) \

@@ -113,8 +113,7 @@ class Conv1d(Module):
         stride (int or tuple, optional): Stride of the convolution. Default: 1
         padding (int, tuple or str, optional): Padding added to both sides of
             the input. Default: 0
-        padding_mode (string, optional): ``'zeros'``, ``'reflect'``,
-            ``'replicate'`` or ``'circular'``. Default: ``'zeros'``
+        padding_mode (string, optional): ``'zeros'``. Default: ``'zeros'``
         dilation (int or tuple, optional): Spacing between kernel
             elements. Default: 1
         groups (int, optional): Number of blocked connections from input
@@ -327,8 +326,7 @@ class Conv2d(Module):
         stride (int or tuple, optional): Stride of the convolution. Default: 1
         padding (int or tuple, optional): Zero-padding added to both sides of
             the input. Default: 0
-        padding_mode (string, optional): ``'zeros'``, ``'reflect'``,
-            ``'replicate'`` or ``'circular'``. Default: ``'zeros'``
+        padding_mode (string, optional): ``'zeros'``. Default: ``'zeros'``
         dilation (int or tuple, optional): Spacing between kernel elements. Default: 1
         groups (int, optional): Number of blocked connections from input
             channels to output channels. Default: 1
@@ -492,74 +490,64 @@ class Conv3d(Module):
     
     Applies a 3D convolution over an input signal composed of several input
     planes.
+
     In the simplest case, the output value of the layer with input size :math:`(N, C_{in}, D, H, W)`
     and output :math:`(N, C_{out}, D_{out}, H_{out}, W_{out})` can be precisely described as:
+
     .. math::
         out(N_i, C_{out_j}) = bias(C_{out_j}) +
                                 \sum_{k = 0}^{C_{in} - 1} weight(C_{out_j}, k) \star input(N_i, k)
+
     where :math:`\star` is the valid 3D `cross-correlation`_ operator
-    This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
+
     * :attr:`stride` controls the stride for the cross-correlation.
-    * :attr:`padding` controls the amount of implicit zero-paddings on both
-      sides for :attr:`padding` number of points for each dimension.
+
+    * :attr:`padding` controls the amount of padding applied to the input. It
+      can be either a string {{'valid', 'same'}} or a tuple of ints giving the
+      amount of implicit padding applied on both sides.
+
     * :attr:`dilation` controls the spacing between the kernel points; also known as the à trous algorithm.
       It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
-    * :attr:`groups` controls the connections between inputs and outputs.
-      :attr:`in_channels` and :attr:`out_channels` must both be divisible by
-      :attr:`groups`. For example,
-        * At groups=1, all inputs are convolved to all outputs.
-        * At groups=2, the operation becomes equivalent to having two conv
-          layers side by side, each seeing half the input channels,
-          and producing half the output channels, and both subsequently
-          concatenated.
-        * At groups= :attr:`in_channels`, each input channel is convolved with
-          its own set of filters, of size
-          :math:`\left\lfloor\frac{out\_channels}{in\_channels}\right\rfloor`.
+
     The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding`, :attr:`dilation` can either be:
+
         - a single ``int`` -- in which case the same value is used for the depth, height and width dimension
         - a ``tuple`` of three ints -- in which case, the first `int` is used for the depth dimension,
           the second `int` for the height dimension and the third `int` for the width dimension
+
     Note:
-         Depending of the size of your kernel, several (of the last)
-         columns of the input might be lost, because it is a valid `cross-correlation`_,
-         and not a full `cross-correlation`_.
-         It is up to the user to add proper padding.
-    Note:
-        When `groups == in_channels` and `out_channels == K * in_channels`,
-        where `K` is a positive integer, this operation is also termed in
-        literature as depthwise convolution.
-        In other words, for an input of size :math:`(N, C_{in}, D_{in}, H_{in}, W_{in})`,
-        a depthwise convolution with a depthwise multiplier `K`, can be constructed by arguments
-        :math:`(in\_channels=C_{in}, out\_channels=C_{in} \times K, ..., groups=C_{in})`.
-    Note:
-        In some circumstances when using the CUDA backend with CuDNN, this operator
-        may select a nondeterministic algorithm to increase performance. If this is
-        undesirable, you can try to make the operation deterministic (potentially at
-        a performance cost) by setting ``torch.backends.cudnn.deterministic =
-        True``.
-        Please see the notes on :doc:`/notes/randomness` for background.
+        ``padding='valid'`` is the same as no padding. ``padding='same'`` pads
+        the input so the output has the shape as the input. However, this mode
+        doesn't support any stride values other than 1.
+
     Args:
         in_channels (int): Number of channels in the input image
         out_channels (int): Number of channels produced by the convolution
         kernel_size (int or tuple): Size of the convolving kernel
         stride (int or tuple, optional): Stride of the convolution. Default: 1
-        padding (int or tuple, optional): Zero-padding added to all three sides of the input. Default: 0
-        padding_mode (string, optional): ``'zeros'``, ``'reflect'``, ``'replicate'`` or ``'circular'``. Default: ``'zeros'``
+        padding (int, tuple or str, optional): Padding added to all six sides of
+            the input. Default: 0
+        padding_mode (string, optional): ``'zeros'``. Default: ``'zeros'``
         dilation (int or tuple, optional): Spacing between kernel elements. Default: 1
         groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
         bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
+    
     Shape:
         - Input: :math:`(N, C_{in}, D_{in}, H_{in}, W_{in})`
         - Output: :math:`(N, C_{out}, D_{out}, H_{out}, W_{out})` where
+
           .. math::
               D_{out} = \left\lfloor\frac{D_{in} + 2 \times \text{padding}[0] - \text{dilation}[0]
                     \times (\text{kernel\_size}[0] - 1) - 1}{\text{stride}[0]} + 1\right\rfloor
+
           .. math::
               H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] - \text{dilation}[1]
                     \times (\text{kernel\_size}[1] - 1) - 1}{\text{stride}[1]} + 1\right\rfloor
+
           .. math::
               W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] - \text{dilation}[2]
                     \times (\text{kernel\_size}[2] - 1) - 1}{\text{stride}[2]} + 1\right\rfloor
+
     Attributes:
         weight (Tensor): the learnable weights of the module of shape
                          :math:`(\text{out\_channels}, \frac{\text{in\_channels}}{\text{groups}},`
@@ -571,8 +559,11 @@ class Conv3d(Module):
                          then the values of these weights are
                          sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
                          :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
+
     For example: 
+
     .. code-block:: python
+
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn

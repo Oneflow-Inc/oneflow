@@ -931,8 +931,8 @@ class BCEWithLogitsLoss(Module):
 
     Args:
         weight (Tensor, optional): The manual rescaling weight to the loss. Default: ``None``
-        size_average (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
-        reduce (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
+        size_average (bool, optional): Deprecated (see :attr:`reduction`). Default: ``True``
+        reduce (bool, optional): Deprecated (see :attr:`reduction`). Default: ``True``
         reduction (str, optional): The reduce type, it can be one of ``"none"``, ``"mean"``, ``"sum"``.
             ``'none'``: no reduction will be applied, ``'mean'``: the sum of the output will be divided
             by the number of elements in the output, ``'sum'``: the output will be summed. Default: ``"mean"``
@@ -1160,6 +1160,55 @@ class SmoothL1Loss(Module):
             return flow.sum(loss)
         elif self.reduction == "mean":
             return flow.mean(loss)
+
+
+class CombinedMarginLoss(Module):
+    """The operation implements "margin_softmax" in InsightFace:
+    https://github.com/deepinsight/insightface/blob/master/recognition/arcface_mxnet/train.py
+    The implementation of margin_softmax in InsightFace is composed of multiple operators.
+    We fuse them for speed up.
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+        label (oneflow.Tensor): label with integer data type
+        m1 (float): loss m1 parameter
+        m2 (float): loss m2 parameter
+        m3 (float): loss m3 parameter
+
+    Returns:
+        oneflow.Tensor: A Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> np_x = np.array([[-0.7027179, 0.0230609], [-0.02721931, -0.16056311], [-0.4565852, -0.64471215]])
+        >>> np_label = np.array([0, 1, 1])
+        >>> x = flow.Tensor(np_x, dtype=flow.float32)
+        >>> label = flow.Tensor(np_label, dtype=flow.int32)
+        >>> loss_func = flow.nn.CombinedMarginLoss(0.3, 0.5, 0.4)
+        >>> out = loss_func(x, label)
+        >>> out
+        tensor([[-0.0423,  0.0231],
+                [-0.0272,  0.1237],
+                [-0.4566, -0.0204]], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, m1: float = 1.0, m2: float = 0.0, m3: float = 0.0) -> None:
+        super().__init__()
+        self.m1 = m1
+        self.m2 = m2
+        self.m3 = m3
+
+    def forward(self, x, label):
+        depth = x.shape[1]
+        (y, _) = flow.F.combined_margin_loss(
+            x, label, m1=self.m1, m2=self.m2, m3=self.m3, depth=depth
+        )
+        return y
 
 
 if __name__ == "__main__":

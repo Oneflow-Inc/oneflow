@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -35,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/framework/tensor_consistent_id.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/functional/functional.h"
@@ -148,7 +150,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
       tensor_impl->mut_tensor_meta()->set_stride(std::make_shared<Stride>(*tensor_impl->shape()));
-      JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
+      const auto& dep_object = JUST(GetLocalDepObject(op_device));
+      JUST(tensor_impl->InitEagerBlobObject(dep_object));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
     } else {
       // output i is inplaced.
@@ -248,6 +251,25 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclBroadcastOpExpr(Symbol<ParallelDesc> 
   }
   return iter->second;
 }
+}  // namespace
+
+Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc) {
+  CHECK_OR_RETURN(parallel_desc->containing_current_rank());
+  if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
+  std::shared_ptr<UserOpExpr> op_expr = JUST(FindOrCreatEagerNcclBroadcastOpExpr(parallel_desc));
+  if (JUST(parallel_desc->MachineId4ParallelId(0)) == GlobalProcessCtx::Rank()) {
+    // inplace.
+    TensorTuple outputs{tensor};
+    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
+                                one::OpExprInterpContext(AttrMap{}, parallel_desc)));
+    return tensor;
+  } else {
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(
+        *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, parallel_desc)));
+  }
+}
+
+namespace {
 
 Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
                                          Symbol<ParallelDesc> parallel_desc,
@@ -256,19 +278,7 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
   const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
-  if (broadcast_parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
-  std::shared_ptr<UserOpExpr> op_expr =
-      JUST(FindOrCreatEagerNcclBroadcastOpExpr(broadcast_parallel_desc));
-  if (JUST(broadcast_parallel_desc->MachineId4ParallelId(0)) == GlobalProcessCtx::Rank()) {
-    // inplace.
-    TensorTuple outputs{tensor};
-    JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,
-                                one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
-    return tensor;
-  } else {
-    return JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_expr, {tensor}, one::OpExprInterpContext(AttrMap{}, broadcast_parallel_desc)));
-  }
+  return Broadcast(tensor, broadcast_parallel_desc);
 }
 
 Maybe<Shape> CalcPhysicalShape(Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
@@ -293,9 +303,16 @@ Maybe<Tensor> TryReshapeTensor(const std::shared_ptr<Tensor>& tensor,
 
 }  // namespace
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
+  OF_UNIMPLEMENTED();
+}
+
+namespace {
+
+Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const TensorTuple& inputs,
+                                 TensorTuple* outputs, const OpExprInterpContext& ctx) {
   std::shared_ptr<MirroredTensor> input_mirrored_tensor;
   {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -322,20 +339,43 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
         SymbolOf(tensor_meta), device, parallel_id, input_mirrored_tensor->requires_grad(),
         !input_mirrored_tensor->requires_grad()));
-    const auto& transport_token = JUST(TransportToken::NewMetaTransportToken());
-    JUST(consistent_tensor_impl->set_transport_token(transport_token));
     consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
-    JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
-      if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
-      const auto& reshaped_tensor = JUST(TryReshapeTensor(input_mirrored_tensor, tensor_meta));
-      const auto& synced_tensor =
-          JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
-      CHECK_EQ_OR_RETURN(dtype, input_mirrored_tensor->dtype());
-      consistent_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsMirroredTensor()));
-      return Maybe<void>::Ok();
-    }));
+    if (parallel_id.has_value()) {
+      CHECK_EQ_OR_RETURN(dtype, input_mirrored_tensor->dtype()->data_type());
+      consistent_tensor_impl->reset_cur_rank_phy_tensor(input_mirrored_tensor);
+    }
   }
   outputs->at(0) = consistent_tensor;
+  return Maybe<void>::Ok();
+}
+
+static constexpr auto* LocalToConsistent =
+    DECORATE(&RawLocalToConsistent, NonRecursiveInitConsistentId);
+
+}  // namespace
+
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+                                                const TensorTuple& inputs, TensorTuple* outputs,
+                                                const OpExprInterpContext& ctx) const {
+  JUST(LocalToConsistent(op_expr, inputs, outputs, ctx));
+  const auto& consistent_tensor = JUST(outputs->at(0)->AsConsistentTensor());
+  JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
+    if (IsConsistentTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
+    const auto& parallel_desc = JUST(ctx.parallel_desc.value());
+    const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+    if (!parallel_id->has_value()) { return Maybe<void>::Ok(); }
+    const auto& nd_sbp = JUST(ctx.nd_sbp.value());
+    const auto& tensor_meta = JUST(consistent_tensor->consistent_tensor_meta());
+    const auto& local_tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
+    const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));
+    const auto& synced_tensor =
+        JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+    auto* consistent_tensor_impl =
+        reinterpret_cast<EagerConsistentTensorImpl*>(consistent_tensor->mut_impl());
+    CHECK_NOTNULL_OR_RETURN(consistent_tensor_impl);
+    consistent_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsMirroredTensor()));
+    return Maybe<void>::Ok();
+  }));
   return Maybe<void>::Ok();
 }
 

@@ -19,6 +19,7 @@ import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
+from oneflow.support.blocking import BlockingInfoContext
 
 import numpy as np
 from typing import Union
@@ -45,8 +46,10 @@ def _tensor_numpy(eager_local_tensor):
         shape=tuple(eager_local_tensor.shape),
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
-    if ndarray.size != 0:
-        copy_to_numpy(ndarray)
+
+    with BlockingInfoContext() as ctx:
+        if ndarray.size != 0:
+            copy_to_numpy(ndarray)
     return ndarray
 
 
@@ -101,6 +104,18 @@ def _setitem(self, key, value):
             value = flow.F.consistent_constant(
                 [1], value, self.dtype, placement=self.placement, sbp=flow.sbp.broadcast
             )
+        else:
+            if value.is_consistent:
+                value = value.to_consistent(sbp=flow.sbp.broadcast)
+                # TODO: remove these lines after asymmetric boxing is ready
+                local_tensor = value.to_local()
+                if local_tensor.nelement() == 0:
+                    local_tensor = flow.zeros(*value.shape)
+                value = local_tensor.to_consistent(
+                    self.placement, sbp=flow.sbp.broadcast
+                )
+            else:
+                value = value.to_consistent(self.placement, sbp=flow.sbp.broadcast)
     else:
         if isinstance(value, (int, float)):
             value = flow.F.constant([1], value, self.dtype, device=self.device)
@@ -230,7 +245,7 @@ def _pow(self, b):
     return flow.pow(self, b)
 
 
-def _uniform_(self, a=0, b=1):
+def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
     )
@@ -297,70 +312,41 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     copy_from_numpy(np_arr)
 
 
-def _init_eager_local_tensor_by_initializer_conf(
-    eager_local_tensor, initializer_conf, random_seed=None
-):
+def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
         random_seed = flow.default_generator().seed()
-    shape = tuple(eager_local_tensor.shape)
+    shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
-    # initializer is None if and only if the initializer_conf is empty_initializer
-    if initializer is None:
-        return
 
-    _copy_from_numpy_to_eager_local_tensor(
-        eager_local_tensor,
-        check_point_v2.generate_values_by_initializer(
-            initializer, shape, eager_local_tensor.dtype
-        ),
+    np_arr = check_point_v2.generate_values_by_initializer(
+        initializer, shape, tensor.dtype
     )
-
-
-def _init_by_initializer_conf(tensor, initializer_conf):
     if tensor.is_consistent:
-        raise NotImplementedError(" consistent initializer unvailiable now")
+        src_tensor = flow.tensor(np_arr)
+        src_tensor = src_tensor.to_consistent(
+            placement=tensor.placement, sbp=flow.sbp.broadcast
+        )
+        tensor.copy_(src_tensor)
     else:
-        _init_eager_local_tensor_by_initializer_conf(tensor, initializer_conf)
+        _copy_from_numpy_to_eager_local_tensor(
+            tensor, np_arr,
+        )
     return tensor
 
 
-def _convert_to_placement_scope(placement_or_device):
-    if isinstance(placement_or_device, flow.placement):
-        placement = placement_or_device
-        return flow.scope.placement(
-            placement.device_tag,
-            list(placement.parallel_conf.device_name()),
-            placement.hierarchy,
-        )
-    else:
-        device = placement_or_device
-        # TODO(jianhao): replace 0 with real machine id
-        machine_id = 0
-        # TODO(jianhao): support cuda in of
-        if device.type == "cuda":
-            device_tag = "gpu"
-        else:
-            device_tag = device.type
-        return flow.scope.placement(
-            device_tag, "{}:{}".format(machine_id, device.index), None
-        )
-
-
-def _placement_scope(self):
-    if self.is_consistent:
-        return _convert_to_placement_scope(self.placement)
-    else:
-        return _convert_to_placement_scope(self.device)
-
-
 def _copy(self, other: Union[Tensor, np.ndarray]):
-    if isinstance(other, (Tensor, check_point_v2.FileBackendVariableBlob)):
-        src_np = other.numpy()
+    if self.is_consistent:
+        assert isinstance(other, Tensor)
+        assert other.is_consistent
+        self[:] = other
     else:
-        assert isinstance(other, np.ndarray)
-        src_np = other
+        if isinstance(other, (Tensor)):
+            src_np = other.numpy()
+        else:
+            assert isinstance(other, np.ndarray)
+            src_np = other
 
-    _copy_from_numpy_to_eager_local_tensor(self, src_np)
+        _copy_from_numpy_to_eager_local_tensor(self, src_np)
 
 
 def _get_device(self):
@@ -371,7 +357,7 @@ def _get_device(self):
 
 def _format(self, format_spec):
     if self.dim() == 0:
-        return self.tolist().__format__(format_spec)
+        return self.numpy().tolist().__format__(format_spec)
     return object.__format__(self, format_spec)
 
 
@@ -380,7 +366,6 @@ def RegisterMethods():
     Tensor.__rmul__ = lambda self, other: self.mul(other)
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
-    Tensor.tolist = lambda self: self.numpy().tolist()
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _tensor_numpy
     Tensor.size = _size
@@ -413,14 +398,13 @@ def RegisterMethods():
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
-    Tensor.uniform_ = _uniform_
+    Tensor.uniform_ = _uniform
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal
     Tensor.xavier_normal_ = _xavier_normal
     Tensor.xavier_uniform_ = _xavier_uniform
     Tensor.normal_ = _normal
     Tensor.fill_ = _fill
-    Tensor._placement_scope = _placement_scope
     Tensor.copy_ = _copy
     Tensor.get_device = _get_device
     Tensor._meta_repr = _meta_repr

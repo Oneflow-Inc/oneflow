@@ -15,27 +15,23 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.nn.module import Module
+from oneflow.nn.common_types import _size_1_t
+from oneflow.nn.modules.utils import _single, _pair, _triple
 
 
 def _generate_output_size(input_size, output_size):
     new_output_size = []
-    if isinstance(output_size, int):
-        for _ in range(len(input_size) - 2):
-            new_output_size.append(output_size)
-    elif isinstance(output_size, tuple):
-        assert len(input_size) - 2 == len(
-            output_size
-        ), f"The length of 'output_size' does not match the input size, {len(input_size) - 2} expected"
-        for i in range(len(output_size)):
-            if output_size[i] is None:
-                new_output_size.append(input_size[i + 2])
-            else:
-                assert isinstance(
-                    output_size[i], int
-                ), "numbers in 'output_size' should be integer"
-                new_output_size.append(output_size[i])
-    else:
-        raise ValueError("invalid 'output_size', 'int' or 'tuple' expected")
+    assert len(input_size) - 2 == len(
+        output_size
+    ), f"the length of 'output_size' does not match the input size, {len(input_size) - 2} expected"
+    for i in range(len(output_size)):
+        if output_size[i] is None:
+            new_output_size.append(input_size[i + 2])
+        else:
+            assert isinstance(
+                output_size[i], int
+            ), "numbers in 'output_size' should be integer"
+            new_output_size.append(output_size[i])
     return tuple(new_output_size)
 
 
@@ -55,7 +51,7 @@ class AdaptiveAvgPool1d(Module):
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
-        
+
         >>> m = nn.AdaptiveAvgPool1d(5)
         >>> input = flow.Tensor(np.random.randn(1, 64, 8))
         >>> output = m(input)
@@ -64,19 +60,19 @@ class AdaptiveAvgPool1d(Module):
 
     """
 
-    def __init__(self, output_size) -> None:
+    def __init__(self, output_size: _size_1_t) -> None:
         super().__init__()
-        self.output_size = output_size
+        assert output_size is not None, "'output_size' cannot be NoneType"
+        self.output_size = _single(output_size)
 
     def forward(self, x):
-        assert len(x.shape) == 3
-        if isinstance(self.output_size, tuple):
-            new_output_size = self.output_size[0]
-        elif isinstance(self.output_size, int):
-            new_output_size = self.output_size
-        else:
-            raise ValueError("'output_size' should be integer or tuple")
-        return flow.F.adaptive_avg_pool1d(x, output_size=(new_output_size,))
+        assert (
+            len(x.shape) == 3 and len(self.output_size) == 1
+        ), "the length of 'output_size' does not match the input size, 1 expected"
+        assert isinstance(
+            self.output_size[0], int
+        ), "numbers in 'output_size' should be integer"
+        return flow.F.adaptive_avg_pool1d(x, output_size=self.output_size)
 
 
 def adaptive_avg_pool1d(input, output_size):
@@ -110,7 +106,7 @@ class AdaptiveAvgPool2d(Module):
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
-        
+
         >>> m = nn.AdaptiveAvgPool2d((5,7))
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9))
         >>> output = m(input)
@@ -133,10 +129,13 @@ class AdaptiveAvgPool2d(Module):
 
     def __init__(self, output_size) -> None:
         super().__init__()
-        self.output_size = output_size
+        assert output_size is not None, "'output_size' cannot be NoneType"
+        self.output_size = _pair(output_size)
 
     def forward(self, x):
-        assert len(x.shape) == 4
+        assert (
+            len(x.shape) == 4
+        ), f"expected 4-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
         new_output_size = _generate_output_size(x.shape, self.output_size)
         return flow.F.adaptive_avg_pool2d(x, output_size=new_output_size)
 
@@ -172,7 +171,7 @@ class AdaptiveAvgPool3d(Module):
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
-        
+
         >>> m = nn.AdaptiveAvgPool3d((5,7,9))
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9, 10))
         >>> output = m(input)
@@ -195,10 +194,13 @@ class AdaptiveAvgPool3d(Module):
 
     def __init__(self, output_size) -> None:
         super().__init__()
-        self.output_size = output_size
+        assert output_size is not None, "'output_size' cannot be NoneType"
+        self.output_size = _triple(output_size)
 
     def forward(self, x):
-        assert len(x.shape) == 5
+        assert (
+            len(x.shape) == 5
+        ), f"expected 5-dimensional tensor, but got {len(x.shape)}-dimensional tensor"
         new_output_size = _generate_output_size(x.shape, self.output_size)
         return flow.F.adaptive_avg_pool3d(x, output_size=new_output_size)
 

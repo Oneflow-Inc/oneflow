@@ -52,6 +52,7 @@ class GpuPReluKernel final : public user_op::OpKernel {
   ~GpuPReluKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
@@ -83,6 +84,7 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
   ~GpuPReluGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
@@ -95,6 +97,9 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     const int batch = x->shape().At(0);
     const int channels = x->shape().At(1);
     const int32_t inner_size = elem_cnt / batch / channels;
+
+    Memset<DeviceType::kGPU>(ctx->device_ctx(), alpha_diff->mut_dptr<T>(), 0,
+                             alpha_diff->shape().elem_cnt() * sizeof(T));
 
     PReluBackwardGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx->device_ctx()->cuda_stream()>>>(

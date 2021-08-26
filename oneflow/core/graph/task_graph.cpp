@@ -144,7 +144,7 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
 
     cur_node->ForEachNodeOnInOutDataEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
-          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
+          && this_node->thrd_id() == next_node->thrd_id()
           && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);

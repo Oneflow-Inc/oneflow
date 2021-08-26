@@ -39,7 +39,7 @@ class Symbol final {
   Symbol(Symbol&& rhs) = default;
   ~Symbol() = default;
 
-  operator bool() const { return ptr_ != nullptr; }
+  explicit operator bool() const { return ptr_ != nullptr; }
   const T* operator->() const { return ptr_; }
   const T& operator*() const { return *ptr_; }
   bool operator==(const Symbol<T>& rhs) const { return ptr_ == rhs.ptr_; }

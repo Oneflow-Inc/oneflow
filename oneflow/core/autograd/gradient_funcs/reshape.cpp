@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class ReshapeOpExprGrad : public OpExprGradFunction<OpExprInterpState> {
+class ReshapeOpExprGrad : public OpExprGradFunction<AutoGradCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -33,13 +33,13 @@ class ReshapeOpExprGrad : public OpExprGradFunction<OpExprInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override {
+  Maybe<void> Capture(AutoGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& saved_tensors = ctx->SavedTensors();
     in_grads->resize(1);

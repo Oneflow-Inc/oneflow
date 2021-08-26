@@ -25,17 +25,26 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/plan_util.h"
-#include "oneflow/core/job/runtime.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
 NNGraph::~NNGraph() {
-  VLOG(2) << "Try to delete c nn graph name " << name_ << "." << std::endl;
-  CloseRuntimeBuffers();
-  runtime_.reset();
-  Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
+  VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
+  CHECK_JUST(Close());
+}
+
+Maybe<void> NNGraph::Close() {
+  if (!is_closed_) {
+    VLOG(2) << "Try to close c nn graph name " << name_ << "." << std::endl;
+    CloseRuntimeBuffers();
+    runtime_.reset();
+    Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
+    is_closed_ = true;
+    VLOG(2) << "Finish close c nn graph name " << name_ << "." << std::endl;
+  }
+  return Maybe<void>::Ok();
 }
 
 const std::vector<std::string>& NNGraph::inputs_op_names() const { return input_op_names_; }
@@ -57,6 +66,7 @@ Maybe<void> NNGraph::RegisterOutputOpNames(const std::vector<std::string>& outpu
 Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     const std::vector<std::string>& variable_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
+  JUST(vm::MultiClientSync());
   CHECK_EQ_OR_RETURN(variable_op_names.size(), variable_tensors.size());
   CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
@@ -79,6 +89,7 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
 }
 
 Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
+  JUST(vm::MultiClientSync());
   const auto& free_eager_tensors =
       Global<MultiClientSessionContext>::Get()->GetFreeEagerTensorNamePairByGraphName(name_);
   for (const auto& pair : free_eager_tensors) {

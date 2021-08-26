@@ -51,7 +51,6 @@ from oneflow.nn.modules.container import (
     Sequential,
 )
 from oneflow.nn.modules.conv import Conv1d, Conv2d, Conv3d
-
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (
     MovingAverageMinMaxObserver,
@@ -65,6 +64,7 @@ from oneflow.nn.modules.dataset import (
     CropMirrorNormalize,
     OFRecordImageDecoder,
     OFRecordImageDecoderRandomCrop,
+    OFRecordImageGpuDecoderRandomCropResize,
     OfrecordRawDecoder,
     OfrecordReader,
     OFRecordBytesDecoder,
@@ -90,6 +90,7 @@ from oneflow.nn.modules.loss import (
     MSELoss,
     NLLLoss,
     SmoothL1Loss,
+    CombinedMarginLoss,
 )
 from oneflow.nn.modules.normalization import GroupNorm, LayerNorm
 from oneflow.nn.modules.padding import (
@@ -116,6 +117,8 @@ from oneflow.nn.modules.upsampling import (
 )
 from oneflow.nn.modules.zeropad2d import ZeroPad2d
 from oneflow.nn.modules.rnn import RNN, GRU, LSTM
+from oneflow.nn.modules.unfold import Unfold
+from oneflow.nn.modules.fold import Fold
 from oneflow.nn.parameter import Parameter
 from oneflow.nn import utils
 

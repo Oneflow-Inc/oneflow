@@ -21,15 +21,16 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/runtime.h"
 
 namespace oneflow {
 
 class Blob;
-class Runtime;
 
 class NNGraph final : public NNGraphIf {
  public:
-  explicit NNGraph(const std::string& name) : name_(name), runtime_inited_(false) {}
+  explicit NNGraph(const std::string& name)
+      : name_(name), runtime_inited_(false), is_closed_(false) {}
   ~NNGraph();
 
   const std::string& job_name() const { return name_; }
@@ -43,6 +44,7 @@ class NNGraph final : public NNGraphIf {
       const std::vector<std::string>& variable_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
   Maybe<void> CompileAndInitRuntime();
+  Maybe<void> Close();
 
  private:
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
@@ -59,6 +61,7 @@ class NNGraph final : public NNGraphIf {
   // TODO(chengcheng): temp impl using runtime now, need reimplement for dynamic multi nn.Graph.
   std::unique_ptr<Runtime> runtime_;
   bool runtime_inited_;
+  bool is_closed_;
 };
 
 Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTuple& outputs,

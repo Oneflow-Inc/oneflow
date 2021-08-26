@@ -170,9 +170,7 @@ class RandomSampler(Sampler[int]):
             #     generator=generator,
             # ).tolist()
         else:
-            yield from np.random.permutation(n).tolist()
-            # TODO: flow.randperm
-            # yield from flow.randperm(n, generator=generator).tolist()
+            yield from flow.randperm(n, generator=generator).tolist()
 
     def __len__(self):
         return self.num_samples

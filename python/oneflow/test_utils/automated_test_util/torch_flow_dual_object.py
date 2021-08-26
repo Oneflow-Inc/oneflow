@@ -34,6 +34,11 @@ def torch_tensor_to_flow(x):
     return flow.tensor(x.cpu().numpy())
 
 
+note_pytorch_method_names = []
+note_pytorch_args = []
+note_pytorch_kwargs = []
+
+
 class PyTorchDoesNotSupportError(Exception):
     def __init__(self, exc):
         self.exc = exc
@@ -43,6 +48,16 @@ class PyTorchDoesNotSupportError(Exception):
 
     def __repr__(self):
         return f"PyTorch error: {str(self.exc)}"
+
+
+call_pytorch = None
+
+
+def get_tensor_shape(call_pytorch):
+    shape_list = []
+    for i in range(len(call_pytorch.shape)):
+        shape_list.append(call_pytorch.shape[i])
+    return shape_list
 
 
 def get_args(callable, *args, **kwargs):
@@ -100,6 +115,35 @@ def get_args(callable, *args, **kwargs):
             continue
         pytorch_kwargs[key] = get_pytorch_value(value)
         oneflow_kwargs[key] = get_oneflow_value(value)
+
+    new_pytorch_args = []
+    new_pytorch_kwargs = {}
+    for x in pytorch_args:
+        if type(x) is torch_original.Tensor:
+            new_pytorch_args.append(f"Tensor({get_tensor_shape(x)})")
+        else:
+            new_pytorch_args.append(x)
+    for key, value in pytorch_kwargs.items():
+        if type(value) is torch_original.Tensor:
+            new_pytorch_kwargs[key] = f"Tensor({get_tensor_shape(x)})"
+        else:
+            new_pytorch_kwargs[key] = value
+
+    if not isinstance(callable, (torch_original.nn.Module)):
+        if isinstance(call_pytorch, torch_original.Tensor):
+            note_pytorch_method_names.append(
+                f"Tensor({get_tensor_shape(call_pytorch)}).{callable.__name__}"
+            )
+        elif isinstance(call_pytorch, torch_original.nn.Module):
+            note_pytorch_method_names.append(f"Module.{callable.__name__}")
+        else:
+            note_pytorch_method_names.append(f"{callable.__name__}")
+    else:
+        note_pytorch_method_names.append(repr(callable))
+
+    note_pytorch_args.append(new_pytorch_args)
+    note_pytorch_kwargs.append(new_pytorch_kwargs)
+
     return (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs)
 
 
@@ -142,10 +186,12 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_args,
                             oneflow_kwargs,
                         ) = get_args(pytorch, *args, **kwargs)
+
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
                         except Exception as e:
                             raise PyTorchDoesNotSupportError(e)
+
                         if name in postulate:
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
@@ -179,6 +225,61 @@ def GetDualObject(name, pytorch, oneflow):
     return Cls(name, pytorch, oneflow)
 
 
+def note_print_args(x, end=True):
+    if end:
+        if isinstance(x, str) and not x.startswith("Tensor"):
+            print(f"\033[32m'{x}, '\033[0m", end="")
+        else:
+            print(f"\033[32m{x}, \033[0m", end="")
+    else:
+        if isinstance(x, str) and not x.startswith("Tensor"):
+            print(f"\033[32m'{x}'\033[0m", end="")
+        else:
+            print(f"\033[32m{x}\033[0m", end="")
+
+
+def note_print_kwargs(x, y, end=True):
+    if end:
+        if isinstance(y, str) and not y.startswith("Tensor"):
+            print(f"\033[32m{x}='{y}, '\033[0m", end="")
+        else:
+            print(f"\033[32m{x}={y}, \033[0m", end="")
+    else:
+        if isinstance(y, str) and not y.startswith("Tensor"):
+            print(f"\033[32m{x}='{y}'\033[0m", end="")
+        else:
+            print(f"\033[32m{x}={y}\033[0m", end="")
+
+
+def print_note_fake_program():
+    code_len = len(note_pytorch_method_names)
+    for i in range(code_len):
+        note_pytorch_args_len = len(note_pytorch_args[i])
+        note_pytorch_kwargs_len = len(note_pytorch_kwargs[i])
+        print(f"\033[32m{note_pytorch_method_names[i]}\033[0m", end="")
+        print(f"\033[32m(\033[0m", end="")
+        if note_pytorch_args[i]:
+            index = 0
+            for x in note_pytorch_args[i]:
+                index += 1
+                note_print_args(x, index < note_pytorch_args_len)
+
+        if note_pytorch_kwargs[i]:
+            index = 0
+            for x in note_pytorch_kwargs[i].keys():
+                index += 1
+                note_print_kwargs(
+                    x, note_pytorch_kwargs[i][x], index < note_pytorch_kwargs_len
+                )
+        print(f"\033[32m)\033[0m")
+
+
+def clear_note_fake_program():
+    note_pytorch_method_names.clear()
+    note_pytorch_args.clear()
+    note_pytorch_kwargs.clear()
+
+
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
         self.name = name
@@ -201,6 +302,8 @@ class DualObject:
         pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)
         new_name = f"{self.name}.{key}"
+        global call_pytorch
+        call_pytorch = self.pytorch
         return GetDualObject(new_name, pytorch_attr, oneflow_attr)
 
 
@@ -230,9 +333,9 @@ def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05):
                 break
     assert checker is not None, (
         "checker not found for type "
-        + type(dual_object.pytorch)
+        + str(type(dual_object.pytorch))
         + " and "
-        + type(dual_object.oneflow)
+        + str(type(dual_object.oneflow))
     )
     return checker(dual_object.pytorch, dual_object.oneflow, rtol, atol)
 
@@ -241,23 +344,30 @@ def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05):
 @equality_checker(torch_original.Tensor, flow._oneflow_internal.Tensor)
 def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
     if torch_tensor.grad is not None:
+        if flow_tensor.grad is None:
+            print_note_fake_program()
         assert (
             flow_tensor.grad is not None
         ), f"OneFlow tensor doesn't have grad while PyTorch tensor has one, PyTorch tensor is\n {torch_tensor}\n, OneFlow tensor is\n{flow_tensor} "
         torch_grad = torch_tensor.grad.detach().cpu().numpy()
         flow_grad = flow_tensor.grad.numpy()
-        if not np.allclose(torch_grad, flow_grad, rtol=rtol, atol=atol):
+        if not np.allclose(
+            torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
+        ):
             print(
-                "Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
+                f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
             return False
-    return np.allclose(
+    equality_res = np.allclose(
         torch_tensor.detach().cpu().numpy(),
         flow_tensor.numpy(),
         rtol=rtol,
         atol=atol,
         equal_nan=True,
     )
+    if equality_res == False:
+        print_note_fake_program()
+    return equality_res
 
 
 @equality_checker(type(None), type(None))
@@ -275,6 +385,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
             loop_limit = n * 20
             loop = 0
             while n > 0:
+                clear_note_fake_program()
                 if loop > loop_limit:
                     raise ValueError("autotest stuck in an endless loop!")
                 dual_modules_to_test.clear()

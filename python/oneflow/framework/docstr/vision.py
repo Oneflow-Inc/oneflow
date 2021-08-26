@@ -53,9 +53,7 @@ add_docstr(
                   [15., 15., 15., 16., 17., 17., 17.],
                   [15., 15., 15., 16., 17., 17., 17.]]]], dtype=oneflow.float32)
 
-    See :class:`oneflow.nn.ConstantPad2d`, :class:`ooneflow.nn.ReflectionPad2d`, and
-        :class:`ooneflow.nn.ReplicationPad2d` for concrete examples on how each of the
-        padding modes works.
+    See :class:`oneflow.nn.ConstantPad2d`, :class:`oneflow.nn.ReflectionPad2d`, and :class:`oneflow.nn.ReplicationPad2d` for concrete examples on how each of the padding modes works.
         
     """,
 )
@@ -75,6 +73,9 @@ add_docstr(
 
     Args:
         height_scale (float):
+            multiplier for spatial size. Has to match input size if it is a tuple.
+        
+        width_scale (float):
             multiplier for spatial size. Has to match input size if it is a tuple.
 
         align_corners (bool): if ``True``, the corner pixels of the input
