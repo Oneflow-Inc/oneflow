@@ -19,10 +19,11 @@ import os
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
+import oneflow.compatible.single_client.unittest
+from oneflow.compatible import single_client as flow
 
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
@@ -37,9 +38,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     if data_type == flow.float16:
         func_config.enable_auto_mixed_precision(True)
         data_type = flow.float
-
     func_config.default_data_type(data_type)
-
     of_activation_map = {
         "relu": flow.nn.relu,
         "sigmoid": flow.math.sigmoid,
