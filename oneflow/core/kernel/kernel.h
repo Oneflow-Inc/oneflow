@@ -47,6 +47,7 @@ class Kernel {
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
+  const KernelConf& kernel_conf() const { return kernel_conf_; }
   /*
    * return true means all below must be guaranteed when `Launch` function return:
    * 1) all out blob header has been set (e.g. SyncSetHeadKernel)
@@ -77,7 +78,6 @@ class Kernel {
   void InitBase(const JobDesc* job_desc, const KernelConf&);
   virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
   virtual void VirtualKernelInit() {}
-  const KernelConf& kernel_conf() const { return kernel_conf_; }
 
   template<typename HandlerT>
   void ForEachObnAndIsHeaderInferedBeforeCompute(

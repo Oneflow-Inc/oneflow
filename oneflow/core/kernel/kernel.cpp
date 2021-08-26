@@ -16,8 +16,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
-#include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/kernel.h"
 #include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
@@ -32,8 +30,6 @@ void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
   kernel_conf_ = kernel_conf;
   shape_infer_helper_ =
       new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
-  blob_access_checker_disabled_ =
-      ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", false);
 }
 
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
@@ -88,28 +84,21 @@ void Kernel::SetOutputBlobConsumerAccessChecker(
 
 void Kernel::Forward(const KernelCtx& ctx,
                      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  if (!blob_access_checker_disabled_) { SetOutputBlobProducerInferAccessChecker(BnInOp2Blob); }
+  Global<KernelObserver>::Get()->WillForwardHeader(ctx, this, BnInOp2Blob);
   ForwardHeader(ctx, BnInOp2Blob);
+  Global<KernelObserver>::Get()->DidForwardHeader(ctx, this, BnInOp2Blob);
   if ((!kernel_conf_.all_blobs_are_static())
       && IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) {
     return;
   }
-  if (!blob_access_checker_disabled_) { SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob); }
-  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
   Global<KernelObserver>::Get()->WillForwardDataContent(ctx, this, BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
   Global<KernelObserver>::Get()->DidForwardDataContent(ctx, this, BnInOp2Blob);
-  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob));
-  if (!blob_access_checker_disabled_) { SetOutputBlobConsumerAccessChecker(BnInOp2Blob); }
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  if (!kernel_conf_.all_blobs_are_static()) {
-    Global<KernelObserver>::Get()->WillForwardShape(ctx, this, BnInOp2Blob);
-    ForwardShape(ctx, BnInOp2Blob);
-    Global<KernelObserver>::Get()->DidForwardShape(ctx, this, BnInOp2Blob);
-  }
+  if (!kernel_conf_.all_blobs_are_static()) { ForwardShape(ctx, BnInOp2Blob); }
 }
 
 void Kernel::ForwardShape(const KernelCtx& ctx,

@@ -55,7 +55,7 @@ class DeviceCtx {
   }
 #endif
 
-  virtual void SyncDevice() { UNIMPLEMENTED(); }
+  virtual void SyncDevice() = 0;
   virtual void AddCallBack(std::function<void()>) const { UNIMPLEMENTED(); }
 
   virtual vm::Allocator* mut_allocator() {

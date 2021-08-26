@@ -43,6 +43,7 @@ __global__ void HasNotFiniteGpuKernel(const int64_t n, const T* x, volatile bool
 
 class HasNotFiniteContext {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(HasNotFiniteContext);
   HasNotFiniteContext() = default;
   ~HasNotFiniteContext() {
     if (has_not_finite_host_ != nullptr) { OF_CUDA_CHECK(cudaFreeHost(has_not_finite_host_)); }

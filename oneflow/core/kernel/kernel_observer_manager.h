@@ -22,6 +22,7 @@ namespace oneflow {
 
 class KernelObserverManager final : public KernelObserver {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelObserverManager);
   KernelObserverManager();
   ~KernelObserverManager() override = default;
 
@@ -30,10 +31,10 @@ class KernelObserverManager final : public KernelObserver {
   void DidForward(const KernelCtx& kernel_ctx, const Kernel* kernel,
                   const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
 
-  void WillForwardShape(const KernelCtx& kernel_ctx, const Kernel* kernel,
+  void WillForwardHeader(const KernelCtx& kernel_ctx, const Kernel* kernel,
+                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
+  void DidForwardHeader(const KernelCtx& kernel_ctx, const Kernel* kernel,
                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
-  void DidForwardShape(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                       const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
 
   void WillForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
                               const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;

@@ -67,8 +67,7 @@ void CheckNumericsKernelObserver::DidForwardDataContent(
     if (blob != nullptr) {
       bool has_not_finite = DispatchHasNotFiniteDeviceType(kernel->op_conf().device_tag(),
                                                            kernel_ctx.device_ctx, blob);
-      CHECK_EQ(has_not_finite, false)
-          << kernel->op_conf().name() << " : " << obn << " has nan or inf";
+      CHECK(!has_not_finite) << kernel->op_conf().name() << " : " << obn << " has nan or inf";
     }
   }
 }

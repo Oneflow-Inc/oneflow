@@ -13,23 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_CHECK_NUMBERICS_KERNEL_OBSERVER_H_
-#define ONEFLOW_CORE_KERNEL_CHECK_NUMBERICS_KERNEL_OBSERVER_H_
+#ifndef ONEFLOW_CORE_KERNEL_PROFILER_KERNEL_OBSERVER_H_
+#define ONEFLOW_CORE_KERNEL_PROFILER_KERNEL_OBSERVER_H_
 
 #include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
-class CheckNumericsKernelObserver final : public KernelObserver {
+class ProfilerKernelObserver final : public KernelObserver {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CheckNumericsKernelObserver);
-  CheckNumericsKernelObserver() = default;
-  ~CheckNumericsKernelObserver() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ProfilerKernelObserver);
+  ProfilerKernelObserver() = default;
+  ~ProfilerKernelObserver() override = default;
 
+  void WillForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
+                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
   void DidForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_CHECK_NUMBERICS_KERNEL_OBSERVER_H_
+#endif  // ONEFLOW_CORE_KERNEL_PROFILER_KERNEL_OBSERVER_H_

@@ -22,6 +22,7 @@ namespace oneflow {
 
 class SyncCheckKernelObserver final : public KernelObserver {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(SyncCheckKernelObserver);
   SyncCheckKernelObserver() = default;
   ~SyncCheckKernelObserver() override = default;
 

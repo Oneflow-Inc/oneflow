@@ -35,10 +35,10 @@ class KernelObserver {
   virtual void DidForward(const KernelCtx& kernel_ctx, const Kernel* kernel,
                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) {}
 
-  virtual void WillForwardShape(const KernelCtx& kernel_ctx, const Kernel* kernel,
+  virtual void WillForwardHeader(const KernelCtx& kernel_ctx, const Kernel* kernel,
+                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) {}
+  virtual void DidForwardHeader(const KernelCtx& kernel_ctx, const Kernel* kernel,
                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) {}
-  virtual void DidForwardShape(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                               const std::function<Blob*(const std::string&)>& BnInOp2Blob) {}
 
   virtual void WillForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
                                       const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
