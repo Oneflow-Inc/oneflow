@@ -57,7 +57,7 @@ class ViewCopyKernel final : public user_op::OpKernel {
       AutoMemcpy(ctx->device_ctx(), out_dptr, in_dptr, contiguous_block_size * dsize,
                  out->mem_case(), in->mem_case());
     } else {
-      StrideVector out_stride{in_shape.NumAxes()};
+      StrideVector out_stride(in_shape.NumAxes());
 
       int64_t sum = 1;
       for (int64_t i = out_stride.size() - 1; i != -1; --i) {
