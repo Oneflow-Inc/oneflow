@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
 
 namespace oneflow {
 
@@ -93,6 +94,9 @@ struct GetSbpFnUtil {
   static Maybe<void> DefaultBroadcastToBroadcast(SbpContext*);
   static Maybe<void> SplitForEachAxis(SbpContext*);
 };
+
+Maybe<void> InferNdSbp4SrcOp(user_op::InferNdSbpFnContext* ctx,
+                             const cfg::SbpParallel& default_sbp);
 
 }  // namespace user_op
 

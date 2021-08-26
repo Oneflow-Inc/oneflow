@@ -35,28 +35,28 @@ class DistributeSplitKernel final : public KernelIf<device_type> {
 
  private:
   void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+                          const std::function<Blob*(const std::string&)>&) const override;
   void ForwardShape(const KernelCtx& ctx,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  Blob* GetOutBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  Blob* GetOutBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 template<DeviceType device_type>
 void DistributeSplitKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CheckSizeAndCopyBlob(ctx.device_ctx, GetOutBlob(BnInOp2Blob), BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type>
 void DistributeSplitKernel<device_type>::ForwardShape(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Blob* out_blob = GetOutBlob(BnInOp2Blob);
   out_blob->mut_shape_view()->set_shape(BnInOp2Blob("in")->shape());
 }
 
 template<DeviceType device_type>
 Blob* DistributeSplitKernel<device_type>::GetOutBlob(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Blob* out_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().output_bns().size()) {
     Blob* cur_blob = BnInOp2Blob(this->op_attribute().output_bns().Get(i));

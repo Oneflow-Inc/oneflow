@@ -49,9 +49,10 @@ HashSet<int32_t> GetInclusiveAxes(const ShapeElemCntOpConf& conf, int32_t num_ax
 
 }  // namespace
 
-void ShapeElemCntOp::InitFromOpConf() {
+Maybe<void> ShapeElemCntOp::InitFromOpConf() {
   EnrollInputBn("x", false);
   EnrollOutputBn("y", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {
@@ -59,7 +60,7 @@ namespace {
 Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
                            const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
   BlobDesc4BnInOp("y")->set_data_type(op_conf.shape_elem_cnt_conf().data_type());
-  BlobDesc4BnInOp("y")->mut_shape() = Shape({1});
+  BlobDesc4BnInOp("y")->mut_shape() = Shape({});
   return Maybe<void>::Ok();
 }
 
@@ -105,6 +106,12 @@ Maybe<void> ShapeElemCntOp::GetSbpSignatures(
           .Broadcast(output_bns())
           .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
+  }
+  if (num_axes == 0) {
+    SbpSignatureBuilder()
+        .PartialSum(input_bns())
+        .PartialSum(output_bns())
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   }
   return Maybe<void>::Ok();
 }

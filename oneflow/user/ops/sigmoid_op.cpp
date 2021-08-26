@@ -51,7 +51,7 @@ REGISTER_USER_OP("sigmoid_grad")
       const Shape& y_shape = ctx->InputShape("y", 0);
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      CHECK(dy_shape == y_shape);
+      CHECK_OR_RETURN(dy_shape == y_shape);
       *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
@@ -73,7 +73,7 @@ REGISTER_USER_OP("sigmoid_grad")
     });
 
 REGISTER_USER_OP_GRAD("sigmoid").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                           user_op::AddOpFn AddOp) {
+                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper sigmoid_grad_op =
@@ -85,6 +85,7 @@ REGISTER_USER_OP_GRAD("sigmoid").SetGenBackwardOpConfFn([](const user_op::UserOp
     op.BindGradTensorWithOpInput(sigmoid_grad_op.output("dx", 0), "in", 0);
     AddOp(sigmoid_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

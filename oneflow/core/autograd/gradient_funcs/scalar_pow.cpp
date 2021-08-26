@@ -22,12 +22,12 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct ScalarPowInterpState : public OpExprInterpState {
+struct ScalarPowCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   double exponent;
 };
 
-class ScalarPow : public OpExprGradFunction<ScalarPowInterpState> {
+class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -38,7 +38,7 @@ class ScalarPow : public OpExprGradFunction<ScalarPowInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(ScalarPowInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ScalarPowCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
@@ -51,7 +51,7 @@ class ScalarPow : public OpExprGradFunction<ScalarPowInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const ScalarPowInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ScalarPowCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
     MutableAttrMap attrs;

@@ -60,7 +60,7 @@ ExternalProject_Add(pciaccess
   URL_HASH MD5=${PCIACCESS_URL_HASH}
   UPDATE_COMMAND ""
   PATCH_COMMAND cp ${XORG_MACROS_INSTALL}/share/aclocal/xorg-macros.m4 ${PCIACCESS_SOURCE_DIR}/src/pciaccess/m4
-  CONFIGURE_COMMAND ${PCIACCESS_SOURCE_DIR}/src/pciaccess/autogen.sh COMMAND ${PCIACCESS_SOURCE_DIR}/src/pciaccess/configure --prefix=${PCIACCESS_INSTALL}
+  CONFIGURE_COMMAND ${PCIACCESS_SOURCE_DIR}/src/pciaccess/autogen.sh COMMAND ${PCIACCESS_SOURCE_DIR}/src/pciaccess/configure --prefix=${PCIACCESS_INSTALL} --enable-shared=no
   BUILD_COMMAND make -j${PROC_NUM} CFLAGS=${PCIACCESS_CFLAGS}
   BUILD_BYPRODUCTS ${PCIACCESS_STATIC_LIBRARIES}
   INSTALL_COMMAND make install
@@ -78,7 +78,7 @@ ExternalProject_Add(hwloc
         URL ${HWLOC_TAR_URL}
         URL_HASH MD5=${HWLOC_URL_HASH}
         UPDATE_COMMAND ""
-        CONFIGURE_COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/autogen.sh COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/configure --prefix=${HWLOC_INSTALL} PKG_CONFIG_PATH=${PCIACCESS_INSTALL}/lib/pkgconfig --disable-libxml2 --enable-static
+        CONFIGURE_COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/autogen.sh COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/configure --prefix=${HWLOC_INSTALL} PKG_CONFIG_PATH=${PCIACCESS_INSTALL}/lib/pkgconfig --disable-libxml2 --enable-static --enable-shared=no
         BUILD_COMMAND make -j${PROC_NUM} CFLAGS=${HWLOC_CFLAGS}
         BUILD_BYPRODUCTS ${HWLOC_STATIC_LIBRARIES}
         INSTALL_COMMAND make install

@@ -36,12 +36,14 @@ template<typename T>
 struct ClipKernelUtil<DeviceType::kGPU, T> {
   template<typename F>
   static void Forward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, T* y) {
+    if (n == 0) { return; }
     RUN_CUDA_KERNEL((CudaClipForward<T, F>), ctx, n, clip_func, n, x, y);
   }
 
   template<typename F>
   static void Backward(DeviceCtx* ctx, F clip_func, const int64_t n, const T* x, const T* dy,
                        T* dx) {
+    if (n == 0) { return; }
     RUN_CUDA_KERNEL((CudaClipBackward<T, F>), ctx, n, clip_func, n, x, dy, dx);
   }
 };

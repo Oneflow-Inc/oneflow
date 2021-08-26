@@ -104,10 +104,6 @@ void GrpcCtrlClient::PullMasterKV(const std::string& k, PbMessage* msg) {
 
 void GrpcCtrlClient::Clear() { rpc_client_.Clear(); }
 
-void GrpcCtrlClient::PushActEvent(const ActEvent& act_event) {
-  rpc_client_.PushActEvent(act_event);
-}
-
 int32_t GrpcCtrlClient::IncreaseCount(const std::string& k, int32_t v) {
   return rpc_client_.IncreaseCount(k, v);
 }

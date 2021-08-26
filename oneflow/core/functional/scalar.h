@@ -71,6 +71,16 @@ class Scalar {
   bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }
   bool IsUnsigned() const { return active_tag_ == HAS_U; }
 
+  Scalar operator+(const Scalar& other);
+  Scalar operator-(const Scalar& other);
+  Scalar operator*(const Scalar& other);
+  Scalar operator/(const Scalar& other);
+
+  Scalar& operator+=(const Scalar& other);
+  Scalar& operator-=(const Scalar& other);
+  Scalar& operator*=(const Scalar& other);
+  Scalar& operator/=(const Scalar& other);
+
  private:
   ValueType value_type_;
   union Value {

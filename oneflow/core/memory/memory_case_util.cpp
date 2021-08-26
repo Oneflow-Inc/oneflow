@@ -37,12 +37,13 @@ bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& 
   }
 }
 
-MemoryCase MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(
-    const MemoryCase& mem_case) {
-  CHECK(mem_case.has_device_cuda_mem());
+MemoryCase MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case) {
   MemoryCase ret;
-  ret.mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
-      mem_case.device_cuda_mem().device_id());
+  ret.mutable_host_mem();
+  if (mem_case.has_device_cuda_mem()) {
+    ret.mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
+        mem_case.device_cuda_mem().device_id());
+  }
   return ret;
 }
 

@@ -36,11 +36,11 @@ struct ScatterNdAddFunctor<DeviceType::kCPU, T, I> final {
 };
 
 template<typename T, typename I>
-struct ZeroByNdIndexFunctor<DeviceType::kCPU, T, I> final {
-  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                  T* dense) const {
-    DoZeroByNdIndex(args.num_slices * args.slice_size, args.slice_size, args.index_ndims,
-                    args.dense_shape, indices, dense);
+struct FillByNdIndexFunctor<DeviceType::kCPU, T, I> final {
+  void operator()(DeviceCtx* ctx, const NdIndexSliceArgs<T, I>& args, const I* indices, T* dense,
+                  T value) const {
+    DoFillByNdIndex(args.num_slices * args.slice_size, args.slice_size, args.index_ndims,
+                    args.dense_shape, indices, dense, value);
   }
 };
 

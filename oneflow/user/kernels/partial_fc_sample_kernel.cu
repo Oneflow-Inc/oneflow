@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/kernel/gather_kernel_util.h"
+#include "oneflow/user/kernels/gather_kernel_util.h"
 #include "oneflow/core/common/not_equal_to_previous_adjacent_iterator.h"
 #include <cub/cub.cuh>
 #include <curand.h>
@@ -308,6 +308,7 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
@@ -370,8 +371,8 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))     \
                        & (user_op::HobDataType("weight", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                               \
-        const int64_t num_classes = ctx->TensorDesc4ArgNameAndIndex("weight", 0)->shape().At(0); \
-        const int64_t batch_size = ctx->TensorDesc4ArgNameAndIndex("label", 0)->shape().At(0);   \
+        const int64_t num_classes = ctx->InputTensorDesc("weight", 0).shape().At(0);             \
+        const int64_t batch_size = ctx->InputTensorDesc("label", 0).shape().At(0);               \
         const int64_t parallel_num = ctx->parallel_ctx().parallel_num();                         \
         TmpBufferManager<OF_PP_PAIR_FIRST(ltype_pair)> buffer_manager(nullptr, num_classes,      \
                                                                       batch_size, parallel_num); \
@@ -388,6 +389,7 @@ class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::O
   ~DistributedPartialFcSampleDisableBoxingGpuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     const user_op::Tensor* sampled_weight_diff =
         ctx->Tensor4ArgNameAndIndex("sampled_weight_diff", 0);

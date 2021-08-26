@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/user/data/batch_dataset.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace data {
@@ -28,12 +29,23 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
   std::shared_ptr<const COCOMeta> meta(new COCOMeta(
       ctx->Attr<int64_t>("session_id"), ctx->Attr<std::string>("annotation_file"),
       ctx->Attr<std::string>("image_dir"), ctx->Attr<bool>("remove_images_without_annotations")));
-
   std::unique_ptr<RandomAccessDataset<COCOImage>> coco_dataset_ptr(new COCODataset(ctx, meta));
+
+  int64_t parallel_id = 0;
+  int64_t parallel_num = 0;
+  // NOTE(zwx): IsMirroredParallelContext return true indicate that COCODataReader works by DDP,
+  //     use rank and world size to init DistributedTrainingDataset
+  if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+    parallel_id = GlobalProcessCtx::Rank();
+    parallel_num = GlobalProcessCtx::WorldSize();
+  } else {
+    parallel_id = ctx->parallel_ctx().parallel_id();
+    parallel_num = ctx->parallel_ctx().parallel_num();
+  }
   loader_.reset(new DistributedTrainingDataset<COCOImage>(
-      ctx->parallel_ctx().parallel_num(), ctx->parallel_ctx().parallel_id(),
-      ctx->Attr<bool>("stride_partition"), ctx->Attr<bool>("shuffle_after_epoch"),
-      ctx->Attr<int64_t>("random_seed"), std::move(coco_dataset_ptr)));
+      parallel_num, parallel_id, ctx->Attr<bool>("stride_partition"),
+      ctx->Attr<bool>("shuffle_after_epoch"), ctx->Attr<int64_t>("random_seed"),
+      std::move(coco_dataset_ptr)));
 
   size_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
   if (ctx->Attr<bool>("group_by_ratio")) {

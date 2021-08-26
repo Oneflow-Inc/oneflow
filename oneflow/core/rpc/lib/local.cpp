@@ -211,7 +211,6 @@ class DryRunCtrlClient : public CtrlClient {
   void PullMasterKV(const std::string& k, PbMessage* msg) override {
     local_ctrl_client_->PullMasterKV(k, msg);
   }
-  void PushActEvent(const ActEvent& ev) override { local_ctrl_client_->PushActEvent(ev); }
   void Clear() override { local_ctrl_client_->Clear(); }
   int32_t IncreaseCount(const std::string& k, int32_t v) override {
     return local_ctrl_client_->IncreaseCount(k, v);

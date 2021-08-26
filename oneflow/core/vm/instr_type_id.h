@@ -38,7 +38,7 @@ class InstrTypeId final {
   ~InstrTypeId() = default;
 
   void __Init__() {
-    std::memset(this, 0, sizeof(InstrTypeId));
+    std::memset(reinterpret_cast<void*>(this), 0, sizeof(InstrTypeId));
     mutable_stream_type_id()->__Init__();
   }
   void __Init__(const StreamType* stream_type, const InstructionType* instruction_type,

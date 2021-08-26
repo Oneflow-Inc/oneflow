@@ -18,9 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void WaitAndSendIdsOp::InitFromOpConf() {
+Maybe<void> WaitAndSendIdsOp::InitFromOpConf() {
   CHECK(op_conf().has_wait_and_send_ids_conf());
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/blob_instruction_type.h"
-#include "oneflow/core/vm/cpu_stream_type.h"
+#include "oneflow/core/vm/async_cpu_stream_type.h"
 
 namespace oneflow {
 namespace vm {
@@ -23,7 +23,7 @@ class CpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
   CpuLazyReferenceInstructionType() = default;
   ~CpuLazyReferenceInstructionType() override = default;
 
-  using stream_type = vm::CpuStreamType;
+  using stream_type = vm::AsyncCpuStreamType;
 };
 
 COMMAND(vm::RegisterInstructionType<CpuLazyReferenceInstructionType>("cpu.LazyReference"));
@@ -33,7 +33,7 @@ class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
   CpuAccessBlobByCallbackInstructionType() = default;
   ~CpuAccessBlobByCallbackInstructionType() override = default;
 
-  using stream_type = vm::CpuStreamType;
+  using stream_type = vm::AsyncCpuStreamType;
 };
 COMMAND(vm::RegisterInstructionType<CpuAccessBlobByCallbackInstructionType>(
     "cpu.AccessBlobByCallback"));
@@ -42,7 +42,7 @@ class CpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
  public:
   CpuSoftSyncStreamInstructionType() = default;
   ~CpuSoftSyncStreamInstructionType() override = default;
-  using stream_type = vm::CpuStreamType;
+  using stream_type = vm::AsyncCpuStreamType;
 };
 COMMAND(vm::RegisterInstructionType<CpuSoftSyncStreamInstructionType>("cpu.SoftSyncStream"));
 

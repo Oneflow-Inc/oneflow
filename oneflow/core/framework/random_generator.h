@@ -16,153 +16,64 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_H_
 #define ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_H_
 
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/device/device_context.h"
-#include <fcntl.h>
-#include <unistd.h>
-#include <unordered_map>
-
-#ifdef WITH_CUDA
-#include <curand.h>
-#include <curand_kernel.h>
-#endif  // WITH_CUDA
+#include "oneflow/core/framework/random_generator_impl.h"
 
 namespace oneflow {
 namespace one {
 
-class GeneratorImpl {
- public:
-  GeneratorImpl() = default;
-  GeneratorImpl(const uint64_t& seed, const std::string& device_type)
-      : seed_(seed), device_type_(device_type) {}
-
-  virtual ~GeneratorImpl() = default;
-
-  virtual void set_current_seed(uint64_t seed) = 0;
-  uint64_t current_seed() const { return seed_; }
-
-  const std::string& device_type() const { return device_type_; }
-
- protected:
-  uint64_t seed_;
-  std::string device_type_;
-};
-
-template<DeviceType device_type>
-class DeviceGeneratorImpl;
-
-template<>
-class DeviceGeneratorImpl<DeviceType::kCPU> : public GeneratorImpl {
- public:
-  DeviceGeneratorImpl(uint64_t seed) : GeneratorImpl(seed, "cpu"), mt19937_generator_(seed) {}
-
-  virtual ~DeviceGeneratorImpl() = default;
-
-  void set_current_seed(uint64_t seed) override {
-    seed_ = seed;
-    mt19937_generator_.seed(seed_);
-  }
-
-  std::mt19937& generator() { return mt19937_generator_; }
-
- public:
-  std::mt19937 mt19937_generator_;
-};
-
-#ifdef WITH_CUDA
-template<>
-class DeviceGeneratorImpl<DeviceType::kGPU> : public GeneratorImpl {
- public:
-  DeviceGeneratorImpl(uint64_t seed);
-
-  virtual ~DeviceGeneratorImpl();
-
-  const int32_t& block_num() const { return block_num_; }
-  const int32_t& thread_num() const { return thread_num_; }
-
-  curandState* curand_states() const { return curand_states_; }
-
-  void set_current_seed(uint64_t seed) override {
-    seed_ = seed;
-    CudaRandInit(seed_);
-  }
-
- private:
-  void CudaRandInit(uint64_t seed);
-
-  int32_t block_num_;
-  int32_t thread_num_;
-  curandState* curand_states_;
-};
-#endif  // WITH_CUDA
-
-class AutoGeneratorImpl : public GeneratorImpl {
- public:
-  AutoGeneratorImpl(uint64_t seed) : GeneratorImpl(seed, "auto") {}
-
-  void set_current_seed(uint64_t seed) override {
-    seed_ = seed;
-    for (const auto& it : generators_) { it.second->set_current_seed(seed); }
-  }
-
-  template<DeviceType device_type>
-  Maybe<DeviceGeneratorImpl<device_type>> GetDeviceGenerator() {
-    CHECK_OR_RETURN(device_type != DeviceType::kInvalidDevice);
-    auto it = generators_.find(device_type);
-    if (it == generators_.end()) {
-      it = generators_
-               .emplace(device_type, std::make_shared<DeviceGeneratorImpl<device_type>>(seed_))
-               .first;
-    }
-    return std::dynamic_pointer_cast<DeviceGeneratorImpl<device_type>>(it->second);
-  }
-
- private:
-  std::unordered_map<DeviceType, std::shared_ptr<GeneratorImpl>, std::hash<int>> generators_;
-};
+// The default seed is selected to be a large number
+// with good distribution of 0s and 1s in bit representation.
+static constexpr uint64_t default_rng_seed_val = 67280421310721;
 
 class Generator final {
  public:
-  // The default seed is selected to be a large number
-  // with good distribution of 0s and 1s in bit representation
-  static constexpr uint64_t default_rng_seed_val = 67280421310721;
+  explicit Generator(const std::shared_ptr<GeneratorImpl>& impl);
 
- public:
-  Generator() = default;
+  ~Generator() = default;
 
-  Maybe<void> Init(const std::string& device, uint64_t seed);
+  void set_current_seed(uint64_t seed);
 
-  static Maybe<Generator> New(const std::string& device) {
-    return New(device, default_rng_seed_val);
-  }
-  static Maybe<Generator> New(const std::string& device, uint64_t seed);
+  uint64_t current_seed() const;
 
-  void set_current_seed(uint64_t seed) { gen_impl_->set_current_seed(seed); }
-
-  uint64_t current_seed() const { return gen_impl_->current_seed(); }
-
-  // Reset current seed by the default seed, and returns it.
+  // Reset current generator by a non-deterministic random seed, and returns it.
   uint64_t seed();
 
+  const std::shared_ptr<GeneratorImpl>& impl() const { return impl_; }
+
+  template<typename T>
+  Maybe<T> Get(int device_index = -1) const {
+    if (auto* impl = dynamic_cast<AutoGeneratorImpl*>(impl_.get())) {
+      return impl->GetOrCreate<T>(device_index);
+    }
+    auto impl = std::dynamic_pointer_cast<T>(impl_);
+    CHECK_NOTNULL_OR_RETURN(impl);
+    if (device_index != -1) {
+      CHECK_EQ_OR_RETURN(device_index, impl->device_index())
+          << "Invalid device index " << device_index << " since the generator's device index is "
+          << impl->device_index();
+    }
+    return impl;
+  }
+
  private:
-  std::shared_ptr<GeneratorImpl> gen_impl_;
+  std::shared_ptr<GeneratorImpl> impl_;
 };
 
-void ManualSeed(uint64_t seed);
+Maybe<void> ManualSeed(uint64_t seed);
 
-const std::shared_ptr<AutoGeneratorImpl>& GetDefaultAutoGenerator();
+Maybe<Generator> DefaultAutoGenerator();
+Maybe<Generator> MakeAutoGenerator();
 
-std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed);
+Maybe<Generator> DefaultCPUGenerator();
+Maybe<Generator> MakeCPUGenerator();
 
-template<DeviceType device_type>
-std::shared_ptr<DeviceGeneratorImpl<device_type>> CreateDeviceGenerator(uint64_t seed);
+#ifdef WITH_CUDA
+Maybe<Generator> DefaultCUDAGenerator(int device_index);
+Maybe<Generator> MakeCUDAGenerator();
+#endif  // WITH_CUDA
 
-template<DeviceType device_type>
-const std::shared_ptr<DeviceGeneratorImpl<device_type>>& GetDefaultDeviceGenerator();
-
-template<DeviceType device_type>
-Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
-    const std::shared_ptr<GeneratorImpl>& generator);
+Maybe<Generator> DefaultGenerator(const std::string& device, int device_index);
+Maybe<Generator> MakeGenerator(const std::string& device, int device_index);
 
 }  // namespace one
 }  // namespace oneflow

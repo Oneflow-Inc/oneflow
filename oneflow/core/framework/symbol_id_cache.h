@@ -63,6 +63,11 @@ class IdCache final {
     return symbol_id;
   }
 
+  void ClearAll() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    symbol_data2id_.clear();
+  }
+
  private:
   mutable std::mutex mutex_;
   std::map<T, int64_t> symbol_data2id_;

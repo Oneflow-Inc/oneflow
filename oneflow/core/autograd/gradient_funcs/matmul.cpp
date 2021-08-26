@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct MatmulInterpState : public OpExprInterpState {
+struct MatmulCaptureState : public AutoGradCaptureState {
   bool transpose_a;
   bool transpose_b;
   double alpha;
@@ -32,11 +32,11 @@ struct MatmulInterpState : public OpExprInterpState {
   size_t b_index;
 };
 
-class MatmulBase : public OpExprGradFunction<MatmulInterpState> {
+class MatmulBase : public OpExprGradFunction<MatmulCaptureState> {
  public:
-  Maybe<void> Capture(MatmulInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override;
-  Maybe<void> Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Capture(MatmulCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Apply(const MatmulCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  protected:
@@ -45,7 +45,7 @@ class MatmulBase : public OpExprGradFunction<MatmulInterpState> {
   std::shared_ptr<OpExpr> grad_b_op_;
 };
 
-Maybe<void> MatmulBase::Capture(MatmulInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> MatmulBase::Capture(MatmulCaptureState* ctx, const TensorTuple& inputs,
                                 const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad_a = inputs.at(0)->requires_grad();
   ctx->requires_grad_b = inputs.at(1)->requires_grad();
@@ -64,7 +64,7 @@ Maybe<void> MatmulBase::Capture(MatmulInterpState* ctx, const TensorTuple& input
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MatmulBase::Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> MatmulBase::Apply(const MatmulCaptureState* ctx, const TensorTuple& out_grads,
                               TensorTuple* in_grads) const {
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -150,7 +150,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("batch_matmul", BatchMatmul);
 class BroadcastMatmul : public MatmulBase {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const MatmulCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 };
 
@@ -168,7 +168,7 @@ Maybe<void> BroadcastMatmul::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BroadcastMatmul::Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> BroadcastMatmul::Apply(const MatmulCaptureState* ctx, const TensorTuple& out_grads,
                                    TensorTuple* in_grads) const {
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
@@ -180,13 +180,13 @@ Maybe<void> BroadcastMatmul::Apply(const MatmulInterpState* ctx, const TensorTup
   JUST(attrs_b.SetAttr<double>("alpha", ctx->alpha));
 
   in_grads->resize(2);
-  if (ctx->requires_grad_b) {
+  if (ctx->requires_grad_a) {
     const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
     in_grads->at(0) =
         JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {out_grads.at(0), input_b}, attrs_a));
   }
 
-  if (ctx->requires_grad_a) {
+  if (ctx->requires_grad_b) {
     const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
     if (!ctx->transpose_b) {
       in_grads->at(1) =

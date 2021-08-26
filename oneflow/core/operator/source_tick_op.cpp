@@ -18,10 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void SourceTickOp::InitFromOpConf() {
+Maybe<void> SourceTickOp::InitFromOpConf() {
   CHECK(op_conf().has_source_tick_conf());
   CHECK(op_conf().ctrl_in_op_name().empty());
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> SourceTickOp::InferLogicalOutBlobDescs(
@@ -29,7 +30,7 @@ Maybe<void> SourceTickOp::InferLogicalOutBlobDescs(
     const ParallelDesc& parallel_desc) const {
   BlobDesc* blob_desc = BlobDesc4BnInOp("out");
   blob_desc->mut_shape() = Shape({1});
-  blob_desc->set_data_type(DataType::kUInt8);
+  blob_desc->set_data_type(DataType::kInt8);
   return Maybe<void>::Ok();
 }
 
@@ -39,7 +40,7 @@ Maybe<void> SourceTickOp::InferOutBlobDescs(
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   BlobDesc* blob_desc = GetBlobDesc4BnInOp("out");
   blob_desc->mut_shape() = Shape({1});
-  blob_desc->set_data_type(DataType::kUInt8);
+  blob_desc->set_data_type(DataType::kInt8);
   return Maybe<void>::Ok();
 }
 

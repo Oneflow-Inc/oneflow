@@ -22,9 +22,9 @@ REGISTER_USER_OP("diag")
     .Output("out")
     .Attr<int32_t>("diagonal", 0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
       const int32_t diagonal = ctx->Attr<int32_t>("diagonal");
-      const ShapeView& in_shape = in->shape();
+      const ShapeView& in_shape = in.shape();
       const int32_t in_dim = in_shape.NumAxes();
       CHECK_GE_OR_RETURN(in_dim, 1);
       CHECK_LE_OR_RETURN(in_dim, 2);
@@ -63,8 +63,8 @@ REGISTER_USER_OP("diag_grad")
     .Attr<int32_t>("diagonal", 0)
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const Shape& in_shape = in->shape();
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      const Shape& in_shape = in.shape();
       user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
       *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
       return Maybe<void>::Ok();
@@ -78,7 +78,8 @@ REGISTER_USER_OP("diag_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
+                                                         -> Maybe<void> {
   const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("diag_grad")
@@ -92,5 +93,6 @@ REGISTER_USER_OP_GRAD("diag").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
   ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
     return ctx->GetOp(grad_op_name).output("dx", 0);
   });
+  return Maybe<void>::Ok();
 });
 }  // namespace oneflow

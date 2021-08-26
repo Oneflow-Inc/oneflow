@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class InstructionMsg;
+struct InstructionMsg;
 
 ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name);
 

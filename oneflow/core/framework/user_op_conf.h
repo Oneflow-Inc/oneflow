@@ -64,6 +64,17 @@ class UserOpConfWrapper final {
   const T& attr(const std::string& attr_name) const {
     return CHECK_JUST(attrs_.GetAttr<T>(attr_name));
   }
+
+  template<typename T>
+  const T& attr_or_default(const std::string& attr_name, const T& default_val) const {
+    const auto& it = attrs_.find(attr_name);
+    if (it != attrs_.end()) {
+      return CHECK_JUST(attrs_.GetAttr<T>(attr_name));
+    } else {
+      return default_val;
+    }
+  }
+
   const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const;
 
  private:
@@ -101,6 +112,11 @@ class UserOpWrapper final {
   template<typename T>
   T attr(const std::string& attr_name) const {
     return conf_.attr<T>(attr_name);
+  }
+
+  template<typename T>
+  T attr_or_default(const std::string& attr_name, const T& default_val) const {
+    return conf_.attr_or_default<T>(attr_name, default_val);
   }
 
   const TensorDesc& arg_tensor_desc(const std::string& arg_name, int32_t index) const;
@@ -177,6 +193,7 @@ class BackwardOpConfContext final {
 
 Maybe<long long> GetAttrTypeImpl(const std::string& op_type_name, const std::string& attr_name);
 Maybe<OperatorConf> CheckAndCompleteUserOpConfImpl(const OperatorConf& op_conf);
+Maybe<void> AddAttrDefaultValueAndCheckValid(UserOpConf* user_conf);
 
 }  // namespace oneflow
 

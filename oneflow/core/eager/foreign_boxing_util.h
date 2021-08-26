@@ -31,12 +31,14 @@ class ForeignBoxingUtil {
       InstructionsBuilder* builder, const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr) const {
     UNIMPLEMENTED();
+    return std::shared_ptr<compatible_py::BlobObject>();
   }
 
   virtual std::shared_ptr<ParallelDesc> TryReplaceDeviceTag(
       InstructionsBuilder* builder, const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
       const std::string& device_tag) const {
     UNIMPLEMENTED();
+    return std::shared_ptr<ParallelDesc>();
   }
 
   virtual void Assign(InstructionsBuilder* builder,

@@ -166,7 +166,7 @@ static std::unordered_map<std::string,  // NOLINT
                           TRTInt8CalibratorResource*>
     resources;
 
-/*static*/ TRTInt8CalibratorResource*  // NOLINT
+/* static */ TRTInt8CalibratorResource*  // NOLINT
 TRTInt8CalibratorResource::LookupOrCreate(const std::string& name) {
   static std::mutex mutex;
   std::lock_guard<std::mutex> lock(mutex);
@@ -175,8 +175,8 @@ TRTInt8CalibratorResource::LookupOrCreate(const std::string& name) {
   return it->second;
 }
 
-/*static*/ const std::unordered_map<std::string,  // NOLINT
-                                    TRTInt8CalibratorResource*>&
+/* static */ const std::unordered_map<std::string,  // NOLINT
+                                      TRTInt8CalibratorResource*>&
 TRTInt8CalibratorResource::All() {
   return resources;
 }

@@ -19,10 +19,11 @@ namespace oneflow {
 
 class DynamicReshapeOp final : public Operator {
  public:
-  void InitFromOpConf() {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_dynamic_reshape_conf());
     EnrollInputBn("in");
     EnrollOutputBn("out")->set_const_inplace_ibn("in");
+    return Maybe<void>::Ok();
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
@@ -116,11 +117,12 @@ REGISTER_OP(OperatorConf::kDynamicReshapeConf, DynamicReshapeOp);
 
 class DynamicReshapeLikeOp final : public Operator {
  public:
-  void InitFromOpConf() {
+  Maybe<void> InitFromOpConf() override {
     CHECK(op_conf().has_dynamic_reshape_like_conf());
     EnrollInputBn("x");
     EnrollOutputBn("y");
     EnrollInputBn("like", false);
+    return Maybe<void>::Ok();
   }
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,

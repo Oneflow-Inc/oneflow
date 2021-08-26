@@ -36,7 +36,7 @@ class InferContext;
 class SbpContext;
 class InferSbpSignatureFnContext;
 class InferOutputBlobTimeShapeFnContext;
-class InferParallelDistributionFnContext;
+class InferNdSbpFnContext;
 class DeviceInferContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
@@ -48,13 +48,14 @@ using SbpSignatureInferFn = std::function<Maybe<void>(InferSbpSignatureFnContext
 using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
-using InputArgModifyFn = std::function<void(GetInputArgModifier, const UserOpConfWrapper&)>;
+using InputArgModifyFn = std::function<Maybe<void>(GetInputArgModifier, const UserOpConfWrapper&)>;
 using OutputArgModifier = OutputBlobModifier;
 using GetOutputArgModifier =
     std::function<OutputArgModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
-using OutputArgModifyFn = std::function<void(GetOutputArgModifier, const UserOpConfWrapper&)>;
+using OutputArgModifyFn =
+    std::function<Maybe<void>(GetOutputArgModifier, const UserOpConfWrapper&)>;
 using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
-using ParallelDistributionInferFn = std::function<Maybe<void>(InferParallelDistributionFnContext*)>;
+using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
 
 struct OpRegistryResult {
   OpRegistryResult() : cpu_only_supported(false), no_grad(false), same_output_regst_num(-1) {}
@@ -77,7 +78,7 @@ struct OpRegistryResult {
   InputArgModifyFn input_arg_modify_fn;
   OutputArgModifyFn output_arg_modify_fn;
   OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn;
-  ParallelDistributionInferFn parallel_distribution_infer_fn;
+  NdSbpInferFn nd_sbp_infer_fn;
 };
 
 class OpRegistry final {
@@ -119,7 +120,7 @@ class OpRegistry final {
   OpRegistry& SetInputArgModifyFn(InputArgModifyFn fn);
   OpRegistry& SetOutputArgModifyFn(OutputArgModifyFn fn);
   OpRegistry& SetOutputBlobTimeShapeInferFn(OutputBlobTimeShapeInferFn fn);
-  OpRegistry& SetParallelDistributionInferFn(ParallelDistributionInferFn fn);
+  OpRegistry& SetNdSbpInferFn(NdSbpInferFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
   OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
   OpRegistry& SetDeviceInferFn(DeviceInferFn fn);

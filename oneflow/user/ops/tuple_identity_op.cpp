@@ -63,13 +63,15 @@ REGISTER_USER_OP("tuple_identity")
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP_GRAD("tuple_identity")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       int32_t in_size = op.input_size("in");
       for (int i = 0; i < in_size; ++i) {
         if (op.NeedGenGradTensor4OpInput("in", i)) {
           op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", i), "in", i);
         }
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

@@ -18,11 +18,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void ScalarOpBase::InitFromOpConf() {
+Maybe<void> ScalarOpBase::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollInputBn("scalar");
   EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
-  ;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ScalarOpBase::InferOutBlobDescs(

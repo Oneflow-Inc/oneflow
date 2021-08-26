@@ -49,8 +49,9 @@ class XrtLaunchKernel : public KernelIf<device_type> {
   virtual ~XrtLaunchKernel() {}
 
  private:
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
 
   xrt::Executable* BuildExecutable(const std::vector<xrt::Parameter>& entry_params,
                                    const std::vector<xrt::Parameter>& return_params,

@@ -26,7 +26,7 @@ class ForeignWatchOp final : public Operator {
   ForeignWatchOp() = default;
   ~ForeignWatchOp() override = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;

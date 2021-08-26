@@ -27,8 +27,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class VmDesc;
-class VmResourceDesc;
+struct VmDesc;
+struct VmResourceDesc;
 
 class TestResourceDescScope final {
  public:

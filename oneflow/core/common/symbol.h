@@ -19,11 +19,16 @@ limitations under the License.
 #include <mutex>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <glog/logging.h>
 #include "oneflow/core/common/type_traits.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/hash_eq_trait_ptr.h"
 
 namespace oneflow {
+
+template<typename T>
+struct SymbolUtil;
 
 template<typename T>
 class Symbol final {
@@ -34,7 +39,7 @@ class Symbol final {
   Symbol(Symbol&& rhs) = default;
   ~Symbol() = default;
 
-  operator bool() const { return ptr_ != nullptr; }
+  explicit operator bool() const { return ptr_ != nullptr; }
   const T* operator->() const { return ptr_; }
   const T& operator*() const { return *ptr_; }
   bool operator==(const Symbol<T>& rhs) const { return ptr_ == rhs.ptr_; }
@@ -51,6 +56,8 @@ class Symbol final {
   std::shared_ptr<const T> shared_from_symbol() const;
 
  private:
+  template<typename SymbolT>
+  friend struct SymbolUtil;
   static const T* GetOrCreatePtr(const T& obj);
 
   const T* ptr_;
@@ -61,80 +68,83 @@ struct IsScalarType<Symbol<T>> final {
   static const bool value = true;
 };
 
-namespace sym {
 template<typename T>
-using SymbolTable = std::unordered_map<HashEqTraitPtr<const T>, std::shared_ptr<const T>>;
+struct SymbolUtil final {
+  using SymbolMap = std::unordered_map<HashEqTraitPtr<const T>, std::shared_ptr<const T>>;
 
-template<typename T>
-SymbolTable<T>* GlobalSymbolTable() {
-  static SymbolTable<T> symbol_table;
-  return &symbol_table;
-}
+  static SymbolMap* GlobalSymbolMap() {
+    static SymbolMap symbol_map;
+    return &symbol_map;
+  }
 
-template<typename T>
-std::mutex* GlobalSymbolTableMutex() {
-  static std::mutex mutex;
-  return &mutex;
-}
+  static std::mutex* GlobalSymbolMapMutex() {
+    static std::mutex mutex;
+    return &mutex;
+  }
 
-template<typename T>
-SymbolTable<T>* ThreadLocalSymbolTable() {
-  static thread_local SymbolTable<T> thread_local_symbol_table;
-  return &thread_local_symbol_table;
-}
+  static SymbolMap* ThreadLocalSymbolMap() {
+    static thread_local SymbolMap thread_local_symbol_map;
+    return &thread_local_symbol_map;
+  }
 
-template<typename T,
-         typename SymbolTable<T>::iterator (*GetIter4ObjectAndHashValue)(const T&, size_t)>
-std::shared_ptr<const T> LocalThreadGetOr(const T& obj) {
-  auto* thread_local_symbol_table = ThreadLocalSymbolTable<T>();
-  size_t hash_value = std::hash<T>()(obj);
-  HashEqTraitPtr<const T> obj_ptr_wraper(&obj, hash_value);
-  const auto& local_iter = thread_local_symbol_table->find(obj_ptr_wraper);
-  if (local_iter != thread_local_symbol_table->end()) { return local_iter->second; }
-  const auto& iter = GetIter4ObjectAndHashValue(obj, hash_value);
-  (*thread_local_symbol_table)[iter->first] = iter->second;
-  return iter->second;
-}
+  static std::unordered_set<const T*>* ThreadLocalSymbolPtrSet() {
+    static thread_local std::unordered_set<const T*> thread_local_symbol_ptr_set;
+    return &thread_local_symbol_ptr_set;
+  }
 
-template<typename T>
-typename SymbolTable<T>::iterator FindGlobalSymbol(const T& obj, size_t hash_value) {
-  HashEqTraitPtr<const T> new_obj_ptr_wraper(&obj, hash_value);
-  auto* symbol_table = GlobalSymbolTable<T>();
-  std::unique_lock<std::mutex> lock(*GlobalSymbolTableMutex<T>());
-  const auto& iter = symbol_table->find(new_obj_ptr_wraper);
-  CHECK(iter != symbol_table->end());
-  return iter;
-}
+  template<typename SymbolMap::iterator (*GetIter4ObjectAndHashValue)(const T&, size_t)>
+  static std::shared_ptr<const T> LocalThreadGetOr(const T& obj) {
+    auto* thread_local_symbol_map = ThreadLocalSymbolMap();
+    size_t hash_value = std::hash<T>()(obj);
+    HashEqTraitPtr<const T> obj_ptr_wraper(&obj, hash_value);
+    const auto& local_iter = thread_local_symbol_map->find(obj_ptr_wraper);
+    if (local_iter != thread_local_symbol_map->end()) { return local_iter->second; }
+    const auto& iter = GetIter4ObjectAndHashValue(obj, hash_value);
+    (*thread_local_symbol_map)[iter->first] = iter->second;
+    CHECK(ThreadLocalSymbolPtrSet()->emplace(iter->second.get()).second);
+    return iter->second;
+  }
 
-template<typename T>
-std::shared_ptr<const T> SharedFromObject(const T& obj) {
-  return LocalThreadGetOr<T, FindGlobalSymbol<T>>(obj);
-}
+  static typename SymbolMap::iterator FindGlobalSymbol(const T& obj, size_t hash_value) {
+    HashEqTraitPtr<const T> new_obj_ptr_wraper(&obj, hash_value);
+    auto* symbol_map = GlobalSymbolMap();
+    std::unique_lock<std::mutex> lock(*GlobalSymbolMapMutex());
+    const auto& iter = symbol_map->find(new_obj_ptr_wraper);
+    CHECK(iter != symbol_map->end());
+    return iter;
+  }
 
-template<typename T>
-typename SymbolTable<T>::iterator CreateGlobalSymbol(const T& obj, size_t hash_value) {
-  std::shared_ptr<const T> ptr(new T(obj));
-  HashEqTraitPtr<const T> new_obj_ptr_wraper(ptr.get(), hash_value);
-  std::unique_lock<std::mutex> lock(*GlobalSymbolTableMutex<T>());
-  return GlobalSymbolTable<T>()->emplace(new_obj_ptr_wraper, ptr).first;
-}
+  static std::shared_ptr<const T> SharedFromObject(const T& obj) {
+    return LocalThreadGetOr<FindGlobalSymbol>(obj);
+  }
 
-template<typename T>
-std::shared_ptr<const T> GetOrCreatePtr(const T& obj) {
-  return LocalThreadGetOr<T, CreateGlobalSymbol<T>>(obj);
-}
+  static typename SymbolMap::iterator CreateGlobalSymbol(const T& obj, size_t hash_value) {
+    std::shared_ptr<const T> ptr(new T(obj));
+    HashEqTraitPtr<const T> new_obj_ptr_wraper(ptr.get(), hash_value);
+    std::unique_lock<std::mutex> lock(*GlobalSymbolMapMutex());
+    return GlobalSymbolMap()->emplace(new_obj_ptr_wraper, ptr).first;
+  }
 
-}  // namespace sym
+  static std::shared_ptr<const T> GetOrCreatePtr(const T& obj) {
+    return LocalThreadGetOr<CreateGlobalSymbol>(obj);
+  }
+  static Maybe<Symbol<T>> GetSymbolByExistedRawPtr(const T* ptr) {
+    CHECK_GT_OR_RETURN(ThreadLocalSymbolPtrSet()->count(ptr), 0) << "ptr: " << ptr;
+    Symbol<T> symbol;
+    symbol.ptr_ = ptr;
+    return symbol;
+  }
+};
 
 template<typename T>
 std::shared_ptr<const T> Symbol<T>::shared_from_symbol() const {
   if (this->ptr_ == nullptr) { return std::shared_ptr<const T>(); }
-  return sym::SharedFromObject(*this->ptr_);
+  return SymbolUtil<T>::SharedFromObject(*this->ptr_);
 }
 
 template<typename T>
 const T* Symbol<T>::GetOrCreatePtr(const T& obj) {
-  return sym::GetOrCreatePtr(obj).get();
+  return SymbolUtil<T>::GetOrCreatePtr(obj).get();
 }
 
 template<typename T>

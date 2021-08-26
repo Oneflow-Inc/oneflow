@@ -379,7 +379,7 @@ std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelCom
     }
   }
 
-  return std::move(state);
+  return state;
 }
 
 template<typename T>
@@ -461,14 +461,13 @@ class ConvCpuKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         size_t tmp_buffer_size = 0;                                                         \
         const auto& out_shape = ctx->OutputTensorDesc("out", 0)->shape();                   \
-        const auto& weight_shape = ctx->TensorDesc4ArgNameAndIndex("weight", 0)->shape();   \
+        const auto& weight_shape = ctx->InputTensorDesc("weight", 0).shape();               \
                                                                                             \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));              \
         tmp_buffer_size +=                                                                  \
             CalcElemNumOfColBuf(out_shape, weight_shape, idx_offset) * sizeof(dtype);       \
-                                                                                            \
-        const auto* bias = ctx->TensorDesc4ArgNameAndIndex("bias", 0);                      \
-        if (bias != nullptr) {                                                              \
+        bool has_bias = ctx->has_input("bias", 0);                                          \
+        if (has_bias) {                                                                     \
           int64_t bias_mul_cnt = 1;                                                         \
           for (int i = 0; i < ndims; ++i) { bias_mul_cnt *= out_shape.At(idx_offset + i); } \
           tmp_buffer_size += bias_mul_cnt * sizeof(dtype);                                  \
@@ -543,8 +542,8 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
         size_t tmp_buffer_size = 0;                                                        \
-        const auto& out_diff_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();    \
-        const auto& weight_shape = ctx->TensorDesc4ArgNameAndIndex("filter", 0)->shape();  \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                \
+        const auto& weight_shape = ctx->InputTensorDesc("filter", 0).shape();              \
                                                                                            \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));             \
         tmp_buffer_size +=                                                                 \
@@ -605,7 +604,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
         size_t tmp_buffer_size = 0;                                                             \
-        const auto& out_diff_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();         \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                     \
         const auto& weight_diff_shape = ctx->OutputTensorDesc("filter_diff", 0)->shape();       \
                                                                                                 \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));                  \
@@ -670,7 +669,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                      \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))         \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                            \
-        const auto& out_diff_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();        \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                    \
         const int ndims = out_diff_shape.NumAxes() - 2;                                        \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));                 \
         int64_t bias_mul_cnt = 1;                                                              \

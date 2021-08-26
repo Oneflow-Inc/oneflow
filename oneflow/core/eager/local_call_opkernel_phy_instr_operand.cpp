@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 
 namespace oneflow {
 namespace vm {
@@ -25,33 +26,33 @@ void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
     const auto& input = input_list->at(index);
-    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
+    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())->mut_mirrored_object());
   }
 }
 
 void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
-  // Sequantialize instructions in the same stream by consuming `compute_local_dep_object` of the
-  // same device.
   auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
-  DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
+  if (opkernel().device()->type() == "nccl") {
+    // Sequantialize nccl instructions to avoid deadlock
+    DoEach(nullptr, device_dep_object->mut_mirrored_object());
+  } else {
+    // Sequantialize instructions to avoid explosive memory allocation of source ops
+    if (dev_vm_dep_object_consume_mode() == one::DevVmDepObjectConsumeMode::MUTABLE) {
+      DoEach(nullptr, device_dep_object->mut_mirrored_object());
+    }
+  }
 
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
     const auto& input = input_list->at(index);
-    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
+    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())->mut_mirrored_object());
   }
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut_obns()) {
     const auto& output = output_list->at(index);
-    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
+    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())->mut_mirrored_object());
   }
 }
 
@@ -61,9 +62,7 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMut2MirroredObject(
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
     const auto& output = output_list->at(index);
-    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())
-                        ->mut_local_dep_object()
-                        ->mut_mirrored_object());
+    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())->mut_mirrored_object());
   }
 }
 

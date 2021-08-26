@@ -23,10 +23,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class Stream;
-class InstructionStatusBuffer;
-class Instruction;
-class StreamDesc;
+struct Stream;
+struct InstructionStatusBuffer;
+struct Instruction;
+struct StreamDesc;
 
 class HostStreamType final : public StreamType {
  public:
@@ -47,6 +47,7 @@ class HostStreamType final : public StreamType {
   ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                           int64_t this_machine_id) const override;
   bool SharingVirtualMachineThread() const override { return true; }
+  bool SupportingTransportInstructions() const override { return false; }
 };
 
 }  // namespace vm

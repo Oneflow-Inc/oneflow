@@ -18,9 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void ForeignWatchOp::InitFromOpConf() {
+Maybe<void> ForeignWatchOp::InitFromOpConf() {
   CHECK(op_conf().has_foreign_watch_conf());
   EnrollInputBn("in");
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> ForeignWatchOp::InferLogicalOutBlobDescs(

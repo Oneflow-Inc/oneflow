@@ -28,8 +28,9 @@ class ConstantLikeKernel final : public KernelIf<device_type> {
  private:
   mutable bool is_init_;
 
-  void ForwardDataContent(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     if (is_init_) { return; }
     Blob* out_blob = BnInOp2Blob("out");
     T value = static_cast<T>(0);

@@ -246,7 +246,7 @@ class fixed_vector final {
  private:
   void CheckSize() const { CheckSize(size_); }
   void CheckSize(size_t size) const { CHECK_LE(size, kMaxSize); }
-  void CheckPos(size_t pos) const { CHECK_LT(pos, size_); }
+  void CheckPos(size_t pos) const { CHECK_LE(pos, size_); }
   void MoveNToEnd(iterator first, size_t N) {
     CheckSize(size_ + N);
     iterator old_end = end();

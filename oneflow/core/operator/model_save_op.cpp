@@ -23,7 +23,7 @@ class ModelSaveOp final : public Operator {
   ModelSaveOp() = default;
   ~ModelSaveOp() override = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override {
@@ -42,32 +42,30 @@ class ModelSaveOp final : public Operator {
     return Maybe<void>::Ok();
   };
 
-  Maybe<void> InferParallelDistributionSignature(
-      cfg::ParallelDistributionSignature* parallel_distribution_signature,
-      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
-      const ParallelDesc& parallel_desc,
-      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-          ParallelDistributionInferHint4Ibn) const override {
-    cfg::ParallelDistribution broadcast_distribution;
+  Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
+                                  const cfg::NdSbpSignature& nd_sbp_constraints,
+                                  const ParallelDesc& parallel_desc,
+                                  std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
+                                      NdSbpInferHint4Ibn) const override {
+    cfg::NdSbp broadcast_distribution;
     for (int64_t i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
       broadcast_distribution.add_sbp_parallel()->mutable_broadcast_parallel();
     }
     for (const std::string& ibn : input_bns()) {
-      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[ibn] =
-          broadcast_distribution;
+      (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[ibn] = broadcast_distribution;
     }
     for (const std::string& obn : output_bns()) {
-      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[obn] =
-          broadcast_distribution;
+      (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[obn] = broadcast_distribution;
     }
     return Maybe<void>::Ok();
   }
 };
 
-void ModelSaveOp::InitFromOpConf() {
+Maybe<void> ModelSaveOp::InitFromOpConf() {
   CHECK(op_conf().has_model_save_conf());
   EnrollInputBn("path", false);
   EnrollRepeatedInputBn("in", false);
+  return Maybe<void>::Ok();
 }
 
 REGISTER_CPU_OP(OperatorConf::kModelSaveConf, ModelSaveOp);

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
-#include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -99,43 +98,6 @@ class DropoutGradKernelCPU final : public user_op::OpKernel {
 
 REGISTER_DROPOUT_GRAD_KERNEL_CPU(float)
 REGISTER_DROPOUT_GRAD_KERNEL_CPU(double)
-
-template<DeviceType device_type>
-class RandomMaskLikeKernel final : public user_op::OpKernel {
- public:
-  RandomMaskLikeKernel() = default;
-  ~RandomMaskLikeKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    int64_t seed = ctx->Attr<int64_t>("seed");
-    return std::make_shared<OpKernelStateWrapper<RandomMaskGenerator<device_type>>>(seed);
-  }
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t elem_cnt = like->shape().elem_cnt();
-    int8_t* mask = out->mut_dptr<int8_t>();
-    auto* random_mask_generator =
-        dynamic_cast<OpKernelStateWrapper<RandomMaskGenerator<device_type>>*>(state);
-    CHECK_NOTNULL(random_mask_generator);
-    random_mask_generator->Mutable()->Generate(ctx->device_ctx(), elem_cnt,
-                                               ctx->Attr<float>("rate"), mask);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_RANDOM_MASK_LIKE_KERNEL(device)   \
-  REGISTER_USER_KERNEL("random_mask_like")         \
-      .SetCreateFn<RandomMaskLikeKernel<device>>() \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
-
-REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
-#endif
 
 }  // namespace
 }  // namespace oneflow

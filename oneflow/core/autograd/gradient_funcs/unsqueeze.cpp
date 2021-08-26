@@ -22,16 +22,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct UnsqueezeInterpState : public OpExprInterpState {
+struct UnsqueezeCaptureState : public AutoGradCaptureState {
   bool requires_grad;
 };
 
-class Unsqueeze : public OpExprGradFunction<UnsqueezeInterpState> {
+class Unsqueeze : public OpExprGradFunction<UnsqueezeCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(UnsqueezeInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(UnsqueezeCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const UnsqueezeInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const UnsqueezeCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -48,7 +48,7 @@ Maybe<void> Unsqueeze::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Unsqueeze::Capture(UnsqueezeInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Unsqueeze::Capture(UnsqueezeCaptureState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -57,15 +57,14 @@ Maybe<void> Unsqueeze::Capture(UnsqueezeInterpState* ctx, const TensorTuple& inp
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Unsqueeze::Apply(const UnsqueezeInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Unsqueeze::Apply(const UnsqueezeCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
   const std::shared_ptr<oneflow::one::Tensor>& like = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  in_grads->at(0) =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), like}, /*attrs*/ {}));
+  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), like}));
   return Maybe<void>::Ok();
 }
 

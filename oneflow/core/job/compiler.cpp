@@ -25,47 +25,6 @@ limitations under the License.
 
 namespace oneflow {
 
-void Compiler::GenNetTopo(Plan* plan) const {
-  HashMap<int64_t, int64_t> rid2mid;
-  HashMap<int64_t, int64_t> tid2mid;
-  std::map<int64_t, std::set<int64_t>> net_topo;
-
-  for (const TaskProto& task_proto : plan->task()) {
-    for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
-      rid2mid.emplace(regst_desc_it.second.regst_desc_id(), task_proto.machine_id());
-    }
-    CHECK(tid2mid.emplace(task_proto.task_id(), task_proto.machine_id()).second);
-  }
-
-  for (const TaskProto& task_proto : plan->task()) {
-    for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
-      int64_t rid = regst_desc_it.second.regst_desc_id();
-      auto rid2mid_it = rid2mid.find(rid);
-      CHECK(rid2mid_it != rid2mid.end());
-      int64_t producer_mid = rid2mid_it->second;
-      for (int64_t consumer_task_id : regst_desc_it.second.consumer_task_id()) {
-        auto tid2mid_it = tid2mid.find(consumer_task_id);
-        CHECK(tid2mid_it != tid2mid.end());
-        int64_t consumer_mid = tid2mid_it->second;
-        net_topo[producer_mid].insert(consumer_mid);
-        net_topo[consumer_mid].insert(producer_mid);
-      }
-    }
-  }
-
-  HashMap<int64_t, MachineIds> std_net_topo;
-  NetTopo& pb_net_topo = *(plan->mutable_net_topo());
-  for (auto& pair : net_topo) {
-    int64_t src_mid = pair.first;
-    if (pair.second.count(src_mid)) { pair.second.erase(src_mid); }
-    std::vector<int64_t> peer_mids(pair.second.begin(), pair.second.end());
-    MachineIds pb_mids;
-    *(pb_mids.mutable_machine_id()) = StdVec2PbRf<int64_t>(peer_mids);
-    CHECK(std_net_topo.emplace(src_mid, pb_mids).second);
-  }
-  *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
-}
-
 void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
   CHECK(task_proto->exec_sequence().exec_node_size() == 1);
@@ -88,7 +47,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   // Step1: ensure job is completed.
-  if (need_job_complete) { JobCompleter().Complete(job); }
+  if (need_job_complete) { CHECK_JUST(JobCompleter().Complete(job)); }
 
   // Step2: new Global<OpGraph> and set log configs.
   Global<OpGraph>::New(*job);
@@ -149,7 +108,6 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
-  PlanUtil::GenMemBlockAndChunk4Plan(plan);
   Global<OpGraph>::Delete();
 }
 

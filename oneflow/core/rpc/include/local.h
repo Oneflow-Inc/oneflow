@@ -50,7 +50,6 @@ class LocalCtrlClient : public CtrlClient {
   void PullKV(const std::string& k, std::string* v) override;
   void PullKV(const std::string& k, PbMessage* msg) override;
   void PullMasterKV(const std::string& k, PbMessage* msg) override;
-  void PushActEvent(const ActEvent&) override {}
   void Clear() override;
   int32_t IncreaseCount(const std::string& k, int32_t v) override;
   void EraseCount(const std::string& k) override;
