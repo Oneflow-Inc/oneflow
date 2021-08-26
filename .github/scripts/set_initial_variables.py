@@ -27,9 +27,10 @@ def print_result(build_matrix=None, test_matrix=None, out=None):
         "build_matrix": build_matrix,
         "test_matrix": test_matrix,
     }
-    print_github_action_output(
-        name="generated", value=json.dumps(root),
-    )
+    for k, v in root.items():
+        print_github_action_output(
+            name=k, value=json.dumps(v),
+        )
     if out:
         with open(out, "w+") as f:
             f.write(json.dumps(root, indent=4))
