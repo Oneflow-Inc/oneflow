@@ -18,6 +18,12 @@ from oneflow.nn.modules.norm import l2_normalize
 from oneflow._C import conv1d
 from oneflow._C import conv2d
 from oneflow._C import conv3d
+from oneflow._C import avgpool_1d
+from oneflow._C import avgpool_2d
+from oneflow._C import avgpool_3d
+from oneflow._C import maxpool_1d
+from oneflow._C import maxpool_2d
+from oneflow._C import maxpool_3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
