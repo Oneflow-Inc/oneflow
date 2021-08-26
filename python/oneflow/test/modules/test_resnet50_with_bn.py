@@ -67,7 +67,7 @@ class TestResNet50(flow.unittest.TestCase):
         )
         res50_module.train()
         res50_module.load_state_dict(
-            flow.load("/dataset/imagenette/oneflow_resnet50_models")
+            flow.load("/dataset/imagenette/resnet50-ckpt-ci-v2")
         )
         of_corss_entropy = flow.nn.CrossEntropyLoss()
         res50_module.to("cuda")
