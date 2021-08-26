@@ -32,22 +32,16 @@ class ActorMsgMR final {
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
   ActorMsgMR(ibv_mr *   mr, char * addr, size_t  size):size_(size){
-    msg_ = reinterpret_cast<ActorMsg*>(addr); //这里没有问题
+    msg_ = reinterpret_cast<ActorMsg*>(addr); 
     mr_ = mr;
   }
-  ~ActorMsgMR() {
-    std::cout<<"ActorMsgMR::~ActorMsgMR done "<< std::endl;
-  }
+  ~ActorMsgMR()=default;
 
   char * addr() { return reinterpret_cast<char *>(msg_) ; }
   uint32_t lkey() { return mr_->lkey ; }
   ActorMsg  msg()  { return *msg_;}
-  void set_msg(const ActorMsg& val) {
-    *msg_ = val ;
-  }
-  size_t size() {
-    return size_; 
-  }
+  void set_msg(const ActorMsg& val) {*msg_ = val ; }
+  size_t size() { return size_; }
  private:
     size_t size_;
     ibv_mr * mr_;
@@ -67,13 +61,12 @@ class MessagePool final {
   public:
     OF_DISALLOW_COPY_AND_MOVE(MessagePool);
     MessagePool() = delete; 
-    ~MessagePool() {
-    }
+    ~MessagePool()=default;
 
     MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
-      index_ = 0;
       RegisterMessagePool();
     }
+
     void RegisterMessagePool() {
       ActorMsg msg;
       size_t ActorMsgSize = sizeof(msg);
@@ -89,69 +82,60 @@ class MessagePool final {
           ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
           message_buf_.push_front(msg_mr);
       }
-      std::cout<<"index_:" << index_ << " and RegisterMessagePool Done" << std::endl;
-      index_++;
     }
 
-  ActorMsgMR *  GetMessage() {
+    ActorMsgMR *  GetMessage() {
         if(IsEmpty() == false)  {
-            std::cout<<"GetMessage first Done" << std::endl;
             return GetMessageFromBuf();
         } else {
             RegisterMessagePool();
-            std::cout<<"GetMessage second Done" << std::endl;
             return GetMessageFromBuf();
-      }
-  }
+       }
+    }
 
-  ActorMsgMR * GetMessageFromBuf() {
+    ActorMsgMR * GetMessageFromBuf() {
+        std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+        ActorMsgMR * msg_mr = message_buf_.front();
+        message_buf_.pop_front();
+        return msg_mr;
+    }
+
+    void PutMessage(ActorMsgMR * msg_mr) {
+        std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+        message_buf_.push_front(msg_mr);
+    }
+
+    bool IsEmpty() {
       std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      ActorMsgMR * msg_mr = message_buf_.front();
-      message_buf_.pop_front();
-        std::cout<<"GetMessageFromBuf  Done" << std::endl;
-      return msg_mr;
-  }
-
-  void PutMessage(ActorMsgMR * msg_mr) {
-      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      message_buf_.push_front(msg_mr);
-      std::cout<<"PutMessage Done" << std::endl;
-  }
-
-  bool IsEmpty() {
-    std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-    return message_buf_.empty() == true ;
-  }
+      return message_buf_.empty() == true ;
+    }
  
-  size_t Size() {
-    std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-    return message_buf_.size();
-  }
+    size_t Size() {
+      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
+      return message_buf_.size();
+    }
   
-  void FreeMr() {
-    while(mr_buf_.empty() == false) {
-        ibv_mr * mr = mr_buf_.front();
-        mr_buf_.pop_front();
-        CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
+    void FreeMr() {
+      while(mr_buf_.empty() == false) {
+          ibv_mr * mr = mr_buf_.front();
+          mr_buf_.pop_front();
+          CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
+      }
     }
-    std::cout<<"FreeMr done" << std::endl; 
-  }
 
-  void FreeActorMsgMR() {
-    while(message_buf_.empty() == false) {
-      delete message_buf_.front();
-      message_buf_.pop_front();
+    void FreeActorMsgMR() {
+      while(message_buf_.empty() == false) {
+        delete message_buf_.front();
+        message_buf_.pop_front();
+      }
     }
-    std::cout<<"FreeActorMsgMR done" << std::endl;
-  }
 
   private:
     ibv_pd * pd_;
     size_t  num_of_message_;
     std::mutex message_buf_mutex_;
     std::deque<ActorMsgMR*> message_buf_;
-    std::deque<ibv_mr*> mr_buf_;
-    size_t index_ ; 
+    std::deque<ibv_mr*> mr_buf_; 
 };
 
 struct IBVerbsCommNetRMADesc;
