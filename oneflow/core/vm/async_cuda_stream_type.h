@@ -49,6 +49,7 @@ class AsyncCudaStreamType final : public StreamType {
   ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                           int64_t this_machine_id) const override;
   bool SharingVirtualMachineThread() const override { return false; }
+  bool SupportingTransportInstructions() const override { return true; }
 };
 
 }  // namespace vm

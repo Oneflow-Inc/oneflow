@@ -23,6 +23,8 @@ class AccActor final : public Actor {
   AccActor() = default;
   ~AccActor() override = default;
 
+  using Actor::Init;
+
  private:
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;

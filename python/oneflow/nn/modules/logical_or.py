@@ -25,7 +25,7 @@ class LogicalOr(Module):
     def forward(self, input, other):
         if other.dtype != input.dtype:
             other = flow.cast(other, input.dtype)
-        return flow.F.broadcast_logical_or(input, other)
+        return flow.F.logical_or(input, other)
 
 
 def logical_or_op(input, other):
