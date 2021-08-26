@@ -66,9 +66,7 @@ class TestResNet50(flow.unittest.TestCase):
             norm_layer=flow.nn.BatchNorm2d,
         )
         res50_module.train()
-        res50_module.load_state_dict(
-            flow.load("/dataset/imagenette/resnet50-ckpt-ci-v2")
-        )
+        res50_module.load_state_dict(flow.load("/dataset/imagenette/resnet50_models"))
         of_corss_entropy = flow.nn.CrossEntropyLoss()
         res50_module.to("cuda")
         of_corss_entropy.to("cuda")

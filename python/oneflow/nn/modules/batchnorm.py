@@ -45,13 +45,9 @@ class _NormBase(Module):
         if self.track_running_stats:
             self.register_buffer("running_mean", flow.Tensor(num_features))
             self.register_buffer("running_var", flow.Tensor(num_features))
-            self.register_buffer(
-                "num_batches_tracked", flow.tensor(0, dtype=flow.int64)
-            )
         else:
             self.register_parameter("running_mean", None)
             self.register_parameter("running_var", None)
-            self.register_buffer("num_batches_tracked", None)
         self.reset_parameters()
 
     def reset_running_stats(self) -> None:
@@ -127,7 +123,6 @@ class _BatchNorm(_NormBase):
                 self.running_var = (
                     1.0 - self.momentum
                 ) * self.running_var + self.momentum * unbiased_variance
-                self.num_batches_tracked = self.num_batches_tracked + 1
             else:
                 mean = mean if self.running_mean is None else self.running_mean
                 variance = variance if self.running_var is None else self.running_var
@@ -164,8 +159,6 @@ class _BatchNorm(_NormBase):
         else:
             if self.training:
                 is_training = True
-                if self.track_running_stats:
-                    self.num_batches_tracked = self.num_batches_tracked + 1
             else:
                 is_training = (self.running_mean is None) and (self.running_var is None)
             return flow.F.normalization(
