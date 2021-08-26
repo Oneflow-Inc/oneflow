@@ -34,7 +34,7 @@ class OneflowVM final {
   const vm::VirtualMachine& vm() const { return *vm_; }
 
  private:
-  void Loop();
+  void Loop(const std::function<void()>& Initializer);
 
   ObjectMsgPtr<vm::VirtualMachine> vm_;
   // for asynchronized execution
