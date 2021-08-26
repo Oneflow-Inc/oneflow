@@ -86,6 +86,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
 
   const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
       [&array, &Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array)); });
+  bool is_printed = false;
   JUST(SpinCounter::SpinWait(
       1,
       [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
@@ -93,7 +94,12 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
           return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
         });
       },
-      []() { LOG(ERROR) << blocking::GetStackInfo(); }));
+      [&is_printed]() {
+        if (!is_printed) {
+          LOG(ERROR) << blocking::GetStackInfo();
+          is_printed = true;
+        }
+      }));
   return Maybe<void>::Ok();
 }
 
