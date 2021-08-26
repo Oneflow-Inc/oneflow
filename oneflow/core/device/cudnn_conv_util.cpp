@@ -215,9 +215,8 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
 #if CUDNN_VERSION >= 8100
   } else if (GetCudnnDataType(data_type) == CUDNN_DATA_BFLOAT16) {
     use_tensor_op_math = true;
-  }
 #endif
-  else {
+  } else {
     use_tensor_op_math = false;
   }
   if (use_tensor_op_math) {
@@ -255,9 +254,8 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
 #if CUDNN_VERSION >= 8100
   } else if (GetCudnnDataType(data_type) == CUDNN_DATA_BFLOAT16) {
     use_tensor_op_math = true;
-  }
 #endif
-  else {
+  } else {
     use_tensor_op_math = false;
   }
   if (use_tensor_op_math) {

@@ -178,7 +178,9 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
       CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type);
     }
     *ctx->OutputTensorDesc("y", 0) = x;
-    const DataType param_data_type = (data_type == DataType::kFloat16 || data_type == DataType::kBFloat16) ? DataType::kFloat : data_type;
+    const DataType param_data_type =
+        (data_type == DataType::kFloat16 || data_type == DataType::kBFloat16) ? DataType::kFloat
+                                                                              : data_type;
     const auto CheckParamDataType = MakeCheckParamDataTypeFn(ctx, param_data_type);
     const auto SetParamDataType = MakeSetParamDataTypeFn(ctx, param_data_type);
     if (ctx->has_input("moving_mean", 0)) {
@@ -401,7 +403,8 @@ Maybe<void> BwDataTypeInferFn(user_op::InferContext* ctx) {
   }
   *ctx->OutputTensorDesc("dx", 0) = x;
   if (ctx->has_output("addend_diff", 0)) { *ctx->OutputTensorDesc("addend_diff", 0) = x; }
-  const DataType param_data_type = (x_type == DataType::kFloat16 || x_type == DataType::kBFloat16) ? DataType::kFloat : x_type;
+  const DataType param_data_type =
+      (x_type == DataType::kFloat16 || x_type == DataType::kBFloat16) ? DataType::kFloat : x_type;
   const auto CheckParamDataType = MakeCheckParamDataTypeFn(ctx, param_data_type);
   const auto SetParamDataType = MakeSetParamDataTypeFn(ctx, param_data_type);
   JUST(CheckParamDataType("mean"));
