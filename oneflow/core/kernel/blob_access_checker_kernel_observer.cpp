@@ -21,9 +21,9 @@ namespace oneflow {
 namespace {
 
 template<typename HandlerT>
-void ForEachObnAndIsHeaderInferedBeforeCompute(const Kernel* kernel,
-                                               std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                               const HandlerT& Handler) {
+void ForEachObnAndIsHeaderInferedBeforeCompute(
+    const Kernel* kernel, const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+    const HandlerT& Handler) {
   const auto& modifier_map =
       kernel->op_attribute().arg_modifier_signature().obn2output_blob_modifier();
   for (const std::string& obn : kernel->op_attribute().output_bns()) {
