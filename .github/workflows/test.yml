@@ -183,6 +183,14 @@ jobs:
       max-parallel: 5
       matrix: ${{ fromJson(needs.set-initial-variables.outputs.build_matrix) }}
     steps:
+      - name: Fix permissions
+        run: |
+          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+      - name: Checkout OneFlow source code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+        if: env.is_built != '1'
       - name: Install Conda
         run: |
           CONDA=$HOME/miniconda3/py39_4.10.3
@@ -255,13 +263,6 @@ jobs:
           echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
 
           echo "pip_index_mirror=https://pypi.tuna.tsinghua.edu.cn/simple" >> $GITHUB_ENV
-      - name: Fix permissions
-        run: |
-          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-        if: env.is_built != '1'
       - name: Build with Conda
         if: matrix.test_suite == 'cpu-clang'
         run: |
