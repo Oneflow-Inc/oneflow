@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from oneflow.nn.modules.activation import glu_op as glu
 from oneflow.nn.modules.interpolate import interpolate
 from oneflow.nn.modules.norm import l2_normalize
 from oneflow.F import conv1d
