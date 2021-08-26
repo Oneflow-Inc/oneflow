@@ -38,6 +38,7 @@ class CpuRandPermKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t* output = out->mut_dptr<int32_t>();
     const int32_t n = ctx->Attr<int32_t>("n");
+    if (n == 0) { return; }
     auto* randperm_kernel_state = dynamic_cast<UniformKernelState*>(state);
     CHECK_NOTNULL(randperm_kernel_state);
     const auto& generator = randperm_kernel_state->generator();
