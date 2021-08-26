@@ -307,7 +307,7 @@ export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
     else:
         bash_cmd += f"""
 cd {oneflow_python_dir}
-git clean -nXd -e \!oneflow/include -e \!oneflow/include/**
+git clean -fXd -e \!oneflow/include -e \!oneflow/include/**
 cd -
 {cmake_cmd}
 cmake --build . -j `nproc`
