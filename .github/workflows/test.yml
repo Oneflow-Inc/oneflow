@@ -195,6 +195,7 @@ jobs:
           fi
           cp ci/conda/tuna.condarc $HOME/.condarc
           conda clean -i
+          conda config --set auto_activate_base false
       - name: Download conda environment.yml # TODO: remove this step if migrated to generated matrix
         if: matrix.test_suite == 'cpu-clang'
         run: |
