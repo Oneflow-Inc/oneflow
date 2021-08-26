@@ -93,6 +93,20 @@ class TestTensorOps(flow.unittest.TestCase):
         y = x.double()
         return y
 
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_item(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=1, dim0=1, dtype=int).to(device)
+        y = torch.tensor(x.item())
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4)
+    def test_tolist(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4).to(device)
+        y = torch.tensor(x.tolist())
+        return y
+
     def test_type_as(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
