@@ -14,7 +14,6 @@ import warnings
 # normal exec loses the source code, however we can patch
 # the linecache module to still recover it.
 # using exec_with_source will add it to our local cache
-# and then tools like flowScript will be able to get source info.
 _next_id = 0
 def exec_with_source(src: str, globals: Dict[str, Any]):
     global _next_id
