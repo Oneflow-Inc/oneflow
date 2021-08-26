@@ -72,6 +72,14 @@ class MessagePool final {
     RegisterMessagePool();
   }
 
+  void FreeMr() {
+    while (mr_buf_.empty() == false) {
+      ibv_mr* mr = mr_buf_.front();
+      mr_buf_.pop_front();
+      CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
+    }
+  }
+
  private:
   void RegisterMessagePool() {
     ActorMsg msg;
@@ -114,19 +122,6 @@ class MessagePool final {
   bool IsEmpty() {
     std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
     return message_buf_.empty() == true;
-  }
-
-  size_t Size() {
-    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
-    return message_buf_.size();
-  }
-
-  void FreeMr() {
-    while (mr_buf_.empty() == false) {
-      ibv_mr* mr = mr_buf_.front();
-      mr_buf_.pop_front();
-      CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-    }
   }
 
   void FreeActorMsgMR() {
