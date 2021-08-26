@@ -42,6 +42,7 @@ def _test_randperm_backward(test_case, N, device, dtype):
     y.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(N), 1e-05, 1e-05))
 
+
 def _test_randperm_randomness(test_case, N, device, dtype):
     n = np.random.randint(100, 1000)
     x1 = flow.randperm(n, device=device)
@@ -75,7 +76,6 @@ class Testrandperm(flow.unittest.TestCase):
         device = random_device()
         y = torch.randperm(0, device=device)
         return y
-
 
 
 if __name__ == "__main__":
