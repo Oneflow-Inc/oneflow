@@ -10,6 +10,25 @@ on:
         description: "placeholder, no effect"
         required: false
 jobs:
+  set-initial-variables:
+    name: Set initial variables
+    if: ${{ github.repository_owner == 'Oneflow-Inc' }}
+    runs-on: ubuntu-20.04
+    outputs:
+      generated: ${{ steps.generating.outputs.generated }}
+    steps:
+      - name: Clone pytorch/pytorch
+        uses: actions/checkout@v2
+      - name: Generating variables
+        id: generating
+        run: |
+          python3 .github/scripts/set_initial_variables.py --only_clang=${{ contains(github.event.pull_request.labels.*.name, 'need-clang-only') }} --out initial-variables.json
+      - name: Upload initial-variables.json
+        uses: actions/upload-artifact@v2
+        with:
+          name: initial-variables.json
+          path: initial-variables.json
+
   cancel_previous:
     name: Cancel previous runs
     runs-on: ubuntu-latest
@@ -147,6 +166,7 @@ jobs:
     name: Build
     needs:
       [
+        set-initial-variables,
         check_license_and_format,
         mirror_third_party,
         cancel_previous,
@@ -157,39 +177,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
     strategy:
       max-parallel: 5
-      matrix:
-        test_suite: ["cuda", "cpu", "xla", "xla_cpu"]
-        include:
-          - test_suite: cuda
-            cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
-            os: [self-hosted, linux, build]
-            allow_fail: false
-            python_version: 3.6,3.7
-          - test_suite: cpu
-            cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu
-            os: [self-hosted, linux, build]
-            allow_fail: false
-            python_version: 3.6,3.7
-          - test_suite: xla
-            cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
-            os: [self-hosted, linux, build]
-            allow_fail: true
-            python_version: 3.6
-          - test_suite: xla_cpu
-            cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --cpu --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
-            os: [self-hosted, linux, build]
-            allow_fail: true
-            python_version: 3.6
-          - test_suite: cpu-clang
-            cuda_version: "N/A"
-            extra_flags: "N/A"
-            os: [self-hosted, linux, build]
-            allow_fail: false
-            python_version: "N/A"
+      matrix: ${{ fromJson(needs.set-initial-variables.generated.build_matrix) }}
     steps:
       - name: Install Conda
         run: |
@@ -353,51 +341,12 @@ jobs:
 
   test:
     name: Test suite
-    needs: [build, wait_for_gpu_slot, changed_files]
+    needs: [set-initial-variables, build, wait_for_gpu_slot, changed_files]
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow_fail }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     strategy:
-      matrix:
-        test_suite:
-          [
-            "cuda",
-            "cuda_op",
-            "cuda_new_interface",
-            "cpu_new_interface",
-            "cpu",
-            "xla",
-            "xla_cpu",
-          ]
-        include:
-          - test_suite: "cuda"
-            os: [self-hosted, linux, gpu]
-            allow_fail: false
-            build_env: build.cuda.env
-          - test_suite: "cuda_op"
-            os: [self-hosted, linux, gpu]
-            allow_fail: false
-            build_env: build.cuda.env
-          - test_suite: "cuda_new_interface"
-            os: [self-hosted, linux, gpu]
-            allow_fail: false
-            build_env: build.cuda.env
-          - test_suite: "cpu"
-            os: [self-hosted, linux, cpu]
-            allow_fail: false
-            build_env: build.cpu.env
-          - test_suite: "cpu_new_interface"
-            os: [self-hosted, linux, cpu]
-            allow_fail: false
-            build_env: build.cpu.env
-          - test_suite: "xla"
-            os: [self-hosted, linux, gpu]
-            allow_fail: true
-            build_env: build.xla.env
-          - test_suite: "xla_cpu"
-            os: [self-hosted, linux, cpu]
-            allow_fail: true
-            build_env: build.xla_cpu.env
+      matrix: ${{ fromJson(needs.set-initial-variables.generated.test_matrix) }}
     steps:
       - name: Fix permissions
         run: |
