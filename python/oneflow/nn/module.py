@@ -76,7 +76,7 @@ class Module(object):
             if result is not None:
                 if not isinstance(result, tuple):
                     result = (result,)
-                args, kwargs = result
+                args = result
 
         res = self.forward(*args, **kwargs)
 
