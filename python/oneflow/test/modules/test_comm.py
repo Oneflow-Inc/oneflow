@@ -71,7 +71,9 @@ class TestComm(flow.unittest.TestCase):
             test_case.assertTrue(np.array_equal(x1.numpy(), x0.numpy()))
 
             x2 = flow.zeros_like(x0)
-            flow.comm.recv(src, shape=x0.shape, dtype=x0.dtype, device=x0.device, out=x2)
+            flow.comm.recv(
+                src, shape=x0.shape, dtype=x0.dtype, device=x0.device, out=x2
+            )
             test_case.assertTrue(np.array_equal(x2.numpy(), x0.numpy()))
         else:
             # do nothing
