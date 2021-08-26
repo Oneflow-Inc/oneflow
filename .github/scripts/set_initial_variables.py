@@ -36,6 +36,18 @@ def print_result(build_matrix=None, test_matrix=None, out=None):
             f.write(json.dumps(root, indent=4))
 
 
+def check_include(include_key=None, matrix: dict = None):
+    assert include_key in matrix
+    in_declare = set(matrix[include_key])
+    in_include = set()
+    for include_value in matrix["include"]:
+        in_include.add(include_value[include_key])
+    assert in_declare == in_include, {
+        "in_declare": in_declare,
+        "in_include": in_include,
+    }
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -147,6 +159,8 @@ if __name__ == "__main__":
                 },
             ],
         }
+        check_include(include_key="test_suite", matrix=full_build_matrix)
+        check_include(include_key="test_suite", matrix=full_test_matrix)
         print_result(
             build_matrix=full_build_matrix, test_matrix=full_test_matrix, out=args.out,
         )
