@@ -21,6 +21,8 @@ def print_github_action_output(name=None, value=None):
 
 
 def print_result(build_matrix=None, test_matrix=None, out=None):
+    check_include(include_key="test_suite", matrix=full_build_matrix)
+    check_include(include_key="test_suite", matrix=full_test_matrix)
     assert build_matrix
     assert test_matrix != None
     root = {
@@ -159,8 +161,6 @@ if __name__ == "__main__":
                 },
             ],
         }
-        check_include(include_key="test_suite", matrix=full_build_matrix)
-        check_include(include_key="test_suite", matrix=full_test_matrix)
         print_result(
             build_matrix=full_build_matrix, test_matrix=full_test_matrix, out=args.out,
         )
