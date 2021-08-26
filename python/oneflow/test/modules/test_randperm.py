@@ -44,7 +44,6 @@ def _test_randperm_backward(test_case, N, device, dtype):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class Testrandperm(flow.unittest.TestCase):
     def test_randperm(test_case):
         arg_dict = OrderedDict()
@@ -81,7 +80,6 @@ class Testrandperm(flow.unittest.TestCase):
         x1 = flow.randperm(n, device=device)
         x2 = flow.randperm(n, device=device)
         test_case.assertTrue(not np.all(x1.numpy() == x2.numpy()))
-
 
 if __name__ == "__main__":
     unittest.main()
