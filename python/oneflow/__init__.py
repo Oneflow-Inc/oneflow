@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import sys
 import collections
 
 import oneflow._oneflow_internal
@@ -92,27 +93,58 @@ del python_callback
 del register_python_callback
 
 
-def _SyncOnMasterFn():
-    if not oneflow._oneflow_internal.IsEnvInited():
-        return
-    if oneflow.framework.distribute.is_multi_client():
-        oneflow._oneflow_internal.eager.multi_client.Sync()
-    elif oneflow.framework.distribute.get_rank() == 0:
-        oneflow._oneflow_internal.eager.single_client.Sync()
+class ExitHook:
+    def __init__(self):
+        self.exit_code = None
+        self.exception = None
+
+        self._orig_exit = sys.exit
+        self._orig_excepthook = sys.excepthook
+
+        def exit(code=0):
+            self.exit_code = code
+            self._orig_exit(code)
+
+        sys.exit = exit
+
+        def exc_handler(exc_type, exc, *args):
+            self.exception = exc
+            self._orig_excepthook(exc_type, exc, *args)
+
+        sys.excepthook = exc_handler
+
+    def is_normal_exit(self):
+        if self.exit_code is not None:
+            return self.exit_code == 0
+        return self.exception is None
 
 
-atexit.register(oneflow._oneflow_internal.SetShuttingDown)
-atexit.register(oneflow._oneflow_internal.DestroyEnv)
-atexit.register(oneflow.framework.session_context.TryCloseDefaultSession)
-atexit.register(_SyncOnMasterFn)
+hook = ExitHook()
+
+
+def atexit_hook(hook):
+    if hook.is_normal_exit():
+        if oneflow._oneflow_internal.IsEnvInited():
+            if oneflow.framework.distribute.is_multi_client():
+                oneflow._oneflow_internal.eager.multi_client.Sync()
+            elif oneflow.framework.distribute.get_rank() == 0:
+                oneflow._oneflow_internal.eager.single_client.Sync()
+    oneflow.framework.session_context.TryCloseDefaultSession()
+    if hook.is_normal_exit():
+        oneflow._oneflow_internal.DestroyEnv()
+    oneflow._oneflow_internal.SetShuttingDown()
+
+
+atexit.register(atexit_hook, hook)
+del atexit_hook
+del hook
+del ExitHook
 del atexit
 del oneflow
-import oneflow.framework.docstr as docstr
-from oneflow.framework.docstr.utils import register_docstr
 
-register_docstr()
-del register_docstr
-del docstr
+import oneflow.F
+import oneflow.framework.docstr as docstr
+
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 import oneflow.nn.modules.acosh
@@ -291,6 +323,7 @@ from oneflow.nn.modules.to import to_op as to
 from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
 from oneflow.nn.modules.consistent_cast import to_local_op as to_local
 from oneflow.nn.modules.transpose import transpose_op as transpose
+from oneflow.nn.modules.tril import tril_op as tril
 from oneflow.nn.modules.triu import triu_op as triu
 from oneflow.nn.modules.unsqueeze import unsqueeze_op as unsqueeze
 from oneflow.nn.modules.where import where_op as where

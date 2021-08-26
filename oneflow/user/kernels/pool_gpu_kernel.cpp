@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/utils/pool_util.h"
 #include "oneflow/core/device/cudnn_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -140,7 +141,7 @@ struct PoolGpuKernelUtil {
 
 }  // namespace
 
-class AvgPool1DGpuKernel final : public user_op::OpKernel {
+class AvgPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool1DGpuKernel() = default;
   ~AvgPool1DGpuKernel() = default;
@@ -153,7 +154,7 @@ class AvgPool1DGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class AvgPool1DGradGpuKernel final : public user_op::OpKernel {
+class AvgPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool1DGradGpuKernel() = default;
   ~AvgPool1DGradGpuKernel() = default;
@@ -165,7 +166,7 @@ class AvgPool1DGradGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class AvgPool2DGpuKernel final : public user_op::OpKernel {
+class AvgPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool2DGpuKernel() = default;
   ~AvgPool2DGpuKernel() = default;
@@ -178,7 +179,7 @@ class AvgPool2DGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class AvgPool2DGradGpuKernel final : public user_op::OpKernel {
+class AvgPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool2DGradGpuKernel() = default;
   ~AvgPool2DGradGpuKernel() = default;
@@ -191,7 +192,7 @@ class AvgPool2DGradGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class AvgPool3DGpuKernel final : public user_op::OpKernel {
+class AvgPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool3DGpuKernel() = default;
   ~AvgPool3DGpuKernel() = default;
@@ -204,7 +205,7 @@ class AvgPool3DGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class AvgPool3DGradGpuKernel final : public user_op::OpKernel {
+class AvgPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool3DGradGpuKernel() = default;
   ~AvgPool3DGradGpuKernel() = default;
@@ -217,7 +218,7 @@ class AvgPool3DGradGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class MaxPool1DGpuKernel final : public user_op::OpKernel {
+class MaxPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool1DGpuKernel() = default;
   ~MaxPool1DGpuKernel() = default;
@@ -230,7 +231,7 @@ class MaxPool1DGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class MaxPool1DGradGpuKernel final : public user_op::OpKernel {
+class MaxPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool1DGradGpuKernel() = default;
   ~MaxPool1DGradGpuKernel() = default;
@@ -243,7 +244,7 @@ class MaxPool1DGradGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class MaxPool2DGpuKernel final : public user_op::OpKernel {
+class MaxPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool2DGpuKernel() = default;
   ~MaxPool2DGpuKernel() = default;
@@ -256,7 +257,7 @@ class MaxPool2DGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class MaxPool2DGradGpuKernel final : public user_op::OpKernel {
+class MaxPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool2DGradGpuKernel() = default;
   ~MaxPool2DGradGpuKernel() = default;
@@ -269,7 +270,7 @@ class MaxPool2DGradGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class MaxPool3DGpuKernel final : public user_op::OpKernel {
+class MaxPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool3DGpuKernel() = default;
   ~MaxPool3DGpuKernel() = default;
@@ -282,7 +283,7 @@ class MaxPool3DGpuKernel final : public user_op::OpKernel {
   };
 };
 
-class MaxPool3DGradGpuKernel final : public user_op::OpKernel {
+class MaxPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool3DGradGpuKernel() = default;
   ~MaxPool3DGradGpuKernel() = default;

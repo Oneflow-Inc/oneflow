@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 #if CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 #endif
@@ -174,12 +175,14 @@ size_t InferGradTmpSize(user_op::InferContext* ctx) {
   return tmp_size;
 }
 
-class NormalizationInferenceKernel final : public user_op::OpKernel {
+class NormalizationInferenceKernel final : public user_op::OpKernel,
+                                           public user_op::CudaGraphSupport {
  public:
   NormalizationInferenceKernel() = default;
   ~NormalizationInferenceKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const bool training = ctx->Attr<bool>("training");
     CHECK(!training);
@@ -407,12 +410,13 @@ void ReluBackward(DeviceCtx* device_ctx, int64_t n, const DataType data_type, co
   }
 }
 
-class NormalizationTrainKernel final : public user_op::OpKernel {
+class NormalizationTrainKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   NormalizationTrainKernel() = default;
   ~NormalizationTrainKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     if (ctx->op_type_name() == "normalization") { CHECK(ctx->Attr<bool>("training")); }
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -538,12 +542,14 @@ REGISTER_USER_KERNEL("normalization_add_relu")
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu"))
     .SetInferTmpSizeFn(InferTrainTmpSize);
 
-class NormalizationGradUserKernel final : public user_op::OpKernel {
+class NormalizationGradUserKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
  public:
   NormalizationGradUserKernel() = default;
   ~NormalizationGradUserKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -708,12 +714,14 @@ size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
   return std::max(size_in_bytes, static_cast<size_t>(1));
 }
 
-class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
+class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
  public:
   FusedNormalizationAddReluKernel() = default;
   ~FusedNormalizationAddReluKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -790,12 +798,14 @@ REGISTER_USER_KERNEL("cudnn_fused_normalization_add_relu")
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu"))
     .SetInferTmpSizeFn(InferFusedNormalizationAddReluTmpSize);
 
-class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
+class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
+                                                      public user_op::CudaGraphSupport {
  public:
   FusedNormalizationAddReluGradUserKernel() = default;
   ~FusedNormalizationAddReluGradUserKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);

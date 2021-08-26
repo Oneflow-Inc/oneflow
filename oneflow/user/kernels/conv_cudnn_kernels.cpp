@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -142,7 +143,7 @@ struct ConvCudnnOpKernelState final : public user_op::OpKernelState {
 };
 
 template<size_t NDims>
-class ConvGpuKernel final : public user_op::OpKernel {
+class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ConvGpuKernel() = default;
   ~ConvGpuKernel() = default;
@@ -194,6 +195,13 @@ class ConvGpuKernel final : public user_op::OpKernel {
                                     out->mut_dptr()));
     }
   }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+    return Global<ResourceDesc, ForSession>::Get()
+        ->resource()
+        .cudnn_conf()
+        .cudnn_conv_heuristic_search_algo();
+  }
 };
 
 #define REGISTER_CONV_KERNEL(op_name, ndims)                                                       \
@@ -214,7 +222,7 @@ REGISTER_CONV_KERNEL(conv1d, 1);
 REGISTER_CONV_KERNEL(conv2d, 2);
 REGISTER_CONV_KERNEL(conv3d, 3);
 
-class ConvDataGradGpuKernel final : public user_op::OpKernel {
+class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvDataGradGpuKernel);
   ConvDataGradGpuKernel() = default;
@@ -256,6 +264,13 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, beta, args.xdesc.Get(), dx->mut_dptr()));
   }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+    return Global<ResourceDesc, ForSession>::Get()
+        ->resource()
+        .cudnn_conf()
+        .cudnn_conv_heuristic_search_algo();
+  }
 };
 
 REGISTER_USER_KERNEL("conv_data_grad")
@@ -278,7 +293,7 @@ REGISTER_USER_KERNEL("conv_data_grad")
       return Maybe<void>::Ok();
     });
 
-class ConvFilterGradGpuKernel final : public user_op::OpKernel {
+class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradGpuKernel);
   ConvFilterGradGpuKernel() = default;
@@ -307,6 +322,13 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
         args.params.max_ws_size, CudnnSPZeroPtr(dy->data_type()), args.wdesc.Get(),
         filter_diff->mut_dptr()));
   }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+    return Global<ResourceDesc, ForSession>::Get()
+        ->resource()
+        .cudnn_conf()
+        .cudnn_conv_heuristic_search_algo();
+  }
 };
 
 REGISTER_USER_KERNEL("conv_filter_grad")
@@ -326,7 +348,7 @@ struct ConvBiasGradState final : public user_op::OpKernelState {
   std::unique_ptr<CudnnTensorDesc> bias_diff_desc;
 };
 
-class ConvBiasGradGpuKernel final : public user_op::OpKernel {
+class ConvBiasGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ConvBiasGradGpuKernel() = default;
   ~ConvBiasGradGpuKernel() = default;

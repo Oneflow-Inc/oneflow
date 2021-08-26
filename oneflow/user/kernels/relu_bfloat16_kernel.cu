@@ -51,6 +51,7 @@ class ReluNvBFloat16Kernel final : public OpKernel {
   ~ReluNvBFloat16Kernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -69,6 +70,7 @@ class ReluGradNvBFloat16Kernel final : public OpKernel {
   ~ReluGradNvBFloat16Kernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);

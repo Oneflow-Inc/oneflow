@@ -95,7 +95,7 @@ Maybe<void> DimScatter<SCATTER_TYPE::SCATTER_UPDATE>::Apply(const DimScatterCapt
   if (ctx->input_requires_grad) {
     const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
     in_grads->at(0) =
-        JUST(functional::DimScatterUpdateScalar(out_grads.at(0), index, 0.0f, ctx->dim));
+        JUST(functional::DimScatterUpdateScalar(out_grads.at(0), ctx->dim, index, 0.0f));
   }
   return Maybe<void>::Ok();
 }
@@ -163,7 +163,7 @@ Maybe<void> DimScatterUpdateScalar::Apply(const DimScatterCaptureState* ctx,
   JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
   JUST(attrs.SetAttr<float>("src_scalar", 0.0f));
   in_grads->at(0) =
-      JUST(functional::DimScatterUpdateScalar(out_grads.at(0), index, 0.0f, ctx->dim););
+      JUST(functional::DimScatterUpdateScalar(out_grads.at(0), ctx->dim, index, 0.0f));
 
   return Maybe<void>::Ok();
 }

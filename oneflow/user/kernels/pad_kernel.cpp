@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 #if defined(WITH_CUDA) && CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 #endif
@@ -65,7 +66,7 @@ const void* GetDtypeMatchedValuePtr(const DataType data_type, double floating, i
 }  // namespace
 
 template<DeviceType device_type>
-class PadKernel final : public user_op::OpKernel {
+class PadKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   PadKernel() = default;
   ~PadKernel() = default;
@@ -118,7 +119,7 @@ REGISTER_PAD_KERNEL(DeviceType::kGPU)
 REGISTER_PAD_KERNEL(DeviceType::kCPU)
 
 template<DeviceType device_type>
-class PadGradKernel final : public user_op::OpKernel {
+class PadGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   PadGradKernel() = default;
   ~PadGradKernel() = default;
