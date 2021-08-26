@@ -42,7 +42,7 @@ if __name__ == "__main__":
     parser.add_argument("--only_clang", type=str, required=False)
     parser.add_argument("--out", type=str, required=False)
     args = parser.parse_args()
-    if args.only_clang:
+    if args.only_clang == "true":
         print_result(
             build_matrix={
                 "test_suite": ["cpu-clang"],
@@ -52,6 +52,7 @@ if __name__ == "__main__":
             out=args.out,
         )
     else:
+        assert args.only_clang == "false"
         full_build_matrix = {
             "test_suite": ["cuda", "cpu", "xla", "xla_cpu", "cpu-clang"],
             "include": [
