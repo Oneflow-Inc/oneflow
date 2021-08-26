@@ -23,6 +23,7 @@ jobs:
       - name: Generating variables
         id: generating
         run: |
+          python3 -m pip install PyYAML>=5.1
           python3 .github/scripts/set_initial_variables.py --labels "${{ join(github.event.pull_request.labels.*.name, ', ') }}" --out initial-variables.json
       - name: Print initial-variables.json
         run: |
