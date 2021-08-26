@@ -30,7 +30,6 @@ class CollectiveBoxingDeviceCtx final : public DeviceCtx {
   ~CollectiveBoxingDeviceCtx() override = default;
 
   std::shared_ptr<CollectiveBoxingDeviceCtxCheckpoint> AddCheckpoint();
-  void SyncDevice() override {}
   void AddCallBack(std::function<void()> callback) const override;
 
  private:
