@@ -21,8 +21,9 @@ def print_github_action_output(name=None, value=None):
 
 
 def print_result(build_matrix=None, test_matrix=None, out=None):
-    check_include(include_key="test_suite", matrix=full_build_matrix)
-    check_include(include_key="test_suite", matrix=full_test_matrix)
+    check_include(include_key="test_suite", matrix=build_matrix)
+    if test_matrix != {}:
+        check_include(include_key="test_suite", matrix=test_matrix)
     assert build_matrix
     assert test_matrix != None
     root = {
