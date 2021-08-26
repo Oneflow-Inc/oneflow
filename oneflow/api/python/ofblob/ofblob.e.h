@@ -23,21 +23,24 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type_seq.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
-#define DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER(direction)                            \
-  template<typename T>                                                              \
-  void OfBlob_Copy##direction##Buffer(uint64_t of_blob_ptr, py::array_t<T> array) { \
-    Global<ForeignLockHelper>::Get()->WithScopedAcquire([&of_blob_ptr, &array]() {  \
-      py::buffer_info buf = array.request();                                        \
-      T* buf_ptr = (T*)buf.ptr;                                                     \
-      size_t size = buf.size;                                                       \
-      using namespace oneflow;                                                      \
-      auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                       \
-      of_blob->AutoMemCopy##direction<T>(buf_ptr, size);                            \
-    });                                                                             \
+#define DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER(direction)                                   \
+  template<typename T>                                                                     \
+  Maybe<void> OfBlob_Copy##direction##Buffer(uint64_t of_blob_ptr, py::array_t<T> array) { \
+    return Global<ForeignLockHelper>::Get()->WithScopedAcquire(                            \
+        [&of_blob_ptr, &array]() -> Maybe<void> {                                          \
+          py::buffer_info buf = array.request();                                           \
+          T* buf_ptr = (T*)buf.ptr;                                                        \
+          size_t size = buf.size;                                                          \
+          using namespace oneflow;                                                         \
+          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                          \
+          of_blob->AutoMemCopy##direction<T>(buf_ptr, size);                               \
+          return Maybe<void>::Ok();                                                        \
+        });                                                                                \
   }
 
 DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER(To)
@@ -49,10 +52,10 @@ DEFINE_OF_BLOB_COPY_TO_OR_FROM_BUFFER(From)
 
 #define DEFINE_COPIER(T, type_proto)                                                  \
   inline void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) {   \
-    oneflow::OfBlob_CopyToBuffer<T>(of_blob_ptr, array);                              \
+    oneflow::OfBlob_CopyToBuffer<T>(of_blob_ptr, array).GetOrThrow();                 \
   }                                                                                   \
   inline void OfBlob_CopyFromBuffer_##T(uint64_t of_blob_ptr, py::array_t<T> array) { \
-    oneflow::OfBlob_CopyFromBuffer<T>(of_blob_ptr, array);                            \
+    oneflow::OfBlob_CopyFromBuffer<T>(of_blob_ptr, array).GetOrThrow();               \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);

@@ -609,16 +609,6 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
       .Attr<int64_t>("depth", depth)
       .Build();
 }
-Maybe<one::UserOpExpr> PReLUGradOp() { return PReLUGradOp(UniqueOpName("prelu_grad")); }
-Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
-  return one::OpBuilder("prelu_grad", name)
-      .Input("x")
-      .Input("dy")
-      .Input("alpha")
-      .Output("dx")
-      .Output("alpha_diff")
-      .Build();
-}
 
 Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
                                       const bool& align_corners, const std::string& data_format,
@@ -647,8 +637,8 @@ Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim) {
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name) {
   return one::OpBuilder("dim_scatter_add_like", name)
       .Input("like")
-      .Input("input")
       .Input("index")
+      .Input("src")
       .Output("output")
       .Attr<int32_t>("dim", dim)
       .Build();
@@ -786,38 +776,6 @@ Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::st
       .Build();
 }
 
-Maybe<one::UserOpExpr> DropoutGradOp(const float& scale) {
-  return DropoutGradOp(scale, UniqueOpName("dropout_grad"));
-}
-
-Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name) {
-  return one::OpBuilder("dropout_grad", name)
-      .Input("dy")
-      .Input("mask")
-      .Output("dx")
-      .Attr<float>("scale", scale)
-      .Build();
-}
-
-Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step) {
-  return SliceGradOp(start, stop, step, UniqueOpName("slice_grad"));
-}
-
-Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
-                                   const std::vector<int64_t>& stop,
-                                   const std::vector<int64_t>& step, const std::string& name) {
-  return one::OpBuilder("slice_grad", name)
-      .Input("dy")
-      .Input("like")
-      .Attr<std::vector<int64_t>>("start", start)
-      .Attr<std::vector<int64_t>>("stop", stop)
-      .Attr<std::vector<int64_t>>("step", step)
-      .Output("dx")
-      .Build();
-}
-
 Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
                                     const std::string& padding,
                                     const std::vector<int32_t>& padding_before,
@@ -852,17 +810,6 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
       .Build();
 }
 
-Maybe<one::UserOpExpr> AdaptivePoolGradOp() {
-  return AdaptivePoolGradOp(UniqueOpName("adaptive_pool_grad"));
-}
-Maybe<one::UserOpExpr> AdaptivePoolGradOp(const std::string& name) {
-  return one::OpBuilder("adaptive_avg_pool2d_grad", name)
-      .Input("x")
-      .Input("dy")
-      .Output("dx")
-      .Build();
-}
-
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis) {
   return UnsortedSegmentSumLikeOp(axis, UniqueOpName("unsorted_segment_sum_like"));
 }
@@ -881,5 +828,6 @@ Maybe<one::UserOpExpr> SoftmaxGradOp() { return SoftmaxGradOp("softmax_grad"); }
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name) {
   return one::OpBuilder("softmax_grad", name).Input("y").Input("dy").Output("dx").Build();
 }
+
 }  // namespace op_expr_helper
 }  // namespace oneflow

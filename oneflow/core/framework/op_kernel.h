@@ -85,8 +85,7 @@ class KernelInitContext {
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const ParallelDesc& parallel_desc() const = 0;
-  virtual const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
-                                                                                int32_t) const = 0;
+  virtual const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
@@ -178,7 +177,11 @@ class KernelInferContext {
     UNIMPLEMENTED();
     return nullptr;
   }
-  virtual const TensorDescInferFn& GetOpInferFn() const { UNIMPLEMENTED(); }
+  virtual const TensorDescInferFn& GetOpInferFn() const {
+    UNIMPLEMENTED();
+    static TensorDescInferFn empty_fn;
+    return empty_fn;
+  }
 
  protected:
   KernelInferContext() = default;

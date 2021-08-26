@@ -22,13 +22,58 @@ jobs:
         uses: styfle/cancel-workflow-action@0.9.0
         with:
           access_token: ${{ github.token }}
+
+  static_analysis_with_clang:
+    name: Static analysis with clang
+    runs-on: ubuntu-20.04
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
+    steps:
+      - name: Check out OneFlow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build
+      - name: Download OneFlow custom clang-tidy
+        run: |
+          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage
+          wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py
+          chmod +x clang-tidy-489012f-x86_64.AppImage run-clang-tidy.py
+      - name: Build third party libs and generate files
+        run: |
+          mkdir build
+          cd build
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON
+          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj
+      - name: Run clang-tidy for all translation units
+        # use clang as compiler for correct compiler flags
+        run: |
+          cd build
+          rm CMakeCache.txt
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_C_COMPILER=clang-12 \
+            -DCMAKE_CXX_COMPILER=clang++-12 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cd ..
+          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -p build -quiet -allow-enabling-alpha-checkers -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" "^(?!$(pwd)/build)"
+
   hosted:
     name: CPU-only
-    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot'))
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
     runs-on: ${{ matrix.os }}
     needs: [cancel_previous]
+    env:
+      CFLAGS: "-w"
+      CXXFLAGS: "-w"
     strategy:
-      fail-fast: false
+      fail-fast: true
       max-parallel: 3
       matrix:
         test_suite: ["conda", "mac", "ubuntu"]
@@ -48,6 +93,11 @@ jobs:
         exclude:
           - test_suite: conda
             cmake_generator: "Ninja"
+          - test_suite: mac
+            cmake_build_type: "Debug"
+          - test_suite: ubuntu
+            cmake_generator: "Ninja"
+            cmake_build_type: "Debug"
     steps:
       - uses: actions/checkout@v2
         with:
@@ -92,7 +142,7 @@ jobs:
       - name: Set environment variables (conda)
         if: matrix.test_suite == 'conda'
         run: |
-          conda env config vars set CXXFLAGS="-fPIC"
+          conda env config vars set CXXFLAGS="-w -fPIC"
         shell: bash -l {0}
       - name: Set environment variables
         run: |
@@ -180,7 +230,8 @@ jobs:
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
         shell: bash -l {0}
       - name: "Tar logs"
-        if: always()
+        if: always() && contains(github.event.pull_request.labels.*.name, 'need-simple-ci-upload-artifact')
+        continue-on-error: true
         run: |
           set -ex
           if [[ -d "${HOME}/oneflow_temp" ]]
@@ -192,7 +243,7 @@ jobs:
               tar -cvf cwd_test_tmp_dir.tar ${PWD}/test_tmp_dir
           fi
       - name: Upload logs
-        if: always()
+        if: always() && contains(github.event.pull_request.labels.*.name, 'need-simple-ci-upload-artifact')
         uses: actions/upload-artifact@v2
         with:
           name: logs-${{ matrix.test_suite }}-${{ matrix.cmake_generator }}-${{ matrix.cmake_build_type }}-shared-${{ matrix.build_shared_libs }}

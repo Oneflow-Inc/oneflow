@@ -53,11 +53,13 @@ jobs:
         id: license_check
         run: |
           python3 ci/check/run_license_format.py -i oneflow -c
+          python3 ci/check/run_license_format.py -i python -c
       - name: Add license
         id: license_fmt
         if: ${{ failure() }}
         run: |
           python3 ci/check/run_license_format.py -i oneflow --fix
+          python3 ci/check/run_license_format.py -i python --fix
       - name: Check C++/CUDA format
         id: cpp_check
         run: |
@@ -91,82 +93,16 @@ jobs:
         if: ${{ failure() }}
         run: |
           exit 1
-
-  static_analysis_with_clang_plug_in:
-    name: Static analysis with Clang plug-in
-    runs-on: ubuntu-20.04
-    if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
-    steps:
-      - name: Check out OneFlow
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{github.event.pull_request.head.repo.full_name}}
-      - name: Install dependencies
+      - name: Check source code (prevent creating files at wrong places)
         run: |
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main"
-          sudo apt-get update
-          sudo apt-get install -y llvm-12 llvm-12-dev llvm-12-tools clang-12 libclang-common-12-dev libclang-12-dev \
-            libopenblas-dev nasm python3-pip ninja-build
-      - name: Set environment variables
-        run: |
-          set -x
-          echo "CC=clang-12" >> $GITHUB_ENV
-          echo "CXX=clang++-12" >> $GITHUB_ENV
-          echo "ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/" >> $GITHUB_ENV
-          echo "ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp;oneflow/core/kernel/kernel_util;oneflow/core/kernel/new_kernel_util" >> $GITHUB_ENV
-      - name: Build Clang plug-in
-        run: |
-          cd tools/clang-plugin
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
-          make -j$(nproc)
-          clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
-          ldd ${clang_plugin_path}
-          echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
-      - name: Build (CMake configure)
-        run: |
-          mkdir build
-          cd build
-          cmake .. -C ../cmake/caches/international/cpu.cmake \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TESTING=ON \
-            -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
-      - name: Build (third party)
-        run: |
-          ulimit -c
-          ulimit -c unlimited
-          ulimit -c
-          cd build
-          cmake --build . -j$(nproc) --target oneflow_deps
-      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
-        run: |
-          ulimit -c
-          ulimit -c unlimited
-          ulimit -c
-          cd build
-          cmake --build . -j$(nproc)
-      - name: Tar core
-        if: always()
-        continue-on-error: true
-        run: |
-          set -ex
-          tar -cvf build_core.tar ${PWD}/build/**/core.*
-      - name: Upload core
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: core-build-oneflow-with-clang-plugin
-          path: |
-            build.tar
+          python3 tools/check_src.py
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
     runs-on: [self-hosted, scheduler]
     needs: [build]
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    continue-on-error: true
     steps:
       - name: Check if secrets accessible
         env:
@@ -181,12 +117,41 @@ jobs:
       - uses: Oneflow-Inc/gh-action-scheduler-v2@1e45bd715c873bc3a14a87ddaf494f9b686137de
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
+        timeout-minutes: 45
         env:
           CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
 
+  changed_files:
+    name: "Changed files"
+    runs-on: ubuntu-latest
+    outputs:
+      should_run_single_client_tests: ${{ steps.changes.outputs.should_run_single_client_tests }}
+    steps:
+      - name: Checkout OneFlow
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set extra args
+        if: contains(github.event.pull_request.labels.*.name, 'need-single-client-tests')
+        run: |
+          echo "extra_args_from_labels=--need_single_client_tests" >> $GITHUB_ENV
+      - name: Find changes
+        id: changes
+        run: |
+          python3 tools/flags_from_git_diff.py --base ${{ github.event.pull_request.base.sha }} --head ${{ github.sha }} ${{ env.extra_args_from_labels }}
+      - name: Will run single client tests
+        if: steps.changes.outputs.should_run_single_client_tests == '1'
+        run: |
+          echo "yes"
   build:
     name: Build
-    needs: [check_license_and_format, mirror_third_party, cancel_previous]
+    needs:
+      [
+        check_license_and_format,
+        mirror_third_party,
+        cancel_previous,
+        changed_files,
+      ]
     continue-on-error: ${{ matrix.allow_fail }}
     runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
@@ -203,10 +168,10 @@ jobs:
             python_version: 3.6,3.7
           - test_suite: cpu
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --gcc7
+            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu
             os: [self-hosted, linux, build]
             allow_fail: false
-            python_version: 3.6
+            python_version: 3.6,3.7
           - test_suite: xla
             cuda_version: 10.1
             extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
@@ -247,7 +212,7 @@ jobs:
               echo "is_built=1" >> $GITHUB_ENV
           fi
           if [ "$test_suite" == "cuda" ]; then
-            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7/build-oneflow/bin" >> $GITHUB_ENV
           elif [ "$test_suite" == "cpu" ]; then
             echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7-cpu/build-oneflow/bin" >> $GITHUB_ENV
           fi
@@ -276,17 +241,18 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
         if: env.is_built != '1'
       - name: Build OneFlow
-        if: env.is_built != '1'
-        uses: ./.github/actions/whl
         timeout-minutes: 45
+        if: env.is_built != '1' && ((contains(fromJson('["cuda", "cpu"]'), matrix.test_suite) || (contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1')))
+        uses: ./.github/actions/whl
         with:
           tmp_dir: ${ci_tmp_dir}
           extra_flags: ${{ matrix.extra_flags }}
           cuda_version: ${{ matrix.cuda_version }}
           extra_docker_args: $extra_docker_args
           python_version: ${{ matrix.python_version }}
-      - name: Custom Op test (run by oneflow build docker)
-        if: matrix.test_suite == 'cpu' && env.is_built != '1'
+      - name: Single client custom Op test (run by oneflow build docker)
+        timeout-minutes: 45
+        if: matrix.test_suite == 'cpu' && env.is_built != '1' && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
@@ -347,22 +313,20 @@ jobs:
 
   test:
     name: Test suite
-    needs: [build, wait_for_gpu_slot]
+    needs: [build, wait_for_gpu_slot, changed_files]
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow_fail }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     strategy:
-      max-parallel: 5
       matrix:
         test_suite:
           [
             "cuda",
             "cuda_op",
             "cuda_new_interface",
+            "cpu_new_interface",
             "cpu",
             "xla",
-            "cuda_op_eager",
-            "cpu_op_eager",
             "xla_cpu",
           ]
         include:
@@ -378,17 +342,13 @@ jobs:
             os: [self-hosted, linux, gpu]
             allow_fail: false
             build_env: build.cuda.env
-          - test_suite: "cuda_op_eager"
-            os: [self-hosted, linux, gpu]
-            allow_fail: true
-            build_env: build.cuda.env
           - test_suite: "cpu"
             os: [self-hosted, linux, cpu]
             allow_fail: false
             build_env: build.cpu.env
-          - test_suite: "cpu_op_eager"
+          - test_suite: "cpu_new_interface"
             os: [self-hosted, linux, cpu]
-            allow_fail: true
+            allow_fail: false
             build_env: build.cpu.env
           - test_suite: "xla"
             os: [self-hosted, linux, gpu]
@@ -440,12 +400,9 @@ jobs:
           if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
-          if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_op_eager" ] || [ "$test_suite" == "xla_cpu" ]; then
+          if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_new_interface" ] || [ "$test_suite" == "xla_cpu" ]; then
             extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
             extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=-1"
-          fi
-          if [ "$test_suite" == "cuda_op_eager" ] || [ "$test_suite" == "cpu_op_eager" ] || [ "$test_suite" == "cuda_new_interface" ]; then
-            extra_docker_args+=" --env ONEFLOW_TEST_ENABLE_EAGER=1"
           fi
           # set container_name
           container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-test
@@ -454,6 +411,12 @@ jobs:
 
           extra_docker_args+=" --shm-size=8g --rm -w $PWD -v $PWD:$PWD"
           extra_docker_args+=" -v /dataset:/dataset -v /model_zoo:/model_zoo"
+
+
+          oneflow_test_cache_dir="$HOME/ci-cache/${{ github.repository }}/test_cache"
+          extra_docker_args+=" -v ${oneflow_test_cache_dir}:${oneflow_test_cache_dir}"
+          extra_docker_args+=" -e ONEFLOW_TEST_CACHE_DIR=${oneflow_test_cache_dir}"
+
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
           echo "image_name=oneflow-test:0.2" >> $GITHUB_ENV
           echo "pip_index_mirror=https://pypi.tuna.tsinghua.edu.cn/simple" >> $GITHUB_ENV
@@ -465,6 +428,7 @@ jobs:
         run: |
           bash docker/ci/test/build.sh
       - name: Exe test
+        timeout-minutes: 45
         if: contains(fromJson('["cuda", "cpu"]'), matrix.test_suite)
         run: |
           set -x
@@ -473,47 +437,36 @@ jobs:
             ${image_name} \
             ${bin_dir}/oneflow_testexe
       - name: Build documentation
-        if: matrix.test_suite == 'cuda'
+        timeout-minutes: 45
+        if: matrix.test_suite == 'cpu'
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
-      - name: Op test (distributed, 1st try)
-        if: matrix.test_suite == 'cuda'
+      - name: Single client op test (distributed, 1st try)
+        timeout-minutes: 45
+        if: matrix.test_suite == 'cuda' && needs.changed_files.outputs.should_run_single_client_tests == '1'
         continue-on-error: true
         id: distributed_try_1
         run: |
-          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
-      - name: Op test (distributed, 2nd try)
-        if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
+          python3 ci/test/distributed_run.py --mode=single_client --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
+      - name: Single client op test (distributed, 2nd try)
+        timeout-minutes: 45
+        if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure' && needs.changed_files.outputs.should_run_single_client_tests == '1'
         continue-on-error: true
         id: distributed_try_2
         run: |
-          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
-      - name: Op test (distributed, 3rd try)
-        if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
+          python3 ci/test/distributed_run.py --mode=single_client --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
+      - name: Single client op test (distributed, 3rd try)
+        timeout-minutes: 45
+        if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure' && needs.changed_files.outputs.should_run_single_client_tests == '1'
         continue-on-error: false
         id: distributed_try_3
         run: |
-          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
-      - name: Upload log (distributed test)
-        if: failure() && matrix.test_suite == 'cuda'
-        uses: ./.github/actions/upload_oss
-        with:
-          src_path: distributed-tmp
-          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/distributed-tmp
-          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
-      - name: Print backtrace (distributed test)
-        if: always() && steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda'
-        run: |
-          set -x
-          docker run \
-            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            ${image_name} bash ci/test/print_stack_from_core.sh python3 distributed-tmp
+          python3 ci/test/distributed_run.py --mode=single_client --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.6
       - name: Doctest
+        timeout-minutes: 45
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -521,15 +474,16 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/doctest.sh"
-      - name: Dry run test (run without runtime)
-        if: matrix.test_suite == 'cuda'
+      - name: Single client dry run test (run without runtime)
+        timeout-minutes: 45
+        if: matrix.test_suite == 'cuda' && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
-      - name: Set environment variables (cuda_new_interface)
-        if: matrix.test_suite == 'cuda_new_interface'
+      - name: Set environment variables (new_interface)
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
           set -x
           echo "image_tag=oneflow-test-v2:0.1" >> $GITHUB_ENV
@@ -538,53 +492,136 @@ jobs:
           img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/pytorch/pytorch/1.9.0-cuda10.2-cudnn7-runtime"
           pip_cache_docker_args="-v ${img_cache_base_dir}/dotcache/pip:/root/.cache/pip"
           echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
-      - name: Check image (cuda_new_interface)
-        if: matrix.test_suite == 'cuda_new_interface'
+      - name: Check image (new_interface)
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
         run: |
           if [[ "$(docker images -q ${{ env.image_tag }} 2> /dev/null)" == "" ]]; then
             echo "should_load_img=1" >> $GITHUB_ENV
           fi
-      - name: Load image (cuda_new_interface)
-        if: matrix.test_suite == 'cuda_new_interface' && env.should_load_img == '1'
+      - name: Load image (new_interface)
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) && env.should_load_img == '1'
         run: |
           wget ${{ env.image_url }}
           docker load -i $(basename "${{ env.image_url }}")
       - name: Module API test
-        if: matrix.test_suite == 'cuda_new_interface'
-        run: |
-          docker run \
-            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
-            ${{ env.image_tag }} \
-            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
-      - name: Tensor API test
-        if: matrix.test_suite == 'cuda_new_interface'
-        run: |
-          docker run \
-            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
-            ${{ env.image_tag }} \
-            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
-      - name: Op test
         timeout-minutes: 45
-        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op' || matrix.test_suite == 'cpu_op_eager' || matrix.test_suite == 'cuda_op_eager'
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
+        run: |
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test_multi_client.sh"
+      - name: Module API test (distributed, 1st try)
+        if: matrix.test_suite == 'cuda_new_interface'
+        continue-on-error: true
+        id: new_interface_distributed_try_1
+        run: |
+          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_tag }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.7
+      - name: Module API test (distributed, 2nd try)
+        if: matrix.test_suite == 'cuda_new_interface' && steps.new_interface_distributed_try_1.outcome=='failure'
+        continue-on-error: true
+        id: new_interface_distributed_try_2
+        run: |
+          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_tag }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.7
+      - name: Module API test (distributed, 3rd try)
+        if: matrix.test_suite == 'cuda_new_interface' && steps.new_interface_distributed_try_2.outcome=='failure'
+        continue-on-error: false
+        id: new_interface_distributed_try_3
+        run: |
+          python3 ci/test/distributed_run.py --bash_script ci/test/2node_op_test_multi_client.sh --copy_files python/oneflow/test/ --copy_files python/oneflow/test_utils/ --copy_files ci/test/ --custom_img_tag=${{ env.image_tag }} --oneflow_wheel_path=${{ env.wheelhouse_dir }} --oneflow_wheel_python_version=3.7
+      - name: Upload log (distributed test)
+        if: always() && (steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda') || (steps.new_interface_distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda_new_interface')
+        uses: ./.github/actions/upload_oss
+        with:
+          src_path: distributed-tmp
+          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/distributed-tmp
+          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
+      - name: Print backtrace (distributed test)
+        if: always() && (steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda') || (steps.new_interface_distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda_new_interface')
+        run: |
+          set -x
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            ${image_name} bash ci/test/print_stack_from_core.sh python3 distributed-tmp
+      - name: Dataloader API test
+        timeout-minutes: 45
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
+        run: |
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/dataloader \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && python3 -m pip install -r docker/ci/test-v2/requirements.txt --user && bash ci/test/try_install.sh && bash ci/test/generic_test_multi_client.sh"
+      - name: Tensor API test
+        timeout-minutes: 45
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
+        run: |
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/tensor \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test_multi_client.sh"
+      - name: Graph API test
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite)
+        run: |
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/graph \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test_multi_client.sh"
+      - name: Checkout Oneflow-Inc/models
+        if: matrix.test_suite == 'cuda_new_interface'
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/models
+          ref: c822b17f9ed598185cf1fa70f570871d12db7442
+          path: oneflow-models
+      - name: Speed test
+        id: speed
+        if: matrix.test_suite == 'cuda_new_interface'
+        run: |
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_speed_multi_client.sh"
+      - name: Post speed stats
+        if: matrix.test_suite == 'cuda_new_interface'
+        continue-on-error: true
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
+            })
+      - name: Single client op test
+        timeout-minutes: 45
+        if: contains(fromJson('["cuda_op", "cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_op_test.sh"
-      - name: Model test
-        if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda'
+      - name: Single client model test
+        timeout-minutes: 45
+        if: contains(fromJson('["cuda", "cpu"]'), matrix.test_suite)  && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
-      - name: Model serve test
+      - name: Single client model serve test
+        timeout-minutes: 45
         id: model_serve_test
-        if: matrix.test_suite == 'cuda'
+        if: matrix.test_suite == 'cuda' && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
@@ -597,33 +634,148 @@ jobs:
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} bash ci/test/print_stack_from_core.sh python3 serving-tmp
-      - name: Benchmark (mainly for backward compatibility)
-        if: matrix.test_suite == 'cuda'
+      - name: Single client benchmark (mainly for backward compatibility)
+        timeout-minutes: 45
+        if: matrix.test_suite == 'cuda' && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
-      - name: Benchmark FP16 (mainly for backward compatibility)
-        if: matrix.test_suite == 'cuda'
+      - name: Single client benchmark FP16 (mainly for backward compatibility)
+        timeout-minutes: 45
+        if: matrix.test_suite == 'cuda' && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
-      - name: XLA Test
-        if: contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && env.is_built != '1'
+      - name: Single client XLA Test
+        timeout-minutes: 45
+        if: contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
+      - name: Remove automerge
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface", "cpu", "cuda", "cuda_op"]'), matrix.test_suite) && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'automerge'
+            })
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'CI failed, removing label automerge'
+            })
+      - name: Print stacks in all core files
+        timeout-minutes: 45
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) == false && failure()
+        run: |
+          set -x
+          docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            ${image_name} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/print_stack_in_all_dirs.sh"
+      - name: Print stacks in all core files (new interface)
+        timeout-minutes: 45
+        if: contains(fromJson('["cuda_new_interface", "cpu_new_interface"]'), matrix.test_suite) && failure()
+        run: |
+          set -x
+          docker run \
+            ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
+            ${{ env.image_tag }} \
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/print_stack_in_all_dirs.sh"
       - name: Query system status
-        if: ${{ failure() }}
+        timeout-minutes: 45
+        if: failure()
         run: |
           nvidia-smi
           docker ps
       - name: Remove container
+        timeout-minutes: 45
         if: always()
         run: |
           docker rm -f ${container_name} || true
+  
+  static_analysis_with_clang_on_diff:
+    name: Static analysis with clang on diff
+    runs-on: ubuntu-20.04
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    steps:
+      - name: Check out OneFlow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build ccache
+      - name: Download OneFlow custom clang-tidy
+        run: |
+          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage
+          wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
+          chmod +x clang-tidy-489012f-x86_64.AppImage clang-tidy-diff.py
+      - name: Cache third party dir
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: clang-tidy-diff-third-party-ccache-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}
+          restore-keys: |
+            clang-tidy-diff-third-party-ccache-${{ hashFiles('**/CMakeLists.txt') }}-
+            clang-tidy-diff-third-party-ccache-
+      - name: Build third party libs and generate files
+        run: |
+          export CCACHE_COMPRESS=true
+          export CCACHE_MAXSIZE=500M
+          mkdir build
+          cd build
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj
+      - name: Fetch upstream
+        if: github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+        run: |
+          git remote add upstream https://github.com/Oneflow-Inc/oneflow
+          git fetch upstream
+      - name: Run clang-tidy for modified files
+        # use clang as compiler for correct compiler flags
+        run: |
+          cd build
+          rm CMakeCache.txt
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_C_COMPILER=clang-12 \
+            -DCMAKE_CXX_COMPILER=clang++-12 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cd ..
+          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="*,-maybe-glog-fatal,-clang-analyzer-alpha.*"
+      - name: Remove automerge
+        if: failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge')
+        uses: actions/github-script@v4
+        with:
+          script: |
+            github.issues.removeLabel({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'automerge'
+            })
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'CI failed, removing label automerge'
+            })

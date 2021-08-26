@@ -23,18 +23,18 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct CTCLossInterpState : public OpExprInterpState {
+struct CTCLossCaptureState : public AutoGradCaptureState {
   int32_t blank;
   bool zero_infinity;
   bool requires_grad;
 };
 
-class CTCLoss : public OpExprGradFunction<CTCLossInterpState> {
+class CTCLoss : public OpExprGradFunction<CTCLossCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(CTCLossInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(CTCLossCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const CTCLossInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CTCLossCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -51,7 +51,7 @@ Maybe<void> CTCLoss::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CTCLoss::Capture(CTCLossInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> CTCLoss::Capture(CTCLossCaptureState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -71,7 +71,7 @@ Maybe<void> CTCLoss::Capture(CTCLossInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CTCLoss::Apply(const CTCLossInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> CTCLoss::Apply(const CTCLossCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);

@@ -33,19 +33,6 @@ class NNGraphIf {
   NNGraphIf() = default;
 };
 
-class NNGraph final : public NNGraphIf {
- public:
-  NNGraph() = delete;
-  explicit NNGraph(const std::string& name) : name_(name) {}
-
-  const std::string& job_name() const { return name_; }
-  const std::vector<std::string>& inputs_op_names() const;
-  const std::vector<std::string>& outputs_op_names() const;
-
- private:
-  std::string name_;
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_IF_H_

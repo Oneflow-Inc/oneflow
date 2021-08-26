@@ -13,21 +13,34 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/copy_hd_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 #ifdef WITH_CUDA
 
-void CopyHdKernel::ForwardDataContent(const KernelCtx& ctx,
-                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
+  CopyHdKernel() = default;
+  ~CopyHdKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx&,
+                          const std::function<Blob*(const std::string&)>&) const override;
+  void ForwardHeader(const KernelCtx& ctx,
+                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+};
+
+void CopyHdKernel::ForwardDataContent(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(op_attribute().input_bns(0));
   Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(0));
   out_blob->CopyValidDataContentFrom(ctx.device_ctx, in_blob);
 }
 
-void CopyHdKernel::ForwardHeader(const KernelCtx& ctx,
-                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void CopyHdKernel::ForwardHeader(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
 }
 

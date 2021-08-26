@@ -108,7 +108,7 @@ FLAT_MSG_BEGIN(InstructionStatusBuffer);
 FLAT_MSG_END(InstructionStatusBuffer);
 // clang-format on
 
-class Instruction;
+struct Instruction;
 // clang-format off
 OBJECT_MSG_BEGIN(InstructionEdge);
   // methods
@@ -126,7 +126,7 @@ OBJECT_MSG_BEGIN(InstructionEdge);
 OBJECT_MSG_END(InstructionEdge);
 // clang-format on
 
-class Stream;
+struct Stream;
 // clang-format off
 OBJECT_MSG_BEGIN(Instruction);
   // methods

@@ -15,7 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
-#include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
@@ -23,19 +24,17 @@ namespace user_op {
 
 namespace {
 
-void CheckParallelDistribution(const Shape& hierarchy, int64_t sum_axis,
-                               const cfg::ParallelDistribution& segment_ids_parallel_distribution,
-                               const cfg::ParallelDistribution& data_parallel_distribution,
-                               const cfg::ParallelDistribution& out_parallel_distribution) {
-  CHECK_EQ(hierarchy.NumAxes(), segment_ids_parallel_distribution.sbp_parallel_size());
-  CHECK_EQ(hierarchy.NumAxes(), data_parallel_distribution.sbp_parallel_size());
-  CHECK_EQ(hierarchy.NumAxes(), out_parallel_distribution.sbp_parallel_size());
+void CheckNdSbp(const Shape& hierarchy, int64_t sum_axis, const cfg::NdSbp& segment_ids_nd_sbp,
+                const cfg::NdSbp& data_nd_sbp, const cfg::NdSbp& out_nd_sbp) {
+  CHECK_EQ(hierarchy.NumAxes(), segment_ids_nd_sbp.sbp_parallel_size());
+  CHECK_EQ(hierarchy.NumAxes(), data_nd_sbp.sbp_parallel_size());
+  CHECK_EQ(hierarchy.NumAxes(), out_nd_sbp.sbp_parallel_size());
   if (hierarchy.elem_cnt() == 1) { return; }
   FOR_RANGE(int64_t, i, 0, hierarchy.NumAxes()) {
-    const auto& out_sbp = out_parallel_distribution.sbp_parallel(i);
+    const auto& out_sbp = out_nd_sbp.sbp_parallel(i);
     if (out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == sum_axis) {
-      CHECK(segment_ids_parallel_distribution.sbp_parallel(i).has_broadcast_parallel());
-      CHECK(data_parallel_distribution.sbp_parallel(i).has_broadcast_parallel());
+      CHECK(segment_ids_nd_sbp.sbp_parallel(i).has_broadcast_parallel());
+      CHECK(data_nd_sbp.sbp_parallel(i).has_broadcast_parallel());
     }
   }
 }
@@ -57,16 +56,13 @@ std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
     user_op::KernelInitContext* ctx) {
   if (ctx->parallel_ctx().parallel_num() > 1) {
     const auto axis = ctx->Attr<int64_t>("axis");
-    const cfg::ParallelDistribution& out_parallel_distribution =
-        ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    const cfg::NdSbp& out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
     const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-    CheckParallelDistribution(
-        hierarchy, axis, ctx->ParallelDistribution4ArgNameAndIndex("segment_ids", 0),
-        ctx->ParallelDistribution4ArgNameAndIndex("data", 0), out_parallel_distribution);
+    CheckNdSbp(hierarchy, axis, ctx->NdSbp4ArgNameAndIndex("segment_ids", 0),
+               ctx->NdSbp4ArgNameAndIndex("data", 0), out_nd_sbp);
     const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
-    TensorSliceView view =
-        GetTensorSliceView4ParallelId(hierarchy, out_parallel_distribution,
-                                      out_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
+    TensorSliceView view = GetTensorSliceView4ParallelId(
+        hierarchy, out_nd_sbp, out_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
     return std::make_shared<UnsortedSegmentSumOpKernelState>(view.At(axis).begin(),
                                                              view.At(axis).end());
   } else {
@@ -77,7 +73,7 @@ std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
 }  // namespace
 
 template<DeviceType device_type, typename T, typename K>
-class UnsortedSegmentSumKernel final : public user_op::OpKernel {
+class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   UnsortedSegmentSumKernel() = default;
   ~UnsortedSegmentSumKernel() override = default;

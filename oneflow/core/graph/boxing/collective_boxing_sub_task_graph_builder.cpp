@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/collective_boxing_pack_task_node.h"
 #include "oneflow/core/graph/collective_boxing_unpack_task_node.h"
-#include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/cuda_stream_index.h"
@@ -72,7 +72,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
   CHECK_NOTNULL(stream_index_generator);
-  auto stream_index = stream_index_generator->GenerateNcclStreamIndex();
+  auto stream_index = stream_index_generator->GenerateNamedStreamIndex("NCCL");
   const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
   node->Init(machine_id, thrd_id, lbi, op_conf);
 }

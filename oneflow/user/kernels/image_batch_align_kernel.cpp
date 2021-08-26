@@ -56,32 +56,13 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
   ~ImageBatchAlignKernel() = default;
 
  private:
-  void InferShape(user_op::KernelInferContext* ctx) const override {
-    DimVector dim_vec;
-    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const int64_t num_images = in_tensor->shape().elem_cnt();
-    dim_vec.push_back(num_images);
-    int64_t max_height = 0;
-    int64_t max_width = 0;
-    FOR_RANGE(int, i, 0, num_images) {
-      const TensorBuffer& image_buffer = in_tensor->dptr<TensorBuffer>()[i];
-      max_height = std::max(max_height, image_buffer.shape().At(0));
-      max_width = std::max(max_width, image_buffer.shape().At(0));
-    }
-    int32_t alignment = ctx->Attr<int32_t>("alignment");
-    max_height = RoundUp(max_height, alignment);
-    max_width = RoundUp(max_width, alignment);
-    dim_vec.push_back(max_height);
-    dim_vec.push_back(max_width);
-    ctx->MutShapeView4ArgNameAndIndex("out", 0)->set_shape(Shape(dim_vec));
-  }
-
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in_tensor->shape().NumAxes(), 1);
     CHECK_EQ(out_tensor->shape().NumAxes(), 4);
     const int64_t num_images = in_tensor->shape().elem_cnt();
+    const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
     CHECK_GT(num_images, 0);
     int64_t max_height = 0;
     int64_t max_width = 0;
@@ -95,6 +76,13 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
     int32_t alignment = ctx->Attr<int32_t>("alignment");
     max_height = RoundUp(max_height, alignment);
     max_width = RoundUp(max_width, alignment);
+
+    if (dynamic_out) {
+      auto* mut_shape_view = out_tensor->mut_shape();
+      mut_shape_view->Set(0, num_images);
+      mut_shape_view->Set(1, max_height);
+      mut_shape_view->Set(2, max_width);
+    }
 
     memset(out_tensor->mut_dptr(), 0,
            out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type()));

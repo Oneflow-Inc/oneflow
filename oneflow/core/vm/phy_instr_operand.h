@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class MirroredObject;
+struct MirroredObject;
 
 // physical instruction operand
 class PhyInstrOperand {

@@ -49,9 +49,9 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
   const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
-  const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
-  const Shape& in_shape = in_tensor_desc->shape();
+  const Shape& in_shape = in_tensor_desc.shape();
 
   CHECK_GE_OR_RETURN(start_dim, 0);
   CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
@@ -60,7 +60,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
   CHECK_LE_OR_RETURN(start_dim, true_end_dim);
 
-  *out_tensor_desc->mut_is_dynamic() = in_tensor_desc->is_dynamic();
+  *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
 
   Shape* out_shape = out_tensor_desc->mut_shape();
 
@@ -92,7 +92,7 @@ REGISTER_USER_OP("flatten")
     .SetDataTypeInferFn(DataTypeInferFn);
 
 REGISTER_USER_OP_GRAD("flatten").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                           user_op::AddOpFn AddOp) {
+                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper reshape_grad_op =
@@ -104,6 +104,7 @@ REGISTER_USER_OP_GRAD("flatten").SetGenBackwardOpConfFn([](const user_op::UserOp
     op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
     AddOp(reshape_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

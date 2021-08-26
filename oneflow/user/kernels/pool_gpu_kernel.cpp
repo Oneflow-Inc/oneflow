@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/utils/pool_util.h"
 #include "oneflow/core/device/cudnn_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -43,9 +44,9 @@ class CudnnPoolDesc final {
 
 class GPUPoolOpKernelState final : public user_op::OpKernelState {
  public:
-  GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type, const Shape& x_shape,
-                       const Shape& y_shape, const std::string& data_format, const DataType& dtype,
-                       const Params3D& params_3d)
+  GPUPoolOpKernelState(const int32_t dim, const std::string& pooling_type, const ShapeView& x_shape,
+                       const ShapeView& y_shape, const std::string& data_format,
+                       const DataType& dtype, const Params3D& params_3d)
       : dim_(dim), pooling_type_(pooling_type) {
     Reset(dim, pooling_type, x_shape, y_shape, data_format, dtype, params_3d);
   }
@@ -81,8 +82,7 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
   static std::shared_ptr<GPUPoolOpKernelState> FromKernelComputeContext(
       const int32_t& dim, const std::string& pooling_type, user_op::KernelComputeContext* ctx) {
     if (pooling_type != "MAX" && pooling_type != "AVG") { UNIMPLEMENTED(); }
-    const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-    const Shape& x_shape = x_desc->shape();
+    const ShapeView& x_shape = ctx->Tensor4ArgNameAndIndex("x", 0)->shape();
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
@@ -92,8 +92,8 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
     const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                              pool_size, strides, ceil_mode);
-    const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
-    const DataType dtype = x_desc->data_type();
+    const ShapeView& y_shape = ctx->Tensor4ArgNameAndIndex("y", 0)->shape();
+    const DataType dtype = ctx->Tensor4ArgNameAndIndex("x", 0)->data_type();
     return std::make_shared<GPUPoolOpKernelState>(dim, pooling_type, x_shape, y_shape, data_format,
                                                   dtype, params_3d);
   }
@@ -142,7 +142,7 @@ struct PoolGpuKernelUtil {
 }  // namespace
 
 template<typename T>
-class AvgPool1DGpuKernel final : public user_op::OpKernel {
+class AvgPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool1DGpuKernel() = default;
   ~AvgPool1DGpuKernel() = default;
@@ -156,7 +156,7 @@ class AvgPool1DGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class AvgPool1DGradGpuKernel final : public user_op::OpKernel {
+class AvgPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool1DGradGpuKernel() = default;
   ~AvgPool1DGradGpuKernel() = default;
@@ -169,7 +169,7 @@ class AvgPool1DGradGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class AvgPool2DGpuKernel final : public user_op::OpKernel {
+class AvgPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool2DGpuKernel() = default;
   ~AvgPool2DGpuKernel() = default;
@@ -183,7 +183,7 @@ class AvgPool2DGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class AvgPool2DGradGpuKernel final : public user_op::OpKernel {
+class AvgPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool2DGradGpuKernel() = default;
   ~AvgPool2DGradGpuKernel() = default;
@@ -197,7 +197,7 @@ class AvgPool2DGradGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class AvgPool3DGpuKernel final : public user_op::OpKernel {
+class AvgPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool3DGpuKernel() = default;
   ~AvgPool3DGpuKernel() = default;
@@ -211,7 +211,7 @@ class AvgPool3DGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class AvgPool3DGradGpuKernel final : public user_op::OpKernel {
+class AvgPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   AvgPool3DGradGpuKernel() = default;
   ~AvgPool3DGradGpuKernel() = default;
@@ -225,7 +225,7 @@ class AvgPool3DGradGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool1DGpuKernel final : public user_op::OpKernel {
+class MaxPool1DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool1DGpuKernel() = default;
   ~MaxPool1DGpuKernel() = default;
@@ -239,7 +239,7 @@ class MaxPool1DGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool1DGradGpuKernel final : public user_op::OpKernel {
+class MaxPool1DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool1DGradGpuKernel() = default;
   ~MaxPool1DGradGpuKernel() = default;
@@ -253,7 +253,7 @@ class MaxPool1DGradGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool2DGpuKernel final : public user_op::OpKernel {
+class MaxPool2DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool2DGpuKernel() = default;
   ~MaxPool2DGpuKernel() = default;
@@ -267,7 +267,7 @@ class MaxPool2DGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool2DGradGpuKernel final : public user_op::OpKernel {
+class MaxPool2DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool2DGradGpuKernel() = default;
   ~MaxPool2DGradGpuKernel() = default;
@@ -281,7 +281,7 @@ class MaxPool2DGradGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool3DGpuKernel final : public user_op::OpKernel {
+class MaxPool3DGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool3DGpuKernel() = default;
   ~MaxPool3DGpuKernel() = default;
@@ -295,7 +295,7 @@ class MaxPool3DGpuKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class MaxPool3DGradGpuKernel final : public user_op::OpKernel {
+class MaxPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   MaxPool3DGradGpuKernel() = default;
   ~MaxPool3DGradGpuKernel() = default;

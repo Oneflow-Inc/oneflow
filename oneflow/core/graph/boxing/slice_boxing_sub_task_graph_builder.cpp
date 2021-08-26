@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
-#include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/common/id_util.h"
 #include "oneflow/core/graph/id_serialization.h"
 #include "oneflow/core/device/cpu_stream_index.h"
@@ -93,7 +93,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
   }
 
   const auto GetBoxingGpuThrdId = [](int64_t machine_id, int64_t dev_id,
-                                     CudaWorkType work_type) -> int64_t {
+                                     const std::string& stream_name) -> int64_t {
     int64_t thrd_id = -1;
 #ifdef WITH_CUDA
     DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
@@ -102,12 +102,12 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
     CHECK_NOTNULL(generator);
     StreamId::stream_index_t stream_index = 0;
-    if (work_type == CudaWorkType::kCopyH2D) {
+    if (stream_name == "H2D") {
       stream_index = generator->GenerateH2DStreamIndex();
-    } else if (work_type == CudaWorkType::kCopyD2H) {
+    } else if (stream_name == "D2H") {
       stream_index = generator->GenerateD2HStreamIndex();
-    } else if (work_type == CudaWorkType::kMix) {
-      stream_index = generator->GenerateMixStreamIndex();
+    } else if (stream_name == "MIX") {
+      stream_index = generator->GenerateNamedStreamIndex("MIX");
     } else {
       UNIMPLEMENTED();
     }
@@ -131,7 +131,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     } else if (pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
       int64_t dev_id = CHECK_JUST(pd.DeviceId4ParallelId(parallel_id));
-      thrd_id = GetBoxingGpuThrdId(machine_id, dev_id, CudaWorkType::kCopyH2D);
+      thrd_id = GetBoxingGpuThrdId(machine_id, dev_id, "H2D");
 #else
       UNIMPLEMENTED();
 #endif
@@ -151,8 +151,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_node->machine_id());
     } else if (src_node->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-      thrd_id =
-          GetBoxingGpuThrdId(src_node->machine_id(), src_node->GpuPhyId(), CudaWorkType::kCopyD2H);
+      thrd_id = GetBoxingGpuThrdId(src_node->machine_id(), src_node->GpuPhyId(), "D2H");
 #else
       UNIMPLEMENTED();
 #endif
@@ -276,8 +275,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           } else if (in_pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
             TaskNode* node = in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()));
-            local_concat_thrd_id =
-                GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), CudaWorkType::kCopyD2H);
+            local_concat_thrd_id = GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), "D2H");
 #else
             UNIMPLEMENTED();
 #endif
@@ -338,8 +336,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
               } else if (in_pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
                 TaskNode* node = in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()));
-                local_add_thrd_id = GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(),
-                                                       CudaWorkType::kCopyD2H);
+                local_add_thrd_id = GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), "D2H");
 #else
                 UNIMPLEMENTED();
 #endif
@@ -385,8 +382,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         } else if (in_pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
           TaskNode* node = in_nodes.at(in_ids_on_machine.front());
-          local_add_thrd_id =
-              GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), CudaWorkType::kCopyH2D);
+          local_add_thrd_id = GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), "H2D");
 #else
           UNIMPLEMENTED();
 #endif

@@ -46,10 +46,11 @@ REGISTER_USER_OP("unsorted_segment_sum")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
-      CHECK_NOTNULL(segment_ids_modifier);
+      CHECK_NOTNULL_OR_RETURN(segment_ids_modifier);
       segment_ids_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t data_num_axes =
@@ -83,7 +84,8 @@ REGISTER_USER_OP("unsorted_segment_sum")
     });
 
 REGISTER_USER_OP_GRAD("unsorted_segment_sum")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       bool need_grad_data = op.NeedGenGradTensor4OpInput("data", 0);
       if (need_grad_data) {
         user_op::UserOpConfWrapperBuilder data_grad_builder(op.op_name() + "_grad");
@@ -97,6 +99,7 @@ REGISTER_USER_OP_GRAD("unsorted_segment_sum")
         op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "data", 0);
         AddOp(data_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("unsorted_segment_sum_like")
@@ -123,21 +126,22 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
-      const user_op::TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
-      CHECK_EQ_OR_RETURN(data->data_type(), like->data_type());
+      const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
+      const user_op::TensorDesc& like = ctx->InputTensorDesc("like", 0);
+      CHECK_EQ_OR_RETURN(data.data_type(), like.data_type());
       CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
       *ctx->OutputDType("out", 0) = ctx->InputDType("like", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
-      CHECK_NOTNULL(segment_ids_modifier);
+      CHECK_NOTNULL_OR_RETURN(segment_ids_modifier);
       segment_ids_modifier->set_requires_grad(false);
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK_NOTNULL(like_modifier);
+      CHECK_NOTNULL_OR_RETURN(like_modifier);
       like_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t data_num_axes =

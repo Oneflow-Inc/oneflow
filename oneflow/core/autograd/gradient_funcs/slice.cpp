@@ -17,32 +17,29 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-struct SliceOpExprInterpState : public OpExprInterpState {
+struct SliceCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
   std::vector<int64_t> step;
 };
 
-class Slice : public OpExprGradFunction<SliceOpExprInterpState> {
+class Slice : public OpExprGradFunction<SliceCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    const std::string& op_name = fw_op_expr->op_name();
-    std::vector<int64_t> start, stop, step;
-    grad_op_ = JUST(op_expr_helper::SliceGradOp(start, stop, step, GradientOpName(op_name)));
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(SliceOpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+  Maybe<void> Capture(SliceCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -56,27 +53,77 @@ class Slice : public OpExprGradFunction<SliceOpExprInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const SliceOpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const SliceCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& like = ctx->SavedTensors().at(0);
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int64_t>>("start", ctx->start));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", ctx->stop));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("step", ctx->step));
 
     in_grads->resize(1);
     in_grads->at(0) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), like}, attrs));
+        JUST(functional::SliceGrad(out_grads.at(0), like, ctx->start, ctx->stop, ctx->step));
     return Maybe<void>::Ok();
   }
 
  private:
-  std::shared_ptr<OpExpr> grad_op_;
+  AttrMap base_attrs_;
+};
+
+struct SliceUpdateCaptureState : public AutoGradCaptureState {
+  bool requires_grad_x;
+  bool requires_grad_update;
+  std::vector<int64_t> start;
+  std::vector<int64_t> stop;
+  std::vector<int64_t> step;
+};
+
+class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(SliceUpdateCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    ctx->requires_grad_x = inputs.at(0)->requires_grad();
+    ctx->requires_grad_update = inputs.at(1)->requires_grad();
+    if (!ctx->requires_grad_x && !ctx->requires_grad_update) { return Maybe<void>::Ok(); }
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
+    ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
+    ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
+
+    if (ctx->requires_grad_x) { ctx->SaveTensorForBackward(inputs.at(1)); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const SliceUpdateCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    in_grads->resize(2);
+
+    if (ctx->requires_grad_x) {
+      const auto& update = ctx->SavedTensors().at(0);
+      const auto& temp = JUST(functional::ZerosLike(update));
+      in_grads->at(0) =
+          JUST(functional::SliceUpdate(out_grads.at(0), temp, ctx->start, ctx->stop, ctx->step));
+    }
+    if (ctx->requires_grad_update) {
+      in_grads->at(1) = JUST(functional::Slice(out_grads.at(0), ctx->start, ctx->stop, ctx->step));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
   AttrMap base_attrs_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("slice", Slice);
-REGISTER_OP_EXPR_GRAD_FUNCTION("slice_update", Slice);
+REGISTER_OP_EXPR_GRAD_FUNCTION("slice_update", SliceUpdate);
 
 }  // namespace one
 }  // namespace oneflow

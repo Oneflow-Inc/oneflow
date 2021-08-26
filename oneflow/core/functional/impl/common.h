@@ -16,12 +16,22 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
 #define ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
 
+#include "oneflow/core/framework/tensor.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
 
 static constexpr size_t kMaxInputCount = 128;
 static constexpr size_t kMaxOutputCount = 128;
+
+bool IsStaticZerosTensor(const std::shared_ptr<Tensor>& x);
+bool IsInplaceValid(const std::shared_ptr<Tensor>& x);
+bool IsShapeCanExpandTo(const Shape& shape, const Shape& expand_shape);
+
+Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x);
+
+Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape);
 
 }  // namespace functional
 }  // namespace one

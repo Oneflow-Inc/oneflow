@@ -140,7 +140,7 @@ __global__ void CalScaleZeroPointAffine(const T* max_ptr, const T* min_ptr, cons
     T min = -min_ptr[gid];
     T s = (max_ptr[gid] - min) / denominator;
     scale[gid] = s;
-    zero_point[gid] = -round(min / s);
+    zero_point[gid] = -nearbyint(min / s);
     gid += gridDim.x * blockDim.x;
   }
 }
@@ -174,6 +174,7 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
   ~GpuMinMaxObserverKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* scale = ctx->Tensor4ArgNameAndIndex("scale", 0);

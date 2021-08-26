@@ -21,12 +21,11 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class Generator final {
- public:
-  // The default seed is selected to be a large number
-  // with good distribution of 0s and 1s in bit representation.
-  static constexpr uint64_t default_rng_seed_val = 67280421310721;
+// The default seed is selected to be a large number
+// with good distribution of 0s and 1s in bit representation.
+static constexpr uint64_t default_rng_seed_val = 67280421310721;
 
+class Generator final {
  public:
   explicit Generator(const std::shared_ptr<GeneratorImpl>& impl);
 

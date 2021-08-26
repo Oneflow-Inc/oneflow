@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
+#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/cluster_instruction.h"
@@ -93,6 +94,11 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(vm::InstructionMsgList* instruc
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(vm::InstructionMsgList* instruction_list,
                                                 const vm::cfg::EagerSymbolList& eager_symbol_list) {
+  if (JUST(GlobalMultiClientEnv())) {
+    // NOTE(chengcheng): in Multi-Client LogicalRun will degenerate directly to PhysicalRun,
+    //   because each rank will process instructions ONLY from itself, NOT the master.
+    return RunPhysicalInstruction(instruction_list, eager_symbol_list);
+  }
   ClusterInstructionProto cluster_instruction;
   auto* repeated_instruction_proto = cluster_instruction.mutable_eager_instruction()
                                          ->mutable_instruction_list()

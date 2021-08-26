@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -142,7 +143,7 @@ struct ConvCudnnOpKernelState final : public user_op::OpKernelState {
 };
 
 template<typename T, size_t NDims>
-class ConvGpuKernel final : public user_op::OpKernel {
+class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ConvGpuKernel() = default;
   ~ConvGpuKernel() = default;
@@ -162,7 +163,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
           GetBiasCudnnTensorDesc<NDims>(data_format, filters, GetDataType<T>::value));
     }
 
-    return std::move(state);
+    return state;
   }
 
  private:
@@ -192,6 +193,13 @@ class ConvGpuKernel final : public user_op::OpKernel {
                                     CudnnSPOnePtr<T>(), args.ydesc.Get(), out->mut_dptr<T>()));
     }
   }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+    return Global<ResourceDesc, ForSession>::Get()
+        ->resource()
+        .cudnn_conf()
+        .cudnn_conv_heuristic_search_algo();
+  }
 };
 
 #define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                                \
@@ -200,12 +208,12 @@ class ConvGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
-        const auto* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);                                 \
-        const auto* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);                         \
+        const auto& in = ctx->InputTensorDesc("in", 0);                                            \
+        const auto& weight = ctx->InputTensorDesc("weight", 0);                                    \
         const auto* out = ctx->OutputTensorDesc("out", 0);                                         \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
         return InferTmpSizeWithCudnn<cudnnConvolutionFwdAlgoPerf_t>(                               \
-            in, weight, out, *ctx, cudnn_conf.has_cudnn_conv_force_fwd_algo(),                     \
+            &in, &weight, out, *ctx, cudnn_conf.has_cudnn_conv_force_fwd_algo(),                   \
             cudnn_conf.cudnn_conv_force_fwd_algo());                                               \
       })
 
@@ -220,7 +228,7 @@ REGISTER_CONV_KERNEL(conv2d, float16, 2);
 REGISTER_CONV_KERNEL(conv3d, float16, 3);
 
 template<typename T>
-class ConvDataGradGpuKernel final : public user_op::OpKernel {
+class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvDataGradGpuKernel);
   ConvDataGradGpuKernel() = default;
@@ -262,6 +270,13 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, beta, args.xdesc.Get(), dx->mut_dptr()));
   }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+    return Global<ResourceDesc, ForSession>::Get()
+        ->resource()
+        .cudnn_conf()
+        .cudnn_conv_heuristic_search_algo();
+  }
 };
 
 #define REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(dtype)                                             \
@@ -270,12 +285,12 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
-        const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);                                 \
-        const auto* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0);                         \
+        const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
+        const auto& filter = ctx->InputTensorDesc("filter", 0);                                    \
         const auto* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);                                 \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(                           \
-            dx, filter, dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),                 \
+            dx, &filter, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),               \
             cudnn_conf.cudnn_conv_force_bwd_data_algo());                                          \
       })                                                                                           \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                   \
@@ -291,7 +306,7 @@ REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(double);
 REGISTER_CONV_DATA_GRAD_FLOATING_KERNEL(float16);
 
 template<typename T>
-class ConvFilterGradGpuKernel final : public user_op::OpKernel {
+class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradGpuKernel);
   ConvFilterGradGpuKernel() = default;
@@ -319,6 +334,13 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
         args.params.max_ws_size, CudnnSPZeroPtr<T>(), args.wdesc.Get(), filter_diff->mut_dptr()));
   }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx) const override {
+    return Global<ResourceDesc, ForSession>::Get()
+        ->resource()
+        .cudnn_conf()
+        .cudnn_conv_heuristic_search_algo();
+  }
 };
 
 #define REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(dtype)                                           \
@@ -327,12 +349,12 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
-        const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);                                 \
-        const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);                                   \
+        const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
+        const auto& x = ctx->InputTensorDesc("x", 0);                                              \
         const auto* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);                         \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t>(                         \
-            x, filter_diff, dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_filter_algo(),           \
+            &x, filter_diff, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_filter_algo(),         \
             cudnn_conf.cudnn_conv_force_bwd_filter_algo());                                        \
       })
 
@@ -345,7 +367,7 @@ struct ConvBiasGradState final : public user_op::OpKernelState {
 };
 
 template<typename T>
-class ConvBiasGradGpuKernel final : public user_op::OpKernel {
+class ConvBiasGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ConvBiasGradGpuKernel() = default;
   ~ConvBiasGradGpuKernel() = default;
@@ -371,7 +393,7 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
           new CudnnTensorDesc(CUDNN_TENSOR_NHWC, bias_diff->data_type(), 1,
                               static_cast<int32_t>(bias_diff->shape().At(0)), 1, 1));
     }
-    return std::move(state);
+    return state;
   }
 
  private:

@@ -31,15 +31,15 @@ namespace functional {
 
 namespace detail {
 
-struct AnyDataBase {
+struct Immediate {
   virtual ValueType value_type() const = 0;
   virtual const void* Ptr() const = 0;
 };
 
 template<typename T>
-struct AnyData : public AnyDataBase {
+struct TypedImmediate final : public Immediate {
   T content;
-  explicit AnyData(const T& v) : content(v) {}
+  explicit TypedImmediate(const T& v) : content(v) {}
 
   ValueType value_type() const override { return ValueTypeOf<T>(); }
   const void* Ptr() const override { return &content; }
@@ -50,19 +50,39 @@ struct AnyData : public AnyDataBase {
 class PythonArg {
  public:
   PythonArg() = default;
-  PythonArg(py::object object) : object_(object.ptr()), active_tag_(HAS_OBJECT) {}
+  PythonArg(const py::object& object)
+      : object_(object.ptr()), immediate_(), active_tag_(HAS_OBJECT) {}
 
-  PythonArg(const std::shared_ptr<const detail::AnyDataBase>& value)
-      : immediate_(value), active_tag_(HAS_IMMEDIATE) {}
+  PythonArg(const std::shared_ptr<const detail::Immediate>& value)
+      : object_(nullptr), immediate_(value), active_tag_(HAS_IMMEDIATE) {}
 
   template<typename T, typename std::enable_if<!py::detail::is_pyobject<T>::value, int>::type = 0>
   PythonArg(const T& value)
-      : immediate_(std::make_shared<detail::AnyData<T>>(value)), active_tag_(HAS_IMMEDIATE) {}
+      : object_(nullptr),
+        immediate_(std::make_shared<detail::TypedImmediate<T>>(value)),
+        active_tag_(HAS_IMMEDIATE) {}
 
   virtual ~PythonArg() = default;
 
-  template<typename T>
-  friend class ObjectAsHelper;
+  PythonArg(const PythonArg& other)
+      : object_(other.object_), immediate_(other.immediate_), active_tag_(other.active_tag_) {}
+  PythonArg(PythonArg&& other)
+      : object_(other.object_),
+        immediate_(std::move(other.immediate_)),
+        active_tag_(other.active_tag_) {}
+
+  PythonArg& operator=(const PythonArg& other) {
+    object_ = other.object_;
+    immediate_ = other.immediate_;
+    active_tag_ = other.active_tag_;
+    return *this;
+  }
+  PythonArg& operator=(PythonArg&& other) {
+    object_ = other.object_;
+    immediate_ = std::move(other.immediate_);
+    active_tag_ = other.active_tag_;
+    return *this;
+  }
 
   template<typename T>
   struct ObjectAsHelper {
@@ -88,16 +108,19 @@ class PythonArg {
     return ObjectAsHelper<oneflow::detail::remove_cvref_t<T>>()(this).GetOrThrow();
   }
 
+  Maybe<bool> TypeCheck(ValueType type) const;
+
  private:
   template<typename T>
   Maybe<T> ObjectAs() const;
-  py::object Borrow() const { return py::reinterpret_borrow<py::object>(object_); }
 
   PyObject* object_;
-  std::shared_ptr<const detail::AnyDataBase> immediate_;
+  std::shared_ptr<const detail::Immediate> immediate_;
 
   enum { HAS_OBJECT, HAS_IMMEDIATE, HAS_NONE } active_tag_;
 };
+
+bool PythonArgCheck(const PythonArg& arg, ValueType type);
 
 }  // namespace functional
 }  // namespace one

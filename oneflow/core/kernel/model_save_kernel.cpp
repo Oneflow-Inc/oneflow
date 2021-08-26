@@ -25,15 +25,15 @@ class ModelSaveKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
     ForwardDataContent(ctx, BnInOp2Blob);
   }
   void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+                          const std::function<Blob*(const std::string&)>&) const override;
 };
 
 void ModelSaveKernel::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const ModelSaveOpConf& conf = this->op_conf().model_save_conf();
   const Blob* path_blob = BnInOp2Blob("path");
   const std::string path(path_blob->dptr<char>(), path_blob->shape_view().elem_cnt());

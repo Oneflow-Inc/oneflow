@@ -18,8 +18,8 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void CaseKernel<T>::ForwardDataContent(const KernelCtx& ctx,
-                                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void CaseKernel<T>::ForwardDataContent(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CaseStatus* const case_status = static_cast<CaseStatus*>(ctx.other);
   if (case_status->cmd == kCaseCmdHandleInput) {
     int64_t cur_selected_id = static_cast<int64_t>(BnInOp2Blob("in")->dptr<T>()[0]);

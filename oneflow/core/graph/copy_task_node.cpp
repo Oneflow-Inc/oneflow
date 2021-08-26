@@ -34,7 +34,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   auto in_regst = GetSoleConsumedRegst("copy_in");
   out_regst->CopyBlobDescFrom(in_regst.get());
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = ConstructOp(NewCopyOpConf());
+  node->mut_op() = CHECK_JUST(ConstructOp(NewCopyOpConf()));
   node->BindBnWithRegst(node->op()->SoleIbn(), in_regst);
   node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }

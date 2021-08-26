@@ -22,13 +22,21 @@ limitations under the License.
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/framework/dtype.h"
 
 namespace oneflow {
 class Shape;
 class AttrMap;
 
+template<typename T>
+class Symbol;
+
+class Device;
+class ParallelDesc;
+
 namespace cfg {
 class AttrValue;
+class SbpParallel;
 }  // namespace cfg
 
 namespace one {
@@ -38,6 +46,7 @@ class Generator;
 
 namespace functional {
 class Scalar;
+class TensorIndex;
 }  // namespace functional
 }  // namespace one
 
@@ -55,7 +64,8 @@ enum ValueType {
   kDOUBLE,
   kBOOL,
   kSTRING,
-  kINT32_LIST,
+
+  kINT32_LIST = 50,
   kUINT32_LIST,
   kINT64_LIST,
   kUINT64_LIST,
@@ -63,9 +73,11 @@ enum ValueType {
   kDOUBLE_LIST,
   kBOOL_LIST,
   kSTRING_LIST,
-  kVOID_MAYBE,
+
+  kVOID_MAYBE = 100,
   kBOOL_MAYBE,
-  kSCALAR,
+
+  kSCALAR = 200,
   kTENSOR,
   kTENSOR_REF,
   kTENSOR_MAYBE,
@@ -80,6 +92,11 @@ enum ValueType {
   kGENERATOR,
   kGENERATOR_REF,
   kGENERATOR_MAYBE,
+  kTENSOR_INDEX,
+  kDEVICE,
+  kPARALLEL_DESC,
+  kSBP_PARALLEL,
+  kSBP_PARALLEL_LIST,
 };
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
@@ -124,16 +141,30 @@ VALUE_TYPE_OF_IMPL(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
 VALUE_TYPE_OF_IMPL(cfg::AttrValue, kATTR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<cfg::AttrValue>, kATTR_REF);
 VALUE_TYPE_OF_IMPL(AttrMap, kATTR_MAP);
-VALUE_TYPE_OF_IMPL(DataType, kDTYPE);
+VALUE_TYPE_OF_IMPL(Symbol<DType>, kDTYPE);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
 VALUE_TYPE_OF_IMPL(one::Generator, kGENERATOR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::Generator>, kGENERATOR_REF);
 VALUE_TYPE_OF_IMPL(Maybe<one::Generator>, kGENERATOR_MAYBE);
+VALUE_TYPE_OF_IMPL(TensorIndex, kTENSOR_INDEX);
+VALUE_TYPE_OF_IMPL(Symbol<Device>, kDEVICE);
+VALUE_TYPE_OF_IMPL(Symbol<ParallelDesc>, kPARALLEL_DESC);
+VALUE_TYPE_OF_IMPL(Symbol<cfg::SbpParallel>, kSBP_PARALLEL);
+VALUE_TYPE_OF_IMPL(std::vector<Symbol<cfg::SbpParallel>>, kSBP_PARALLEL_LIST);
 
 #undef VALUE_TYPE_OF_IMPL
+
+Maybe<const std::string&> ValueTypeName(ValueType type);
 
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
+
+namespace std {
+template<>
+struct hash<oneflow::one::functional::ValueType> {
+  std::size_t operator()(oneflow::one::functional::ValueType v) const noexcept { return v; }
+};
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_FUNCTIONAL_VALUE_TYPES_H_

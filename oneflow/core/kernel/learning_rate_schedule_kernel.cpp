@@ -34,7 +34,7 @@ class LearningRateScheduleKernel final : public KernelIf<DeviceType::kCPU> {
     }
   }
   void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+                          const std::function<Blob*(const std::string&)>&) const override;
 
   std::unique_ptr<TeePersistentLogStream> log_stream_;
 };
@@ -200,7 +200,7 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
 }  // namespace
 
 void LearningRateScheduleKernel::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const LearningRateScheduleOpConf& conf = this->op_conf().learning_rate_schedule_conf();
   const int64_t train_step = *BnInOp2Blob("train_step")->dptr<int64_t>();
   float learning_rate = conf.learning_rate();

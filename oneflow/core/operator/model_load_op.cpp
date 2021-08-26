@@ -19,11 +19,11 @@ namespace oneflow {
 
 class ModelLoadOp : public Operator {
  public:
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
   virtual Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const ParallelDesc& parallel_desc) const;
+      const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
@@ -34,10 +34,11 @@ class ModelLoadOp : public Operator {
       cfg::SbpSignatureList* sbp_sig_list) const override;
 };
 
-void ModelLoadOp::InitFromOpConf() {
+Maybe<void> ModelLoadOp::InitFromOpConf() {
   CHECK(op_conf().has_model_load_conf());
   EnrollInputBn("path", false);
   EnrollRepeatedOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 namespace {

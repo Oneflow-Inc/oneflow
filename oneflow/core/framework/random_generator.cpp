@@ -84,13 +84,11 @@ Maybe<Generator> DefaultCUDAGenerator(int device_index) {
 #endif  // WITH_CUDA
 
 Maybe<Generator> MakeAutoGenerator() {
-  return std::make_shared<Generator>(
-      std::make_shared<AutoGeneratorImpl>(detail::GetNonDeterministicRandom()));
+  return std::make_shared<Generator>(std::make_shared<AutoGeneratorImpl>(default_rng_seed_val));
 }
 
 Maybe<Generator> MakeCPUGenerator() {
-  return std::make_shared<Generator>(
-      std::make_shared<CPUGeneratorImpl>(detail::GetNonDeterministicRandom()));
+  return std::make_shared<Generator>(std::make_shared<CPUGeneratorImpl>(default_rng_seed_val));
 }
 
 #ifdef WITH_CUDA
@@ -99,7 +97,7 @@ Maybe<Generator> MakeCUDAGenerator(int device_index) {
   CHECK_OR_RETURN(device_index >= 0 && device_index < detail::GetCudaDeviceCount())
       << "Invalid device index " << device_index;
   return std::make_shared<Generator>(
-      std::make_shared<CUDAGeneratorImpl>(detail::GetNonDeterministicRandom(), device_index));
+      std::make_shared<CUDAGeneratorImpl>(default_rng_seed_val, device_index));
 }
 #endif  // WITH_CUDA
 

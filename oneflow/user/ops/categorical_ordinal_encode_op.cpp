@@ -45,7 +45,7 @@ REGISTER_NO_GRAD_USER_OP("CategoricalOrdinalEncode")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* table = GetInputArgModifierFn("table", 0);
       table->set_is_mutable(true);
       table->set_requires_grad(false);
@@ -54,6 +54,7 @@ REGISTER_NO_GRAD_USER_OP("CategoricalOrdinalEncode")
       size->set_requires_grad(false);
       user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
       in->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->parallel_num(), 1);

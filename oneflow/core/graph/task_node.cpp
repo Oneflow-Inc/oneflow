@@ -156,8 +156,8 @@ void TaskNode::ForEachProducedDataRegst(
 
 void TaskNode::Build() { BuildExecGphAndRegst(); }
 
-void TaskNode::EraseZeroSizeProducedBlob() {
-  for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
+void TaskNode::EraseUninitializedShapeProducedBlob() {
+  for (auto& pair : produced_regsts_) { pair.second->EraseUninitializedShapeBlob(); }
 }
 
 void TaskNode::EraseZeroSizeConsumedRegst() {
@@ -338,11 +338,6 @@ void TaskNode::UpdateTaskId() {
   StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
   TaskId task_id = Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id);
   task_id_ = SerializeTaskIdToInt64(task_id);
-}
-
-int64_t TaskNode::GlobalWorkStreamId() const {
-  CHECK_NE(task_id_, -1);
-  return Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id_);
 }
 
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {

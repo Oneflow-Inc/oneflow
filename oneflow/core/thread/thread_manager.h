@@ -29,14 +29,14 @@ class Plan;
 class ThreadMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
-  ThreadMgr() = delete;
+  ThreadMgr() = default;
   ~ThreadMgr();
 
+  void AddPlan(const Plan& plan);
   Thread* GetThrd(int64_t thrd_id);
 
  private:
   friend class Global<ThreadMgr>;
-  explicit ThreadMgr(const Plan& plan);
 
   HashMap<int64_t, std::unique_ptr<Thread>> threads_;
 };

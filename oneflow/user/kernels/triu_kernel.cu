@@ -82,6 +82,7 @@ class GpuTriuKernel final : public user_op::OpKernel {
   ~GpuTriuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
@@ -90,6 +91,7 @@ class GpuTriuKernel final : public user_op::OpKernel {
     const int64_t num_cols = shape.At(shape.NumAxes() - 1);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t elem_cnt = shape.elem_cnt();
+    if (elem_cnt == 0) { return; }
     if (num_cols % (kCudaWarpSize * 2) == 0) {
       const int64_t total_rows = elem_cnt / num_cols;
       TriuWarpProcessRowGpu<<<BlocksNum4ThreadsNum(total_rows * kCudaWarpSize),

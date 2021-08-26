@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/boxing_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -21,6 +21,22 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 
 namespace oneflow {
+
+template<typename T>
+class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
+  BoxingKernel() = default;
+  ~BoxingKernel() = default;
+
+ private:
+  void VirtualKernelInit() override;
+  void ForwardDataContent(const KernelCtx&,
+                          const std::function<Blob*(const std::string&)>&) const override;
+
+  PbRpf<std::string> ibn_0_;
+  PbRpf<std::string> obn_0_;
+};
 
 namespace {
 
@@ -32,7 +48,7 @@ PbRpf<std::string> ConstructPbRpf(const std::string& s) {
 }
 
 template<typename T>
-void CalcSumOfBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+void CalcSumOfBlobs(DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                     const PbRpf<std::string>& src_bns, const std::string& dst_bn) {
   const Blob* src_blob_0 = BnInOp2Blob(src_bns.Get(0));
   Blob* dst_blob = BnInOp2Blob(dst_bn);
@@ -46,7 +62,8 @@ void CalcSumOfBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnI
 }
 
 template<>
-void CalcSumOfBlobs<float16>(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+void CalcSumOfBlobs<float16>(DeviceCtx* ctx,
+                             const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                              const PbRpf<std::string>& src_bns, const std::string& dst_bn) {
   const Blob* src_blob_0 = BnInOp2Blob(src_bns.Get(0));
   Blob* dst_blob = BnInOp2Blob(dst_bn);
@@ -60,7 +77,8 @@ void CalcSumOfBlobs<float16>(DeviceCtx* ctx, std::function<Blob*(const std::stri
   }
 }
 
-void CopyFromFirstToOtherBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+void CopyFromFirstToOtherBlobs(DeviceCtx* ctx,
+                               const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                const PbRpf<std::string>& bns, CopyBlobFieldMthd Copy) {
   const Blob* blob_0 = BnInOp2Blob(bns.Get(0));
   FOR_RANGE(size_t, i, 1, bns.size()) { (BnInOp2Blob(bns.Get(i))->*Copy)(ctx, blob_0); }
@@ -160,7 +178,8 @@ void ConcatSplitPartDataContent(DeviceCtx* ctx, const DataContentDesc& in_desc,
   CHECK_EQ(out_idx, range.end());
 }
 
-void ConcatSplitDataContent(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+void ConcatSplitDataContent(DeviceCtx* ctx,
+                            const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                             const PbRpf<std::string>& concat_bns, int32_t concat_axis,
                             const PbRpf<std::string>& split_bns, int32_t split_axis) {
   DataContentDesc in_desc(BnInOp2Blob, &concat_bns, concat_axis);
@@ -196,7 +215,7 @@ void BoxingKernel<T>::VirtualKernelInit() {
 
 template<typename T>
 void BoxingKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {

@@ -32,6 +32,7 @@ class OfBlob final {
   }
   ~OfBlob() = default;
 
+  const Blob& blob() const { return *blob_; }
   int data_type() const { return blob_->data_type(); }
   size_t NumAxes() const { return blob_->shape().NumAxes(); }
   bool is_dynamic() const { return blob_->blob_desc().is_dynamic(); }
@@ -44,6 +45,9 @@ class OfBlob final {
   template<typename T>
   void AutoMemCopyFrom(const T* ptr, int64_t len) const;
   void AsyncAutoMemset(const char value) const;
+
+  Blob* mut_blob() { return blob_; }
+  DeviceCtx* mut_device_ctx() { return device_ctx_; }
 
  private:
   DeviceCtx* device_ctx_;

@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/actor/compute_actor.h"
+#include "oneflow/core/actor/actor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
-class SspVariableProxyCompActor final : public CompActor {
+class SspVariableProxyActor final : public Actor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SspVariableProxyCompActor);
-  SspVariableProxyCompActor() = default;
-  ~SspVariableProxyCompActor() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(SspVariableProxyActor);
+  SspVariableProxyActor() = default;
+  ~SspVariableProxyActor() override = default;
 
  protected:
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
@@ -33,7 +33,6 @@ class SspVariableProxyCompActor final : public CompActor {
       override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
-  bool CheckOutputActId(int64_t regst_desc_id) const override { return false; }
   bool IsCustomizedReadReady() const override { return consumed_var_rs_.IsCurSlotReady(); }
   bool IsCustomizedWriteReady() const override {
     int64_t cur_staleness = (received_var_piece_id_ - ack_msg_returned_ref_piece_id_);
@@ -55,7 +54,6 @@ class SspVariableProxyCompActor final : public CompActor {
   void UpdtStateAsCustomizedProducedRegst(Regst* regst) override {
     if (regst->regst_desc_id() == produced_value_regst_desc_id_) {
       ++ack_msg_returned_value_piece_id_;
-      CHECK_EQ(regst->piece_id(), ack_msg_returned_value_piece_id_);
       CHECK_EQ(regst, GetRingBufferValueRegst(ack_msg_returned_value_piece_id_));
       CHECK_EQ(0, produced_value_rs_.TryPushBackRegst(regst));
       if (ack_msg_returned_ref_piece_id_ == ack_msg_returned_value_piece_id_
@@ -71,7 +69,6 @@ class SspVariableProxyCompActor final : public CompActor {
       }
     } else if (regst->regst_desc_id() == produced_ref_regst_desc_id_) {
       ++ack_msg_returned_ref_piece_id_;
-      CHECK_EQ(regst->piece_id(), ack_msg_returned_ref_piece_id_);
       CHECK_EQ(regst, ref_regst_);
       if (ack_msg_returned_value_piece_id_ >= ack_msg_returned_ref_piece_id_
           /* All const consumers to value regst has done their job */) {
@@ -90,11 +87,8 @@ class SspVariableProxyCompActor final : public CompActor {
       if (value_regst->consumers_actor_id().empty()) {
         ++ack_msg_returned_value_piece_id_;
       } else {
-        Regst* const var_regst = consumed_var_rs_.Front(consumed_var_regst_desc_id_);
-        CHECK_EQ(received_var_piece_id_, var_regst->piece_id());
         CHECK_EQ(value_regst, GetRingBufferValueRegst(received_var_piece_id_));
-        value_regst->set_piece_id(received_var_piece_id_);
-        CHECK_GT(HandleRegstToConsumer(value_regst, [](int64_t) { return true; }), 0);
+        CHECK_GT(HandleRegstToConsumer(value_regst), 0);
         produced_value_rs_.PopFrontRegsts({produced_value_regst_desc_id_});
       }
     }
@@ -104,8 +98,7 @@ class SspVariableProxyCompActor final : public CompActor {
       if (ref_regst->consumers_actor_id().empty()) {
         ++ack_msg_returned_ref_piece_id_;
       } else {
-        ref_regst->set_piece_id(ack_msg_returned_ref_piece_id_ + 1);
-        CHECK_GT(HandleRegstToConsumer(ref_regst, [](int64_t) { return true; }), 0);
+        CHECK_GT(HandleRegstToConsumer(ref_regst), 0);
         produced_ref_rs_.PopFrontRegsts({produced_ref_regst_desc_id_});
       }
     }
@@ -128,12 +121,12 @@ class SspVariableProxyCompActor final : public CompActor {
     inplace_produced_rs_.InitedDone();
   }
 
-  void VirtualCompActorInit(const TaskProto& task_proto) override {
+  void VirtualActorInit(const TaskProto& task_proto) override {
     CheckInplaceBetweenVarAndRef(task_proto);
     TakeOverVarRegst(task_proto.consumed_regst_desc_id());
     TakeOverRefRegst(task_proto.produced_regst_desc());
     TakeOverValueRegst(task_proto.produced_regst_desc());
-    OF_SET_MSG_HANDLER(&SspVariableProxyCompActor::HandlerNormal);
+    OF_SET_MSG_HANDLER(&SspVariableProxyActor::HandlerNormal);
   }
 
   bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override { return true; }
@@ -146,7 +139,6 @@ class SspVariableProxyCompActor final : public CompActor {
     }
     CHECK_EQ(0, consumed_var_rs_.TryPushBackRegst(var_regst_));
     ++received_var_piece_id_;
-    CHECK_EQ(var_regst_->piece_id(), received_var_piece_id_);
   }
 
  private:
@@ -246,6 +238,6 @@ class SspVariableProxyCompActor final : public CompActor {
   std::vector<Regst*> value_regst_ring_buffer_;
 };
 
-REGISTER_ACTOR(TaskType::kSspVariableProxy, SspVariableProxyCompActor);
+REGISTER_ACTOR(TaskType::kSspVariableProxy, SspVariableProxyActor);
 
 }  // namespace oneflow

@@ -23,13 +23,13 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct BiasAddInterpState : public OpExprInterpState {
+struct BiasAddCaptureState : public AutoGradCaptureState {
   bool input_requires_grad;
   bool bias_requires_grad;
   int32_t axis;
 };
 
-class BiasAdd : public OpExprGradFunction<BiasAddInterpState> {
+class BiasAdd : public OpExprGradFunction<BiasAddCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -42,7 +42,7 @@ class BiasAdd : public OpExprGradFunction<BiasAddInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(BiasAddInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(BiasAddCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->input_requires_grad = inputs.at(0)->requires_grad();
@@ -52,7 +52,7 @@ class BiasAdd : public OpExprGradFunction<BiasAddInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const BiasAddInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const BiasAddCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const int64_t num_axes = out_grads.at(0)->shape()->NumAxes();
     in_grads->resize(2);

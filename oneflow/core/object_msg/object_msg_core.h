@@ -343,7 +343,7 @@ class ObjectMsgDefaultAllocator : public ObjectMsgAllocator {
   std::allocator<char> allocator_;
 };
 
-class ObjectMsgPtrUtil;
+struct ObjectMsgPtrUtil;
 template<typename T>
 class ObjectMsgPtr;
 
@@ -358,7 +358,7 @@ class ObjectMsgBase {
   ObjectMsgAllocator* mut_allocator() const { return allocator_; }
 
  private:
-  friend class ObjectMsgPtrUtil;
+  friend struct ObjectMsgPtrUtil;
   void InitRefCount() { ref_cnt_ = 0; }
   void set_allocator(ObjectMsgAllocator* allocator) { allocator_ = allocator; }
   void IncreaseRefCount() { ref_cnt_++; }

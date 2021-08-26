@@ -69,6 +69,7 @@ void LaunchTransposeGpu(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeVie
     cur_stride *= x_shape.At(i);
   }
   for (int32_t i = 0; i < NDIMS; ++i) { x_strides.val[i] = buff[permutation[i]]; }
+  if (elem_cnt == 0) { return; }
   TransposeGpu<NDIMS, T>
       <<<SMBlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           y_shape_struct, x_strides, elem_cnt, x, y);
@@ -110,7 +111,7 @@ template<typename T>
 struct TransposeUtil final {
 #define MAKE_TRANSPOSE_SWITCH_ENTRY(func_name, NDIMS) func_name<NDIMS, T>
   DEFINE_STATIC_SWITCH_FUNC(void, TransposeImpl, MAKE_TRANSPOSE_SWITCH_ENTRY,
-                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ))
 };
 
 }  // namespace

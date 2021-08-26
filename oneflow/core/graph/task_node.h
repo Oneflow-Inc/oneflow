@@ -67,7 +67,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
-  int64_t GlobalWorkStreamId() const;
   int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
 
   // Setters
@@ -86,7 +85,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
       const std::function<void(const std::string&, const RegstDesc*)>& Handler) const;
   void Build();
 
-  void EraseZeroSizeProducedBlob();
+  void EraseUninitializedShapeProducedBlob();
   void EraseZeroSizeConsumedRegst();
   void EraseZeroSizeProducedRegst();
   void UnbindBnWithEmptyRegst();

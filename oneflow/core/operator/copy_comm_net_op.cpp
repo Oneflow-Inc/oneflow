@@ -17,9 +17,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void CopyCommNetOp::InitFromOpConf() {
+Maybe<void> CopyCommNetOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
+  return Maybe<void>::Ok();
 }
 
 LogicalBlobId CopyCommNetOp::lbi4obn(const std::string& output_bn) const {

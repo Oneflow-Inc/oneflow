@@ -23,8 +23,8 @@ Maybe<void> TransformNegativeAxesToPositive(const std::vector<int32_t>& axes_vec
                                             const int32_t num_axes, AxisVector* fixed_axes_vec) {
   fixed_axes_vec->resize(axes_vec.size());
   FOR_RANGE(size_t, i, 0, fixed_axes_vec->size()) {
-    CHECK_GE(axes_vec[i], -num_axes);
-    CHECK_LT(axes_vec[i], num_axes);
+    CHECK_GE_OR_RETURN(axes_vec[i], -num_axes);
+    CHECK_LT_OR_RETURN(axes_vec[i], num_axes);
     fixed_axes_vec->at(i) = axes_vec[i] >= 0 ? axes_vec[i] : axes_vec[i] + num_axes;
   }
   return Maybe<void>::Ok();
@@ -50,11 +50,7 @@ Maybe<void> SqueezeTensorDescInferFn(user_op::InferContext* ctx) {
   DimVector dim_vec = in_shape.dim_vec();
   JUST(CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &dim_vec));
   dim_vec.erase(std::remove(dim_vec.begin(), dim_vec.end(), -1), dim_vec.end());
-  if (dim_vec.empty()) {
-    *out_shape = Shape({1});
-  } else {
-    *out_shape = Shape(dim_vec);
-  }
+  *out_shape = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 
@@ -91,7 +87,7 @@ REGISTER_USER_OP("squeeze")
     .SetGetSbpFn(SqueezeGetSbpFn);
 
 REGISTER_USER_OP_GRAD("squeeze").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                           user_op::AddOpFn AddOp) {
+                                                           user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op("reshape_like")
@@ -102,6 +98,7 @@ REGISTER_USER_OP_GRAD("squeeze").SetGenBackwardOpConfFn([](const user_op::UserOp
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

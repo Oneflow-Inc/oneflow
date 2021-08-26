@@ -30,6 +30,16 @@ template<typename T, typename Enabled = void>
 class Maybe;
 
 template<typename T>
+struct is_maybe {
+  static const bool value = false;
+};
+
+template<typename T>
+struct is_maybe<Maybe<T>> {
+  static const bool value = true;
+};
+
+template<typename T>
 class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScalarType<T>::value)
                                        && !std::is_reference<T>::value>::type>
     final {
@@ -37,9 +47,10 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Maybe(const T& data) : data_or_error_(std::make_shared<T>(data)) {}
   Maybe(const Error& error) : data_or_error_(error.error_proto()) {}
   Maybe(const std::shared_ptr<T>& data) : data_or_error_(data) {}
+  Maybe(std::shared_ptr<T>&& data) : data_or_error_(std::move(data)) {}
   Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : data_or_error_(error) {}
   Maybe(const Maybe&) = default;
-  Maybe(Maybe&&) = default;
+  Maybe(Maybe&& other) : data_or_error_(std::move(other.data_or_error_)) {}
   ~Maybe() = default;
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
@@ -149,12 +160,18 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
   SharedOrScalar<cfg::ErrorProto, void*> error_or_scalar_;
 };
 
+inline const std::shared_ptr<cfg::ErrorProto>& UninitializedValueError() {
+  static thread_local const auto& error = Error::ValueError("uninitialized value").error_proto();
+  return error;
+}
+
 template<typename T>
 class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
  public:
   Maybe(T data) : error_or_scalar_(data) {}
   Maybe(const Error& error) : error_or_scalar_(error.error_proto()) { CheckError(); }
   Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : error_or_scalar_(error) { CheckError(); }
+  Maybe() : error_or_scalar_(UninitializedValueError()) {}
   Maybe(const Maybe&) = default;
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
@@ -252,44 +269,80 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 
 #if defined(__GNUC__) || defined(__CUDACC__) || defined(__clang__)
 
-// fix CUDA 11.1 compiler crashes
-#if defined(__CUDACC__)
-#define MAYBE_CONST_AUTO_REF const auto
-#else
-#define MAYBE_CONST_AUTO_REF const auto&
-#endif  // defined(__CUDACC__)
+namespace private_details {
+
+inline void MaybeErrorAddStackFrame(const std::shared_ptr<cfg::ErrorProto>& err,
+                                    const std::string& file, int64_t line, const std::string& func,
+                                    const std::string& message) {
+  auto* stack_frame = err->add_stack_frame();
+  stack_frame->set_file(file);
+  stack_frame->set_line(line);
+  stack_frame->set_function(func);
+  stack_frame->set_error_msg(message);
+}
+
+template<typename... T>
+Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
+  __attribute__((unused)) int dummy[] = {((void)(std::move(err) << std::forward<T>(msg)), 0)...};
+  return std::move(err);
+}
+
+}  // namespace private_details
 
 #define TRY(...) __MaybeErrorStackCheckWrapper__(__VA_ARGS__)
-#define JUST(...)                                                              \
-  ({                                                                           \
-    MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-    if (!maybe.IsOk()) {                                                       \
-      auto* stack_frame = maybe.error()->add_stack_frame();                    \
-      stack_frame->set_location(MAYBE_FAILED_LOC);                             \
-      stack_frame->set_function(__FUNCTION__);                                 \
-      return maybe.error();                                                    \
-    }                                                                          \
-    maybe;                                                                     \
+#define JUST(...)                                                                           \
+  ({                                                                                        \
+    auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                            \
+    if (!maybe.IsOk()) {                                                                    \
+      ::oneflow::private_details::MaybeErrorAddStackFrame(                                  \
+          maybe.error(), __FILE__, __LINE__, __FUNCTION__, OF_PP_STRINGIZE((__VA_ARGS__))); \
+      return maybe.error();                                                                 \
+    }                                                                                       \
+    std::move(maybe);                                                                       \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
-#define CHECK_JUST(...)                                                        \
-  ([&](const char* func_name) {                                                \
-    MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-    if (!maybe.IsOk()) {                                                       \
-      auto* stack_frame = maybe.error()->add_stack_frame();                    \
-      stack_frame->set_location(MAYBE_FAILED_LOC);                             \
-      stack_frame->set_function(func_name);                                    \
-      LOG(FATAL) << maybe.GetSerializedError();                                \
-    }                                                                          \
-    return maybe;                                                              \
-  })(__FUNCTION__)                                                             \
+#define CHECK_JUST(...)                                                                  \
+  ([&](const char* func_name) {                                                          \
+    auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                         \
+    if (!maybe.IsOk()) {                                                                 \
+      ::oneflow::private_details::MaybeErrorAddStackFrame(                               \
+          maybe.error(), __FILE__, __LINE__, func_name, OF_PP_STRINGIZE((__VA_ARGS__))); \
+      LOG(FATAL) << maybe.GetSerializedError();                                          \
+    }                                                                                    \
+    return std::move(maybe);                                                             \
+  })(__FUNCTION__)                                                                       \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
+#define JUST_MSG(value, ...)                                                               \
+  ({                                                                                       \
+    auto&& maybe = (value);                                                                \
+    if (!maybe.IsOk()) {                                                                   \
+      return ::oneflow::private_details::MaybeErrorAddMessage(                             \
+          ::oneflow::Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__), \
+          OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__);                                    \
+    }                                                                                      \
+    std::move(maybe);                                                                      \
+  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define OF_RETURN_IF_ERROR(...)                                                              \
-  for (MAYBE_CONST_AUTO_REF maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
-       !maybe_##__LINE__.IsOk();)                                                            \
-  return Error(maybe_##__LINE__.error()).AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
+#define CHECK_JUST_MSG(value, ...)                                                             \
+  ([&](const char* func_name) {                                                                \
+    auto&& maybe = (value);                                                                    \
+    if (!maybe.IsOk()) {                                                                       \
+      LOG(FATAL)                                                                               \
+          << ::oneflow::private_details::MaybeErrorAddMessage(                                 \
+                 ::oneflow::Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, func_name), \
+                 OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                                  \
+                 ->DebugString();                                                              \
+    }                                                                                          \
+    return std::move(maybe);                                                                   \
+  })(__FUNCTION__)                                                                             \
+      .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+
+#define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
+
+#define OF_RETURN_IF_ERROR(...)                                                \
+  for (auto&& maybe_##__LINE__ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
+       !maybe_##__LINE__.IsOk();)                                              \
+  return Error(maybe_##__LINE__.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
 #else
 #error statement expression is no supported, please implement try-catch version of JUST
@@ -297,17 +350,21 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 
 }  // namespace oneflow
 
-#define OF_TODO() return Error::Todo().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
+#define OF_TODO() return Error::Todo().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 #define OF_UNIMPLEMENTED() \
-  return Error::Unimplemented().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)
+  return Error::Unimplemented().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
-#define OF_COMPLIE_OPTION_EEEOR()                                                  \
-  return Error::CompileOptionWrong().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__) \
+#define OF_RUNTIME_ERROR()                                                                        \
+  return Error::RuntimeError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) << "RuntimeError " \
+                                                                                  ": "
+
+#define OF_COMPLIE_OPTION_ERROR()                                                    \
+  return Error::CompileOptionWrong().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << " Compile option wrong: "
 
-#define CHECK_OR_RETURN(expr)                                                    \
-  if (!(expr))                                                                   \
-  return Error::CheckFailedError().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__) \
+#define CHECK_OR_RETURN(expr)                                                      \
+  if (!(expr))                                                                     \
+  return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << " Check failed: " << OF_PP_STRINGIZE(expr) << " "
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs) \

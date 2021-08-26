@@ -43,8 +43,7 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
   msg.regst_wrapper_.comm_net_token = nullptr;
-  msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
-  msg.regst_wrapper_.regst_status.regst_desc_id = regst_raw_ptr->regst_desc_id();
+  msg.regst_wrapper_.regst_desc_id = regst_raw_ptr->regst_desc_id();
   msg.regst_wrapper_.has_sole_empty_blob = IsSoleBlobAndDynamicEmpty(regst_raw_ptr);
   msg.regst_wrapper_.is_data_regst_to_consumer =
       regst_raw_ptr->regst_desc()->regst_desc_type().has_data_regst_desc();
@@ -58,7 +57,7 @@ ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
   msg.dst_actor_id_ = producer;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
-  msg.regst_wrapper_.regst_status.regst_desc_id = -1;
+  msg.regst_wrapper_.regst_desc_id = -1;
   msg.regst_wrapper_.comm_net_token = nullptr;
   // you can NOT access the regst ptr when multi nodes, because the address is in another machine
   msg.regst_wrapper_.has_sole_empty_blob = false;
@@ -100,21 +99,22 @@ Regst* ActorMsg::regst() const {
 
 int64_t ActorMsg::regst_desc_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  // FIXME(liujunchneg): regst_desc_id for remote returned regst
   if (Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_) == GlobalProcessCtx::Rank()) {
     return regst_wrapper_.regst->regst_desc_id();
   } else {
-    return regst_wrapper_.regst_status.regst_desc_id;
+    return regst_wrapper_.regst_desc_id;
   }
 }
 
-int64_t ActorMsg::piece_id() const {
+int64_t ActorMsg::comm_net_sequence_number() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-  return regst_wrapper_.regst_status.piece_id;
+  return regst_wrapper_.comm_net_sequence_number;
 }
 
-int64_t ActorMsg::act_id() const {
+void ActorMsg::set_comm_net_sequence_number(int64_t sequence_number) {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-  return regst_wrapper_.regst_status.act_id;
+  regst_wrapper_.comm_net_sequence_number = sequence_number;
 }
 
 void* ActorMsg::comm_net_token() const {

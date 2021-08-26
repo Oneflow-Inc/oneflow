@@ -20,21 +20,21 @@ namespace oneflow {
 namespace {
 
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* scalar = ctx->TensorDesc4ArgNameAndIndex("scalar", 0);
-  CHECK_EQ_OR_RETURN(scalar->shape().elem_cnt(), 1);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& scalar = ctx->InputTensorDesc("scalar", 0);
+  CHECK_EQ_OR_RETURN(scalar.shape().elem_cnt(), 1);
   user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-  *y->mut_shape() = x->shape();
-  *y->mut_is_dynamic() = x->is_dynamic();
+  *y->mut_shape() = x.shape();
+  *y->mut_is_dynamic() = x.is_dynamic();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> DataTypeInferFn(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* scalar = ctx->TensorDesc4ArgNameAndIndex("scalar", 0);
-  CHECK_EQ_OR_RETURN(x->data_type(), scalar->data_type());
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& scalar = ctx->InputTensorDesc("scalar", 0);
+  CHECK_EQ_OR_RETURN(x.data_type(), scalar.data_type());
   user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-  *y->mut_data_type() = x->data_type();
+  *y->mut_data_type() = x.data_type();
   return Maybe<void>::Ok();
 }
 
@@ -77,7 +77,8 @@ REGISTER_USER_OP("scalar_add_by_tensor")
     }));
 
 REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("y", 0), "x", 0);
       }
@@ -95,6 +96,7 @@ REGISTER_USER_OP_GRAD("scalar_add_by_tensor")
         op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "scalar", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("scalar_sub_by_tensor")
@@ -113,7 +115,8 @@ REGISTER_USER_OP("scalar_sub_by_tensor")
     }));
 
 REGISTER_USER_OP_GRAD("scalar_sub_by_tensor")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("y", 0), "x", 0);
       }
@@ -142,6 +145,7 @@ REGISTER_USER_OP_GRAD("scalar_sub_by_tensor")
         AddOp(scalar_grad_reduce_sum_op);
         AddOp(scalar_grad_scalar_mul_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("scalar_mul_by_tensor")
@@ -165,7 +169,8 @@ REGISTER_USER_OP("scalar_mul_by_tensor")
     }));
 
 REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op = builder.Op("scalar_mul_by_tensor")
@@ -200,6 +205,7 @@ REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
         AddOp(scalar_grad_multiply_op);
         AddOp(scalar_grad_reduce_sum_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("scalar_div_by_tensor")
@@ -218,7 +224,8 @@ REGISTER_USER_OP("scalar_div_by_tensor")
     }));
 
 REGISTER_USER_OP_GRAD("scalar_div_by_tensor")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op = builder.Op("scalar_div_by_tensor")
@@ -240,6 +247,7 @@ REGISTER_USER_OP_GRAD("scalar_div_by_tensor")
         op.BindGradTensorWithOpInput(grad_op.output("dy", 0), "scalar", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

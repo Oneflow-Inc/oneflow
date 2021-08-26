@@ -22,17 +22,18 @@ REGISTER_USER_OP("sigmoid_cross_entropy")
     .Input("label")
     .Output("loss")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("label", 0);
       cond_arg_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
-      const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-      CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
+      const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
+      const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
+      CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape());
       user_op::TensorDesc* loss_desc = ctx->OutputTensorDesc("loss", 0);
-      *loss_desc->mut_shape() = prediction_desc->shape();
-      *loss_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
+      *loss_desc->mut_shape() = prediction_desc.shape();
+      *loss_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -58,19 +59,20 @@ REGISTER_USER_OP("sigmoid_cross_entropy_grad")
     .Input("label")
     .Output("prediction_diff")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("label", 0);
       cond_arg_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
-      const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-      const user_op::TensorDesc* loss_diff_desc = ctx->TensorDesc4ArgNameAndIndex("loss_diff", 0);
-      CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
-      CHECK_EQ_OR_RETURN(loss_diff_desc->shape(), prediction_desc->shape());
+      const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
+      const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
+      const user_op::TensorDesc& loss_diff_desc = ctx->InputTensorDesc("loss_diff", 0);
+      CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape());
+      CHECK_EQ_OR_RETURN(loss_diff_desc.shape(), prediction_desc.shape());
       user_op::TensorDesc* prediction_diff = ctx->OutputTensorDesc("prediction_diff", 0);
-      *prediction_diff->mut_shape() = prediction_desc->shape();
-      *prediction_diff->mut_is_dynamic() = prediction_desc->is_dynamic();
+      *prediction_diff->mut_shape() = prediction_desc.shape();
+      *prediction_diff->mut_is_dynamic() = prediction_desc.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -92,7 +94,8 @@ REGISTER_USER_OP("sigmoid_cross_entropy_grad")
     });
 
 REGISTER_USER_OP_GRAD("sigmoid_cross_entropy")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -105,5 +108,6 @@ REGISTER_USER_OP_GRAD("sigmoid_cross_entropy")
         op.BindGradTensorWithOpInput(grad_op.output("prediction_diff", 0), "prediction", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 }  // namespace oneflow

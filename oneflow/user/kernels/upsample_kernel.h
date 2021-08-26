@@ -15,6 +15,16 @@ limitations under the License.
 */
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
+template<typename T>
+OF_DEVICE_FUNC T GetLinearInputIndex(const int64_t out_dim_idx, const T scale, bool align_corners) {
+  if (align_corners) {
+    return static_cast<T>(scale * out_dim_idx);
+  } else {
+    T src_idx = scale * (out_dim_idx + 0.5) - 0.5;
+    return static_cast<T>(src_idx < 0 ? 0 : src_idx);
+  }
+}
+
 OF_DEVICE_FUNC static int64_t GetNearestInputIndex(const int64_t out_dim_idx, const float scale,
                                                    const int64_t in_dim_size) {
   int64_t index = static_cast<int64_t>(std::floor((static_cast<float>(out_dim_idx) * scale)));
@@ -34,6 +44,17 @@ OF_DEVICE_FUNC T GetAreaPixelScale(const int64_t input_size, const int64_t outpu
     }
   } else {
     return (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
+  }
+}
+
+template<typename T>
+OF_DEVICE_FUNC T GetAreaPixel(const T scale, const int64_t dst_index, bool align_corners,
+                              bool cubic = false) {
+  if (align_corners) {
+    return scale * dst_index;
+  } else {
+    T src_idx = scale * (dst_index + 0.5) - 0.5;
+    return (!cubic && src_idx < 0) ? static_cast<T>(0) : src_idx;
   }
 }
 
@@ -77,4 +98,61 @@ OF_DEVICE_FUNC void GetBilinearParam(const bool align_corners, const int64_t h, 
   params->left_w_index = w1;
   params->right_w_index = w1 + w1p;
   params->w_lerp = w1r - w1;
+}
+
+template<typename T>
+OF_DEVICE_FUNC void upsample_increment_value_bounded(T* data, int64_t width, int64_t height,
+                                                     int64_t x, int64_t y, T value) {
+  int64_t access_x = std::max(std::min(x, width - 1), static_cast<int64_t>(0));
+  int64_t access_y = std::max(std::min(y, height - 1), static_cast<int64_t>(0));
+  data[access_y * width + access_x] += value;
+}
+
+template<typename T>
+OF_DEVICE_FUNC T upsample_get_value_bounded(const T* data, const int64_t width,
+                                            const int64_t height, const int64_t x,
+                                            const int64_t y) {
+  int64_t access_x = x;
+  access_x = access_x > width - 1 ? width - 1 : access_x;
+  access_x = access_x < 0 ? 0 : access_x;
+
+  int64_t access_y = y;
+  access_y = access_y > height - 1 ? height - 1 : access_y;
+  access_y = access_y < 0 ? 0 : access_y;
+
+  return data[access_y * width + access_x];
+}
+
+// Based on
+// https://en.wikipedia.org/wiki/Bicubic_interpolation#Bicubic_convolution_algorithm
+
+template<typename T>
+OF_DEVICE_FUNC T cubic_convolution1(const T x, const T A) {
+  return ((A + 2.0) * x - (A + 3.0)) * x * x + 1.0;
+}
+
+template<typename T>
+OF_DEVICE_FUNC T cubic_convolution2(const T x, const T A) {
+  return ((A * x - 5.0 * A) * x + 8.0 * A) * x - 4.0 * A;
+}
+
+template<typename T>
+OF_DEVICE_FUNC void get_cubic_upsample_coefficients(T coeffs[4], const T t) {
+  T A = -0.75;
+
+  T x1 = t;
+  coeffs[0] = cubic_convolution2<T>(x1 + 1.0, A);
+  coeffs[1] = cubic_convolution1<T>(x1, A);
+
+  // opposite coefficients
+  T x2 = 1.0 - t;
+  coeffs[2] = cubic_convolution1<T>(x2, A);
+  coeffs[3] = cubic_convolution2<T>(x2 + 1.0, A);
+}
+
+template<typename T>
+OF_DEVICE_FUNC T cubic_interp1d(const T x0, const T x1, const T x2, const T x3, const T t) {
+  T coeffs[4];
+  get_cubic_upsample_coefficients<T>(coeffs, t);
+  return x0 * coeffs[0] * 1.0 + x1 * coeffs[1] * 1.0 + x2 * coeffs[2] * 1.0 + x3 * coeffs[3] * 1.0;
 }

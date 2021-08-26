@@ -38,6 +38,7 @@ class InferContext {
  public:
   virtual ~InferContext() = default;
 
+  virtual const TensorDesc& InputTensorDesc(const std::string&, int32_t) const = 0;
   virtual TensorDesc* OutputTensorDesc(const std::string&, int32_t) = 0;
   virtual TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
@@ -75,8 +76,7 @@ class InferContext {
   virtual const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
 
-  virtual const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
-                                                                                int32_t) const = 0;
+  virtual const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual bool InputIsDynamic(const std::string&, int32_t) const = 0;
   virtual bool* OutputIsDynamic(const std::string&, int32_t) = 0;

@@ -11,8 +11,8 @@ if [ -n "$index" ]; then
 elif [ -d "$wheel_path" ]; then
     ls -la $wheel_path
     export PATH=/root/.local/bin:$PATH
-    python3 -m pip install piprepo==0.1.3 --user
-    piprepo build $wheel_path
+    python3 -m pip install https://oneflow-static.oss-cn-beijing.aliyuncs.com/pipindex/pipindex-0.1.3-py2.py3-none-any.whl --user
+    pipindex build $wheel_path
     python3 -m pip install -U --user --extra-index-url file://${wheel_path}/simple ${pkg_name}
 elif [ -e "$wheel_path" ]; then
     python3 -m pip install --user "$wheel_path"

@@ -40,13 +40,9 @@ message Resource {
   optional int32 cpu_device_num = 5 [default = 0];
   optional int32 comm_net_worker_num = 6 [default = 4];
   optional int32 max_mdsave_worker_num = 7 [default = 64];
-  optional bool use_rdma = 8 [default = false];
-  optional uint64 rdma_mem_block_mbyte = 9 [default = 8];
-  optional uint64 rdma_recv_msg_buf_mbyte = 10 [default = 6];
   optional uint64 reserved_host_mem_mbyte = 12 [default = 500];
   optional uint64 reserved_device_mem_mbyte = 13 [default = 500];
   optional int32 compute_thread_pool_size = 15;
-  optional bool thread_enable_local_message_queue = 103 [default = false];
   optional bool enable_thread_local_cache = 16 [default = true];
   optional int64 thread_local_cache_max_size = 17 [default = 67108864]; // 64M
   optional bool enable_debug_mode = 18 [default = false];
