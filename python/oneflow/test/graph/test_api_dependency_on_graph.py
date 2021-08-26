@@ -23,6 +23,58 @@ import oneflow.unittest
 from alexnet_model import alexnet
 
 
+class Graph(flow.nn.Graph):
+    def __init__(self, module):
+        self.m = module
+    
+    def build(self, x):
+        out = self.m(x)
+        return out
+
+
+def parse_attr(attr):
+    # Parse node_attr
+    attrs = {}
+    for a in attr:
+        attr_str = str(attr[a])
+
+        if attr_str[0:7] == "at_list":
+            attr_str_ = attr_str.split(" ")[0]
+
+            if attr_str_ == "at_list_float":
+                attrs[a] = tuple(attr[a].at_list_float.val)
+            elif attr_str_ == "at_list_int32":
+                attrs[a] = tuple(attr[a].at_list_int32.val)
+            elif attr_str_ == "at_list_int64":
+                attrs[a] = tuple(attr[a].at_list_int64.val)
+
+        elif attr_str.split(":")[0] == "at_string":
+            attrs[a] = attr[a].at_string
+
+        elif attr_str.split(" ")[0] == "at_shape":
+            attrs[a] = tuple(list(attr[a].at_shape.dim))
+
+        else:
+            attr_str_ = attr_str.split(":")[0]
+            if attr_str_ == "at_bool":
+                attrs[a] = attr[a].at_bool
+            elif attr_str_ == "at_double":
+                attrs[a] = attr[a].at_double
+            elif attr_str_ == "at_float":
+                attrs[a] = attr[a].at_float
+            elif attr_str_ == "at_int32":
+                attrs[a] = attr[a].at_int32
+            elif attr_str_ == "at_int64":
+                attrs[a] = attr[a].at_int64
+
+    return attrs
+
+
+def is_user_op(node):
+    # Determine if the the node is the intermediate variables of graph
+    return node.WhichOneof("op_type") == "user_conf"
+
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestConvertDependency(flow.unittest.TestCase):
@@ -36,18 +88,10 @@ class TestConvertDependency(flow.unittest.TestCase):
 
 
     def test_infos_of_nodes(test_case):
-        class Graph(flow.nn.Graph):
-            def __init__(self, module):
-                self.m = module
-            
-            def build(self, x):
-                out = self.m(x)
-                return out
-
         alexnet_module = alexnet()
         alexnet_graph = Graph(alexnet_module)
-
         graph_str = repr(alexnet_graph)
+
         size_where = 2
         if "cuda" in graph_str:
             size_where = 3
@@ -77,11 +121,15 @@ class TestConvertDependency(flow.unittest.TestCase):
                     test_case.assertEqual(type_attr, "oneflow.float32")
 
                 data_size = tuple(map(int, size_attr[1:-1].split(", ")))
-                node_name = attrs[1]
+                if cnt == 1 and t == "PARAMETER":
+                    test_case.assertEqual(data_size, (64, 3, 11, 11))
+                elif cnt == 15 and t == "PARAMETER":
+                    test_case.assertEqual(data_size, (1000, 4096))
             num_nodes[t] = cnt
 
         test_case.assertEqual(num_nodes["INPUT"]!=0, True)
-        test_case.assertEqual(num_nodes["PARAMETER"]==16, True)
+        test_case.assertEqual(num_nodes["BUFFER"], 0)
+        test_case.assertEqual(num_nodes["PARAMETER"], 16)
         test_case.assertEqual(num_nodes["OUTPUT"]!=0, True)
 
         # get graph proto, if you don't _compile the graph, the _graph_proto will be None
@@ -100,7 +148,57 @@ class TestConvertDependency(flow.unittest.TestCase):
         nodes = {}
         for op in graph_proto.net.op:
             nodes[op.name] = op
-        print(nodes)
+
+        op_names = []
+        op_attrs = []
+        for node_name in nodes:
+            node = nodes[node_name]
+            if is_user_op(node):
+                op_name = node.user_conf.op_type_name
+                op_attr = parse_attr(node.user_conf.attr)
+                op_names.append(op_name)
+                op_attrs.append(op_attr)
+
+        test_case.assertEqual(op_names[0], "conv2d")
+        test_case.assertEqual(op_names[1], "relu")
+        test_case.assertEqual(op_names[2], "maxpool_2d")
+
+        test_case.assertEqual(op_attrs[0]["kernel_size"], (11, 11))
+        test_case.assertEqual(op_attrs[0]["strides"], (4, 4))
+        test_case.assertEqual(op_attrs[0]["padding_before"], (2, 2))
+
+
+    def test_buffer_convert_dependence(test_case):
+        class SubModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.fc1 = flow.nn.Linear(36, 4, False)
+                self.register_buffer("dummy_buff", flow.Tensor(1, 4))
+
+            def forward(self, x):
+                x = self.fc1(x)
+                x += self.dummy_buff
+                return x
+        
+        sub_module = SubModule()
+        sub_graph = Graph(sub_module)
+        graph_str = repr(sub_graph)
+
+        size_where = 2
+        if "cuda" in graph_str:
+            size_where = 3
+
+        p_size = re.compile(r"size=\(.*?\)", re.S)
+        p_type = re.compile(r"dtype=.*?,", re.S)
+        num_nodes = {}
+
+        data = re.finditer("BUFFER:.*", graph_str)
+        for i in data:
+            attrs = i.group().split(":")
+            size_strs = re.findall(p_size, attrs[size_where])
+            size_attr = size_strs[0].replace("size=", "")
+            data_size = tuple(map(int, size_attr[1:-1].split(", ")))
+            test_case.assertEqual(data_size, (1, 4))
 
 
 if __name__ == "__main__":
