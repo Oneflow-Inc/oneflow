@@ -17,7 +17,7 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/thread/consistent_unique_id.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
@@ -30,9 +30,9 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InitConsistentTransportTokenScope(const std::string& thread_tag,
-                                              int64_t thread_consistent_uid,
+                                              int64_t thread_consistent_id,
                                               Symbol<RankGroup> rank_group) {
-  JUST(SetThisThreadConsistentUniqueId(thread_consistent_uid, thread_tag));
+  JUST(InitThisThreadUniqueConsistentId(thread_consistent_id, thread_tag));
   static thread_local const auto& init_rank_group_scope =
       JUST(RankGroupScope::MakeInitialRankGroupScope(rank_group));
   // no unused warning for `init_rank_group_scope`.
@@ -41,14 +41,14 @@ Maybe<void> InitConsistentTransportTokenScope(const std::string& thread_tag,
 }
 
 Maybe<void> InitConsistentTransportTokenScope(const std::string& thread_tag,
-                                              int64_t thread_consistent_uid) {
+                                              int64_t thread_consistent_id) {
   const auto& rank_group = JUST(RankGroup::DefaultRankGroup());
-  JUST(InitConsistentTransportTokenScope(thread_tag, thread_consistent_uid, rank_group));
+  JUST(InitConsistentTransportTokenScope(thread_tag, thread_consistent_id, rank_group));
   return Maybe<void>::Ok();
 }
 
 void ApiInitDefaultConsistentTransportTokenScope() {
-  return InitConsistentTransportTokenScope("main", 0).GetOrThrow();
+  return InitConsistentTransportTokenScope("main", kThreadConsistentIdMain).GetOrThrow();
 }
 
 }  // namespace
