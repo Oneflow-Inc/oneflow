@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_QP_H_
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_QP_H_
 
-
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/platform/include/ibv.h"

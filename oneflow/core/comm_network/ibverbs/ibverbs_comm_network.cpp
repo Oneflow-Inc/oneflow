@@ -79,6 +79,7 @@ IBVerbsCommNet::~IBVerbsCommNet() {
     if (qp) { delete qp; }
   }
   msg_buf_->FreeMr();
+  delete msg_buf_;
   CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
   CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
   CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
@@ -208,7 +209,7 @@ void IBVerbsCommNet::PollCQ() {
     FOR_RANGE(int32_t, i, 0, found_wc_num) {
       const ibv_wc& wc = wc_vec.at(i);
       WorkRequestId* wr_id = reinterpret_cast<WorkRequestId*>(wc.wr_id);
-      CHECK_EQ(wc.status, IBV_WC_SUCCESS) << wc.opcode << "wc.wr_id" << wc.wr_id;
+      CHECK_EQ(wc.status, IBV_WC_SUCCESS) << wc.opcode ;
       IBVerbsQP* qp = wr_id->qp;
       switch (wc.opcode) {
         case IBV_WC_RDMA_READ: {
