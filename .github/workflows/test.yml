@@ -23,6 +23,9 @@ jobs:
         id: generating
         run: |
           python3 .github/scripts/set_initial_variables.py --only_clang=${{ contains(github.event.pull_request.labels.*.name, 'need-clang-only') }} --out initial-variables.json
+      - name: Print initial-variables.json
+        run: |
+          cat initial-variables.json
       - name: Upload initial-variables.json
         uses: actions/upload-artifact@v2
         with:
