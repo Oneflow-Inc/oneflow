@@ -136,7 +136,6 @@ OneFlow Tensor Class
             tanh, 
             tile, 
             to, 
-            tolist, 
             topk, 
             transpose,
             tril, 
@@ -156,4 +155,6 @@ OneFlow Tensor Class
             double, 
             type_as, 
             cpu, 
-            cuda 
+            cuda,
+            item,
+            tolist
