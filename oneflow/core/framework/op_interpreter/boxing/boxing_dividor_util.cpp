@@ -79,16 +79,19 @@ decltype(FlattenInHierarchy) FlattenInHierarchy = DECORATE(&RawFlattenInHierarch
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp() {
+Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp(int64_t ndim) {
   cfg::NdSbp partial_sum_nd_sbp;
-  partial_sum_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
+  for (int64_t i = 0; i < ndim; ++i) {
+    partial_sum_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
+  }
   return SymbolOf(partial_sum_nd_sbp);
 }
 
 auto* CachedGetPartialSumNdSbp = DECORATE(&GetPartialSumNdSbp, ThreadLocal);
 
 Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithPartialSum(Symbol<PlacedNdSbp> placed_nd_sbp) {
-  Symbol<cfg::NdSbp> partial_sum_nd_sbp = JUST(CachedGetPartialSumNdSbp());
+  Symbol<cfg::NdSbp> partial_sum_nd_sbp =
+      JUST(CachedGetPartialSumNdSbp(placed_nd_sbp->nd_sbp()->sbp_parallel_size()));
   return JUST(PlacedNdSbp::New(partial_sum_nd_sbp, placed_nd_sbp->placement()));
 }
 
@@ -110,16 +113,19 @@ decltype(OutPlacementAndPartialSum) OutPlacementAndPartialSum =
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp() {
+Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp(int64_t ndim) {
   cfg::NdSbp broadcast_nd_sbp;
-  broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  for (int64_t i = 0; i < ndim; ++i) {
+    broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  }
   return SymbolOf(broadcast_nd_sbp);
 }
 
 auto* CachedGetBroadcastNdSbp = DECORATE(&GetBroadcastNdSbp, ThreadLocal);
 
 Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithBroadcast(Symbol<PlacedNdSbp> placed_nd_sbp) {
-  Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetBroadcastNdSbp());
+  Symbol<cfg::NdSbp> broadcast_nd_sbp =
+      JUST(CachedGetBroadcastNdSbp(placed_nd_sbp->nd_sbp()->sbp_parallel_size()));
   return JUST(PlacedNdSbp::New(broadcast_nd_sbp, placed_nd_sbp->placement()));
 }
 

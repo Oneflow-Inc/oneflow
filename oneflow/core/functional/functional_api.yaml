@@ -989,7 +989,7 @@
   signature: "Tensor (Tensor x) => Broadcast"
   bind_python: True
 
-- name: "private_local_all_reduce"
+- name: "local_all_reduce"
   signature: "Tensor (Tensor x) => LocalAllReduce"
   bind_python: True
 
