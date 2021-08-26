@@ -583,6 +583,93 @@ class TestTensor(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=3, dim1=2, dim2=3).to(device)
         return x.lt(y)
 
+    @autotest(auto_backward=False)
+    def test_tensor_topk_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=4, dim1=8, dim2=9, dim3=10).to(device)
+        y = x.topk(
+            random(low=1, high=8).to(int),
+            dim=random(low=1, high=4).to(int),
+            largest=random_bool(),
+            sorted=constant(True),
+        )
+        return y[0], y[1]
+
+    @autotest(auto_backward=False)
+    def test_flow_fmod_element_with_random_data(test_case):
+        device = random_device()
+        dim1 = random().to(int)
+        dim2 = random().to(int)
+        input = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        other = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        return input.fmod(other)
+
+    @autotest(auto_backward=False)
+    def test_flow_fmod_broadcast_with_random_data(test_case):
+        device = random_device()
+        dim1 = random().to(int)
+        dim2 = random().to(int)
+        input = random_pytorch_tensor(ndim=3, dim1=constant(1), dim2=dim2).to(device)
+        other = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=constant(1)).to(device)
+        return input.fmod(other)
+
+    @autotest(auto_backward=True)
+    def test_flow_fmod_scalar_with_random_data(test_case):
+        device = random_device()
+        dim1 = random().to(int)
+        dim2 = random().to(int)
+        input = random_pytorch_tensor(ndim=3, dim1=dim1, dim2=dim2).to(device)
+        other = 3
+        return input.fmod(other)
+
+    @autotest(auto_backward=False)
+    def test_fmod_with_0shape_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        y = x.fmod(2)
+        return y
+
+    @autotest()
+    def test_tensor_flip_list_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(
+            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+        ).to(device)
+        y = x.flip(constant([0, 1, 2]))
+        return y
+
+    @autotest()
+    def test_tensor_flip_tuple_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(
+            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+        ).to(device)
+        y = x.flip(constant((0, 1, 2)))
+        return y
+
+    @autotest()
+    def test_tensor_chunk_list_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_pytorch_tensor(
+            ndim=4,
+            dim1=random(low=4, high=8).to(int),
+            dim2=random(low=4, high=8).to(int),
+            dim3=random(low=4, high=8).to(int),
+        ).to(device)
+        y = x.chunk(chunks=random(low=1, high=5).to(int), dim=dim)
+        z = torch.cat(y, dim=dim)
+        return z
+
+    @autotest()
+    def test_tensor_reciprocal_list_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(
+            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+        ).to(device)
+        y = x.reciprocal()
+        return y
+
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_slice(test_case):
         x = np.random.randn(2, 3, 4, 5).astype(np.float32)

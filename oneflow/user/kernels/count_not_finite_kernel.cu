@@ -82,6 +82,7 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel, public user_op::
   ~CountNotFiniteGpuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -112,6 +113,7 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
   ~MultiCountNotFiniteGpuKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     Param<T, 128> para;
@@ -122,7 +124,6 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
     int64_t remain_size = ctx->inputs().size();
     int64_t input_id = 0;
     while (remain_size > 0) {
-      int64_t num_x = 0;
       if (remain_size > 128) {
         remain_size -= 128;
         para.num_x = 128;
