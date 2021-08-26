@@ -60,7 +60,7 @@ class InferenceSession {
   Maybe<void> Init();
   Maybe<void> OpenCtx(std::string job_name, JobSignatureDef* signature, int batch_size);
   Maybe<void> CloseCtx();
-  Maybe<void> Compile(std::vector<OperatorConf>& op_list);
+  Maybe<void> Compile(GraphDef& graph_def);
 
   Maybe<void> LoadModel_(std::string saved_model_dir,
                          ModelVersionPolicy model_version_policy,

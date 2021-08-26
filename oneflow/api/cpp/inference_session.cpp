@@ -96,6 +96,7 @@ Maybe<void> InferenceSession::Init() {
   }
 
   this->status_ = SessionStatus::OPEN;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferenceSession::Close() {
@@ -109,6 +110,7 @@ Maybe<void> InferenceSession::Close() {
   }
 
   this->status_ = SessionStatus::CLOSED;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferenceSession::OpenCtx(std::string job_name, JobSignatureDef* signature, int batch_size = 0) {
@@ -145,11 +147,12 @@ Maybe<void> InferenceSession::OpenCtx(std::string job_name, JobSignatureDef* sig
     CHECK_OR_RETURN(false) << Error::Unimplemented();
   }
 
-  // std::shared_ptr<Scope> scope = MakeInitialScope(job_conf, device_tag, 
-  //                                   device_ids, nullptr, this->is_mirrored_);
+  std::shared_ptr<cfg::JobConfigProto> job_cfg_conf = std::make_shared<cfg::JobConfigProto>(*job_conf);
+  std::shared_ptr<Scope> scope = MakeInitialScope(job_cfg_conf, device_tag, 
+                                    device_ids, nullptr, this->is_mirrored_);
 
-  // JUST(ThreadLocalScopeStackPush(scope));
-  // this->cur_job_name_ = job_name;
+  JUST(ThreadLocalScopeStackPush(scope));
+  this->cur_job_name_ = job_name;
   return Maybe<void>::Ok();
 }
 
@@ -160,11 +163,11 @@ Maybe<void> InferenceSession::CloseCtx() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferenceSession::Compile(std::vector<OperatorConf>& op_list) {
+Maybe<void> InferenceSession::Compile(GraphDef& graph_def) {
   JUST(this->CheckStatus(SessionStatus::OPEN));
 
   std::shared_ptr<Scope> scope = GetCurrentScope().GetPtrOrThrow();
-  for (auto& op_conf : op_list) {
+  for (auto& op_conf : *(graph_def.mutable_op_list())) {
     op_conf.set_scope_symbol_id(scope->symbol_id().GetOrThrow());
     if(!op_conf.has_device_tag()) {
       op_conf.set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
@@ -188,8 +191,8 @@ void InferenceSession::Launch() {
 void InferenceSession::LoadModel(std::string saved_model_dir,
                                  ModelVersionPolicy model_version_policy,
                                  std::string saved_model_meta_file_basename,
-                                 std::string graph_name = "",
-                                 std::string signature_name = "") {
+                                 std::string graph_name,
+                                 std::string signature_name) {
   return this->LoadModel_(saved_model_dir,
                           model_version_policy, 
                           saved_model_meta_file_basename,
@@ -200,8 +203,8 @@ void InferenceSession::LoadModel(std::string saved_model_dir,
 Maybe<void> InferenceSession::LoadModel_(std::string saved_model_dir,
                                          ModelVersionPolicy model_version_policy,
                                          std::string saved_model_meta_file_basename,
-                                         std::string graph_name = "",
-                                         std::string signature_name = "") {
+                                         std::string graph_name,
+                                         std::string signature_name) {
   CHECK_OR_RETURN(LocalFS()->IsDirectory(saved_model_dir))
     << Error::ValueError(saved_model_dir + std::string(" is not a valid directory"));
 
@@ -221,14 +224,13 @@ Maybe<void> InferenceSession::LoadModel_(std::string saved_model_dir,
   std::string saved_model_meta_pb_filename = saved_model_meta_file_basename + ".pb";
   std::string saved_model_meta_prototxt_filename = saved_model_meta_file_basename + ".prototxt";
   
-  // TODO: cfg or not?
-  cfg::SavedModel saved_model_proto;
+  SavedModel saved_model_proto;
   if (std::find(std::begin(subfiles), std::end(subfiles), 
       saved_model_meta_pb_filename) != std::end(subfiles)) {
-      saved_model_proto = LoadSavedModel(saved_model_meta_pb_filename, false).GetOrThrow();
+      CHECK_OR_RETURN(TryParseProtoFromPbFile(saved_model_meta_pb_filename, &saved_model_proto));
   } else if (std::find(std::begin(subfiles), std::end(subfiles), 
       saved_model_meta_prototxt_filename) != std::end(subfiles)) {
-      saved_model_proto = LoadSavedModel(saved_model_meta_prototxt_filename, true).GetOrThrow();
+      CHECK_OR_RETURN(TryParseProtoFromTextFile(saved_model_meta_prototxt_filename, &saved_model_proto));
   } else {
       CHECK_OR_RETURN(false) << Error::ValueError("saved model meta file" + 
         saved_model_meta_file_basename + " do not exist in " + saved_model_path);
@@ -246,7 +248,7 @@ Maybe<void> InferenceSession::LoadModel_(std::string saved_model_dir,
       << Error::ValueError("graph " + graph_name + "do not exist");
   }
 
-  cfg::GraphDef graph_def = saved_model_proto.mutable_graphs()->at(graph_name);
+  GraphDef graph_def = saved_model_proto.mutable_graphs()->at(graph_name);
   if (signature_name.empty() && graph_def.has_default_signature_name()) {
       signature_name = graph_def.default_signature_name();
   }
@@ -259,7 +261,7 @@ Maybe<void> InferenceSession::LoadModel_(std::string saved_model_dir,
 
   // compile job
   JUST(this->OpenCtx(graph_name, signature_ptr));
-  JUST(this->Compile(*graph_def.mutable_op_list()));
+  JUST(this->Compile(graph_def));
   JUST(this->CloseCtx());
 
   return Maybe<void>::Ok();
@@ -308,6 +310,7 @@ Maybe<void> InferenceSession::CheckStatus(SessionStatus status) {
   std::string caller_func_name = "";
   CHECK_OR_RETURN(check_success) 
     << Error::ValueError("The calling to " + caller_func_name + " is not allowed in current status");
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferenceSession::CheckStatus(const std::vector<SessionStatus>& status) {
@@ -322,6 +325,7 @@ Maybe<void> InferenceSession::CheckStatus(const std::vector<SessionStatus>& stat
   std::string caller_func_name = "";
   CHECK_OR_RETURN(check_success) 
     << Error::ValueError("The calling to " + caller_func_name + " is not allowed in current status");
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferenceSession::MakeConfigProto() {
@@ -345,8 +349,7 @@ Maybe<void> InferenceSession::MakeConfigProto() {
 }
 
 std::shared_ptr<JobConfigProto> InferenceSession::GetJobConf(std::string job_name) {
-  if (std::find(std::begin(this->job_name2job_conf_), std::end(this->job_name2job_conf_), 
-          job_name) != std::end(this->job_name2job_conf_)) {
+  if (this->job_name2job_conf_.count(job_name)) {
     return this->job_name2job_conf_[job_name];
   } else {
     std::shared_ptr<JobConfigProto> job_conf = std::make_shared<JobConfigProto>();

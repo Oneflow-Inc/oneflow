@@ -13,10 +13,10 @@
 namespace oneflow {
 
 std::shared_ptr<Scope> MakeInitialScope(std::shared_ptr<cfg::JobConfigProto> job_conf, 
-                                                 std::string device_tag, 
-                                                 std::vector<std::string> machine_device_ids, 
-                                                 std::shared_ptr<Shape> hierarchy, 
-                                                 bool is_mirrored) {
+                                        std::string device_tag, 
+                                        std::vector<std::string> machine_device_ids, 
+                                        std::shared_ptr<Shape> hierarchy, 
+                                        bool is_mirrored) {
   std::shared_ptr<Scope> scope;
   auto BuildInitialScope = [&](InstructionsBuilder* builder) mutable -> Maybe<void> {
     // default configuration
