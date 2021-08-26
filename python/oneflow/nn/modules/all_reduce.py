@@ -32,5 +32,5 @@ class AllReduce(Module):
 
     def forward(self, x):
         assert x.device.type == "cuda"
-        assert x.device.index == flow.framework.distribute.get_local_rank()
+        assert x.device.index == flow.env.get_local_rank()
         return self._op(x)[0]
