@@ -70,12 +70,6 @@ class Module(object):
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def consistent_forward(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)
-
-    def force_mirrored_forward(self, *args, **kwargs):
-        raise NotImplementedError()
-
     def __call__(self, *args, **kwargs):
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args, kwargs)
