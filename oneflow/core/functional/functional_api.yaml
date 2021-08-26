@@ -512,24 +512,18 @@
   bind_python: True
 
 - name: "adaptive_avg_pool1d"
-  signature: [
-    "Tensor (Tensor x, Int64List output_size) => AdaptiveAvgPool1DIntList", 
-    "Tensor (Tensor x, Int64 output_size) => AdaptiveAvgPool1DInt"
-  ]
+  signature: 
+    "Tensor (Tensor x, Int64List[1] output_size) => AdaptiveAvgPool1DIntList"
   bind_python: True
 
 - name: "adaptive_avg_pool2d"
-  signature: [
-    "Tensor (Tensor x, Int64List output_size) => AdaptiveAvgPool2DIntList", 
-    "Tensor (Tensor x, Int64 output_size) => AdaptiveAvgPool2DInt"
-  ]
+  signature: 
+    "Tensor (Tensor x, Int64List[2] output_size) => AdaptiveAvgPool2DIntList"
   bind_python: True
 
 - name: "adaptive_avg_pool3d"
-  signature: [
-    "Tensor (Tensor x, Int64List output_size) => AdaptiveAvgPool3DIntList", 
-    "Tensor (Tensor x, Int64 output_size) => AdaptiveAvgPool3DInt"
-  ]
+  signature: 
+    "Tensor (Tensor x, Int64List[3] output_size) => AdaptiveAvgPool3DIntList"
   bind_python: True
 
 - name: "adaptive_pool_grad"

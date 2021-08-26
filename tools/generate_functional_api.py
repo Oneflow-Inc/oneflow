@@ -312,15 +312,17 @@ class Argument:
         if sp == -1:
             raise ValueError("Missing argument type or name for argument def: " + fmt)
         type_name = fmt[0:sp]
-        arg_name = fmt[sp + 1:]
+        arg_name = fmt[sp + 1 :]
         sp = type_name.find("[")
         if sp != -1:
             self._type = _normalize(type_name[0:sp])
-            size = type_name[sp + 1:]
+            size = type_name[sp + 1 :]
             sp = size.find("]")
             assert sp != -1, "Missing ']' for argument def: " + fmt
             size = _normalize(size[0:sp])
-            assert size.isnumeric(), "list size is not an integer for argument def: " + fmt
+            assert size.isnumeric(), (
+                "list size is not an integer for argument def: " + fmt
+            )
             self._size = int(size)
         else:
             self._type = _normalize(type_name)
@@ -545,7 +547,11 @@ class FunctionalGenerator:
                     else:
                         argument_def.append(
                             '  ArgumentDef(/*name*/"{0}", /*value_type*/ValueTypeOf<{1}>(), /*size*/{2}, /*keyword_only*/{3}, /*optional*/{4})'.format(
-                                arg._name, _std_decay(arg._cpp_type), arg._size, keyword_only, optional,
+                                arg._name,
+                                _std_decay(arg._cpp_type),
+                                arg._size,
+                                keyword_only,
+                                optional,
                             )
                         )
                 schema_fmt += 'FunctionDef {0}Schema::function_def = {{\n/*name*/"{1}",\n/*return_def*/{2},\n/*argument_def*/{{\n{3}\n}}\n}};\n'.format(
