@@ -21,12 +21,6 @@ limitations under the License.
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/platform/include/ibv.h"
 
-#include <infiniband/verbs.h>
-
-#include <deque>
-#include <memory>
-#include <mutex>
-
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 namespace oneflow {

@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
-#include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/platform/include/ibv.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
-#include "third_party/json/include/json.hpp"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
@@ -217,7 +215,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 }
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
-  { msg_Pool_buf_->PutMessage(wr_id->msg_mr); }
+  msg_Pool_buf_->PutMessage(wr_id->msg_mr); 
   DeleteWorkRequestId(wr_id);
   PostPendingSendWR();
 }
