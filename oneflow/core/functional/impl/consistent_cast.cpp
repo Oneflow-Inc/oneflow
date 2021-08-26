@@ -85,7 +85,7 @@ FLAT_MSG_END(FlatShapeAndDataType);
 Maybe<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>> BroadcastGatherShapeAndDataType(
     const Shape& shape, DataType dtype, Symbol<ParallelDesc> parallel_desc) {
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncLocalShapeDtype));
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncLocalShapeDtype));
   const auto& send_buffer = JUST(FlatShapeAndDataType::New(shape, dtype));
   const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>>();
   map->emplace(GlobalProcessCtx::Rank(), send_buffer);
@@ -139,7 +139,7 @@ Maybe<FlatShapeAndDataType> BroadcastShapeAndDtype(const Shape& shape, DataType 
   const auto& out_flat_shape_dtype = JUST(FlatShapeAndDataType::New());
   int64_t root = JUST(CachedFindRoot(broadcast_parallel_desc, parallel_desc));
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncLocalShapeDtype));
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncLocalShapeDtype));
   JUST(ccl::CpuBroadcast(in_flat_shape_dtype.get(), out_flat_shape_dtype.get(),
                          sizeof(FlatShapeAndDataType), root, broadcast_parallel_desc,
                          transport_token));
