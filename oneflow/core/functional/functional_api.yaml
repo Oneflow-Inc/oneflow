@@ -1056,10 +1056,6 @@
                           Int32List dilation_rate, Int32List padding, 
                           Int32List strides) => Fold"
   bind_python: True
-  
-- name: "scalar_fmod"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarFMod"
-  bind_python: False
 
 - name: "split"
   signature: "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split"
