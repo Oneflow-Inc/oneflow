@@ -39,7 +39,6 @@ class TmpBufferManager final {
   cub::KeyValuePair<int32_t, T>* KeyValueOutPtr() const { return key_value_out_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t KeyValueOutElemCnt() const { return key_value_out_elem_cnt_; }
   int32_t TempStorageBytes() const { return temp_storage_bytes_; }
 
  private:
@@ -71,7 +70,7 @@ size_t InferTempStorageForArgMax(int32_t num_row, int32_t num_col) {
   MultiplyFunctor multiply_functor(num_col);
   SegmentOffsetIter segment_offset_iter(counting_iter, multiply_functor);
 
-  size_t temp_storage_bytes = -1;
+  size_t temp_storage_bytes = 0;
   auto err =
       cub::DeviceSegmentedReduce::ArgMax<T*, cub::KeyValuePair<int32_t, T>*, SegmentOffsetIter>(
           /* d_temp_storage */ nullptr, /* temp_storage_bytes */ temp_storage_bytes,
@@ -124,6 +123,7 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
   ~GpuArgMaxKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

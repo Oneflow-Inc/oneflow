@@ -33,6 +33,7 @@ class AssignIfGPUKernel final : public user_op::OpKernel {
   ~AssignIfGPUKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* condition = ctx->Tensor4ArgNameAndIndex("condition", 0);
     CHECK_EQ(condition->shape().NumAxes(), 1);

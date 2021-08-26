@@ -31,21 +31,23 @@ def all_reduce(tensor):
 
     .. code-block:: python
 
+        >>> # We have 2 process groups, 2 ranks.
         >>> import oneflow as flow
         
-        >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda")
+        >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.distributed.get_local_rank()
+        >>> input
+        tensor([[1, 2],
+                [3, 4]], device='cuda:0', dtype=oneflow.int64) # Rank 0
+        tensor([[2, 3],
+                [4, 5]], device='cuda:1', dtype=oneflow.int64) # Rank 1
         >>> out = flow.comm.all_reduce(input)
         >>> out
-        tensor([[2, 4],
-                [6, 8]],
-               placement=oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1]}, hierarchy=(2,)),
-               sbp=(oneflow.sbp.broadcast,), dtype=oneflow.int64) # Rank 0
-        tensor([[2, 4],
-                [6, 8]],
-               placement=oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1]}, hierarchy=(2,)),
-               sbp=(oneflow.sbp.broadcast,), dtype=oneflow.int64) # Rank 1
-
+        tensor([[3, 5],
+                [7, 9]], device='cuda:0', dtype=oneflow.int64) # Rank 0
+        tensor([[3, 5],
+                [7, 9]], device='cuda:1', dtype=oneflow.int64) # Rank 1
     """
+
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.device.type == "cuda"
     assert tensor.device.index == flow.framework.distribute.get_local_rank()
@@ -70,4 +72,5 @@ def all_reduce(tensor):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)
+

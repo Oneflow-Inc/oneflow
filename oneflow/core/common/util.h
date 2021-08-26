@@ -71,14 +71,14 @@ namespace oneflow {
 
 #define OF_DISALLOW_COPY(ClassName)     \
   ClassName(const ClassName&) = delete; \
-  ClassName& operator=(const ClassName&) = delete;
+  ClassName& operator=(const ClassName&) = delete
 
 #define OF_DISALLOW_MOVE(ClassName) \
   ClassName(ClassName&&) = delete;  \
-  ClassName& operator=(ClassName&&) = delete;
+  ClassName& operator=(ClassName&&) = delete
 
 #define OF_DISALLOW_COPY_AND_MOVE(ClassName) \
-  OF_DISALLOW_COPY(ClassName)                \
+  OF_DISALLOW_COPY(ClassName);               \
   OF_DISALLOW_MOVE(ClassName)
 
 #define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
@@ -221,6 +221,9 @@ bool ParseBooleanFromEnv(const std::string& env_var, bool default_value);
 int64_t ParseIntegerFromEnv(const std::string& env_var, int64_t default_value);
 
 std::string GetStringFromEnv(const std::string& env_var, const std::string& default_value);
+
+#define OF_PREDICT_TRUE GOOGLE_PREDICT_TRUE
+#define OF_PREDICT_FALSE GOOGLE_PREDICT_FALSE
 
 }  // namespace oneflow
 

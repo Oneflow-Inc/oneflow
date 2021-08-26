@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter/boxing/naive_b2p_boxing_interpreter.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -28,11 +29,14 @@ Maybe<one::Tensor> NaiveB2PBoxingInterpreter::InterpretImpl(
     Symbol<ParallelDesc> out_parallel_desc) const {
   CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   int64_t root = JUST(in_parallel_desc->MachineId4ParallelId(0));
+  std::shared_ptr<one::Tensor> tensor = JUST(input->cur_rank_phy_tensor());
   if (root == GlobalProcessCtx::Rank()) {
-    return JUST(one::functional::Identity(input));
+    // do nothing
   } else {
-    return JUST(one::functional::ZerosLike(input));
+    tensor = JUST(one::functional::ZerosLike(tensor));
   }
+  return one::functional::ToConsistent(tensor, out_parallel_desc, *JUST(GetSbpList(out_nd_sbp)),
+                                       GetNoneSbpList());
 }
 
 }  // namespace oneflow

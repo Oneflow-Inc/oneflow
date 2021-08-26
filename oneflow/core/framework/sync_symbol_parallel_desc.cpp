@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace {
 
-static const int kLimitParallelConfString = 1024 * 8;
+static const int kLimitParallelConfString = 1024 * 64;
 struct FlatParallelConf {
   size_t available_size() const {
     CHECK_GE(this->buffer_size, 0);
@@ -69,7 +69,7 @@ struct FlatParallelConf {
 
 Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> parallel_desc) {
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncSymbolParallelDesc));
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncSymbolParallelDesc));
   const auto& recv_buffer = std::make_shared<FlatParallelConf>();
   NaiveAsyncTransportCtx ctx(
       transport_token,

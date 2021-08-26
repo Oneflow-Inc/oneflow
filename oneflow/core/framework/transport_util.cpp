@@ -19,18 +19,20 @@ limitations under the License.
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/transport/transport.h"
-#include "oneflow/core/thread/consistent_unique_id.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/common/thread_local_callback.h"
 
 namespace oneflow {
 
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
-  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds));
-  JUST(ctx.transport_token().TryReleaseCtrlTransportTokenLock());
+  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds,
+                            [] { LOG(ERROR) << blocking::GetStackInfo(); },
+                            TransportUtil::BlockingWarningIntervalSeconds()));
   return Maybe<void>::Ok();
 }
 
@@ -86,14 +88,35 @@ Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const TransportToke
   return AccessToOtherRanks<SendOrRecv, Prepare>(ForEachRank, token, ctx);
 }
 
+namespace {
+
+Maybe<std::shared_ptr<TransportToken>> RawGetTransportToken(const TransportToken& token) {
+  CHECK_EQ_OR_RETURN(token.seq_id(), 0);
+  JUST(token.CheckThreadConsistentId());
+  auto auto_token = std::make_shared<TransportToken>(token);
+  return auto_token;
+}
+
+static constexpr auto* GetTransportToken = DECORATE(&RawGetTransportToken, ThreadLocal);
+
+Maybe<TransportToken> GetAutoIncrementalTransportToken(int64_t src_rank, int64_t dst_rank,
+                                                       TransportToken token) {
+  CHECK_EQ_OR_RETURN(token.seq_id(), 0);
+  JUST(token.set_src_rank(src_rank));
+  JUST(token.set_dst_rank(dst_rank));
+  return ++**JUST(GetTransportToken(token));
+}
+
+}  // namespace
+
 Maybe<void> Send(const TransportToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
 #ifdef __linux__
+  int64_t src_rank = GlobalProcessCtx::Rank();
+  int64_t dst_rank = rank;
+  TransportToken send_token = JUST(GetAutoIncrementalTransportToken(src_rank, dst_rank, token));
   auto* transport = JUST(GlobalMaybe<Transport>());
-  TransportToken transport_token(token);
-  JUST(transport_token.set_src_rank(GlobalProcessCtx::Rank()));
-  JUST(transport_token.set_dst_rank(rank));
-  transport->Send(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
+  transport->Send(static_cast<uint64_t>(send_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 #else
   UNIMPLEMENTED();
@@ -104,11 +127,11 @@ Maybe<void> Send(const TransportToken& token, int64_t rank, void* buffer, std::s
 Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
 #ifdef __linux__
+  int64_t src_rank = rank;
+  int64_t dst_rank = GlobalProcessCtx::Rank();
+  TransportToken recv_token = JUST(GetAutoIncrementalTransportToken(src_rank, dst_rank, token));
   auto* transport = JUST(GlobalMaybe<Transport>());
-  TransportToken transport_token(token);
-  JUST(transport_token.set_src_rank(rank));
-  JUST(transport_token.set_dst_rank(GlobalProcessCtx::Rank()));
-  transport->Receive(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
+  transport->Receive(static_cast<uint64_t>(recv_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 #else
   UNIMPLEMENTED();

@@ -87,25 +87,6 @@ class TestGraph(flow.unittest.TestCase):
         z = g.build(x)
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
-    def test_graph_config(test_case):
-        class CustomGraphConfig(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.m = CustomModule()
-                self.config.enable_auto_mixed_precision(True)
-
-            def build(self, x):
-                x = self.m(x)
-                return x
-
-        g = CustomGraphConfig()
-        test_case.assertEqual(g.config.training, False)
-        g.config.enable_fuse_add_to_output(True)
-        g.config.enable_fuse_add_to_output(False)
-        for s in g._state():
-            print("g state: ", repr(s))
-        print(repr(g))
-
     def test_graph_name(test_case):
         class ACustomGraph(flow.nn.Graph):
             def __init__(self):
@@ -152,7 +133,6 @@ class TestGraph(flow.unittest.TestCase):
         class CustomGraphGraphBuildCtx(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.config.enable_auto_mixed_precision(True)
 
             def build(self, x):
                 test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), True)

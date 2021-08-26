@@ -19,6 +19,7 @@ import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
+from oneflow.support.blocking import BlockingInfoContext
 
 import numpy as np
 from typing import Union
@@ -45,8 +46,10 @@ def _tensor_numpy(eager_local_tensor):
         shape=tuple(eager_local_tensor.shape),
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
-    if ndarray.size != 0:
-        copy_to_numpy(ndarray)
+
+    with BlockingInfoContext() as ctx:
+        if ndarray.size != 0:
+            copy_to_numpy(ndarray)
     return ndarray
 
 
@@ -354,7 +357,7 @@ def _get_device(self):
 
 def _format(self, format_spec):
     if self.dim() == 0:
-        return self.tolist().__format__(format_spec)
+        return self.numpy().tolist().__format__(format_spec)
     return object.__format__(self, format_spec)
 
 
@@ -363,7 +366,6 @@ def RegisterMethods():
     Tensor.__rmul__ = lambda self, other: self.mul(other)
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
-    Tensor.tolist = lambda self: self.numpy().tolist()
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _tensor_numpy
     Tensor.size = _size
