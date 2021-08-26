@@ -293,9 +293,68 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
 
   CHECK_OR_RETURN(!outputs->at(0).get());
-  // TODO(chengcheng): Build EagerLocalTensor if parllel attr is this rank.
   (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /* is_lazy= */ false,
                                                  /* is_local= */ input_tensor->is_local()));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr& op_expr,
+                                       const TensorTuple& inputs, TensorTuple* outputs,
+                                       const OpExprInterpContext& ctx) const {
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
+  const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
+  const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
+  CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
+
+  auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
+  std::string device_tag;
+  if (IsCpuOnly(*op_conf)) {
+    device_tag = "cpu";
+  } else {
+    device_tag = "gpu";
+  }
+
+  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+  parallel_conf->InitFromProto(JUST(GetParallelDescOfTensor(input_tensor))->parallel_conf());
+  parallel_conf->set_device_tag(device_tag);  // NOTE(chengcheng): only support gpu decode.
+  const auto& scope = JUST(NewScopeWithParallelConfAndCurScope(parallel_conf));
+
+  op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
+  op_conf->set_device_tag(device_tag);
+
+  // NOTE(chengcheng): replace right input_lbn and obn
+  ReplaceInputLbnInOpCustomizedConf(op_conf.get(), /* ibn */ "in", input_lbn);
+  op_conf->mutable_image_decoder_random_crop_resize_conf()->set_out("out");
+
+  auto infer_ctx = JUST(GetCurInferCtx());
+  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp
+  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(*op_conf));
+  op_conf->set_name(new_op_name);
+
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
+
+  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+          << op_conf->DebugString() << std::endl;
+  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
+          << " infer and and op attr : \n"
+          << op_attr.DebugString() << std::endl;
+
+  int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
+  const std::shared_ptr<ParallelDesc>& blob_parallel_desc_sym =
+      JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+
+  // Check outputs num and setup output tensor properties.
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
+  const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
+  const auto& parallel_attr =
+      JUST(compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, op_attr, obn));
+  const auto& blob_attr = JUST(compatible_py::GetOpArgBlobAttribute(op_attr, obn));
+  CHECK_OR_RETURN(!outputs->at(0).get());
+  (*outputs)[0] = JUST(OpInterpUtil::BuildTensor(blob_attr, parallel_attr, /* is_lazy= */ true,
+                                                 /* is_local= */ input_tensor->is_local()));
+  TensorNameScope::Global()->Record(outputs->at(0), GenLogicalBlobName(new_op_name, obn));
   return Maybe<void>::Ok();
 }
 
@@ -498,9 +557,17 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       JUST(GetParallelDescOfTensor(inputs.at(0)));
 
   op_conf->set_device_tag(device_tag);
+  auto infer_ctx = JUST(GetCurInferCtx());
+  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp
+  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(*op_conf));
+  const std::string graph_name = infer_ctx->job().job_conf().job_name();
+
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_tensor = inputs.at(i);
-    CHECK_OR_RETURN(device_tag == GetDeviceTagOfTensor(input_tensor));
+    CHECK_OR_RETURN(device_tag == GetDeviceTagOfTensor(input_tensor))
+        << " Lazy nn.Graph name : " << graph_name << " encountered ERROR where multi-input tensor"
+        << " has different device type in module/op_name: " << new_op_name
+        << ". Please use tensor.to() or tensor.to_consistent() to make all input with same device.";
     CHECK_OR_RETURN(
         parallel_desc->EqualsIgnoringHierarchy(*JUST(GetParallelDescOfTensor(input_tensor))));
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
@@ -513,10 +580,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     CHECK_OR_RETURN(!lbn.empty());  // NOTE(chengcheng): lbn must not empty now.
     ReplaceInputLbnInOpCustomizedConf(op_conf.get(), ibn, lbn);
   }
-
-  auto infer_ctx = JUST(GetCurInferCtx());
-  // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp
-  const std::string new_op_name = *JUST(infer_ctx->NewUniqueOpNameByFunctionalOpConf(*op_conf));
 
   // NOTE(chengcheng): for UserOp, NOT only reset op_name, but also the output values.
   op_conf->set_name(new_op_name);
@@ -533,10 +596,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
 
-  VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
+  VLOG(2) << "Lazy nn.Graph name " << graph_name << " add op : \n"
           << op_conf->DebugString() << std::endl;
-  VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
-          << " infer and and op attr : \n"
+  VLOG(3) << "Lazy nn.Graph name " << graph_name << " infer and and op attr : \n"
           << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));

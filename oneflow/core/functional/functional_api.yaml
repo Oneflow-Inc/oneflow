@@ -57,49 +57,78 @@
   signature: "Tensor (Tensor y, Tensor z, Tensor dz) => DivGrad"
   bind_python: False
 
-- name: "broadcast_equal"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastEqual"
-  bind_python: True
+- name: "equal"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastEqual",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalEqual",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalEqual2",
+  ]
+  bind_python: true
 
-- name: "broadcast_not_equal"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastNotEqual"
-  bind_python: True
+- name: "not_equal"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastNotEqual",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalNotEqual",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalNotEqual2",
+  ]
+  bind_python: true
 
-- name: "broadcast_greater"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastGreater"
-  bind_python: True
+- name: "greater"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastGreater",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalGreater",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalGreater2",
+  ]
+  bind_python: true
 
-- name: "broadcast_greater_equal"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastGreaterEqual"
-  bind_python: True
+- name: "greater_equal"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastGreaterEqual",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalGreaterEqual",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalGreaterEqual2",
+  ]
+  bind_python: true
 
-- name: "broadcast_logical_and"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastLogicalAnd"
-  bind_python: True
+- name: "logical_and"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastLogicalAnd",
+  ]
+  bind_python: true
 
-- name: "broadcast_logical_or"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastLogicalOr"
+- name: "logical_or"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastLogicalOr",
+  ]
   bind_python: True
  
-- name: "broadcast_logical_xor"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastLogicalXor"
+- name: "logical_xor"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastLogicalXor",
+  ]
   bind_python: True
 
-- name: "broadcast_less"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastLess"
+- name: "less"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastLess",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalLess",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalLess2",
+  ]
   bind_python: True
 
-- name: "broadcast_less_equal"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastLessEqual"
+- name: "less_equal"
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastLessEqual",
+    "Tensor (Tensor input, Scalar other) => ScalarLogicalLessEqual",
+    "Tensor (Scalar input, Tensor other) => ScalarLogicalLessEqual2",
+  ]
   bind_python: True
 
 - name: "pow"
-  signature: "Tensor (Tensor x, Tensor y) => Pow"
-  bind_python: False
-
-- name: "pow_scalar"
-  signature: "Tensor (Tensor x, Scalar alpha) => ScalarPow"
-  bind_python: False
+  signature: [
+    "Tensor (Tensor input, Tensor exponent) => Pow",
+    "Tensor (Tensor input, Scalar exponent) => ScalarPow",
+  ]
+  bind_python: True
 
 - name: "broadcast_pow"
   signature: "Tensor (Tensor x, Tensor y) => BroadcastPow"
@@ -154,8 +183,11 @@
   bind_python: True
 
 - name: "fmod"
-  signature: "Tensor (Tensor x, Tensor y) => BroadcastFMod"
-  bind_python: False
+  signature: [
+    "Tensor (Tensor input, Tensor other) => BroadcastFMod",
+    "Tensor (Tensor input, Scalar other) => ScalarFMod",
+  ]
+  bind_python: true
 
 - name: "log"
   signature: "Tensor (Tensor x) => Log"
@@ -467,20 +499,13 @@
   bind_python: False
 
 - name: "where"
-  signature: "Tensor (Tensor condition, Tensor x, Tensor y) => Where"
-  bind_python: false
-
-- name: "where_scalar_x"
-  signature: "Tensor (Tensor condition, Scalar scalar, Tensor y) => WhereScalarX"
-  bind_python: False
-
-- name: "where_scalar_y"
-  signature: "Tensor (Tensor condition, Tensor x, Scalar scalar) => WhereScalarY"
-  bind_python: False
-
-- name: "where_scalar_xy"
-  signature: "Tensor (Tensor condition, Scalar x_scalar, Scalar y_scalar) => WhereScalarXY"
-  bind_python: False
+  signature: [
+    "Tensor (Tensor condition, Tensor x, Tensor y) => Where",
+    "Tensor (Tensor condition, Scalar x, Tensor y) => WhereScalarX",
+    "Tensor (Tensor condition, Tensor x, Scalar y) => WhereScalarY",
+    "Tensor (Tensor condition, Scalar x, Scalar y) => WhereScalarXY",
+  ]
+  bind_python: true
 
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
@@ -802,32 +827,22 @@
     "Tensor (Tensor x, Tensor segment_ids, Tensor like, Int64 axis) => UnsortedSegmentSumLike"
   bind_python: False
 
+- name: "tril"
+  signature: "Tensor (Tensor x, Int64 diagonal=0) => Tril"
+  bind_python: True
+
 - name: "triu"
   signature: "Tensor (Tensor x, Int64 diagonal=0) => Triu"
   bind_python: True
   
-- name: "clip_by_scalar"
-  signature: "Tensor (Tensor x, Scalar min, Scalar max) => ClipByScalar"
-  bind_python: false
+- name: "clamp"
+  signature: [
+    "Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp",
+  ]
+  bind_python: true
 
-- name: "clip_by_scalar_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Scalar min, Scalar max) => ClipByScalarGrad"
-  bind_python: False
-
-- name: "clip_by_scalar_min"
-  signature: "Tensor (Tensor x, Scalar min) => ClipByScalarMin"
-  bind_python: false
-
-- name: "clip_by_scalar_min_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Scalar min) => ClipByScalarMinGrad"
-  bind_python: False
-
-- name: "clip_by_scalar_max"
-  signature: "Tensor (Tensor x, Scalar max) => ClipByScalarMax"
-  bind_python: false
-
-- name: "clip_by_scalar_max_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Scalar max) => ClipByScalarMaxGrad"
+- name: "clamp_grad"
+  signature: "Tensor (Tensor dy, Tensor x, Scalar min=None, Scalar max=None) => ClampGrad"
   bind_python: False
 
 - name: "dropout"
@@ -892,20 +907,18 @@
   signature: "Tensor (Tensor x, TensorIndex index) => TensorGetItem"
   bind_python: True
 
-- name: "dim_scatter"
-  signature: "Tensor (Tensor input, Tensor index, Tensor src, Int32 dim) => DimScatter"
-  bind_python: False
-
-- name: "dim_scatter_add"
-  signature: "Tensor (Tensor input, Tensor index, Tensor src, Int32 dim) => DimScatterAdd"
+- name: "scatter"
+  signature: [
+    "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src) => DimScatter",
+    "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src) => DimScatterUpdateScalar",
+  ]
   bind_python: True
 
-- name: "dim_scatter_scalar"
-  signature: "Tensor (Tensor input, Tensor index, Float src, Int32 dim) => DimScatterUpdateScalar"
-  bind_python: False
-
-- name: "dim_scatter_add_scalar"
-  signature: "Tensor (Tensor input, Tensor index, Float src, Int32 dim) => DimScatterAddScalar"
+- name: "scatter_add"
+  signature: [
+    "Tensor (Tensor input, Int32 dim, Tensor index, Tensor src) => DimScatterAdd",
+    "Tensor (Tensor input, Int32 dim, Tensor index, Scalar src) => DimScatterAddScalar",
+  ]
   bind_python: True
 
 - name: "tensor_setitem"
@@ -1004,30 +1017,6 @@
   signature: "Tensor (Tensor in, Tensor like) => BroadcastReduceSumLike"
   bind_python: False
 
-- name: "scalar_logical_equal"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalEqual"
-  bind_python: False
-
-- name: "scalar_logical_not_equal"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalNotEqual"
-  bind_python: False
-
-- name: "scalar_logical_greater"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalGreater"
-  bind_python: False
-
-- name: "scalar_logical_greater_equal"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalGreaterEqual"
-  bind_python: False
-
-- name: "scalar_logical_less"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalLess"
-  bind_python: False
-
-- name: "scalar_logical_less_equal"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarLogicalLessEqual"
-  bind_python: False
-
 - name: "rand"
   signature: "Tensor (Shape shape, DataType dtype=None, Device device=None, Generator generator=None) => Rand"
   bind_python: True
@@ -1047,10 +1036,19 @@
                       Generator generator=None) => ConsistentRandN"
   bind_python: True
 
-- name: "scalar_fmod"
-  signature: "Tensor (Tensor in, Scalar scalar) => ScalarFMod"
-  bind_python: False
-
+- name: "unfold"
+  signature: "Tensor (Tensor x, String data_format=\"channels_first\", Int32List kernel_size, 
+                            Int32List dilation_rate, Int32List padding, 
+                            Int32List strides) => Unfold"
+  bind_python: True
+  
+- name: "fold"
+  signature: "Tensor (Tensor x, String data_format=\"channels_first\", 
+                          Int32List output_size, Int32List kernel_size, 
+                          Int32List dilation_rate, Int32List padding, 
+                          Int32List strides) => Fold"
+  bind_python: True
+  
 - name: "split"
   signature: "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split"
   bind_python: True

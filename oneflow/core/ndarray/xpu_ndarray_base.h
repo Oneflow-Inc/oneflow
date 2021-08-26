@@ -34,8 +34,8 @@ class XpuReshapeNdarray;
 template<typename DerivedT, typename T>
 class XpuNdarrayBase {
  public:
-  OF_DEVICE_FUNC XpuNdarrayBase() = default;
-  OF_DEVICE_FUNC ~XpuNdarrayBase() = default;
+  XpuNdarrayBase() = default;
+  ~XpuNdarrayBase() = default;
 
   template<template<typename> class unary_func>
   OF_DEVICE_FUNC XpuUnaryFuncNdarray<T, unary_func, DerivedT> UnaryFunc() const {
