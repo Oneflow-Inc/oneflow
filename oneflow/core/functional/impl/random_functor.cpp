@@ -272,7 +272,7 @@ class RandIntFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<double>("low", low));
-    JUST(attrs.SetAttr<double>("high", high-1));
+    JUST(attrs.SetAttr<double>("high", high - 1));
     JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
 
     std::shared_ptr<one::Generator> gen;
@@ -318,7 +318,7 @@ class ConsistentRandIntFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<double>("low", low));
-    JUST(attrs.SetAttr<double>("high", high-1));
+    JUST(attrs.SetAttr<double>("high", high - 1));
     JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
     std::shared_ptr<one::Generator> gen;
     if (!generator) {
