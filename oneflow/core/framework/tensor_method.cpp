@@ -56,6 +56,8 @@ Maybe<MirroredTensor> ShallowCopy(const std::shared_ptr<MirroredTensor>& tensor,
   const auto& impl = tensor->mut_impl();
   const auto& blob_obj = JUST(impl->eager_blob_object());
 
+  CHECK_OR_RETURN(blob_obj->mut_blob());
+
   auto new_blob_obj = std::shared_ptr<vm::EagerBlobObject>(new vm::EagerBlobObject(
       std::make_shared<MemoryCase>(blob_obj->mem_case()), std::const_pointer_cast<Shape>(shape),
       dtype, blob_obj->tensor_buffer(), blob_obj->compute_local_dep_object_));

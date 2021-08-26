@@ -476,7 +476,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
                auto offset = args.contains("offset") ? py::cast<int64_t>(args["offset"]) : -1;
 
-               return ShallowCopy(mt, shape, stride, offset).GetPtrOrThrow();
+               auto dtype =
+                   args.contains("dtype") ? py::cast<DataType>(args["dtype"]) : kInvalidDataType;
+
+               return ShallowCopy(mt, shape, stride, offset, dtype).GetPtrOrThrow();
              } else {
                throw std::runtime_error("mirrored tensor is expected");
              }
