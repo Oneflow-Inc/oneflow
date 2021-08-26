@@ -35,7 +35,7 @@ def _get_c_tensor(t):
 
 
 def _test_user_op_graph(test_case, is_cuda):
-    test_case.assertTrue(oneflow.distributed.is_multi_client())
+    test_case.assertTrue(oneflow.env.is_multi_client())
     test_case.assertTrue(oneflow.framework.env_util.HasAllMultiClientEnvVars())
 
     x0 = flow.tensor(np.random.rand(20, 30), dtype=flow.float32)
