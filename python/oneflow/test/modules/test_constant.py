@@ -102,6 +102,20 @@ class TestConstantModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+        @autotest(n=10, auto_backward=True)
+        def test_full_with_random_data_int(test_case):
+            device = random_device()
+            shape = random_tensor().value().shape
+            y = torch.full(shape, 2)
+            return y
+
+        @autotest(n=10, auto_backward=True)
+        def test_full_with_random_data_float(test_case):
+            device = random_device()
+            shape = random_tensor().value().shape
+            y = torch.full(shape, 2.0)
+            return y
+
 
 if __name__ == "__main__":
     unittest.main()
