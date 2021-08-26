@@ -462,6 +462,7 @@ class NormalizationFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    // convert torch momentum to tensorflow momentum
     JUST(attrs.SetAttr<float>("momentum", 1.0 - momentum));
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
