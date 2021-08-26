@@ -413,8 +413,15 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                         dual_objects_to_test.append(
                             GetDualObject(
                                 "unused",
-                                x.pytorch.state_dict()[key],
-                                x.oneflow.state_dict()[key],
+                                getattr(x.pytorch, key),
+                                getattr(x.oneflow, key),
+                            )
+                        )
+                        dual_objects_to_test.append(
+                            GetDualObject(
+                                "unused",
+                                getattr(x.pytorch, key).grad,
+                                getattr(x.oneflow, key).grad,
                             )
                         )
                 for x in dual_objects_to_test:
