@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("dot")
+REGISTER_USER_OP("dot") // #1 注册OP
     .Input("x")
     .Input("y")
     .Output("out")
