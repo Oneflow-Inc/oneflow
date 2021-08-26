@@ -160,10 +160,10 @@ class TestAddModule(flow.unittest.TestCase):
         out = x + y
         return out
 
-    @autotest()
+    @autotest(auto_backward=False)
     def test_0dim_inplace_add(test_case):
         device = random_device()
-        x = random_pytorch_tensor(2, 2, 3).to(device)
+        x = random_pytorch_tensor(2, 2, 3, requires_grad=False).to(device)
         y = random_pytorch_tensor(1, 10).to(device)
         x += y.mean()
         return x
