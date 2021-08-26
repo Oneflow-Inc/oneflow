@@ -455,7 +455,9 @@ def random_pytorch_tensor(
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
-    flow_tensor = flow.tensor(pytorch_tensor.detach().cpu().numpy(), requires_grad=True)
+    flow_tensor = flow.tensor(
+        pytorch_tensor.detach().cpu().numpy(), requires_grad=requires_grad
+    )
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
