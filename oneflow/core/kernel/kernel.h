@@ -66,47 +66,11 @@ class Kernel {
   virtual void Forward(const KernelCtx& ctx,
                        const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
-  void SetOutputBlobProducerInferAccessChecker(
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void SetOutputBlobProducerComputeAccessChecker(
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void SetOutputBlobConsumerAccessChecker(
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-
  protected:
   Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
   void InitBase(const JobDesc* job_desc, const KernelConf&);
   virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
   virtual void VirtualKernelInit() {}
-
-  template<typename HandlerT>
-  void ForEachObnAndIsHeaderInferedBeforeCompute(
-      std::function<Blob*(const std::string&)> BnInOp2Blob, const HandlerT& Handler) const {
-    const auto& modifier_map =
-        this->kernel_conf_.op_attribute().arg_modifier_signature().obn2output_blob_modifier();
-    for (const std::string& obn : this->op_attribute().output_bns()) {
-      Blob* blob = BnInOp2Blob(obn);
-      if (blob) {
-        bool is_header_infered_before_compute =
-            modifier_map.at(obn).header_infered_before_compute();
-        Handler(obn, is_header_infered_before_compute);
-      }
-    }
-  }
-
-  template<typename HandlerT>
-  void ForEachObnAndIsMutableByConsumer(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-                                        const HandlerT& Handler) const {
-    const auto& modifier_map =
-        this->kernel_conf_.op_attribute().arg_modifier_signature().obn2output_blob_modifier();
-    for (const std::string& obn : this->op_attribute().output_bns()) {
-      Blob* blob = BnInOp2Blob(obn);
-      if (blob) {
-        bool is_mutable_by_consumer = modifier_map.at(obn).is_mutable();
-        Handler(obn, is_mutable_by_consumer);
-      }
-    }
-  }
 
   virtual void ForwardHeader(const KernelCtx& ctx,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
@@ -121,7 +85,6 @@ class Kernel {
   const JobDesc* job_desc_;
   RuntimeBlobShapeInferHelper* shape_infer_helper_;
   KernelConf kernel_conf_;
-  bool blob_access_checker_disabled_;
 };
 
 template<DeviceType device_type>

@@ -48,40 +48,6 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
 }
 
-void Kernel::SetOutputBlobProducerInferAccessChecker(
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  ForEachObnAndIsHeaderInferedBeforeCompute(BnInOp2Blob, [&](const std::string& obn, bool _) {
-    BnInOp2Blob(obn)->set_blob_access_checker(Global<BlobAccessCheckerIf<true, false>>::Get());
-  });
-}
-
-void Kernel::SetOutputBlobProducerComputeAccessChecker(
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  ForEachObnAndIsHeaderInferedBeforeCompute(
-      BnInOp2Blob, [&](const std::string& obn, bool is_header_infered_before_compute) {
-        const BlobAccessChecker* checker = nullptr;
-        if (is_header_infered_before_compute) {
-          checker = Global<BlobAccessCheckerIf<false, true>>::Get();
-        } else {
-          checker = Global<BlobAccessCheckerIf<true, true>>::Get();
-        }
-        BnInOp2Blob(obn)->set_blob_access_checker(checker);
-      });
-}
-
-void Kernel::SetOutputBlobConsumerAccessChecker(
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  ForEachObnAndIsMutableByConsumer(BnInOp2Blob, [&](const std::string& obn, bool is_mutable) {
-    const BlobAccessChecker* checker = nullptr;
-    if (is_mutable) {
-      checker = Global<BlobAccessCheckerIf<false, true>>::Get();
-    } else {
-      checker = Global<BlobAccessCheckerIf<false, false>>::Get();
-    }
-    BnInOp2Blob(obn)->set_blob_access_checker(checker);
-  });
-}
-
 void Kernel::Forward(const KernelCtx& ctx,
                      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Global<KernelObserver>::Get()->WillForwardHeader(ctx, this, BnInOp2Blob);

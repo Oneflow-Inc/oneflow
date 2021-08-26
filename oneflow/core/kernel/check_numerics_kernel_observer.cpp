@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/check_numerics_kernel_observer.h"
+#include "oneflow/core/device/cuda_device_context.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -48,7 +49,11 @@ bool DispatchHasNotFiniteDeviceType(const std::string& device_tag, DeviceCtx* ct
     return HasNotFiniteCpu(ctx, blob);
   } else if (device_tag == "gpu") {
 #ifdef WITH_CUDA
-    return HasNotFiniteGpu(ctx, blob);
+    if (dynamic_cast<CudaDeviceCtx*>(ctx) != nullptr) {
+      return HasNotFiniteGpu(ctx, blob);
+    } else {
+      return false;
+    }
 #else
     return false;
 #endif  // WITH_CUDA
