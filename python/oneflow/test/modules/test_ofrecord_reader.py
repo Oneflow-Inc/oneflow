@@ -69,7 +69,7 @@ class DataLoaderGraph(flow.nn.Graph):
 @flow.unittest.skip_unless_1n2d()
 class DistributedOFRecordReaderTestCase(oneflow.unittest.TestCase):
     def test(test_case):
-        rank = flow.env.get_rank()()
+        rank = flow.env.get_rank()
         # print(f"DistributedOFRecordReaderTestCase.test on rank {rank} {os.getpid()}")
 
         eager_ofrecord_loader = OFRecordDataLoader(

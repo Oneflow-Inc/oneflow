@@ -92,7 +92,7 @@ class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
         graph_local_out = graph_out.to_local()
         # NOTE(chengcheng): MUST call for each rank sync correct input copy
         graph_local_out_np = graph_local_out.numpy()
-        # print("graph_local_out in rank ", flow.env.get_rank()(),  " is : ", graph_local_out)
+        # print("graph_local_out in rank ", flow.env.get_rank(),  " is : ", graph_local_out)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(graph_local_out.shape.numel() == 0)
             test_case.assertTrue(graph_local_out_np.size == np.array([]).size)
