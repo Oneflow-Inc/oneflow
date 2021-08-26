@@ -185,11 +185,11 @@ jobs:
             allow_fail: true
             python_version: 3.6
           - test_suite: cpu-clang
-            cuda_version: 10.2 # unused
-            extra_flags: "" # unused
+            cuda_version: "N/A"
+            extra_flags: "N/A"
             os: [self-hosted, linux, build]
             allow_fail: false
-            python_version: 3.6 # unused
+            python_version: "N/A"
     steps:
       - name: Install Conda
         run: |
