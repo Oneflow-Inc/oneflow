@@ -81,6 +81,7 @@ Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t 
   return Maybe<void>::Ok();
 }
 
+#ifdef WITH_CUDA
 std::pair<ncclComm_t, int64_t> RawGetNcclCommAndPeerNcclRank(int64_t peer_process_id) {
   std::set<std::pair<int64_t, int64_t>> device_set;
   const int64_t& rank = GlobalProcessCtx::Rank();
@@ -91,6 +92,7 @@ std::pair<ncclComm_t, int64_t> RawGetNcclCommAndPeerNcclRank(int64_t peer_proces
           peer_nccl_rank};
 }
 auto* GetNcclCommAndPeerNcclRank = DECORATE(&RawGetNcclCommAndPeerNcclRank, ThreadLocal);
+#endif
 
 template<>
 Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
