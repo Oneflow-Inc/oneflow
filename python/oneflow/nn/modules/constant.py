@@ -238,7 +238,7 @@ def full_op(
         >>> import oneflow as flow
         >>> y = flow.full((5,),5)
         >>> y
-        tensor([5., 5., 5., 5., 5.], dtype=oneflow.int64)
+        tensor([5, 5, 5, 5, 5], dtype=oneflow.int64)
         >>> y = flow.full((2,3),5.0)
         >>> y
         tensor([[5., 5., 5.],
