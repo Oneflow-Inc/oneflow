@@ -20,14 +20,14 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-struct SoftmaxKernelUtil<DeviceType::kCPU, SoftmaxType::kSoftmax, T> {
+struct SoftmaxKernelUtil<DeviceType::kCPU, SoftmaxAlgorithm::kSoftmax, T> {
   static void ComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* prob,
                           void* temp_storage, const size_t temp_storage_bytes) {
     auto Val = NdarrayUtil<DeviceType::kCPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
 
     const size_t min_temp_storage_bytes =
-        SoftmaxComputeProbTempStorageSize<T, SoftmaxType::kSoftmax>(n, w);
+        SoftmaxComputeProbTempStorageSize<T, SoftmaxAlgorithm::kSoftmax>(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
 
     const size_t reduce_operation_storage_bytes = SoftmaxReduceOperationStorageSize<T>(n, w);
@@ -60,7 +60,7 @@ struct SoftmaxKernelUtil<DeviceType::kCPU, SoftmaxType::kSoftmax, T> {
     auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
 
     const size_t min_temp_storage_bytes =
-        SoftmaxComputeDiffTempStorageSize<T, SoftmaxType::kSoftmax>(n, w);
+        SoftmaxComputeDiffTempStorageSize<T, SoftmaxAlgorithm::kSoftmax>(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
 
     const size_t reduce_operation_storage_bytes = SoftmaxReduceOperationStorageSize<T>(n, w);
@@ -86,14 +86,14 @@ struct SoftmaxKernelUtil<DeviceType::kCPU, SoftmaxType::kSoftmax, T> {
 };
 
 template<typename T>
-struct SoftmaxKernelUtil<DeviceType::kCPU, SoftmaxType::kLogSoftmax, T> {
+struct SoftmaxKernelUtil<DeviceType::kCPU, SoftmaxAlgorithm::kLogSoftmax, T> {
   static void ComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* prob,
                           void* temp_storage, const size_t temp_storage_bytes) {
     auto Val = NdarrayUtil<DeviceType::kCPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
 
     const size_t min_temp_storage_bytes =
-        SoftmaxComputeProbTempStorageSize<T, SoftmaxType::kLogSoftmax>(n, w);
+        SoftmaxComputeProbTempStorageSize<T, SoftmaxAlgorithm::kLogSoftmax>(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
 
     const size_t reduce_operation_storage_bytes = SoftmaxReduceOperationStorageSize<T>(n, w);
@@ -135,7 +135,7 @@ struct SoftmaxKernelUtil<DeviceType::kCPU, SoftmaxType::kLogSoftmax, T> {
     auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
 
     const size_t min_temp_storage_bytes =
-        SoftmaxComputeDiffTempStorageSize<T, SoftmaxType::kLogSoftmax>(n, w);
+        SoftmaxComputeDiffTempStorageSize<T, SoftmaxAlgorithm::kLogSoftmax>(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
 
     const size_t reduce_operation_storage_bytes = SoftmaxReduceOperationStorageSize<T>(n, w);
@@ -165,11 +165,11 @@ struct SoftmaxKernelUtil<DeviceType::kCPU, SoftmaxType::kLogSoftmax, T> {
   }
 };
 
-#define INSTANTIATE_SOFTMAX_KERNEL_UTIL(data_type, softmax_type) \
-  template struct SoftmaxKernelUtil<DeviceType::kCPU, softmax_type, data_type>;
-INSTANTIATE_SOFTMAX_KERNEL_UTIL(float, SoftmaxType::kSoftmax)
-INSTANTIATE_SOFTMAX_KERNEL_UTIL(double, SoftmaxType::kSoftmax)
-INSTANTIATE_SOFTMAX_KERNEL_UTIL(float, SoftmaxType::kLogSoftmax)
-INSTANTIATE_SOFTMAX_KERNEL_UTIL(double, SoftmaxType::kLogSoftmax)
+#define INSTANTIATE_SOFTMAX_KERNEL_UTIL(data_type, softmax_algorithm) \
+  template struct SoftmaxKernelUtil<DeviceType::kCPU, softmax_algorithm, data_type>;
+INSTANTIATE_SOFTMAX_KERNEL_UTIL(float, SoftmaxAlgorithm::kSoftmax)
+INSTANTIATE_SOFTMAX_KERNEL_UTIL(double, SoftmaxAlgorithm::kSoftmax)
+INSTANTIATE_SOFTMAX_KERNEL_UTIL(float, SoftmaxAlgorithm::kLogSoftmax)
+INSTANTIATE_SOFTMAX_KERNEL_UTIL(double, SoftmaxAlgorithm::kLogSoftmax)
 #undef INSTANTIATE_SOFTMAX_KERNEL_UTIL
 }  // namespace oneflow

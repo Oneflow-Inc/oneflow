@@ -62,7 +62,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
 
-    SoftmaxKernelUtil<device_type, SoftmaxType::kLogSoftmax, T>::ComputeProb(
+    SoftmaxKernelUtil<device_type, SoftmaxAlgorithm::kLogSoftmax, T>::ComputeProb(
         ctx->device_ctx(), num_instances, num_classes, prediction->dptr<T>(), prob->mut_dptr<T>(),
         tmp_buffer->mut_dptr(), temp_storage_bytes);
 
@@ -106,7 +106,7 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
         const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
         const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
         return SoftmaxComputeDiffTempStorageSize<OF_PP_PAIR_FIRST(dtype_pair),                   \
-                                                 SoftmaxType::kLogSoftmax>(num_instances,        \
+                                                 SoftmaxAlgorithm::kLogSoftmax>(num_instances,        \
                                                                            num_classes);         \
       });
 

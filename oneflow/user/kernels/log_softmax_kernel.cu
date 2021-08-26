@@ -38,7 +38,7 @@ class LogSoftmaxKernel final : public user_op::OpKernel {
     cuda::softmax::DirectLoad<T, ComputeType> load(in->dptr<T>(), num_classes);
     cuda::softmax::DirectStore<ComputeType, T> store(prob->mut_dptr<T>(), num_classes);
     cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType,
-                                   cuda::softmax::SoftmaxType::kLogSoftmax>(
+                                   cuda::softmax::SoftmaxAlgorithm::kLogSoftmax>(
         ctx->device_ctx()->cuda_stream(), load, store, num_instances, num_classes);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -75,7 +75,7 @@ class LogSoftmaxGradKernel final : public user_op::OpKernel {
     cuda::softmax::DirectStore<ComputeType, T> store(dx->mut_dptr<T>(), num_classes);
 
     cuda::softmax::DispatchSoftmaxGrad<decltype(load_prob), decltype(load_dy), decltype(store),
-                                       ComputeType, cuda::softmax::SoftmaxType::kLogSoftmax>(
+                                       ComputeType, cuda::softmax::SoftmaxAlgorithm::kLogSoftmax>(
         ctx->device_ctx()->cuda_stream(), load_prob, load_dy, store, num_instances, num_classes);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

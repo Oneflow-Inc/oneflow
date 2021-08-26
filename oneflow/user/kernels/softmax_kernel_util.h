@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-enum class SoftmaxType {
+enum class SoftmaxAlgorithm {
   kSoftmax = 0,
   kLogSoftmax = 1,
 };
@@ -35,31 +35,31 @@ size_t SoftmaxReduceOperationStorageSize(int64_t n, int64_t w) {
   return GetCudaAlignedSize(n * w * sizeof(T));
 }
 
-template<typename T, SoftmaxType softmax_type>
-typename std::enable_if<softmax_type == SoftmaxType::kSoftmax, size_t>::type
+template<typename T, SoftmaxAlgorithm softmax_algorithm>
+typename std::enable_if<softmax_algorithm == SoftmaxAlgorithm::kSoftmax, size_t>::type
 SoftmaxComputeProbTempStorageSize(int64_t n, int64_t w) {
   return SoftmaxReduceResultStorageSize<T>(n) + SoftmaxReduceOperationStorageSize<T>(n, w);
 }
 
-template<typename T, SoftmaxType softmax_type>
-typename std::enable_if<softmax_type == SoftmaxType::kLogSoftmax, size_t>::type
+template<typename T, SoftmaxAlgorithm softmax_algorithm>
+typename std::enable_if<softmax_algorithm == SoftmaxAlgorithm::kLogSoftmax, size_t>::type
 SoftmaxComputeProbTempStorageSize(int64_t n, int64_t w) {
   return SoftmaxReduceResultStorageSize<T>(n) + SoftmaxReduceOperationStorageSize<T>(n, w) * 2;
 }
 
-template<typename T, SoftmaxType softmax_type>
-typename std::enable_if<softmax_type == SoftmaxType::kSoftmax, size_t>::type
+template<typename T, SoftmaxAlgorithm softmax_algorithm>
+typename std::enable_if<softmax_algorithm == SoftmaxAlgorithm::kSoftmax, size_t>::type
 SoftmaxComputeDiffTempStorageSize(int64_t n, int64_t w) {
   return SoftmaxReduceResultStorageSize<T>(n) + SoftmaxReduceOperationStorageSize<T>(n, w);
 }
 
-template<typename T, SoftmaxType softmax_type>
-typename std::enable_if<softmax_type == SoftmaxType::kLogSoftmax, size_t>::type
+template<typename T, SoftmaxAlgorithm softmax_algorithm>
+typename std::enable_if<softmax_algorithm == SoftmaxAlgorithm::kLogSoftmax, size_t>::type
 SoftmaxComputeDiffTempStorageSize(int64_t n, int64_t w) {
   return SoftmaxReduceResultStorageSize<T>(n) + SoftmaxReduceOperationStorageSize<T>(n, w) * 2;
 }
 
-template<DeviceType device_type, SoftmaxType softmax_type, typename T>
+template<DeviceType device_type, SoftmaxAlgorithm softmax_algorithm, typename T>
 struct SoftmaxKernelUtil {
   static void ComputeProb(DeviceCtx* ctx, int64_t n, int64_t w, const T* in, T* prob,
                           void* temp_storage, size_t temp_storage_bytes);

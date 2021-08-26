@@ -82,13 +82,13 @@ void BroadcastSubExpGpu<float16>(DeviceCtx* ctx, const int64_t num_instances,
 
 }  // namespace
 
-template<SoftmaxType softmax_type, typename T>
-struct SoftmaxKernelUtil<DeviceType::kGPU, softmax_type, T> {
+template<SoftmaxAlgorithm softmax_algorithm, typename T>
+struct SoftmaxKernelUtil<DeviceType::kGPU, softmax_algorithm, T> {
   static void ComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* prob,
                           void* temp_storage, const size_t temp_storage_bytes) {
     auto Val = NdarrayUtil<DeviceType::kGPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kGPU, T>::GetVarNdarrayBuilder();
-    const size_t min_temp_storage_bytes = SoftmaxComputeProbTempStorageSize<T, softmax_type>(n, w);
+    const size_t min_temp_storage_bytes = SoftmaxComputeProbTempStorageSize<T, softmax_algorithm>(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
     const size_t reduce_temp_storage_bytes = SoftmaxReduceOperationStorageSize<T>(n, w);
     T* reduce_storage = reinterpret_cast<T*>(temp_storage);
@@ -121,7 +121,7 @@ struct SoftmaxKernelUtil<DeviceType::kGPU, softmax_type, T> {
                           const size_t temp_storage_bytes) {
     auto Val = NdarrayUtil<DeviceType::kGPU, T>::GetValNdarrayBuilder();
     auto Var = NdarrayUtil<DeviceType::kGPU, T>::GetVarNdarrayBuilder();
-    const size_t min_temp_storage_bytes = SoftmaxComputeProbTempStorageSize<T, softmax_type>(n, w);
+    const size_t min_temp_storage_bytes = SoftmaxComputeProbTempStorageSize<T, softmax_algorithm>(n, w);
     CHECK_GE(temp_storage_bytes, min_temp_storage_bytes);
     const size_t reduce_temp_storage_bytes = SoftmaxReduceOperationStorageSize<T>(n, w);
     T* reduce_storage = reinterpret_cast<T*>(temp_storage);
@@ -145,7 +145,7 @@ struct SoftmaxKernelUtil<DeviceType::kGPU, softmax_type, T> {
 };
 
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(data_type) \
-  template struct SoftmaxKernelUtil<DeviceType::kGPU, SoftmaxType::kSoftmax, data_type>;
+  template struct SoftmaxKernelUtil<DeviceType::kGPU, SoftmaxAlgorithm::kSoftmax, data_type>;
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(float16)
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(float)
 INSTANTIATE_SOFTMAX_KERNEL_UTIL(double)

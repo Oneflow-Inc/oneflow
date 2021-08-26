@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL_UTIL_H_
-#define ONEFLOW_USER_KERNELS_SPARSE_SOFTMAX__CROSS_ENTROPY_KERNEL_UTIL_H_
+#define ONEFLOW_USER_KERNELS_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL_UTIL_H_
 
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"

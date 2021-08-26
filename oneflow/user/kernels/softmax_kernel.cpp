@@ -35,7 +35,7 @@ class SoftmaxKernel final : public user_op::OpKernel {
     const int64_t num_instances = in->shape().Count(0, in->shape().NumAxes() - 1);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
-    SoftmaxKernelUtil<device_type, SoftmaxType::kSoftmax, T>::ComputeProb(
+    SoftmaxKernelUtil<device_type, SoftmaxAlgorithm::kSoftmax, T>::ComputeProb(
         ctx->device_ctx(), num_instances, num_classes, in->dptr<T>(), out->mut_dptr<T>(),
         tmp_buffer->mut_dptr(), temp_storage_bytes);
   }
@@ -48,7 +48,7 @@ user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
     const Shape& in_shape = ctx->InputShape("in", 0);
     const int64_t num_classes = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t num_instances = in_shape.Count(0, in_shape.NumAxes() - 1);
-    return SoftmaxComputeProbTempStorageSize<T, SoftmaxType::kSoftmax>(num_instances, num_classes);
+    return SoftmaxComputeProbTempStorageSize<T, SoftmaxAlgorithm::kSoftmax>(num_instances, num_classes);
   };
 }
 
@@ -80,7 +80,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const size_t temp_storage_bytes = tmp_buffer->shape().elem_cnt();
 
-    SoftmaxKernelUtil<device_type, SoftmaxType::kSoftmax, T>::ComputeDiff(
+    SoftmaxKernelUtil<device_type, SoftmaxAlgorithm::kSoftmax, T>::ComputeDiff(
         ctx->device_ctx(), num_instances, num_classes, dy->dptr<T>(), y->dptr<T>(),
         dx->mut_dptr<T>(), tmp_buffer->mut_dptr(), temp_storage_bytes);
   }
@@ -93,7 +93,7 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
     const Shape& dy_shape = ctx->InputShape("dy", 0);
     const int64_t num_classes = dy_shape.At(dy_shape.NumAxes() - 1);
     const int64_t num_instances = dy_shape.Count(0, dy_shape.NumAxes() - 1);
-    return SoftmaxComputeDiffTempStorageSize<T, SoftmaxType::kSoftmax>(num_instances, num_classes);
+    return SoftmaxComputeDiffTempStorageSize<T, SoftmaxAlgorithm::kSoftmax>(num_instances, num_classes);
   };
 }
 

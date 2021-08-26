@@ -36,7 +36,7 @@ class SoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     cuda::softmax::DirectLoad<T, ComputeType> load(in->dptr<T>(), cols);
     cuda::softmax::DirectStore<ComputeType, T> store(out->mut_dptr<T>(), cols);
     cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType,
-                                   cuda::softmax::SoftmaxType::kSoftmax>(
+                                   cuda::softmax::SoftmaxAlgorithm::kSoftmax>(
         ctx->device_ctx()->cuda_stream(), load, store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -70,7 +70,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel, public user_op::CudaGr
     cuda::softmax::DirectLoad<T, ComputeType> load_dy(dy->dptr<T>(), cols);
     cuda::softmax::DirectStore<ComputeType, T> store(dx->mut_dptr<T>(), cols);
     cuda::softmax::DispatchSoftmaxGrad<decltype(load_y), decltype(load_dy), decltype(store),
-                                       ComputeType, cuda::softmax::SoftmaxType::kSoftmax>(
+                                       ComputeType, cuda::softmax::SoftmaxAlgorithm::kSoftmax>(
         ctx->device_ctx()->cuda_stream(), load_y, load_dy, store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
