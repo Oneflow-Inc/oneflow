@@ -28,6 +28,8 @@ class LogSoftmaxKernel final : public user_op::OpKernel {
   ~LogSoftmaxKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
+
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
@@ -53,16 +55,6 @@ user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_LOGSOFTMAX_KERNEL(device, dtype)                                        \
-  REGISTER_USER_KERNEL("log_softmax")                                                    \
-      .SetCreateFn<LogSoftmaxKernel<device, dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
-                       & (user_op::HobDataType("prob", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(GenFwInferTmpSizeFn<device, dtype>());
-
-REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kCPU, float)
-REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kCPU, double)
-
 template<DeviceType device_type, typename T>
 class LogSoftmaxGradKernel final : public user_op::OpKernel {
  public:
@@ -70,6 +62,8 @@ class LogSoftmaxGradKernel final : public user_op::OpKernel {
   ~LogSoftmaxGradKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
+  
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -99,6 +93,18 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
   };
 }
 
+}  // namespace
+
+#define REGISTER_LOGSOFTMAX_KERNEL(device, dtype)                                        \
+  REGISTER_USER_KERNEL("log_softmax")                                                    \
+      .SetCreateFn<LogSoftmaxKernel<device, dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
+                       & (user_op::HobDataType("prob", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(GenFwInferTmpSizeFn<device, dtype>());
+
+REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kCPU, float)
+REGISTER_LOGSOFTMAX_KERNEL(DeviceType::kCPU, double)
+
 #define REGISTER_LOGSOFTMAX_GRAD_KERNEL(device, dtype)                                 \
   REGISTER_USER_KERNEL("log_softmax_grad")                                             \
       .SetCreateFn<LogSoftmaxGradKernel<device, dtype>>()                              \
@@ -109,5 +115,4 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
 REGISTER_LOGSOFTMAX_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_LOGSOFTMAX_GRAD_KERNEL(DeviceType::kCPU, double)
 
-}  // namespace
 }  // namespace oneflow
