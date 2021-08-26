@@ -42,6 +42,12 @@ def _test_randperm_backward(test_case, N, device, dtype):
     y.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(N), 1e-05, 1e-05))
 
+def _test_randperm_randomness(test_case, N, device, dtype):
+    n = np.random.randint(100, 1000)
+    x1 = flow.randperm(n, device=device)
+    x2 = flow.randperm(n, device=device)
+    test_case.assertFalse(np.all(x1.numpy() == x2.numpy()))
+
 
 @flow.unittest.skip_unless_1n1d()
 class Testrandperm(flow.unittest.TestCase):
@@ -50,6 +56,7 @@ class Testrandperm(flow.unittest.TestCase):
         arg_dict["test_functions"] = [
             _test_randperm_with_generator,
             _test_randperm_backward,
+            _test_randperm_randomness,
         ]
         arg_dict["N"] = [i for i in range(10, 100, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
@@ -69,17 +76,6 @@ class Testrandperm(flow.unittest.TestCase):
         y = torch.randperm(0, device=device)
         return y
 
-    def test_randperm_randomness(test_case):
-        device = "cuda"
-        n = np.random.randint(100, 1000)
-        x1 = flow.randperm(n, device=device)
-        x2 = flow.randperm(n, device=device)
-        test_case.assertTrue(not np.all(x1.numpy() == x2.numpy()))
-        device = "cpu"
-        n = np.random.randint(100, 1000)
-        x1 = flow.randperm(n, device=device)
-        x2 = flow.randperm(n, device=device)
-        test_case.assertTrue(not np.all(x1.numpy() == x2.numpy()))
 
 
 if __name__ == "__main__":
