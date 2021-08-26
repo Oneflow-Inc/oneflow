@@ -285,7 +285,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
     CHECK_OR_RETURN(sbp_tuple.size() == placement->hierarchy()->NumAxes());
   }
 
-  if (kwargs.contains("dtype")) { desired_dtype = kwargs["dtype"].cast<Symbol<DType>>(); }
+  desired_dtype = kwargs.contains("dtype") ? kwargs["dtype"].cast<Symbol<DType>>() : desired_dtype;
 
   bool requires_grad = false;
   if (kwargs.contains("requires_grad")) { requires_grad = kwargs["requires_grad"].cast<bool>(); }
