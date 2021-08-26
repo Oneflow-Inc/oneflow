@@ -16,15 +16,16 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_QP_H_
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_QP_H_
 
-#include <cstdint>
-#include <deque>
-#include <memory>
-#include <mutex>
+
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/platform/include/ibv.h"
 
 #include <infiniband/verbs.h>
+
+#include <deque>
+#include <memory>
+#include <mutex>
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
@@ -72,7 +73,7 @@ class MessagePool final {
     RegisterMessagePool();
   }
 
-    void RegisterMessagePool() {
+  void RegisterMessagePool() {
     ActorMsg msg;
     size_t ActorMsgSize = sizeof(msg);
     size_t RegisterMemorySize = ActorMsgSize * (num_of_message_);
@@ -115,13 +116,6 @@ class MessagePool final {
     return message_buf_.empty() == true;
   }
 
-  void FreeActorMsgMR() {
-    while (message_buf_.empty() == false) {
-      delete message_buf_.front();
-      message_buf_.pop_front();
-    }
-  }
-
   void FreeMr() {
     while (mr_buf_.empty() == false) {
       ibv_mr* mr = mr_buf_.front();
@@ -151,7 +145,7 @@ class IBVerbsQP final {
   uint32_t qp_num() const { return qp_->qp_num; }
   void Connect(const IBVerbsConnectionInfo& peer_info);
   void PostAllRecvRequest();
-
+  void GetActorMsgMRFromMessagePool();
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);

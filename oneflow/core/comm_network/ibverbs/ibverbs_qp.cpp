@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/platform/include/ibv.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
+#include "third_party/json/include/json.hpp"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
@@ -131,16 +132,17 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 void IBVerbsQP::PostAllRecvRequest() {
   if (msg_Pool_buf_->IsEmpty()) {
     msg_Pool_buf_->RegisterMessagePool();
-    while (msg_Pool_buf_->IsEmpty() == false) {
-      ActorMsgMR* msg_mr = msg_Pool_buf_->GetMessage();
-      PostRecvRequest(msg_mr);
-    }
+    GetActorMsgMRFromMessagePool();
   } else {
+    GetActorMsgMRFromMessagePool();
+  }
+}
+
+void IBVerbsQP::GetActorMsgMRFromMessagePool(){
     while (msg_Pool_buf_->IsEmpty() == false) {
       ActorMsgMR* msg_mr = msg_Pool_buf_->GetMessage();
       PostRecvRequest(msg_mr);
     }
-  }
 }
 
 void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
