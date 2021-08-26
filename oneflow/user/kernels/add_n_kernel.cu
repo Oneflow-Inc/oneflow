@@ -104,6 +104,7 @@ class GpuAddNKernel : public user_op::OpKernel, public user_op::CudaGraphSupport
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     int32_t in_num = ctx->inputs().size();
 
@@ -178,6 +179,7 @@ class GpuAddNHalfKernel : public user_op::OpKernel, public user_op::CudaGraphSup
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     int32_t in_num = ctx->inputs().size();
 
