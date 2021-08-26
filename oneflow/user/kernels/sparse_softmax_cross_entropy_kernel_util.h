@@ -17,9 +17,6 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL_UTIL_H_
 
 #include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/ndarray/xpu_var_ndarray.h"
 
 namespace oneflow {
 namespace user_op {

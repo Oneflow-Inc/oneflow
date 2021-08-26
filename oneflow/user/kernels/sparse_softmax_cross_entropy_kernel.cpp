@@ -106,8 +106,8 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
         const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
         const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
         return SoftmaxComputeDiffTempStorageSize<OF_PP_PAIR_FIRST(dtype_pair),                   \
-                                                 SoftmaxAlgorithm::kLogSoftmax>(num_instances,        \
-                                                                           num_classes);         \
+                                                 SoftmaxAlgorithm::kLogSoftmax>(num_instances,   \
+                                                                                num_classes);    \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,

@@ -29,8 +29,8 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* 
   cuda::softmax::DirectLoad<T, ComputeType> load(in, col);
   cuda::softmax::DirectStore<ComputeType, T> store(prob, col);
   cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType,
-                                 cuda::softmax::SoftmaxAlgorithm::kLogSoftmax>(ctx->cuda_stream(), load,
-                                                                          store, row, col);
+                                 cuda::softmax::SoftmaxAlgorithm::kLogSoftmax>(
+      ctx->cuda_stream(), load, store, row, col);
 }
 
 template<>
@@ -39,8 +39,8 @@ void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const flo
   cuda::softmax::DirectLoad<half, float> load(reinterpret_cast<const half*>(in), col);
   cuda::softmax::DirectStore<float, half> store(reinterpret_cast<half*>(prob), col);
   cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), float,
-                                 cuda::softmax::SoftmaxAlgorithm::kLogSoftmax>(ctx->cuda_stream(), load,
-                                                                          store, row, col);
+                                 cuda::softmax::SoftmaxAlgorithm::kLogSoftmax>(
+      ctx->cuda_stream(), load, store, row, col);
 }
 
 template<typename T, typename K>

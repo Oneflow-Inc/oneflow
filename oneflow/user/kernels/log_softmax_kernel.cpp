@@ -49,7 +49,7 @@ user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
     const int64_t num_classes = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t num_instances = in_shape.Count(0, in_shape.NumAxes() - 1);
     return SoftmaxComputeProbTempStorageSize<T, SoftmaxAlgorithm::kLogSoftmax>(num_instances,
-                                                                          num_classes);
+                                                                               num_classes);
   };
 }
 
@@ -95,7 +95,7 @@ user_op::InferTmpSizeFn GenBwInferTmpSizeFn() {
     const int64_t num_classes = dy_shape.At(dy_shape.NumAxes() - 1);
     const int64_t num_instances = dy_shape.Count(0, dy_shape.NumAxes() - 1);
     return SoftmaxComputeDiffTempStorageSize<T, SoftmaxAlgorithm::kLogSoftmax>(num_instances,
-                                                                          num_classes);
+                                                                               num_classes);
   };
 }
 
