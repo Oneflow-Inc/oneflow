@@ -89,3 +89,4 @@ Operators for neural networks
         FakeQuantization,
         Quantization
 
+.. autofunction:: oneflow.nn.parallel.DistributedDataParallel

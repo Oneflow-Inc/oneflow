@@ -136,6 +136,8 @@ OneFlow Tensor Class
             tanh, 
             tile, 
             to, 
+            to_consistent,
+            to_local,
             tolist, 
             topk, 
             transpose,
