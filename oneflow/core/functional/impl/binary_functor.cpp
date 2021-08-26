@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/scalar.h"
 
@@ -114,6 +115,11 @@ class PowFunctor : public BinaryFunctor {
  public:
   PowFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("pow").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    if (*x->shape() != *y->shape()) { return BroadcastPow(x, y); }
+    return BinaryFunctor::operator()(x, y);
   }
 };
 
