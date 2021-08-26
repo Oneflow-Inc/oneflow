@@ -79,7 +79,7 @@ decltype(FlattenInHierarchy) FlattenInHierarchy = DECORATE(&RawFlattenInHierarch
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp(int64_t ndim) {
+Maybe<Symbol<cfg::NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
   cfg::NdSbp partial_sum_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
     partial_sum_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
@@ -87,11 +87,11 @@ Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp(int64_t ndim) {
   return SymbolOf(partial_sum_nd_sbp);
 }
 
-auto* CachedGetPartialSumNdSbp = DECORATE(&GetPartialSumNdSbp, ThreadLocal);
+auto* CachedGetAllPartialSumNdSbp = DECORATE(&GetAllPartialSumNdSbp, ThreadLocal);
 
 Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithPartialSum(Symbol<PlacedNdSbp> placed_nd_sbp) {
   Symbol<cfg::NdSbp> partial_sum_nd_sbp =
-      JUST(CachedGetPartialSumNdSbp(placed_nd_sbp->nd_sbp()->sbp_parallel_size()));
+      JUST(CachedGetAllPartialSumNdSbp(placed_nd_sbp->nd_sbp()->sbp_parallel_size()));
   return JUST(PlacedNdSbp::New(partial_sum_nd_sbp, placed_nd_sbp->placement()));
 }
 
@@ -113,7 +113,7 @@ decltype(OutPlacementAndPartialSum) OutPlacementAndPartialSum =
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp(int64_t ndim) {
+Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
   cfg::NdSbp broadcast_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
     broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
@@ -121,11 +121,11 @@ Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp(int64_t ndim) {
   return SymbolOf(broadcast_nd_sbp);
 }
 
-auto* CachedGetBroadcastNdSbp = DECORATE(&GetBroadcastNdSbp, ThreadLocal);
+auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 
 Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithBroadcast(Symbol<PlacedNdSbp> placed_nd_sbp) {
   Symbol<cfg::NdSbp> broadcast_nd_sbp =
-      JUST(CachedGetBroadcastNdSbp(placed_nd_sbp->nd_sbp()->sbp_parallel_size()));
+      JUST(CachedGetAllBroadcastNdSbp(placed_nd_sbp->nd_sbp()->sbp_parallel_size()));
   return JUST(PlacedNdSbp::New(broadcast_nd_sbp, placed_nd_sbp->placement()));
 }
 
