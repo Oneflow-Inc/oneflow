@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/boxing/naive_s2p_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/cuda_copy_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/boxing/cuda_based_cpu_mpi_boxing_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/boxing/boxing_dividor_util.h"
 
 namespace oneflow {
 
@@ -67,6 +68,28 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
   if (lhs == rhs) { return true; }
   return lhs == JUST(ReplaceDeviceType(rhs, lhs->device_type()));
 }
+
+namespace {
+
+Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_boxing_expr) {
+  return JUST(
+      BoxingExpr(JUST(ReplaceInDeviceType(DeviceType::kGPU)), JUST(OptionalBoxing("cuda-copy-h2d")),
+                 JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kGPU)), core_boxing_expr,
+                                 JUST(OptionalBoxing("cuda-copy-d2h"))))));
+}
+
+Maybe<BoxingExprIf> RawMainBoxingExpr() {
+  const auto& core =
+      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
+      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-1-to-p"))
+      | JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
+                        JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))));
+  return core | JUST(OptionalCudaCopy(core));
+}
+
+}  // namespace
+
+static constexpr auto* MainBoxingExpr = DECORATE(&RawMainBoxingExpr, ThreadLocal);
 
 Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
                                                    Symbol<cfg::NdSbp> out_nd_sbp,
@@ -123,21 +146,15 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
         in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
     if (interpreter.IsOk()) { return JUST(interpreter); }
   }
+
   const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
   const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
 
-#define TRY_BOXING_FUNCTION(boxing_function_name)                                       \
-  do {                                                                                  \
-    const auto& BoxingFunction = TRY(GetBoxingFunction(boxing_function_name, in, out)); \
-    if (BoxingFunction.IsOk()) {                                                        \
-      return std::shared_ptr<EagerBoxingInterpreter>(                                   \
-          new NaiveEagerBoxingInterpreter(JUST(BoxingFunction)));                       \
-    }                                                                                   \
-  } while (0)
-
-  TRY_BOXING_FUNCTION("flatten-hierarchy");
-
-#undef TRY_BOXING_FUNCTION
+  const auto& main_boxing_expr = JUST(MainBoxingExpr());
+  if (TRY(main_boxing_expr->Check(in, out)).IsOk()) {
+    const auto& boxing_func = JUST(main_boxing_expr->GetBoxingFunction(in, out));
+    return std::shared_ptr<EagerBoxingInterpreter>(new NaiveEagerBoxingInterpreter(boxing_func));
+  }
 
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
                               << "consistent-to-consistent not supported"

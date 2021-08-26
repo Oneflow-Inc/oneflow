@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/scalar.h"
 
@@ -71,6 +72,12 @@ class AddFunctor {
   std::shared_ptr<OpExpr> add_op_;
   std::shared_ptr<OpExpr> broadcast_add_op_;
 };
+class BroadcastPowFunctor : public BinaryFunctor {
+ public:
+  BroadcastPowFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_pow").Input("x").Input("y").Output("z").Build());
+  }
+};
 
 class SubFunctor : public BinaryFunctor {
  public:
@@ -108,6 +115,11 @@ class PowFunctor : public BinaryFunctor {
  public:
   PowFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("pow").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    if (*x->shape() != *y->shape()) { return BroadcastPow(x, y); }
+    return BinaryFunctor::operator()(x, y);
   }
 };
 
@@ -235,6 +247,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MulFunctor>("Mul");
   m.add_functor<impl::DivFunctor>("Div");
   m.add_functor<impl::PowFunctor>("Pow");
+  m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");
   m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
   m.add_functor<impl::BroadcastNotEqualFunctor>("BroadcastNotEqual");
   m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");

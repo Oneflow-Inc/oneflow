@@ -591,7 +591,7 @@ def rsqrt_op(input):
             \\text{out}_{i} = \\frac{1}{\\sqrt{\\text{input}_{i}}}
 
         Args:
-            input (Tensor) – the input tensor.
+            input (Tensor): the input tensor.
 
          For example:
 
@@ -1242,9 +1242,10 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 
     Args:
         input (oneflow.Tensor): Input Tensor
+        k (int): the k in “top-k”
         dim (int, optional): the dimension to sort along. Defaults to the last dim (-1)
         largest (bool, optional): controls whether to return largest or smallest elements
-        sorted (bool, optional): controls whether to return the elements in sorted order
+        sorted (bool, optional): controls whether to return the elements in sorted order (Only Support True Now!)
 
     Returns:
         Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int32)): A tuple of (values, indices), where
