@@ -357,7 +357,7 @@ def _get_device(self):
 
 def _format(self, format_spec):
     if self.dim() == 0:
-        return self.tolist().__format__(format_spec)
+        return self.numpy().tolist().__format__(format_spec)
     return object.__format__(self, format_spec)
 
 
@@ -366,7 +366,6 @@ def RegisterMethods():
     Tensor.__rmul__ = lambda self, other: self.mul(other)
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
-    Tensor.tolist = lambda self: self.numpy().tolist()
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _tensor_numpy
     Tensor.size = _size
