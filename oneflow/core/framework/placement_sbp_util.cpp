@@ -621,8 +621,8 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
 }
 auto* CachedBroadcastGroup = DECORATE(&CalcBroadcastGroup, ThreadLocal);
 
-
 Maybe<void> RawCheckIsNdSbpBoxingAcyclic(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  using namespace private_details;
   const auto& src_nd_sbp = in->nd_sbp();
   const auto& dst_nd_sbp = out->nd_sbp();
   std::function<Maybe<Optional<int64_t>>(int64_t)> ExclusiveSrcNdSbpAxis4DstNdSbpAxis;
@@ -635,7 +635,6 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclic(Symbol<PlacedNdSbp> in, Symbol<PlacedNd
                                                             ExclusiveSrcNdSbpAxis4DstNdSbpAxis);
   return Maybe<void>::Ok();
 }
-
 
 }  // namespace
 
