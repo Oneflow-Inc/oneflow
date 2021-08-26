@@ -124,7 +124,7 @@ class MessagePool final {
       memory_buf_.pop_front();
     }
   }
-  
+
  private:
   ibv_pd* pd_;
   size_t num_of_message_;
@@ -173,7 +173,7 @@ class IBVerbsQP final {
   uint32_t num_outstanding_send_wr_;
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
-  MessagePool* msg_Pool_buf_;
+  MessagePool* msg_pool_buf_;
 };
 
 }  // namespace oneflow
