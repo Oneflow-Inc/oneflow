@@ -107,4 +107,35 @@ Maybe<BoxingDividor> RawOutPlacementAndPartialSum() {
 
 decltype(OutPlacementAndPartialSum) OutPlacementAndPartialSum =
     DECORATE(&RawOutPlacementAndPartialSum, ThreadLocal);
+
+namespace {
+
+Maybe<Symbol<cfg::NdSbp>> GetBroadcastNdSbp() {
+  cfg::NdSbp broadcast_nd_sbp;
+  broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  return SymbolOf(broadcast_nd_sbp);
+}
+
+auto* CachedGetBroadcastNdSbp = DECORATE(&GetBroadcastNdSbp, ThreadLocal);
+
+Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithBroadcast(Symbol<PlacedNdSbp> placed_nd_sbp) {
+  Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetBroadcastNdSbp());
+  return JUST(PlacedNdSbp::New(broadcast_nd_sbp, placed_nd_sbp->placement()));
+}
+
+static constexpr auto* ReplaceNdSbpWithBroadcast =
+    DECORATE(&RawReplaceNdSbpWithBroadcast, ThreadLocal);
+
+Maybe<BoxingDividor> RawInPlacementAndBroadcast() {
+  return std::make_shared<BoxingDividor>(
+      "InPlacementAndBroadcast",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return ReplaceNdSbpWithBroadcast(in);
+      });
+}
+
+}  // namespace
+
+decltype(InPlacementAndBroadcast) InPlacementAndBroadcast =
+    DECORATE(&RawInPlacementAndBroadcast, ThreadLocal);
 }  // namespace oneflow

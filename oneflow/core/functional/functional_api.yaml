@@ -972,13 +972,25 @@
   signature: "Tensor (Tensor x) => ConsistentToLocal"
   bind_python: True
 
-- name: "all_reduce"
-  signature: "Tensor (Tensor x) => AllReduce"
-  bind_python: True
-
 - name: "broadcast"
   signature: "Tensor (Tensor x) => Broadcast"
   bind_python: True
+
+- name: "private_local_all_reduce"
+  signature: "Tensor (Tensor x) => LocalAllReduce"
+  bind_python: True
+
+- name: "consistent_all_reduce"
+  signature: "Tensor (Tensor x) => ConsistentAllReduce"
+  bind_python: False
+
+- name: "consistent_reduce_scatter"
+  signature: "Tensor (Tensor x, String op_type) => ConsistentReduceScatter"
+  bind_python: False
+
+- name: "consistent_all_gather"
+  signature: "Tensor (Tensor x) => ConsistentAllGather"
+  bind_python: False
 
 - name: "select_first"
   signature: "Tensor (TensorTuple inputs) => SelectFirst"
@@ -1047,6 +1059,19 @@
                       Generator generator=None) => ConsistentRandN"
   bind_python: True
 
+- name: "unfold"
+  signature: "Tensor (Tensor x, String data_format=\"channels_first\", Int32List kernel_size, 
+                            Int32List dilation_rate, Int32List padding, 
+                            Int32List strides) => Unfold"
+  bind_python: True
+  
+- name: "fold"
+  signature: "Tensor (Tensor x, String data_format=\"channels_first\", 
+                          Int32List output_size, Int32List kernel_size, 
+                          Int32List dilation_rate, Int32List padding, 
+                          Int32List strides) => Fold"
+  bind_python: True
+  
 - name: "scalar_fmod"
   signature: "Tensor (Tensor in, Scalar scalar) => ScalarFMod"
   bind_python: False
