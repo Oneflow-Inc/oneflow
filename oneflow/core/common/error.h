@@ -132,6 +132,11 @@ inline Error&& operator<<(Error&& error, const Error& other) {
   return std::move(error);
 }
 
+#define ERROR_ISSUE_MSG                                                                        \
+  "This is a oneflow bug, please submit issues in "                                            \
+  "'https://github.com/Oneflow-Inc/oneflow/issues' include the log information of the error, " \
+  "the minimum reproduction code, and the system information."
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ERROR_H_
