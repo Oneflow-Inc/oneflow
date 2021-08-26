@@ -184,7 +184,22 @@ jobs:
             os: [self-hosted, linux, build]
             allow_fail: true
             python_version: 3.6
+          - test_suite: conda
+            cuda_version: 10.2 # unused
+            extra_flags: "" # unused
+            os: [self-hosted, linux, build]
+            allow_fail: false
+            python_version: 3.6 # unused
     steps:
+      - name: Install Conda
+        run: |
+          CONDA=$HOME/miniconda3/py39_4.10.3
+          echo "CONDA=${CONDA}" >> $GITHUB_ENV
+          if ! command -v $CONDA/bin/conda &> /dev/null
+          then
+              wget https://oneflow-static.oss-cn-beijing.aliyuncs.com/downloads/conda-installers/Miniconda3-py39_4.10.3-Linux-x86_64.sh
+              bash Miniconda3-py39_4.10.3-Linux-x86_64.sh -b -u -p ${CONDA}
+          fi
       - name: Set environments from secrets
         if: contains(${{ github.repository }}, "Oneflow-Inc")
         run: |
@@ -703,7 +718,7 @@ jobs:
         if: always()
         run: |
           docker rm -f ${container_name} || true
-  
+
   static_analysis_with_clang_on_diff:
     name: Static analysis with clang on diff
     runs-on: ubuntu-20.04
