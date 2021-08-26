@@ -18,7 +18,13 @@ from typing import Optional
 import oneflow as flow
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _getint, _pair, _single, _triple, _generate_output_size
+from oneflow.nn.modules.utils import (
+    _getint,
+    _pair,
+    _single,
+    _triple,
+    _generate_output_size,
+)
 
 
 class MaxPool1d(Module):
@@ -620,6 +626,7 @@ class AdaptiveAvgPool1d(Module):
         ), "numbers in 'output_size' should be integer"
         return flow.F.adaptive_avg_pool1d(x, output_size=self.output_size)
 
+
 def adaptive_avg_pool1d(input, output_size):
     """Applies a 1D adaptive average pooling over an input signal composed of several input planes.
 
@@ -630,6 +637,7 @@ def adaptive_avg_pool1d(input, output_size):
         output_size: the target output size (single integer)
     """
     return AdaptiveAvgPool1d(output_size)(input)
+
 
 class AdaptiveAvgPool2d(Module):
     """Applies a 2D adaptive average pooling over an input signal composed of several input planes.
@@ -683,6 +691,7 @@ class AdaptiveAvgPool2d(Module):
         new_output_size = _generate_output_size(x.shape, self.output_size)
         return flow.F.adaptive_avg_pool2d(x, output_size=new_output_size)
 
+
 def adaptive_avg_pool2d(input, output_size):
     """Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
@@ -693,6 +702,7 @@ def adaptive_avg_pool2d(input, output_size):
         output_size: the target output size (single integer or double-integer tuple)
     """
     return AdaptiveAvgPool2d(output_size)(input)
+
 
 class AdaptiveAvgPool3d(Module):
     """Applies a 3D adaptive average pooling over an input signal composed of several input planes.

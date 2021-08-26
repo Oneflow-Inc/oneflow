@@ -46,6 +46,7 @@ def sign_op(input):
     """
     return flow.F.sign(input)
 
+
 @register_tensor_op("sign")
 def sign_op_tensor(input):
     """
@@ -56,6 +57,7 @@ def sign_op_tensor(input):
 
     """
     return flow.F.sign(input)
+
 
 def sinh_op(input):
     """Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
@@ -87,6 +89,7 @@ def sinh_op(input):
     """
     return flow.F.sinh(input)
 
+
 @register_tensor_op("sinh")
 def sinh_op_tensor(input):
     """
@@ -97,6 +100,7 @@ def sinh_op_tensor(input):
 
     """
     return flow.F.sinh(input)
+
 
 def tan_op(input):
     """Returns  the tan value of the elements of :attr:`input`.
@@ -122,6 +126,7 @@ def tan_op(input):
     """
     return flow.F.tan(input)
 
+
 @register_tensor_op("tan")
 def tan_op_tensor(input):
     """
@@ -130,6 +135,7 @@ def tan_op_tensor(input):
 
     """
     return flow.F.tan(input)
+
 
 @register_tensor_op("acos")
 def acos_op(input):
@@ -157,6 +163,7 @@ def acos_op(input):
 
     """
     return flow.F.acos(input)
+
 
 def acosh_op(input):
     """Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
@@ -186,6 +193,7 @@ def acosh_op(input):
     """
     return flow.F.acosh(input)
 
+
 @register_tensor_op("acosh")
 def acosh_op_tensor(input):
     """
@@ -197,6 +205,7 @@ def acosh_op_tensor(input):
     """
     return flow.F.acosh(input)
 
+
 def arccosh_op(input):
     """
 
@@ -204,6 +213,7 @@ def arccosh_op(input):
 
     """
     return flow.F.acosh(input)
+
 
 @register_tensor_op("arccosh")
 def arccosh_op_tensor(input):
@@ -216,6 +226,7 @@ def arccosh_op_tensor(input):
     """
     return flow.F.acosh(input)
 
+
 class Atan2(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -225,6 +236,7 @@ class Atan2(Module):
 
     def forward(self, x, y):
         return self.atan2_op(x, y)[0]
+
 
 def atan2_op(input, other):
     """Element-wise arctangent of input{i}/other{i}
@@ -262,6 +274,7 @@ def atan2_op(input, other):
     """
     return Atan2()(input, other)
 
+
 @register_tensor_op("atan2")
 def atan2_op_tensor(input, other):
     """
@@ -297,6 +310,7 @@ def atanh_op(input):
     """
     return flow.F.atanh(input)
 
+
 @register_tensor_op("atanh")
 def atanh_op_tensor(input):
     """
@@ -306,12 +320,14 @@ def atanh_op_tensor(input):
     """
     return flow.F.atanh(input)
 
+
 def arctanh_op(input):
     """
 
     Alias for :func:`oneflow.atanh`
     """
     return flow.F.atanh(input)
+
 
 @register_tensor_op("arctanh")
 def arctanh_op_tensor(input):
@@ -320,7 +336,6 @@ def arctanh_op_tensor(input):
     Alias for :func:`oneflow.atanh`
     """
     return flow.F.atanh(input)
-
 
 
 if __name__ == "__main__":

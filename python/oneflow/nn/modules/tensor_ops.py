@@ -46,6 +46,7 @@ def negative_op(input):
     """
     return flow.F.negative(input)
 
+
 @register_tensor_op("type_as")
 def type_as_op(input, target):
     r"""Returns this tensor cast to the type of the given tensor.

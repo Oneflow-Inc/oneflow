@@ -80,6 +80,7 @@ def ne_op(input, other):
     """
     return flow.F.not_equal(input, other)
 
+
 def greater_op(input, other):
     """Returns the truth value of :math:`input > other` element-wise.
 
@@ -106,6 +107,7 @@ def greater_op(input, other):
 
     """
     return flow.F.greater(input, other)
+
 
 @register_tensor_op("gt")
 def greater_op_tensor(input, other):
@@ -146,6 +148,7 @@ def greater_equal_op(input, other):
     """
     return flow.F.greater_equal(input, other)
 
+
 @register_tensor_op("ge")
 def greater_equal_op_tensor(input, other):
     """
@@ -156,7 +159,6 @@ def greater_equal_op_tensor(input, other):
 
     """
     return greater_equal_op(input, other)
-
 
 
 @register_tensor_op("lt")
@@ -215,7 +217,6 @@ def less_equal_op(input, other):
 
     """
     return flow.F.less_equal(input, other)
-
 
 
 @register_tensor_op("ne")
