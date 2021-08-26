@@ -110,10 +110,19 @@ class Rand(Module):
     def forward(self):
         if self.placement is not None:
             res = flow.F.consistent_rand(
-                self.size, placement=self.placement, sbp=self.sbp, dtype=self.dtype, generator=self.generator
+                self.size,
+                placement=self.placement,
+                sbp=self.sbp,
+                dtype=self.dtype,
+                generator=self.generator,
             )
         else:
-            res = flow.F.rand(self.size, dtype=self.dtype, device=self.device, generator=self.generator)
+            res = flow.F.rand(
+                self.size,
+                dtype=self.dtype,
+                device=self.device,
+                generator=self.generator,
+            )
         res.requires_grad = self.requires_grad
         return res
 
@@ -199,10 +208,19 @@ class RandN(Module):
     def forward(self):
         if self.placement is not None:
             res = flow.F.consistent_randn(
-                self.size, placement=self.placement, sbp=self.sbp, dtype=self.dtype, generator=self.generator
+                self.size,
+                placement=self.placement,
+                sbp=self.sbp,
+                dtype=self.dtype,
+                generator=self.generator,
             )
         else:
-            res = flow.F.randn(self.size, dtype=self.dtype, device=self.device, generator=self.generator)
+            res = flow.F.randn(
+                self.size,
+                dtype=self.dtype,
+                device=self.device,
+                generator=self.generator,
+            )
         res.requires_grad = self.requires_grad
         return res
 
