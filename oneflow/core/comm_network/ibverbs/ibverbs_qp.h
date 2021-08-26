@@ -75,7 +75,8 @@ class MessagePool final {
         pd_, addr, RegisterMemorySize,
         IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
     CHECK(mr);
-    mr_buf_.push_front(mr);
+    ibv_mr_buf_.push_front(mr);
+    memory_buf_.push_front(addr);
     for (size_t i = 0; i < num_of_message_; i++) {
       char* split_addr = addr + ActorMsgSize * i;
       ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, ActorMsgSize);
@@ -110,19 +111,27 @@ class MessagePool final {
   }
 
   void FreeMr() {
-    while (mr_buf_.empty() == false) {
-      ibv_mr* mr = mr_buf_.front();
-      mr_buf_.pop_front();
+    while (ibv_mr_buf_.empty() == false) {
+      ibv_mr* mr = ibv_mr_buf_.front();
+      ibv_mr_buf_.pop_front();
       CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
     }
   }
 
+  void FreeMemory() {
+    while(memory_buf_.empty() == false) {
+      free(memory_buf_.front());
+      memory_buf_.pop_front();
+    }
+  }
+  
  private:
   ibv_pd* pd_;
   size_t num_of_message_;
   std::mutex message_buf_mutex_;
   std::deque<ActorMsgMR*> message_buf_;
-  std::deque<ibv_mr*> mr_buf_;
+  std::deque<ibv_mr*> ibv_mr_buf_;
+  std::deque<char*> memory_buf_;
 };
 
 struct IBVerbsCommNetRMADesc;
