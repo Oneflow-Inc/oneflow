@@ -78,15 +78,47 @@ Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_b
                                  JUST(OptionalBoxing("cuda-copy-d2h"))))));
 }
 
+Maybe<BoxingExprIf> OptionalNcclSToS(const std::shared_ptr<BoxingExprIf>& core_boxing_expr) {
+  return JUST(BoxingExpr(JUST(InPlacementAndSplit()),
+                         JUST(OptionalBoxing("nccl-s-to-s")) | JUST(BoxingExpr("nccl-p-to-s"))
+                             | JUST(BoxingExpr("nccl-b-to-s")),
+                         JUST(BoxingExpr(JUST(OutPlacementAndSplit()), core_boxing_expr,
+                                         JUST(OptionalBoxing("nccl-s-to-s"))))));
+}
+
+Maybe<BoxingExprIf> RawGenericBoxingExprNotEfficient() {
+  const auto& lhs_boxing =
+      JUST(BoxingExpr(JUST(InPlacementAndBroadcast()),
+                      JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-s-to-b"))
+                          | JUST(BoxingExpr("identity")),
+                      JUST(BoxingExpr("naive-b-to-1"))));
+  const auto& rhs_boxing = JUST(BoxingExpr(
+      JUST(OutSingleDevice()), JUST(BoxingExpr("identity")) | JUST(BoxingExpr("naive-1-to-1")),
+      JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
+                      JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))
+                          | JUST(BoxingExpr("identity"))))));
+  const auto& core = JUST(BoxingExpr(JUST(InSingleDevice()), lhs_boxing, rhs_boxing));
+  return core | JUST(OptionalNcclSToS(core)) | JUST(OptionalCudaCopy(core))
+         | JUST(OptionalCudaCopy(JUST(OptionalNcclSToS(core))));
+}
+
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
   const auto& core =
       JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
-      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-1-to-p"))
+      | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))
+      | JUST(BoxingExpr("nccl-b-to-s")) | JUST(BoxingExpr("nccl-s-to-b"))
+      | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("naive-b-to-p"))
+      | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()), JUST(BoxingExpr("nccl-s-to-b")),
+                        JUST(BoxingExpr("naive-b-to-p"))))
+      | JUST(BoxingExpr("asymmetric-x-to-b"))
+      // 1 to n
       | JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
-                        JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))))
-      | JUST(BoxingExpr("naive-b-to-1"))
+                        JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))
+                            | JUST(BoxingExpr("identity"))))
+      // n to 1
       | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()),
-                        JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-s-to-b")),
+                        JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-s-to-b"))
+                            | JUST(BoxingExpr("identity")),
                         JUST(BoxingExpr("naive-b-to-1"))))
       | JUST(BoxingExpr("naive-1-to-1"));
   return core | JUST(OptionalCudaCopy(core));
@@ -95,6 +127,8 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
 }  // namespace
 
 static constexpr auto* MainBoxingExpr = DECORATE(&RawMainBoxingExpr, ThreadLocal);
+static constexpr auto* GenericBoxingExprNotEfficient =
+    DECORATE(&RawGenericBoxingExprNotEfficient, ThreadLocal);
 
 Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
                                                    Symbol<cfg::NdSbp> out_nd_sbp,
@@ -109,20 +143,6 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
       && EagerBoxingInterpreterUtil::IsBoxingB2P(in_nd_sbp->sbp_parallel(0),
                                                  out_nd_sbp->sbp_parallel(0))) {
     return std::shared_ptr<EagerBoxingInterpreter>(new NaiveB2PBoxingInterpreter());
-  }
-  if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
-      && in_parallel_desc == out_parallel_desc
-      && in_parallel_desc->device_type() == DeviceType::kGPU
-      && EagerBoxingInterpreterUtil::IsBoxingS2S(in_nd_sbp->sbp_parallel(0),
-                                                 out_nd_sbp->sbp_parallel(0))) {
-    return std::shared_ptr<EagerBoxingInterpreter>(new NcclCollectiveS2SBoxingInterpreter());
-  }
-  if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
-      && in_parallel_desc == out_parallel_desc
-      && in_parallel_desc->device_type() == DeviceType::kGPU) {
-    const auto& gpu_boxing_interpreter =
-        TRY(GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp));
-    if (gpu_boxing_interpreter.IsOk()) { return JUST(gpu_boxing_interpreter); }
   }
   if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
       && in_parallel_desc == out_parallel_desc
@@ -158,6 +178,11 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   const auto& main_boxing_expr = JUST(MainBoxingExpr());
   if (TRY(main_boxing_expr->Check(in, out)).IsOk()) {
     const auto& boxing_func = JUST(main_boxing_expr->GetBoxingFunction(in, out));
+    return std::shared_ptr<EagerBoxingInterpreter>(new NaiveEagerBoxingInterpreter(boxing_func));
+  }
+  const auto& generic_boxing_expr_not_efficient = JUST(GenericBoxingExprNotEfficient());
+  if (TRY(generic_boxing_expr_not_efficient->Check(in, out)).IsOk()) {
+    const auto& boxing_func = JUST(generic_boxing_expr_not_efficient->GetBoxingFunction(in, out));
     return std::shared_ptr<EagerBoxingInterpreter>(new NaiveEagerBoxingInterpreter(boxing_func));
   }
 

@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+
 namespace oneflow {
 
 namespace {
@@ -359,3 +361,5 @@ REGISTER_EAGER_NCCL_S2S_KERNEL(float)
 REGISTER_EAGER_NCCL_S2S_KERNEL(double)
 REGISTER_EAGER_NCCL_S2S_KERNEL(float16)
 }  // namespace oneflow
+
+#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700

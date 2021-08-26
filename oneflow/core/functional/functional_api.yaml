@@ -992,6 +992,10 @@
   signature: "Tensor (Tensor x) => ConsistentAllGather"
   bind_python: False
 
+- name: "consistent_s2s"
+  signature: "Tensor (Tensor x, SbpList out_sbp) => ConsistentS2S"
+  bind_python: False
+
 - name: "select_first"
   signature: "Tensor (TensorTuple inputs) => SelectFirst"
   bind_python: True
