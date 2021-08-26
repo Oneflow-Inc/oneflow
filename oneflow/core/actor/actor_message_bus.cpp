@@ -39,10 +39,8 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       }
       ActorMsg new_msg = msg;
       new_msg.set_comm_net_sequence_number(comm_net_sequence);
-   //   std::cout << "1In ActorMsgBus::SendMsg, the new_msg comm_net_sequence:" << new_msg.comm_net_sequence_number() << std::endl;
       Global<CommNet>::Get()->SendActorMsg(dst_machine_id, new_msg);
     } else {
-   //   std::cout << "2In ActorMsgBus::SendMsg, the msg comm_net_sequence:" << msg.comm_net_sequence_number() << std::endl;
       Global<CommNet>::Get()->SendActorMsg(dst_machine_id, msg);
     }
   }

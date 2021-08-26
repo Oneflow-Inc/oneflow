@@ -6,7 +6,7 @@ you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
-    
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
-#include <cstdint>
-#include <memory>
-#include <vector>
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
@@ -37,11 +34,10 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 }  // namespace
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
-                     ibv_cq* recv_cq,
-                     MessagePool * msg_buf) {
+                     ibv_cq* recv_cq, MessagePool* msg_buf) {
   // ctx_, pd_
   ctx_ = ctx;
-  pd_ = pd ;
+  pd_ = pd;
   port_num_ = port_num;
   // qp_
   ibv_device_attr device_attr{};
@@ -68,9 +64,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   msg_Pool_buf_ = msg_buf;
 }
 
-IBVerbsQP::~IBVerbsQP() {
-  CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
-}
+IBVerbsQP::~IBVerbsQP() { CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0); }
 
 void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   ibv_qp_attr qp_attr{};
@@ -135,19 +129,18 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-    if(msg_Pool_buf_->IsEmpty()) {
-      msg_Pool_buf_->RegisterMessagePool();
-      while(msg_Pool_buf_->IsEmpty() == false) {
-        ActorMsgMR * msg_mr = msg_Pool_buf_->GetMessage();
-        PostRecvRequest(msg_mr);
-        
-      }
-    } else {
-        while(msg_Pool_buf_->IsEmpty() == false  ) {
-        ActorMsgMR * msg_mr = msg_Pool_buf_->GetMessage();
-        PostRecvRequest(msg_mr);
-      }
+  if (msg_Pool_buf_->IsEmpty()) {
+    msg_Pool_buf_->RegisterMessagePool();
+    while (msg_Pool_buf_->IsEmpty() == false) {
+      ActorMsgMR* msg_mr = msg_Pool_buf_->GetMessage();
+      PostRecvRequest(msg_mr);
     }
+  } else {
+    while (msg_Pool_buf_->IsEmpty() == false) {
+      ActorMsgMR* msg_mr = msg_Pool_buf_->GetMessage();
+      PostRecvRequest(msg_mr);
+    }
+  }
 }
 
 void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
@@ -179,7 +172,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 }
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
-  ActorMsgMR * msg_mr = msg_Pool_buf_->GetMessage();
+  ActorMsgMR* msg_mr = msg_Pool_buf_->GetMessage();
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
@@ -222,9 +215,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 }
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
-  {
-    msg_Pool_buf_->PutMessage(wr_id->msg_mr);
-  }
+  { msg_Pool_buf_->PutMessage(wr_id->msg_mr); }
   DeleteWorkRequestId(wr_id);
   PostPendingSendWR();
 }

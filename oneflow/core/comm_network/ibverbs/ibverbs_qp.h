@@ -1,9 +1,12 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,21 +34,22 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_mr *   mr, char * addr, size_t  size):size_(size){
-    msg_ = reinterpret_cast<ActorMsg*>(addr); 
+  ActorMsgMR(ibv_mr* mr, char* addr, size_t size) : size_(size) {
+    msg_ = reinterpret_cast<ActorMsg*>(addr);
     mr_ = mr;
   }
-  ~ActorMsgMR()=default;
+  ~ActorMsgMR() = default;
 
-  char * addr() { return reinterpret_cast<char *>(msg_) ; }
-  uint32_t lkey() { return mr_->lkey ; }
-  ActorMsg  msg()  { return *msg_;}
-  void set_msg(const ActorMsg& val) {*msg_ = val ; }
+  char* addr() { return reinterpret_cast<char*>(msg_); }
+  uint32_t lkey() { return mr_->lkey; }
+  ActorMsg msg() { return *msg_; }
+  void set_msg(const ActorMsg& val) { *msg_ = val; }
   size_t size() { return size_; }
+
  private:
-    size_t size_;
-    ibv_mr * mr_;
-    ActorMsg *  msg_;
+  size_t size_;
+  ibv_mr* mr_;
+  ActorMsg* msg_;
 };
 
 class IBVerbsQP;
@@ -58,84 +62,85 @@ struct WorkRequestId {
 };
 
 class MessagePool final {
-  public:
-    OF_DISALLOW_COPY_AND_MOVE(MessagePool);
-    MessagePool() = delete; 
-    ~MessagePool()=default;
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MessagePool);
+  MessagePool() = delete;
+  ~MessagePool() = default;
 
-    MessagePool(ibv_pd* pd, uint32_t number_of_message):pd_(pd), num_of_message_(number_of_message) {
+  MessagePool(ibv_pd* pd, uint32_t number_of_message)
+      : pd_(pd), num_of_message_(number_of_message) {
+    RegisterMessagePool();
+  }
+
+ private:
+  void RegisterMessagePool() {
+    ActorMsg msg;
+    size_t ActorMsgSize = sizeof(msg);
+    size_t RegisterMemorySize = ActorMsgSize * (num_of_message_);
+    char* addr = (char*)malloc(RegisterMemorySize);
+    ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
+        pd_, addr, RegisterMemorySize,
+        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+    CHECK(mr);
+    mr_buf_.push_front(mr);
+    for (size_t i = 0; i < num_of_message_; i++) {
+      char* split_addr = addr + ActorMsgSize * i;
+      ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, ActorMsgSize);
+      message_buf_.push_front(msg_mr);
+    }
+  }
+
+  ActorMsgMR* GetMessage() {
+    if (IsEmpty() == false) {
+      return GetMessageFromBuf();
+    } else {
       RegisterMessagePool();
+      return GetMessageFromBuf();
     }
+  }
 
-    void RegisterMessagePool() {
-      ActorMsg msg;
-      size_t ActorMsgSize = sizeof(msg);
-      size_t RegisterMemorySize  = ActorMsgSize  * (num_of_message_);
-      char * addr =(char*) malloc(RegisterMemorySize );
-      ibv_mr *   mr =ibv::wrapper.ibv_reg_mr_wrap(
-          pd_,  addr, RegisterMemorySize,
-          IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
-      CHECK(mr);
-      mr_buf_.push_front(mr);
-      for(size_t i = 0;  i < num_of_message_ ; i++){
-          char * split_addr =addr + ActorMsgSize * i ; 
-          ActorMsgMR * msg_mr = new ActorMsgMR(mr,split_addr, ActorMsgSize);
-          message_buf_.push_front(msg_mr);
-      }
-    }
+  ActorMsgMR* GetMessageFromBuf() {
+    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
+    ActorMsgMR* msg_mr = message_buf_.front();
+    message_buf_.pop_front();
+    return msg_mr;
+  }
 
-    ActorMsgMR *  GetMessage() {
-        if(IsEmpty() == false)  {
-            return GetMessageFromBuf();
-        } else {
-            RegisterMessagePool();
-            return GetMessageFromBuf();
-       }
-    }
+  void PutMessage(ActorMsgMR* msg_mr) {
+    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
+    message_buf_.push_front(msg_mr);
+  }
 
-    ActorMsgMR * GetMessageFromBuf() {
-        std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-        ActorMsgMR * msg_mr = message_buf_.front();
-        message_buf_.pop_front();
-        return msg_mr;
-    }
+  bool IsEmpty() {
+    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
+    return message_buf_.empty() == true;
+  }
 
-    void PutMessage(ActorMsgMR * msg_mr) {
-        std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-        message_buf_.push_front(msg_mr);
-    }
+  size_t Size() {
+    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
+    return message_buf_.size();
+  }
 
-    bool IsEmpty() {
-      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      return message_buf_.empty() == true ;
+  void FreeMr() {
+    while (mr_buf_.empty() == false) {
+      ibv_mr* mr = mr_buf_.front();
+      mr_buf_.pop_front();
+      CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
     }
- 
-    size_t Size() {
-      std::unique_lock<std::mutex>  msg_buf_lck(message_buf_mutex_);
-      return message_buf_.size();
-    }
-  
-    void FreeMr() {
-      while(mr_buf_.empty() == false) {
-          ibv_mr * mr = mr_buf_.front();
-          mr_buf_.pop_front();
-          CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-      }
-    }
+  }
 
-    void FreeActorMsgMR() {
-      while(message_buf_.empty() == false) {
-        delete message_buf_.front();
-        message_buf_.pop_front();
-      }
+  void FreeActorMsgMR() {
+    while (message_buf_.empty() == false) {
+      delete message_buf_.front();
+      message_buf_.pop_front();
     }
+  }
 
-  private:
-    ibv_pd * pd_;
-    size_t  num_of_message_;
-    std::mutex message_buf_mutex_;
-    std::deque<ActorMsgMR*> message_buf_;
-    std::deque<ibv_mr*> mr_buf_; 
+  ibv_pd* pd_;
+  size_t num_of_message_;
+  std::mutex message_buf_mutex_;
+  std::deque<ActorMsgMR*> message_buf_;
+  std::deque<ibv_mr*> mr_buf_;
 };
 
 struct IBVerbsCommNetRMADesc;
@@ -144,12 +149,8 @@ class IBVerbsQP final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
   IBVerbsQP() = delete;
-  IBVerbsQP(ibv_context *, ibv_pd*, uint8_t port_num, ibv_cq * send_cq, ibv_cq* recv_cq,
-            MessagePool * msg_buf);
-
-  IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
-                     ibv_cq* recv_cq,
-                     std::shared_ptr<MessagePool> msg_buf);
+  IBVerbsQP(ibv_context*, ibv_pd*, uint8_t port_num, ibv_cq* send_cq, ibv_cq* recv_cq,
+            MessagePool* msg_buf);
   ~IBVerbsQP();
 
   uint32_t qp_num() const { return qp_->qp_num; }
@@ -181,8 +182,8 @@ class IBVerbsQP final {
   uint32_t num_outstanding_send_wr_;
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
-  MessagePool * msg_Pool_buf_;
- };
+  MessagePool* msg_Pool_buf_;
+};
 
 }  // namespace oneflow
 

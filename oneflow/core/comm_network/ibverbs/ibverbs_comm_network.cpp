@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
-#include <memory>
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -143,7 +142,7 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   ibv_device_attr device_attr{};
   CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  msg_buf_ = new MessagePool(pd_,kDefaultMessagePoolSize);
+  msg_buf_ = new MessagePool(pd_, kDefaultMessagePoolSize);
   CHECK(cq_);
   ibv_port_attr port_attr{};
   const uint8_t port = user_port == 0 ? 1 : user_port;
@@ -156,7 +155,7 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   qp_vec_.assign(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
-    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, port, cq_,cq_,msg_buf_);
+    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, port, cq_, cq_, msg_buf_);
     qp_vec_.at(peer_id) = cur_qp;
     IBVerbsConnectionInfo conn_info;
     conn_info.set_lid(port_attr.lid);

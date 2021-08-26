@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/register/register.h"
 
-#include <iostream>
 namespace oneflow {
 
 CopyCommNetActor::~CopyCommNetActor() { Global<CommNet>::Get()->DeleteActorReadId(actor_read_id_); }
