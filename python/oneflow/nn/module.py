@@ -72,7 +72,7 @@ class Module(object):
 
     def __call__(self, *args, **kwargs):
         for hook in itertools.chain(self._forward_pre_hooks.values()):
-            result = hook(self, args, kwargs)
+            result = hook(self, args)
             if result is not None:
                 if not isinstance(result, tuple):
                     result = (result,)
@@ -81,7 +81,7 @@ class Module(object):
         res = self.forward(*args, **kwargs)
 
         for hook in itertools.chain(self._forward_hooks.values()):
-            result = hook(self, args, kwargs, res)
+            result = hook(self, args, res)
             if result is not None:
                 res = result
 
