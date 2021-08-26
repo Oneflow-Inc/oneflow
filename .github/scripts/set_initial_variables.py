@@ -56,13 +56,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--only_clang",
-        type=lambda x: (str(x).lower() in ["true", "1", "yes"]),
-        required=True,
+        "--labels", type=lambda x: (str(x).replace(" ", "").split(",")), required=True,
     )
     parser.add_argument("--out", type=str, required=False)
     args = parser.parse_args()
-    if args.only_clang:
+    if "need-clang-only" in args.labels:
         print_result(
             build_matrix={
                 "test_suite": ["cpu-clang"],
