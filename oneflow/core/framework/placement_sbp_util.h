@@ -25,6 +25,7 @@ namespace oneflow {
 
 class Shape;
 class ParallelDesc;
+class PlacedNdSbp;
 
 namespace cfg {
 
@@ -72,6 +73,8 @@ Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
     Symbol<cfg::NdSbp> sub_nd_sbp);
 
 }  // namespace private_details
+
+extern Maybe<void> (*CheckIsNdSbpBoxingAcyclic)(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out);
 
 static constexpr auto* GetSubConsistentTensorMeta =
     DECORATE(&private_details::CalcSubConsistentTensorMeta, ThreadLocal);

@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
-#include "oneflow/core/framework/op_interpreter/boxing/naive_nd_sbp_boxing_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
+#include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/common/decorator.h"
@@ -60,10 +60,21 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
 
 }  // namespace
 
-Maybe<one::Tensor> NaiveNdSbpBoxingInterpreter::InterpretImpl(
-    const std::shared_ptr<one::Tensor>& input, Symbol<cfg::NdSbp> in_nd_sbp,
-    Symbol<cfg::NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
-    Symbol<ParallelDesc> out_parallel_desc) const {
+Maybe<void> CheckSymmetricNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  CHECK_OR_RETURN(in->placement() == out->placement());
+  CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), out->nd_sbp()->sbp_parallel_size());
+  CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  JUST(CheckIsNdSbpBoxingAcyclic(in, out));
+  return Maybe<void>::Ok();
+}
+
+Maybe<one::Tensor> SymmetricNdSbpBoxing(
+    const std::shared_ptr<one::Tensor>& input, Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  const auto& in_nd_sbp = in->nd_sbp();
+  const auto& out_nd_sbp = out->nd_sbp();
+  const auto& in_parallel_desc = in->placement();
+  const auto& out_parallel_desc = out->placement();
   CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   const auto& tensor_meta = JUST(input->consistent_tensor_meta());
   const auto& naive_transformations =
@@ -80,5 +91,8 @@ Maybe<one::Tensor> NaiveNdSbpBoxingInterpreter::InterpretImpl(
   }
   return JUST(ReinterpterConsistentTensor(tensor, *input->shape(), out_parallel_desc, out_nd_sbp));
 }
+
+COMMAND(RegisterBoxingFunction("symmetric-nd-sbp-to-nd-sbp", CheckSymmetricNdSbpBoxing,
+                               &SymmetricNdSbpBoxing));
 
 }  // namespace oneflow

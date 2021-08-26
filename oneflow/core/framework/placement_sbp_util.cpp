@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <tuple>
 #include "oneflow/core/framework/placement_sbp_util.h"
+#include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/shape.h"
@@ -620,7 +621,26 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
 }
 auto* CachedBroadcastGroup = DECORATE(&CalcBroadcastGroup, ThreadLocal);
 
+
+Maybe<void> RawCheckIsNdSbpBoxingAcyclic(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  const auto& src_nd_sbp = in->nd_sbp();
+  const auto& dst_nd_sbp = out->nd_sbp();
+  std::function<Maybe<Optional<int64_t>>(int64_t)> ExclusiveSrcNdSbpAxis4DstNdSbpAxis;
+  JUST(MakeExclusiveSrcNdSbpAxis4DstNdSbpAxis(&ExclusiveSrcNdSbpAxis4DstNdSbpAxis, src_nd_sbp,
+                                              dst_nd_sbp));
+  bool is_acyclic = JUST(
+      IsNdSbpBoxingAcyclic(src_nd_sbp->sbp_parallel_size(), ExclusiveSrcNdSbpAxis4DstNdSbpAxis));
+  CHECK_OR_RETURN(is_acyclic) << Error::Unimplemented()
+                              << GetCyclicBoxingDebugString(src_nd_sbp, dst_nd_sbp,
+                                                            ExclusiveSrcNdSbpAxis4DstNdSbpAxis);
+  return Maybe<void>::Ok();
+}
+
+
 }  // namespace
+
+decltype(CheckIsNdSbpBoxingAcyclic) CheckIsNdSbpBoxingAcyclic =
+    DECORATE(&RawCheckIsNdSbpBoxingAcyclic, ThreadLocal);
 
 Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroup(
     Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc) {
