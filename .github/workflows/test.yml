@@ -15,7 +15,8 @@ jobs:
     if: ${{ github.repository_owner == 'Oneflow-Inc' }}
     runs-on: ubuntu-20.04
     outputs:
-      generated: ${{ steps.generating.outputs.generated }}
+      build_matrix: ${{ steps.generating.outputs.build_matrix }}
+      test_matrix: ${{ steps.generating.outputs.test_matrix }}
     steps:
       - name: Clone pytorch/pytorch
         uses: actions/checkout@v2
