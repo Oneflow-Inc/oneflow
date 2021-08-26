@@ -156,7 +156,6 @@ types_allowed = {
     "Placement",
     "Sbp",
     "SbpList",
-    "Object",
 }
 
 generic_type_aliases = {
