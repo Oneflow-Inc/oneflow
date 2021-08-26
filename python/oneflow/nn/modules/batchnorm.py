@@ -127,7 +127,7 @@ class _BatchNorm(_NormBase):
                 self.running_var = (
                     1.0 - self.momentum
                 ) * self.running_var + self.momentum * unbiased_variance
-                self.num_batches_tracked += 1
+                self.num_batches_tracked = self.num_batches_tracked + 1
             else:
                 mean = mean if self.running_mean is None else self.running_mean
                 variance = variance if self.running_var is None else self.running_var
@@ -165,7 +165,7 @@ class _BatchNorm(_NormBase):
             if self.training:
                 is_training = True
                 if self.track_running_stats:
-                    self.num_batches_tracked += 1
+                    self.num_batches_tracked = self.num_batches_tracked + 1
             else:
                 is_training = (self.running_mean is None) and (self.running_var is None)
             return flow.F.normalization(
