@@ -19,6 +19,33 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
 
+@register_tensor_op("negative")
+def negative_op(input):
+    """This operator computes the negative value of Tensor.
+
+    Args:
+        input (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor(
+        ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
+        ... )
+        >>> out = flow.negative(input)
+        >>> out
+        tensor([-1.0000,  1.0000, -2.3000], dtype=oneflow.float32)
+
+    """
+    return flow.F.negative(input)
+
 @register_tensor_op("type_as")
 def type_as_op(input, target):
     r"""Returns this tensor cast to the type of the given tensor.
