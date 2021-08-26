@@ -60,7 +60,7 @@ def with_cuda() -> bool:
 
 
 @oneflow_export("sysconfig.get_cuda_version")
-def get_cuda_version() -> bool:
+def get_cuda_version() -> int:
     return oneflow._oneflow_internal.flags.cuda_version()
 
 

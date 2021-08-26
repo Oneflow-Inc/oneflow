@@ -1295,19 +1295,8 @@ def batch_normalization_add_relu(
         axis += len(inputs.shape)
     assert 0 <= axis < len(inputs.shape)
     params_shape = [inputs.shape[axis]]
-<<<<<<< HEAD:oneflow/python/ops/layers.py
-    # Float32 required to avoid precision-loss when using fp16 input/output
-    params_dtype = (
-        flow.float32
-        if inputs.dtype == flow.float16 or inputs.dtype == flow.bfloat16
-        else inputs.dtype
-    )
-
-    beta, gamma, moving_mean, moving_variance = _get_batch_normalization_variables(
-=======
-    params_dtype = flow.float32 if inputs.dtype == flow.float16 else inputs.dtype
+    params_dtype = flow.float32 if inputs.dtype == flow.float16 or inputs.dtype == flow.bfloat16 else inputs.dtype
     (beta, gamma, moving_mean, moving_variance) = _get_batch_normalization_variables(
->>>>>>> 73a9e4210735cc1b0fba29bd937b5e8bf92dcf9a:python/oneflow/compatible/single_client/ops/layers.py
         name,
         gamma_name,
         beta_name,

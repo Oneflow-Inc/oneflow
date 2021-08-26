@@ -13,18 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.compatible.single_client.unittest
-from oneflow.compatible import single_client as flow
-from oneflow.compatible.single_client import typing as tp
+
+
 import math
 import os
+import unittest
 from collections import OrderedDict
 
 import numpy as np
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
-
+import oneflow.compatible.single_client.unittest
+from oneflow.compatible import single_client as flow
 gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
@@ -38,9 +39,7 @@ def compare_with_tensorflow(device_type, activation_type, shape, data_type):
     if data_type == flow.float16:
         func_config.enable_auto_mixed_precision(True)
         data_type = flow.float
-
     func_config.default_data_type(data_type)
-
     of_activation_map = {
         "relu": flow.nn.relu,
         "sigmoid": flow.math.sigmoid,
@@ -105,6 +104,6 @@ class TestActivations(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-    #if flow.sysconfig.get_cuda_version() >= 11000:
-    #    unittest.main()
+    if flow.sysconfig.get_cuda_version() >= 11000:
+        print("v:", flow.sysconfig.get_cuda_version())
+        unittest.main()
