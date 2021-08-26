@@ -22,7 +22,7 @@ def print_github_action_output(name=None, value=None):
 
 def print_result(build_matrix=None, test_matrix=None, out=None):
     assert build_matrix
-    assert test_matrix
+    assert test_matrix != None
     root = {
         "build_matrix": build_matrix,
         "test_matrix": test_matrix,
