@@ -194,7 +194,6 @@ from oneflow.nn.modules.acos import acos_op as acos
 from oneflow.nn.modules.acosh import acosh_op as acosh
 from oneflow.nn.modules.acosh import arccosh_op as arccosh
 from oneflow.nn.modules.activation import gelu_op as gelu
-from oneflow.nn.modules.activation import glu_op as glu
 from oneflow.nn.modules.activation import mish_op as mish
 from oneflow.nn.modules.activation import sigmoid_op as sigmoid
 from oneflow.nn.modules.activation import softmax_op as softmax

@@ -1167,7 +1167,7 @@ def glu_op(x, dim=-1):
 
     Args:
         x (Tensor, float): input tensor. 
-        dim (int, optional):dimension on which to split the input. Default: -1
+        dim (int, optional): dimension on which to split the input. Default: -1
 
     The formula is: 
     
@@ -1210,16 +1210,6 @@ def glu_op(x, dim=-1):
     y = x.split([nc, nc], dim)
 
     return y[0] * flow.sigmoid(y[1])
-
-
-@register_tensor_op("glu")
-def glu_op_tensor(x, dim=-1):
-    r"""
-    glu(dim) -> Tensor
-    See :func:`oneflow.glu`
-    """
-
-    return glu_op(x, dim)
 
 
 if __name__ == "__main__":
