@@ -43,7 +43,7 @@ def allreduce_fn(ddp_state_for_reversed_params, param):
 def DistributedDataParallel(
     module: "flow.nn.Module", *, broadcast_buffers: bool = True
 ):
-    world_size = flow.distributed.get_world_size()
+    world_size = flow.env.get_world_size()
     with flow.no_grad():
         for x in module.parameters():
             requires_grad = x.requires_grad
