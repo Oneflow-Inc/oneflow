@@ -623,7 +623,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestConsistentCast_1ToN(flow.unittest.TestCase):
     def test_consistent_to_consistent_1tb(test_case):
-        if flow.distributed.get_rank() == 0:
+        if flow.env.get_rank() == 0:
             np_arr = np.array(
                 [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
                 dtype=np.float32,
@@ -642,7 +642,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
             new_placement, flow.sbp.broadcast
         )
         test_case.assertTrue(broadcast_tensor.placement, new_placement)
-        if flow.distributed.get_rank() < 2:
+        if flow.env.get_rank() < 2:
             test_case.assertTrue(
                 np.array_equal(
                     broadcast_tensor.to_local().numpy(),
@@ -654,7 +654,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
             )
 
     def test_consistent_to_consistent_1tp(test_case):
-        if flow.distributed.get_rank() == 0:
+        if flow.env.get_rank() == 0:
             np_arr = np.array(
                 [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
                 dtype=np.float32,
@@ -673,7 +673,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
             new_placement, flow.sbp.partial_sum
         )
         test_case.assertTrue(partial_sum_tensor.placement, new_placement)
-        if flow.distributed.get_rank() == 0:
+        if flow.env.get_rank() == 0:
             test_case.assertTrue(
                 np.array_equal(
                     partial_sum_tensor.to_local().numpy(),
@@ -683,7 +683,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
                     ),
                 )
             )
-        elif flow.distributed.get_rank() == 1:
+        elif flow.env.get_rank() == 1:
             test_case.assertTrue(
                 np.array_equal(
                     partial_sum_tensor.to_local().numpy(),
@@ -695,7 +695,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
             )
 
     def test_consistent_to_consistent_1ts(test_case):
-        if flow.distributed.get_rank() == 0:
+        if flow.env.get_rank() == 0:
             np_arr = np.array(
                 [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
                 dtype=np.float32,
@@ -712,28 +712,28 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         new_placement = flow.placement("cuda", {0: range(4)})
         split_tensor = consistent_tensor.to_consistent(new_placement, flow.sbp.split(0))
         test_case.assertTrue(split_tensor.placement, new_placement)
-        if flow.distributed.get_rank() == 0:
+        if flow.env.get_rank() == 0:
             test_case.assertTrue(
                 np.array_equal(
                     split_tensor.to_local().numpy(),
                     np.array([[4, 6, 5, 20]], dtype=np.float32,),
                 )
             )
-        elif flow.distributed.get_rank() == 1:
+        elif flow.env.get_rank() == 1:
             test_case.assertTrue(
                 np.array_equal(
                     split_tensor.to_local().numpy(),
                     np.array([[6, 2, 5, 7]], dtype=np.float32,),
                 )
             )
-        elif flow.distributed.get_rank() == 2:
+        elif flow.env.get_rank() == 2:
             test_case.assertTrue(
                 np.array_equal(
                     split_tensor.to_local().numpy(),
                     np.array([[3, 7, 5, 4]], dtype=np.float32,),
                 )
             )
-        elif flow.distributed.get_rank() == 3:
+        elif flow.env.get_rank() == 3:
             test_case.assertTrue(
                 np.array_equal(
                     split_tensor.to_local().numpy(),
