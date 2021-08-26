@@ -180,7 +180,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
     strategy:
       max-parallel: 5
-      matrix: ${{ fromJson(needs.set-initial-variables.generated.build_matrix) }}
+      matrix: ${{ fromJson(needs.set-initial-variables.outputs.generated.build_matrix) }}
     steps:
       - name: Install Conda
         run: |
