@@ -65,7 +65,7 @@ class ViewCopyKernel final : public user_op::OpKernel {
         sum *= in_shape.At(i);
       }
 
-      DimVector index{contiguous_dim + 1, 0};
+      DimVector index(contiguous_dim + 1, 0);
       int64_t in_offset = 0, out_offset = 0;
 
       bool not_overflow = true;
