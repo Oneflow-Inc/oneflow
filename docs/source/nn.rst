@@ -53,6 +53,8 @@ Operators for neural networks
         MaxPool1d,
         MaxPool2d,
         MaxPool3d,
+        ModuleDict,
+        ModuleList,
         Mish,
         NLLLoss,
         OFRecordImageDecoder,
