@@ -270,7 +270,7 @@ endif()
 include(functional)
 GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
     FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
-oneflow_add_library(of_functional_obj ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
+oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
 add_dependencies(of_functional_obj of_cfgobj)
 
 set(PYBIND11_SRCS ${CFG_PYBIND11_SRCS} ${FUNCTIONAL_PYBIND11_SRCS})
@@ -377,9 +377,7 @@ add_custom_target(of_include_copy)
 add_dependencies(of_include_copy oneflow_internal)
 
 foreach(of_include_src_dir ${CFG_INCLUDE_DIR})
-  set(oneflow_all_include_file)
-  file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
-  copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+  copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
 
 set(DEVICE_REG_HEADERS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/device_register_*.h")

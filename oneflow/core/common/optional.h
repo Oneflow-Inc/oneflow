@@ -161,7 +161,7 @@ class Optional final {
   }
 
   bool has_value() const { return init_; }
-  operator bool() const { return has_value(); }
+  explicit operator bool() const { return has_value(); }
 
  private:
   bool init_;
@@ -188,7 +188,7 @@ class Optional<T&> final {
   }
 
   bool has_value() const { return value_ptr_ != nullptr; }
-  operator bool() const { return has_value(); }
+  explicit operator bool() const { return has_value(); }
 
  private:
   T* value_ptr_;
