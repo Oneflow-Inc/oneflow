@@ -72,16 +72,7 @@ class MessagePool final {
     RegisterMessagePool();
   }
 
-  void FreeMr() {
-    while (mr_buf_.empty() == false) {
-      ibv_mr* mr = mr_buf_.front();
-      mr_buf_.pop_front();
-      CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-    }
-  }
-
- private:
-  void RegisterMessagePool() {
+    void RegisterMessagePool() {
     ActorMsg msg;
     size_t ActorMsgSize = sizeof(msg);
     size_t RegisterMemorySize = ActorMsgSize * (num_of_message_);
@@ -131,6 +122,15 @@ class MessagePool final {
     }
   }
 
+  void FreeMr() {
+    while (mr_buf_.empty() == false) {
+      ibv_mr* mr = mr_buf_.front();
+      mr_buf_.pop_front();
+      CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
+    }
+  }
+
+ private:
   ibv_pd* pd_;
   size_t num_of_message_;
   std::mutex message_buf_mutex_;
