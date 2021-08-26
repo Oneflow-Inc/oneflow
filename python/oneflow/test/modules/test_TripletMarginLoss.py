@@ -21,7 +21,6 @@ from test_util import GenArgList
 
 from automated_test_util import *
 import oneflow as flow
-import torch
 
 
 def np_distance(x1, x2, eps, p):
