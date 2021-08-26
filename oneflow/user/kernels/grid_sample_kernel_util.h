@@ -13,27 +13,382 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/user/kernels/math_unary_elementwise_func.h"
-#include "grid_sample_kernel.h"
+#ifndef ONEFLOW_USER_KERNELS_GRID_SAMPLE_KERNEL_H_
+#define ONEFLOW_USER_KERNELS_GRID_SAMPLE_KERNEL_H_
+
+#include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/ndarray/xpu_util.h"
+#include "oneflow/user/kernels/clip_by_value_kernel.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/cuda/atomic.cuh"
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
-namespace {
+enum class GridSamplerInterpolation { kBilinear = 0, kNearest, kBicubic };
+
+enum class GridSamplerPadding { kZeros = 0, kBorder, kReflection };
+
+static GridSamplerInterpolation StringToGridSamplerInterpolation(const std::string& mode) {
+  if (mode == "bilinear") {
+    return GridSamplerInterpolation::kBilinear;
+  } else if (mode == "nearest") {
+    return GridSamplerInterpolation::kNearest;
+  }
+  return GridSamplerInterpolation::kBicubic;
+}
+static GridSamplerPadding StringToGridGridSamplerPadding(const std::string& mode) {
+  if (mode == "zeros") {
+    return GridSamplerPadding::kZeros;
+  } else if (mode == "border") {
+    return GridSamplerPadding::kBorder;
+  }
+  return GridSamplerPadding::kReflection;
+}
+static bool CanUse32BitIndex(const std::initializer_list<ShapeView>& shapes) {
+  for (const auto& shape : shapes) {
+    if (shape.elem_cnt() >= std::numeric_limits<int32_t>::max()) { return false; }
+  }
+  return true;
+}
+
+inline int GridSampleGetBlocks(const int64_t number, const int64_t threads_per_block) {
+  // Round up division for positive number that cannot cause integer overflow
+  auto block_num = (number - 1) / threads_per_block + 1;
+  return static_cast<int>(block_num);
+}
 
 // This kernel implement is referenced from:
-// git commit id:e7724bb
+// https://github.com/pytorch/pytorch with git commit id: e7724bb
 // https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/GridSampler.cu
+// https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/GridSampler.cuh
+
+// Unnormalizes a coordinate from the -1 to +1 scale to its pixel index value,
+// where we view each pixel as an area between (idx - 0.5) and (idx + 0.5).
+// if align_corners: -1 and +1 get sent to the centers of the corner pixels
+//     -1 --> 0
+//     +1 --> (size - 1)
+//     scale_factor = (size - 1) / 2
+// if not align_corners: -1 and +1 get sent to the image edges
+//     -1 --> -0.5
+//     +1 --> (size - 1) + 0.5 == size - 0.5
+//     scale_factor = size / 2
+template<typename scalar_t>
+static OF_DEVICE_FUNC scalar_t GridSamplerUnnormalize(scalar_t coord, int size,
+                                                      bool align_corners) {
+  if (align_corners) {
+    // unnormalize coord from [-1, 1] to [0, size - 1]
+    return ((coord + 1.f) / 2) * (size - 1);
+  } else {
+    // unnormalize coord from [-1, 1] to [-0.5, size - 0.5]
+    return ((coord + 1.f) * size - 1) / 2;
+  }
+}
+
+// GridSamplerUnnormalizeSetGrad works the same as GridSamplerUnnormalize
+// except that it also returns the `d output / d input` via pointer argument
+// `grad_in`.
+// This is useful in the backward pass of grid_sampler.
+template<typename scalar_t>
+static OF_DEVICE_FUNC scalar_t GridSamplerUnnormalizeSetGrad(scalar_t coord, int size,
+                                                             bool align_corners,
+                                                             scalar_t* grad_in) {
+  if (align_corners) {
+    // unnormalize coord from [-1, 1] to [0, size - 1]
+    *grad_in = static_cast<scalar_t>(size - 1) / 2;
+    return ((coord + 1.f) / 2) * (size - 1);
+  } else {
+    // unnormalize coord from [-1, 1] to [-0.5, size - 0.5]
+    *grad_in = static_cast<scalar_t>(size) / 2;
+    return ((coord + 1.f) * size - 1) / 2;
+  }
+}
+
+// Clips coordinates to between 0 and clip_limit - 1
+template<typename scalar_t>
+static OF_DEVICE_FUNC scalar_t ClipCoordinates(scalar_t in, int clip_limit) {
+  return DeviceMin(static_cast<scalar_t>(clip_limit - 1), DeviceMax(in, static_cast<scalar_t>(0)));
+}
+
+// ClipCoordinatesSetGrad works similarly to ClipCoordinates except that
+// it also returns the `d output / d input` via pointer argument `grad_in`.
+// This is useful in the backward pass of grid_sampler.
+template<typename scalar_t>
+static OF_DEVICE_FUNC scalar_t ClipCoordinatesSetGrad(scalar_t in, int clip_limit,
+                                                      scalar_t* grad_in) {
+  // Note that it is important for the gradient calculation that borders
+  // are considered out of bounds.
+  if (in <= static_cast<scalar_t>(0)) {
+    *grad_in = static_cast<scalar_t>(0);
+    return static_cast<scalar_t>(0);
+  } else {
+    scalar_t max = static_cast<scalar_t>(clip_limit - 1);
+    if (in >= max) {
+      *grad_in = static_cast<scalar_t>(0);
+      return max;
+    } else {
+      *grad_in = static_cast<scalar_t>(1);
+      return in;
+    }
+  }
+}
+
+// Reflects coordinates until they fall between low and high (inclusive).
+// The bounds are passed as twice their value so that half-integer values
+// can be represented as ints.
+template<typename scalar_t>
+static OF_DEVICE_FUNC scalar_t ReflectCoordinates(scalar_t in, int twice_low, int twice_high) {
+  if (twice_low == twice_high) { return static_cast<scalar_t>(0); }
+  scalar_t min = static_cast<scalar_t>(twice_low) / 2;
+  scalar_t span = static_cast<scalar_t>(twice_high - twice_low) / 2;
+  in = fabs(in - min);
+  // `fmod` returns same sign as `in`, which is positive after the `fabs` above.
+  scalar_t extra = fmod(in, span);
+  int flips = static_cast<int>(floor(in / span));
+  if (flips % 2 == 0) {
+    return extra + min;
+  } else {
+    return span - extra + min;
+  }
+}
+
+// ReflectCoordinatesSetGrad works similarly to ReflectCoordinates except
+// that it also returns the `d output / d input` via pointer argument
+// `grad_in`.
+// This is useful in the backward pass of grid_sampler.
+template<typename scalar_t>
+static OF_DEVICE_FUNC scalar_t ReflectCoordinatesSetGrad(scalar_t in, int twice_low, int twice_high,
+                                                         scalar_t* grad_in) {
+  if (twice_low == twice_high) {
+    *grad_in = static_cast<scalar_t>(0);
+    return static_cast<scalar_t>(0);
+  }
+  int grad_in_mult_;
+  scalar_t min = static_cast<scalar_t>(twice_low) / 2;
+  scalar_t span = static_cast<scalar_t>(twice_high - twice_low) / 2;
+  in = in - min;
+  if (in < static_cast<scalar_t>(0)) {
+    grad_in_mult_ = -1;
+    in = -in;
+  } else {
+    grad_in_mult_ = 1;
+  }
+  // `fmod` returns same sign as `in`, which is positive after the `if` above.
+  scalar_t extra = fmod(in, span);
+  int flips = static_cast<int>(floor(in / span));
+  if (flips % 2 == 0) {
+    *grad_in = static_cast<scalar_t>(grad_in_mult_);
+    return extra + min;
+  } else {
+    *grad_in = static_cast<scalar_t>(-grad_in_mult_);
+    return span - extra + min;
+  }
+}
+
+#if defined(__CUDACC__)
+template<typename scalar_t>
+static __device__ __forceinline__ scalar_t safe_downgrade_to_int_range(scalar_t x) {
+  // -100.0 does not have special meaning. This is just to make sure
+  // it's not WithinBounds2D or WithinBounds3D, and does not cause
+  // undefined behavior. See #35506.
+  if (x > INT_MAX - 1 || x < INT_MIN || !isfinite(static_cast<double>(x)))
+    return static_cast<scalar_t>(-100.0);
+  return x;
+}
+#endif
+
+template<typename scalar_t>
+static OF_DEVICE_FUNC scalar_t ComputeCoordinates(scalar_t coord, int size,
+                                                  GridSamplerPadding padding_mode,
+                                                  bool align_corners) {
+  if (padding_mode == GridSamplerPadding::kBorder) {
+    // clip coordinates to image borders
+    coord = ClipCoordinates(coord, size);
+  } else if (padding_mode == GridSamplerPadding::kReflection) {
+    // reflect coordinates by image borders
+    if (align_corners) {
+      coord = ReflectCoordinates(coord, 0, 2 * (size - 1));
+    } else {
+      coord = ReflectCoordinates(coord, -1, 2 * size - 1);
+    }
+    // clip coordinates to image borders
+    coord = ClipCoordinates(coord, size);
+  }
+#if defined(__CUDACC__)
+  coord = safe_downgrade_to_int_range(coord);
+#endif
+  return coord;
+}
+
+// Computes the pixel source index value for a grid coordinate
+template<typename scalar_t>
+static OF_DEVICE_FUNC scalar_t GridSamplerComputeSourceIndex(scalar_t coord, int size,
+                                                             GridSamplerPadding padding_mode,
+                                                             bool align_corners) {
+  coord = GridSamplerUnnormalize(coord, size, align_corners);
+  coord = ComputeCoordinates(coord, size, padding_mode, align_corners);
+  return coord;
+}
+
+// GridSamplerComputeSourceIndexSetGrad works similarly to
+// GridSamplerComputeSourceIndex except that it also returns the
+// `d output / d input` via pointer argument `grad_in`.
+// This is useful in the backward pass of grid_sampler.
+template<typename scalar_t>
+static OF_DEVICE_FUNC scalar_t GridSamplerComputeSourceIndexSetGrad(scalar_t coord, int size,
+                                                                    GridSamplerPadding padding_mode,
+                                                                    bool align_corners,
+                                                                    scalar_t* grad_in) {
+  scalar_t grad_clip, grad_refl;
+  coord = GridSamplerUnnormalizeSetGrad(coord, size, align_corners, grad_in);
+  if (padding_mode == GridSamplerPadding::kBorder) {
+    // clip coordinates to image borders
+    coord = ClipCoordinatesSetGrad(coord, size, &grad_clip);
+    *grad_in = (*grad_in) * grad_clip;
+  } else if (padding_mode == GridSamplerPadding::kReflection) {
+    // reflect coordinates by image borders
+    if (align_corners) {
+      coord = ReflectCoordinatesSetGrad(coord, 0, 2 * (size - 1), &grad_refl);
+    } else {
+      coord = ReflectCoordinatesSetGrad(coord, -1, 2 * size - 1, &grad_refl);
+    }
+    // clip coordinates to image borders
+    coord = ClipCoordinatesSetGrad(coord, size, &grad_clip);
+    *grad_in = (*grad_in) * grad_refl * grad_clip;
+  }
+
+#if defined(__CUDACC__)
+  coord = safe_downgrade_to_int_range(coord);
+#endif
+  return coord;
+}
+
+static OF_DEVICE_FUNC bool WithinBounds2D(int h, int w, int H, int W) {
+  return h >= 0 && h < H && w >= 0 && w < W;
+}
+
+static OF_DEVICE_FUNC bool WithinBounds3D(int d, int h, int w, int D, int H, int W) {
+  return d >= 0 && d < D && h >= 0 && h < H && w >= 0 && w < W;
+}
+
+template<typename scalar_t>
+static OF_DEVICE_FUNC scalar_t GetValueBounded(const scalar_t* data, scalar_t x, scalar_t y, int W,
+                                               int H, int sW, int sH,
+                                               GridSamplerPadding padding_mode,
+                                               bool align_corners) {
+  x = ComputeCoordinates(x, W, padding_mode, align_corners);
+  y = ComputeCoordinates(y, H, padding_mode, align_corners);
+
+  int ix = static_cast<int>(x);
+  int iy = static_cast<int>(y);
+
+  if (WithinBounds2D(iy, ix, H, W)) { return data[iy * sH + ix * sW]; }
+  return static_cast<scalar_t>(0);
+}
+
+template<typename scalar_t, typename index_t>
+static OF_DEVICE_FUNC void SafeAdd2D(scalar_t* data, int h, int w, int sH, int sW, int H, int W,
+                                     scalar_t delta, const index_t NC_offset,
+                                     const index_t memory_span) {
+  if (WithinBounds2D(h, w, H, W)) {
+#if defined(__CUDACC__)
+    cuda::atomic::Add(data + NC_offset + h * sH + w * sW, delta);
+#else
+    data[NC_offset + h * sH + w * sW] += delta;
+#endif
+  }
+}
+
+template<typename scalar_t, typename index_t>
+static OF_DEVICE_FUNC void SafeAdd3D(scalar_t* data, int d, int h, int w, int sD, int sH, int sW,
+                                     int D, int H, int W, scalar_t delta, const index_t NC_offset,
+                                     const index_t memory_span) {
+  if (WithinBounds3D(d, h, w, D, H, W)) {
+#if defined(__CUDACC__)
+    cuda::atomic::Add(data + NC_offset + d * sD + h * sH + w * sW, delta);
+#else
+    data[NC_offset + d * sD + h * sH + w * sW] += delta;
+#endif
+  }
+}
+
+template<typename scalar_t, typename index_t>
+static OF_DEVICE_FUNC void AddValueBounded(scalar_t* data, scalar_t x, scalar_t y, int W, int H,
+                                           int sW, int sH, scalar_t delta,
+                                           GridSamplerPadding padding_mode, bool align_corners,
+                                           const index_t NC_offset, const index_t memory_span) {
+  x = ComputeCoordinates(x, W, padding_mode, align_corners);
+  y = ComputeCoordinates(y, H, padding_mode, align_corners);
+
+  int ix = static_cast<int>(x);
+  int iy = static_cast<int>(y);
+
+  SafeAdd2D(data, iy, ix, sH, sW, H, W, delta, NC_offset, memory_span);
+}
+
+// Calculate the differential of the cubic convolution, i.e. `d coeff / d x`
+template<typename scalar_t>
+static OF_DEVICE_FUNC void GetCubicCoefficientsGrad(scalar_t coeffs[4], scalar_t t) {
+  // Must be the same as forward calculation in
+  // aten/src/ATen/native/cuda/UpSample.cuh:get_cubic_upsample_coefficients
+  scalar_t A = -0.75;
+
+  scalar_t x;
+  x = -1 - t;  // 1 < x = |-1 - tx| < 2
+  coeffs[0] = (-3 * A * x - 10 * A) * x - 8 * A;
+  x = -t;  // x = |0 - tx| <= 1
+  coeffs[1] = (-3 * (A + 2) * x - 2 * (A + 3)) * x;
+  x = 1 - t;  // x = |1 - tx| <= 1
+  coeffs[2] = (3 * (A + 2) * x - 2 * (A + 3)) * x;
+  x = 2 - t;  // 1 < x = |2 - tx| < 2
+  coeffs[3] = (3 * A * x - 10 * A) * x + 8 * A;
+}
+
+// Based on
+// https://en.wikipedia.org/wiki/Bicubic_interpolation#Bicubic_convolution_algorithm
+template<typename accscalar_t>
+OF_DEVICE_FUNC static accscalar_t CubicConvolution1(accscalar_t x, accscalar_t A) {
+  return ((A + 2) * x - (A + 3)) * x * x + 1;
+}
+
+template<typename accscalar_t>
+OF_DEVICE_FUNC static accscalar_t CubicConvolution2(accscalar_t x, accscalar_t A) {
+  return ((A * x - 5 * A) * x + 8 * A) * x - 4 * A;
+}
+
+template<typename accscalar_t>
+OF_DEVICE_FUNC static void GetCubicUpsamplingCoefficients(accscalar_t coeffs[4], accscalar_t t) {
+  accscalar_t A = -0.75;
+
+  accscalar_t x1 = t;
+  coeffs[0] = CubicConvolution2<accscalar_t>(x1 + 1.0, A);
+  coeffs[1] = CubicConvolution1<accscalar_t>(x1, A);
+
+  // opposite coefficients
+  accscalar_t x2 = 1.0 - t;
+  coeffs[2] = CubicConvolution1<accscalar_t>(x2, A);
+  coeffs[3] = CubicConvolution2<accscalar_t>(x2 + 1.0, A);
+}
+
+template<typename scalar_t, typename accscalar_t>
+OF_DEVICE_FUNC static accscalar_t cubic_interp1d(scalar_t x0, scalar_t x1, scalar_t x2, scalar_t x3,
+                                                 accscalar_t t) {
+  accscalar_t coeffs[4];
+  GetCubicUpsamplingCoefficients<accscalar_t>(coeffs, t);
+
+  return x0 * coeffs[0] + x1 * coeffs[1] + x2 * coeffs[2] + x3 * coeffs[3];
+}
 
 template<typename data_type, typename index_type>
-__launch_bounds__(256) __global__
-    void GridSampler4DKernel(const index_type nthreads, const data_type* input_ptr,
-                             const data_type* grid_ptr, data_type* output_ptr, index_type N,
-                             index_type C, index_type inp_H, index_type inp_W, index_type out_H,
-                             index_type out_W, const GridSamplerInterpolation interpolation_mode,
-                             const GridSamplerPadding padding_mode, const bool align_corners) {
+OF_DEVICE_FUNC void GridSampler4DKernel(const index_type nthreads, const data_type* input_ptr,
+                                        const data_type* grid_ptr, data_type* output_ptr,
+                                        index_type N, index_type C, index_type inp_H,
+                                        index_type inp_W, index_type out_H, index_type out_W,
+                                        const GridSamplerInterpolation interpolation_mode,
+                                        const GridSamplerPadding padding_mode,
+                                        const bool align_corners) {
   index_type inp_sN = C * inp_H * inp_W;
   index_type inp_sC = inp_H * inp_W;
   index_type inp_sH = inp_W;
@@ -47,7 +402,7 @@ __launch_bounds__(256) __global__
   index_type out_sH = out_W;
   index_type out_sW = 1;
 
-  CUDA_1D_KERNEL_LOOP_T(index_type, index, nthreads) {
+  XPU_1D_KERNEL_LOOP(index, nthreads) {
     const index_type w = index % out_W;
     const index_type h = (index / out_W) % out_H;
     const index_type n = index / (out_H * out_W);
@@ -123,8 +478,9 @@ __launch_bounds__(256) __global__
       auto out_ptr_NCHW = output_ptr + n * out_sN + h * out_sH + w * out_sW;
       for (index_type c = 0; c < C; ++c, inp_ptr_NC += inp_sC, out_ptr_NCHW += out_sC) {
         data_type coefficients[4];
-
+#ifdef __CUDA_ARCH__
 #pragma unroll 4
+#endif
         for (index_type i = 0; i < 4; ++i) {
           coefficients[i] = cubic_interp1d(
               GetValueBounded<data_type>(inp_ptr_NC, ix_nw - 1, iy_nw - 1 + i, inp_W, inp_H, inp_sW,
@@ -146,13 +502,14 @@ __launch_bounds__(256) __global__
 }
 
 template<typename data_type, typename index_type>
-__launch_bounds__(512) __global__
-    void GridSampler5DKernel(const index_type nthreads, const data_type* input_ptr,
-                             const data_type* grid_ptr, data_type* output_ptr, index_type N,
-                             index_type C, index_type inp_D, index_type inp_H, index_type inp_W,
-                             index_type out_D, index_type out_H, index_type out_W,
-                             const GridSamplerInterpolation interpolation_mode,
-                             const GridSamplerPadding padding_mode, const bool align_corners) {
+OF_DEVICE_FUNC void GridSampler5DKernel(const index_type nthreads, const data_type* input_ptr,
+                                        const data_type* grid_ptr, data_type* output_ptr,
+                                        index_type N, index_type C, index_type inp_D,
+                                        index_type inp_H, index_type inp_W, index_type out_D,
+                                        index_type out_H, index_type out_W,
+                                        const GridSamplerInterpolation interpolation_mode,
+                                        const GridSamplerPadding padding_mode,
+                                        const bool align_corners) {
   index_type inp_sN = C * inp_D * inp_H * inp_W;
   index_type inp_sC = inp_D * inp_H * inp_W;
   index_type inp_sD = inp_H * inp_W;
@@ -169,7 +526,7 @@ __launch_bounds__(512) __global__
   index_type out_sH = out_W;
   index_type out_sW = 1;
 
-  CUDA_1D_KERNEL_LOOP_T(index_type, index, nthreads) {
+  XPU_1D_KERNEL_LOOP(index, nthreads) {
     const index_type w = index % out_W;
     const index_type h = (index / out_W) % out_H;
     const index_type d = (index / (out_H * out_W)) % out_D;
@@ -291,7 +648,7 @@ __launch_bounds__(512) __global__
 // information, including batch * channel offset (NC_offset).
 
 template<typename data_type, typename index_type>
-__launch_bounds__(256) __global__ void GridSampler4DBackwardKernel(
+OF_DEVICE_FUNC void GridSampler4DBackwardKernel(
     const index_type nthreads, const data_type* grad_output_ptr, const data_type* input_ptr,
     const data_type* grid_ptr, data_type* grad_input_ptr, data_type* grad_grid_ptr, index_type N,
     index_type C, index_type inp_H, index_type inp_W, index_type out_H, index_type out_W,
@@ -315,7 +672,7 @@ __launch_bounds__(256) __global__ void GridSampler4DBackwardKernel(
   index_type gInp_sW = inp_sW;
   index_type gGrid_sW = grid_sW;
 
-  CUDA_1D_KERNEL_LOOP_T(index_type, index, nthreads) {
+  XPU_1D_KERNEL_LOOP(index, nthreads) {
     const index_type w = index % out_W;
     const index_type h = (index / out_W) % out_H;
     const index_type n = index / (out_H * out_W);
@@ -448,9 +805,13 @@ __launch_bounds__(256) __global__ void GridSampler4DBackwardKernel(
            ++c, gOut_ptr_NCHW += gOut_sC, NC_offset += gInp_sC, inp_ptr_NC += inp_sC) {
         data_type gOut = *gOut_ptr_NCHW;
 
+#ifdef __CUDA_ARCH__
 #pragma unroll 4
+#endif
         for (index_type i = 0; i < 4; ++i) {
+#ifdef __CUDA_ARCH__
 #pragma unroll 4
+#endif
           for (index_type j = 0; j < 4; ++j) {
             // set input gradient. See Note [Passing pointer and offset to fastAtomicAdd].
             AddValueBounded<data_type>(grad_input_ptr, ix_nw - 1 + i, iy_nw - 1 + j, inp_W, inp_H,
@@ -477,7 +838,7 @@ __launch_bounds__(256) __global__ void GridSampler4DBackwardKernel(
 }
 
 template<typename data_type, typename index_type>
-__launch_bounds__(256) __global__ void GridSampler5DBackwardKernel(
+OF_DEVICE_FUNC void GridSampler5DBackwardKernel(
     const index_type nthreads, const data_type* grad_output_ptr, const data_type* input_ptr,
     const data_type* grid_ptr, data_type* grad_input_ptr, data_type* grad_grid_ptr, index_type N,
     index_type C, index_type inp_D, index_type inp_H, index_type inp_W, index_type out_D,
@@ -506,7 +867,7 @@ __launch_bounds__(256) __global__ void GridSampler5DBackwardKernel(
   index_type gInp_sW = inp_sW;
   index_type gGrid_sW = grid_sW;
 
-  CUDA_1D_KERNEL_LOOP_T(index_type, index, nthreads) {
+  XPU_1D_KERNEL_LOOP(index, nthreads) {
     const index_type w = index % out_W;
     const index_type h = (index / out_W) % out_H;
     const index_type d = (index / (out_H * out_W)) % out_D;
@@ -685,235 +1046,38 @@ __launch_bounds__(256) __global__ void GridSampler5DBackwardKernel(
   }
 }
 
-class CudnnGridSampleDesc final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnGridSampleDesc);
-  CudnnGridSampleDesc(DataType data_type, const ShapeView& shape) {
-    std::vector<int> tensor_dim({shape.ptr(), shape.ptr() + shape.NumAxes()});
-    OF_CUDNN_CHECK(cudnnCreateSpatialTransformerDescriptor(&val_));
-    OF_CUDNN_CHECK(cudnnSetSpatialTransformerNdDescriptor(val_, CUDNN_SAMPLER_BILINEAR,
-                                                          GetCudnnDataType(data_type),
-                                                          shape.NumAxes(), tensor_dim.data()));
-  }
+template<DeviceType device_type, typename data_type, typename index_type>
+struct GridSampleKernelUtil final {
+  static void Forward4D(user_op::KernelComputeContext* ctx, const user_op::Tensor* input,
+                        const user_op::Tensor* grid, user_op::Tensor* output,
+                        GridSamplerInterpolation interpolation, GridSamplerPadding padding,
+                        const bool align_corners, const ShapeView& input_shape,
+                        const ShapeView& grid_shape, const ShapeView& output_shape, int64_t count);
+  static void Forward5D(user_op::KernelComputeContext* ctx, const user_op::Tensor* input,
+                        const user_op::Tensor* grid, user_op::Tensor* output,
+                        GridSamplerInterpolation interpolation, GridSamplerPadding padding,
+                        const bool align_corners, const ShapeView& input_shape,
+                        const ShapeView& grid_shape, const ShapeView& output_shape, int64_t count);
 
-  ~CudnnGridSampleDesc() { OF_CUDNN_CHECK(cudnnDestroySpatialTransformerDescriptor(val_)); }
-
-  const cudnnSpatialTransformerDescriptor_t& Get() const { return val_; }
-
- private:
-  cudnnSpatialTransformerDescriptor_t val_;
+  static void Backward4D(user_op::KernelComputeContext* ctx, const user_op::Tensor* doutput,
+                         const user_op::Tensor* input, const user_op::Tensor* grid,
+                         user_op::Tensor* dinput, user_op::Tensor* dgrid,
+                         GridSamplerInterpolation interpolation, GridSamplerPadding padding,
+                         const bool align_corners, const ShapeView& input_shape,
+                         const ShapeView& grid_shape, const ShapeView& output_shape, int64_t count);
+  static void Backward5D(user_op::KernelComputeContext* ctx, const user_op::Tensor* doutput,
+                         const user_op::Tensor* input, const user_op::Tensor* grid,
+                         user_op::Tensor* dinput, user_op::Tensor* dgrid,
+                         GridSamplerInterpolation interpolation, GridSamplerPadding padding,
+                         const bool align_corners, const ShapeView& input_shape,
+                         const ShapeView& grid_shape, const ShapeView& output_shape, int64_t count);
 };
 
-template<typename T>
-struct CudnnGridSampleKernelUtil {
-  static bool CanRunWithCudnn(user_op::KernelComputeContext* ctx) {
-    if (ctx->Attr<std::string>("interpolation_mode") != "bilinear"
-        || ctx->Attr<std::string>("padding_mode") != "zeros" || !ctx->Attr<bool>("align_corners")) {
-      return false;
-    }
-    const ShapeView& input_shape = ctx->Tensor4ArgNameAndIndex("input", 0)->shape();
-    if (input_shape.NumAxes() != 4 || input_shape.At(1) > 1024) { return false; }
-
-    return true;
-  }
-
-  static void ForwardCompute(user_op::KernelComputeContext* ctx) {
-    const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const user_op::Tensor* grid = ctx->Tensor4ArgNameAndIndex("grid", 0);
-    user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
-    const ShapeView& input_shape = input->shape();
-    const ShapeView& output_shape = output->shape();
-    const DataType dtype = input->data_type();
-
-    CudnnTensorDesc input_desc(dtype, input_shape, "channels_first");
-    CudnnTensorDesc output_desc(dtype, output_shape, "channels_first");
-    CudnnGridSampleDesc transfomer_desc(dtype, output_shape);
-
-    OF_CUDNN_CHECK(cudnnSpatialTfSamplerForward(
-        ctx->device_ctx()->cudnn_handle(), transfomer_desc.Get(), CudnnSPOnePtr<T>(),
-        input_desc.Get(), input->dptr(), grid->dptr(), CudnnSPZeroPtr<T>(), output_desc.Get(),
-        output->mut_dptr()));
-  }
-
-  static void BackwardCompute(user_op::KernelComputeContext* ctx) {
-    const user_op::Tensor* doutput = ctx->Tensor4ArgNameAndIndex("doutput", 0);
-    const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const user_op::Tensor* grid = ctx->Tensor4ArgNameAndIndex("grid", 0);
-    user_op::Tensor* dinput = ctx->Tensor4ArgNameAndIndex("dinput", 0);
-    user_op::Tensor* dgrid = ctx->Tensor4ArgNameAndIndex("dgrid", 0);
-    const ShapeView& input_shape = input->shape();
-    const ShapeView& output_shape = doutput->shape();
-    const ShapeView& dinput_shape = dinput->shape();
-    const DataType dtype = input->data_type();
-
-    CudnnTensorDesc input_desc(dtype, input_shape, "channels_first");
-    CudnnTensorDesc output_desc(dtype, output_shape, "channels_first");
-    CudnnTensorDesc dinput_desc(dtype, dinput_shape, "channels_first");
-    CudnnGridSampleDesc transfomer_desc(dtype, output_shape);
-
-    OF_CUDNN_CHECK(cudnnSpatialTfSamplerBackward(
-        ctx->device_ctx()->cudnn_handle(), transfomer_desc.Get(), CudnnSPOnePtr<T>(),
-        input_desc.Get(), input->dptr(), CudnnSPZeroPtr<T>(), dinput_desc.Get(), dinput->mut_dptr(),
-        CudnnSPOnePtr<T>(), output_desc.Get(), doutput->dptr(), grid->dptr(), CudnnSPZeroPtr<T>(),
-        dgrid->mut_dptr()));
-  }
-};
-
-}  // namespace
-
-template<typename data_type>
-class GridSampleGpuKernel final : public user_op::OpKernel {
- public:
-  GridSampleGpuKernel() = default;
-  ~GridSampleGpuKernel() override = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const user_op::Tensor* grid = ctx->Tensor4ArgNameAndIndex("grid", 0);
-    user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
-    const std::string interpolation_mode = ctx->Attr<std::string>("interpolation_mode");
-    const std::string padding_mode = ctx->Attr<std::string>("padding_mode");
-    GridSamplerInterpolation interpolation =
-        GridSampleKernelUtil::StringToGridSamplerInterpolation(interpolation_mode);
-    GridSamplerPadding padding = GridSampleKernelUtil::StringToGridGridSamplerPadding(padding_mode);
-    const bool align_corners = ctx->Attr<bool>("align_corners");
-
-    const ShapeView& input_shape = input->shape();
-    const ShapeView& grid_shape = grid->shape();
-    const ShapeView& output_shape = output->shape();
-    int64_t count = output_shape.elem_cnt() / input_shape.At(1);
-
-    if (input_shape.NumAxes() == 4) {
-      if (!GridSampleKernelUtil::CanUse32BitIndex({input_shape, grid_shape, output_shape})) {
-        GridSampler4DKernel<data_type, int64_t>
-            <<<GridSampleGetBlocks(count, 256), 256, 0, ctx->device_ctx()->cuda_stream()>>>(
-                count, input->dptr<data_type>(), grid->dptr<data_type>(),
-                output->mut_dptr<data_type>(), input_shape.At(0), input_shape.At(1),
-                input_shape.At(2), input_shape.At(3), output_shape.At(2), output_shape.At(3),
-                interpolation, padding, align_corners);
-      } else {
-        if (CudnnGridSampleKernelUtil<data_type>::CanRunWithCudnn(ctx)) {
-          return CudnnGridSampleKernelUtil<data_type>::ForwardCompute(ctx);
-        }
-        GridSampler4DKernel<data_type, int32_t>
-            <<<GridSampleGetBlocks(count, 256), 256, 0, ctx->device_ctx()->cuda_stream()>>>(
-                count, input->dptr<data_type>(), grid->dptr<data_type>(),
-                output->mut_dptr<data_type>(), input_shape.At(0), input_shape.At(1),
-                input_shape.At(2), input_shape.At(3), output_shape.At(2), output_shape.At(3),
-                interpolation, padding, align_corners);
-      }
-    } else {
-      if (!GridSampleKernelUtil::CanUse32BitIndex({input_shape, grid_shape, output_shape})) {
-        GridSampler5DKernel<data_type, int64_t>
-            <<<GridSampleGetBlocks(count, 512), 512, 0, ctx->device_ctx()->cuda_stream()>>>(
-                count, input->dptr<data_type>(), grid->dptr<data_type>(),
-                output->mut_dptr<data_type>(), input_shape.At(0), input_shape.At(1),
-                input_shape.At(2), input_shape.At(3), input_shape.At(4), output_shape.At(2),
-                output_shape.At(3), output_shape.At(4), interpolation, padding, align_corners);
-      } else {
-        GridSampler5DKernel<data_type, int32_t>
-            <<<GridSampleGetBlocks(count, 512), 512, 0, ctx->device_ctx()->cuda_stream()>>>(
-                count, input->dptr<data_type>(), grid->dptr<data_type>(),
-                output->mut_dptr<data_type>(), input_shape.At(0), input_shape.At(1),
-                input_shape.At(2), input_shape.At(3), input_shape.At(4), output_shape.At(2),
-                output_shape.At(3), output_shape.At(4), interpolation, padding, align_corners);
-      }
-    }
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_SAMPLE_GPU_KERNEL(data_type)                        \
-  REGISTER_USER_KERNEL("grid_sample")                                \
-      .SetCreateFn<GridSampleGpuKernel<data_type>>()                 \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
-                       & (user_op::HobDataType("input", 0) == GetDataType<data_type>::value));
-
-REGISTER_SAMPLE_GPU_KERNEL(float);
-REGISTER_SAMPLE_GPU_KERNEL(double);
-
-template<typename data_type>
-class GridSampleGradGpuKernel final : public user_op::OpKernel {
- public:
-  GridSampleGradGpuKernel() = default;
-  ~GridSampleGradGpuKernel() override = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    const user_op::Tensor* doutput = ctx->Tensor4ArgNameAndIndex("doutput", 0);
-    const user_op::Tensor* input = ctx->Tensor4ArgNameAndIndex("input", 0);
-    const user_op::Tensor* grid = ctx->Tensor4ArgNameAndIndex("grid", 0);
-    user_op::Tensor* dinput = ctx->Tensor4ArgNameAndIndex("dinput", 0);
-    user_op::Tensor* dgrid = ctx->Tensor4ArgNameAndIndex("dgrid", 0);
-    const std::string interpolation_mode = ctx->Attr<std::string>("interpolation_mode");
-    const std::string padding_mode = ctx->Attr<std::string>("padding_mode");
-    GridSamplerInterpolation interpolation =
-        GridSampleKernelUtil::StringToGridSamplerInterpolation(interpolation_mode);
-    GridSamplerPadding padding = GridSampleKernelUtil::StringToGridGridSamplerPadding(padding_mode);
-    const bool align_corners = ctx->Attr<bool>("align_corners");
-
-    const ShapeView& input_shape = input->shape();
-    const ShapeView& grid_shape = grid->shape();
-    const ShapeView& output_shape = doutput->shape();
-    int64_t count = output_shape.elem_cnt() / input_shape.At(1);
-
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), (void*)dinput->mut_dptr<data_type>(), 0,
-                             input_shape.elem_cnt() * sizeof(data_type));
-
-    if (input_shape.NumAxes() == 4) {
-      if (!GridSampleKernelUtil::CanUse32BitIndex({input_shape, grid_shape, output_shape})) {
-        GridSampler4DBackwardKernel<data_type, int64_t>
-            <<<GridSampleGetBlocks(count, 256), 256, 0, ctx->device_ctx()->cuda_stream()>>>(
-                count, doutput->dptr<data_type>(), input->dptr<data_type>(),
-                grid->dptr<data_type>(), dinput->mut_dptr<data_type>(),
-                dgrid->mut_dptr<data_type>(), input_shape.At(0), input_shape.At(1),
-                input_shape.At(2), input_shape.At(3), output_shape.At(2), output_shape.At(3),
-                interpolation, padding, align_corners, input_shape.elem_cnt());
-      } else {
-        if (CudnnGridSampleKernelUtil<data_type>::CanRunWithCudnn(ctx)) {
-          return CudnnGridSampleKernelUtil<data_type>::BackwardCompute(ctx);
-        }
-        GridSampler4DBackwardKernel<data_type, int32_t>
-            <<<GridSampleGetBlocks(count, 256), 256, 0, ctx->device_ctx()->cuda_stream()>>>(
-                count, doutput->dptr<data_type>(), input->dptr<data_type>(),
-                grid->dptr<data_type>(), dinput->mut_dptr<data_type>(),
-                dgrid->mut_dptr<data_type>(), input_shape.At(0), input_shape.At(1),
-                input_shape.At(2), input_shape.At(3), output_shape.At(2), output_shape.At(3),
-                interpolation, padding, align_corners, input_shape.elem_cnt());
-      }
-    } else {
-      if (!GridSampleKernelUtil::CanUse32BitIndex({input_shape, grid_shape, output_shape})) {
-        GridSampler5DBackwardKernel<data_type, int64_t>
-            <<<GridSampleGetBlocks(count, 256), 256, 0, ctx->device_ctx()->cuda_stream()>>>(
-                count, doutput->dptr<data_type>(), input->dptr<data_type>(),
-                grid->dptr<data_type>(), dinput->mut_dptr<data_type>(),
-                dgrid->mut_dptr<data_type>(), input_shape.At(0), input_shape.At(1),
-                input_shape.At(2), input_shape.At(3), input_shape.At(4), output_shape.At(2),
-                output_shape.At(3), output_shape.At(4), interpolation, padding, align_corners,
-                input_shape.elem_cnt());
-      } else {
-        GridSampler5DBackwardKernel<data_type, int32_t>
-            <<<GridSampleGetBlocks(count, 256), 256, 0, ctx->device_ctx()->cuda_stream()>>>(
-                count, doutput->dptr<data_type>(), input->dptr<data_type>(),
-                grid->dptr<data_type>(), dinput->mut_dptr<data_type>(),
-                dgrid->mut_dptr<data_type>(), input_shape.At(0), input_shape.At(1),
-                input_shape.At(2), input_shape.At(3), input_shape.At(4), output_shape.At(2),
-                output_shape.At(3), output_shape.At(4), interpolation, padding, align_corners,
-                input_shape.elem_cnt());
-      }
-    }
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_GRID_SAMPLE_GPU_KERNEL(data_type)                   \
-  REGISTER_USER_KERNEL("grid_sample_grad")                           \
-      .SetCreateFn<GridSampleGradGpuKernel<data_type>>()             \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
-                       & (user_op::HobDataType("doutput", 0) == GetDataType<data_type>::value));
-
-REGISTER_GRID_SAMPLE_GPU_KERNEL(float);
-REGISTER_GRID_SAMPLE_GPU_KERNEL(double);
+// macros for functors instantiate(used by grid_sample_kernel_util.cu, grid_sample_kernel_util.cpp)
+#define INSTANTIATE_GRID_SAMPLE_KERNEL_UTIL(device_type, dtype_pair, itype_pair)  \
+  template struct GridSampleKernelUtil<device_type, OF_PP_PAIR_FIRST(dtype_pair), \
+                                       OF_PP_PAIR_FIRST(itype_pair)>;
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_USER_KERNELS_GRID_SAMPLE_KERNEL_H_
