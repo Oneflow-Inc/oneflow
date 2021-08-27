@@ -26,7 +26,8 @@ namespace one {
 class Tensor;
 
 Maybe<void> RunEmptyOp(TensorTuple* outputs);
-Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc);
+Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc,
+                        bool inplace);
 
 }  // namespace one
 }  // namespace oneflow
