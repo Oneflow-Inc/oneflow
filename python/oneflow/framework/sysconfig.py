@@ -59,12 +59,10 @@ def with_cuda() -> bool:
     return oneflow._oneflow_internal.flags.with_cuda()
 
 
-@oneflow_export("sysconfig.get_cuda_version")
 def get_cuda_version() -> int:
     return oneflow._oneflow_internal.flags.cuda_version()
 
 
-@oneflow_export("sysconfig.with_xla")
 def with_xla() -> bool:
     return oneflow._oneflow_internal.flags.with_xla()
 
