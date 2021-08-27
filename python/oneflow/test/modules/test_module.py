@@ -190,6 +190,9 @@ class TestModule(flow.unittest.TestCase):
         state_dict = m.state_dict()
         with tempfile.TemporaryDirectory() as save_dir:
             flow.save(state_dict, save_dir)
+            # Creates a new file and test fault tolerance
+            with open(os.path.join(save_dir, 'random_file'), 'w') as fp:
+                fp.write("nothing")
             loaded_state_dict = flow.load(save_dir)
             m.load_state_dict(loaded_state_dict)
         res2 = m()
