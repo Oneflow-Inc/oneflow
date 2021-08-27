@@ -14,11 +14,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #include "oneflow/core/kernel/kernel_observer.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
+
+namespace {
+
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns, const KernelContext* ctx) {
+  for (const auto& bn : bns) {
+    Blob* blob = ctx->BnInOp2Blob(bn);
+    if (blob && !blob->IsBodyEmpty()) { return false; }
+  }
+  return true;
+}
+
+}  // namespace
 
 Kernel::~Kernel() {
   if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
@@ -37,39 +49,40 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
   VirtualKernelInit(device_ctx);
 }
 
-void Kernel::Launch(const KernelCtx& ctx,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  Global<KernelObserver>::Get()->WillForward(ctx, this, BnInOp2Blob);
-  Forward(ctx, BnInOp2Blob);
-  Global<KernelObserver>::Get()->DidForward(ctx, this, BnInOp2Blob);
+void Kernel::CreateState(void** state) const { *state = nullptr; }
+
+void Kernel::DestroyState(void* state) const { CHECK(state == nullptr); }
+
+void Kernel::Launch(const KernelContext* ctx) const {
+  Global<KernelObserver>::Get()->WillForward(ctx, this);
+  Forward(ctx);
+  Global<KernelObserver>::Get()->DidForward(ctx, this);
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
 }
 
-void Kernel::Forward(const KernelCtx& ctx,
-                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  Global<KernelObserver>::Get()->WillForwardHeader(ctx, this, BnInOp2Blob);
-  ForwardHeader(ctx, BnInOp2Blob);
-  Global<KernelObserver>::Get()->DidForwardHeader(ctx, this, BnInOp2Blob);
-  if ((!kernel_conf_.all_blobs_are_static())
-      && IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) {
+void Kernel::Forward(const KernelContext* ctx) const {
+  Global<KernelObserver>::Get()->WillForwardHeader(ctx, this);
+  ForwardHeader(ctx);
+  Global<KernelObserver>::Get()->DidForwardHeader(ctx, this);
+  if ((!kernel_conf_.all_blobs_are_static()) && IsAllBlobEmpty(op_attribute().output_bns(), ctx)
+      && IsStateless()) {
     return;
   }
-  Global<KernelObserver>::Get()->WillForwardDataContent(ctx, this, BnInOp2Blob);
-  ForwardDataContent(ctx, BnInOp2Blob);
-  Global<KernelObserver>::Get()->DidForwardDataContent(ctx, this, BnInOp2Blob);
+  Global<KernelObserver>::Get()->WillForwardDataContent(ctx, this);
+  ForwardDataContent(ctx);
+  Global<KernelObserver>::Get()->DidForwardDataContent(ctx, this);
 }
 
-void Kernel::ForwardHeader(const KernelCtx& ctx,
-                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  if (!kernel_conf_.all_blobs_are_static()) { ForwardShape(ctx, BnInOp2Blob); }
+void Kernel::ForwardHeader(const KernelContext* ctx) const {
+  if (!kernel_conf_.all_blobs_are_static()) { ForwardShape(ctx); }
 }
 
-void Kernel::ForwardShape(const KernelCtx& ctx,
-                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  return shape_infer_helper_->InferShape(BnInOp2Blob);
+void Kernel::ForwardShape(const KernelContext* ctx) const {
+  return shape_infer_helper_->InferShape(
+      [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); });
 }
 
 std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf& conf,
@@ -83,9 +96,5 @@ std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const Ker
   rptr->Init(job_desc, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
-
-#define INSTANTIATE_KERNEL_IF(device_type) template class KernelIf<device_type>;
-
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
 
 }  // namespace oneflow

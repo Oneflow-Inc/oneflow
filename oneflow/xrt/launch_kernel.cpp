@@ -147,8 +147,8 @@ void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
 }
 
 template<DeviceType device_type>
-void XrtLaunchKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+  const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   desc_getter_ = BlobDescGetter<device_type>(this, BnInOp2Blob);
   // Prepare input and output parameters
   std::vector<xrt::Parameter> entry_params, return_params;
@@ -181,7 +181,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   bool block_until_done = true;
   if (device_type == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-    run_options.stream = ctx.device_ctx->cuda_stream();
+    run_options.stream = ctx->device_ctx()->cuda_stream();
     run_options.device_memory_limit = FLAGS_max_workspace_bytes;
     block_until_done = false;
 #else

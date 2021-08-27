@@ -24,7 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-struct KernelCtx;
 class Blob;
 class ParallelContext;
 

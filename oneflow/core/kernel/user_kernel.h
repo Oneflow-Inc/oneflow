@@ -45,11 +45,8 @@ class UserKernel final : public Kernel {
  private:
   void VirtualKernelInit(DeviceCtx* device_ctx) override;
 
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
-  void ForwardShape(const KernelCtx& ctx,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardShape(const KernelContext* ctx) const override;
 
   bool IsStateless() const override;
 

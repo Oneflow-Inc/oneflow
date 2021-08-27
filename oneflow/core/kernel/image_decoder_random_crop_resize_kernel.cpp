@@ -484,7 +484,7 @@ class Worker final {
 }  // namespace
 
 template<DeviceType device_type>
-class ImageDecoderRandomCropResizeKernel final : public KernelIf<device_type> {
+class ImageDecoderRandomCropResizeKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ImageDecoderRandomCropResizeKernel);
   ImageDecoderRandomCropResizeKernel() = default;
@@ -492,8 +492,7 @@ class ImageDecoderRandomCropResizeKernel final : public KernelIf<device_type> {
 
  private:
   void VirtualKernelInit() override;
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
 
   std::vector<std::unique_ptr<RandomCropGenerator>> random_crop_generators_;
   std::vector<std::unique_ptr<Worker>> workers_;
@@ -531,12 +530,12 @@ void ImageDecoderRandomCropResizeKernel<device_type>::VirtualKernelInit() {
 
 template<DeviceType device_type>
 void ImageDecoderRandomCropResizeKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+    const KernelContext* ctx) const {
   const ImageDecoderRandomCropResizeOpConf& conf =
       this->op_conf().image_decoder_random_crop_resize_conf();
-  const Blob* in = BnInOp2Blob("in");
-  Blob* out = BnInOp2Blob("out");
-  Blob* tmp = BnInOp2Blob("tmp");
+  const Blob* in = ctx->BnInOp2Blob("in");
+  Blob* out = ctx->BnInOp2Blob("out");
+  Blob* tmp = ctx->BnInOp2Blob("tmp");
   CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
   CHECK_EQ(out->data_type(), DataType::kUInt8);
   const ShapeView& in_shape = in->shape();

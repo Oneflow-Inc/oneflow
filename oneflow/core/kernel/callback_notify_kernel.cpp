@@ -18,11 +18,12 @@ limitations under the License.
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
 template<typename T>
-class CallbackNotifyKernel final : public KernelIf<DeviceType::kCPU> {
+class CallbackNotifyKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CallbackNotifyKernel);
   CallbackNotifyKernel() = default;
@@ -30,20 +31,17 @@ class CallbackNotifyKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
 };
 
 template<typename T>
-void CallbackNotifyKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void CallbackNotifyKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   std::string buffer_name;
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     buffer_name = GetCallbackNotifierBufferName(this->job_desc().job_name());
   } else {
-    T job_id = *BnInOp2Blob("in")->dptr<T>();
+    T job_id = *ctx->BnInOp2Blob("in")->dptr<T>();
     buffer_name = this->op_conf().callback_notify_conf().callback_buffer_name(job_id);
   }
   std::shared_ptr<JobInstance> foreign_job_instance;

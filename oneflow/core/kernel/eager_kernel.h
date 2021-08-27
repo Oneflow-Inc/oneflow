@@ -35,11 +35,7 @@ class EagerKernel final : public Kernel {
 
  private:
   void InitOpKernel(const KernelConf& kernel_conf);
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
-    UNIMPLEMENTED();
-  }
+  void ForwardDataContent(const KernelContext* kernel_ctx) const override { UNIMPLEMENTED(); }
   std::unique_ptr<const user_op::OpKernel> kernel_;
 };
 

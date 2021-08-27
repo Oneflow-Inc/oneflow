@@ -23,7 +23,7 @@ namespace oneflow {
 class WaitAndSendIdsActor final : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(WaitAndSendIdsActor);
-  WaitAndSendIdsActor() = default;
+  WaitAndSendIdsActor() : wait_and_send_ids_status_(nullptr) {}
   ~WaitAndSendIdsActor() = default;
 
  private:
@@ -39,32 +39,33 @@ class WaitAndSendIdsActor final : public Actor {
 
   int HandlerWaitToStart(const ActorMsg&);
 
-  WaitAndSendIdsStatus wait_and_send_ids_status_;
+  WaitAndSendIdsStatus* wait_and_send_ids_status_;
 };
 
 void WaitAndSendIdsActor::VirtualActorInit(const TaskProto& task_proto) {
-  wait_and_send_ids_status_.buffer_status_ = kBufferStatusSuccess;
-  wait_and_send_ids_status_.in_id_ = 0;
-  wait_and_send_ids_status_.out_idx_ = 0;
-  wait_and_send_ids_status_.out_num_ = 0;
+  CHECK_EQ(exec_kernel_vec().size(), 1);
+  wait_and_send_ids_status_ =
+      static_cast<WaitAndSendIdsStatus*>(exec_kernel_vec().at(0).kernel_ctx->state());
+  wait_and_send_ids_status_->buffer_status_ = kBufferStatusSuccess;
+  wait_and_send_ids_status_->in_id_ = 0;
+  wait_and_send_ids_status_->out_idx_ = 0;
+  wait_and_send_ids_status_->out_num_ = 0;
   OF_SET_MSG_HANDLER(&WaitAndSendIdsActor::HandlerWaitToStart);
 }
 
 void WaitAndSendIdsActor::Act() {
-  CHECK_LE(wait_and_send_ids_status_.out_idx_, wait_and_send_ids_status_.out_num_);
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = &wait_and_send_ids_status_;
-  AsyncLaunchKernel(kernel_ctx);
+  CHECK_LE(wait_and_send_ids_status_->out_idx_, wait_and_send_ids_status_->out_num_);
+  AsyncLaunchKernel();
 }
 
 void WaitAndSendIdsActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (wait_and_send_ids_status_.buffer_status_ == kBufferStatusSuccess) {
+  if (wait_and_send_ids_status_->buffer_status_ == kBufferStatusSuccess) {
     HandleProducedNaiveDataRegstToConsumer();
   }
 }
 
 bool WaitAndSendIdsActor::IsCustomizedReadReady() const {
-  return wait_and_send_ids_status_.buffer_status_ == kBufferStatusSuccess;
+  return wait_and_send_ids_status_->buffer_status_ == kBufferStatusSuccess;
 }
 
 int WaitAndSendIdsActor::HandlerWaitToStart(const ActorMsg& msg) {

@@ -44,6 +44,31 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+namespace {
+
+class KernelContextImpl : public KernelContext {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelContextImpl);
+  KernelContextImpl(DeviceCtx* device_ctx, std::function<Blob*(const std::string&)> BnInOp2Blob)
+      : device_ctx_(device_ctx), bn_in_op2blob_fn_(std::move(BnInOp2Blob)) {}
+  ~KernelContextImpl() = default;
+
+  DeviceCtx* device_ctx() const override { return device_ctx_; }
+
+  Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
+
+  void* state() const override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+ private:
+  DeviceCtx* device_ctx_;
+  std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
+};
+
+}  // namespace
+
 class InitOpKernelObjectInstructionType final : public vm::InstructionType {
  public:
   InitOpKernelObjectInstructionType() = default;
@@ -374,7 +399,8 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
       }));
   std::function<Blob*(const std::string&)> Blob4BnInOp;
   JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
-  opkernel_obj->kernel().SystemForwardHeader(KernelCtx(), Blob4BnInOp);
+  KernelContextImpl kernel_ctx(nullptr, Blob4BnInOp);
+  opkernel_obj->kernel().SystemForwardHeader(&kernel_ctx);
   return Maybe<void>::Ok();
 }
 
@@ -411,11 +437,10 @@ Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction*
         JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
         return Maybe<void>::Ok();
       }));
-  KernelCtx kernel_ctx;
-  kernel_ctx.device_ctx = device_ctx;
   std::function<Blob*(const std::string&)> Blob4BnInOp;
   JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
-  opkernel_obj->kernel().SystemForwardDataContent(kernel_ctx, Blob4BnInOp);
+  KernelContextImpl kernel_ctx(device_ctx, std::move(Blob4BnInOp));
+  opkernel_obj->kernel().SystemForwardDataContent(&kernel_ctx);
   return Maybe<void>::Ok();
 }
 

@@ -19,6 +19,9 @@ limitations under the License.
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/persistence/snapshot.h"
 
 namespace oneflow {
 
@@ -189,7 +192,7 @@ class AutoSyncBlobAccessor<DeviceType::kCPU> final {
 }  // namespace
 
 template<DeviceType device_type>
-class ModelInitV2Kernel final : public KernelIf<device_type> {
+class ModelInitV2Kernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelInitV2Kernel);
   ModelInitV2Kernel() = default;
@@ -234,20 +237,15 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
           *hierarchy, nd_sbp, logical_blob_shape, parallel_ctx.parallel_id()));
     }
   }
-  void Forward(const KernelCtx& ctx,
-               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
-    ForwardDataContent(ctx, BnInOp2Blob);
-  }
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
+  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(const KernelContext* ctx) const override {
     const ModelInitV2OpConf& conf = this->op_conf().model_init_v2_conf();
 
     FOR_RANGE(int64_t, i, 0, conf.variable_op_name_size()) {
-      Blob* ref = BnInOp2Blob(GenRepeatedBn("ref", i));
+      Blob* ref = ctx->BnInOp2Blob(GenRepeatedBn("ref", i));
       const DataType data_type = ref->data_type();
       const VariableOpConf& original_variable_conf = conf.original_variable_conf(i);
-      AutoSyncBlobAccessor<device_type> ref_accessor(ctx.device_ctx, ref, false, true);
+      AutoSyncBlobAccessor<device_type> ref_accessor(ctx->device_ctx(), ref, false, true);
       if (original_variable_conf.has_initializer()) {
         std::mt19937 random_seed_gen(seeds_.at(i));
         InitializeWithConfUtil::SwitchInitializeWithConf(
@@ -274,7 +272,7 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kModelInitV2Conf, ModelInitV2Kernel);
 
 template<DeviceType device_type>
-class ModelLoadV2Kernel final : public KernelIf<device_type> {
+class ModelLoadV2Kernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelLoadV2Kernel);
   ModelLoadV2Kernel() = default;
@@ -299,24 +297,19 @@ class ModelLoadV2Kernel final : public KernelIf<device_type> {
                                         this->kernel_conf().parallel_ctx().parallel_id()));
     }
   }
-  void Forward(const KernelCtx& ctx,
-               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
-    ForwardDataContent(ctx, BnInOp2Blob);
-  }
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
+  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(const KernelContext* ctx) const override {
     const ModelLoadV2OpConf& conf = this->op_conf().model_load_v2_conf();
-    const Blob* path = BnInOp2Blob("path");
-    const std::string snapshot_path = SyncReadStringFromBlob<device_type>(ctx.device_ctx, path);
+    const Blob* path = ctx->BnInOp2Blob("path");
+    const std::string snapshot_path = SyncReadStringFromBlob<device_type>(ctx->device_ctx(), path);
     SnapshotReader reader(snapshot_path);
     FOR_RANGE(int64_t, i, 0, conf.variable_op_name_size()) {
-      Blob* ref = BnInOp2Blob(GenRepeatedBn("ref", i));
+      Blob* ref = ctx->BnInOp2Blob(GenRepeatedBn("ref", i));
       const VariableOpConf& original_variable_conf = conf.original_variable_conf(i);
       const Shape logical_blob_shape(original_variable_conf.shape());
       const std::string& var_lbn =
           GenLogicalBlobName(conf.variable_op_name(i), original_variable_conf.out());
-      AutoSyncBlobAccessor<device_type> ref_accessor(ctx.device_ctx, ref, false, true);
+      AutoSyncBlobAccessor<device_type> ref_accessor(ctx->device_ctx(), ref, false, true);
       reader.Read(var_lbn, logical_blob_shape, tensor_slice_views_.at(i), ref_accessor.host_blob());
     }
   }
@@ -326,7 +319,7 @@ class ModelLoadV2Kernel final : public KernelIf<device_type> {
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kModelLoadV2Conf, ModelLoadV2Kernel);
 
 template<DeviceType device_type>
-class ModelSaveV2Kernel final : public KernelIf<device_type> {
+class ModelSaveV2Kernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ModelSaveV2Kernel);
   ModelSaveV2Kernel() = default;
@@ -382,28 +375,23 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
     }
   }
 
-  void Forward(const KernelCtx& ctx,
-               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
-    ForwardDataContent(ctx, BnInOp2Blob);
-  }
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
+  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(const KernelContext* ctx) const override {
     const ModelSaveV2OpConf& conf = this->op_conf().model_save_v2_conf();
-    const Blob* path_blob = BnInOp2Blob("path");
+    const Blob* path_blob = ctx->BnInOp2Blob("path");
     const std::string snapshot_path =
-        SyncReadStringFromBlob<device_type>(ctx.device_ctx, path_blob);
+        SyncReadStringFromBlob<device_type>(ctx->device_ctx(), path_blob);
     SnapshotWriter writer(snapshot_path);
     SnapshotReader reader(snapshot_path);
     FOR_RANGE(int64_t, i, 0, conf.variable_op_name_size()) {
       if (!need_do_saves_.at(i)) { continue; }
       *(counters_.at(i)) += 1;
       const std::vector<TensorSliceView>& variable_part_id2slice_views = part_id2slice_views_.at(i);
-      Blob* in_blob = BnInOp2Blob(GenRepeatedBn("in", i));
+      Blob* in_blob = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
       const VariableOpConf& original_variable_conf = conf.original_variable_conf(i);
       const Shape logical_blob_shape(original_variable_conf.shape());
       const DataType data_type = original_variable_conf.data_type();
-      AutoSyncBlobAccessor<device_type> in_accessor(ctx.device_ctx, in_blob, true, false);
+      AutoSyncBlobAccessor<device_type> in_accessor(ctx->device_ctx(), in_blob, true, false);
       const std::string var_lbn =
           GenLogicalBlobName(conf.variable_op_name(i), original_variable_conf.out());
       const bool is_broadcast = ShapeView(logical_blob_shape) == in_blob->shape();

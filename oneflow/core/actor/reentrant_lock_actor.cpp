@@ -21,7 +21,7 @@ namespace oneflow {
 class ReentrantLockActor final : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReentrantLockActor);
-  ReentrantLockActor() = default;
+  ReentrantLockActor() : reentrant_lock_status_(nullptr) {}
   ~ReentrantLockActor() override = default;
 
  protected:
@@ -48,14 +48,16 @@ class ReentrantLockActor final : public Actor {
   RegstSlot consumed_rs_;
   int64_t cur_processed_regst_desc_id_;
   HashMap<int64_t, std::string> regst_desc_id2ibn_;
-  ReentrantLockStatus reentrant_lock_status_;
+  ReentrantLockStatus* reentrant_lock_status_;
   int64_t eord_regst_desc_id_;
   int64_t act_id_;
 };
 
 void ReentrantLockActor::VirtualActorInit(const TaskProto& task_proto) {
-  act_id_ = 0;
   CHECK_EQ(1, exec_kernel_vec().size());
+  reentrant_lock_status_ =
+      static_cast<ReentrantLockStatus*>(exec_kernel_vec().at(0).kernel_ctx->state());
+  act_id_ = 0;
   const auto& kernel_conf = task_proto.exec_sequence().exec_node().Get(0).kernel_conf();
   const auto& ibns = kernel_conf.op_attribute().input_bns();
   for (const auto& ibn : ibns) {
@@ -70,7 +72,7 @@ void ReentrantLockActor::VirtualActorInit(const TaskProto& task_proto) {
   }
   consumed_rs_.InitedDone();
   cur_processed_regst_desc_id_ = -1;
-  reentrant_lock_status_.Init(kernel_conf);
+  reentrant_lock_status_->Init(kernel_conf);
   OF_SET_MSG_HANDLER(&ReentrantLockActor::HandlerNormal);
 }
 
@@ -79,7 +81,8 @@ void ReentrantLockActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg&
 }
 
 bool ReentrantLockActor::IsCustomizedReadReady() const {
-  return reentrant_lock_status_.cur_unlocked_ids().size() > 0 || -1 != GetCurProcessedRegstDescId();
+  return reentrant_lock_status_->cur_unlocked_ids().size() > 0
+         || -1 != GetCurProcessedRegstDescId();
 }
 
 void ReentrantLockActor::ForEachCurCustomizedReadableRegst(
@@ -96,12 +99,10 @@ const std::string& ReentrantLockActor::Ibn4RegstDescId(int64_t id) const {
 void ReentrantLockActor::Act() {
   cur_processed_regst_desc_id_ = GetCurProcessedRegstDescId();
   Regst* const cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
-  reentrant_lock_status_.set_cur_ibn(Ibn4RegstDescId(cur_processed_regst_desc_id_));
-  reentrant_lock_status_.set_cur_act_id(act_id_);
+  reentrant_lock_status_->set_cur_ibn(Ibn4RegstDescId(cur_processed_regst_desc_id_));
+  reentrant_lock_status_->set_cur_act_id(act_id_);
   act_id_ += 1;
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = &reentrant_lock_status_;
-  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
+  AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* {
     if (cur_processed_regst_desc_id_ != regst_desc_id) { return nullptr; }
     return cur_regst;
   });
@@ -109,12 +110,12 @@ void ReentrantLockActor::Act() {
 
 bool ReentrantLockActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
   return ReceiveEordMsg(eord_regst_desc_id_)
-         && reentrant_lock_status_.total_queued_request_lock_num() == 0
-         && reentrant_lock_status_.total_acquired_lock_num() == 0;
+         && reentrant_lock_status_->total_queued_request_lock_num() == 0
+         && reentrant_lock_status_->total_acquired_lock_num() == 0;
 }
 
 void ReentrantLockActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (reentrant_lock_status_.acquired_lock_to_be_sent() == false) { return; }
+  if (reentrant_lock_status_->acquired_lock_to_be_sent() == false) { return; }
   HandleProducedNaiveDataRegstToConsumer();
 }
 

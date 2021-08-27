@@ -20,11 +20,16 @@ limitations under the License.
 
 namespace oneflow {
 
-struct KernelCtx {
-  KernelCtx() : device_ctx(nullptr), other(nullptr) {}
+class Blob;
+class KernelContext {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelContext);
+  KernelContext() = default;
+  virtual ~KernelContext() = default;
 
-  DeviceCtx* device_ctx;
-  void* other;
+  virtual DeviceCtx* device_ctx() const = 0;
+  virtual Blob* BnInOp2Blob(const std::string& bn) const = 0;
+  virtual void* state() const = 0;
 };
 
 }  // namespace oneflow

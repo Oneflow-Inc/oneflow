@@ -17,27 +17,24 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
 template<DeviceType device_type>
-class OutputKernel final : public KernelIf<device_type> {
+class OutputKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OutputKernel);
   OutputKernel() = default;
   ~OutputKernel() = default;
 
  private:
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
-  void ForwardHeader(const KernelCtx& ctx,
-                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardHeader(const KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void OutputKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void OutputKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     const auto& job_name = this->job_desc().job_name();
     const auto& op_name = this->op_conf().name();
@@ -47,21 +44,20 @@ void OutputKernel<device_type>::ForwardDataContent(
     BufferStatus buffer_status = buffer->TryReceive(&job_instance);
     CHECK_NE(buffer_status, kBufferStatusEmpty);
     if (buffer_status == kBufferStatusSuccess) {
-      OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("in"));
+      OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
       job_instance->PullBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
     }
   } else {
-    BnInOp2Blob("out")->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("in"));
+    ctx->BnInOp2Blob("out")->CopyDataContentFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
   }
 }
 
 template<DeviceType device_type>
-void OutputKernel<device_type>::ForwardHeader(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void OutputKernel<device_type>::ForwardHeader(const KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     // Do nothing.
   } else {
-    BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
+    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
   }
 }
 

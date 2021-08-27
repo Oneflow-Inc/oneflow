@@ -24,8 +24,8 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/operator/operator.h"
 
 #ifdef WITH_CUDA_GRAPHS
 
@@ -34,6 +34,19 @@ limitations under the License.
 #endif  // WITH_CUDA_GRAPHS
 
 namespace oneflow {
+
+namespace {
+
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                    const std::function<Blob*(const std::string& bn)>& BnInOp2Blob) {
+  for (const auto& bn : bns) {
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob && !blob->IsBodyEmpty()) { return false; }
+  }
+  return true;
+}
+
+}  // namespace
 
 using Arg2Tensor =
     HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::BlobTensorView>>;
@@ -674,13 +687,13 @@ void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {
   opkernel_state_ = CreateOpKernelState(device_ctx);
 }
 
-void UserKernel::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void UserKernel::ForwardDataContent(const KernelContext* ctx) const {
+  const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
 }
 
-void UserKernel::ForwardShape(const KernelCtx& ctx,
-                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void UserKernel::ForwardShape(const KernelContext* ctx) const {
+  const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
   infer_cache_->UpdateCacheKey(infer_ctx_.get());
   if (!infer_cache_->IsCacheHit()) {
