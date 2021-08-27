@@ -215,6 +215,7 @@ jobs:
       - name: Update Conda env
         if: matrix.test_suite == 'cpu-clang'
         run: |
+          export PATH=$PATH:$CONDA/bin
           conda env update -f environment.yml --prune
       - name: Set environments from secrets
         if: contains(${{ github.repository }}, "Oneflow-Inc")
@@ -268,6 +269,7 @@ jobs:
         if: matrix.test_suite == 'cpu-clang'
         run: |
           set -x
+          export PATH=$PATH:$CONDA/bin
           bash -i ci/conda/build-clang.sh
       - name: Build OneFlow
         timeout-minutes: 45
