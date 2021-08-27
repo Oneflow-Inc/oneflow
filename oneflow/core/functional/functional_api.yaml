@@ -537,18 +537,18 @@
   bind_python: True
 
 - name: "adaptive_avg_pool1d"
-  signature:
-    "Tensor (Tensor x, Int64List output_size) => AdaptiveAvgPool1D"
+  signature: 
+    "Tensor (Tensor x, Int64List[1] output_size) => AdaptiveAvgPool1D"
   bind_python: True
 
 - name: "adaptive_avg_pool2d"
-  signature:
-    "Tensor (Tensor x, Int64List output_size) => AdaptiveAvgPool2D"
+  signature: 
+    "Tensor (Tensor x, Int64List[2] output_size) => AdaptiveAvgPool2D"
   bind_python: True
 
 - name: "adaptive_avg_pool3d"
-  signature:
-    "Tensor (Tensor x, Int64List output_size) => AdaptiveAvgPool3D"
+  signature: 
+    "Tensor (Tensor x, Int64List[3] output_size) => AdaptiveAvgPool3D"
   bind_python: True
 
 - name: "adaptive_pool_grad"
@@ -985,13 +985,25 @@
   signature: "Tensor (Tensor x) => ConsistentToLocal"
   bind_python: True
 
-- name: "all_reduce"
-  signature: "Tensor (Tensor x) => AllReduce"
-  bind_python: True
-
 - name: "broadcast"
   signature: "Tensor (Tensor x, *, Bool inplace=True) => Broadcast"
   bind_python: True
+
+- name: "local_all_reduce"
+  signature: "Tensor (Tensor x) => LocalAllReduce"
+  bind_python: True
+
+- name: "consistent_all_reduce"
+  signature: "Tensor (Tensor x) => ConsistentAllReduce"
+  bind_python: False
+
+- name: "consistent_reduce_scatter"
+  signature: "Tensor (Tensor x, String op_type) => ConsistentReduceScatter"
+  bind_python: False
+
+- name: "consistent_all_gather"
+  signature: "Tensor (Tensor x) => ConsistentAllGather"
+  bind_python: False
 
 - name: "select_first"
   signature: "Tensor (TensorTuple inputs) => SelectFirst"
