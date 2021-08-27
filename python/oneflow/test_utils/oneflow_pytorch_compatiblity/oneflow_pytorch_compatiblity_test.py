@@ -59,6 +59,7 @@ def get_loss(
     module_name: str,
     test_pytorch: bool = True,
     device: str = "cuda",
+    tmpdirname: str='/tmp',
 ):
     model_loss = []
     learning_rate = 0.01
@@ -84,11 +85,8 @@ def get_loss(
             if "num_batches_tracked" not in k:
                 new_parameters[k] = flow.tensor(w[k].detach().numpy())
 
-        try:
-            shutil.rmtree("/dataset/imagenet/compatiblity_models")
-        except:
-            pass
-        flow.save(new_parameters, "/dataset/imagenet/compatiblity_models")
+ 
+        flow.save(new_parameters, tmpdirname)
 
         pytorch_model.to(device)
         torch_sgd = torch.optim.SGD(
@@ -170,11 +168,8 @@ def get_loss(
         oneflow_model.to(device)
         corss_entropy.to(device)
 
-        try:
-            params = flow.load("/dataset/imagenet/compatiblity_models")
-            oneflow_model.load_state_dict(params)
-        except:
-            shutil.rmtree("/dataset/imagenet/compatiblity_models")
+        params = flow.load(tmpdirname)
+        oneflow_model.load_state_dict(params)
 
         of_sgd = flow.optim.SGD(
             oneflow_model.parameters(), lr=learning_rate, momentum=mom
@@ -217,7 +212,7 @@ def get_loss(
 
 
 def test_train_loss_oneflow_pytorch(
-    test_case, model_path: str, module_name: str, device: str = "cuda"
+    test_case, model_path: str, module_name: str, device: str = "cuda", 
 ):
     batch_size = 16
     image_nd = np.random.rand(batch_size, 3, 224, 224).astype(np.float32)
@@ -225,12 +220,13 @@ def test_train_loss_oneflow_pytorch(
     oneflow_model_loss = []
     pytorch_model_loss = []
 
-    oneflow_model_loss = get_loss(
-        image_nd, label_nd, batch_size, model_path, module_name, True, "cuda"
-    )
-    pytorch_model_loss = get_loss(
-        image_nd, label_nd, batch_size, model_path, module_name, False, "cuda"
-    )
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        oneflow_model_loss = get_loss(
+            image_nd, label_nd, batch_size, model_path, module_name, True, "cuda", tmpdirname
+        )
+        pytorch_model_loss = get_loss(
+            image_nd, label_nd, batch_size, model_path, module_name, False, "cuda", tmpdirname
+        )
 
     if verbose:
         indes = [i for i in range(len(oneflow_model_loss))]
@@ -250,7 +246,6 @@ def test_train_loss_oneflow_pytorch(
         plt.savefig("./loss_compare.png")
         plt.show()
 
-    shutil.rmtree("/dataset/imagenet/compatiblity_models")
     test_case.assertTrue(
         np.allclose(cos_sim(oneflow_model_loss, pytorch_model_loss), 1.0, 1e-1, 1e-1)
     )
