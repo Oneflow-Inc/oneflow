@@ -39,6 +39,7 @@ class CastNvBFloat162FloatKernel final : public OpKernel {
   ~CastNvBFloat162FloatKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -57,6 +58,7 @@ class CastFloat2NvBFloat16Kernel final : public OpKernel {
   ~CastFloat2NvBFloat16Kernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
