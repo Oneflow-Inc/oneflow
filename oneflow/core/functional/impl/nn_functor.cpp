@@ -320,10 +320,10 @@ class Maxpool3DFunctor : public PoolingNDFunctor {
   }
 };
 
-class AdaptivePoolNDIntListFunctor {
+class AdaptivePoolNDFunctor {
  public:
-  AdaptivePoolNDIntListFunctor() = default;
-  virtual ~AdaptivePoolNDIntListFunctor() = default;
+  AdaptivePoolNDFunctor() = default;
+  virtual ~AdaptivePoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int64_t>& output_size) const {
     MutableAttrMap attrs;
@@ -335,63 +335,23 @@ class AdaptivePoolNDIntListFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class AdaptiveAvgPool1DIntListFunctor : public AdaptivePoolNDIntListFunctor {
+class AdaptiveAvgPool1DFunctor : public AdaptivePoolNDFunctor {
  public:
-  AdaptiveAvgPool1DIntListFunctor() {
+  AdaptiveAvgPool1DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool1d").Input("x").Output("y").Build());
   }
 };
 
-class AdaptiveAvgPool2DIntListFunctor : public AdaptivePoolNDIntListFunctor {
+class AdaptiveAvgPool2DFunctor : public AdaptivePoolNDFunctor {
  public:
-  AdaptiveAvgPool2DIntListFunctor() {
+  AdaptiveAvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool2d").Input("x").Output("y").Build());
   }
 };
 
-class AdaptiveAvgPool3DIntListFunctor : public AdaptivePoolNDIntListFunctor {
+class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
  public:
-  AdaptiveAvgPool3DIntListFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool3d").Input("x").Output("y").Build());
-  }
-};
-
-class AdaptivePoolNDIntFunctor {
- public:
-  explicit AdaptivePoolNDIntFunctor(const int64_t num_spatial_dims)
-      : num_spatial_dims_(num_spatial_dims){};
-  virtual ~AdaptivePoolNDIntFunctor() = default;
-
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& output_val) const {
-    MutableAttrMap attrs;
-    std::vector<int64_t> output_vec(num_spatial_dims_);
-    for (int i = 0; i < num_spatial_dims_; i++) { output_vec.at(i) = output_val; }
-    JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", output_vec));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
-
- protected:
-  std::shared_ptr<OpExpr> op_;
-  int64_t num_spatial_dims_;
-};
-
-class AdaptiveAvgPool1DIntFunctor : public AdaptivePoolNDIntFunctor {
- public:
-  AdaptiveAvgPool1DIntFunctor() : AdaptivePoolNDIntFunctor(/*num_spatial_dims=*/1) {
-    op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool1d").Input("x").Output("y").Build());
-  }
-};
-
-class AdaptiveAvgPool2DIntFunctor : public AdaptivePoolNDIntFunctor {
- public:
-  AdaptiveAvgPool2DIntFunctor() : AdaptivePoolNDIntFunctor(/*num_spatial_dims=*/2) {
-    op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool2d").Input("x").Output("y").Build());
-  }
-};
-
-class AdaptiveAvgPool3DIntFunctor : public AdaptivePoolNDIntFunctor {
- public:
-  AdaptiveAvgPool3DIntFunctor() : AdaptivePoolNDIntFunctor(/*num_spatial_dims=*/3) {
+  AdaptiveAvgPool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("adaptive_avg_pool3d").Input("x").Output("y").Build());
   }
 };
@@ -989,12 +949,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
   m.add_functor<impl::Maxpool3DFunctor>("Maxpool3D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
-  m.add_functor<impl::AdaptiveAvgPool1DIntListFunctor>("AdaptiveAvgPool1DIntList");
-  m.add_functor<impl::AdaptiveAvgPool2DIntListFunctor>("AdaptiveAvgPool2DIntList");
-  m.add_functor<impl::AdaptiveAvgPool3DIntListFunctor>("AdaptiveAvgPool3DIntList");
-  m.add_functor<impl::AdaptiveAvgPool1DIntFunctor>("AdaptiveAvgPool1DInt");
-  m.add_functor<impl::AdaptiveAvgPool2DIntFunctor>("AdaptiveAvgPool2DInt");
-  m.add_functor<impl::AdaptiveAvgPool3DIntFunctor>("AdaptiveAvgPool3DInt");
+  m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
+  m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
+  m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
