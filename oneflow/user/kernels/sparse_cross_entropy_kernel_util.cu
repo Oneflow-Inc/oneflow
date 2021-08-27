@@ -207,6 +207,23 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
             num_instances, num_classes, depth, lower_bound, reinterpret_cast<const half*>(x),
             labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
   }
+  
+  static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
+                                     const int64_t num_classes, const int64_t depth,
+                                     const int64_t lower_bound, const float16* prob,
+                                     const K* labels, const float16* dy, float16* dx) {
+    if (num_classes % 2 == 0) {
+      ComputeDiffWithSoftmaxGpuHalf2<K>
+          <<<BlocksNum4ThreadsNum(elem_cnt / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+              elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
+              labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+    } else {
+      ComputeDiffWithSoftmaxGpuHalf<K>
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+              elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
+              labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+    }
+  }
 };
 
 #define INSTANTIATE_SPARSE_CROSS_ENTROPY_KERNEL_UTIL_GPU(data_type_pair, index_type_pair)          \

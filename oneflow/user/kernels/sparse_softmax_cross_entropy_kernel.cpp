@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/user/kernels/softmax_kernel_util.h"
+#include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
 #include "oneflow/user/kernels/sparse_softmax_cross_entropy_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
@@ -191,7 +192,7 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
       CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
       lower_bound = kernel_state->lower();
     }
-    SparseSoftmaxCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
+    SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
         ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
         prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
