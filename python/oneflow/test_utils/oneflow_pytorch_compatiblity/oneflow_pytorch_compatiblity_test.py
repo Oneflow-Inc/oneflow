@@ -139,7 +139,7 @@ def get_loss(
             for i, line in enumerate(lines):
                 if (
                     i > 15 and "import" not in line and len(line.strip()) != 0
-                ):  # 15 means c
+                ):  # 15 means license
                     break
             lines = (
                 lines[:i]
