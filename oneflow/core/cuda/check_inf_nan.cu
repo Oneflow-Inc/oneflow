@@ -46,8 +46,7 @@ int CheckBlobInfNan(DeviceCtx* ctx, Blob* blob) {
   size_t elem_cnt = blob->shape().elem_cnt();
   switch (blob->data_type()) {
     case DataType::kFloat: {
-      RUN_CUDA_KERNEL((CheckInfNan<float>), ctx, elem_cnt, elem_cnt, blob->dptr<float>(),
-                      ret_code);
+      RUN_CUDA_KERNEL((CheckInfNan<float>), ctx, elem_cnt, elem_cnt, blob->dptr<float>(), ret_code);
       break;
     }
     default: {
