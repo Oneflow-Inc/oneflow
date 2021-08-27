@@ -25,7 +25,7 @@ class _FusedNormBase(Module):
     def __init__(
         self,
         num_features: int,
-        has_addend: bool = False, 
+        has_addend: bool = False,
         eps: float = 1e-05,
         momentum: float = 0.1,
         affine: bool = True,
@@ -95,14 +95,16 @@ class _FusedNormBase(Module):
 class _FusedBatchNorm(_FusedNormBase):
     def __init__(
         self,
-        num_features, 
-        has_addend=False, 
+        num_features,
+        has_addend=False,
         eps=1e-05,
         momentum=0.1,
         affine=True,
         track_running_stats=True,
     ):
-        super().__init__(num_features, has_addend, eps, momentum, affine, track_running_stats)
+        super().__init__(
+            num_features, has_addend, eps, momentum, affine, track_running_stats
+        )
 
     def forward(self, x, addend):
         self._check_input_dim(x)
@@ -111,14 +113,18 @@ class _FusedBatchNorm(_FusedNormBase):
         # no device, however using `x.is_cuda` is not a good choice.
         # import pdb
         # pdb.set_trace()
-        if self.has_addend is False: 
+        if self.has_addend is False:
             if not x.is_cuda:
-                # can add cpu version. 
-                raise NotImplementedError("Fused batchnorm version can be only used in GPU")
-        else: 
+                # can add cpu version.
+                raise NotImplementedError(
+                    "Fused batchnorm version can be only used in GPU"
+                )
+        else:
             if not x.is_cuda and not addend.is_cuda:
-                # can add cpu version. 
-                raise NotImplementedError("Fused batchnorm version can be only used in GPU")
+                # can add cpu version.
+                raise NotImplementedError(
+                    "Fused batchnorm version can be only used in GPU"
+                )
 
         if self.training:
             is_training = True
@@ -126,8 +132,10 @@ class _FusedBatchNorm(_FusedNormBase):
             is_training = (self.running_mean is None) and (self.running_var is None)
         return flow.F.normalization_add_relu(
             x,
-            addend if self.has_addend else None, 
-            self.running_mean if not self.training or self.track_running_stats else None,
+            addend if self.has_addend else None,
+            self.running_mean
+            if not self.training or self.track_running_stats
+            else None,
             self.running_var if not self.training or self.track_running_stats else None,
             self.weight,
             self.bias,
@@ -136,6 +144,7 @@ class _FusedBatchNorm(_FusedNormBase):
             momentum=self.momentum,
             is_training=is_training,
         )
+
 
 class FusedBatchNorm1d(_FusedBatchNorm):
     """Applies Batch Normalization over a 2D or 3D input (a mini-batch of 1D

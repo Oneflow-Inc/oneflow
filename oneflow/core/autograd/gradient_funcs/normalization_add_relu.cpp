@@ -21,28 +21,26 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-
-// todo: rewrite
 struct NormalizationAddReluGradCaptureState : public AutoGradCaptureState {
   int32_t axis;
   float epsilon;
   bool track_running_stats;
   bool is_training;
-  bool has_addend; 
+  bool has_addend;
   bool x_requires_grad;
-  bool addend_requires_grad; // for add_end
+  bool addend_requires_grad;
   bool gamma_requires_grad;
   bool beta_requires_grad;
 };
 
 // training:
-// y, mean, inv_variance = normalization_add_relu(x, Optional(add_end), moving_mean, moving_variance, gamma, beta,
-// axis=1, epsilon=0.01, momentum=0.9)
-// y, mean, inv_variance = normalization_add_relu(x, Optional(add_end), gamma, beta, axis=1, epsilon=0.01, momentum=0.9)
+// y, mean, inv_variance = normalization_add_relu(x, Optional(add_end), moving_mean,
+// moving_variance, gamma, beta, axis=1, epsilon=0.01, momentum=0.9) y, mean, inv_variance =
+// normalization_add_relu(x, Optional(add_end), gamma, beta, axis=1, epsilon=0.01, momentum=0.9)
 
 // inference:
-// y = normalization_add_relu(x, Optional(add_end), moving_mean, moving_variance, gamma, beta, axis=1, epsilon=0.01,
-// momentum=0.9)
+// y = normalization_add_relu(x, Optional(add_end), moving_mean, moving_variance, gamma, beta,
+// axis=1, epsilon=0.01, momentum=0.9)
 
 class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluGradCaptureState> {
  public:
@@ -58,7 +56,6 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     // input_size may be 3/4/5/6, as inputs may be
     // (x, gamma, beta) or (x, moving_mean, moving_variance, gamma, beta)
     // (x, addend, gamma, beta) or (x, addend, moving_mean, moving_variance, gamma, beta)
-    
 
     // ref to track_running_stats false/true
     // output_size may be 2 or 4, as outputs may be
@@ -66,58 +63,34 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     // ref to is_training false/true
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     std::shared_ptr<Tensor> add_end, gamma, beta;
-    // if (inputs.size() == 3) {
-    //   add_end = nullptr;
-    //   gamma = inputs.at(1);
-    //   beta = inputs.at(2);
-    //   ctx->track_running_stats = false;
-    // } else if (inputs.size() == 4) {
-    //   add_end = inputs.at(1); 
-    //   gamma = inputs.at(2);
-    //   beta = inputs.at(3);
-    //   ctx->track_running_stats = false;
-    // } else if (inputs.size() == 5) {
-    //   add_end = nullptr; 
-    //   gamma = inputs.at(3);
-    //   beta = inputs.at(4);
-    //   ctx->track_running_stats = true;
-    // } else {
-    //   CHECK_EQ_OR_RETURN(inputs.size(), 6);
-    //   add_end = inputs().at(1); 
-    //   gamma = inputs.at(4);
-    //   beta = inputs.at(5);
-    //   ctx->track_running_stats = true;
-    // } 
 
     if (inputs.size() == 3 || inputs.size() == 5) {
       add_end = nullptr;
-      if(inputs.size()==3){
+      if (inputs.size() == 3) {
         gamma = inputs.at(1);
         beta = inputs.at(2);
         ctx->track_running_stats = false;
-      }
-      else{
+      } else {
         gamma = inputs.at(3);
         beta = inputs.at(4);
         ctx->track_running_stats = true;
       }
       ctx->has_addend = false;
     } else if (inputs.size() == 4 || inputs.size() == 6) {
-      add_end = inputs.at(1); 
-      if(inputs.size()==4){
+      add_end = inputs.at(1);
+      if (inputs.size() == 4) {
         gamma = inputs.at(2);
         beta = inputs.at(3);
-        ctx->track_running_stats = false;  
-      }
-      else{
+        ctx->track_running_stats = false;
+      } else {
         gamma = inputs.at(4);
         beta = inputs.at(5);
         ctx->track_running_stats = true;
-      } 
+      }
       ctx->has_addend = true;
-      ctx->addend_requires_grad = inputs.at(1) -> requires_grad(); 
-    }  
-    
+      ctx->addend_requires_grad = inputs.at(1)->requires_grad();
+    }
+
     ctx->gamma_requires_grad = gamma->requires_grad();
     ctx->beta_requires_grad = beta->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -128,13 +101,11 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
 
     ctx->SaveTensorForBackward(inputs.at(0));  // x 0
     ctx->SaveTensorForBackward(gamma);         // gamma 1
-    ctx->SaveTensorForBackward(beta);         // beta 2
+    ctx->SaveTensorForBackward(beta);          // beta 2
 
-    
     // input_size may be 3/4/5/6, as inputs may be
     // (x, gamma, beta) or (x, moving_mean, moving_variance, gamma, beta)
     // (x, addend, gamma, beta) or (x, addend, moving_mean, moving_variance, gamma, beta)
-    
 
     // ref to track_running_stats false/true
     // output_size may be 2 or 4, as outputs may be
@@ -144,19 +115,17 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
       ctx->SaveTensorForBackward(outputs.at(2));  // mean 3
       ctx->SaveTensorForBackward(outputs.at(3));  // inv_variance 4
     } else {
-      if(inputs.size() == 5){
+      if (inputs.size() == 5) {
         // without add_end
         ctx->SaveTensorForBackward(inputs.at(1));  // moving_mean 3
         ctx->SaveTensorForBackward(inputs.at(2));  // moving_variance 4
-      }
-      else{
-          CHECK_EQ_OR_RETURN(inputs.size(), 6);
-            // with add_end
-          ctx->SaveTensorForBackward(inputs.at(2));  // moving_mean 3
-          ctx->SaveTensorForBackward(inputs.at(3));  // moving_variance 4
+      } else {
+        CHECK_EQ_OR_RETURN(inputs.size(), 6);
+        // with add_end
+        ctx->SaveTensorForBackward(inputs.at(2));  // moving_mean 3
+        ctx->SaveTensorForBackward(inputs.at(3));  // moving_variance 4
       }
     }
-    // save reserve out space
     ctx->SaveTensorForBackward(outputs.at(0));  // y 5
     ctx->SaveTensorForBackward(outputs.at(1));  // reserve space 6
 
@@ -167,7 +136,7 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);      // x
     const auto& gamma = ctx->SavedTensors().at(1);  // gamma
-    const auto& beta = ctx->SavedTensors().at(2);  // beta
+    const auto& beta = ctx->SavedTensors().at(2);   // beta
     const auto& y_grad = out_grads.at(0);
 
     std::shared_ptr<Tensor> mean, inv_variance;
@@ -185,26 +154,15 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     const auto& y = ctx->SavedTensors().at(5);
     const auto& reserve_space = ctx->SavedTensors().at(6);
 
-    const auto& results = JUST(functional::NormalizationAddReluGrad(x, y_grad, mean, inv_variance, gamma,
-                                                             beta, reserve_space, y, ctx->axis, 
-                                                             ctx->epsilon));
-    CHECK_EQ_OR_RETURN(results->size(), 4); // here output includes "gamma_diff" "beta_diff" "dx" "addend_diff"
-
-    // input_size may be 3/4/5/6, as inputs may be
-    // (x, gamma, beta) or (x, moving_mean, moving_variance, gamma, beta)
-    // (x, addend, gamma, beta) or (x, addend, moving_mean, moving_variance, gamma, beta)
-    
-
-    // ref to track_running_stats false/true
-    // output_size may be 2 or 4, as outputs may be
-    // (x, reserve_space) or (x, reserve_space, mean, inv_variance)
-    // ref to is_training false/true
-
+    const auto& results = JUST(functional::NormalizationAddReluGrad(
+        x, y_grad, mean, inv_variance, gamma, beta, reserve_space, y, ctx->axis, ctx->epsilon));
+    CHECK_EQ_OR_RETURN(results->size(),
+                       4);  // here output includes "gamma_diff" "beta_diff" "dx" "addend_diff"
 
     if (ctx->track_running_stats) {
-      // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and beta.
-      // or 6 inputs: x, add_end, moving_mean, moving_variance, gamma and beta.
-      if(ctx->has_addend){
+      // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and
+      // beta. or 6 inputs: x, add_end, moving_mean, moving_variance, gamma and beta.
+      if (ctx->has_addend) {
         in_grads->resize(6);
         if (ctx->gamma_requires_grad) {
           in_grads->at(4) = results->at(1);  // gamma_diff;
@@ -215,21 +173,20 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
         if (ctx->addend_requires_grad) {
           in_grads->at(1) = results->at(3);  // add_end_diff
         }
-      }
-      else{
+      } else {
         in_grads->resize(5);
         if (ctx->gamma_requires_grad) {
-          in_grads->at(4) = results->at(1);  // gamma_diff;
+          in_grads->at(3) = results->at(1);  // gamma_diff;
         }
         if (ctx->beta_requires_grad) {
-          in_grads->at(5) = results->at(2);  // beta_diff
+          in_grads->at(4) = results->at(2);  // beta_diff
         }
       }
-      
+
     } else {
       // The normalization op has 3 inputs which are x, addend, gamma and beta.
-      // of has 4 inputs which are x, addend, gamma and beta.
-      if(ctx->has_addend){
+      // or has 4 inputs which are x, addend, gamma and beta.
+      if (ctx->has_addend) {
         in_grads->resize(4);
         if (ctx->gamma_requires_grad) {
           in_grads->at(1) = results->at(1);  // gamma_diff;
@@ -240,8 +197,7 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
         if (ctx->addend_requires_grad) {
           in_grads->at(1) = results->at(3);  // addend_diff
         }
-      }
-      else{
+      } else {
         in_grads->resize(3);
         if (ctx->gamma_requires_grad) {
           in_grads->at(1) = results->at(1);  // gamma_diff;
@@ -250,7 +206,6 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
           in_grads->at(2) = results->at(2);  // beta_diff
         }
       }
-      
     }
 
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
@@ -259,8 +214,8 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
       return Maybe<void>::Ok();
     }
 
-    // todo(zzk): add eval mode. 
-    return Maybe<void>::Ok(); 
+    // todo(zzk): add eval mode.
+    return Maybe<void>::Ok();
   }
 
  private:
