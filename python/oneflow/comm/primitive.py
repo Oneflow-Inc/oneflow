@@ -19,6 +19,34 @@ import numpy as np
 
 
 def all_reduce(tensor):
+    """
+    Reduces the tensor data across all machines in such a way that all get
+    the final result.
+    After the call ``tensor`` is going to be bitwise identical in all processes.
+
+    Args:
+        input (Tensor): the input tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> # We have 2 process groups, 2 ranks.
+        >>> import oneflow as flow
+
+        >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.distributed.get_local_rank()
+        >>> input
+        tensor([[1, 2],
+                [3, 4]], device='cuda:0', dtype=oneflow.int64) # Rank 0
+        tensor([[2, 3],
+                [4, 5]], device='cuda:1', dtype=oneflow.int64) # Rank 1
+        >>> out = flow.comm.all_reduce(input)
+        >>> out
+        tensor([[3, 5],
+                [7, 9]], device='cuda:0', dtype=oneflow.int64) # Rank 0
+        tensor([[3, 5],
+                [7, 9]], device='cuda:1', dtype=oneflow.int64) # Rank 1
+    """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.device.type == "cuda"
     assert tensor.device.index == flow.framework.distribute.get_local_rank()

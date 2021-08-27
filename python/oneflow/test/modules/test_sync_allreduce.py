@@ -21,19 +21,25 @@ import unittest
 
 
 class TestAllReduce(flow.unittest.TestCase):
-    @flow.unittest.skip_unless_1n2d()
-    def test_all_reduce_1n2d(test_case):
-        np_arr = np.array([[1, 2], [3, 4]])
-        input = flow.tensor(np_arr, device="cuda")
-        out = flow.comm.all_reduce(input)
-        test_case.assertTrue(np.allclose(out.numpy(), np_arr * 2))
+    # @flow.unittest.skip_unless_1n2d()
+    # def test_all_reduce_1n2d(test_case):
+    #     np_arr = np.array([[1, 2], [3, 4]])
+    #     input = flow.tensor(np_arr, device="cuda")
+    #     out = flow.comm.all_reduce(input)
+    #     test_case.assertTrue(np.allclose(out.numpy(), np_arr * 2))
 
-    @flow.unittest.skip_unless_2n2d()
-    def test_all_reduce_2n2d(test_case):
-        np_arr = np.array([[1, 2], [3, 4]])
-        input = flow.tensor(np_arr, device="cuda")
-        out = flow.comm.all_reduce(input)
-        test_case.assertTrue(np.allclose(out.numpy(), np_arr * 4))
+    # @flow.unittest.skip_unless_2n2d()
+    # def test_all_reduce_2n2d(test_case):
+    #     np_arr = np.array([[1, 2], [3, 4]])
+    #     input = flow.tensor(np_arr, device="cuda")
+    #     out = flow.comm.all_reduce(input)
+    #     test_case.assertTrue(np.allclose(out.numpy(), np_arr * 4))
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_docs(test_case):
+        import doctest
+
+        doctest.testmod(flow.comm.primitive, raise_on_error=True, verbose=True)
 
 
 if __name__ == "__main__":
