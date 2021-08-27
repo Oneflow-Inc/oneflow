@@ -201,6 +201,53 @@ def cuda(input, device: Union[int, str, flow.device] = None):
     return input.to(device=device)
 
 
+@register_tensor_op("item")
+def item_op(input):
+    r"""Returns the value of this tensor as a standard Python number. This only works for tensors with one element. 
+    For other cases, see tolist().
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1.0])
+        >>> x.item()
+        1.0
+    """
+    assert input.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
+    return input.numpy().item()
+
+
+@register_tensor_op("tolist")
+def tolist_op(input):
+    r"""Returns the tensor as a (nested) list. For scalars, a standard Python number is returned, 
+    just like with `item()`. Tensors are automatically moved to the CPU first if necessary.
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.tensor([[1,2,3], [4,5,6]])
+        >>> input.tolist()
+        [[1, 2, 3], [4, 5, 6]]
+    """
+    if input.numel() == 1 and input.ndim == 0:
+        return input.item()
+    return input.numpy().tolist()
+
+
 if __name__ == "__main__":
     import doctest
 

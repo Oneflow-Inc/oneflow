@@ -13,27 +13,43 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from test_util import GenArgList
 from automated_test_util import *
-
 import oneflow as flow
 import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestReciprocalModule(flow.unittest.TestCase):
+class TestTril(flow.unittest.TestCase):
     @autotest()
-    def test_flow_reciprocal_list_with_random_data(test_case):
+    def test_tril_without_diag(test_case):
         device = random_device()
         x = random_pytorch_tensor(
-            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+            ndim=4,
+            dim0=random(1, 5).to(int),
+            dim1=random(1, 5).to(int),
+            dim2=random(1, 5).to(int),
+            dim3=random(1, 5).to(int),
         ).to(device)
-        y = torch.reciprocal(x)
+        y = torch.tril(x)
+        y = torch.exp(y)
+
+        return y
+
+    @autotest()
+    def test_tril_with_diag(test_case):
+        device = random_device()
+        diagonal = random(-3, 3).to(int)
+        x = random_pytorch_tensor(
+            ndim=4,
+            dim0=random(1, 5).to(int),
+            dim1=random(1, 5).to(int),
+            dim2=random(1, 5).to(int),
+            dim3=random(1, 5).to(int),
+        ).to(device)
+        y = torch.tril(x, diagonal)
+        y = torch.exp(y)
+
         return y
 
 

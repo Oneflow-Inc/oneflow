@@ -30,8 +30,12 @@ namespace oneflow {
 
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
+  bool is_printed = false;
   JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds,
-                            [] { LOG(ERROR) << blocking::GetStackInfo(); },
+                            [&is_printed] {
+                              if (!is_printed) { LOG(ERROR) << blocking::GetStackInfo(); }
+                              is_printed = true;
+                            },
                             TransportUtil::BlockingWarningIntervalSeconds()));
   return Maybe<void>::Ok();
 }

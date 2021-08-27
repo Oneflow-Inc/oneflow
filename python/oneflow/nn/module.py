@@ -67,16 +67,10 @@ class Module(object):
     def consistent(self):
         return self._consistent
 
-    def forward(self, *args):
+    def forward(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def consistent_forward(self, *args):
-        return self.forward(*args)
-
-    def force_mirrored_forward(self, *args):
-        raise NotImplementedError()
-
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
@@ -84,7 +78,7 @@ class Module(object):
                     result = (result,)
                 args = result
 
-        res = self.forward(*args)
+        res = self.forward(*args, **kwargs)
 
         for hook in itertools.chain(self._forward_hooks.values()):
             result = hook(self, args, res)
