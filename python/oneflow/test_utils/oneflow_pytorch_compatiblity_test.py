@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import importlib.util
 import unittest
 
 import numpy as np
 import time
+import tempfile
 import argparse
 
 import oneflow as flow
@@ -28,11 +30,6 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-from models.oneflow_alexnet import alexnet as oneflow_alexnet
-from models.pytorch_alexnet import alexnet as pytorch_alexnet
-from models.oneflow_resnet import resnet50 as oneflow_resnet50
-from models.pytorch_resnet import resnet50 as pytorch_resnet50
-
 def cos_sim(vector_a, vector_b):
     vector_a = np.mat(vector_a)
     vector_b = np.mat(vector_b)
@@ -42,8 +39,13 @@ def cos_sim(vector_a, vector_b):
     sim = 0.5 + 0.5 * cos
     return sim
 
+def import_file(path):
+    spec = importlib.util.spec_from_file_location("mod", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
-def test_train_loss_oneflow_pytorch(test_case, oneflow_model, pytorch_model, device):
+def test_train_loss_oneflow_pytorch(test_case, model_path: str, module_name: str, device: str="cuda"):
     batch_size = 16
     image_nd = np.random.rand(batch_size, 3, 224, 224).astype(np.float32)
     label_nd = np.array([e for e in range(batch_size)], dtype=np.int32)
@@ -54,6 +56,36 @@ def test_train_loss_oneflow_pytorch(test_case, oneflow_model, pytorch_model, dev
     image = flow.tensor(image_nd)
     label = flow.tensor(label_nd)
     corss_entropy = flow.nn.CrossEntropyLoss(reduction="mean")
+
+    python_module = import_file(model_path)
+    Net = getattr(python_module, module_name)
+    pytorch_model = Net()
+
+    with open(model_path) as f:
+        buf = f.read()
+
+        lines = buf.split("\n")
+        for i, line in enumerate(lines):
+            if "import" not in line and len(line.strip()) != 0:
+                break
+        lines = (
+            lines[:i]
+            + [
+                "import torch as flow",
+                "import torch.nn as nn",
+                "from torch import Tensor",
+                "from torch.nn import Parameter",
+            ]
+            + lines[i:]
+        )
+        buf = "\n".join(lines)
+        with tempfile.NamedTemporaryFile("w", suffix=".py") as f:
+            f.write(buf)
+            torch_python_module = import_file(f.name)
+            print(torch_python_module)
+
+    Net = getattr(torch_python_module, module_name)
+    oneflow_model = Net()
 
     image_gpu = image.to(device)
     label = label.to(device)
@@ -183,13 +215,13 @@ def test_train_loss_oneflow_pytorch(test_case, oneflow_model, pytorch_model, dev
 class TestApiCompatiblity(flow.unittest.TestCase):
     def test_alexnet_compatiblity(test_case):
         test_train_loss_oneflow_pytorch(
-            test_case, oneflow_alexnet(), pytorch_alexnet(), "cuda"
+            test_case, "pytorch_alexnet.py", "alexnet", "cuda"
         )
     
-    def test_resnet50_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, oneflow_resnet50(), pytorch_resnet50(), "cuda"
-        )
+    # def test_resnet50_compatiblity(test_case):
+    #     test_train_loss_oneflow_pytorch(
+    #         test_case, "cuda"
+    #     )
 
 
 if __name__ == "__main__":
