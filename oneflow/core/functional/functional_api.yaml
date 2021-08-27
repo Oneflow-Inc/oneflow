@@ -986,7 +986,7 @@
   bind_python: True
 
 - name: "broadcast"
-  signature: "Tensor (Tensor x) => Broadcast"
+  signature: "Tensor (Tensor x, *, Bool inplace=True) => Broadcast"
   bind_python: True
 
 - name: "local_all_reduce"

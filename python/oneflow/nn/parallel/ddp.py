@@ -47,7 +47,7 @@ def DistributedDataParallel(
     with flow.no_grad():
         for x in module.parameters():
             requires_grad = x.requires_grad
-            x.copy_(flow.F.broadcast(x))
+            flow.F.broadcast(x, inplace=True)
             # TODO: fix the bug that x's requires_grad is discarded
             # after flow.F.broadcast
             x.requires_grad_(requires_grad)
@@ -76,7 +76,7 @@ def DistributedDataParallel(
         def pre_forward_hook(module, input):
             with flow.no_grad():
                 for x in module.buffers():
-                    x.copy_(flow.F.broadcast(x))
+                    flow.F.broadcast(x, inplace=True)
 
         module.register_forward_pre_hook(pre_forward_hook)
 
