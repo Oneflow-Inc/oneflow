@@ -43,6 +43,7 @@ from oneflow.nn.modules.adaptive_pool import (
 )
 from oneflow.nn.modules.all_reduce import AllReduce
 from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
+from oneflow.nn.modules.batchnorm_fused import FusedBatchNorm1d, FusedBatchNorm2d, FusedBatchNorm3d
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
