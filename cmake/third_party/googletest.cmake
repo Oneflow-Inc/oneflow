@@ -9,7 +9,7 @@ set(GOOGLEMOCK_LIBRARY_DIR ${THIRD_PARTY_DIR}/googlemock/lib)
 set(googletest_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/include)
 set(googlemock_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/include)
 
-set(googletest_URL https://github.com/google/googletest/archive/release-1.8.0.tar.gz)
+set(googletest_URL https://github.com/google/googletest/archive/release-1.11.0.tar.gz)
 use_mirror(VARIABLE googletest_URL URL ${googletest_URL})
 
 if(WIN32)
@@ -44,11 +44,12 @@ if(THIRD_PARTY)
 ExternalProject_Add(googletest
     PREFIX googletest
     URL ${googletest_URL}
-    URL_MD5 16877098823401d1bf2ed7891d7dce36
+    URL_MD5 e8a8df240b6938bb6384155d4c37d937
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
     BUILD_BYPRODUCTS ${GOOGLETEST_STATIC_LIBRARIES} ${GOOGLEMOCK_STATIC_LIBRARIES}
+    -DCMAKE_INSTALL_PREFIX:STRING=${PROTOBUF_INSTALL_DIR}
     CMAKE_CACHE_ARGS
         -DCMAKE_C_COMPILER_LAUNCHER:STRING=${CMAKE_C_COMPILER_LAUNCHER}
         -DCMAKE_CXX_COMPILER_LAUNCHER:STRING=${CMAKE_CXX_COMPILER_LAUNCHER}
