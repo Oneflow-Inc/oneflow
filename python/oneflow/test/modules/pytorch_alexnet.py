@@ -1,19 +1,33 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import torch
 import torch.nn as nn
 from _internally_replaced_utils import load_state_dict_from_url
 from typing import Any
 
 
-__all__ = ['AlexNet', 'alexnet']
+__all__ = ["AlexNet", "alexnet"]
 
 
 model_urls = {
-    'alexnet': 'https://download.pytorch.org/models/alexnet-owt-7be5be79.pth',
+    "alexnet": "https://download.pytorch.org/models/alexnet-owt-7be5be79.pth",
 }
 
 
 class AlexNet(nn.Module):
-
     def __init__(self, num_classes: int = 1000) -> None:
         super(AlexNet, self).__init__()
         self.features = nn.Sequential(
@@ -60,7 +74,6 @@ def alexnet(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> A
     """
     model = AlexNet(**kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls['alexnet'],
-                                              progress=progress)
+        state_dict = load_state_dict_from_url(model_urls["alexnet"], progress=progress)
         model.load_state_dict(state_dict)
     return model
