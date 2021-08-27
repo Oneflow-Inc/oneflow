@@ -79,11 +79,15 @@ Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_b
 }
 
 Maybe<BoxingExprIf> OptionalNcclSToS(const std::shared_ptr<BoxingExprIf>& core_boxing_expr) {
-  return JUST(BoxingExpr(JUST(InPlacementAndSplit()),
-                         JUST(OptionalBoxing("nccl-s-to-s")) | JUST(BoxingExpr("nccl-p-to-s"))
-                             | JUST(BoxingExpr("nccl-b-to-s")),
-                         JUST(BoxingExpr(JUST(OutPlacementAndSplit()), core_boxing_expr,
-                                         JUST(OptionalBoxing("nccl-s-to-s"))))));
+  return JUST(BoxingExpr(
+      JUST(InPlacementAndSplit()),
+      JUST(OptionalBoxing("nccl-s-to-s")) | JUST(BoxingExpr("nccl-p-to-s"))
+          | JUST(BoxingExpr("nccl-b-to-s")),
+      JUST(BoxingExpr(
+          JUST(OutPlacementAndSplit()), core_boxing_expr,
+          JUST(OptionalBoxing("nccl-s-to-s")) | JUST(BoxingExpr("nccl-s-to-b"))
+              | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()), JUST(BoxingExpr("nccl-s-to-b")),
+                                JUST(BoxingExpr("naive-b-to-p"))))))));
 }
 
 Maybe<BoxingExprIf> RawGenericBoxingExprNotEfficient() {
