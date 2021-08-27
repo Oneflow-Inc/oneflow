@@ -16,6 +16,7 @@ limitations under the License.
 
 import oneflow as flow
 import numpy as np
+import oneflow.unittest
 
 
 def all_reduce(tensor):
@@ -35,20 +36,21 @@ def all_reduce(tensor):
         >>> import oneflow as flow
 
         >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.distributed.get_local_rank()
-        >>> input
+        >>> if flow.distributed.get_local_rank() == 0:
+        ...     print(input, "# Rank0")
+        ... else:
+        ...     oneflow.framework.unittest._skip # doctest: +COND_SKIP
         tensor([[1, 2],
-                [3, 4]], device='cuda:0', dtype=oneflow.int64) # Rank 0
-        tensor([[2, 3],
-                [4, 5]], device='cuda:1', dtype=oneflow.int64) # Rank 1
+                [3, 4]], device='cuda:0', dtype=oneflow.int64) # Rank0
         >>> out = flow.comm.all_reduce(input)
-        >>> out
+        >>> if flow.distributed.get_local_rank() == 0:
+        ...     print(out, "# Rank0")
+        ... else:
+        ...     oneflow.framework.unittest._skip # doctest: +COND_SKIP
         tensor([[3, 5],
-                [7, 9]], device='cuda:0', dtype=oneflow.int64) # Rank 0
-        tensor([[3, 5],
-                [7, 9]], device='cuda:1', dtype=oneflow.int64) # Rank 1
+                [7, 9]], device='cuda:0', dtype=oneflow.int64) # Rank0
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
-    assert tensor.device.type == "cuda"
     assert tensor.device.index == flow.framework.distribute.get_local_rank()
     assert tensor.is_local
     placement = None

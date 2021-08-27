@@ -35,12 +35,10 @@ class TestAllReduce(flow.unittest.TestCase):
         out = flow.comm.all_reduce(input)
         test_case.assertTrue(np.allclose(out.numpy(), np_arr * 4))
 
+    # @flow.unittest.skip("TODO:not support ")
     @flow.unittest.skip_unless_1n2d()
     def test_docs(test_case):
-        import doctest
-
-        doctest.testmod(flow.comm.primitive, raise_on_error=True, verbose=True)
-
+        oneflow.framework.unittest.cond_skip_for_docstr("oneflow.comm.primitive")
 
 if __name__ == "__main__":
     unittest.main()

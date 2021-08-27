@@ -368,3 +368,19 @@ def skip_unless_2n2d():
 
 def skip_unless_2n4d():
     return skip_unless(2, 4)
+
+_skip = object()
+def cond_skip_for_docstr(module):
+    import doctest, sys
+    COND_SKIP = doctest.register_optionflag('COND_SKIP')
+    class CondSkipChecker(doctest.OutputChecker):
+        def check_output(self, want, got, optionflags):
+            if (optionflags & COND_SKIP) and got.strip() == str(_skip):
+                return True
+            else:
+                return super(CondSkipChecker, self).check_output(want, got, optionflags)
+    m = sys.modules.get(module)
+    finder = doctest.DocTestFinder()
+    runner = doctest.DebugRunner(CondSkipChecker())
+    for test in finder.find(m, m.__name__):
+        runner.run(test)
