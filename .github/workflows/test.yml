@@ -278,7 +278,7 @@ jobs:
           cmake --build . -j $(nproc)
           cd -
           cd python
-          python setup.py bdist_wheel
+          python3 setup.py bdist_wheel
           echo "wheelhouse_dir=$PWD/dist" >> $GITHUB_ENV
         shell: bash -l {0}
       - name: Build OneFlow
