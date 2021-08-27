@@ -128,6 +128,11 @@ class MessagePool final {
     }
   }
 
+  ActorMsgMR * GetActorMsgMRFromMessagePool(){
+     ActorMsgMR* msg_mr = GetMessage();
+     return  msg_mr;
+  }
+
  private:
   ibv_pd* pd_;
   size_t num_of_message_;
@@ -150,7 +155,7 @@ class IBVerbsQP final {
   uint32_t qp_num() const { return qp_->qp_num; }
   void Connect(const IBVerbsConnectionInfo& peer_info);
   void PostAllRecvRequest();
-  void GetActorMsgMRFromMessagePool();
+ 
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);
