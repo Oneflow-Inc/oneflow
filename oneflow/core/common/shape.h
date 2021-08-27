@@ -103,8 +103,8 @@ namespace std {
 template<>
 struct hash<oneflow::Shape> {
   size_t operator()(const oneflow::Shape& shape) const {
-    size_t ret = 0;
-    FOR_RANGE(int, i, 0, shape.NumAxes()) { ret ^= std::hash<int64_t>()(shape.At(i)); }
+    size_t ret = shape.NumAxes();
+    FOR_RANGE(int, i, 0, shape.NumAxes()) { oneflow::HashCombineTyped(&ret, shape.At(i)); }
     return ret;
   }
 };
