@@ -42,6 +42,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/common/thread_local_callback.h"
 
 namespace py = pybind11;
 
@@ -85,11 +86,20 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
 
   const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
       [&array, &Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array)); });
-  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
-    });
-  }));
+  bool is_printed = false;
+  JUST(SpinCounter::SpinWait(
+      1,
+      [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+        return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+          return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
+        });
+      },
+      [&is_printed]() {
+        if (!is_printed) {
+          LOG(ERROR) << blocking::GetStackInfo();
+          is_printed = true;
+        }
+      }));
   return Maybe<void>::Ok();
 }
 

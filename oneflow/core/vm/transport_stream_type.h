@@ -52,6 +52,8 @@ class TransportStreamType : public StreamType {
   ObjectMsgPtr<StreamDesc> MakeTransportStreamDesc(const Resource& resource,
                                                    int64_t this_machine_id) const;
   bool SharingVirtualMachineThread() const override { return true; }
+  // not support transport instructions because the entire TransportStreamType is deperecated.
+  bool SupportingTransportInstructions() const override { return false; }
 };
 
 class TransportSenderStreamType : public TransportStreamType {

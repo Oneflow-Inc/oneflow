@@ -186,6 +186,7 @@ class GpuAdaptiveAvgPool1dKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool1dKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 1); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -198,6 +199,7 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool2dKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 2); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -210,6 +212,7 @@ class GpuAdaptiveAvgPool3dKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool3dKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgForwardCompute<T>(ctx, 3); }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -222,6 +225,7 @@ class GpuAdaptiveAvgPool1dGradKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool1dGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgBackwardCompute<T>(ctx, 1); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -233,6 +237,7 @@ class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool2dGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgBackwardCompute<T>(ctx, 2); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -244,6 +249,7 @@ class GpuAdaptiveAvgPool3dGradKernel final : public OpKernel {
   ~GpuAdaptiveAvgPool3dGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(KernelComputeContext* ctx) const override { AvgBackwardCompute<T>(ctx, 3); }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

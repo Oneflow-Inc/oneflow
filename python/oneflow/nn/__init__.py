@@ -64,6 +64,7 @@ from oneflow.nn.modules.dataset import (
     CropMirrorNormalize,
     OFRecordImageDecoder,
     OFRecordImageDecoderRandomCrop,
+    OFRecordImageGpuDecoderRandomCropResize,
     OfrecordRawDecoder,
     OfrecordReader,
     OFRecordBytesDecoder,
@@ -115,6 +116,8 @@ from oneflow.nn.modules.upsampling import (
     UpsamplingNearest2d,
 )
 from oneflow.nn.modules.zeropad2d import ZeroPad2d
+from oneflow.nn.modules.unfold import Unfold
+from oneflow.nn.modules.fold import Fold
 from oneflow.nn.parameter import Parameter
 from oneflow.nn import utils
 

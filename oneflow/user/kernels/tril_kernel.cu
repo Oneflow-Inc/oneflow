@@ -147,6 +147,7 @@ class GpuTrilKernel final : public user_op::OpKernel {
   ~GpuTrilKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
@@ -197,6 +198,7 @@ class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
   ~GpuFusedScaleTrilKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto shape = x->shape();
