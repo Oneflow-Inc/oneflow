@@ -127,7 +127,6 @@ class _BatchNorm(_NormBase):
                 self.running_var = (
                     1.0 - self.momentum
                 ) * self.running_var + self.momentum * unbiased_variance
-                self.num_batches_tracked += 1
             else:
                 mean = mean if self.running_mean is None else self.running_mean
                 variance = variance if self.running_var is None else self.running_var
