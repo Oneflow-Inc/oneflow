@@ -207,7 +207,7 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kGPU, float16, K> {
             num_instances, num_classes, depth, lower_bound, reinterpret_cast<const half*>(x),
             labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
   }
-  
+
   static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
                                      const int64_t num_classes, const int64_t depth,
                                      const int64_t lower_bound, const float16* prob,

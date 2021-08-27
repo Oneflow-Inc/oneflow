@@ -45,7 +45,6 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
     }
   }
 
-
   static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
                                      const int64_t num_classes, const int64_t depth,
                                      const int64_t lower_bound, const T* prob, const K* labels,

@@ -63,7 +63,7 @@ class LogSoftmaxGradKernel final : public user_op::OpKernel {
 
  private:
   using user_op::OpKernel::Compute;
-  
+
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
