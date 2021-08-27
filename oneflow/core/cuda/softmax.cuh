@@ -105,39 +105,20 @@ __inline__ __device__ double Div<double>(double a, double b) {
 }
 
 template<typename T>
-__device__ __forceinline__ T MaxWithLogThreshold(T x) {
-  const T threshold = 1e-20;
-  return x > threshold ? x : threshold;
-}
+__inline__ __device__ T Log(T x);
 
-#if defined(__CUDACC__)
-__device__ __forceinline__ half MaxWithLogThreshold(half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  half threshold = hexp2(__float2half(-14.0));
-  if (__hgt(x, threshold)) { return x; }
-  return threshold;
+template<>
+__inline__ __device__ float Log<float>(float x) {
+#ifdef OF_SOFTMAX_USE_FAST_MATH
+  return __logf(x);
 #else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-}
+  return log(x);
 #endif
-
-template<typename T>
-__device__ __forceinline__ T SafeLog(T x) {
-  return logf(MaxWithLogThreshold(x));
 }
-
-#if defined(__CUDACC__)
-__device__ __forceinline__ half SafeLog(half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  return hlog(MaxWithLogThreshold(x));
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+template<>
+__inline__ __device__ double Log<double>(double x) {
+  return log(x);
 }
-#endif
 
 inline int GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves) {
   int dev;
@@ -263,9 +244,11 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
         if (algorithm == Algorithm::kSoftmax) {
           row_buf[i] = Exp(row_buf[i] - warp_max[row_id]);
           thread_sum[row_id] += row_buf[i];
-        } else {
+        } else if (algorithm == Algorithm::kLogSoftmax) {
           row_buf[i] -= warp_max[row_id];
           thread_sum[row_id] += Exp(row_buf[i]);
+        } else {
+          __trap();
         }
       }
     }
@@ -281,8 +264,10 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
       for (int i = 0; i < cols_per_thread; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           row_buf[i] = Div(row_buf[i], warp_sum[row_id]);
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          row_buf[i] -= Log(warp_sum[row_id]);
         } else {
-          row_buf[i] -= SafeLog(warp_sum[row_id]);
+          __trap();
         }
       }
 #pragma unroll
@@ -500,8 +485,10 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
       for (int i = 0; i < pack_size; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           pack[i] = Div(buf[i * num_packs + pack_id], row_sum);
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          pack[i] = buf[i * num_packs + pack_id] - Log(row_sum);
         } else {
-          pack[i] = buf[i * num_packs + pack_id] - SafeLog(row_sum);
+          __trap();
         }
         thread_max = max(thread_max, pack[i]);
       }
@@ -621,8 +608,10 @@ __global__ void SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t r
       for (int i = 0; i < pack_size; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           pack[i] = Div(Exp(pack[i] - row_max), row_sum);
+        } else if (algorithm == Algorithm::kLogSoftmax) {
+          pack[i] = (pack[i] - row_sum) - Log(row_sum);
         } else {
-          pack[i] = (pack[i] - row_sum) - SafeLog(row_sum);
+          __trap();
         }
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
@@ -720,8 +709,10 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
             if (algorithm == Algorithm::kSoftmax) {
               thread_sum[row_id] +=
                   row_y_buf[pack_id * pack_size + i] * row_dy_buf[pack_id * pack_size + i];
-            } else {
+            } else if (algorithm == Algorithm::kLogSoftmax) {
               thread_sum[row_id] += row_dy_buf[pack_id * pack_size + i];
+            } else {
+              __trap();
             }
           }
         }
@@ -745,9 +736,11 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
               row_dy_buf[pack_id * pack_size + i] =
                   (row_dy_buf[pack_id * pack_size + i] - warp_sum[row_id])
                   * row_y_buf[pack_id * pack_size + i];
-            } else {
+            } else if (algorithm == Algorithm::kLogSoftmax) {
               row_dy_buf[pack_id * pack_size + i] -=
                   Exp(row_y_buf[pack_id * pack_size + i]) * warp_sum[row_id];
+            } else {
+              __trap();
             }
           }
           store.template store<pack_size>(row_dy_buf + pack_id * pack_size, row + row_id, col);
@@ -956,8 +949,10 @@ __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE s
         dy_buf[i * num_packs + pack_id] = dy_pack[i];
         if (algorithm == Algorithm::kSoftmax) {
           thread_sum += y_pack[i] * dy_pack[i];
-        } else {
+        } else if (algorithm == Algorithm::kLogSoftmax) {
           thread_sum += dy_pack[i];
+        } else {
+          __trap();
         }
       }
     }
@@ -968,8 +963,10 @@ __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE s
       for (int i = 0; i < pack_size; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           pack[i] = (dy_buf[i * num_packs + pack_id] - row_sum) * y_buf[i * num_packs + pack_id];
-        } else {
+        } else if (algorithm == Algorithm::kLogSoftmax) {
           pack[i] = dy_buf[i * num_packs + pack_id] - Exp(y_buf[i * num_packs + pack_id]) * row_sum;
+        } else {
+          __trap();
         }
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
@@ -1092,8 +1089,10 @@ __global__ void SoftmaxGradBlockUncachedImpl(LOAD_Y load_y, LOAD_DY load_dy, STO
       for (int i = 0; i < pack_size; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           thread_sum += y_pack[i] * dy_pack[i];
-        } else {
+        } else if (algorithm == Algorithm::kLogSoftmax) {
           thread_sum += dy_pack[i];
+        } else {
+          __trap();
         }
       }
     }
@@ -1107,8 +1106,10 @@ __global__ void SoftmaxGradBlockUncachedImpl(LOAD_Y load_y, LOAD_DY load_dy, STO
       for (int i = 0; i < pack_size; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           dy_pack[i] = (dy_pack[i] - row_sum) * y_pack[i];
-        } else {
+        } else if (algorithm == Algorithm::kLogSoftmax) {
           dy_pack[i] -= Exp(y_pack[i]) * row_sum;
+        } else {
+          __trap();
         }
       }
       store.template store<pack_size>(dy_pack, row, pack_id * pack_size);
