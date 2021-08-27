@@ -77,7 +77,9 @@ def arange_op(
             for elem in sbp:
                 assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
         assert len(sbp) == len(placement.hierarchy)
-        res = flow.F.consistent_arange(start, end, step, dtype=dtype, placement=placement, sbp=sbp)
+        res = flow.F.consistent_arange(
+            start, end, step, dtype=dtype, placement=placement, sbp=sbp
+        )
 
     res.requires_grad = requires_grad
     return res

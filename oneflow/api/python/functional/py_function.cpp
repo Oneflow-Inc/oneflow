@@ -53,10 +53,8 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
 
   if (max_pos_args == 1) {
     const auto& type = function.argument_def.at(0).type;
-    const auto& size = function.argument_def.at(0).size;
-    treat_args_as_intlist = (size == 0 || nargs != 1)
-                            && (type == kINT32_LIST || type == kUINT32_LIST || type == kINT64_LIST
-                                || type == kUINT64_LIST || type == kSHAPE);
+    treat_args_as_intlist = (type == kINT32_LIST || type == kUINT32_LIST || type == kINT64_LIST
+                             || type == kUINT64_LIST || type == kSHAPE);
   }
   if (nargs > max_pos_args && !treat_args_as_intlist) {
     if (raise_exception) {

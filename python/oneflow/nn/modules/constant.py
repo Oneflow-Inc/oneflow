@@ -69,10 +69,16 @@ class _ConstantBase(Module):
     def forward(self):
         if self.placement is not None:
             res = flow.F.consistent_constant(
-                self.shape, self.value, dtype=self.dtype, placement=self.placement, sbp=self.sbp,
+                self.shape,
+                self.value,
+                dtype=self.dtype,
+                placement=self.placement,
+                sbp=self.sbp,
             )
         else:
-            res = flow.F.constant(self.shape, self.value, dtype=self.dtype, device=self.device)
+            res = flow.F.constant(
+                self.shape, self.value, dtype=self.dtype, device=self.device
+            )
         res.requires_grad = self.requires_grad
         return res
 

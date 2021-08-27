@@ -266,6 +266,7 @@
   signature: [
     "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
              Device device=None) => Arange",
+    "Tensor (Int64 end, *, DataType dtype=kInt64, Device device=None) => Arange2",
   ]
   bind_python: True
 
@@ -273,6 +274,7 @@
   signature: [
     "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
              Placement placement, SbpList sbp) => ConsistentArange",
+    "Tensor (Int64 end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange2",
   ]
   bind_python: True
 
