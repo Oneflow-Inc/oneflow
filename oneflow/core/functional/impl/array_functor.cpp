@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <cstdint>
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -1270,15 +1271,36 @@ class DiagGradFunctor {
 
 class DiagonalFunctor {
  public:
-  DiagonalFunctor() {
+  DiagonalFunctor(){
     op_ = CHECK_JUST(one::OpBuilder("diagonal").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& offset) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("offset", offset));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, 
+                           const int32_t& offset,
+                           const int32_t& dim1,
+                           const int32_t& dim2) const {
+     int64_t ndims = x->shape()->NumAxes();
+     CHECK_GE_OR_RETURN(ndims,2);
+     CHECK_GE_OR_RETURN(dim1,-ndims);
+     CHECK_LT_OR_RETURN(dim1,ndims);
+     CHECK_GE_OR_RETURN(dim2,-ndims);
+     CHECK_LT_OR_RETURN(dim2,ndims);
 
+     int32_t p_dim1 = dim1>0?dim1:dim1+ndims;
+     int32_t p_dim2 = dim2>0?dim2:dim2+ndims;
+     CHECK_NE_OR_RETURN(p_dim1,p_dim2);
+
+     std::vector<int32_t> input_index{p_dim1,p_dim2};
+     for(int32_t i = 0; i < ndims; i++){
+       if(i != p_dim1 && i != p_dim2){
+         input_index.push_back(i);
+       }
+     }
+     std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x,input_index));
+     
+     MutableAttrMap attrs;
+     JUST(attrs.SetAttr<int32_t>("offset", offset));
+     return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x}, attrs);
+  }
  private:
   std::shared_ptr<OpExpr> op_;
 };

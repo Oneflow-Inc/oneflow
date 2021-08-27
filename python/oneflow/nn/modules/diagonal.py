@@ -6,7 +6,7 @@ you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
-    
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,13 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
-
-def diagonal_transpose(x, dim_num, dim1=0, dim2=1):
-    outindex = [dim1, dim2]
-    for i in range(dim_num):
-        if i != dim1 and i != dim2:
-            outindex.append(i)
-    return x, outindex
 
 def diagonal_op(input, offset=0, dim1=0, dim2=1):
     """
@@ -50,27 +43,7 @@ def diagonal_op(input, offset=0, dim1=0, dim2=1):
         >>> flow.diagonal(input)
         tensor([2., 6.], dtype=oneflow.float32)
     """
-    dim_num = len(input.shape)
-    assert (
-        dim1 >= -dim_num and dim1 < dim_num
-    ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
-        -dim_num, dim_num - 1, dim1
-    )
-    assert (
-        dim2 >= -dim_num and dim2 < dim_num
-    ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
-        -dim_num, dim_num - 1, dim1
-    )
-    if dim1 < 0:
-        dim1 += dim_num
-    if dim2 < 0:
-        dim2 += dim_num
-    assert dim1 != dim2, "diagonal dimensions cannot be identical {}, {}".format(
-        dim1, dim2
-    )
-    input, outindex = diagonal_transpose(input, dim_num, dim1, dim2)
-    input = flow.F.transpose(input, perm=outindex)
-    out = flow.F.diagonal(input, offset)
+    out = flow.F.diagonal(input, offset, dim1, dim2)
     return out
 
 @register_tensor_op("diagonal")
