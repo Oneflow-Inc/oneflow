@@ -61,11 +61,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
     return data_or_error_.template Get<cfg::ErrorProto>();
   }
 
-  std::string GetSerializedError() const {
-    const auto& maybe_error = FormatErrorStr(this->error());
-    const auto& error_str = maybe_error.GetDataAndErrorProto(this->error()->DebugString());
-    return error_str.first;
-  }
+  std::string GetSerializedError() const;
 
   template<typename Type = T>
   Type GetDataAndSerializedErrorProto(std::string* error_str, const Type& default_for_error) const {
@@ -129,12 +125,7 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
   void Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {}
   std::shared_ptr<cfg::ErrorProto> error() const { return error_or_scalar_.shared_ptr(); }
 
-  std::string GetSerializedError() const {
-    CHECK(!IsOk());
-    const auto& maybe_error = FormatErrorStr(this->error());
-    const auto& error_str = maybe_error.GetDataAndErrorProto(this->error()->DebugString());
-    return error_str.first;
-  }
+  std::string GetSerializedError() const;
 
   void GetDataAndSerializedErrorProto(std::string* error_str) const {
     if (IsOk()) {
@@ -190,12 +181,7 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
   }
   std::shared_ptr<cfg::ErrorProto> error() const { return error_or_scalar_.shared_ptr(); }
 
-  std::string GetSerializedError() const {
-    CHECK(!IsOk());
-    const auto& maybe_error = FormatErrorStr(this->error());
-    const auto& error_str = maybe_error.GetDataAndErrorProto(this->error()->DebugString());
-    return error_str.first;
-  }
+  std::string GetSerializedError() const;
 
   T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
     if (IsOk()) {
@@ -251,11 +237,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   }
   std::shared_ptr<cfg::ErrorProto> error() const { return maybe_ptr_.error(); }
 
-  std::string GetSerializedError() const {
-    const auto& maybe_error = FormatErrorStr(this->error());
-    const auto& error_str = maybe_error.GetDataAndErrorProto(this->error()->DebugString());
-    return error_str.first;
-  }
+  std::string GetSerializedError() const;
 
   T GetDataAndSerializedErrorProto(std::string* error_str) const {
     return *maybe_ptr_.GetDataAndSerializedErrorProto(error_str, static_cast<PtrT>(nullptr));
@@ -273,7 +255,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 #define __MaybeErrorStackCheckWrapper__(...) __VA_ARGS__
 
 inline bool MaybeIsOk(Maybe<void>&& maybe) {
-  if (!maybe.IsOk()) { LOG(ERROR) << "\n" << maybe.GetSerializedError(); }
+  if (!maybe.IsOk()) { LOG(ERROR) << maybe.GetSerializedError(); }
   return maybe.IsOk();
 }
 
@@ -302,6 +284,41 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
 }  // namespace private_details
 
 #define TRY(...) __MaybeErrorStackCheckWrapper__(__VA_ARGS__)
+
+namespace {
+  std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& error_proto) {
+    const auto& maybe_error = TRY(FormatErrorStr(error_proto));
+    const auto& error_str = maybe_error.GetDataAndErrorProto(error_proto->DebugString());
+    return error_str.first;
+  }
+}
+
+template<typename T>
+std::string Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScalarType<T>::value)
+                                       && !std::is_reference<T>::value>::type>::GetSerializedError() const {
+    CHECK(!IsOk());
+    return GetFormatedSerializedError(this->error());
+}
+
+template<typename T>
+std::string Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type>::GetSerializedError() const {
+    CHECK(!IsOk());
+    return GetFormatedSerializedError(this->error());
+}
+
+template<typename T>
+std::string Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type>::GetSerializedError() const {
+    CHECK(!IsOk());
+    return GetFormatedSerializedError(this->error());
+}
+
+template<typename T>
+std::string Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScalarType<T>::value)
+                                       && std::is_reference<T>::value>::type>::GetSerializedError() const {
+    CHECK(!IsOk());
+    return GetFormatedSerializedError(this->error());
+}
+
 #define JUST(...)                                                                           \
   ({                                                                                        \
     auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                            \
