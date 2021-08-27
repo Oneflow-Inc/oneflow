@@ -141,7 +141,9 @@ class RandomSampler(Sampler[int]):
         n = len(self.data_source)
         if self.generator is None:
             generator = flow.Generator()
-            generator.manual_seed(int(flow.empty((), dtype=flow.int64).random_().item()))
+            generator.manual_seed(
+                int(flow.empty((), dtype=flow.int64).random_().item())
+            )
         else:
             generator = self.generator
         if self.replacement:
