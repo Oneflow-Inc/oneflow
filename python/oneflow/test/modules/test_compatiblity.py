@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow_pytorch_compatiblity import *
-
+from oneflow.test_utils.oneflow_pytorch_compatiblity import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestApiCompatiblity(flow.unittest.TestCase):
