@@ -16,8 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
-#include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/kernel.h"
+#include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
@@ -31,8 +30,6 @@ void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
   kernel_conf_ = kernel_conf;
   shape_infer_helper_ =
       new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
-  blob_access_checker_disabled_ =
-      ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", false);
 }
 
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
@@ -42,60 +39,27 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Device
 
 void Kernel::Launch(const KernelCtx& ctx,
                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  Global<KernelObserver>::Get()->WillForward(ctx, this, BnInOp2Blob);
   Forward(ctx, BnInOp2Blob);
+  Global<KernelObserver>::Get()->DidForward(ctx, this, BnInOp2Blob);
 }
 
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
 }
 
-void Kernel::SetOutputBlobProducerInferAccessChecker(
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  ForEachObnAndIsHeaderInferedBeforeCompute(BnInOp2Blob, [&](const std::string& obn, bool _) {
-    BnInOp2Blob(obn)->set_blob_access_checker(Global<BlobAccessCheckerIf<true, false>>::Get());
-  });
-}
-
-void Kernel::SetOutputBlobProducerComputeAccessChecker(
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  ForEachObnAndIsHeaderInferedBeforeCompute(
-      BnInOp2Blob, [&](const std::string& obn, bool is_header_infered_before_compute) {
-        const BlobAccessChecker* checker = nullptr;
-        if (is_header_infered_before_compute) {
-          checker = Global<BlobAccessCheckerIf<false, true>>::Get();
-        } else {
-          checker = Global<BlobAccessCheckerIf<true, true>>::Get();
-        }
-        BnInOp2Blob(obn)->set_blob_access_checker(checker);
-      });
-}
-
-void Kernel::SetOutputBlobConsumerAccessChecker(
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  ForEachObnAndIsMutableByConsumer(BnInOp2Blob, [&](const std::string& obn, bool is_mutable) {
-    const BlobAccessChecker* checker = nullptr;
-    if (is_mutable) {
-      checker = Global<BlobAccessCheckerIf<false, true>>::Get();
-    } else {
-      checker = Global<BlobAccessCheckerIf<false, false>>::Get();
-    }
-    BnInOp2Blob(obn)->set_blob_access_checker(checker);
-  });
-}
-
 void Kernel::Forward(const KernelCtx& ctx,
                      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  if (!blob_access_checker_disabled_) { SetOutputBlobProducerInferAccessChecker(BnInOp2Blob); }
+  Global<KernelObserver>::Get()->WillForwardHeader(ctx, this, BnInOp2Blob);
   ForwardHeader(ctx, BnInOp2Blob);
+  Global<KernelObserver>::Get()->DidForwardHeader(ctx, this, BnInOp2Blob);
   if ((!kernel_conf_.all_blobs_are_static())
       && IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob) && IsStateless()) {
     return;
   }
-  if (!blob_access_checker_disabled_) { SetOutputBlobProducerComputeAccessChecker(BnInOp2Blob); }
-  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(this, ctx, BnInOp2Blob));
+  Global<KernelObserver>::Get()->WillForwardDataContent(ctx, this, BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
-  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(this, ctx, BnInOp2Blob));
-  if (!blob_access_checker_disabled_) { SetOutputBlobConsumerAccessChecker(BnInOp2Blob); }
+  Global<KernelObserver>::Get()->DidForwardDataContent(ctx, this, BnInOp2Blob);
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
