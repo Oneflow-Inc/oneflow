@@ -80,12 +80,19 @@ def is_user_op(node):
 @flow.unittest.skip_unless_1n1d()
 class TestConvertDependency(flow.unittest.TestCase):
     def test_get_params(test_case):
+        if not os.path.exists("alexnet_oneflow_model.tar.gz"):
+            os.system("wget https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/cv/classification/alexnet/alexnet_oneflow_model.tar.gz")
+            os.system("tar zxf alexnet_oneflow_model.tar.gz")
         model_dir_path = "alexnet_oneflow_model"
         model = flow.load(model_dir_path)
         for layer_name in model:
             layer = model[layer_name]
-            layer_path = layer.file_path  # get path
-            test_case.assertEqual(layer_path != None, True)
+            layer_path = getattr(layer, "file_path", None)
+            layer_has_meta_info = getattr(layer, "has_meta_info_", None)
+            test_case.assertEqual(layer_path, "m.classifier.1.bias")
+            test_case.assertEqual(layer_has_meta_info, True)
+            break
+
 
     def test_infos_of_nodes(test_case):
         alexnet_module = alexnet()
@@ -164,9 +171,12 @@ class TestConvertDependency(flow.unittest.TestCase):
         test_case.assertEqual(op_names[1], "relu")
         test_case.assertEqual(op_names[2], "maxpool_2d")
 
-        test_case.assertEqual(op_attrs[0]["kernel_size"], (11, 11))
-        test_case.assertEqual(op_attrs[0]["strides"], (4, 4))
-        test_case.assertEqual(op_attrs[0]["padding_before"], (2, 2))
+        kernel_size = op_attrs[0].get("kernel_size", None)
+        strides = op_attrs[0].get("strides", None)
+        padding_before = op_attrs[0].get("padding_before", None)
+        test_case.assertEqual(kernel_size, (11, 11))
+        test_case.assertEqual(strides, (4, 4))
+        test_case.assertEqual(padding_before, (2, 2))
 
     def test_buffer_convert_dependence(test_case):
         class SubModule(flow.nn.Module):
