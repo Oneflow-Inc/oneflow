@@ -48,7 +48,7 @@ function(target_treat_warnings_as_errors target)
     target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
 
     # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
-    target_try_compile_options(${target} -Wno-error=mismatched-tags)
+    target_try_compile_options(${target} -Wno-mismatched-tags)
 
     # disable for pointer operations of intrusive linked lists
     target_try_compile_options(${target} -Wno-error=array-bounds)
@@ -214,7 +214,7 @@ add_custom_target(of_format
 # clang tidy
 add_custom_target(of_tidy
   COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py --build_dir ${CMAKE_BINARY_DIR}
-  DEPENDS of_git_version oneflow_deps of_cfgobj of_functional_obj 
+  DEPENDS of_git_version oneflow_deps of_cfgobj of_functional_obj
   )
 # generate version
 set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
