@@ -210,7 +210,7 @@ jobs:
       - name: Download conda environment.yml # TODO: remove this step if migrated to generated matrix
         if: matrix.test_suite == 'cpu-clang'
         run: |
-          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/550506c70b96f0d001ec131fe66773fe6cf539a2/dev/clang10/environment-v2.yml -O environment.yml
+          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/9cd37571cbd6cc6a81fc87faa7f6a43be772ae31/dev/clang10/environment-v2.yml -O environment.yml
       - uses: conda-incubator/setup-miniconda@v2
         if: matrix.test_suite == 'cpu-clang'
         name: Activate Conda environment
