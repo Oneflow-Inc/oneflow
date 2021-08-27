@@ -191,7 +191,7 @@ class TestModule(flow.unittest.TestCase):
         with tempfile.TemporaryDirectory() as save_dir:
             flow.save(state_dict, save_dir)
             # Creates a new file and test fault tolerance
-            with open(os.path.join(save_dir, 'random_file'), 'w') as fp:
+            with open(os.path.join(save_dir, "random_file"), "w") as fp:
                 fp.write("nothing")
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")

@@ -153,7 +153,10 @@ def Load(
         try:
             var_dict[f] = _LoadSingleVariable(var_dir, consistent_src_rank)
         except FileNotFoundError:
-            warnings.warn(f"'{var_dir}' does not have valid tensor data. Please check it if it is unexpected.", stacklevel=2)
+            warnings.warn(
+                f"'{var_dir}' does not have valid tensor data. Please check it if it is unexpected.",
+                stacklevel=2,
+            )
     return var_dict
 
 
