@@ -263,11 +263,9 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
         if (algorithm == Algorithm::kSoftmax) {
           row_buf[i] = Exp(row_buf[i] - warp_max[row_id]);
           thread_sum[row_id] += row_buf[i];
-        } else if (algorithm == Algorithm::kLogSoftmax) {
+        } else {
           row_buf[i] -= warp_max[row_id];
           thread_sum[row_id] += Exp(row_buf[i]);
-        } else {
-          static_assert(false, "");
         }
       }
     }
@@ -283,10 +281,8 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
       for (int i = 0; i < cols_per_thread; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           row_buf[i] = Div(row_buf[i], warp_sum[row_id]);
-        } else if (algorithm == Algorithm::kLogSoftmax) {
-          row_buf[i] -= SafeLog(warp_sum[row_id]);
         } else {
-          static_assert(false, "");
+          row_buf[i] -= SafeLog(warp_sum[row_id]);
         }
       }
 #pragma unroll
@@ -491,12 +487,10 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
         const ComputeType exp_x = Exp(buf[col] - row_max);
         buf[col] = exp_x;
         thread_sum += exp_x;
-      } else if (algorithm == Algorithm::kLogSoftmax) {
+      } else {
         const ComputeType x = buf[col] - row_max;
         buf[col] = x;
         thread_sum += Exp(x);
-      } else {
-        static_assert(false, "");
       }
     }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
@@ -506,10 +500,8 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
       for (int i = 0; i < pack_size; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           pack[i] = Div(buf[i * num_packs + pack_id], row_sum);
-        } else if (algorithm == Algorithm::kLogSoftmax) {
-          pack[i] = buf[i * num_packs + pack_id] - SafeLog(row_sum);
         } else {
-          static_assert(false, "");
+          pack[i] = buf[i * num_packs + pack_id] - SafeLog(row_sum);
         }
         thread_max = max(thread_max, pack[i]);
       }
@@ -629,10 +621,8 @@ __global__ void SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t r
       for (int i = 0; i < pack_size; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           pack[i] = Div(Exp(pack[i] - row_max), row_sum);
-        } else if (algorithm == Algorithm::kLogSoftmax) {
-          pack[i] = (pack[i] - row_sum) - SafeLog(row_sum);
         } else {
-          static_assert(false, "");
+          pack[i] = (pack[i] - row_sum) - SafeLog(row_sum);
         }
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
@@ -730,10 +720,8 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
             if (algorithm == Algorithm::kSoftmax) {
               thread_sum[row_id] +=
                   row_y_buf[pack_id * pack_size + i] * row_dy_buf[pack_id * pack_size + i];
-            } else if (algorithm == Algorithm::kLogSoftmax) {
-              thread_sum[row_id] += row_dy_buf[pack_id * pack_size + i];
             } else {
-              static_assert(false, "");
+              thread_sum[row_id] += row_dy_buf[pack_id * pack_size + i];
             }
           }
         }
@@ -757,11 +745,9 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
               row_dy_buf[pack_id * pack_size + i] =
                   (row_dy_buf[pack_id * pack_size + i] - warp_sum[row_id])
                   * row_y_buf[pack_id * pack_size + i];
-            } else if (algorithm == Algorithm::kLogSoftmax) {
+            } else {
               row_dy_buf[pack_id * pack_size + i] -=
                   Exp(row_y_buf[pack_id * pack_size + i]) * warp_sum[row_id];
-            } else {
-              static_assert(false, "");
             }
           }
           store.template store<pack_size>(row_dy_buf + pack_id * pack_size, row + row_id, col);
@@ -970,10 +956,8 @@ __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE s
         dy_buf[i * num_packs + pack_id] = dy_pack[i];
         if (algorithm == Algorithm::kSoftmax) {
           thread_sum += y_pack[i] * dy_pack[i];
-        } else if (algorithm == Algorithm::kLogSoftmax) {
-          thread_sum += dy_pack[i];
         } else {
-          static_assert(false, "");
+          thread_sum += dy_pack[i];
         }
       }
     }
@@ -984,10 +968,8 @@ __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE s
       for (int i = 0; i < pack_size; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           pack[i] = (dy_buf[i * num_packs + pack_id] - row_sum) * y_buf[i * num_packs + pack_id];
-        } else if (algorithm == Algorithm::kLogSoftmax) {
-          pack[i] = dy_buf[i * num_packs + pack_id] - Exp(y_buf[i * num_packs + pack_id]) * row_sum;
         } else {
-          static_assert(false, "");
+          pack[i] = dy_buf[i * num_packs + pack_id] - Exp(y_buf[i * num_packs + pack_id]) * row_sum;
         }
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
@@ -1110,10 +1092,8 @@ __global__ void SoftmaxGradBlockUncachedImpl(LOAD_Y load_y, LOAD_DY load_dy, STO
       for (int i = 0; i < pack_size; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           thread_sum += y_pack[i] * dy_pack[i];
-        } else if (algorithm == Algorithm::kLogSoftmax) {
-          thread_sum += dy_pack[i];
         } else {
-          static_assert(false, "");
+          thread_sum += dy_pack[i];
         }
       }
     }
@@ -1127,10 +1107,8 @@ __global__ void SoftmaxGradBlockUncachedImpl(LOAD_Y load_y, LOAD_DY load_dy, STO
       for (int i = 0; i < pack_size; ++i) {
         if (algorithm == Algorithm::kSoftmax) {
           dy_pack[i] = (dy_pack[i] - row_sum) * y_pack[i];
-        } else if (algorithm == Algorithm::kLogSoftmax) {
-          dy_pack[i] -= Exp(y_pack[i]) * row_sum;
         } else {
-          static_assert(false, "");
+          dy_pack[i] -= Exp(y_pack[i]) * row_sum;
         }
       }
       store.template store<pack_size>(dy_pack, row, pack_id * pack_size);
