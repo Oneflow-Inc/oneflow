@@ -130,10 +130,9 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 void IBVerbsQP::PostAllRecvRequest() {
   if (msg_pool_buf_->IsEmpty()) {
     msg_pool_buf_->RegisterMessagePool();
-    ActorMsgMR * msg_mr = msg_pool_buf_->GetActorMsgMRFromMessagePool();
-    PostRecvRequest(msg_mr);
-  } else {
-    ActorMsgMR * msg_mr = msg_pool_buf_->GetActorMsgMRFromMessagePool();
+  }
+  while(msg_pool_buf_->IsEmpty() == false) {
+    ActorMsgMR* msg_mr = msg_pool_buf_->GetMessage();
     PostRecvRequest(msg_mr);
   }
 }
