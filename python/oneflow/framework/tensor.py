@@ -252,6 +252,15 @@ def _uniform(self, a=0, b=1):
     return _init_by_initializer_conf(self, initializer_conf)
 
 
+def _trunc_normal_(
+    self, mean=0.0, std=1.0, a=-2.0, b=2.0,
+):
+    initializer_conf = flow.truncated_normal_initializer(mean=mean, stddev=std)
+    res = _init_by_initializer_conf(self, initializer_conf)
+    res = flow.clamp(res, min=a, max=b)
+    return res
+
+
 def _kaiming_uniform(
     self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
@@ -399,6 +408,7 @@ def RegisterMethods():
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
     Tensor.uniform_ = _uniform
+    Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal
     Tensor.xavier_normal_ = _xavier_normal

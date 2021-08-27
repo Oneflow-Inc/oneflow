@@ -105,7 +105,7 @@ def _LoadSingleVariable(
     path: Optional[str], consistent_src_rank: Optional[int] = None
 ) -> "flow.Tensor":
     if consistent_src_rank is not None:
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == consistent_src_rank:
             assert isinstance(path, str)
             file_backed_blob = FileBackendVariableBlob(path)
@@ -124,7 +124,7 @@ def _LoadSingleVariable(
 
 
 def _broadcast_py_object(obj, src: int = 0):
-    rank = flow.framework.distribute.get_rank()
+    rank = flow.env.get_rank()
     if src == rank:
         obj_bytes = pickle.dumps(obj)
         return pickle.loads(flow._oneflow_internal.cpu_broadcast(obj_bytes, src))
@@ -136,7 +136,7 @@ def Load(
     path: str, consistent_src_rank: Optional[int] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
-    rank = flow.framework.distribute.get_rank()
+    rank = flow.env.get_rank()
     var_dict = {}
     if consistent_src_rank is None or rank == consistent_src_rank:
         all_files = os.listdir(path)
@@ -169,7 +169,7 @@ def save(
                 not var.is_consistent
             ), f"local tensor is needed, but {name} is a consistent tensor"
 
-    rank = flow.framework.distribute.get_rank()
+    rank = flow.env.get_rank()
     if consistent_mode and rank != consistent_dst_rank:
         return
 
