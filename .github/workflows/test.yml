@@ -219,6 +219,7 @@ jobs:
           activate-environment: oneflow-dev-clang10-v2
           environment-file: environment.yml
           auto-activate-base: false
+          condarc-file: ci/conda/tuna.condarc
       - name: Set environments from secrets
         if: contains(${{ github.repository }}, "Oneflow-Inc")
         run: |
