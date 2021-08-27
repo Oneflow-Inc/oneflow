@@ -33,7 +33,7 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 }  // namespace
 
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
-                     ibv_cq* recv_cq, MessagePool* msg_buf) {
+                     ibv_cq* recv_cq, MessagePool* message_pool) {
   // ctx_, pd_
   ctx_ = ctx;
   pd_ = pd;
@@ -60,7 +60,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK(qp_);
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
-  msg_pool_buf_ = msg_buf;
+  message_pool_ = message_pool;
 }
 
 IBVerbsQP::~IBVerbsQP() { CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0); }
@@ -128,11 +128,11 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-  if (msg_pool_buf_->IsEmpty()) {
-    msg_pool_buf_->RegisterMessagePool();
+  if (message_pool_->IsEmpty()) {
+    message_pool_->RegisterMessagePool();
   }
-  while(msg_pool_buf_->IsEmpty() == false) {
-    ActorMsgMR* msg_mr = msg_pool_buf_->GetMessage();
+  while(message_pool_->IsEmpty() == false) {
+    ActorMsgMR* msg_mr = message_pool_->GetMessage();
     PostRecvRequest(msg_mr);
   }
 }
@@ -166,7 +166,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 }
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
-  ActorMsgMR* msg_mr = msg_pool_buf_->GetMessage();
+  ActorMsgMR* msg_mr = message_pool_->GetMessage();
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
@@ -209,7 +209,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 }
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
-  msg_pool_buf_->PutMessage(wr_id->msg_mr); 
+  message_pool_->PutMessage(wr_id->msg_mr); 
   DeleteWorkRequestId(wr_id);
   PostPendingSendWR();
 }
@@ -219,7 +219,7 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   CHECK(ibv_comm_net != nullptr);
   ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);
-  msg_pool_buf_->PutMessage(wr_id->msg_mr);
+  message_pool_->PutMessage(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
 }
 

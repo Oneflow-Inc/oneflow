@@ -78,7 +78,7 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
-  delete msg_pool_buf_;
+  delete message_pool_;
   CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
   CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
   CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
@@ -142,7 +142,7 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   ibv_device_attr device_attr{};
   CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  msg_pool_buf_ = new MessagePool(pd_, kDefaultMessagePoolSize);
+  message_pool_ = new MessagePool(pd_, kDefaultMessagePoolSize);
   CHECK(cq_);
   ibv_port_attr port_attr{};
   const uint8_t port = user_port == 0 ? 1 : user_port;
@@ -155,7 +155,7 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   qp_vec_.assign(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
-    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, port, cq_, cq_, msg_pool_buf_);
+    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, port, cq_, cq_, message_pool_);
     qp_vec_.at(peer_id) = cur_qp;
     IBVerbsConnectionInfo conn_info;
     conn_info.set_lid(port_attr.lid);
