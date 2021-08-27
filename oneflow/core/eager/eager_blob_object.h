@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/eager/blob_object.h"
-#include "oneflow/core/framework/local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {

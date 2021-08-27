@@ -62,7 +62,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(y.is_local)
 
     @flow.unittest.skip_unless_1n1d()
-    def test_tensor_autograd_related_methods(test_case):
+    def test_consistent_tensor_autograd_related_methods(test_case):
         placement = flow.placement("cuda", {0: 0})
         sbp = flow.sbp.split(0)
         shape = (2, 3, 4, 5)
@@ -114,6 +114,26 @@ class TestTensor(flow.unittest.TestCase):
             )
         )
         test_case.assertIsNone(l_x.grad)
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_consistent_tensor_unsupported_property(test_case):
+
+        shape = (2, 3)
+        placement = flow.placement("cuda", {0: 0})
+        sbp = flow.sbp.split(0)
+        a = flow.Tensor(*shape)
+        b = a.to_consistent(placement=placement, sbp=sbp)
+        test_case.assertTrue(b.is_consistent)
+
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.RuntimeException
+        ):
+            b.device()
+
+        with test_case.assertRaises(
+            oneflow._oneflow_internal.exception.RuntimeException
+        ):
+            b._tensor_buffer_shapes_and_dtypes
 
 
 if __name__ == "__main__":

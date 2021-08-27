@@ -366,7 +366,11 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
 #define OF_UNIMPLEMENTED() \
   return Error::Unimplemented().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
-#define OF_COMPLIE_OPTION_EEEOR()                                                    \
+#define OF_RUNTIME_ERROR()                                                                        \
+  return Error::RuntimeError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) << "RuntimeError " \
+                                                                                  ": "
+
+#define OF_COMPLIE_OPTION_ERROR()                                                    \
   return Error::CompileOptionWrong().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << " Compile option wrong: "
 

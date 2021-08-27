@@ -121,6 +121,7 @@ class LazyInterpreter : public OpExprInterpreter {
   DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
   DECLARE_NORMAL_APPLY_FUNC(ConsistentToConsistentOp);
+  DECLARE_NORMAL_APPLY_FUNC(ImageDecoderRandomCropResizeOp);
 };
 
 class EagerInterpreter : public OpExprInterpreter {

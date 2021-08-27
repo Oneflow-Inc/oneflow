@@ -16,39 +16,32 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_RPC_TOKEN_H_
 #define ONEFLOW_CORE_FRAMEWORK_RPC_TOKEN_H_
 
+#include <functional>
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
-const static int kTransportTokenTypeBit = 2;
-const static int kTransportTokenThreadConsistentUIdBit = 3;
-const static int kTransportTokenRankGroupLevelBit = 3;
+const static int kTransportTokenTypeBit = 5;
+const static int kTransportTokenThreadConsistentIdBit = 3;
 
 enum TransportTokenType {
   // Begin
-  kInvalidTransportTokenType = 0,
-  kDataTransportTokenType,  // e.g. for tensor data transportation
-  kMetaTransportTokenType,  // e.g. for tensor meta checking
-  kCtrlTransportTokenType,  // e.g. for rank_group or thread checking. see RankGroupCtrlCmd
+  kTransportTokenTypeInvalid = 0,
+  kTransportTokenTypeData,  // e.g. for tensor data transportation
+  kTransportTokenTypeMeta,  // e.g. for consistent id generating
+  kTransportTokenTypeSyncSymbolParallelDesc,
+  kTransportTokenTypeSyncSymbolNdSbp,
+  kTransportTokenTypeSyncSymbolConsistentTensorMeta,
+  kTransportTokenTypeCheckRankGroupConsistency,
+  kTransportTokenTypeCheckTensorConsistency,
+  kTransportTokenTypeSyncLocalShapeDtype,
   // End
   kTransportTokenTypeSize,
 };
 
 static_assert(kTransportTokenTypeSize <= (1 << kTransportTokenTypeBit), "");
-
-enum RankGroupCtrlCmd {
-  // Begin
-  kRankGroupCtrlCmdInvalid = 0,
-  kRankGroupCtrlCmdSyncSymbolParallelDesc,
-  kRankGroupCtrlCmdSyncSymbolNdSbp,
-  kRankGroupCtrlCmdSyncSymbolConsistentTensorMeta,
-  kRankGroupCtrlCmdCheckRankGroupConsistency,
-  kRankGroupCtrlCmdCheckTensorConsistency,
-  kRankGroupCtrlCmdSyncLocalShapeDtype,
-  // End
-  kSizeOfRankGroupCtrlCmd
-};
 
 class TransportToken;
 
@@ -59,52 +52,65 @@ struct IsScalarType<TransportToken> final {
 
 class TransportToken final {
  public:
-  TransportToken() : TransportToken(kInvalidTransportTokenType) {}
+  TransportToken() : TransportToken(kTransportTokenTypeInvalid, 0) {}
   TransportToken(const TransportToken&) = default;
   TransportToken(TransportToken&) = default;
   ~TransportToken() = default;
 
-  static TransportToken NewDataTransportToken();
-  static Maybe<TransportToken> NewMetaTransportToken();
-  static Maybe<TransportToken> AcquireCtrlTransportToken(RankGroupCtrlCmd cmd);
-  Maybe<void> TryAcquireCtrlTransportTokenLock() const;
-  Maybe<void> TryReleaseCtrlTransportTokenLock() const;
+  static Maybe<TransportToken> NewTransportToken(TransportTokenType type);
 
   static constexpr size_t MaxNumberOfThreadConsistentUId() {
-    return (1 << kTransportTokenThreadConsistentUIdBit);
+    return (1 << kTransportTokenThreadConsistentIdBit);
+  }
+
+  Maybe<void> CheckThreadConsistentId() const;
+  bool operator==(const TransportToken& other) const {
+    return static_cast<uint64_t>(*this) == static_cast<uint64_t>(other);
   }
 
   // Getters
-  int64_t src_rank() const { return src_rank_; }
-  int64_t dst_rank() const { return dst_rank_; }
   TransportTokenType type() const { return static_cast<TransportTokenType>(type_); }
-  Maybe<int64_t> thread_consistent_unique_id() const;
-  Maybe<int64_t> rank_group_level() const;
-  Maybe<RankGroupCtrlCmd> cmd() const;
+  int thread_consistent_id() const { return thread_consistent_id_; }
+  int32_t seq_id() const { return seq_id_; }
 
   // Setters
-  Maybe<void> set_src_rank(int64_t src_rank);
-  Maybe<void> set_dst_rank(int64_t dst_rank);
+  Maybe<void> set_src_rank(int64_t val);
+  Maybe<void> set_dst_rank(int64_t val);
 
-  operator uint64_t() const;
-  TransportToken& operator++();
+  operator uint64_t() const { return *reinterpret_cast<const uint64_t*>(this); }
+
+  TransportToken& operator++() {
+    ++seq_id_;
+    return *this;
+  }
 
  private:
-  explicit TransportToken(TransportTokenType type);
-
-  static Maybe<TransportToken> NewMetaTransportToken(int32_t thread_consistent_unique_id,
-                                                     int32_t rank_group_level);
-  static Maybe<TransportToken> NewCtrlTransportToken(RankGroupCtrlCmd cmd,
-                                                     int32_t thread_consistent_unique_id,
-                                                     int32_t rank_group_level);
+  TransportToken(TransportTokenType type, uint8_t thread_consistent_id)
+      : src_rank_(0),
+        dst_rank_(0),
+        type_(static_cast<uint8_t>(type)),
+        thread_consistent_id_(thread_consistent_id),
+        seq_id_(0) {}
 
   uint16_t src_rank_;
   uint16_t dst_rank_;
-  uint32_t type_ : 2;  // TransportTokenType
-  uint32_t opaque_ids_ : 30;
+  uint8_t type_ : kTransportTokenTypeBit;  // TransportTokenType
+  uint8_t thread_consistent_id_ : kTransportTokenThreadConsistentIdBit;
+  uint32_t seq_id_ : (32 - kTransportTokenTypeBit - kTransportTokenThreadConsistentIdBit);
 };
 static_assert(sizeof(TransportToken) == sizeof(uint64_t), "");
 
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::TransportToken> {
+  size_t operator()(const oneflow::TransportToken& token) const {
+    return std::hash<uint64_t>()(static_cast<uint64_t>(token));
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_RPC_TOKEN_H_
