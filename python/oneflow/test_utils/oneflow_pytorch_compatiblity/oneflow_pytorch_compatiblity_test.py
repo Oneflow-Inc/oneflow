@@ -44,11 +44,14 @@ def cos_sim(vector_a, vector_b):
     return sim
 
 
-def import_file(path):
-    spec = importlib.util.spec_from_file_location("mod", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+def import_file(source):
+    with tempfile.NamedTemporaryFile("w", suffix=".py") as f:
+        f.write(source)
+        f.flush()
+        spec = importlib.util.spec_from_file_location("mod", f.name)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
 
 
 def get_loss(
@@ -75,7 +78,12 @@ def get_loss(
         label = flow.tensor(label_nd)
         corss_entropy = flow.nn.CrossEntropyLoss(reduction="mean")
 
-        python_module = import_file(model_path)
+        with open(model_path) as f:
+            buf = f.read()
+            lines = buf.split("\n")
+            buf = "\n".join(lines)
+            python_module = import_file(buf)
+
         Net = getattr(python_module, module_name)
         pytorch_model = Net()
 
@@ -129,8 +137,6 @@ def get_loss(
             print("forward avg time : {}".format(for_time / bp_iters))
             print("backward avg time : {}".format(bp_time / bp_iters))
             print("update parameters avg time : {}".format(update_time / bp_iters))
-            for i in range(100):
-                print(f"oneflow_loss:{model_loss[i]}, pytorch_loss:{model_loss[i]}")
     else:
         with open(model_path) as f:
             buf = f.read()
@@ -152,10 +158,9 @@ def get_loss(
                 + lines[i:]
             )
             buf = "\n".join(lines)
-            with open("/tmp/tmp_model.py", "w") as new_f:
-                new_f.write(buf)
+            
+            python_module = import_file(buf)
 
-        python_module = import_file("/tmp/tmp_model.py")
         Net = getattr(python_module, module_name)
         oneflow_model = Net()
 
@@ -206,8 +211,6 @@ def get_loss(
             print("backward avg time : {}".format(bp_time / bp_iters))
             print("update parameters avg time : {}".format(update_time / bp_iters))
 
-        os.remove("/tmp/tmp_model.py")
-
     return model_loss
 
 
@@ -221,10 +224,10 @@ def test_train_loss_oneflow_pytorch(
     pytorch_model_loss = []
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        oneflow_model_loss = get_loss(
+        pytorch_model_loss = get_loss(
             image_nd, label_nd, batch_size, model_path, module_name, True, "cuda", tmpdirname
         )
-        pytorch_model_loss = get_loss(
+        oneflow_model_loss = get_loss(
             image_nd, label_nd, batch_size, model_path, module_name, False, "cuda", tmpdirname
         )
 
