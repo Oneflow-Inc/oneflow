@@ -81,7 +81,9 @@ def is_user_op(node):
 class TestConvertDependency(flow.unittest.TestCase):
     def test_get_params(test_case):
         if not os.path.exists("alexnet_oneflow_model.tar.gz"):
-            os.system("wget https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/cv/classification/alexnet/alexnet_oneflow_model.tar.gz")
+            os.system(
+                "wget https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/cv/classification/alexnet/alexnet_oneflow_model.tar.gz"
+            )
             os.system("tar zxf alexnet_oneflow_model.tar.gz")
         model_dir_path = "alexnet_oneflow_model"
         model = flow.load(model_dir_path)
@@ -92,7 +94,6 @@ class TestConvertDependency(flow.unittest.TestCase):
             test_case.assertEqual(layer_path, "m.classifier.1.bias")
             test_case.assertEqual(layer_has_meta_info, True)
             break
-
 
     def test_infos_of_nodes(test_case):
         alexnet_module = alexnet()
