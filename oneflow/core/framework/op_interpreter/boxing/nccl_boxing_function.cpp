@@ -17,10 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
-#include "oneflow/core/framework/id_util.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 
@@ -65,38 +62,6 @@ Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 
 static constexpr auto* CheckNcclS2B = DECORATE(&RawCheckNcclS2B, ThreadLocal);
 
-Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Build();
-}
-
-static constexpr auto* CachedEagerNcclAllReduceOpExpr = DECORATE(&EagerNcclAllReduce, ThreadLocal);
-
-Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
-                                              const std::string& op_type) {
-  return one::OpBuilder("eager_nccl_reduce_scatter", *JUST(UniqueStr("eager_nccl_reduce_scatter")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<std::string>("op_type", op_type)
-      .Build();
-}
-static constexpr auto* CachedNcclReduceScatterOpExpr =
-    DECORATE(&EagerNcclReduceScatter, ThreadLocalCopiable);
-
-Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Build();
-}
-
-static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
-
 }  // namespace
 
 Maybe<one::Tensor> NcclP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -106,8 +71,7 @@ Maybe<one::Tensor> NcclP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
-  const auto& op_expr = JUST(CachedEagerNcclAllReduceOpExpr(in->placement()));
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+  return JUST(one::functional::ConsistentAllReduce(tensor));
 }
 
 Maybe<one::Tensor> NcclP2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -117,8 +81,7 @@ Maybe<one::Tensor> NcclP2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
-  const auto& op_expr = JUST(CachedNcclReduceScatterOpExpr(in->placement(), "sum"));
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+  return JUST(one::functional::ConsistentReduceScatter(tensor, "sum"));
 }
 
 Maybe<one::Tensor> NcclS2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -128,8 +91,7 @@ Maybe<one::Tensor> NcclS2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
-  const auto& op_expr = JUST(CachedEagerNcclAllGatherOpExpr(in->placement()));
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+  return JUST(one::functional::ConsistentAllGather(tensor));
 }
 
 COMMAND(RegisterBoxingFunction("nccl-p-to-b", CheckNcclP2B, &NcclP2B));
