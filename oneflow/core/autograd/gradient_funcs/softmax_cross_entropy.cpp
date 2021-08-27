@@ -20,7 +20,7 @@ namespace oneflow {
 namespace one {
 
 struct SoftmaxCrossEntropyGradState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
 };
 
 class SoftmaxCrossEntropy : public OpExprGradFunction<SoftmaxCrossEntropyGradState> {
