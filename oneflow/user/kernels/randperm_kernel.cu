@@ -44,10 +44,12 @@ class GpuRandPermKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t* output = out->mut_dptr<int32_t>();
     const int32_t n = ctx->Attr<int32_t>("n");
+    if (n == 0) { return; }
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     auto* randperm_kernel_state = dynamic_cast<UniformKernelState*>(state);

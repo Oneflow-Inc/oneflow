@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -84,7 +85,7 @@ FLAT_MSG_END(FlatShapeAndDataType);
 Maybe<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>> BroadcastGatherShapeAndDataType(
     const Shape& shape, DataType dtype, Symbol<ParallelDesc> parallel_desc) {
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncLocalShapeDtype));
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncLocalShapeDtype));
   const auto& send_buffer = JUST(FlatShapeAndDataType::New(shape, dtype));
   const auto& map = std::make_shared<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>>();
   map->emplace(GlobalProcessCtx::Rank(), send_buffer);
@@ -138,7 +139,7 @@ Maybe<FlatShapeAndDataType> BroadcastShapeAndDtype(const Shape& shape, DataType 
   const auto& out_flat_shape_dtype = JUST(FlatShapeAndDataType::New());
   int64_t root = JUST(CachedFindRoot(broadcast_parallel_desc, parallel_desc));
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdSyncLocalShapeDtype));
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncLocalShapeDtype));
   JUST(ccl::CpuBroadcast(in_flat_shape_dtype.get(), out_flat_shape_dtype.get(),
                          sizeof(FlatShapeAndDataType), root, broadcast_parallel_desc,
                          transport_token));
@@ -229,7 +230,7 @@ Maybe<Tensor> ConsistentToConsistent(
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
-  if (!LazyMode::is_enabled() && tensor != x) {
+  if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
     CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);

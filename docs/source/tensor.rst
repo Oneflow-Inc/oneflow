@@ -52,7 +52,7 @@ OneFlow Tensor Class
             flatten, 
             flip, 
             floor, 
-            fmod, 
+            fmod,
             gather, 
             ge, 
             gelu, 
@@ -136,9 +136,9 @@ OneFlow Tensor Class
             tanh, 
             tile, 
             to, 
-            tolist, 
             topk, 
-            transpose, 
+            transpose,
+            tril, 
             triu, 
             uniform_, 
             unsqueeze, 
@@ -155,4 +155,6 @@ OneFlow Tensor Class
             double, 
             type_as, 
             cpu, 
-            cuda 
+            cuda,
+            item,
+            tolist

@@ -53,7 +53,6 @@ class EagerNcclOpKernelState final : public user_op::OpKernelState {
 };
 
 size_t InferEagerNcclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
-  size_t ret = 0;
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   size_t tensor_byte_size =
       GetCudaAlignedSize(in_tensor.shape().elem_cnt() * GetSizeOfDataType(in_tensor.data_type()));
@@ -75,6 +74,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -104,12 +104,16 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t root = ctx->Attr<int64_t>("root");
+    int64_t dev_id = GlobalProcessCtx::LocalRank(root);
+    int64_t nccl_root =
+        CHECK_JUST(kernel_state->parallel_desc()->ParallelId4MachineDeviceId(root, dev_id));
     const void* in_ptr = nullptr;
     if (GlobalProcessCtx::Rank() == root) {
       CHECK_EQ(in->shape(), out->shape());
@@ -117,7 +121,7 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
       in_ptr = in->dptr();
     }
     OF_NCCL_CHECK(ncclBroadcast(in_ptr, out->mut_dptr(), out->shape().elem_cnt(),
-                                GetNcclDataType(out->data_type()), root, kernel_state->comm(),
+                                GetNcclDataType(out->data_type()), nccl_root, kernel_state->comm(),
                                 ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -138,6 +142,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -168,6 +173,7 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -203,6 +209,7 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -232,6 +239,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);

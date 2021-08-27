@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -37,15 +34,12 @@ class Dropout : public OpExprGradFunction<DropoutCaptureState> {
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 Maybe<void> Dropout::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  grad_op_ = JUST(op_expr_helper::DropoutGradOp(/*scale=*/2.0, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -68,11 +62,9 @@ Maybe<void> Dropout::Apply(const DropoutCaptureState* ctx, const TensorTuple& ou
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<float>("scale", ctx->scale));
   // mask hava no grad(reqiures_grad=False), but still take a place in in_grads
   in_grads->resize(2);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), mask}, attrs));
+  in_grads->at(0) = JUST(functional::DropoutGrad(out_grads.at(0), mask, ctx->scale));
   return Maybe<void>::Ok();
 }
 

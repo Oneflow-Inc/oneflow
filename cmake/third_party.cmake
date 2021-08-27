@@ -272,3 +272,12 @@ endif()
 message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
+
+if (THIRD_PARTY)
+  add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
+  foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
+    copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
+  endforeach()
+else()
+  add_custom_target(prepare_oneflow_third_party ALL)
+endif()
