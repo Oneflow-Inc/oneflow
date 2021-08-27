@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/run_lazy_job_phy_instr_operand.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 namespace vm {
@@ -26,9 +27,24 @@ void RunLazyJobPhyInstrOperand::ForEachConstMirroredObject(
   }
 }
 
+namespace {
+
+Maybe<LocalDepObject*> RawGetCommNetLocalDepObject() {
+  const auto& device = JUST(Device::New("comm_net"));
+  const auto& local_dep_object = device->mut_transport_local_dep_object();
+  CHECK_OR_RETURN(local_dep_object.has_value());
+  return JUST(local_dep_object.value());
+}
+
+}  // namespace
+
+static constexpr auto* GetCommNetLocalDepObject =
+    DECORATE(&RawGetCommNetLocalDepObject, ThreadLocal);
+
 void RunLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
+  DoEach(nullptr, CHECK_JUST(GetCommNetLocalDepObject())->mut_mirrored_object());
   for (const auto& parameter : *parameters()) {
     DoEach(nullptr, CHECK_JUST(parameter->compute_local_dep_object())->mut_mirrored_object());
   }

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/static_global.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/vm_object.msg.h"
 #include "oneflow/core/vm/oneflow_vm.h"
@@ -44,6 +45,12 @@ Maybe<void> LocalDepObject::Init(const Device& device) {
   return Maybe<void>::Ok();
 }
 
+Maybe<ObjectMsgPtr<LocalDepObject>> LocalDepObject::New(const Device& device) {
+  auto local_dep_obj = ObjectMsgPtr<LocalDepObject>::New();
+  JUST(local_dep_obj.Mutable()->Init(device));
+  return local_dep_obj;
+}
+
 namespace {
 
 Maybe<std::vector<ObjectMsgPtr<LocalDepObject>>> RawGetLocalDepObjectPool(Symbol<Device> device) {
@@ -51,8 +58,7 @@ Maybe<std::vector<ObjectMsgPtr<LocalDepObject>>> RawGetLocalDepObjectPool(Symbol
   size_t pool_size = JUST(device->instr_local_dep_object_pool_size());
   pool->reserve(pool_size);
   for (int64_t i = 0; i < pool_size; ++i) {
-    auto local_dep_object = ObjectMsgPtr<LocalDepObject>::New();
-    JUST(local_dep_object->Init(*device));
+    auto local_dep_object = *JUST(LocalDepObject::New(*device));
     pool->push_back(local_dep_object);
   }
   return pool;
@@ -62,7 +68,7 @@ Maybe<std::vector<ObjectMsgPtr<LocalDepObject>>> RawGetLocalDepObjectPool(Symbol
 
 static constexpr auto* GetLocalDepObjectPool = DECORATE(&RawGetLocalDepObjectPool, ThreadLocal);
 
-Maybe<LocalDepObject*> GetLocalDepObject(Symbol<Device> device) {
+Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device) {
   const auto& local_dep_object_pool = JUST(GetLocalDepObjectPool(device));
   CHECK_OR_RETURN(!local_dep_object_pool->empty());
   size_t pool_size = local_dep_object_pool->size();
@@ -70,20 +76,9 @@ Maybe<LocalDepObject*> GetLocalDepObject(Symbol<Device> device) {
   return local_dep_object_pool->at(index++ % pool_size).Mutable();
 }
 
-Maybe<LocalDepObject*> FindOrCreateComputeLocalDepObject(const Device& device) {
-  static std::mutex mutex;
-  static HashMap<Device, ObjectMsgPtr<LocalDepObject>> device2dep_object;
-  {
-    std::unique_lock<std::mutex> lock(mutex);
-    const auto& iter = device2dep_object.find(device);
-    if (iter != device2dep_object.end()) { return iter->second.Mutable(); }
-  }
-  auto dep_object = ObjectMsgPtr<LocalDepObject>::New();
-  JUST(dep_object.Mutable()->Init(device));
-  {
-    std::unique_lock<std::mutex> lock(mutex);
-    return device2dep_object.emplace(device, dep_object).first->second.Mutable();
-  }
+Maybe<LocalDepObject*> GetLocalDepObject4Device(const Device& device) {
+  static constexpr auto* GetObj = DECORATE(&LocalDepObject::New, StaticGlobalCopiable);
+  return JUST(GetObj(device))->Mutable();
 }
 
 }  // namespace oneflow

@@ -195,7 +195,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf) {
   const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
   Optional<int64_t> parallel_id;
-  const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&parallel_id));
+  const auto& device = JUST(parallel_desc->GetTensorDevice4CurrentProcessCtx(&parallel_id));
   return EagerConsistentTensorImpl::New(consistent_tensor_meta, device, parallel_id, requires_grad,
                                         is_leaf);
 }
@@ -227,7 +227,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
       std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
   auto cur_rank_phy_tensor_impl =
       std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
-  const auto& dep_object = JUST(GetLocalDepObject(device));
+  const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(device));
   JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
   const auto& cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
   auto* tensor_impl =

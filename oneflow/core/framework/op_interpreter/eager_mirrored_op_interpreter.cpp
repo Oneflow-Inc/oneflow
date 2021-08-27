@@ -150,7 +150,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
       tensor_impl->mut_tensor_meta()->set_stride(std::make_shared<Stride>(*tensor_impl->shape()));
-      const auto& dep_object = JUST(GetLocalDepObject(op_device));
+      const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(op_device));
       JUST(tensor_impl->InitEagerBlobObject(dep_object));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
     } else {
@@ -161,7 +161,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
 
-  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(op_device));
   kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
@@ -275,7 +275,7 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
                                          Symbol<ParallelDesc> parallel_desc,
                                          Symbol<cfg::NdSbp> nd_sbp) {
   Optional<int64_t> parallel_id;
-  JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+  JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
   const auto& broadcast_parallel_desc = JUST(GetBroadcastSubParallelDesc(parallel_desc, nd_sbp));
   return Broadcast(tensor, broadcast_parallel_desc, false);
@@ -335,7 +335,7 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
                                      parallel_desc);
     Optional<int64_t> parallel_id{};
-    const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+    const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
         SymbolOf(tensor_meta), device, parallel_id, input_mirrored_tensor->requires_grad(),
         !input_mirrored_tensor->requires_grad()));

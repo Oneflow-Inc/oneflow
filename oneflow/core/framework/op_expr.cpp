@@ -109,17 +109,16 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
   return Maybe<void>::Ok();
 }
 
-Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const {
+Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(Symbol<Device> device) const {
   const auto& it = device2kernel_.find(device);
   if (it != device2kernel_.end()) { return it->second; }
 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
   JUST(BuildOpConf(op_conf.get(), {}));
-  op_conf->set_device_tag(JUST(device.of_type()));
-  std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
-  const auto& opkernel =
-      JUST(StatefulLocalOpKernel::New(op_conf, SymbolOf(device), base_attrs(), parallel_desc,
-                                      input_arg_tuple(), output_arg_tuple()));
+  op_conf->set_device_tag(JUST(device->of_type()));
+  std::shared_ptr<const ParallelDesc> parallel_desc = device->parallel_desc_ptr();
+  const auto& opkernel = JUST(StatefulLocalOpKernel::New(
+      op_conf, device, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }

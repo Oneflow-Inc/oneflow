@@ -21,6 +21,7 @@ limitations under the License.
 #include <unordered_set>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
@@ -60,8 +61,12 @@ class Device final {
   static const std::unordered_set<std::string> type_supported;
 
   static std::string Type4DeviceTag(const std::string& device_tag);
+  Maybe<const Optional<std::string>&> GetSharedTransportDeviceType() const;
 
   Maybe<const std::string&> local_call_instruction_name() const;
+  const Optional<LocalDepObject*>& mut_transport_local_dep_object() const {
+    return transport_local_dep_object_;
+  }
   LocalDepObject* mut_compute_local_dep_object() const { return compute_local_dep_object_; }
   Maybe<size_t> instr_local_dep_object_pool_size() const;
 
@@ -73,6 +78,7 @@ class Device final {
   const int64_t device_id_;
   const size_t hash_value_;
   std::shared_ptr<MemoryCase> mem_case_;
+  Optional<LocalDepObject*> transport_local_dep_object_;
   LocalDepObject* compute_local_dep_object_;
 };
 

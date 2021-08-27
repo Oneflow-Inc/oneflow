@@ -21,24 +21,32 @@ import oneflow.unittest
 
 
 def sync_allreduce(x):
-    y = x.to_consistent(sbp=flow.sbp.broadcast)
+    return x.to_consistent(sbp=flow.sbp.broadcast)
+
 
 def async_allreduce(x):
-    y = flow.F.all_reduce(x)
+    return flow.F.all_reduce(x)
 
 
 @flow.unittest.skip_unless_1n4d()
 class TestP2bOnGPU(flow.unittest.TestCase):
     def test_p2b(test_case):
         placement = flow.placement("cuda", {0: range(4)})
-        sync_x = flow.ones((128, 1024, 1024), placement=placement, dtype=flow.int32, sbp=flow.sbp.partial_sum)
-        async_x = flow.ones((128 * 2, 1024, 1024), device="cuda", dtype=flow.int32)
+        sync_x = flow.ones(
+            (128, 1024),
+            placement=placement,
+            dtype=flow.int32,
+            sbp=flow.sbp.partial_sum,
+        )
+        async_x = flow.ones((128 * 2, 1024), device="cuda", dtype=flow.int32)
         i = 0
-        for i in range(5000):
-            sync_allreduce(sync_x)
-            async_allreduce(async_x)
+        for i in range(500):
+            synced_y = sync_allreduce(sync_x)
+            asynced_y = async_allreduce(async_x)
             if i % 20 == 0:
                 print(i)
+        print(synced_y.to_local().numpy())
+        print(asynced_y.numpy())
 
 
 if __name__ == "__main__":
