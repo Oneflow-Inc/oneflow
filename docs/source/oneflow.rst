@@ -131,4 +131,4 @@ oneflow
             is_grad_enabled,
             is_floating_point,
 .. autofunction:: oneflow.relu
-.. autofunction:: oneflow.framework.distribute.get_rank
+.. autofunction:: oneflow.env.get_rank
