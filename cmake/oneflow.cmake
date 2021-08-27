@@ -270,7 +270,7 @@ endif()
 include(functional)
 GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
     FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
-oneflow_add_library(of_functional_obj ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
+oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
 add_dependencies(of_functional_obj of_cfgobj)
 
 set(PYBIND11_SRCS ${CFG_PYBIND11_SRCS} ${FUNCTIONAL_PYBIND11_SRCS})
@@ -416,4 +416,4 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 add_custom_target(oneflow_py ALL)
-add_dependencies(oneflow_py of_include_copy)
+add_dependencies(oneflow_py of_include_copy of_pyscript_copy)

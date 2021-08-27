@@ -52,7 +52,7 @@ OneFlow Tensor Class
             flatten, 
             flip, 
             floor, 
-            fmod, 
+            fmod,
             gather, 
             ge, 
             gelu, 
@@ -158,4 +158,6 @@ OneFlow Tensor Class
             double, 
             type_as, 
             cpu, 
-            cuda 
+            cuda,
+            item,
+            tolist

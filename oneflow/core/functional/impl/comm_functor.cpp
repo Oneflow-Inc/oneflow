@@ -37,13 +37,13 @@ namespace impl {
 class BroadcastFunctor {
  public:
   BroadcastFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     std::string device_type_str = JUST(x->device())->type();
     CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kGPU : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
-    return one::Broadcast(x, parallel_desc);
+    return one::Broadcast(x, parallel_desc, inplace);
   }
 };
 

@@ -47,7 +47,7 @@ def logical_xor_op(input, other):
 
     if other.dtype != input.dtype:
         other = flow.cast(other, input.dtype)
-    return flow.F.broadcast_logical_xor(input, other)
+    return flow.F.logical_xor(input, other)
 
 
 @register_tensor_op("logical_xor")

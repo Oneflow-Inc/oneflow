@@ -13,19 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_THREAD_CONSISTENT_UNIQUE_ID_H_
-#define ONEFLOW_CORE_THREAD_CONSISTENT_UNIQUE_ID_H_
+#ifndef ONEFLOW_CORE_KERNEL_SYNC_CHECK_KERNEL_OBSERVER_H_
+#define ONEFLOW_CORE_KERNEL_SYNC_CHECK_KERNEL_OBSERVER_H_
 
-#include <string>
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
-Maybe<void> SetThisThreadConsistentUniqueId(int64_t thread_consistent_uid,
-                                            const std::string& debug_string);
-Maybe<int64_t> GetThisThreadConsistentUniqueId();
-Maybe<const std::string&> GetThreadConsistentUniqueIdDebugString(int64_t thread_consistent_uid);
+class SyncCheckKernelObserver final : public KernelObserver {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SyncCheckKernelObserver);
+  SyncCheckKernelObserver() = default;
+  ~SyncCheckKernelObserver() override = default;
+
+  void DidForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
+                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
+};
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_CONSISTENT_UNIQUE_ID_H_
+#endif  // ONEFLOW_CORE_KERNEL_SYNC_CHECK_KERNEL_OBSERVER_H_
