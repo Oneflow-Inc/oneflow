@@ -90,7 +90,7 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
       } else {
         arg_pos++;
       }
-      PythonArg arg(obj);
+      PythonArg arg(obj, param.size);
       if ((obj == Py_None && param.optional) || PythonArgCheck(arg, param.type)) {
         parsed_args->at(i) = std::move(arg);
       } else {
