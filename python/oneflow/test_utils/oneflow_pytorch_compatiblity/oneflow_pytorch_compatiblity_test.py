@@ -57,7 +57,6 @@ def import_file(source):
 def get_loss(
     image_nd,
     label_nd,
-    batch_size,
     model_path: str,
     module_name: str,
     test_pytorch: bool = True,
@@ -225,10 +224,10 @@ def test_train_loss_oneflow_pytorch(
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         pytorch_model_loss = get_loss(
-            image_nd, label_nd, batch_size, model_path, module_name, True, "cuda", tmpdirname
+            image_nd, label_nd, model_path, module_name, True, "cuda", tmpdirname
         )
         oneflow_model_loss = get_loss(
-            image_nd, label_nd, batch_size, model_path, module_name, False, "cuda", tmpdirname
+            image_nd, label_nd, model_path, module_name, False, "cuda", tmpdirname
         )
 
     if verbose:
