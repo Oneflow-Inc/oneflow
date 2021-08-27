@@ -203,8 +203,8 @@ jobs:
               bash Miniconda3-py39_4.10.3-Linux-x86_64.sh -b -u -p ${CONDA}
           fi
           cp ci/conda/tuna.condarc $HOME/.condarc
-          export PATH=PATH
-          conda clean -i $CONDA/bin
+          export PATH=PATH:$CONDA/bin
+          conda clean -i
           conda config --set auto_activate_base false
       - name: Download conda environment.yml # TODO: remove this step if migrated to generated matrix
         if: matrix.test_suite == 'cpu-clang'
