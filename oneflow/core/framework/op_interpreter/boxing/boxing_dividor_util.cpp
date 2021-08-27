@@ -79,16 +79,19 @@ decltype(FlattenInHierarchy) FlattenInHierarchy = DECORATE(&RawFlattenInHierarch
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetPartialSumNdSbp() {
+Maybe<Symbol<cfg::NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
   cfg::NdSbp partial_sum_nd_sbp;
-  partial_sum_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
+  for (int64_t i = 0; i < ndim; ++i) {
+    partial_sum_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
+  }
   return SymbolOf(partial_sum_nd_sbp);
 }
 
-auto* CachedGetPartialSumNdSbp = DECORATE(&GetPartialSumNdSbp, ThreadLocal);
+auto* CachedGetAllPartialSumNdSbp = DECORATE(&GetAllPartialSumNdSbp, ThreadLocal);
 
 Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithPartialSum(Symbol<PlacedNdSbp> placed_nd_sbp) {
-  Symbol<cfg::NdSbp> partial_sum_nd_sbp = JUST(CachedGetPartialSumNdSbp());
+  Symbol<cfg::NdSbp> partial_sum_nd_sbp =
+      JUST(CachedGetAllPartialSumNdSbp(placed_nd_sbp->nd_sbp()->sbp_parallel_size()));
   return JUST(PlacedNdSbp::New(partial_sum_nd_sbp, placed_nd_sbp->placement()));
 }
 
@@ -107,4 +110,38 @@ Maybe<BoxingDividor> RawOutPlacementAndPartialSum() {
 
 decltype(OutPlacementAndPartialSum) OutPlacementAndPartialSum =
     DECORATE(&RawOutPlacementAndPartialSum, ThreadLocal);
+
+namespace {
+
+Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
+  cfg::NdSbp broadcast_nd_sbp;
+  for (int64_t i = 0; i < ndim; ++i) {
+    broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+  }
+  return SymbolOf(broadcast_nd_sbp);
+}
+
+auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
+
+Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithBroadcast(Symbol<PlacedNdSbp> placed_nd_sbp) {
+  Symbol<cfg::NdSbp> broadcast_nd_sbp =
+      JUST(CachedGetAllBroadcastNdSbp(placed_nd_sbp->nd_sbp()->sbp_parallel_size()));
+  return JUST(PlacedNdSbp::New(broadcast_nd_sbp, placed_nd_sbp->placement()));
+}
+
+static constexpr auto* ReplaceNdSbpWithBroadcast =
+    DECORATE(&RawReplaceNdSbpWithBroadcast, ThreadLocal);
+
+Maybe<BoxingDividor> RawInPlacementAndBroadcast() {
+  return std::make_shared<BoxingDividor>(
+      "InPlacementAndBroadcast",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return ReplaceNdSbpWithBroadcast(in);
+      });
+}
+
+}  // namespace
+
+decltype(InPlacementAndBroadcast) InPlacementAndBroadcast =
+    DECORATE(&RawInPlacementAndBroadcast, ThreadLocal);
 }  // namespace oneflow
