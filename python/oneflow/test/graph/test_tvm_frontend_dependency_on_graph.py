@@ -25,6 +25,7 @@ from alexnet_model import alexnet
 
 class Graph(flow.nn.Graph):
     def __init__(self, module):
+        super().__init__()
         self.m = module
     
     def build(self, x):
