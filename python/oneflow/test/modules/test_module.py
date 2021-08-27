@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import os
-import collections.abc
+import warnings
 import tempfile
 import unittest
 from itertools import repeat
@@ -193,7 +193,9 @@ class TestModule(flow.unittest.TestCase):
             # Creates a new file and test fault tolerance
             with open(os.path.join(save_dir, 'random_file'), 'w') as fp:
                 fp.write("nothing")
-            loaded_state_dict = flow.load(save_dir)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                loaded_state_dict = flow.load(save_dir)
             m.load_state_dict(loaded_state_dict)
         res2 = m()
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -152,7 +153,7 @@ def Load(
         try:
             var_dict[f] = _LoadSingleVariable(var_dir, consistent_src_rank)
         except FileNotFoundError:
-            pass
+            warnings.warn(f"'{var_dir}' does not have valid tensor data. Please check it if it is unexpected.", stacklevel=2)
     return var_dict
 
 
