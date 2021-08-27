@@ -36,11 +36,7 @@ from oneflow.nn.modules.activation import (
     SiLU,
     Softsign,
 )
-from oneflow.nn.modules.adaptive_pool import (
-    AdaptiveAvgPool1d,
-    AdaptiveAvgPool2d,
-    AdaptiveAvgPool3d,
-)
+
 from oneflow.nn.modules.all_reduce import AllReduce
 from oneflow.nn.modules.batchnorm import BatchNorm1d, BatchNorm2d, BatchNorm3d
 from oneflow.nn.modules.container import (
@@ -50,7 +46,7 @@ from oneflow.nn.modules.container import (
     ParameterList,
     Sequential,
 )
-from oneflow.nn.modules.conv import Conv1d, Conv2d, Conv3d
+from oneflow.nn.modules.conv import Conv1d, Conv2d, Conv3d, ConvTranspose2d
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (
     MovingAverageMinMaxObserver,
@@ -70,7 +66,6 @@ from oneflow.nn.modules.dataset import (
     OFRecordBytesDecoder,
     GPTIndexedBinDataReader,
 )
-from oneflow.nn.modules.deconv import ConvTranspose2d
 from oneflow.nn.modules.dropout import Dropout
 from oneflow.nn.modules.flatten import Flatten
 from oneflow.nn.modules.instancenorm import (
@@ -99,6 +94,7 @@ from oneflow.nn.modules.padding import (
     ConstantPad3d,
     ReflectionPad2d,
     ReplicationPad2d,
+    ZeroPad2d,
 )
 from oneflow.nn.modules.pixelshuffle import PixelShufflev2 as PixelShuffle
 from oneflow.nn.modules.pooling import (
@@ -108,6 +104,9 @@ from oneflow.nn.modules.pooling import (
     MaxPool1d,
     MaxPool2d,
     MaxPool3d,
+    AdaptiveAvgPool1d,
+    AdaptiveAvgPool2d,
+    AdaptiveAvgPool3d,
 )
 from oneflow.nn.modules.sparse import Embedding
 from oneflow.nn.modules.upsampling import (
@@ -115,9 +114,8 @@ from oneflow.nn.modules.upsampling import (
     UpsamplingBilinear2d,
     UpsamplingNearest2d,
 )
-from oneflow.nn.modules.zeropad2d import ZeroPad2d
-from oneflow.nn.modules.unfold import Unfold
-from oneflow.nn.modules.fold import Fold
+from oneflow.nn.modules.fold import Fold, Unfold
+
 from oneflow.nn.parameter import Parameter
 from oneflow.nn import utils
 
