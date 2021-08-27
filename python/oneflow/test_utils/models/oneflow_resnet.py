@@ -1,7 +1,7 @@
 import oneflow
 from oneflow import Tensor
 import oneflow.nn as nn
-from .._internally_replaced_utils import load_state_dict_from_url
+from ._internally_replaced_utils import load_state_dict_from_url
 from typing import Type, Any, Callable, Union, List, Optional
 
 
@@ -240,7 +240,7 @@ class ResNet(nn.Module):
         x = self.layer4(x)
 
         x = self.avgpool(x)
-        x = torch.flatten(x, 1)
+        x = oneflow.flatten(x, 1)
         x = self.fc(x)
 
         return x
