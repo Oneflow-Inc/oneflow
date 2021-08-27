@@ -272,6 +272,7 @@ GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
     FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
 add_dependencies(of_functional_obj of_cfgobj)
+add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
 set(PYBIND11_SRCS ${CFG_PYBIND11_SRCS} ${FUNCTIONAL_PYBIND11_SRCS})
 
@@ -280,7 +281,7 @@ include_directories(${PROJECT_BINARY_DIR})
 
 if(BUILD_CUDA)
   oneflow_add_library(of_cudaobj ${of_cuda_src})
-  add_dependencies(of_cudaobj of_protoobj of_cfgobj of_functional_obj prepare_oneflow_third_party)
+  add_dependencies(of_cudaobj of_protoobj of_cfgobj of_functional_obj)
   target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
   set(ONEFLOW_CUDA_LIBS of_cudaobj)
 
@@ -291,7 +292,6 @@ endif()
 
 # cc obj lib
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
-add_dependencies(of_ccobj prepare_oneflow_third_party)
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
