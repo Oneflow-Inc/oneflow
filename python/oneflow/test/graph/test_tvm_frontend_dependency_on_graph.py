@@ -15,9 +15,9 @@ limitations under the License.
 """
 
 import os
+import re
 import unittest
 
-import oneflow
 import oneflow as flow
 import oneflow.unittest
 from alexnet_model import alexnet
