@@ -359,9 +359,9 @@ def randint_op(
         >>> generator = flow.Generator()
         >>> generator.manual_seed(0)
         >>> flow.randint(0, 5, (3,3), generator=generator)
-        tensor([[3, 3, 4],
-                [5, 3, 5],
-                [3, 5, 2]], dtype=oneflow.int64)
+        tensor([[2, 2, 3],
+                [4, 3, 4],
+                [2, 4, 2]], dtype=oneflow.int64)
 
     """
     assert out is None, "out not supported yet"
