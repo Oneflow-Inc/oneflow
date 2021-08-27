@@ -179,7 +179,7 @@ class _BatchNorm(_NormBase):
                 self.bias,
                 axis=1,
                 epsilon=self.eps,
-                momentum=1-self.momentum,
+                momentum=self.momentum,
                 is_training=is_training,
             )
 
