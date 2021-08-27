@@ -15,6 +15,7 @@ limitations under the License.
 """
 from oneflow.test_utils.oneflow_pytorch_compatiblity import *
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestApiCompatiblity(flow.unittest.TestCase):
     def test_alexnet_compatiblity(test_case):

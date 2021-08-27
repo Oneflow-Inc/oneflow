@@ -61,7 +61,7 @@ def get_loss(
     module_name: str,
     test_pytorch: bool = True,
     device: str = "cuda",
-    tmpdirname: str='/tmp',
+    tmpdirname: str = "/tmp",
 ):
     model_loss = []
     learning_rate = 0.01
@@ -92,7 +92,6 @@ def get_loss(
             if "num_batches_tracked" not in k:
                 new_parameters[k] = flow.tensor(w[k].detach().numpy())
 
- 
         flow.save(new_parameters, tmpdirname)
 
         pytorch_model.to(device)
@@ -157,7 +156,7 @@ def get_loss(
                 + lines[i:]
             )
             buf = "\n".join(lines)
-            
+
             python_module = import_file(buf)
 
         Net = getattr(python_module, module_name)
@@ -214,7 +213,7 @@ def get_loss(
 
 
 def test_train_loss_oneflow_pytorch(
-    test_case, model_path: str, module_name: str, device: str = "cuda", 
+    test_case, model_path: str, module_name: str, device: str = "cuda",
 ):
     batch_size = 16
     image_nd = np.random.rand(batch_size, 3, 224, 224).astype(np.float32)
