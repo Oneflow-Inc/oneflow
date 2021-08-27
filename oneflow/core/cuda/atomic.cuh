@@ -39,6 +39,7 @@ __device__ __forceinline__ half Add(half* address, half val) {
   return atomicAdd(address, val);
 #else
   __trap();
+  return 0;
 #endif
 }
 

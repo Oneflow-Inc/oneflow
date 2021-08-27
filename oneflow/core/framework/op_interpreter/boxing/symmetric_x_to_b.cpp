@@ -25,57 +25,37 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckSymXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckSymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kGPU);
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymXToB = DECORATE(&RawCheckSymXToB, ThreadLocal);
-
-Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Build();
-}
-
-static constexpr auto* CachedEagerNcclAllReduceOpExpr = DECORATE(&EagerNcclAllReduce, ThreadLocal);
-
-Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Build();
-}
-
-static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
+static constexpr auto* CheckSymmetricXToB = DECORATE(&RawCheckSymmetricXToB, ThreadLocal);
 
 }  // namespace
 
-Maybe<one::Tensor> SymXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                           Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> SymmetricXToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                                 Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
   if (EagerBoxingInterpreterUtil::IsBroadcastSbp(tensor_nd_sbp->sbp_parallel(0))) { return tensor; }
   if (EagerBoxingInterpreterUtil::IsPartialSumSbp(tensor_nd_sbp->sbp_parallel(0))) {
-    const auto& op_expr = JUST(CachedEagerNcclAllReduceOpExpr(in->placement()));
-    return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+    const auto& NcclPToBBoxingFunction = *JUST(GetBoxingFunction("nccl-p-to-b", in, out));
+    return JUST(NcclPToBBoxingFunction(tensor, in, out));
   }
   if (EagerBoxingInterpreterUtil::IsSplitSbp(tensor_nd_sbp->sbp_parallel(0), 0)) {
-    const auto& op_expr = JUST(CachedEagerNcclAllGatherOpExpr(in->placement()));
-    return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+    const auto& NcclSToBBoxingFunction = *JUST(GetBoxingFunction("nccl-s-to-b", in, out));
+    return JUST(NcclSToBBoxingFunction(tensor, in, out));
   }
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-COMMAND(RegisterBoxingFunction("symmetric-x-to-b", CheckSymXToB, &SymXToB));
+COMMAND(RegisterBoxingFunction("symmetric-x-to-b", CheckSymmetricXToB, &SymmetricXToB));
 
 }  // namespace oneflow
