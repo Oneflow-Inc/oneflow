@@ -20,6 +20,32 @@ namespace oneflow {
 namespace user_op {
 namespace {
 
+template<typename T>
+__inline__ __device__ T Exp(T x);
+
+template<>
+__inline__ __device__ float Exp<float>(float x) {
+#ifdef OF_SOFTMAX_USE_FAST_MATH
+  return __expf(x);
+#else
+  return exp(x);
+#endif
+}
+
+template<>
+__inline__ __device__ double Exp<double>(double x) {
+  return exp(x);
+}
+
+template<>
+__inline__ __device__ half Exp<half>(half x) {
+#ifdef OF_SOFTMAX_USE_FAST_MATH
+  return __float2half(__expf(__half2float(x)));
+#else
+  return __float2half(exp(__half2float(x)));
+#endif
+}
+
 template<typename T, typename K>
 __global__ void ComputeDiffGpu(const int64_t num_instances, const int64_t num_classes,
                                const int64_t depth, const int64_t lower_bound, const T* prob,
@@ -31,9 +57,9 @@ __global__ void ComputeDiffGpu(const int64_t num_instances, const int64_t num_cl
     assert(labels[row_id] < depth);
     K label = labels[row_id] - lower_bound;
     if (label == col_id) {
-      dx[i] = dy[row_id] * (cuda::softmax::Exp(prob[i]) - 1);
+      dx[i] = dy[row_id] * (Exp(prob[i]) - 1);
     } else {
-      dx[i] = dy[row_id] * cuda::softmax::Exp(prob[i]);
+      dx[i] = dy[row_id] * Exp(prob[i]);
     }
   }
 }
@@ -49,9 +75,9 @@ __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t nu
     assert(labels[row_id] < depth);
     K label = labels[row_id] - lower_bound;
     if (label == col_id) {
-      dx[i] = __hmul(dy[row_id], __hsub(cuda::softmax::Exp(prob[i]), __float2half(1.0)));
+      dx[i] = __hmul(dy[row_id], __hsub(Exp(prob[i]), __float2half(1.0)));
     } else {
-      dx[i] = __hmul(dy[row_id], cuda::softmax::Exp(prob[i]));
+      dx[i] = __hmul(dy[row_id], Exp(prob[i]));
     }
   }
 }
