@@ -194,32 +194,29 @@ jobs:
         if: env.is_built != '1'
       - name: Install Conda
         run: |
-          CONDA=$HOME/miniconda3/py39_4.10.3
+          CONDA=$HOME/miniconda3-prefixes/py39_4.10.3
           echo "CONDA=${CONDA}" >> $GITHUB_ENV
           if ! command -v $CONDA/bin/conda &> /dev/null
           then
               rm -rf $CONDA
               wget https://oneflow-static.oss-cn-beijing.aliyuncs.com/downloads/conda-installers/Miniconda3-py39_4.10.3-Linux-x86_64.sh
-              bash Miniconda3-py39_4.10.3-Linux-x86_64.sh -b -u -p ${CONDA}
+              bash Miniconda3-py39_4.10.3-Linux-x86_64.sh -b -u -s -p ${CONDA}
           fi
           cp ci/conda/tuna.condarc $HOME/.condarc
           cat $HOME/.condarc
           export PATH=$PATH:$CONDA/bin
           conda clean -i
           conda config --set auto_activate_base false
+          conda init
       - name: Download conda environment.yml # TODO: remove this step if migrated to generated matrix
         if: matrix.test_suite == 'cpu-clang'
         run: |
           wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/9cd37571cbd6cc6a81fc87faa7f6a43be772ae31/dev/clang10/environment-v2.yml -O environment.yml
-      - uses: conda-incubator/setup-miniconda@v2
+      - name: Update Conda env
         if: matrix.test_suite == 'cpu-clang'
-        name: Activate Conda environment
-        with:
-          remove-profiles: false # this flag is critial, ~/.bashrc will be removed if not set to false
-          activate-environment: oneflow-dev-clang10-v2
-          environment-file: environment.yml
-          auto-activate-base: false
-          condarc-file: ci/conda/tuna.condarc
+        run: |
+          export PATH=$PATH:$CONDA/bin
+          conda env update -f environment.yml --prune
       - name: Set environments from secrets
         if: contains(${{ github.repository }}, "Oneflow-Inc")
         run: |
@@ -272,15 +269,8 @@ jobs:
         if: matrix.test_suite == 'cpu-clang'
         run: |
           set -x
-          mkdir -p build
-          cd build
-          cmake .. -C ../cmake/caches/cn/fast/cpu-clang.cmake
-          cmake --build . -j $(nproc)
-          cd -
-          cd python
-          python setup.py bdist_wheel
-          echo "wheelhouse_dir=$PWD/dist" >> $GITHUB_ENV
-        shell: bash -l {0}
+          export PATH=$PATH:$CONDA/bin
+          bash -i ci/conda/build-clang.sh
       - name: Build OneFlow
         timeout-minutes: 45
         if: env.is_built != '1' && ((contains(fromJson('["cuda", "cpu"]'), matrix.test_suite) || (contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1')))
@@ -337,6 +327,10 @@ jobs:
         run: |
           set -x
           docker rm -f ${container_name} || true
+      - name: Remove container
+        if: always()
+        run: |
+          conda init --reverse
       - name: Save shared env
         run: |
           set -x
