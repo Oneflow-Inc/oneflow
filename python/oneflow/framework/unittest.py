@@ -21,6 +21,7 @@ import subprocess
 import sys
 import unittest
 import uuid
+import doctest
 from contextlib import closing
 from tempfile import NamedTemporaryFile
 from typing import Any, Callable, Dict
@@ -369,18 +370,20 @@ def skip_unless_2n2d():
 def skip_unless_2n4d():
     return skip_unless(2, 4)
 
-_skip = object()
-def cond_skip_for_docstr(module):
-    import doctest, sys
-    COND_SKIP = doctest.register_optionflag('COND_SKIP')
-    class CondSkipChecker(doctest.OutputChecker):
-        def check_output(self, want, got, optionflags):
-            if (optionflags & COND_SKIP) and got.strip() == str(_skip):
-                return True
-            else:
-                return super(CondSkipChecker, self).check_output(want, got, optionflags)
-    m = sys.modules.get(module)
+
+class CondSkipChecker(doctest.OutputChecker):
+    def __init__(self, flag):
+        self._check_flag = flag
+    def check_output(self, want, got, optionflags):
+        if self._check_flag & optionflags and oneflow.distributed.get_local_rank() == 0:
+            return super(CondSkipChecker, self).check_output(want, got, optionflags)
+        else:
+            return True
+
+
+def check_rank0_docstr(module):
+    ONLY_CHECK_RANK_0 = doctest.register_optionflag('ONLY_CHECK_RANK_0')
     finder = doctest.DocTestFinder()
-    runner = doctest.DebugRunner(CondSkipChecker())
-    for test in finder.find(m, m.__name__):
+    runner = doctest.DebugRunner(CondSkipChecker(ONLY_CHECK_RANK_0))
+    for test in finder.find(module, module.__name__):
         runner.run(test)
