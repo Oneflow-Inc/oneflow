@@ -425,6 +425,12 @@ class Graph(object):
                 accessed from this graph using the given name
             module (Module): child module to be added to the graph.
         """
+        if "_name" not in self.__dict__:
+            raise AttributeError(
+                "Base class nn.Graph has not been initialized, "
+                "please call super().__init__() in subclass of nn.Graph "
+                "before assigning any attribute."
+            )
         if not isinstance(module, Module) and module is not None:
             raise TypeError("{} is not a Module subclass".format(type(module)))
         elif not isinstance(name, str):
@@ -438,12 +444,6 @@ class Graph(object):
         self._blocks[name] = Block("", name, module)
 
     def __setattr__(self, name: str, value=None):
-        if "_name" not in self.__dict__:
-            raise AttributeError(
-                "Base class nn.Graph has not been initialized, "
-                "please call super().__init__() in subclass of nn.Graph "
-                "before assigning any attribute."
-            )
         if isinstance(value, Module):
             self._add_block(name, value)
         elif isinstance(value, Optimizer):
