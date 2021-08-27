@@ -1070,19 +1070,27 @@
   ]
   bind_python: True
 
+- name: "randint"
+  signature: "Tensor (Int64 low, Int64 high, Shape shape, DataType dtype=None, Device device=None, Generator generator=None)=> RandInt"
+  bind_python: True
+
+- name: "consistent_randint"
+  signature: "Tensor (Int64 low, Int64 high, Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None, Generator generator=None)=> ConsistentRandInt"
+  bind_python: True
+
 - name: "unfold"
   signature: "Tensor (Tensor x, String data_format=\"channels_first\", Int32List kernel_size, 
                             Int32List dilation_rate, Int32List padding, 
                             Int32List strides) => Unfold"
   bind_python: True
-  
+
 - name: "fold"
   signature: "Tensor (Tensor x, String data_format=\"channels_first\", 
                           Int32List output_size, Int32List kernel_size, 
                           Int32List dilation_rate, Int32List padding, 
                           Int32List strides) => Fold"
   bind_python: True
-  
+
 - name: "split"
   signature: "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split"
   bind_python: True

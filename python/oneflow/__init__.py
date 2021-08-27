@@ -291,7 +291,8 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.random_ops import bernoulli
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
-from oneflow.nn.modules.random_ops import randperm
+from oneflow.nn.modules.random_ops import randint_op as randint
+from oneflow.nn.modules.random_ops import randperm_op as randperm
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min
