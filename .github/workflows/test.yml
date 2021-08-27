@@ -215,6 +215,7 @@ jobs:
         if: matrix.test_suite == 'cpu-clang'
         name: Activate Conda environment
         with:
+          remove-profiles: false # this flag is critial, ~/.bashrc will be removed if not set
           activate-environment: oneflow-dev-clang10-v2
           environment-file: environment.yml
           auto-activate-base: false
