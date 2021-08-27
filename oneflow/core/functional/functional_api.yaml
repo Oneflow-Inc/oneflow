@@ -903,6 +903,14 @@
   signature: "Tensor (Tensor dy, Tensor in, Int32 diagonal=0) => DiagGrad"
   bind_python: False
 
+- name: "diagonal"
+  signature: "Tensor (Tensor x, Int32 offset=0) => Diagonal"
+  bind_python: True
+
+- name: "diagonal_grad"
+  signature: "Tensor (Tensor dy, Tensor in, Int32 offset=0) => DiagonalGrad"
+  bind_python: False
+
 - name: "tensor_getitem"
   signature: "Tensor (Tensor x, TensorIndex index) => TensorGetItem"
   bind_python: True

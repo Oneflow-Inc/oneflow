@@ -1268,6 +1268,37 @@ class DiagGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class DiagonalFunctor {
+ public:
+  DiagonalFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("diagonal").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& offset) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("offset", offset));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class DiagonalGradFunctor {
+ public:
+  DiagonalGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("diagonal_grad").Input("dy").Input("in").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const int32_t& offset) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("offset", offset));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
@@ -1646,6 +1677,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TriuFunctor>("Triu");
   m.add_functor<impl::DiagFunctor>("Diag");
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
+  m.add_functor<impl::DiagonalFunctor>("Diagonal");
+  m.add_functor<impl::DiagonalGradFunctor>("DiagonalGrad");
   m.add_functor<impl::TensorGetItemFunctor>("TensorGetItem");
   m.add_functor<impl::DimScatterFunctor>("DimScatter");
   m.add_functor<impl::DimScatterAddFunctor>("DimScatterAdd");
