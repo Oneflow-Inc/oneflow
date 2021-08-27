@@ -203,6 +203,7 @@ jobs:
               bash Miniconda3-py39_4.10.3-Linux-x86_64.sh -b -u -p ${CONDA}
           fi
           cp ci/conda/tuna.condarc $HOME/.condarc
+          cat $HOME/.condarc
           export PATH=$PATH:$CONDA/bin
           conda clean -i
           conda config --set auto_activate_base false
