@@ -20,6 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
+Maybe<TransportToken> NewTensorConsistentId();
+
 namespace one {
 
 class TensorTuple;

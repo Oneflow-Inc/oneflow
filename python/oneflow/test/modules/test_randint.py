@@ -27,7 +27,7 @@ from test_util import GenArgList
 def _test_rand(test_case, device, shape, low, high):
     y1 = flow.randint(low, high, shape, device=flow.device(device))
     y2 = flow.randint(low, high, shape, device=flow.device(device))
-    test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertFalse(np.all(y1.numpy() == y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
 
 
@@ -73,7 +73,7 @@ def _test_with_generator(test_case, device, shape, low, high):
 def _test_high(test_case, device, shape, low, high):
     y1 = flow.randint(low, high, shape, device=flow.device(device))
     y2 = flow.randint(low, high, shape, device=flow.device(device))
-    test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertFalse(np.all(y1.numpy() == y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
 
 
@@ -103,7 +103,7 @@ class TestRandint(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["low"] = [i for i in range(10)]
-        arg_dict["high"] = [10 + np.random.randint(1, 10) for i in range(10)]
+        arg_dict["high"] = [10 + np.random.randint(10, 20) for i in range(10)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
@@ -123,7 +123,7 @@ class TestRandint(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3, 4), (2, 5, 2)]
         arg_dict["low"] = [i for i in range(10)]
-        arg_dict["high"] = [10 + np.random.randint(1, 10) for i in range(10)]
+        arg_dict["high"] = [10 + np.random.randint(10, 20) for i in range(10)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

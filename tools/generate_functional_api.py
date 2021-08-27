@@ -121,7 +121,11 @@ namespace functional {{
 namespace functional = one::functional;
 
 ONEFLOW_API_PYBIND11_MODULE("F", m) {{
+  py::options options;
+  options.disable_function_signatures();
+
 {1}
+  options.enable_function_signatures();
 }}
 
 }}  // namespace oneflow
@@ -301,16 +305,31 @@ class Argument:
         self._type = None
         self._name = None
         self._default_value = None
+        self._size = 0
 
         fmt = _normalize(fmt)
         sp = fmt.rfind(" ")
         if sp == -1:
             raise ValueError("Missing argument type or name for argument def: " + fmt)
-        self._type = _normalize(fmt[0:sp])
+        type_name = fmt[0:sp]
+        arg_name = fmt[sp + 1 :]
+        sp = type_name.find("[")
+        if sp != -1:
+            self._type = _normalize(type_name[0:sp])
+            size = type_name[sp + 1 :]
+            sp = size.find("]")
+            assert sp != -1, "Missing ']' for argument def: " + fmt
+            size = _normalize(size[0:sp])
+            assert size.isnumeric(), (
+                "list size is not an integer for argument def: " + fmt
+            )
+            self._size = int(size)
+        else:
+            self._type = _normalize(type_name)
         assert self._type in types_allowed, "Unknow type: " + self._type
 
         self._optional = False
-        self._name = _normalize(fmt[sp + 1 :])
+        self._name = _normalize(arg_name)
         sp = self._name.find("=")
         if sp != -1:
             self._default_value = _normalize(self._name[sp + 1 :])
@@ -516,18 +535,23 @@ class FunctionalGenerator:
                     optional = "true" if arg._optional else "false"
                     if arg.has_default_value:
                         argument_def.append(
-                            '  ArgumentDef(/*name*/"{0}", /*default_value*/{1}({2}), /*keyword_only*/{3}, /*optional*/{4})'.format(
+                            '  ArgumentDef(/*name*/"{0}", /*default_value*/{1}({2}), /*size*/{3}, /*keyword_only*/{4}, /*optional*/{5})'.format(
                                 arg._name,
                                 _std_decay(arg._cpp_type),
                                 arg._default_cpp_value,
+                                arg._size,
                                 keyword_only,
                                 optional,
                             )
                         )
                     else:
                         argument_def.append(
-                            '  ArgumentDef(/*name*/"{0}", /*value_type*/ValueTypeOf<{1}>(), /*keyword_only*/{2})'.format(
-                                arg._name, _std_decay(arg._cpp_type), keyword_only
+                            '  ArgumentDef(/*name*/"{0}", /*value_type*/ValueTypeOf<{1}>(), /*size*/{2}, /*keyword_only*/{3}, /*optional*/{4})'.format(
+                                arg._name,
+                                _std_decay(arg._cpp_type),
+                                arg._size,
+                                keyword_only,
+                                optional,
                             )
                         )
                 schema_fmt += 'FunctionDef {0}Schema::function_def = {{\n/*name*/"{1}",\n/*return_def*/{2},\n/*argument_def*/{{\n{3}\n}}\n}};\n'.format(

@@ -290,7 +290,7 @@ class RandInt(Module):
             self.placement,
             self.sbp,
         ) = _rand_op_common_process(size, device, generator, placement, sbp)
-        self.dtype = None
+        self.dtype = dtype
         self.low = low
         self.high = high
 
@@ -358,9 +358,9 @@ def randint_op(
         >>> generator = flow.Generator()
         >>> generator.manual_seed(0)
         >>> flow.randint(0, 5, (3,3), generator=generator)
-        tensor([[3, 3, 4],
-                [5, 3, 5],
-                [3, 5, 2]], dtype=oneflow.int64)
+        tensor([[2, 2, 3],
+                [4, 3, 4],
+                [2, 4, 2]], dtype=oneflow.int64)
 
     """
     assert out is None, "out not supported yet"
@@ -388,7 +388,15 @@ class RandPerm(Module):
         super().__init__()
         assert n >= 0
         self.n = n
-        self.dtype = None
+        self.dtype = dtype
+        (
+            _,
+            self.device,
+            self.generator,
+            self.placement,
+            self.sbp,
+        ) = _rand_op_common_process((), device, generator, placement, sbp)
+        self.requires_grad = requires_grad
 
     def forward(self, out=None):
         if self.placement is not None:
@@ -445,7 +453,7 @@ def randperm_op(
     """
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
-    assert pin_memory is None, "layout not supported yet"
+    assert pin_memory is False, "pin_memory not supported yet"
     if generator is None:
         generator = flow.default_generator()
     return RandPerm(n, generator, dtype, layout, device, placement, sbp, requires_grad)(
