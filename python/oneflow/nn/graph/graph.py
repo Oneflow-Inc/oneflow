@@ -438,6 +438,12 @@ class Graph(object):
         self._blocks[name] = Block("", name, module)
 
     def __setattr__(self, name: str, value=None):
+        if "_name" not in self.__dict__:
+            raise AttributeError(
+                "Base class nn.Graph has not been initialized, "
+                "please call super().__init__() in subclass of nn.Graph "
+                "before assigning any attribute."
+            )
         if isinstance(value, Module):
             self._add_block(name, value)
         elif isinstance(value, Optimizer):
