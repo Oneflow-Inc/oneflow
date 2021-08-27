@@ -1,3 +1,19 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+import os
 import unittest
 
 import numpy as np
@@ -7,9 +23,11 @@ import argparse
 import oneflow as flow
 import torch
 import oneflow.unittest
+import shutil
 
 from models.oneflow_resnet import resnet50 as oneflow_resnet50
 from models.pytorch_resnet import resnet50 as pytorch_resnet50
+
 
 def test_train_loss_oneflow_pytorch(test_case, oneflow_model, pytorch_model, device):
     batch_size = 16
@@ -26,6 +44,16 @@ def test_train_loss_oneflow_pytorch(test_case, oneflow_model, pytorch_model, dev
     label = label.to(device)
     oneflow_model.to(device)
     corss_entropy.to(device)
+
+    w = pytorch_model.state_dict()
+    new_parameters = dict()
+    for k, v in w.items():
+        if "num_batches_tracked" not in k:
+            new_parameters[k] = flow.tensor(w[k].detach().numpy())
+
+    flow.save(new_parameters, "/dataset/imagenet/compatiblity_models")
+    params = flow.load("/dataset/imagenet/compatiblity_models")
+    oneflow_model.load_state_dict(params)
 
     learning_rate = 0.01
     mom = 0.9
@@ -106,16 +134,23 @@ def test_train_loss_oneflow_pytorch(test_case, oneflow_model, pytorch_model, dev
     print("forward avg time : {}".format(for_time / bp_iters))
     print("backward avg time : {}".format(bp_time / bp_iters))
     print("update parameters avg time : {}".format(update_time / bp_iters))
-    print(oneflow_model_loss)
-    print(pytorch_model_loss)
+    for i in range(100):
+        print(f'oneflow_loss:{oneflow_model_loss[i]}, pytorch_loss:{pytorch_model_loss[i]}')
 
-    test_case.assertTrue(np.allclose(oneflow_model_loss, pytorch_model_loss, 1e-03, 1e-03))
+    shutil.rmtree("/dataset/imagenet/compatiblity_models")
+
+    test_case.assertTrue(
+        np.allclose(oneflow_model_loss, pytorch_model_loss, 1e-03, 1e-03)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestApiCompatiblity(flow.unittest.TestCase):
     def test_resnet50_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(test_case, oneflow_resnet50(), pytorch_resnet50(), "cuda")
+        test_train_loss_oneflow_pytorch(
+            test_case, oneflow_resnet50(), pytorch_resnet50(), "cuda"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
