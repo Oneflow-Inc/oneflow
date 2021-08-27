@@ -608,11 +608,13 @@ class NormalizationAddReluFunctor {
       printf("here no no states!");
 
       if(addend){
+        printf("here add");
         return OpInterpUtil::Dispatch<one::Tensor>(   
           *addend_norm_training_no_stats_op_,
           {x, JUST(addend.value()), gamma, beta}, attrs);
       }
       else{
+        printf("here no add");
         return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
                                                attrs);
       }
