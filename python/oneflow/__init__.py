@@ -125,9 +125,9 @@ hook = ExitHook()
 def atexit_hook(hook):
     if hook.is_normal_exit():
         if oneflow._oneflow_internal.IsEnvInited():
-            if oneflow.framework.distribute.is_multi_client():
+            if oneflow.env.is_multi_client():
                 oneflow._oneflow_internal.eager.multi_client.Sync()
-            elif oneflow.framework.distribute.get_rank() == 0:
+            elif oneflow.env.get_rank() == 0:
                 oneflow._oneflow_internal.eager.single_client.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
     if hook.is_normal_exit():
@@ -223,6 +223,7 @@ from oneflow.nn.modules.constant import ones_like_op as ones_like
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_like_op as zeros_like
 from oneflow.nn.modules.constant import zeros_op as zeros
+from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow.nn.modules.diag import diag_op as diag
