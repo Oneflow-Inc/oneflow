@@ -1,4 +1,22 @@
 import json
+import yaml
+from parsec import *
+
+
+def load_test_yaml():
+    with open(".github/workflows/test.yml") as f:
+        return yaml.load(f, Loader=yaml.FullLoader)
+
+
+BUILD_AND_TEST = load_test_yaml()
+
+# id format: [enable-by-label-[LABEL]]--[REAL ID]
+def shard_test_steps_by_timeout():
+    for s in BUILD_AND_TEST["jobs"]["test"]["steps"]:
+        if "id" in s:
+            print(s["id"])
+        if "timeout-minutes" in s:
+            print(s["name"])
 
 
 def create_one(name=None, allow_fail=None):
