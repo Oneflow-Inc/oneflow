@@ -31,7 +31,7 @@ def create_one(name=None, allow_fail=None):
 
 
 def create_conda(name=None):
-    return create_one(name=name, allow_fail=True)
+    return create_one(name=name, allow_fail=False)
 
 
 def print_github_action_output(name=None, value=None):
