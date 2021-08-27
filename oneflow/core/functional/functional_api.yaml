@@ -1117,13 +1117,13 @@
   
 - name: "randperm"
   signature: [
-    "Tensor (Int32 n, *, Device device=None, Generator generator=None) => Randperm",
+    "Tensor (Int32 n, *, Device device=None, Generator generator=None) => RandPerm",
   ]
   bind_python: True
 
 - name: "consistent_randperm"
   signature: [
-    "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None) => ConsistentRandperm",
+    "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None) => ConsistentRandPerm",
   ]
   bind_python: True
 
