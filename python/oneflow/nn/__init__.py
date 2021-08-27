@@ -85,7 +85,7 @@ from oneflow.nn.modules.loss import (
     MSELoss,
     NLLLoss,
     SmoothL1Loss,
-    CombinedMarginLoss
+    CombinedMarginLoss,
 )
 from oneflow.nn.modules.normalization import GroupNorm, LayerNorm
 from oneflow.nn.modules.padding import (
@@ -94,7 +94,7 @@ from oneflow.nn.modules.padding import (
     ConstantPad3d,
     ReflectionPad2d,
     ReplicationPad2d,
-    ZeroPad2d
+    ZeroPad2d,
 )
 from oneflow.nn.modules.pixelshuffle import PixelShufflev2 as PixelShuffle
 from oneflow.nn.modules.pooling import (
@@ -106,7 +106,7 @@ from oneflow.nn.modules.pooling import (
     MaxPool3d,
     AdaptiveAvgPool1d,
     AdaptiveAvgPool2d,
-    AdaptiveAvgPool3d
+    AdaptiveAvgPool3d,
 )
 from oneflow.nn.modules.sparse import Embedding
 from oneflow.nn.modules.upsampling import (
