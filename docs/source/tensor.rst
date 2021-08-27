@@ -52,7 +52,7 @@ OneFlow Tensor Class
             flatten, 
             flip, 
             floor, 
-            fmod, 
+            fmod,
             gather, 
             ge, 
             gelu, 

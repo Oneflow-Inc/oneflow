@@ -32,27 +32,33 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-#define INSTANCE_OBJECT_AS_INTEGER(T)                                 \
-  template<>                                                          \
-  Maybe<T> PythonArg::ObjectAs<T>() const {                           \
-    return static_cast<T>(PyLong_AsLongLong(object_));                \
-  }                                                                   \
-  template<>                                                          \
-  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const { \
-    return PyUnpackLongSequence<T>(object_);                          \
+#define INSTANCE_OBJECT_AS_INTEGER(T)                                                             \
+  template<>                                                                                      \
+  Maybe<T> PythonArg::ObjectAs<T>() const {                                                       \
+    return static_cast<T>(PyLong_AsLongLong(object_));                                            \
+  }                                                                                               \
+  template<>                                                                                      \
+  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                             \
+    if (size_ > 0 && PyLong_Check(object_)) {                                                     \
+      return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyLong_AsLongLong(object_))); \
+    }                                                                                             \
+    return PyUnpackLongSequence<T>(object_);                                                      \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_TYPE_SEQ)
 #undef INSTANCE_OBJECT_AS_INTEGER
 
-#define INSTANCE_OBJECT_AS_FLOAT(T)                                   \
-  template<>                                                          \
-  Maybe<T> PythonArg::ObjectAs<T>() const {                           \
-    return static_cast<T>(PyFloat_AsDouble(object_));                 \
-  }                                                                   \
-  template<>                                                          \
-  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const { \
-    return PyUnpackFloatSequence<T>(object_);                         \
+#define INSTANCE_OBJECT_AS_FLOAT(T)                                                              \
+  template<>                                                                                     \
+  Maybe<T> PythonArg::ObjectAs<T>() const {                                                      \
+    return static_cast<T>(PyFloat_AsDouble(object_));                                            \
+  }                                                                                              \
+  template<>                                                                                     \
+  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                            \
+    if (size_ > 0 && PyFloat_Check(object_)) {                                                   \
+      return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyFloat_AsDouble(object_))); \
+    }                                                                                            \
+    return PyUnpackFloatSequence<T>(object_);                                                    \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_FLOAT, FLOATING_TYPE_SEQ)
@@ -154,11 +160,13 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kUINT32_LIST:
     case kINT64_LIST:
     case kUINT64_LIST:
-    case kBOOL_LIST: return PyLongSequenceCheck(object_);
+    case kBOOL_LIST: return PyLongSequenceCheck(object_) || (size_ > 0 && PyLong_Check(object_));
     case kFLOAT:
     case kDOUBLE: return PyFloat_Check(object_) || PyLong_Check(object_);
     case kFLOAT_LIST:
-    case kDOUBLE_LIST: return PyFloatSquenceCheck(object_);
+    case kDOUBLE_LIST:
+      return PyFloatSquenceCheck(object_)
+             || (size_ > 0 && (PyFloat_Check(object_) || PyLong_Check(object_)));
     case kSTRING: return PyStringCheck(object_);
     case kSTRING_LIST: return PyStringSequenceCheck(object_);
     case kSCALAR: return PyScalarCheck(object_);
