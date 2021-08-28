@@ -270,7 +270,7 @@ def pad(
         # https://github.com/pytorch/pytorch/issues/40763
         need_cast = True
         img = img.to(flow.float32)
-    img = flow.F.pad(img, pad=p, mode=padding_mode, value=float(fill))
+    img = flow._C.pad(img, pad=p, mode=padding_mode, value=float(fill))
 
     if need_squeeze:
         img = img.squeeze(dim=0)

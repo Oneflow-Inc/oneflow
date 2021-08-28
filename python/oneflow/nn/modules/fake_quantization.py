@@ -102,7 +102,7 @@ class FakeQuantization(Module):
         self.quantization_scheme = quantization_scheme
 
     def forward(self, input, scale, zero_point):
-        return flow.F.fake_quantization(
+        return flow._C.fake_quantization(
             input,
             scale,
             zero_point,
