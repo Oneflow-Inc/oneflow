@@ -46,7 +46,7 @@ def exp_op(x):
         tensor([ 2.7183,  7.3891, 20.0855], dtype=oneflow.float32)
 
     """
-    return flow.F.exp(x)
+    return flow._C.exp(x)
 
 
 if __name__ == "__main__":

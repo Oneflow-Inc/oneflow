@@ -161,7 +161,7 @@ class _BatchNorm(_NormBase):
                 is_training = True
             else:
                 is_training = (self.running_mean is None) and (self.running_var is None)
-            return flow.F.normalization(
+            return flow._C.normalization(
                 x,
                 self.running_mean
                 if not self.training or self.track_running_stats
