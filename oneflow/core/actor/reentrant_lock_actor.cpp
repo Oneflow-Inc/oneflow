@@ -46,11 +46,11 @@ class ReentrantLockActor final : public Actor {
   const std::string& Ibn4RegstDescId(int64_t id) const;
 
   RegstSlot consumed_rs_;
-  int64_t cur_processed_regst_desc_id_;
+  int64_t cur_processed_regst_desc_id_{};
   HashMap<int64_t, std::string> regst_desc_id2ibn_;
   ReentrantLockStatus* reentrant_lock_status_;
-  int64_t eord_regst_desc_id_;
-  int64_t act_id_;
+  int64_t eord_regst_desc_id_{};
+  int64_t act_id_{};
 };
 
 void ReentrantLockActor::VirtualActorInit(const TaskProto& task_proto) {
