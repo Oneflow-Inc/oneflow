@@ -135,7 +135,7 @@ def _scatter_nd_op(index, update, shape):
                dtype=oneflow.float32)
 
     """
-    return flow.F.scatternd(index, update, shape)
+    return flow._C.scatternd(index, update, shape)
 
 
 if __name__ == "__main__":
