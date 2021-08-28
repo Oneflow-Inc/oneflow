@@ -372,18 +372,20 @@ def skip_unless_2n4d():
 
 
 class CondSkipChecker(doctest.OutputChecker):
-    def __init__(self, flag):
-        self._check_flag = flag
+    def __init__(self, check_flags):
+        self._check_flags = check_flags
     def check_output(self, want, got, optionflags):
-        if self._check_flag & optionflags and oneflow.distributed.get_local_rank() == 0:
+        target_rank_list = [bool(flag & optionflags) for flag in self._check_flags]
+        if any(target_rank_list) and target_rank_list.index(True) == oneflow.distributed.get_rank():
             return super(CondSkipChecker, self).check_output(want, got, optionflags)
         else:
             return True
 
 
-def check_rank0_docstr(module):
-    ONLY_CHECK_RANK_0 = doctest.register_optionflag('ONLY_CHECK_RANK_0')
+def check_multi_rank_docstr(module):
+    # supply customized flag ONLY_CHECK_RANK_{x} for docstr
+    check_flags = [doctest.register_optionflag(f'ONLY_CHECK_RANK_{i}') for i in range(oneflow.distributed.get_world_size())]
     finder = doctest.DocTestFinder()
-    runner = doctest.DebugRunner(CondSkipChecker(ONLY_CHECK_RANK_0))
+    runner = doctest.DebugRunner(CondSkipChecker(check_flags))
     for test in finder.find(module, module.__name__):
         runner.run(test)

@@ -32,13 +32,16 @@ def all_reduce(tensor):
 
     .. code-block:: python
 
-        >>> # We have 2 process groups, 2 ranks.
+        >>> # We have 1 process groups, 2 ranks.
         >>> import oneflow as flow
 
         >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.distributed.get_local_rank()
         >>> input # doctest: +ONLY_CHECK_RANK_0
         tensor([[1, 2],
                 [3, 4]], device='cuda:0', dtype=oneflow.int64)
+        >>> input # doctest: +ONLY_CHECK_RANK_1
+        tensor([[2, 3],
+                [4, 5]], device='cuda:1', dtype=oneflow.int64)
         >>> out = flow.comm.all_reduce(input)
         >>> out  # doctest: +ONLY_CHECK_RANK_0
         tensor([[3, 5],
