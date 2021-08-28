@@ -35,7 +35,7 @@ def all_reduce(tensor):
         >>> # We have 1 process groups, 2 ranks.
         >>> import oneflow as flow
 
-        >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.distributed.get_local_rank()
+        >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_local_rank()
         >>> input # doctest: +ONLY_CHECK_RANK_0
         tensor([[1, 2],
                 [3, 4]], device='cuda:0', dtype=oneflow.int64)
@@ -48,14 +48,14 @@ def all_reduce(tensor):
                 [7, 9]], device='cuda:0', dtype=oneflow.int64)
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
-    assert tensor.device.index == flow.framework.distribute.get_local_rank()
+    assert tensor.device.index == flow.env.get_local_rank()
     assert tensor.is_local
     placement = None
     machine_device_ids = {}
     nproc_per_node = int(
-        flow.distributed.get_world_size() / flow.distributed.get_node_size()
+        flow.env.get_world_size() / flow.env.get_node_size()
     )
-    for node_rank in range(flow.distributed.get_node_size()):
+    for node_rank in range(flow.env.get_node_size()):
         machine_device_ids[node_rank] = range(nproc_per_node)
     placement = flow.placement(str(tensor.device).split(":")[0], machine_device_ids)
 

@@ -19,38 +19,6 @@ from contextlib import contextmanager
 import oneflow._oneflow_internal
 
 
-def get_local_rank():
-    return oneflow._oneflow_internal.GetLocalRank()
-
-
-def get_rank():
-    """Returns the rank of current process group.
-
-    Returns:
-        The rank of the process group.
-
-    """
-    return oneflow._oneflow_internal.GetRank()
-
-
-def get_world_size():
-    """Returns the number of processes in the current process group.
-
-    Returns:
-        The world size of the process group.
-
-    """
-    return oneflow._oneflow_internal.GetWorldSize()
-
-
-def get_node_size():
-    return oneflow._oneflow_internal.GetNodeSize()
-
-
-def is_multi_client():
-    return oneflow._oneflow_internal.IsMultiClient()
-
-
 def split_sbp(axis: int) -> oneflow._oneflow_internal.sbp.sbp:
     """Generate a split scheme in which op will be splitted at `axis`.
 

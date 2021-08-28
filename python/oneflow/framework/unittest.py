@@ -376,7 +376,7 @@ class CondSkipChecker(doctest.OutputChecker):
         self._check_flags = check_flags
     def check_output(self, want, got, optionflags):
         target_rank_list = [bool(flag & optionflags) for flag in self._check_flags]
-        if any(target_rank_list) and target_rank_list.index(True) == oneflow.distributed.get_rank():
+        if any(target_rank_list) and target_rank_list.index(True) == oneflow.env.get_rank():
             return super(CondSkipChecker, self).check_output(want, got, optionflags)
         else:
             return True
@@ -384,7 +384,7 @@ class CondSkipChecker(doctest.OutputChecker):
 
 def check_multi_rank_docstr(module):
     # supply customized flag ONLY_CHECK_RANK_{x} for docstr
-    check_flags = [doctest.register_optionflag(f'ONLY_CHECK_RANK_{i}') for i in range(oneflow.distributed.get_world_size())]
+    check_flags = [doctest.register_optionflag(f'ONLY_CHECK_RANK_{i}') for i in range(oneflow.env.get_world_size())]
     finder = doctest.DocTestFinder()
     runner = doctest.DebugRunner(CondSkipChecker(check_flags))
     for test in finder.find(module, module.__name__):
