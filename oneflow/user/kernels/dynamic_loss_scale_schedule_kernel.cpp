@@ -31,7 +31,10 @@ class DynamicLossScaleScheduleCpuKernel final : public user_op::OpKernel {
         ctx->Tensor4ArgNameAndIndex("good_step_counter", 0)->mut_dptr<int64_t>();
     const auto increment_period = ctx->Attr<int64_t>("increment_period");
     const auto multiplier = ctx->Attr<float>("multiplier");
-    if (*count_not_finite == 0) {
+    if (*loss_scale == 0) {
+      LOG(INFO) << "Hack init loss_scale";
+      *loss_scale = static_cast<float>(1 << 30);
+    } else if (*count_not_finite == 0) {
       int64_t cur_good_step_counter = *good_step_counter + 1;
       if (cur_good_step_counter >= increment_period) {
         const double old_loss_scale = *loss_scale;
