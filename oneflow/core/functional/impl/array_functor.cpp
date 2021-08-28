@@ -1566,6 +1566,41 @@ class SplitFunctor {
   }
 };
 
+class SplitLikeFunctor {
+ public:
+  SplitLikeFunctor() {
+    ops_.resize(kMaxInputCount);
+    for (int n = 1; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("split_like")
+                               .Input("in")
+                               .Input("like", n + 1)
+                               .Output("out", n + 1)
+                               .Build());
+    }
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
+                                const int64_t& axis) const {
+    CHECK_GE_OR_RETURN(like.size(), 2);
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    TensorTuple outputs(like.size());
+    for (int i = 0; i < like.size(); i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < like.size() ? kMaxInputCount : like.size() - i;
+      TensorTuple partial_inputs(size + 1);
+      partial_inputs[0] = x;
+      for (int j = 0; j < size; ++j) { partial_inputs[j + 1] = like[i + j]; }
+      const auto& partial_outputs =
+          JUST(OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(size - 1), partial_inputs, attrs));
+      for (int j = 0; j < size; ++j) { outputs[i + j] = partial_outputs->at(j); }
+    }
+
+    return outputs;
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
+};
+
 class SplitWithSizeFunctor {
  public:
   SplitWithSizeFunctor() {}
@@ -1667,6 +1702,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
+  m.add_functor<impl::SplitLikeFunctor>("SplitLike");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
 };
 

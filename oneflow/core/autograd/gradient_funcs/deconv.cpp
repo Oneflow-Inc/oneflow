@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/user_op_conf_trait.h"
 
 namespace oneflow {
 namespace one {
@@ -37,12 +36,12 @@ class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
                     TensorTuple* in_grads) const override;
 
  private:
-  std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
-  std::shared_ptr<std::string> data_format_;
-  std::shared_ptr<std::vector<int32_t>> padding_before_;
-  std::shared_ptr<std::vector<int32_t>> kernel_size_;
-  std::shared_ptr<std::vector<int32_t>> strides_;
-  std::shared_ptr<std::vector<int32_t>> dilation_rate_;
+  AttrMap base_attrs_;
+  std::string data_format_;
+  std::vector<int32_t> padding_before_;
+  std::vector<int32_t> kernel_size_;
+  std::vector<int32_t> strides_;
+  std::vector<int32_t> dilation_rate_;
 
   std::shared_ptr<OpExpr> activation_grad_op_;
   std::shared_ptr<OpExpr> weight_grad_op_;
@@ -51,23 +50,22 @@ class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
 Maybe<void> DeConvolutionNd::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  const std::string& op_name = fw_op_expr->op_name();
-  op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
 
-  data_format_ = JUST(op_trait_->GetAttr<std::string>("data_format"));
-  padding_before_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("padding_before"));
-  kernel_size_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("kernel_size"));
-  strides_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("strides"));
-  dilation_rate_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("dilation_rate"));
-  int32_t ndims = kernel_size_->size();
-  CHECK_EQ_OR_RETURN(ndims, strides_->size());
-  CHECK_EQ_OR_RETURN(ndims, dilation_rate_->size());
-  // int32_t filters = JUST(op_trait_->GetAttr<int32_t>("filters"));
+  data_format_ = JUST(base_attrs_.GetAttr<std::string>("data_format"));
+  padding_before_ = JUST(base_attrs_.GetAttr<std::vector<int32_t>>("padding_before"));
+  kernel_size_ = JUST(base_attrs_.GetAttr<std::vector<int32_t>>("kernel_size"));
+  strides_ = JUST(base_attrs_.GetAttr<std::vector<int32_t>>("strides"));
+  dilation_rate_ = JUST(base_attrs_.GetAttr<std::vector<int32_t>>("dilation_rate"));
+  int32_t ndims = kernel_size_.size();
+  CHECK_EQ_OR_RETURN(ndims, strides_.size());
+  CHECK_EQ_OR_RETURN(ndims, dilation_rate_.size());
+  // int32_t filters = JUST(base_attrs_.GetAttr<int32_t>("filters"));
   activation_grad_op_ =
-      JUST(op_expr_helper::ConvNdOp(/*filters=1*/ 1, *kernel_size_, *strides_, *padding_before_,
-                                    *dilation_rate_, /*groups=*/1, *data_format_));
+      JUST(op_expr_helper::ConvNdOp(/*filters=1*/ 1, kernel_size_, strides_, padding_before_,
+                                    dilation_rate_, /*groups=*/1, data_format_));
   weight_grad_op_ = JUST(op_expr_helper::ConvNdFilterGradOp(
-      *kernel_size_, *strides_, *padding_before_, *dilation_rate_, /*groups=*/1, *data_format_));
+      kernel_size_, strides_, padding_before_, dilation_rate_, /*groups=*/1, data_format_));
   return Maybe<void>::Ok();
 }
 

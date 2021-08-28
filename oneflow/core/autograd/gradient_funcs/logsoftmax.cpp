@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/user_op_conf_trait.h"
 
 namespace oneflow {
 namespace one {
