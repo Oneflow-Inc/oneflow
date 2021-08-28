@@ -72,6 +72,9 @@ class Optimizer(object):
         raise NotImplementedError()
 
     def load_state_dict(self, state_dict) -> None:
+        r"""
+        Load the state of the optimizer which is created by `state_dict` function.
+        """
         self._state = state_dict["state"]
         param_group_options = state_dict["param_group_options"]
         if len(param_group_options) != len(self.param_groups):
@@ -93,7 +96,7 @@ class Optimizer(object):
 
         * state - a dict holding current optimization state. Its content
           differs between optimizer classes.
-        * param_group_options - a dict containing all parameter group options
+        * param_group_options - a dict containing all parameter group options.
         """
 
         param_group_options = [group._options for group in self.param_groups]
