@@ -504,7 +504,7 @@ void Actor::AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4RegstDescId) 
           if (blob_info_it == ek.bn_in_op2blob_info.cend()) { return nullptr; }
           const BlobInfo& info = blob_info_it->second;
           if (info.regst_desc_id == -1) { return nullptr; }
-          Regst* regst;
+          Regst* regst = nullptr;
           if (info.rs != nullptr) {
             regst = info.rs->Front(info.regst_desc_id);
           } else {
