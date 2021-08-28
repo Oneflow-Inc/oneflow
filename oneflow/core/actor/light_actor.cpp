@@ -205,7 +205,7 @@ class LightActor : public ActorBase, public KernelContext {
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
-      kernel_info_[0]->kernel = ConstructKernel(job_desc, kernel_conf, device_ctx_.get());
+      kernel_info_[0]->kernel = ConstructKernel(job_desc, kernel_conf, this);
       kernel_info_[0]->kernel->CreateState(&kernel_info_[0]->state);
 #ifdef WITH_CUDA_GRAPHS
       auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx_.get());

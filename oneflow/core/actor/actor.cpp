@@ -80,8 +80,8 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = ConstructKernel(job_desc_, node.kernel_conf(), device_ctx_.get());
     ek.kernel_ctx.reset(new KernelContextImpl(device_ctx_.get()));
+    ek.kernel = ConstructKernel(job_desc_, node.kernel_conf(), ek.kernel_ctx.get());
     void* state = nullptr;
     ek.kernel->CreateState(&state);
     ek.kernel_ctx->set_state(state);

@@ -44,9 +44,9 @@ void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
       new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
 }
 
-void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
+void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, KernelContext* ctx) {
   InitBase(job_desc, kernel_conf);
-  VirtualKernelInit(device_ctx);
+  VirtualKernelInit(ctx->device_ctx());
 }
 
 void Kernel::CreateState(void** state) const { *state = nullptr; }
@@ -86,14 +86,14 @@ void Kernel::ForwardShape(const KernelContext* ctx) const {
 }
 
 std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf& conf,
-                                              DeviceCtx* device_ctx) {
+                                              KernelContext* kernel_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();
   CHECK_NE(op_type, OperatorConf::OpTypeCase::OP_TYPE_NOT_SET)
       << " ERROR! KernelConf: " << conf.DebugString() << " has NOT set op_type_case";
   Kernel* rptr = kernel_registration::CreateKernel(conf);
   if (rptr == nullptr) { rptr = NewObj<int32_t, Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
-  rptr->Init(job_desc, conf, device_ctx);
+  rptr->Init(job_desc, conf, kernel_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

@@ -81,7 +81,8 @@ void SystemOpKernelObject::ResetKernel(
     const ParallelDesc* parallel_desc) {
   KernelConf kernel_conf;
   op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf);
-  kernel_ = ConstructKernel(job_desc_.get(), kernel_conf, nullptr);
+  kernel_ctx_.reset(new SystemOpKernelContext(nullptr));
+  kernel_ = ConstructKernel(job_desc_.get(), kernel_conf, kernel_ctx_.get());
 }
 
 }  // namespace vm

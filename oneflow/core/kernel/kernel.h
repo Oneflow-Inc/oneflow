@@ -34,7 +34,7 @@ class Kernel {
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
-  void Init(const JobDesc* job_desc, const KernelConf&, DeviceCtx*);
+  void Init(const JobDesc* job_desc, const KernelConf& kernel_conf, KernelContext* ctx);
   virtual void CreateState(void** state) const;
   virtual void DestroyState(void* state) const;
   void Launch(const KernelContext* ctx) const;
@@ -77,8 +77,8 @@ class Kernel {
 #define REGISTER_KERNEL_CREATOR(k, f) \
   REGISTER_CLASS_CREATOR(int32_t, k, Kernel, f, const KernelConf&)
 
-std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf&,
-                                              DeviceCtx*);
+std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc,
+                                              const KernelConf& kernel_conf, KernelContext* ctx);
 
 }  // namespace oneflow
 

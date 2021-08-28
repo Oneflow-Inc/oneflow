@@ -44,33 +44,6 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-namespace {
-
-class KernelContextImpl : public KernelContext {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelContextImpl);
-  KernelContextImpl(DeviceCtx* device_ctx, std::function<Blob*(const std::string&)> BnInOp2Blob)
-      : device_ctx_(device_ctx), bn_in_op2blob_fn_(std::move(BnInOp2Blob)) {}
-  ~KernelContextImpl() = default;
-
-  DeviceCtx* device_ctx() const override { return device_ctx_; }
-
-  Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
-
-  void* state() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-
-  void set_state(void* state) override { UNIMPLEMENTED(); }
-
- private:
-  DeviceCtx* device_ctx_;
-  std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
-};
-
-}  // namespace
-
 class InitOpKernelObjectInstructionType final : public vm::InstructionType {
  public:
   InitOpKernelObjectInstructionType() = default;
@@ -401,8 +374,8 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
       }));
   std::function<Blob*(const std::string&)> Blob4BnInOp;
   JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
-  KernelContextImpl kernel_ctx(nullptr, Blob4BnInOp);
-  opkernel_obj->kernel().SystemForwardHeader(&kernel_ctx);
+  opkernel_obj->kernel_ctx()->UpdateBnInOp2BlobFn(Blob4BnInOp);
+  opkernel_obj->kernel().SystemForwardHeader(opkernel_obj->kernel_ctx());
   return Maybe<void>::Ok();
 }
 
@@ -441,8 +414,8 @@ Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction*
       }));
   std::function<Blob*(const std::string&)> Blob4BnInOp;
   JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
-  KernelContextImpl kernel_ctx(device_ctx, std::move(Blob4BnInOp));
-  opkernel_obj->kernel().SystemForwardDataContent(&kernel_ctx);
+  opkernel_obj->kernel_ctx()->UpdateBnInOp2BlobFn(Blob4BnInOp);
+  opkernel_obj->kernel().SystemForwardDataContent(opkernel_obj->kernel_ctx());
   return Maybe<void>::Ok();
 }
 
