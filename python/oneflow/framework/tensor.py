@@ -102,7 +102,11 @@ def _setitem(self, key, value):
     if self.is_consistent:
         if isinstance(value, (int, float)):
             value = flow._C.consistent_constant(
-                [1], value, dtype=self.dtype, placement=self.placement, sbp=flow.sbp.broadcast
+                [1],
+                value,
+                dtype=self.dtype,
+                placement=self.placement,
+                sbp=flow.sbp.broadcast,
             )
         else:
             if value.is_consistent:
