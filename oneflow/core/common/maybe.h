@@ -31,14 +31,14 @@ class Maybe;
 
 Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>&);
 namespace {
-std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>&); 
+std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>&);
 }
 
 class MaybeTrait {
  public:
-   virtual bool IsOk() const = 0;
-   virtual std::shared_ptr<cfg::ErrorProto> error() const = 0;
-   std::string GetSerializedError() const {
+  virtual bool IsOk() const = 0;
+  virtual std::shared_ptr<cfg::ErrorProto> error() const = 0;
+  std::string GetSerializedError() const {
     CHECK(!IsOk());
     return GetFormatedSerializedError(error());
   }
@@ -124,7 +124,8 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 };
 
 template<typename T>
-class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> final : public MaybeTrait {
+class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> final
+    : public MaybeTrait {
  public:
   Maybe(const Error& error) : error_or_scalar_(error.error_proto()) { CheckError(); }
   Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : error_or_scalar_(error) { CheckError(); }
@@ -293,12 +294,12 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
 #define TRY(...) __MaybeErrorStackCheckWrapper__(__VA_ARGS__)
 
 namespace {
-  std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& error_proto) {
-    const auto& maybe_error = TRY(FormatErrorStr(error_proto));
-    const auto& error_str = maybe_error.GetDataAndErrorProto(error_proto->DebugString());
-    return error_str.first;
-  }
+std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& error_proto) {
+  const auto& maybe_error = TRY(FormatErrorStr(error_proto));
+  const auto& error_str = maybe_error.GetDataAndErrorProto(error_proto->DebugString());
+  return error_str.first;
 }
+}  // namespace
 
 #define JUST(...)                                                                           \
   ({                                                                                        \

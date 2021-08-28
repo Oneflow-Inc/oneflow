@@ -578,7 +578,7 @@ struct LocalCallOpKernelUtil final {
 
   static inline Maybe<void> OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
                                             DeviceCtx* device_ctx, user_op::OpKernelState* state) {
-    CHECK_OR_RETURN( 1== 2) << "debug";
+    CHECK_OR_RETURN(1 == 2) << "debug";
     JUST(WithComputeContext(operand, device_ctx,
                             [&](user_op::KernelComputeContext* compute_ctx) -> Maybe<void> {
                               operand->user_opkernel()->Compute(compute_ctx, state);
