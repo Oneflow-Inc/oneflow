@@ -84,7 +84,7 @@ class Optimizer(object):
             )
         for group, option in zip(self.param_groups, param_group_options):
             group._options = deepcopy(option)
-            group._enable_grad_clip = (
+            group._enable_clip_grad = (
                 "clip_grad_max_norm" in option and "clip_grad_norm_type" in option
             )
 

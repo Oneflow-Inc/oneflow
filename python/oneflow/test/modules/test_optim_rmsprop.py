@@ -121,6 +121,7 @@ def compare_with_numpy_rmsprop_clip_grad(
     centered,
     clip_grad_max_norm,
     clip_grad_norm_type,
+    reload_state_step,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -159,6 +160,10 @@ def compare_with_numpy_rmsprop_clip_grad(
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
+            if i == reload_state_step:
+                state_dict = rmsprop.state_dict()
+                rmsprop = flow.optim.RMSprop([x])
+                rmsprop.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
@@ -223,6 +228,7 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict["centered"] = [False, True]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
+        arg_dict["reload_state_step"] = [5]  # save and load optim state
         for arg in GenArgList(arg_dict):
             compare_with_numpy_rmsprop_clip_grad(test_case, *arg)
 
