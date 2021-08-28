@@ -82,6 +82,7 @@ def is_user_op(node):
 class TestConvertDependency(flow.unittest.TestCase):
     def test_get_params(test_case):
         model_path = "alexnet_oneflow_model"
+        test_data = np.random.randn(64, 3, 11, 11)
         if not os.path.exists(model_path):
             os.system("mkdir {}".format(model_path))
             test_data.tofile(os.path.join(model_path, "m.classifier.1.weight", "out"))
@@ -90,8 +91,8 @@ class TestConvertDependency(flow.unittest.TestCase):
             layer = model[layer_name]
             layer_path = getattr(layer, "file_path", None)
             layer_has_meta_info = getattr(layer, "has_meta_info_", None)
-            test_case.assertEqual(layer_path, "m.classifier.1.bias")
-            test_case.assertEqual(layer_has_meta_info, True)
+            test_case.assertEqual(layer_path, "m.classifier.1.weight/out")
+            test_case.assertEqual(layer_has_meta_info, False)
             break
 
     def test_infos_of_nodes(test_case):
