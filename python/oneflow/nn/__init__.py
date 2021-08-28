@@ -62,10 +62,13 @@ from oneflow.nn.modules.dataset import (
     OFRecordImageDecoderRandomCrop,
     OFRecordImageGpuDecoderRandomCropResize,
     OFRecordRawDecoder,
+    OFRecordRawDecoder as OfrecordRawDecoder,
     OFRecordReader,
+    OFRecordReader as OfrecordReader,
     OFRecordBytesDecoder,
     GPTIndexedBinDataReader,
 )
+
 from oneflow.nn.modules.dropout import Dropout
 from oneflow.nn.modules.flatten import Flatten
 from oneflow.nn.modules.instancenorm import (
