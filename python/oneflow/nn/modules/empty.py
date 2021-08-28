@@ -86,9 +86,11 @@ def empty_op(
         assert sbp is None, "sbp: %s" % sbp
 
     if placement is not None:
-        tensor = flow._C.consistent_empty(shape, dtype, placement, sbp)
+        tensor = flow._C.consistent_empty(
+            shape, dtype=dtype, placement=placement, sbp=sbp
+        )
     else:
-        tensor = flow._C.empty(shape, dtype, device,)
+        tensor = flow._C.empty(shape, dtype=dtype, device=device)
     tensor.requires_grad_(requires_grad)
     return tensor
 

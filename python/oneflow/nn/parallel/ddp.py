@@ -30,9 +30,9 @@ def allreduce_fn(ddp_state_for_reversed_params, param):
             if ready:
                 ddp_state_for_reversed_params[cur_param][1] = True
                 if cur_param is param:
-                    ret = flow._C.all_reduce(grad)
+                    ret = flow._C.local_all_reduce(grad)
                 else:
-                    cur_param.grad = flow._C.all_reduce(cur_param.grad)
+                    cur_param.grad = flow._C.local_all_reduce(cur_param.grad)
             else:
                 break
         return ret
@@ -47,7 +47,7 @@ def DistributedDataParallel(
     with flow.no_grad():
         for x in module.parameters():
             requires_grad = x.requires_grad
-            x.copy_(flow._C.broadcast(x))
+            flow._C.broadcast(x, inplace=True)
             # TODO: fix the bug that x's requires_grad is discarded
             # after flow._C.broadcast
             x.requires_grad_(requires_grad)
@@ -76,7 +76,7 @@ def DistributedDataParallel(
         def pre_forward_hook(module, input):
             with flow.no_grad():
                 for x in module.buffers():
-                    x.copy_(flow._C.broadcast(x))
+                    flow._C.broadcast(x, inplace=True)
 
         module.register_forward_pre_hook(pre_forward_hook)
 
