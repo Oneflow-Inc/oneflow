@@ -20,6 +20,10 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
@@ -110,12 +114,72 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
+  JUST(vm::MultiClientSync());
+  OpGraph op_graph(job_);
+  JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
+    if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
+    const Operator& variable_op = op_node->op();
+    const LogicalBlobId& variable_lbi = variable_op.BnInOp2Lbi(variable_op.SoleObn());
+    const VariableOpConf& var_conf = variable_op.op_conf().variable_conf();
+    const std::string& var_name = variable_op.op_name();
+    CHECK_OR_RETURN(var_conf.has_initializer())
+        << " nn.Graph ONLY support variable op with initializer conf.";
+    if (var_conf.initializer().has_constant_conf()
+        || var_conf.initializer().has_constant_int_conf()) {
+      CHECK_OR_RETURN(variable_op_names_.find(var_name) == variable_op_names_.end())
+          << " ERROR! variable_op_name : " << var_name << " has been add in nn.Graph: " << name_;
+      // NOTE(chengcheng): handle constant variable created by job pass
+      Symbol<ParallelDesc> placement(op_node->parallel_desc());
+      const auto& nd_sbp = op_node->NdSbp4Lbi(variable_lbi);
+      const BlobDesc& blob_desc = op_node->LogicalBlobDesc4Lbi(variable_lbi);
+      DType dtype(blob_desc.data_type());
+      std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> sbp_tuple =
+          JUST(GetSbpList(Symbol<cfg::NdSbp>(nd_sbp)));
+      one::functional::Scalar value;
+      if (var_conf.initializer().has_constant_conf()) {
+        value = var_conf.initializer().constant_conf().value();
+      } else if (var_conf.initializer().has_constant_int_conf()) {
+        value = var_conf.initializer().constant_int_conf().value();
+      } else {
+        OF_UNIMPLEMENTED();
+      }
+      std::shared_ptr<one::Tensor> tensor = JUST(one::functional::ConsistentConstant(
+          blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
+      JUST(vm::MultiClientSync());
+      const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+      Blob* var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+      CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
+      CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
+
+      // NOTE(chengcheng): just for tensor lifetime hold by session context in graph lifetime valid.
+      Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
+          name_, tensor, var_name);
+
+      VLOG(2) << "Lazy nn.Graph name " << name_ << " op : \n"
+              << variable_op.op_conf().DebugString()
+              << " created in JobPass, nn.Graph will new EagerTensor for this variable.\n";
+    } else {
+      CHECK_OR_RETURN(var_conf.initializer().has_empty_conf())
+          << " nn.Graph ONLY support variable_op with empty conf,"
+          << " because variable is inited by eager tensor."
+          << " This error variable conf is : " << variable_op.op_conf().DebugString()
+          << " in nn.Graph " << name_;
+      CHECK_OR_RETURN(variable_op_names_.find(var_name) != variable_op_names_.end())
+          << " ERROR! cannot find variable_op_name : " << var_name << " in nn.Graph: " << name_;
+    }
+    return Maybe<void>::Ok();
+  }));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   CHECK_OR_RETURN(!runtime_inited_);
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
   job_ = job_ctx->job();
   // TODO(chengcheng): CHECK job valid for each rank.
+  JUST(CreateAndRegisterNewVariableOpInJobPass());
 
   // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.
   if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
