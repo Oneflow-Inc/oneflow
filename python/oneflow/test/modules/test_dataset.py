@@ -35,7 +35,7 @@ class TestOFRecordModule(flow.unittest.TestCase):
         output_layout = "NCHW"
         rgb_mean = [123.68, 116.779, 103.939]
         rgb_std = [58.393, 57.12, 57.375]
-        record_reader = flow.nn.OfrecordReader(
+        record_reader = flow.nn.OFRecordReader(
             "/dataset/imagenette/ofrecord",
             batch_size=batch_size,
             data_part_num=1,
@@ -45,7 +45,7 @@ class TestOFRecordModule(flow.unittest.TestCase):
         record_image_decoder = flow.nn.OFRecordImageDecoder(
             "encoded", color_space=color_space
         )
-        record_label_decoder = flow.nn.OfrecordRawDecoder(
+        record_label_decoder = flow.nn.OFRecordRawDecoder(
             "class/label", shape=(), dtype=flow.int32
         )
         resize = flow.nn.image.Resize(
@@ -281,7 +281,7 @@ class TestCocoReader(flow.unittest.TestCase):
 class TestOFRecordBytesDecoder(flow.unittest.TestCase):
     def test_OFRecordBytesDecoder(test_case):
         batch_size = 16
-        record_reader = flow.nn.OfrecordReader(
+        record_reader = flow.nn.OFRecordReader(
             "/dataset/imagenette/ofrecord",
             batch_size=batch_size,
             part_name_suffix_length=5,
