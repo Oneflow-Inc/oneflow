@@ -1,7 +1,7 @@
-oneflow.nn.Module
+oneflow.nn.Graph
 ================================================
-Module class for building neural networks
+Graph class for building neural networks
 ---------------------------------------------------
 .. currentmodule:: oneflow.nn
-.. autoclass:: oneflow.nn.Module
+.. autoclass:: oneflow.nn.Graph
     :members:
