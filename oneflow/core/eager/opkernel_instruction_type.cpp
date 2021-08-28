@@ -62,7 +62,7 @@ class KernelContextImpl : public KernelContext {
     return nullptr;
   }
 
-  void set_state() override { UNIMPLEMENTED(); }
+  void set_state(void* state) override { UNIMPLEMENTED(); }
 
  private:
   DeviceCtx* device_ctx_;
