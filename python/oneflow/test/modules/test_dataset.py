@@ -103,7 +103,7 @@ class TestConsistentOFRecordModule(flow.unittest.TestCase):
             part_name_suffix_length=5,
             shuffle_after_epoch=False,
             placement=flow.placement("cpu", {0: [0]}),
-            sbp=[flow.sbp.split(0)]
+            sbp=[flow.sbp.split(0)],
         )
         record_image_decoder = flow.nn.OFRecordImageDecoder(
             "encoded", color_space=color_space
@@ -117,7 +117,7 @@ class TestConsistentOFRecordModule(flow.unittest.TestCase):
         flip = flow.nn.CoinFlip(
             batch_size=batch_size,
             placement=flow.placement("cpu", {0: [0]}),
-            sbp=[flow.sbp.split(0)]
+            sbp=[flow.sbp.split(0)],
         )
         crop_mirror_normal = flow.nn.CropMirrorNormalize(
             color_space=color_space,
