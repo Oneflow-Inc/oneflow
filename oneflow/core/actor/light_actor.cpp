@@ -500,6 +500,11 @@ class LightActor : public ActorBase, public KernelContext {
     }
   }
 
+  void set_state(void* state) override {
+    CHECK(exec_kernel);
+    kernel_info_[0]->state = state;
+  }
+
   RegstIndex regst_desc_id_index_;
   StateContainer index2state_;
   IndexType total_reading_cnt_;

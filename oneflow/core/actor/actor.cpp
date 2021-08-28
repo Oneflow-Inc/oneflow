@@ -26,7 +26,7 @@ namespace {
 class KernelContextImpl : public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelContextImpl);
-  KernelContextImpl(DeviceCtx* device_ctx, void* state) : device_ctx_(device_ctx), state_(state) {}
+  explicit KernelContextImpl(DeviceCtx* device_ctx) : device_ctx_(device_ctx), state_(nullptr) {}
   ~KernelContextImpl() = default;
 
   DeviceCtx* device_ctx() const override { return device_ctx_; }
@@ -34,6 +34,11 @@ class KernelContextImpl : public KernelContext {
   Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
 
   void* state() const override { return state_; }
+
+  void set_state(void* state) override {
+    CHECK(state_ != nullptr);
+    state_ = state;
+  }
 
   void UpdateBnInOp2BlobFn(std::function<Blob*(const std::string&)> fn) {
     bn_in_op2blob_fn_ = std::move(fn);
@@ -76,9 +81,10 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel = ConstructKernel(job_desc_, node.kernel_conf(), device_ctx_.get());
+    ek.kernel_ctx.reset(new KernelContextImpl(device_ctx_.get()));
     void* state = nullptr;
     ek.kernel->CreateState(&state);
-    ek.kernel_ctx.reset(new KernelContextImpl(device_ctx_.get(), state));
+    ek.kernel_ctx->set_state(state);
     exec_kernel_vec_.push_back(std::move(ek));
   }
 

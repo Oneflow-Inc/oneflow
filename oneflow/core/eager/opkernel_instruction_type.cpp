@@ -62,6 +62,8 @@ class KernelContextImpl : public KernelContext {
     return nullptr;
   }
 
+  void set_state() override { UNIMPLEMENTED(); }
+
  private:
   DeviceCtx* device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;

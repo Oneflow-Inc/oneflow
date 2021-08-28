@@ -30,6 +30,7 @@ class KernelContext {
   virtual DeviceCtx* device_ctx() const = 0;
   virtual Blob* BnInOp2Blob(const std::string& bn) const = 0;
   virtual void* state() const = 0;
+  virtual void set_state(void* state) = 0;
 };
 
 }  // namespace oneflow
