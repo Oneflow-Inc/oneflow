@@ -18,6 +18,7 @@ import os
 import re
 import unittest
 
+import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from alexnet_model import alexnet
@@ -80,13 +81,11 @@ def is_user_op(node):
 @flow.unittest.skip_unless_1n1d()
 class TestConvertDependency(flow.unittest.TestCase):
     def test_get_params(test_case):
-        if not os.path.exists("alexnet_oneflow_model.tar.gz"):
-            os.system(
-                "wget https://oneflow-public.oss-cn-beijing.aliyuncs.com/model_zoo/cv/classification/alexnet/alexnet_oneflow_model.tar.gz"
-            )
-            os.system("tar zxf alexnet_oneflow_model.tar.gz")
-        model_dir_path = "alexnet_oneflow_model"
-        model = flow.load(model_dir_path)
+        model_path = "alexnet_oneflow_model"
+        if not os.path.exists(model_path):
+            os.system("mkdir {}".format(model_path))
+            test_data.tofile(os.path.join(model_path, "m.classifier.1.weight", "out"))
+        model = flow.load(model_path)
         for layer_name in model:
             layer = model[layer_name]
             layer_path = getattr(layer, "file_path", None)
