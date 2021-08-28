@@ -35,7 +35,7 @@ class SliceBoxingKernel : public Kernel {
   const std::vector<std::shared_ptr<TensorSliceCopier>>& tensor_slice_copier_vec() const;
 
  private:
-  void VirtualKernelInit() override;
+  void VirtualKernelInit(KernelContext* ctx) override;
 
   std::vector<std::shared_ptr<TensorSliceCopier>> tensor_slice_copier_vec_;
   std::unique_ptr<MemoryCopier> memory_copier_;
@@ -66,7 +66,7 @@ class SliceBoxingAddKernel final : public SliceBoxingKernel<device_type, T> {
 };
 
 template<DeviceType device_type, typename T>
-void SliceBoxingKernel<device_type, T>::VirtualKernelInit() {
+void SliceBoxingKernel<device_type, T>::VirtualKernelInit(KernelContext* ctx) {
   memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   const SliceBoxingConf& conf = GetCustomizedBoxingConf();
   const TensorSliceView out_slice(conf.out_slice());

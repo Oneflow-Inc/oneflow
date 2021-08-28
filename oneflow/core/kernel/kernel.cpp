@@ -46,7 +46,7 @@ void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
 
 void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, KernelContext* ctx) {
   InitBase(job_desc, kernel_conf);
-  VirtualKernelInit(ctx->device_ctx());
+  VirtualKernelInit(ctx);
 }
 
 void Kernel::CreateState(void** state) const { *state = nullptr; }

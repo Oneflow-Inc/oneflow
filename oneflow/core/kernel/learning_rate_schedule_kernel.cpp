@@ -27,7 +27,7 @@ class LearningRateScheduleKernel final : public Kernel {
   ~LearningRateScheduleKernel() override = default;
 
  private:
-  void VirtualKernelInit() override {
+  void VirtualKernelInit(KernelContext* ctx) override {
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";

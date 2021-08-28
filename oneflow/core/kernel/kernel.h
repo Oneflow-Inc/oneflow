@@ -57,8 +57,7 @@ class Kernel {
  protected:
   Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
   void InitBase(const JobDesc* job_desc, const KernelConf&);
-  virtual void VirtualKernelInit(DeviceCtx* device_ctx) { VirtualKernelInit(); }
-  virtual void VirtualKernelInit() {}
+  virtual void VirtualKernelInit(KernelContext* ctx) {}
 
   virtual void ForwardHeader(const KernelContext* ctx) const;
   virtual void ForwardShape(const KernelContext* ctx) const;

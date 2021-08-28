@@ -43,7 +43,7 @@ class UserKernel final : public Kernel {
   bool IsCudaGraphSupported() const;
 
  private:
-  void VirtualKernelInit(DeviceCtx* device_ctx) override;
+  void VirtualKernelInit(KernelContext* ctx) override;
 
   void ForwardDataContent(const KernelContext* ctx) const override;
   void ForwardShape(const KernelContext* ctx) const override;

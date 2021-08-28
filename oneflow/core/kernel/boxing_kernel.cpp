@@ -30,7 +30,7 @@ class BoxingKernel final : public Kernel {
   ~BoxingKernel() = default;
 
  private:
-  void VirtualKernelInit() override;
+  void VirtualKernelInit(KernelContext* ctx) override;
   void ForwardDataContent(const KernelContext* ctx) const override;
 
   PbRpf<std::string> ibn_0_;
@@ -205,7 +205,7 @@ void ConcatSplitDataContent(DeviceCtx* ctx,
 }  // namespace
 
 template<typename T>
-void BoxingKernel<T>::VirtualKernelInit() {
+void BoxingKernel<T>::VirtualKernelInit(KernelContext* ctx) {
   const std::string& ibn_0 = op_attribute().input_bns(0);
   const std::string& obn_0 = op_attribute().output_bns(0);
   ibn_0_ = ConstructPbRpf(ibn_0);

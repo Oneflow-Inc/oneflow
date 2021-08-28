@@ -199,7 +199,7 @@ class ModelInitV2Kernel final : public Kernel {
   ~ModelInitV2Kernel() override = default;
 
  private:
-  void VirtualKernelInit() override {
+  void VirtualKernelInit(KernelContext* ctx) override {
     const ParallelContext& parallel_ctx = this->kernel_conf().parallel_ctx();
     const auto& hierarchy =
         ParallelDesc(
@@ -279,7 +279,7 @@ class ModelLoadV2Kernel final : public Kernel {
   ~ModelLoadV2Kernel() override = default;
 
  private:
-  void VirtualKernelInit() override {
+  void VirtualKernelInit(KernelContext* ctx) override {
     const auto& hierarchy =
         ParallelDesc(
             this->kernel_conf().op_attribute().parallel_conf_signature().op_parallel_conf())
@@ -326,7 +326,7 @@ class ModelSaveV2Kernel final : public Kernel {
   ~ModelSaveV2Kernel() override = default;
 
  private:
-  void VirtualKernelInit() override {
+  void VirtualKernelInit(KernelContext* ctx) override {
     const auto& hierarchy =
         ParallelDesc(
             this->kernel_conf().op_attribute().parallel_conf_signature().op_parallel_conf())

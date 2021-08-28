@@ -29,7 +29,7 @@ class DecodeRandomKernel final : public Kernel {
   void ForwardDataContent(const KernelContext* ctx) const override;
 
  private:
-  void VirtualKernelInit() override;
+  void VirtualKernelInit(KernelContext* ctx) override;
   uint32_t GenNextRandomSeed() const;
 
   std::unique_ptr<std::mt19937> gen_;
@@ -58,7 +58,7 @@ void RandomFillBlob(DeviceCtx* ctx, DeviceType device_type, const InitializerCon
 }  // namespace
 
 template<DeviceType device_type>
-void DecodeRandomKernel<device_type>::VirtualKernelInit() {
+void DecodeRandomKernel<device_type>::VirtualKernelInit(KernelContext* ctx) {
   gen_.reset(new std::mt19937(this->kernel_conf().decode_random_conf().random_seed()));
   dis_.reset(new std::uniform_int_distribution<uint32_t>());
   is_init_ = false;

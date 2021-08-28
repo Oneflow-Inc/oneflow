@@ -681,10 +681,10 @@ bool UserKernel::IsCudaGraphSupported() const {
 #endif  // WITH_CUDA_GRAPHS
 }
 
-void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {
-  InitUserKernel(device_ctx);
+void UserKernel::VirtualKernelInit(KernelContext* ctx) {
+  InitUserKernel(ctx->device_ctx());
   CHECK(opkernel_state_.get() == nullptr);
-  opkernel_state_ = CreateOpKernelState(device_ctx);
+  opkernel_state_ = CreateOpKernelState(ctx->device_ctx());
 }
 
 void UserKernel::ForwardDataContent(const KernelContext* ctx) const {
