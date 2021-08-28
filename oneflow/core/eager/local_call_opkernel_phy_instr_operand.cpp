@@ -38,14 +38,14 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
   if (opt_transport_dep_object.has_value()) {
     DoEach(nullptr, CHECK_JUST(opt_transport_dep_object.value())->mut_mirrored_object());
   }
-  auto* device_compute_dep_object = device->mut_compute_local_dep_object();
+  auto* device_schedule_dep_object = device->mut_schedule_local_dep_object();
   if (device->type() == "async_launched_nccl") {
     // Sequantialize nccl instructions to avoid deadlock
-    DoEach(nullptr, device_compute_dep_object->mut_mirrored_object());
+    DoEach(nullptr, device_schedule_dep_object->mut_mirrored_object());
   } else {
     // Sequantialize instructions to avoid explosive memory allocation of source ops
     if (dev_vm_dep_object_consume_mode() == one::DevVmDepObjectConsumeMode::MUTABLE) {
-      DoEach(nullptr, device_compute_dep_object->mut_mirrored_object());
+      DoEach(nullptr, device_schedule_dep_object->mut_mirrored_object());
     }
   }
 

@@ -25,7 +25,7 @@ def sync_allreduce(x):
 
 
 def async_allreduce(x):
-    return flow.F.all_reduce(x)
+    return flow.F.local_all_reduce(x)
 
 
 @flow.unittest.skip_unless_1n4d()

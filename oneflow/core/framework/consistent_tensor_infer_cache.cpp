@@ -319,8 +319,8 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
         infer_args.attrs(), parallel_desc->device_tag(), GetInputTensorMeta,
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
-  auto* result =
-      new ConsistentTensorInferResult(user_op_expr.input_size(), user_op_expr.output_size());
+  auto result = std::make_unique<ConsistentTensorInferResult>(user_op_expr.input_size(),
+                                                              user_op_expr.output_size());
   auto* output_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
@@ -331,7 +331,7 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
   result->set_op_device(JUST(GetTensorDevice(parallel_desc)));
-  return std::shared_ptr<const ConsistentTensorInferResult>(result);
+  return std::shared_ptr<const ConsistentTensorInferResult>(std::move(result));
 }
 
 Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::GetOrInfer(

@@ -62,12 +62,13 @@ class Device final {
 
   static std::string Type4DeviceTag(const std::string& device_tag);
   Maybe<const Optional<std::string>&> GetSharedTransportDeviceType() const;
+  Maybe<const std::string&> GetSharedScheduleDeviceType() const;
 
   Maybe<const std::string&> local_call_instruction_name() const;
   const Optional<LocalDepObject*>& mut_transport_local_dep_object() const {
     return transport_local_dep_object_;
   }
-  LocalDepObject* mut_compute_local_dep_object() const { return compute_local_dep_object_; }
+  LocalDepObject* mut_schedule_local_dep_object() const { return schedule_local_dep_object_; }
   Maybe<size_t> instr_local_dep_object_pool_size() const;
 
  private:
@@ -79,7 +80,7 @@ class Device final {
   const size_t hash_value_;
   std::shared_ptr<MemoryCase> mem_case_;
   Optional<LocalDepObject*> transport_local_dep_object_;
-  LocalDepObject* compute_local_dep_object_;
+  LocalDepObject* schedule_local_dep_object_;
 };
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);
