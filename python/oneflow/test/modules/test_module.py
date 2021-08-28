@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import os
-import collections.abc
+import warnings
 import tempfile
 import unittest
 from itertools import repeat
@@ -190,7 +190,12 @@ class TestModule(flow.unittest.TestCase):
         state_dict = m.state_dict()
         with tempfile.TemporaryDirectory() as save_dir:
             flow.save(state_dict, save_dir)
-            loaded_state_dict = flow.load(save_dir)
+            # Creates a new file and test fault tolerance
+            with open(os.path.join(save_dir, "random_file"), "w") as fp:
+                fp.write("nothing")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                loaded_state_dict = flow.load(save_dir)
             m.load_state_dict(loaded_state_dict)
         res2 = m()
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
@@ -216,7 +221,7 @@ class TestModule(flow.unittest.TestCase):
 
             consistent_src_dst_rank = 0
             flow.save(state_dict, f, consistent_dst_rank=consistent_src_dst_rank)
-            rank = flow.framework.distribute.get_rank()
+            rank = flow.env.get_rank()
             if rank != consistent_src_dst_rank:
                 test_case.assertEqual(len(os.listdir(f)), 0)
 
