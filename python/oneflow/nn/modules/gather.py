@@ -65,7 +65,7 @@ def gather_op(input, index, dim=0, sparse_grad=False):
             assert (
                 input.shape[i] == index.shape[i]
             ), "Dimensions of input and index should be same except at dim"
-    return flow.F.dim_gather(input, index, dim=dim)
+    return flow._C.dim_gather(input, index, dim=dim)
 
 
 def gather_nd_op(input, index):
@@ -103,7 +103,7 @@ def gather_nd_op(input, index):
         tensor([3., 8.], dtype=oneflow.float32)
 
     """
-    return flow.F.gather_nd(input, index)
+    return flow._C.gather_nd(input, index)
 
 
 if __name__ == "__main__":
