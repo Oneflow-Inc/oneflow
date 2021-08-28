@@ -17,10 +17,12 @@ OneFlow API Reference
     functional
     module
     _C
+    graph
     linalg
     image
     optim
     utils
+    distributed
 
 
 
