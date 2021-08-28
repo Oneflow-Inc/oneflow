@@ -43,7 +43,7 @@ def all_reduce(tensor):
         tensor([[2, 3],
                 [4, 5]], device='cuda:1', dtype=oneflow.int64)
         >>> out = flow.comm.all_reduce(input)
-        >>> out  # doctest: +ONLY_CHECK_RANK_0
+        >>> out
         tensor([[3, 5],
                 [7, 9]], device='cuda:0', dtype=oneflow.int64)
     """
