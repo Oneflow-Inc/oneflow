@@ -295,15 +295,19 @@
   bind_python: False
 
 - name: "arange"
-  signature:
-    "Tensor (Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64,
-             Device device=None) => Arange"
+  signature: [
+    "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
+             Device device=None) => Arange",
+    "Tensor (Int64 end, *, DataType dtype=kInt64, Device device=None) => Arange2",
+  ]
   bind_python: True
 
 - name: "consistent_arange"
-  signature:
-    "Tensor (Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64,
-             Placement placement, SbpList sbp_tuple) => ConsistentArange"
+  signature: [
+    "Tensor (Int64 start, Int64 end, Int64 step=1, *, DataType dtype=kInt64,
+             Placement placement, SbpList sbp) => ConsistentArange",
+    "Tensor (Int64 end, *, DataType dtype=kInt64, Placement placement, SbpList sbp) => ConsistentArange2",
+  ]
   bind_python: True
 
 - name: "flatten"
@@ -327,19 +331,27 @@
   bind_python: True
 
 - name: "constant"
-  signature: "Tensor (Shape shape, Scalar value, DataType dtype, Device device=None) => Constant"
+  signature: [
+    "Tensor (Shape shape, Scalar value, *, DataType dtype, Device device=None) => Constant",
+  ]
   bind_python: True
 
 - name: "consistent_constant"
-  signature: "Tensor (Shape shape, Scalar value, DataType dtype, Placement placement, SbpList sbp_tuple) => ConsistentConstant"
+  signature: [
+    "Tensor (Shape shape, Scalar value, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentConstant",
+  ]
   bind_python: True
 
 - name: "empty"
-  signature: "Tensor (Shape shape, DataType dtype, Device device=None) => Empty"
+  signature: [
+    "Tensor (Shape shape, *, DataType dtype, Device device=None) => Empty",
+  ]
   bind_python: True
 
 - name: "consistent_empty"
-  signature: "Tensor (Shape shape, DataType dtype, Placement placement, SbpList sbp_tuple) => ConsistentEmpty"
+  signature: [
+    "Tensor (Shape shape, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentEmpty",
+  ]
   bind_python: True
 
 - name: "zeros_like"
@@ -351,8 +363,9 @@
   bind_python: True
 
 - name: "bernoulli"
-  signature:
-    "Tensor (Tensor x, DataType dtype=kFloat, Generator generator=None) => Bernoulli"
+  signature: [
+    "Tensor (Tensor x, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
+  ]
   bind_python: True
 
 - name: "concat"
@@ -1038,22 +1051,31 @@
   bind_python: False
 
 - name: "rand"
-  signature: "Tensor (Shape shape, DataType dtype=None, Device device=None, Generator generator=None) => Rand"
+  signature: [
+    "Tensor (Shape shape, *, DataType dtype=None, Device device=None,
+             Generator generator=None) => Rand",
+  ]
   bind_python: True
 
 - name: "consistent_rand"
-  signature: "Tensor (Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None,
-                      Generator generator=None) => ConsistentRand"
+  signature: [
+    "Tensor (Shape shape, *, Placement placement, SbpList sbp, DataType dtype=None,
+             Generator generator=None) => ConsistentRand",
+  ]
   bind_python: True
 
 - name: "randn"
-  signature: "Tensor (Shape shape, DataType dtype=None, Device device=None, 
-                      Generator generator=None) => RandN"
+  signature: [
+    "Tensor (Shape shape, *, DataType dtype=None, Device device=None, 
+             Generator generator=None) => RandN",
+  ]
   bind_python: True
 
 - name: "consistent_randn"
-  signature: "Tensor (Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None,
-                      Generator generator=None) => ConsistentRandN"
+  signature: [
+    "Tensor (Shape shape, *, Placement placement, SbpList sbp, DataType dtype=None,
+             Generator generator=None) => ConsistentRandN",
+  ]
   bind_python: True
 
 - name: "randint"
@@ -1094,7 +1116,15 @@
   bind_python: False
   
 - name: "randperm"
-  signature: "Tensor (Int32 n, Device device=None, Generator generator=None) => RandPerm"
+  signature: [
+    "Tensor (Int32 n, *, Device device=None, Generator generator=None) => RandPerm",
+  ]
+  bind_python: True
+
+- name: "consistent_randperm"
+  signature: [
+    "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None) => ConsistentRandPerm",
+  ]
   bind_python: True
 
 - name: "fused_self_attention"
@@ -1104,10 +1134,6 @@
 - name: "fused_self_attention_grad"
   signature: "Tensor (Tensor query_mul_key_grad, Tensor value_grad, Tensor hidden_states, Float alpha=1.0) => FusedSelfAttentionGrad"
   bind_python: False
-
-- name: "consistent_randperm"
-  signature: "Tensor (Int32 n,Placement placement, SbpList sbp_tuple, Generator generator=None) => ConsistentRandperm"
-  bind_python: True
 
 - name: "fused_scale_tril"
   signature: "Tensor (Tensor x, Int64 diagonal=0, Scalar fill_value=0, Scalar scale=1) => FusedScaleTril"
