@@ -327,9 +327,10 @@ jobs:
         run: |
           set -x
           docker rm -f ${container_name} || true
-      - name: Remove container
+      - name: Reverse conda init
         if: always()
         run: |
+          export PATH=$PATH:$CONDA/bin
           conda init --reverse
       - name: Save shared env
         run: |
