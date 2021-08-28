@@ -33,7 +33,7 @@ def compare_with_numpy_sgd(
     weight_decay,
     learning_rate,
     train_iters,
-    state_dict_step,
+    reload_state_step,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -65,7 +65,7 @@ def compare_with_numpy_sgd(
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
             # test state_dict/load_state_dict
-            if i == state_dict_step:
+            if i == reload_state_step:
                 state_dict = sgd.state_dict()
                 sgd = flow.optim.SGD([x])
                 sgd.load_state_dict(state_dict)
@@ -176,7 +176,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["train_iters"] = [10]
-        arg_dict["state_dict_step"] = [5]
+        arg_dict["reload_state_step"] = [5]  # save and load optim state
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd(test_case, **arg)
 

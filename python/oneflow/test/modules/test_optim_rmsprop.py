@@ -36,6 +36,7 @@ def compare_with_numpy_rmsprop(
     eps,
     weight_decay,
     centered,
+    reload_state_step,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -71,6 +72,10 @@ def compare_with_numpy_rmsprop(
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
+            if i == reload_state_step:
+                state_dict = rmsprop.state_dict()
+                rmsprop = flow.optim.RMSprop([x])
+                rmsprop.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
@@ -201,6 +206,7 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict["eps"] = [1e-08, 1e-05]
         arg_dict["weight_decay"] = [0.1, 0.99]
         arg_dict["centered"] = [False, True]
+        arg_dict["reload_state_step"] = [5]  # save and load optim state
         for arg in GenArgList(arg_dict):
             compare_with_numpy_rmsprop(test_case, *arg)
 

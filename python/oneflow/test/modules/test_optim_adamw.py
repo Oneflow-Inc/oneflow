@@ -26,7 +26,13 @@ from oneflow.nn.parameter import Parameter
 
 
 def compare_with_numpy_adamw(
-    test_case, device, x_shape, learning_rate, train_iters, weight_decay
+    test_case,
+    device,
+    x_shape,
+    learning_rate,
+    train_iters,
+    weight_decay,
+    reload_state_step,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -50,6 +56,10 @@ def compare_with_numpy_adamw(
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
+            if i == reload_state_step:
+                state_dict = adam.state_dict()
+                adam = flow.optim.AdamW([x])
+                adam.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
@@ -167,6 +177,7 @@ class TestAdamW(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
         arg_dict["weight_decay"] = [0.001, 0.0]
+        arg_dict["reload_state_step"] = [5]  # save and load optim state
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adamw(test_case, *arg)
 
