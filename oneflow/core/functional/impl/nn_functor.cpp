@@ -377,6 +377,46 @@ class SparseSoftmaxCrossEntropyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SoftmaxCrossEntropyFunctor {
+ public:
+  SoftmaxCrossEntropyFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softmax_cross_entropy")
+                         .Input("prediction")
+                         .Input("label")
+                         .Output("out")
+                         .Output("prob")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
+                           const std::shared_ptr<one::Tensor>& label) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftmaxCrossEntropyGradFunctor {
+ public:
+  SoftmaxCrossEntropyGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softmax_cross_entropy_grad")
+                         .Input("dy")
+                         .Input("label")
+                         .Input("prob")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& prob) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, label, prob});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SmoothL1LossFunctor {
  public:
   SmoothL1LossFunctor() {
@@ -462,7 +502,8 @@ class NormalizationFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
-    JUST(attrs.SetAttr<float>("momentum", momentum));
+    // convert torch momentum to tensorflow momentum
+    JUST(attrs.SetAttr<float>("momentum", 1.0 - momentum));
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << "Both moving_mean and moving_variance should be None or Tensor.";
@@ -953,6 +994,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
+  m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
+  m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
   m.add_functor<impl::NormalizationFunctor>("Normalization");

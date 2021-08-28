@@ -479,6 +479,14 @@
   signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropy"
   bind_python: True
 
+- name: "softmax_cross_entropy"
+  signature: "Tensor (Tensor logits, Tensor label) => SoftmaxCrossEntropy"
+  bind_python: True
+
+- name: "softmax_cross_entropy_grad"
+  signature: "Tensor (Tensor dy, Tensor label, Tensor prob) => SoftmaxCrossEntropyGrad"
+  bind_python: True
+
 - name: "smooth_l1_loss"
   signature: "Tensor (Tensor logits, Tensor label, Float beta) => SmoothL1Loss"
   bind_python: True
@@ -537,18 +545,18 @@
   bind_python: True
 
 - name: "adaptive_avg_pool1d"
-  signature:
-    "Tensor (Tensor x, Int64List output_size) => AdaptiveAvgPool1D"
+  signature: 
+    "Tensor (Tensor x, Int64List[1] output_size) => AdaptiveAvgPool1D"
   bind_python: True
 
 - name: "adaptive_avg_pool2d"
-  signature:
-    "Tensor (Tensor x, Int64List output_size) => AdaptiveAvgPool2D"
+  signature: 
+    "Tensor (Tensor x, Int64List[2] output_size) => AdaptiveAvgPool2D"
   bind_python: True
 
 - name: "adaptive_avg_pool3d"
-  signature:
-    "Tensor (Tensor x, Int64List output_size) => AdaptiveAvgPool3D"
+  signature: 
+    "Tensor (Tensor x, Int64List[3] output_size) => AdaptiveAvgPool3D"
   bind_python: True
 
 - name: "adaptive_pool_grad"
@@ -985,13 +993,25 @@
   signature: "Tensor (Tensor x) => ConsistentToLocal"
   bind_python: True
 
-- name: "all_reduce"
-  signature: "Tensor (Tensor x) => AllReduce"
+- name: "broadcast"
+  signature: "Tensor (Tensor x, *, Bool inplace=True) => Broadcast"
   bind_python: True
 
-- name: "broadcast"
-  signature: "Tensor (Tensor x) => Broadcast"
+- name: "local_all_reduce"
+  signature: "Tensor (Tensor x) => LocalAllReduce"
   bind_python: True
+
+- name: "consistent_all_reduce"
+  signature: "Tensor (Tensor x) => ConsistentAllReduce"
+  bind_python: False
+
+- name: "consistent_reduce_scatter"
+  signature: "Tensor (Tensor x, String op_type) => ConsistentReduceScatter"
+  bind_python: False
+
+- name: "consistent_all_gather"
+  signature: "Tensor (Tensor x) => ConsistentAllGather"
+  bind_python: False
 
 - name: "select_first"
   signature: "Tensor (TensorTuple inputs) => SelectFirst"
@@ -1036,19 +1056,27 @@
                       Generator generator=None) => ConsistentRandN"
   bind_python: True
 
+- name: "randint"
+  signature: "Tensor (Int64 low, Int64 high, Shape shape, DataType dtype=None, Device device=None, Generator generator=None)=> RandInt"
+  bind_python: True
+
+- name: "consistent_randint"
+  signature: "Tensor (Int64 low, Int64 high, Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None, Generator generator=None)=> ConsistentRandInt"
+  bind_python: True
+
 - name: "unfold"
   signature: "Tensor (Tensor x, String data_format=\"channels_first\", Int32List kernel_size, 
                             Int32List dilation_rate, Int32List padding, 
                             Int32List strides) => Unfold"
   bind_python: True
-  
+
 - name: "fold"
   signature: "Tensor (Tensor x, String data_format=\"channels_first\", 
                           Int32List output_size, Int32List kernel_size, 
                           Int32List dilation_rate, Int32List padding, 
                           Int32List strides) => Fold"
   bind_python: True
-  
+
 - name: "split"
   signature: "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split"
   bind_python: True
@@ -1066,7 +1094,7 @@
   bind_python: False
   
 - name: "randperm"
-  signature: "Tensor (Int32 n, Device device=None, Generator generator=None) => Randperm"
+  signature: "Tensor (Int32 n, Device device=None, Generator generator=None) => RandPerm"
   bind_python: True
 
 - name: "fused_self_attention"
