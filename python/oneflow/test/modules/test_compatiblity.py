@@ -16,6 +16,7 @@ limitations under the License.
 from oneflow.test_utils.oneflow_pytorch_compatiblity import *
 
 @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestApiCompatiblity(flow.unittest.TestCase):
     def test_alexnet_compatiblity(test_case):
         test_train_loss_oneflow_pytorch(
