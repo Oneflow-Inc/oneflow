@@ -72,10 +72,33 @@ class Optimizer(object):
         raise NotImplementedError()
 
     def load_state_dict(self, state_dict) -> None:
-        raise NotImplementedError()
+        self._state = state_dict["state"]
+        param_group_options = state_dict["param_group_options"]
+        if len(param_group_options) != len(self.param_groups):
+            raise RuntimeError(
+                "loaded state dict contains a parameter group "
+                "that doesn't match the size of optimizer's group"
+            )
+        for group, option in zip(self.param_groups, param_group_options):
+            group._options = deepcopy(option)
 
     def state_dict(self):
-        raise NotImplementedError()
+        r"""
+        Returns the state of the optimizer as a :class:`dict`.
+
+        It contains two entries:
+
+        * state - a dict holding current optimization state. Its content
+          differs between optimizer classes.
+        * param_group_options - a dict containing all parameter group options
+        """
+
+        param_group_options = [group._options for group in self.param_groups]
+        state = self._state
+        return {
+            "state": state,
+            "param_group_options": param_group_options,
+        }
 
     def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
         raise NotImplementedError()
