@@ -80,7 +80,7 @@ class RandFunctor {
     if (dtype.has_value()) {
       dtype_val = JUST(dtype.value())->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in rand";
+        OF_UNIMPLEMENTED() << "Only support float and double in rand().";
       }
     }
 
@@ -127,7 +127,7 @@ class ConsistentRandFunctor {
     if (dtype.has_value()) {
       dtype_val = JUST(dtype.value())->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in rand";
+        OF_UNIMPLEMENTED() << "Only support float and double in rand().";
       }
     }
 
@@ -172,7 +172,7 @@ class RandNFunctor {
       dtype_val = JUST(dtype.value())->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+        OF_UNIMPLEMENTED() << "Only support float and double in randn().";
       }
     }
 
@@ -220,7 +220,7 @@ class ConsistentRandNFunctor {
       dtype_val = JUST(dtype.value())->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+        OF_UNIMPLEMENTED() << "Only support float and double in randn().";
       }
     }
 
