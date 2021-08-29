@@ -38,7 +38,7 @@ def relu_op(input, inplace=False):
         tensor([1., 0., 3.], dtype=oneflow.float32)
 
     """
-    return flow.F.relu(input, inplace=inplace)
+    return flow._C.relu(input, inplace=inplace)
 
 
 @register_tensor_op("relu")
@@ -47,7 +47,7 @@ def relu_tensor_op(input, inplace=False):
     Applies the rectified linear unit function element-wise. See :class:`~oneflow.relu` for more details. 
 
     """
-    return flow.F.relu(input, inplace=inplace)
+    return flow._C.relu(input, inplace=inplace)
 
 
 if __name__ == "__main__":

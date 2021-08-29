@@ -29,7 +29,7 @@ class Narrow(Module):
 
     def forward(self, x):
         dim = dim + x.dim if self.dim < 0 else self.dim
-        return flow.F.narrow(x, dim=dim, start=self.start, length=self.length)
+        return flow._C.narrow(x, dim=dim, start=self.start, length=self.length)
 
 
 @register_tensor_op("narrow")

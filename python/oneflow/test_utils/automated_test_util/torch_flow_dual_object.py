@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections.abc
+import warnings
 import functools
 import inspect
 import os
@@ -288,7 +289,7 @@ class DualObject:
         if isinstance(pytorch, torch_original.nn.Module):
             state_dict = pytorch.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
-            oneflow.load_state_dict(state_dict)
+            oneflow.load_state_dict(state_dict, strict=False)
             if testing:
                 dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
@@ -410,11 +411,21 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
                     for key in x.pytorch.state_dict().keys():
+                        if key not in x.oneflow.state_dict().keys():
+                            warnings.warn(f"oneflow module don't have `{key}`")
+                            continue
                         dual_objects_to_test.append(
                             GetDualObject(
                                 "unused",
-                                x.pytorch.state_dict()[key],
-                                x.oneflow.state_dict()[key],
+                                getattr(x.pytorch, key),
+                                getattr(x.oneflow, key),
+                            )
+                        )
+                        dual_objects_to_test.append(
+                            GetDualObject(
+                                "unused",
+                                getattr(x.pytorch, key).grad,
+                                getattr(x.oneflow, key).grad,
                             )
                         )
                 for x in dual_objects_to_test:

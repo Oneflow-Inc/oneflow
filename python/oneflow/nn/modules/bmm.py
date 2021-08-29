@@ -44,7 +44,7 @@ def bmm_op(input, mat2):
     assert (
         input.shape[0] == mat2.shape[0] and input.shape[2] == mat2.shape[1]
     ), f"batch dim or matmul dim not match, please check input!"
-    return flow.F.batch_matmul(input, mat2)
+    return flow._C.batch_matmul(input, mat2)
 
 
 @register_tensor_op("bmm")
@@ -56,7 +56,7 @@ def bmm_op_tensor(input, mat2):
     See :func:`oneflow.bmm`
 
     """
-    return flow.F.batch_matmul(input, mat2)
+    return flow._C.batch_matmul(input, mat2)
 
 
 if __name__ == "__main__":

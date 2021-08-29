@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -39,7 +40,8 @@ class FileBackendVariableBlob:
         shape: Optional[Sequence[int]] = None,
     ):
         data_path = os.path.join(var_dir, DATA_FILENAME)
-        assert os.path.isfile(data_path)
+        if not os.path.isfile(data_path):
+            raise FileNotFoundError()
         self.var_dir_ = var_dir
         meta_info_path = os.path.join(self.var_dir_, META_INFO_FILENAME)
         if os.path.exists(meta_info_path):
@@ -105,7 +107,7 @@ def _LoadSingleVariable(
     path: Optional[str], consistent_src_rank: Optional[int] = None
 ) -> "flow.Tensor":
     if consistent_src_rank is not None:
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == consistent_src_rank:
             assert isinstance(path, str)
             file_backed_blob = FileBackendVariableBlob(path)
@@ -124,7 +126,7 @@ def _LoadSingleVariable(
 
 
 def _broadcast_py_object(obj, src: int = 0):
-    rank = flow.framework.distribute.get_rank()
+    rank = flow.env.get_rank()
     if src == rank:
         obj_bytes = pickle.dumps(obj)
         return pickle.loads(flow._oneflow_internal.cpu_broadcast(obj_bytes, src))
@@ -136,7 +138,7 @@ def Load(
     path: str, consistent_src_rank: Optional[int] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
-    rank = flow.framework.distribute.get_rank()
+    rank = flow.env.get_rank()
     var_dict = {}
     if consistent_src_rank is None or rank == consistent_src_rank:
         all_files = os.listdir(path)
@@ -148,7 +150,13 @@ def Load(
         all_files = _broadcast_py_object(None, consistent_src_rank)
     for f in all_files:
         var_dir = os.path.join(path, f)
-        var_dict[f] = _LoadSingleVariable(var_dir, consistent_src_rank)
+        try:
+            var_dict[f] = _LoadSingleVariable(var_dir, consistent_src_rank)
+        except FileNotFoundError:
+            warnings.warn(
+                f"'{var_dir}' does not have valid tensor data. Please check it if it is unexpected.",
+                stacklevel=2,
+            )
     return var_dict
 
 
@@ -169,22 +177,10 @@ def save(
                 not var.is_consistent
             ), f"local tensor is needed, but {name} is a consistent tensor"
 
-    rank = flow.framework.distribute.get_rank()
+    rank = flow.env.get_rank()
     if consistent_mode and rank != consistent_dst_rank:
         return
 
-    def IsFileOrNonEmptyDir(path):
-        if os.path.isfile(path):
-            return True
-        if os.path.isdir(path) and len(os.listdir(path)) != 0:
-            return True
-        return False
-
-    assert not IsFileOrNonEmptyDir(
-        path
-    ), "{} is a file or non-empty directory! Note that flow.save is different from torch.save. It saves each weight as a separated file so that a directory instead of a file should be given.".format(
-        path
-    )
     os.makedirs(path, exist_ok=True)
 
     for (name, var) in var_dict.items():
