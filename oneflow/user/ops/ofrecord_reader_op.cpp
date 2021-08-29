@@ -63,7 +63,9 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("OFRecordReader")
                              const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
       CHECK_OR_RETURN(out_modifier != nullptr);
-      out_modifier->set_header_infered_before_compute(false);
+      // NOTE(chengcheng): OFRecordReader Only support static shape infer which will read all batch
+      //  size data with output shape (batch_size,)
+      // out_modifier->set_header_infered_before_compute(false);
       return Maybe<void>::Ok();
     });
 

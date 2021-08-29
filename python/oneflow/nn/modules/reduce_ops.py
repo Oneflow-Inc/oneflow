@@ -54,7 +54,7 @@ def _sum(input, dim=None, keepdim=False):
     axis_checked = _check_axis(dim, input.shape)
     if len(axis_checked) == 0:
         return input
-    return flow.F.reduce_sum(input, axis=axis_checked, keepdims=keepdim)
+    return flow._C.reduce_sum(input, axis=axis_checked, keepdims=keepdim)
 
 
 @register_tensor_op("mean")
@@ -78,7 +78,7 @@ def _mean(input, dim=None, keepdim=False):
     axis_checked = _check_axis(dim, input.shape)
     if len(axis_checked) == 0:
         return input
-    return flow.F.reduce_mean(input, axis=axis_checked, keepdims=keepdim)
+    return flow._C.reduce_mean(input, axis=axis_checked, keepdims=keepdim)
 
 
 class Min(Module):
@@ -187,7 +187,7 @@ def prod_op(input, dim=None, keepdim=False):
     axis_checked = _check_axis(dim, input.shape)
     if len(axis_checked) == 0:
         return input
-    return flow.F.reduce_prod(input, axis_checked, keepdim)
+    return flow._C.reduce_prod(input, axis_checked, keepdim)
 
 
 @register_tensor_op("prod")
