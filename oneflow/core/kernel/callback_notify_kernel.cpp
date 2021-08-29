@@ -39,7 +39,7 @@ void CallbackNotifyKernel<T>::ForwardDataContent(const KernelContext* ctx) const
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   std::string buffer_name;
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-    buffer_name = GetCallbackNotifierBufferName(this->job_desc().job_name());
+    buffer_name = GetCallbackNotifierBufferName(ctx->job_desc()->job_name());
   } else {
     T job_id = *ctx->BnInOp2Blob("in")->dptr<T>();
     buffer_name = this->op_conf().callback_notify_conf().callback_buffer_name(job_id);

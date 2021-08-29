@@ -37,15 +37,14 @@ Kernel::~Kernel() {
 }
 
 void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
-  if (!(job_desc_ == nullptr || shape_infer_helper_ == nullptr)) { return; }
-  job_desc_ = job_desc;
+  if (shape_infer_helper_ != nullptr) { return; }
   kernel_conf_ = kernel_conf;
   shape_infer_helper_ =
-      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), &this->job_desc());
+      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), job_desc);
 }
 
-void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, KernelContext* ctx) {
-  InitBase(job_desc, kernel_conf);
+void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {
+  InitBase(ctx->job_desc(), kernel_conf);
   VirtualKernelInit(ctx);
 }
 
@@ -79,15 +78,14 @@ void Kernel::ForwardShape(const KernelContext* ctx) const {
       [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); });
 }
 
-std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc, const KernelConf& conf,
-                                              KernelContext* kernel_ctx) {
+std::unique_ptr<const Kernel> ConstructKernel(const KernelConf& conf, KernelContext* kernel_ctx) {
   auto op_type = conf.op_attribute().op_conf().op_type_case();
   CHECK_NE(op_type, OperatorConf::OpTypeCase::OP_TYPE_NOT_SET)
       << " ERROR! KernelConf: " << conf.DebugString() << " has NOT set op_type_case";
   Kernel* rptr = kernel_registration::CreateKernel(conf);
   if (rptr == nullptr) { rptr = NewObj<int32_t, Kernel>(op_type, conf); }
   CHECK_NOTNULL(rptr);
-  rptr->Init(job_desc, conf, kernel_ctx);
+  rptr->Init(conf, kernel_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

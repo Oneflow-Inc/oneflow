@@ -32,9 +32,7 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel();
 
-  const JobDesc& job_desc() const { return *job_desc_; }
-
-  void Init(const JobDesc* job_desc, const KernelConf& kernel_conf, KernelContext* ctx);
+  void Init(const KernelConf& kernel_conf, KernelContext* ctx);
   virtual void DestroyState(void* state) const;
   void Launch(const KernelContext* ctx) const;
 
@@ -53,7 +51,7 @@ class Kernel {
   virtual void Forward(const KernelContext* ctx) const;
 
  protected:
-  Kernel() : job_desc_(nullptr), shape_infer_helper_(nullptr) {}
+  Kernel() : shape_infer_helper_(nullptr), kernel_conf_{} {}
   void InitBase(const JobDesc* job_desc, const KernelConf&);
   virtual void VirtualKernelInit(KernelContext* ctx) {}
 
@@ -64,7 +62,6 @@ class Kernel {
   virtual bool IsStateless() const { return false; }
 
  private:
-  const JobDesc* job_desc_;
   RuntimeBlobShapeInferHelper* shape_infer_helper_;
   KernelConf kernel_conf_;
 };
@@ -74,8 +71,7 @@ class Kernel {
 #define REGISTER_KERNEL_CREATOR(k, f) \
   REGISTER_CLASS_CREATOR(int32_t, k, Kernel, f, const KernelConf&)
 
-std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc,
-                                              const KernelConf& kernel_conf, KernelContext* ctx);
+std::unique_ptr<const Kernel> ConstructKernel(const KernelConf& kernel_conf, KernelContext* ctx);
 
 }  // namespace oneflow
 

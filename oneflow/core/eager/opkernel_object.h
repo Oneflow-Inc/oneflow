@@ -82,7 +82,8 @@ class OpKernelObject : public vm::Object {
 class SystemOpKernelContext : public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SystemOpKernelContext);
-  explicit SystemOpKernelContext(DeviceCtx* device_ctx) : device_ctx_(device_ctx) {}
+  SystemOpKernelContext(const JobDesc* job_desc, DeviceCtx* device_ctx)
+      : job_desc_(job_desc), device_ctx_(device_ctx) {}
   ~SystemOpKernelContext() = default;
 
   DeviceCtx* device_ctx() const override { return device_ctx_; }
@@ -96,6 +97,8 @@ class SystemOpKernelContext : public KernelContext {
 
   void set_state(void* state) override { UNIMPLEMENTED(); }
 
+  const JobDesc* job_desc() const override { return job_desc_; }
+
   void set_device_ctx(DeviceCtx* ctx) { device_ctx_ = ctx; }
 
   void UpdateBnInOp2BlobFn(std::function<Blob*(const std::string&)> fn) {
@@ -103,6 +106,7 @@ class SystemOpKernelContext : public KernelContext {
   }
 
  private:
+  const JobDesc* job_desc_;
   DeviceCtx* device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
 };

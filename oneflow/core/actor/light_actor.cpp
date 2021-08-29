@@ -193,19 +193,20 @@ class LightActor : public ActorBase, public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LightActor);
   explicit LightActor(std::unique_ptr<DeviceCtx> device_ctx)
-      : thread_(nullptr), device_ctx_(std::move(device_ctx)) {}
+      : thread_(nullptr), device_ctx_(std::move(device_ctx)), job_desc_(nullptr) {}
   ~LightActor() override {
     if (exec_kernel) { kernel_info_[0]->kernel->DestroyState(kernel_info_[0]->state); }
   }
 
   void Init(const JobDesc* job_desc, const TaskProto& task_proto,
             const ThreadCtx& thread_ctx) override {
+    job_desc_ = job_desc;
     task_proto_.reset(new TaskProto(task_proto));
     CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
-      kernel_info_[0]->kernel = ConstructKernel(job_desc, kernel_conf, this);
+      kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
 #ifdef WITH_CUDA_GRAPHS
       auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx_.get());
       if (cuda_device_ctx != nullptr && kernel_conf.all_blobs_are_static()) {
@@ -505,6 +506,8 @@ class LightActor : public ActorBase, public KernelContext {
     kernel_info_[0]->state = state;
   }
 
+  const JobDesc* job_desc() const override { return job_desc_; }
+
   RegstIndex regst_desc_id_index_;
   StateContainer index2state_;
   IndexType total_reading_cnt_;
@@ -524,6 +527,7 @@ class LightActor : public ActorBase, public KernelContext {
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   std::unique_ptr<TaskProto> task_proto_;
+  const JobDesc* job_desc_;
 };
 
 namespace {

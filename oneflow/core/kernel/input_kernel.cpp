@@ -34,7 +34,7 @@ class InputKernel final : public Kernel {
  private:
   void ForwardDataContent(const KernelContext* ctx) const override {
     if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      const auto& job_name = this->job_desc().job_name();
+      const auto& job_name = ctx->job_desc()->job_name();
       const auto& op_name = this->op_conf().name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       auto* buffer = buffer_mgr->Get(GetInputBufferName(job_name, op_name));

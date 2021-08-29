@@ -39,7 +39,7 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(const KernelContext* ctx) const
   const auto& conf = this->op_conf().wait_and_send_ids_conf();
   if (status->out_idx_ >= status->out_num_) {
     if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      const auto& job_name = this->job_desc().job_name();
+      const auto& job_name = ctx->job_desc()->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       auto* buffer = buffer_mgr->Get(GetSourceTickBufferName(job_name));
       status->in_id_ = 0;

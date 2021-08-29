@@ -54,7 +54,7 @@ class CaseActor final : public Actor {
   int64_t GetCurSelectId() const;
 
   HashMap<int64_t, int64_t> out_bn_id2regst_desc_id_;
-  int64_t consumed_regst_desc_id_;
+  int64_t consumed_regst_desc_id_{};
   RegstSlot consumed_rs_;
   HashMap<int64_t, RegstSlot> regst_desc_id2produced_rs_;
   CaseStatus* case_status_;

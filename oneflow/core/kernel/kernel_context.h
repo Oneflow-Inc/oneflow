@@ -21,6 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class Blob;
+class JobDesc;
 class KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelContext);
@@ -31,6 +32,7 @@ class KernelContext {
   virtual Blob* BnInOp2Blob(const std::string& bn) const = 0;
   virtual void* state() const = 0;
   virtual void set_state(void* state) = 0;
+  virtual const JobDesc* job_desc() const = 0;
 };
 
 }  // namespace oneflow
