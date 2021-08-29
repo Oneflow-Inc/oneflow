@@ -134,10 +134,6 @@ inline Error&& operator<<(Error&& error, const Error& other) {
 
 extern const char* kOfBugIssueUploadPrompt;
 
-// TODO The return value is not of type maybe
-#define RUNTIME_ERROR_CANNOT_RETURN_MAYBE() \
-  LOG(FATAL) << "RuntimeError: " << kOfBugIssueUploadPrompt
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ERROR_H_

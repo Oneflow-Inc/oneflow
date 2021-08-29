@@ -127,18 +127,18 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Symbol<Device>> device() const { return device_; }
   Maybe<Symbol<Device>*> mut_device() { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   bool is_cuda() const {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return false;
   }
   bool is_consistent() const { return false; }
   bool is_local() const { return !is_consistent(); }
   bool is_lazy() const {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return false;
   }
   bool is_eager() const { return !is_lazy(); }
   const TensorMeta& tensor_meta() const {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return *(TensorMeta*)nullptr;
   }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const {
@@ -167,19 +167,19 @@ class StaticZerosTensor final : public Tensor {
 
   // Getters for autograd
   bool requires_grad() const {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return false;
   }
   bool is_leaf() const {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return false;
   }
   bool retain_grad() const {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return false;
   }
   std::shared_ptr<const FunctionNode> grad_fn_node() const {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return nullptr;
   }
   Maybe<Tensor> acc_grad() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
@@ -187,37 +187,37 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> detach() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   Maybe<Tensor> clone() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   std::shared_ptr<Tensor> data() const {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return nullptr;
   }
 
   // Setters for autograd
-  void set_requires_grad(bool requires_grad) { RUNTIME_ERROR_CANNOT_RETURN_MAYBE(); }
+  void set_requires_grad(bool requires_grad) { LOG(FATAL) << kOfBugIssueUploadPrompt; }
   Maybe<void> set_retain_grad(bool retain_grad) { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
   }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return *(std::shared_ptr<FunctionNode>*)nullptr;
   }
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   Maybe<Tensor> mut_acc_grad() { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  void set_is_leaf(bool is_leaf) { RUNTIME_ERROR_CANNOT_RETURN_MAYBE(); }
+  void set_is_leaf(bool is_leaf) { LOG(FATAL) << kOfBugIssueUploadPrompt; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return nullptr;
   }
   bool has_autograd_meta() const {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return false;
   }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
   }
 
   user_op::TensorDesc* mut_tensor_meta() {
-    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
+    LOG(FATAL) << kOfBugIssueUploadPrompt;
     return nullptr;
   }
 
