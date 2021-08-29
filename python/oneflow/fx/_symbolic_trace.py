@@ -118,6 +118,9 @@ def _patch_function(fn: FunctionType, nargs: int) -> FunctionType:
     # we can't call this function normally, otherwise it would try to unpack them
     # instead, let's make python think that args and kwargs are normal variables
 
+# TODO(bbuf) Calls patch_function in order to intercept functions at the C-extension level
+# Generally, oneflow._C.xxx will not be called when building a Module
+
 class PHBase(object):
     """
     Object representing an input placeholder to `concrete_args`
