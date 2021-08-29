@@ -22,16 +22,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct SqueezeInterpState : public OpExprInterpState {
+struct SqueezeCaptureState : public AutoGradCaptureState {
   bool requires_grad;
 };
 
-class Squeeze : public OpExprGradFunction<SqueezeInterpState> {
+class Squeeze : public OpExprGradFunction<SqueezeCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(SqueezeInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(SqueezeCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const SqueezeInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const SqueezeCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -48,7 +48,7 @@ Maybe<void> Squeeze::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Squeeze::Capture(SqueezeInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Squeeze::Capture(SqueezeCaptureState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -57,7 +57,7 @@ Maybe<void> Squeeze::Capture(SqueezeInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Squeeze::Apply(const SqueezeInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Squeeze::Apply(const SqueezeCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);

@@ -23,16 +23,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct LogSoftmaxInterpState : public OpExprInterpState {
+struct LogSoftmaxCaptureState : public AutoGradCaptureState {
   bool requires_grad;
 };
 
-class LogSoftmax : public OpExprGradFunction<LogSoftmaxInterpState> {
+class LogSoftmax : public OpExprGradFunction<LogSoftmaxCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(LogSoftmaxInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(LogSoftmaxCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const LogSoftmaxInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const LogSoftmaxCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -53,7 +53,7 @@ Maybe<void> LogSoftmax::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LogSoftmax::Capture(LogSoftmaxInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> LogSoftmax::Capture(LogSoftmaxCaptureState* ctx, const TensorTuple& inputs,
                                 const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -65,7 +65,7 @@ Maybe<void> LogSoftmax::Capture(LogSoftmaxInterpState* ctx, const TensorTuple& i
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LogSoftmax::Apply(const LogSoftmaxInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> LogSoftmax::Apply(const LogSoftmaxCaptureState* ctx, const TensorTuple& out_grads,
                               TensorTuple* in_grads) const {
   if (!ctx->requires_grad) return Maybe<void>::Ok();
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);

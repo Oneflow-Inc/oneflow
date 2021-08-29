@@ -33,23 +33,6 @@ class NdSbp;
 
 namespace one {
 
-class OpExprInterpState {
- public:
-  OpExprInterpState() = default;
-  virtual ~OpExprInterpState() = default;
-
-  const TensorTuple& SavedTensors() const { return saved_tensors_; }
-
-  size_t SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
-    size_t offset = saved_tensors_.size();
-    saved_tensors_.push_back(tensor);
-    return offset;
-  }
-
- private:
-  TensorTuple saved_tensors_;
-};
-
 struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg) : attrs(attrs_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg)
@@ -100,6 +83,7 @@ class OpExprInterpreter {
   _macro(VariableOp);                \
   _macro(CastToMirroredOp);          \
   _macro(CastFromMirroredOp);        \
+  _macro(ConsistentToConsistentOp);  \
   _macro(CastToConsistentOp);        \
   _macro(CastFromConsistentOp);      \
   _macro(DistributeSplitOp);         \
@@ -137,6 +121,7 @@ class LazyInterpreter : public OpExprInterpreter {
   DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
   DECLARE_NORMAL_APPLY_FUNC(ConsistentToConsistentOp);
+  DECLARE_NORMAL_APPLY_FUNC(ImageDecoderRandomCropResizeOp);
 };
 
 class EagerInterpreter : public OpExprInterpreter {

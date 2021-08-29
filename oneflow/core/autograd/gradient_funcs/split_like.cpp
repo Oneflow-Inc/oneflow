@@ -23,17 +23,17 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct SplitLikeInterpState : public OpExprInterpState {
+struct SplitLikeCaptureState : public AutoGradCaptureState {
   int64_t max_dim_size;
   bool requires_grad;
 };
 
-class SplitLike : public OpExprGradFunction<SplitLikeInterpState> {
+class SplitLike : public OpExprGradFunction<SplitLikeCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(SplitLikeInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(SplitLikeCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const SplitLikeInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const SplitLikeCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -60,7 +60,7 @@ Maybe<void> SplitLike::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SplitLike::Capture(SplitLikeInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> SplitLike::Capture(SplitLikeCaptureState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), outputs.size() + 1);
   ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -73,7 +73,7 @@ Maybe<void> SplitLike::Capture(SplitLikeInterpState* ctx, const TensorTuple& inp
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SplitLike::Apply(const SplitLikeInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> SplitLike::Apply(const SplitLikeCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   in_grads->resize(1);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }

@@ -776,19 +776,6 @@ Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::st
       .Build();
 }
 
-Maybe<one::UserOpExpr> DropoutGradOp(const float& scale) {
-  return DropoutGradOp(scale, UniqueOpName("dropout_grad"));
-}
-
-Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name) {
-  return one::OpBuilder("dropout_grad", name)
-      .Input("dy")
-      .Input("mask")
-      .Output("dx")
-      .Attr<float>("scale", scale)
-      .Build();
-}
-
 Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
                                     const std::string& padding,
                                     const std::vector<int32_t>& padding_before,

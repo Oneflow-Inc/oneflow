@@ -22,14 +22,14 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct ElementwiseXimumOpExprInterpState : public OpExprInterpState {
+struct ElementwiseXimumCaptureState : public AutoGradCaptureState {
   bool x_requires_grad;
   bool y_requires_grad;
 };
 
-class ElementwiseXimumOp : public OpExprGradFunction<ElementwiseXimumOpExprInterpState> {
+class ElementwiseXimumOp : public OpExprGradFunction<ElementwiseXimumCaptureState> {
  public:
-  Maybe<void> Capture(ElementwiseXimumOpExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ElementwiseXimumCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->y_requires_grad = inputs.at(1)->requires_grad();
@@ -38,7 +38,7 @@ class ElementwiseXimumOp : public OpExprGradFunction<ElementwiseXimumOpExprInter
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const ElementwiseXimumOpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ElementwiseXimumCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!(ctx->x_requires_grad || ctx->y_requires_grad)) { return Maybe<void>::Ok(); }
 

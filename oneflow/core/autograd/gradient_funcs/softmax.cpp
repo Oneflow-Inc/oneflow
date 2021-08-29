@@ -22,16 +22,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct SoftmaxInterpState : public OpExprInterpState {
+struct SoftmaxCaptureState : public AutoGradCaptureState {
   bool requires_grad;
 };
 
-class Softmax : public OpExprGradFunction<SoftmaxInterpState> {
+class Softmax : public OpExprGradFunction<SoftmaxCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(SoftmaxInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(SoftmaxCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const SoftmaxInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const SoftmaxCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -46,7 +46,7 @@ Maybe<void> Softmax::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Softmax::Capture(SoftmaxInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Softmax::Capture(SoftmaxCaptureState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -57,7 +57,7 @@ Maybe<void> Softmax::Capture(SoftmaxInterpState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Softmax::Apply(const SoftmaxInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Softmax::Apply(const SoftmaxCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) return Maybe<void>::Ok();
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);

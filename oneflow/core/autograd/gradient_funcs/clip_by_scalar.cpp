@@ -19,13 +19,13 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct ClipByScalarInterpState : public OpExprInterpState {
+struct ClipByScalarCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   functional::Scalar min;
   functional::Scalar max;
 };
 
-class ClipByScalar : public OpExprGradFunction<ClipByScalarInterpState> {
+class ClipByScalar : public OpExprGradFunction<ClipByScalarCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -34,7 +34,7 @@ class ClipByScalar : public OpExprGradFunction<ClipByScalarInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(ClipByScalarInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ClipByScalarCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -54,13 +54,13 @@ class ClipByScalar : public OpExprGradFunction<ClipByScalarInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const ClipByScalarInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ClipByScalarCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::ClipByScalarGrad(out_grads.at(0), x, ctx->min, ctx->max));
+      in_grads->at(0) = JUST(functional::ClampGrad(out_grads.at(0), x, ctx->min, ctx->max));
     }
     return Maybe<void>::Ok();
   }

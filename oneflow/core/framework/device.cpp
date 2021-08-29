@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <sstream>
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -33,21 +33,6 @@ namespace {
 
 inline size_t HashDevice(const std::string& type, int64_t device_id) {
   return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
-}
-
-Maybe<VmLocalDepObject> FindOrCreateComputeLocalDepObject(const Device& device) {
-  static std::mutex mutex;
-  static HashMap<Device, std::shared_ptr<VmLocalDepObject>> device2dep_object;
-  {
-    std::unique_lock<std::mutex> lock(mutex);
-    const auto& iter = device2dep_object.find(device);
-    if (iter != device2dep_object.end()) { return iter->second; }
-  }
-  const auto& dep_object = std::make_shared<VmLocalDepObject>(device.parallel_desc_ptr());
-  {
-    std::unique_lock<std::mutex> lock(mutex);
-    return device2dep_object.emplace(device, dep_object).first->second;
-  }
 }
 
 }  // namespace
@@ -97,12 +82,23 @@ Maybe<const std::string&> Device::of_type() const {
 }
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
+  // gpu.LocalCallOpKernel is shared between device `cuda` and device `cuda_h2d`.
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},           {"cuda", "gpu.LocalCallOpKernel"},
-      {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
+      {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "gpu.LocalCallOpKernel"},
       {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"}, {"nccl", "async.gpu.LocalCallOpKernel"},
   };
   return MapAt(type2instr_name, type);
+}
+
+Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
+  static const size_t kDoubleBufferPoolSize = 2;
+  static const HashMap<std::string, size_t> type2pool_size{
+      {"cpu", GetInstructionHighWaterMark()}, {"cuda", GetInstructionHighWaterMark()},
+      {"gpu", GetInstructionHighWaterMark()}, {"cuda_h2d", kDoubleBufferPoolSize},
+      {"cuda_d2h", kDoubleBufferPoolSize},    {"nccl", kDoubleBufferPoolSize},
+  };
+  return MapAt(type2pool_size, type());
 }
 
 Maybe<const std::string&> Device::local_call_instruction_name() const {

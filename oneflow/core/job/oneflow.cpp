@@ -214,6 +214,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
     }
   }
   PlanUtil::GenCollectiveBoxingPlan(job, plan);
+  PlanUtil::GenRegisterHint(plan);
   return Maybe<void>::Ok();
 }
 

@@ -362,6 +362,8 @@ void Actor::ActUntilFail() {
 
     AsyncSendQueuedMsg();
   }
+  // NOTE(liujuncheng): return inplace consumed
+  AsyncSendQueuedMsg();
 }
 
 void Actor::AsyncSendNaiveProducedRegstMsgToConsumer() {
@@ -610,13 +612,6 @@ Regst* Actor::GetNaiveCurReadable(int64_t regst_desc_id) const {
 
 Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
   return naive_produced_rs_.Front(regst_desc_id);
-}
-
-std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  Actor* rptr = NewObj<int32_t, Actor>(task_proto.task_type());
-  const auto& job_descs = *Global<RuntimeJobDescs>::Get();
-  rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
-  return std::unique_ptr<Actor>(rptr);
 }
 
 void Actor::AsyncSendQueuedMsg() {

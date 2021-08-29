@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_method.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/functional/value_types.h"
 #include "oneflow/core/job/placement.cfg.h"
@@ -41,6 +42,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/common/thread_local_callback.h"
 
 namespace py = pybind11;
 
@@ -84,11 +86,20 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
 
   const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
       [&array, &Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array)); });
-  JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
-    });
-  }));
+  bool is_printed = false;
+  JUST(SpinCounter::SpinWait(
+      1,
+      [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
+        return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+          return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
+        });
+      },
+      [&is_printed]() {
+        if (!is_printed) {
+          LOG(ERROR) << blocking::GetStackInfo();
+          is_printed = true;
+        }
+      }));
   return Maybe<void>::Ok();
 }
 
@@ -157,7 +168,7 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dty
   auto* np_arr = reinterpret_cast<PyArrayObject*>(np_arr_pyobject);
   bool init_from_numpy = py::isinstance<py::array>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
-  const Shape shape = Shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
+  const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
   std::shared_ptr<Tensor> tensor =
       JUST(functional::Empty(shape, CHECK_JUST(DType::Get(flow_dtype)), device));
@@ -299,9 +310,8 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
       if (other_tensor->is_local()) {
         if (placement) {
           // LocalTensor -> ConsistentTensor
-          tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple,
-                                                 /* identity_grad */ false,
-                                                 /* grad_sbp_parallels */ {}));
+          tensor =
+              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple, GetNoneSbpList()));
         } else {
           // LocalTensor -> LocalTensor
           if (!device) { device = JUST(Device::New("cpu")); }
@@ -310,9 +320,8 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
       } else {
         if (placement) {
           // ConsistentTensor -> ConsistentTensor
-          tensor = JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple,
-                                                 /* identity_grad */ false,
-                                                 /* grad_sbp_parallels */ {}));
+          tensor =
+              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple, GetNoneSbpList()));
         } else {
           // ConsistentTensor -> LocalTensor
           tensor = JUST(functional::ConsistentToLocal(other_tensor));
@@ -367,6 +376,7 @@ std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
 void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
   if (tensor.is_leaf()) {
     tensor.set_requires_grad(requires_grad);
+    if (!requires_grad) { tensor.set_grad_fn_node(nullptr); }
   } else {
     throw std::runtime_error("You can only change requires_grad flags of leaf tensors.");
   }

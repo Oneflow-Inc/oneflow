@@ -52,17 +52,6 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   }
 }
 
-/* static */ Maybe<MirroredTensor> MirroredTensor::MakeEagerTensor(
-    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
-    const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf) {
-  const auto& blob_desc = eager_blob_object->blob_desc();
-  const auto& tensor_meta =
-      std::make_shared<MirroredTensorMeta>(blob_desc.shape_ptr(), blob_desc.data_type(), device);
-  auto* tensor_impl = new EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf);
-  JUST(tensor_impl->InitEagerBlobObjectAndTensorStorage(eager_blob_object, tensor_storage));
-  return std::make_shared<MirroredTensor>(std::shared_ptr<MirroredTensorImpl>(tensor_impl));
-}
-
 bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
 std::shared_ptr<Tensor> MirroredTensor::data() const {

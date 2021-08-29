@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct LayerNormInterpState : public OpExprInterpState {
+struct LayerNormCaptureState : public AutoGradCaptureState {
   bool center;
   bool scale;
 
@@ -47,14 +47,14 @@ struct LayerNormInterpState : public OpExprInterpState {
 // y, mean, inv_variance, [normalized] =
 //   layer_norm(x, [beta], [gamma], center=False, scale=False, begin_norm_axis=1,
 //              begin_params_axis=-1, epsilon=1e-5)
-class LayerNorm : public OpExprGradFunction<LayerNormInterpState> {
+class LayerNorm : public OpExprGradFunction<LayerNormCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
 
-  Maybe<void> Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(LayerNormCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
 
-  Maybe<void> Apply(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const LayerNormCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -73,7 +73,7 @@ Maybe<void> LayerNorm::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> LayerNorm::Capture(LayerNormCaptureState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->center = JUST(composed_attrs.GetAttr<bool>("center"));
@@ -101,7 +101,7 @@ Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inp
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   const auto& saved_tensors = ctx->SavedTensors();
   in_grads->resize(ctx->center + ctx->scale + 1);

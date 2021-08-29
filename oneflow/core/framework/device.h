@@ -26,7 +26,10 @@ namespace oneflow {
 
 class ParallelDesc;
 class MemoryCase;
-class VmLocalDepObject;
+class LocalDepObject;
+
+inline size_t GetInstructionHighWaterMark() { return 500; }
+inline size_t GetInstructionLowWaterMark() { return 200; }
 
 class Device final {
  public:
@@ -51,7 +54,7 @@ class Device final {
 
   static Maybe<Symbol<Device>> ThreadLocalGetOrNew(const std::string& type, int64_t device_id);
   static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
-  static Maybe<Symbol<Device>> New(const std::string& typed);
+  static Maybe<Symbol<Device>> New(const std::string& type);
 
   static Maybe<Symbol<Device>> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
@@ -59,7 +62,8 @@ class Device final {
   static std::string Type4DeviceTag(const std::string& device_tag);
 
   Maybe<const std::string&> local_call_instruction_name() const;
-  VmLocalDepObject* mut_compute_local_dep_object() const { return compute_local_dep_object_.get(); }
+  LocalDepObject* mut_compute_local_dep_object() const { return compute_local_dep_object_; }
+  Maybe<size_t> instr_local_dep_object_pool_size() const;
 
  private:
   Device(const std::string& type, int64_t device_id);
@@ -69,7 +73,7 @@ class Device final {
   const int64_t device_id_;
   const size_t hash_value_;
   std::shared_ptr<MemoryCase> mem_case_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
+  LocalDepObject* compute_local_dep_object_;
 };
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);

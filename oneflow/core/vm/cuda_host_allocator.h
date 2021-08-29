@@ -24,11 +24,14 @@ namespace vm {
 
 class CudaHostAllocator final : public Allocator {
  public:
-  explicit CudaHostAllocator() : Allocator() {}
+  explicit CudaHostAllocator(int64_t device_id) : Allocator(), device_id_(device_id) {}
   ~CudaHostAllocator() override = default;
 
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
+
+ private:
+  int64_t device_id_;
 };
 
 }  // namespace vm

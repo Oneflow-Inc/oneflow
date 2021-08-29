@@ -18,8 +18,8 @@ limitations under the License.
 
 #include <type_traits>
 #include <unordered_map>
-#include "oneflow/core/common/tuple_hash.h"
-#include "oneflow/core/common/static_check.h"
+#include "tuple_hash.h"
+#include "static_check.h"
 
 namespace oneflow {
 
@@ -64,9 +64,8 @@ struct ThreadLocalCopiable<RetT, Arg0> {
   }
 
  private:
-  static void StaticCheckNotOutArg() {
-    auto* _ = &static_check::ForEachArgsType<static_check::CheckNotOutArg, Arg0>;
-  }
+  static_assert(!IsOutArg<Arg0>::value, "");
+  static_assert(!StaticAny<IsOutArg, Arg0>::value, "");
 };
 
 template<typename RetT, typename Arg0, typename Arg1>
@@ -84,9 +83,7 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1> {
   }
 
  private:
-  static void StaticCheckNotOutArg() {
-    auto* _ = &static_check::ForEachArgsType<static_check::CheckNotOutArg, Arg0, Arg1>;
-  }
+  static_assert(!StaticAny<IsOutArg, Arg0, Arg1>::value, "");
 };
 
 template<typename RetT, typename Arg0, typename Arg1, typename Arg2>
@@ -107,9 +104,7 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2> {
   }
 
  private:
-  static void StaticCheckNotOutArg() {
-    auto* _ = &static_check::ForEachArgsType<static_check::CheckNotOutArg, Arg0, Arg1, Arg2>;
-  }
+  static_assert(!StaticAny<IsOutArg, Arg0, Arg1, Arg2>::value, "");
 };
 
 template<typename RetT, typename Arg0, typename Arg1, typename Arg2, typename Arg3,
@@ -131,19 +126,14 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2, Arg3, Args...> {
   }
 
  private:
-  static void StaticCheckNotOutArg() {
-    auto* _ = &static_check::ForEachArgsType<static_check::CheckNotOutArg, Arg0, Arg1, Arg2, Arg3,
-                                             Args...>;
-  }
+  static_assert(!StaticAny<IsOutArg, Arg0, Arg1, Arg2, Arg3, Args...>::value, "");
 };
 
 // for scalar type key.
-template<typename... Args>
-struct ThreadLocal : public ThreadLocalCopiable<Args...> {
+template<typename RetT, typename... Args>
+struct ThreadLocal : public ThreadLocalCopiable<RetT, Args...> {
  private:
-  static void StaticCheckIsScalarType() {
-    auto* _0 = &static_check::ForEachArgsType<static_check::CheckIsScalarType, Args...>;
-  }
+  static_assert(StaticAll<IsDecayedScalarType, Args...>::value, "");
 };
 
 }  // namespace oneflow
