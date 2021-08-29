@@ -150,6 +150,15 @@ def _ne(self, other):
     return self.ne(other)
 
 
+def _getstate(self):
+    assert self.is_local, "Only support local tensor to pickle"
+    return {"data": self.numpy(), "dtype": self.dtype}
+
+
+def _setstate(self, pickle_dict):
+    return self.__init__(pickle_dict["data"], dtype=pickle_dict["dtype"])
+
+
 def is_nonzero(input):
     r"""
     is_nonzero(input) -> (bool)
@@ -390,6 +399,8 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
+    Tensor.__setstate__ = _setstate
+    Tensor.__getstate__ = _getstate
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__eq__ = _eq
