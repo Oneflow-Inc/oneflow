@@ -463,7 +463,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
-    OF_RUNTIME_ERROR() << "ConsistentTensor has no device property";
+    OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
+                          "'.placement' for local tensors.";
   }
   Maybe<Symbol<Device>*> mut_device() override {
     OF_RUNTIME_ERROR() << "ConsistentTensor has no mut_device property";
