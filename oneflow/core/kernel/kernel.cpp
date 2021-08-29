@@ -32,15 +32,15 @@ bool IsAllBlobEmpty(const PbRpf<std::string>& bns, const KernelContext* ctx) {
 
 }  // namespace
 
-Kernel::~Kernel() {
-  if (shape_infer_helper_ != nullptr) { delete shape_infer_helper_; }
-}
+Kernel::Kernel() = default;
+
+Kernel::~Kernel() = default;
 
 void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
-  if (shape_infer_helper_ != nullptr) { return; }
+  if (!shape_infer_helper_) { return; }
   kernel_conf_ = kernel_conf;
-  shape_infer_helper_ =
-      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), job_desc);
+  shape_infer_helper_.reset(
+      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), job_desc));
 }
 
 void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {

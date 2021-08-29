@@ -51,7 +51,7 @@ class Kernel {
   virtual void Forward(const KernelContext* ctx) const;
 
  protected:
-  Kernel() : shape_infer_helper_(nullptr), kernel_conf_{} {}
+  Kernel();
   void InitBase(const JobDesc* job_desc, const KernelConf&);
   virtual void VirtualKernelInit(KernelContext* ctx) {}
 
@@ -62,7 +62,7 @@ class Kernel {
   virtual bool IsStateless() const { return false; }
 
  private:
-  RuntimeBlobShapeInferHelper* shape_infer_helper_;
+  std::unique_ptr<RuntimeBlobShapeInferHelper> shape_infer_helper_;
   KernelConf kernel_conf_;
 };
 
