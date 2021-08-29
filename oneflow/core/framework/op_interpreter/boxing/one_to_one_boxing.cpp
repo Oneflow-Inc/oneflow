@@ -49,8 +49,11 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
   int64_t dst = JUST(out->placement()->MachineId4ParallelId(0));
 
   if (GlobalProcessCtx::Rank() == src) {
+    LOG(ERROR) << "NaiveOneToOne: " << src << ", " << dst;
     JUST(one::functional::Send(local_tensor, dst, /* send_meta */ false));
-  } else if (GlobalProcessCtx::Rank() == dst) {
+  }
+  if (GlobalProcessCtx::Rank() == dst) {
+    LOG(ERROR) << "NaiveOneToOne: " << src << ", " << dst;
     local_tensor =
         JUST(one::functional::Recv(src, *tensor->shape(), tensor->dtype(),
                                    JUST(local_tensor->device()), Optional<one::Tensor>()));

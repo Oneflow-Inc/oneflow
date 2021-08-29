@@ -96,8 +96,16 @@ Maybe<BoxingExprIf> RawGenericBoxingExprNotEfficient() {
                       JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-s-to-b"))
                           | JUST(BoxingExpr("identity")),
                       JUST(BoxingExpr("naive-b-to-1"))));
+  // 1 to n
+  const auto& mid_boxing = JUST(BoxingExpr(
+      JUST(InOutPlacementAndBroadcast()),
+      JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
+                      JUST(BoxingExpr("nccl-p-to-b")))),
+      JUST(BoxingExpr("naive-b-to-1"))));
+  const auto& sec_mid = JUST(BoxingExpr(JUST(InLastPlacementAndBroadcast()), mid_boxing,
+                                        JUST(BoxingExpr("naive-b-to-1"))));
   const auto& rhs_boxing = JUST(BoxingExpr(
-      JUST(OutSingleDevice()), JUST(BoxingExpr("identity")) | JUST(BoxingExpr("naive-1-to-1")),
+      JUST(OutSingleDevice()), JUST(BoxingExpr("identity")) | mid_boxing,
       JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
                       JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))
                           | JUST(BoxingExpr("identity"))))));

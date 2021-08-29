@@ -23,7 +23,7 @@ Maybe<Symbol<Device>> DeviceInferFn(user_op::DeviceInferContext* ctx) {
   const auto& input_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = input_device;
   if (input_device->type() == "cuda" || input_device->type() == "gpu") {
-    static thread_local const auto& nccl_device = Device::New("nccl");
+    static thread_local const auto& nccl_device = Device::New("cuda");
     return nccl_device;
   } else if (input_device->type() == "cpu") {
     return input_device;

@@ -143,7 +143,11 @@ Maybe<one::Tensor> NcclS2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
-  return JUST(one::functional::ConsistentS2S(tensor, *JUST(GetSbpList(out->nd_sbp()))));
+  LOG(ERROR) << "NcclS2S";
+  LOG(ERROR) << "NcclS2S: " << *JUST(PlacementToString(tensor_placement));
+  const auto& ret = JUST(one::functional::ConsistentS2S(tensor, *JUST(GetSbpList(out->nd_sbp()))));
+  LOG(ERROR) << "NcclS2S end";
+  return ret;
 }
 
 COMMAND(RegisterBoxingFunction("nccl-p-to-b", CheckNcclP2B, &NcclP2B));
