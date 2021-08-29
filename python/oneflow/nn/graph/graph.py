@@ -36,9 +36,27 @@ from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 
 
 class Graph(object):
+    r"""Base class for all neural network graphs traced from nn.Module.
+
+    To use graph mode for model training or evaluation in OneFlow, you should 
+    subclass this class. Then assign modules as regular attributes. Modules 
+    assigned in Graph init will be registered and wrapped into a Block. A Block 
+    reprents a segment of code and its scope in a Graph.
+
+    Modules registered in Graph can be call in Graph.build(). Module's operator
+    exectuion in Graph.build() is traced into a graph on the first call of a
+    Graph. The traced graph will be compiled and optimized for later execution.
+
+    # TODO() add deom
+
+    Graph cannot be nested at the moment.
+    """
     _child_init_cnt = dict()
 
     def __init__(self):
+        """
+        Initializes internal Graph state.
+        """
         self._generate_name()
         self.config = GraphConfig()
         self._blocks = OrderedDict()
@@ -58,10 +76,14 @@ class Graph(object):
 
     @property
     def name(self):
+        r"""Name auto-generated for this graph.
+        """
         return self._name
 
     @property
     def training(self):
+        r"""In traninig mode if the graph has an optimizer.
+        """
         return self.config.training
 
     @property
@@ -79,6 +101,8 @@ class Graph(object):
         return self._job_proto
 
     def debug(self, mode: bool = True) -> None:
+        r"""Debug mode will print log of graph building on rank 0.
+        """
         if get_rank() != 0:
             return
         else:
@@ -89,11 +113,18 @@ class Graph(object):
             block.debug(mode)
 
     def build(self, *args):
+        r"""Defines the computation traced at the first call.
+        Should be overridden by all subclasses.
+        """
         raise NotImplementedError()
 
     def add_optimizer(
         self, optim: Optimizer, *, lr_sch: LrScheduler = None,
     ):
+        r"""Add an optimizer, an learning rate scheduler for the graph.
+        Optimizer.step() LrScheduler.step() are automatically executed at each
+        call on Graph.
+        """
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
         assert isinstance(
