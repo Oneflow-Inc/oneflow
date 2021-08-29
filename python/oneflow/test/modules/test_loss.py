@@ -20,33 +20,178 @@ import oneflow as flow
 import oneflow.unittest
 
 
+def generate_necessity_for_cross_entropy_or_nll_loss(dim: int):
+    if dim > 4 or dim < 2:
+        raise ValueError("dim should be less than 5 or greater than 1. ")
+    device = random_device()
+    num_classes = random(low=2).to(int)
+    batch_size = random(low=10, high=100).to(int)
+    ignore_index = (
+        random(0, num_classes).to(int) | nothing()
+        if num_classes.value() > 2
+        else nothing()
+    )
+    extra_dim = [random().to(int) for _ in range(dim - 2)]
+    return (
+        random_pytorch_tensor(dim, batch_size, num_classes, *extra_dim).to(device),
+        random_pytorch_tensor(
+            dim - 1,
+            batch_size,
+            *extra_dim,
+            low=0,
+            high=num_classes,
+            dtype=int,
+            requires_grad=False,
+        ).to(device),
+        ignore_index,
+        device,
+    )
+
+
+def generate_necessity_for_bce_loss(dim: int):
+    if dim > 5 or dim < 2:
+        raise ValueError("dim should be less than 6 or greater than 1. ")
+    device = random_device()
+    num_classes = random(low=3).to(int)
+    batch_size = random(low=10, high=100).to(int)
+    extra_dim = [random().to(int) for _ in range(dim - 2)]
+    return (
+        random_pytorch_tensor(dim, batch_size, num_classes, *extra_dim).to(device),
+        random_pytorch_tensor(
+            dim,
+            batch_size,
+            num_classes,
+            *extra_dim,
+            low=0,
+            high=num_classes,
+            requires_grad=False,
+        ).to(device),
+        random_pytorch_tensor(
+            dim, batch_size, num_classes, *extra_dim, low=0, high=3, requires_grad=False
+        ).to(device),
+        device,
+    )
+
+
+def test_cross_entropy_loss(dim=int):
+    (
+        x,
+        target,
+        ignore_index,
+        device,
+    ) = generate_necessity_for_cross_entropy_or_nll_loss(dim)
+    m = torch.nn.CrossEntropyLoss(
+        reduction=oneof("none", "sum", "mean", nothing()), ignore_index=ignore_index,
+    )
+    m.train(random())
+    m.to(device)
+
+    y = m(x, target)
+    return y
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
     @autotest()
-    def test_cross_entropy_loss_with_random_data(test_case):
-        num_classes = random(low=2)
-        device = random_device()
-        batch_size = random(low=10, high=100)
+    def test_cross_entropy_loss_with_random_data_dim_2(test_case):
+        test_cross_entropy_loss(2)
 
-        x = random_pytorch_tensor(
-            ndim=random(3, 5), dim0=batch_size, dim1=num_classes
-        ).to(device)
-        target = random_pytorch_tensor(
-            2, batch_size, 1, low=0, high=num_classes, dtype=int
-        ).to(device)
+    @autotest()
+    def test_cross_entropy_loss_with_random_data_dim_3(test_case):
+        test_cross_entropy_loss(3)
 
-        ignore_index = (
-            random(0, num_classes) | nothing() if num_classes.value() > 2 else nothing()
-        )
-        m = torch.nn.CrossEntropyLoss(
+    @autotest()
+    def test_cross_entropy_loss_with_random_data_dim_4(test_case):
+        test_cross_entropy_loss(4)
+
+
+def test_nll_loss(dim=int):
+    (
+        x,
+        target,
+        ignore_index,
+        device,
+    ) = generate_necessity_for_cross_entropy_or_nll_loss(dim)
+    m = torch.nn.NLLLoss(
+        reduction=oneof("none", "sum", "mean", nothing()), ignore_index=ignore_index,
+    )
+    m.train(random())
+    m.to(device)
+
+    y = m(x, target)
+    return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestNLLLossModule(flow.unittest.TestCase):
+    @autotest()
+    def test_nll_loss_with_random_data_dim_2(test_case):
+        test_nll_loss(2)
+
+    @autotest()
+    def test_nll_loss_with_random_data_dim_3(test_case):
+        test_nll_loss(3)
+
+    @autotest()
+    def test_nll_loss_with_random_data_dim_4(test_case):
+        test_nll_loss(4)
+
+
+def test_bce_loss(dim=int, with_logits: bool = False):
+    x, target, weight, device = generate_necessity_for_bce_loss(dim)
+
+    m = torch.nn.BCELoss(
+        # weight=oneof(weight,nothing()),
+        reduction=oneof("none", "sum", "mean", nothing()),
+    )
+    if with_logits:
+        m = torch.nn.BCEWithLogitsLoss(
+            # weight=oneof(weight,nothing()),
             reduction=oneof("none", "sum", "mean", nothing()),
-            ignore_index=ignore_index,
         )
-        m.train(random())
-        m.to(device)
+    m.train(random())
+    m.to(device)
 
-        y = m(x, target)
-        return y
+    y = m(x, target)
+    return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestBCELossModule(flow.unittest.TestCase):
+    @autotest()
+    def test_bce_loss_with_random_data_dim_2(test_case):
+        test_bce_loss(2)
+
+    @autotest()
+    def test_bce_loss_with_random_data_dim_3(test_case):
+        test_bce_loss(3)
+
+    @autotest()
+    def test_bce_loss_with_random_data_dim_4(test_case):
+        test_bce_loss(4)
+
+    @autotest()
+    def test_bce_loss_with_random_data_dim_5(test_case):
+        test_bce_loss(5)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
+    @autotest()
+    def test_bce_with_logits_loss_with_random_data_dim_2(test_case):
+        test_bce_loss(2, True)
+
+    @autotest()
+    def test_bce_with_logits_loss_with_random_data_dim_3(test_case):
+        test_bce_loss(3, True)
+
+    @autotest()
+    def test_bce_with_logits_loss_with_random_data_dim_4(test_case):
+        test_bce_loss(4, True)
+
+    @autotest()
+    def test_bce_with_logits_loss_with_random_data_dim_5(test_case):
+        test_bce_loss(5, True)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -57,7 +202,9 @@ class TestL1LossModule(flow.unittest.TestCase):
         shape = random_tensor().value().shape
 
         x = random_pytorch_tensor(len(shape), *shape).to(device)
-        target = random_pytorch_tensor(len(shape), *shape).to(device)
+        target = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+            device
+        )
 
         m = torch.nn.L1Loss(reduction=oneof("none", "sum", "mean", nothing()))
         m.train(random())
@@ -75,7 +222,9 @@ class TestSmoothL1LossModule(flow.unittest.TestCase):
         shape = random_tensor().value().shape
 
         x = random_pytorch_tensor(len(shape), *shape).to(device)
-        target = random_pytorch_tensor(len(shape), *shape).to(device)
+        target = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+            device
+        )
 
         m = torch.nn.SmoothL1Loss(
             reduction=oneof("none", "sum", "mean", nothing()), beta=oneof(0, 0.5, 1)
@@ -84,6 +233,73 @@ class TestSmoothL1LossModule(flow.unittest.TestCase):
         m.to(device)
 
         y = m(x, target)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestMSELossModule(flow.unittest.TestCase):
+    @autotest()
+    def test_mse_loss_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+
+        x = random_pytorch_tensor(len(shape), *shape).to(device)
+        target = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+            device
+        )
+
+        m = torch.nn.MSELoss(reduction=oneof("none", "sum", "mean", nothing()))
+        m.train(random())
+        m.to(device)
+
+        y = m(x, target)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestKLDivLossModule(flow.unittest.TestCase):
+    @autotest()
+    def test_kldiv_loss_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+
+        x = random_pytorch_tensor(len(shape), *shape).to(device)
+        target = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+            device
+        )
+
+        m = torch.nn.KLDivLoss(
+            reduction=oneof("none", "sum", "mean", nothing()),
+            log_target=oneof(True, False),
+        )
+        m.train(random())
+        m.to(device)
+
+        y = m(x, target)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestMarginRankingLossModule(flow.unittest.TestCase):
+    @autotest()
+    def test_margin_ranking_loss_with_random_data(test_case):
+        device = random_device()
+        shape = random_tensor().value().shape
+
+        x1 = random_pytorch_tensor(len(shape), *shape).to(device)
+        x2 = random_pytorch_tensor(len(shape), *shape).to(device)
+        target = random_pytorch_tensor(len(shape), *shape, requires_grad=False).to(
+            device
+        )
+
+        m = torch.nn.MarginRankingLoss(
+            margin=oneof(0.0, 0.3, 10),
+            reduction=oneof("none", "sum", "mean", nothing()),
+        )
+        m.train(random())
+        m.to(device)
+
+        y = m(x1, x2, target)
         return y
 
 
