@@ -57,7 +57,7 @@ def masked_fill_op(input, mask, value):
     """
 
     orig_type = input.dtype
-    return flow.F.where(mask, float(value), input.to(dtype=flow.float64)).to(
+    return flow._C.where(mask, float(value), input.to(dtype=flow.float64)).to(
         dtype=orig_type
     )
 
