@@ -80,22 +80,22 @@ def is_user_op(node):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestConvertDependency(flow.unittest.TestCase):
-    def test_get_params(test_case):
-        class ConvModel(flow.nn.Module):
-            def __init__(self):
-                super(ConvModel, self).__init__()
-                self.conv = flow.nn.Conv2d(3, 64, kernel_size=11, bias=False)
+#     def test_get_params(test_case):
+#         class ConvModel(flow.nn.Module):
+#             def __init__(self):
+#                 super(ConvModel, self).__init__()
+#                 self.conv = flow.nn.Conv2d(3, 64, kernel_size=11, bias=False)
 
-            def forward(self, x):
-                x = self.conv(x)
-                return x
+#             def forward(self, x):
+#                 x = self.conv(x)
+#                 return x
 
-        model = ConvModel().state_dict()
-        for layer_name in model:
-            layer = model[layer_name]
-            layer_path = getattr(layer, "file_path", None)
-            test_case.assertEqual(layer_path, "m.conv.1.weight/out")
-            break
+#         model = ConvModel().state_dict()
+#         for layer_name in model:
+#             layer = model[layer_name]
+#             layer_path = getattr(layer, "file_path", None)
+#             test_case.assertEqual(layer_path, "m.conv.1.weight/out")
+#             break
 
     def test_infos_of_nodes(test_case):
         alexnet_module = alexnet()
