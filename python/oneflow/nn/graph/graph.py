@@ -39,9 +39,21 @@ class Graph(object):
     r"""Base class for all neural network graphs traced from nn.Module.
 
     To use graph mode for model training or evaluation in OneFlow, you should 
-    subclass this class. Then assign modules as regular attributes. Modules 
-    assigned in Graph init will be registered and wrapped into a Block. A Block 
-    reprents a segment of code and its scope in a Graph.
+    subclass this class. Then assign modules as regular attributes::
+    
+        import oneflow as flow
+
+        class LinearGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linear = flow.nn.Linear(3, 8, False)
+
+            def build(self, x):
+                return self.linear(x)
+
+
+    Modules assigned in Graph init will be registered and wrapped into a Block.
+    A Block reprents a segment of code and its scope in a Graph.
 
     Modules registered in Graph can be call in Graph.build(). Module's operator
     exectuion in Graph.build() is traced into a graph on the first call of a
@@ -113,7 +125,7 @@ class Graph(object):
             block.debug(mode)
 
     def build(self, *args):
-        r"""Defines the computation traced at the first call.
+        r"""Defines the computation graph traced at the first call of Graph.
         Should be overridden by all subclasses.
         """
         raise NotImplementedError()
@@ -122,7 +134,7 @@ class Graph(object):
         self, optim: Optimizer, *, lr_sch: LrScheduler = None,
     ):
         r"""Add an optimizer, an learning rate scheduler for the graph.
-        Optimizer.step() LrScheduler.step() are automatically executed at each
+        Optimizer.step(), LrScheduler.step() are automatically executed at each
         call on Graph.
         """
         opt_dict = dict()
@@ -140,6 +152,8 @@ class Graph(object):
         self._opts.append(opt_dict)
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
+        r"""Set the GradScaler for grad and losss scaling.
+        """
         assert isinstance(grad_scaler, GradScaler)
         self._grad_scaler = grad_scaler
 
@@ -453,7 +467,7 @@ class Graph(object):
 
         Args:
             name (string): name of the child block. The child block can be
-                accessed from this graph using the given name
+                accessed from this graph using the given name.
             module (Module): child module to be added to the graph.
         """
         if not isinstance(module, Module) and module is not None:
