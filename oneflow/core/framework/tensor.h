@@ -127,18 +127,18 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Symbol<Device>> device() const { return device_; }
   Maybe<Symbol<Device>*> mut_device() { RETURN_ERROR_WITH_BUG_PROMPT(); }
   bool is_cuda() const {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   bool is_consistent() const { return false; }
   bool is_local() const { return !is_consistent(); }
   bool is_lazy() const {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   bool is_eager() const { return !is_lazy(); }
   const TensorMeta& tensor_meta() const {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return *(TensorMeta*)nullptr;
   }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const {
@@ -167,19 +167,19 @@ class StaticZerosTensor final : public Tensor {
 
   // Getters for autograd
   bool requires_grad() const {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   bool is_leaf() const {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   bool retain_grad() const {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   std::shared_ptr<const FunctionNode> grad_fn_node() const {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
   Maybe<Tensor> acc_grad() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -187,37 +187,37 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> detach() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> clone() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
   std::shared_ptr<Tensor> data() const {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
 
   // Setters for autograd
-  void set_requires_grad(bool requires_grad) { LOG(FATAL) << kOfBugIssueUploadPrompt; }
+  void set_requires_grad(bool requires_grad) { PRINT_BUG_PROMPT_AND_ABORT(); }
   Maybe<void> set_retain_grad(bool retain_grad) { RETURN_ERROR_WITH_BUG_PROMPT(); }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
   }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return *(std::shared_ptr<FunctionNode>*)nullptr;
   }
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> mut_acc_grad() { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  void set_is_leaf(bool is_leaf) { LOG(FATAL) << kOfBugIssueUploadPrompt; }
+  void set_is_leaf(bool is_leaf) { PRINT_BUG_PROMPT_AND_ABORT(); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
   bool has_autograd_meta() const {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
   }
 
   user_op::TensorDesc* mut_tensor_meta() {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
 

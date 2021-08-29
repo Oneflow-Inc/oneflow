@@ -153,7 +153,7 @@ class ConsistentTensorImpl : public TensorImpl {
   void set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
 
   ConsistentTensorMeta* mut_tensor_meta() {
-    LOG(FATAL) << kOfBugIssueUploadPrompt;
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
 
