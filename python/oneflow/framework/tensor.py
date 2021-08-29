@@ -91,7 +91,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
 
 def _getitem(self, key):
     try:
-        return flow.F.tensor_getitem(self, key)
+        return flow._C.tensor_getitem(self, key)
     except IndexException as e:
         # The stop condition of for in python is IndexError,
         # so we have to catch IndexException from C++ and throw IndexError
@@ -101,7 +101,7 @@ def _getitem(self, key):
 def _setitem(self, key, value):
     if self.is_consistent:
         if isinstance(value, (int, float)):
-            value = flow.F.consistent_constant(
+            value = flow._C.consistent_constant(
                 [1],
                 value,
                 dtype=self.dtype,
@@ -122,11 +122,11 @@ def _setitem(self, key, value):
                 value = value.to_consistent(self.placement, sbp=flow.sbp.broadcast)
     else:
         if isinstance(value, (int, float)):
-            value = flow.F.constant([1], value, dtype=self.dtype, device=self.device)
+            value = flow._C.constant([1], value, dtype=self.dtype, device=self.device)
         else:
             value = value.to(device=self.device)
 
-    flow.F.tensor_setitem(self, key, value)
+    flow._C.tensor_setitem(self, key, value)
     return self
 
 

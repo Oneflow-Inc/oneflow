@@ -39,7 +39,7 @@ def round_op(input):
         array([2., 8., 5., 7.], dtype=float32)
 
     """
-    return flow.F.round(input)
+    return flow._C.round(input)
 
 
 @register_tensor_op("round")
@@ -50,7 +50,7 @@ def round_op_tensor(input):
     See :func:`oneflow.round`
 
     """
-    return flow.F.round(input)
+    return flow._C.round(input)
 
 
 if __name__ == "__main__":
