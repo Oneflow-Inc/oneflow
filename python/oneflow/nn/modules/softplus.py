@@ -23,7 +23,7 @@ class Softplus(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.softplus(x)
+        return flow._C.softplus(x)
 
 
 @register_tensor_op("softplus")

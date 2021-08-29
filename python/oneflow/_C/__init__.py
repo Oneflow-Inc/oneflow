@@ -13,11 +13,4 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.compatible.single_client.nn.modules.dataset import (
-    ImageBatchAlign as batch_align,
-)
-from oneflow.compatible.single_client.nn.modules.dataset import ImageDecode as decode
-from oneflow.compatible.single_client.nn.modules.dataset import (
-    ImageNormalize as normalize,
-)
-from oneflow.compatible.single_client.nn.modules.dataset import ImageResize as Resize
+from oneflow._oneflow_internal._C import *
