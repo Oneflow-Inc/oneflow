@@ -26,18 +26,13 @@ namespace std {
 template<typename... T>
 struct hash<std::tuple<T...>> final {
   size_t operator()(const std::tuple<T...>& val) const {
-    size_t seed = 0;
-
-    do_hash(val, seed, std::index_sequence_for<T...>{});
-
-    return seed;
+    return do_hash(val, std::index_sequence_for<T...>{});
   }
 
  private:
   template<size_t... I>
-  void do_hash(const std::tuple<T...>& val, size_t& seed, std::index_sequence<I...>) const {
-    __attribute__((__unused__)) int dummy[] = {
-        (oneflow::HashCombineTyped<T>(&seed, std::get<I>(val)), 0)...};
+  size_t do_hash(const std::tuple<T...>& val, std::index_sequence<I...>) const {
+    return oneflow::Hash<T...>(std::get<I>(val)...);
   }
 };
 

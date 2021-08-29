@@ -51,18 +51,22 @@ inline void HashCombine(size_t* seed, size_t hash) {
   *seed ^= (hash + 0x9e3779b9 + (*seed << 6U) + (*seed >> 2U));
 }
 
-template<typename T>
-inline void HashCombineTyped(size_t* seed, const T& v) {
-  HashCombine(seed, std::hash<T>()(v));
+template<typename... T>
+inline void Hash(size_t* seed, const T& ...v) {
+  __attribute__((__unused__)) int dummy[] = { (HashCombine(seed, std::hash<T>()(v)), 0)... };
 }
 
 inline size_t HashCombine(size_t lhs, size_t rhs) {
   return lhs ^ (rhs + 0x9e3779b9 + (lhs << 6U) + (lhs >> 2U));
 }
 
-template<typename T, typename U>
-inline size_t HashCombineTyped(const T& lhs, const U& rhs) {
-  return HashCombine(std::hash<T>()(lhs), std::hash<U>()(rhs));
+template<typename T, typename... Ts>
+inline size_t Hash(const T& v1, const Ts& ...vn) {
+  size_t seed = std::hash<T>()(v1);
+
+  Hash<Ts...>(&seed, vn...);
+
+  return seed;
 }
 
 }  // namespace oneflow
@@ -72,7 +76,7 @@ namespace std {
 template<typename T0, typename T1>
 struct hash<std::pair<T0, T1>> {
   std::size_t operator()(const std::pair<T0, T1>& p) const {
-    return oneflow::HashCombineTyped<T0, T1>(p.first, p.second);
+    return oneflow::Hash<T0, T1>(p.first, p.second);
   }
 };
 
@@ -80,7 +84,7 @@ template<typename T>
 struct hash<std::vector<T>> {
   std::size_t operator()(const std::vector<T>& vec) const {
     std::size_t hash_value = vec.size();
-    for (const auto& elem : vec) { oneflow::HashCombineTyped<T>(&hash_value, elem); }
+    for (const auto& elem : vec) { oneflow::Hash<T>(&hash_value, elem); }
     return hash_value;
   }
 };

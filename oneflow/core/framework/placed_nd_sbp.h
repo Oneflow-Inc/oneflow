@@ -55,7 +55,7 @@ namespace std {
 template<>
 struct hash<oneflow::PlacedNdSbp> final {
   size_t operator()(const oneflow::PlacedNdSbp& placed_nd_sbp) const {
-    return oneflow::HashCombineTyped(placed_nd_sbp.nd_sbp(), placed_nd_sbp.placement());
+    return oneflow::Hash(placed_nd_sbp.nd_sbp(), placed_nd_sbp.placement());
   }
 };
 
