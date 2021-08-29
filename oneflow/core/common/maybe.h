@@ -253,7 +253,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return GetFormatedSerializedError(this->error());
+    return maybe_ptr_.GetSerializedError();
   }
 
   T GetDataAndSerializedErrorProto(std::string* error_str) const {
