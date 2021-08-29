@@ -33,9 +33,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::hash(py::self))
       .def(py::pickle(
           [](const Symbol<DType>& dtype) {  // __getstate__
-            return dtype->bytes().GetOrThrow();
+            return static_cast<int>(dtype->data_type());
           },
-          [](size_t t) {  // __setstate__
+          [](int t) {  // __setstate__
             return CHECK_JUST(DType::Get(DataType(t)));
           }))
       .def_property_readonly(

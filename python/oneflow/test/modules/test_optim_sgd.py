@@ -16,6 +16,7 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
+import tempfile
 
 import numpy as np
 from test_util import GenArgDict
@@ -34,6 +35,7 @@ def compare_with_numpy_sgd(
     learning_rate,
     train_iters,
     reload_state_step,
+    save_load_by_pickle,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -68,6 +70,14 @@ def compare_with_numpy_sgd(
             if i == reload_state_step:
                 state_dict = sgd.state_dict()
                 sgd = flow.optim.SGD([x])
+                if save_load_by_pickle:
+                    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
+                        file_name = f.name
+                        import pickle
+
+                        pickle.dump(state_dict, f)
+                    with open(file_name, "rb") as f:
+                        state_dict = pickle.load(f)
                 sgd.load_state_dict(state_dict)
         return x
 
@@ -105,6 +115,7 @@ def compare_with_numpy_sgd_clip_grad(
     clip_grad_norm_type,
     train_iters,
     reload_state_step,
+    save_load_by_pickle,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -142,6 +153,14 @@ def compare_with_numpy_sgd_clip_grad(
             if i == reload_state_step:
                 state_dict = sgd.state_dict()
                 sgd = flow.optim.SGD([x])
+                if save_load_by_pickle:
+                    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
+                        file_name = f.name
+                        import pickle
+
+                        pickle.dump(state_dict, f)
+                    with open(file_name, "rb") as f:
+                        state_dict = pickle.load(f)
                 sgd.load_state_dict(state_dict)
         return x
 
@@ -183,6 +202,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1, 0.1]
         arg_dict["train_iters"] = [10]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
+        arg_dict["save_load_by_pickle"] = [False, True]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd(test_case, **arg)
 
@@ -197,6 +217,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["train_iters"] = [10]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
+        arg_dict["save_load_by_pickle"] = [False, True]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd_clip_grad(test_case, **arg)
 
