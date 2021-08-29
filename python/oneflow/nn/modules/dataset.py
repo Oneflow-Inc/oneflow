@@ -35,7 +35,7 @@ def mirrored_gen_random_seed(seed=None):
     return (seed, has_seed)
 
 
-class OfrecordReader(Module):
+class OFRecordReader(Module):
     def __init__(
         self,
         ofrecord_dir: str,
@@ -106,7 +106,7 @@ class OfrecordReader(Module):
         return res
 
 
-class OfrecordRawDecoder(Module):
+class OFRecordRawDecoder(Module):
     def __init__(
         self,
         blob_name: str,
@@ -586,7 +586,7 @@ def raw_decoder(
         print(
             "WARNING: auto_zero_padding has been deprecated, Please use truncate instead.\n            "
         )
-    return OfrecordRawDecoder(
+    return OFRecordRawDecoder(
         blob_name,
         shape,
         dtype,
@@ -607,7 +607,7 @@ def get_ofrecord_handle(
     shuffle_after_epoch: bool = False,
     name: Optional[str] = None,
 ):
-    return OfrecordReader(
+    return OFRecordReader(
         ofrecord_dir,
         batch_size,
         data_part_num,
@@ -826,7 +826,7 @@ class OFRecordBytesDecoder(Module):
 
         name: The name for this component in the graph.
 
-        input: the Tensor which might be provided by an OfrecordReader.
+        input: the Tensor which might be provided by an OFRecordReader.
 
     Returns:
 
@@ -841,7 +841,7 @@ class OFRecordBytesDecoder(Module):
 
         >>> def example():
         ...      batch_size = 16
-        ...      record_reader = flow.nn.OfrecordReader(
+        ...      record_reader = flow.nn.OFRecordReader(
         ...         "dataset/",
         ...         batch_size=batch_size,
         ...         part_name_suffix_length=5,
