@@ -59,9 +59,7 @@ class Graph(object):
     exectuion in Graph.build() is traced into a graph on the first call of a
     Graph. The traced graph will be compiled and optimized for later execution.
 
-    # TODO() add deom
-
-    Graph cannot be nested at the moment.
+    Note that Graph cannot be nested at the moment.
     """
     _child_init_cnt = dict()
 
