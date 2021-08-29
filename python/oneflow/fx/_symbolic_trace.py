@@ -131,3 +131,193 @@ class PHBase(object):
 PH = PHBase()
 
 
+class Tracer(TracerBase):
+    # Reference: https://github.com/pytorch/pytorch/issues/54354
+    # The first line of this docstring overrides the one Sphinx generates for the
+    # documentation. We need it so that Sphinx doesn't leak `math`s path from the
+    # build environment (e.g. `<module 'math' from '/leaked/path').
+
+    """Tracer(autowrap_modules=(math,), autowrap_functions=(), enable_cpatching=False)
+
+    ``Tracer`` is the class that implements the symbolic tracing functionality
+    of ``oneflow.fx.symbolic_trace``. A call to ``symbolic_trace(m)`` is equivalent
+    to ``Tracer().trace(m)``.
+
+    Tracer can be subclassed to override various behaviors of the tracing
+    process. The different behaviors that can be overridden are described
+    in the docstrings of the methods on this class.
+    """
+    def __init__(self, autowrap_modules: Tuple[ModuleType] = (math, ),
+                 autowrap_functions: Tuple[Callable, ...] = (),
+                 enable_cpatching: bool = False,
+                 param_shapes_constant: bool = False) -> None:
+        # This method's signature is overridden by the first line of this class'
+        # docstring. If this method's signature is modified, the signature that
+        # overrides it also should be modified accordingly.
+
+        """
+        Construct a Tracer object.
+
+        Args:
+
+            autowrap_modules (Tuple[ModuleType]): defaults to `(math, )`,
+                Python modules whose functions should be wrapped automatically
+                without needing to use fx.wrap().
+
+            autowrap_function (Tuple[Callable, ...]): defaults to `()`,
+                Python functions that should be wrapped automatically without
+                needing to use fx.wrap().
+
+            enable_cpatching (bool): defaults to `False`,
+                Allows you to enable/disable monkeypatching of oneflow functions at the
+                C-level (which captures functins like randn).
+
+                C-level monkeypatching works by directly modifying the PyCFunctionObject*
+                so that calling it returns a different function.
+
+                Turning this on is likely to slow down tracing by 1.5-3x.
+
+            param_shapes_constant (bool): see https://github.com/pytorch/pytorch/issues/61733. When
+            this flag is set,  calls to shape, size and a few other shape like attributes of a module's parameter
+            will be evaluted directly, rather than returning a new Proxy value for an attribute access.
+
+        """
+
+        super().__init__()
+
+        # Functions we will eagerly wrap when we see them while tracing
+        # this captures both `math.sqrt()` and `from math import sqrt` automatically
+        self._autowrap_function_ids: Set[int] = {
+            id(value) for name, value in chain(*[m.__dict__.items() for m in autowrap_modules])
+            if not name.startswith("_") and callable(value)}
+        self._autowrap_function_ids.update(set([id(f) for f in autowrap_functions]))
+
+        # Python modules to apply autowrap to at the start, in addition to
+        # modules we see while tracing
+        self._autowrap_search: List[ModuleType] = list(autowrap_modules)
+        self.enable_cpatching = enable_cpatching
+        self.param_shapes_constant = param_shapes_constant
+
+        self.submodule_paths: Optional[Dict[flow.nn.Module, str]] = None
+    
+    def create_arg(self, a: Any) -> 'Argument':
+        """
+        A method to specify the behavior of tracing when preparing values to
+        be used as arguments to nodes in the ``Graph``.
+
+        By default, the behavior includes:
+
+        #. Iterate through collection types (e.g. tuple, list, dict) and recursively
+           call ``create_arg`` on the elements.
+        #. Given a Proxy object, return a reference to the underlying IR ``Node``
+        #. Given a non-Proxy Tensor object, emit IR for various cases:
+
+            * For a Parameter, emit a ``get_attr`` node referring to that Parameter
+            * For a non-Parameter Tensor, store the Tensor away in a special
+              attribute referring to that attribute.
+
+        This method can be overridden to support more types.
+
+        Args:
+
+            a (Any): The value to be emitted as an ``Argument`` in the ``Graph``.
+
+
+        Returns:
+
+            The value ``a`` converted into the appropriate ``Argument``
+        """
+        # The base tracer is used to construct Graphs when there is no associated
+        # module hierarchy, so it can never create parameter references.
+        # The default tracer adds the ability to refer to parameters when
+        # tracing modules.
+        if isinstance(a, flow.nn.Parameter):
+            for n, p in self.root.named_parameters():
+                if a is p:
+                    return self.create_node('get_attr', n, (), {})
+            raise NameError('parameter is not a member of this module')
+        elif isinstance(a, flow.Tensor):
+            for n_, p_ in self.root.named_buffers():
+                if a is p_:
+                    return self.create_node('get_attr', n_, (), {})
+        elif isinstance(a, flow.nn.Module):
+            for n_, p_ in self.root.named_modules():
+                if a is p_:
+                    return self.create_node('get_attr', n_, (), {})
+        # For NamedTuple instances that appear literally as args, we emit
+        # a node to construct the NamedTuple and use that Node as the argument.
+        if isinstance(a, tuple) and hasattr(a, '_fields'):
+            args = tuple(self.create_arg(elem) for elem in a)
+            return self.create_node('call_function', a.__class__, args, {})
+
+        # Tensors do not have a reliable string repr() from which they can be
+        # constructed (and we probably don't want to rely on that, either), so
+        # for any constant Tensor values we encounter, first search for if they
+        # are an attribute of some module in the module hierarchy. If so, emit
+        # a get_attr to retrieve that tensor. Otherwise, we'll store away the
+        # tensor value into a special attribute on the Module s.t. we can
+        # retrieve it with a get_attr.
+
+        if type(a) in _proxyable_classes:
+            # This is an instance of a proxyable class for which we did not
+            # witness its construction. Intern this as a constant attribute
+
+            # TODO: binary search
+            i = 0
+            while True:
+                qualname = f'_{a.__class__.__name__}_constant_{i}'
+                if not hasattr(self.root, qualname):
+                    break
+                i += 1
+            setattr(self.root, qualname, a)
+
+            return self.create_node('get_attr', qualname, (), {})
+
+        return super().create_arg(a)
+
+    def is_leaf_module(self, m: flow.nn.Module, module_qualified_name : str) -> bool:
+        """
+        A method to specify whether a given ``nn.Module`` is a "leaf" module.
+
+        Leaf modules are the atomic units that appear in
+        the IR, referenced by ``call_module`` calls. By default,
+        Modules in the OneFlow standard library namespace (flow.nn)
+        are leaf modules. All other modules are traced through and
+        their constituent ops are recorded, unless specified otherwise
+        via this parameter.
+
+        Args:
+
+            m (Module): The module being queried about
+            module_qualified_name (str): The path to root of this module. For example,
+                if you have a module hierarchy where submodule ``foo`` contains
+                submodule ``bar``, which contains submodule ``baz``, that module will
+                appear with the qualified name ``foo.bar.baz`` here.
+        """
+        return m.__module__.startswith('flow.nn') and not isinstance(m, flow.nn.Sequential)
+    
+    def path_of_module(self, mod : flow.nn.Module) -> str:
+        """
+        Helper method to find the qualified name of ``mod`` in the Module hierarchy
+        of ``root``. For example, if ``root`` has a submodule named ``foo``, which has
+        a submodule named ``bar``, passing ``bar`` into this function will return
+        the string "foo.bar".
+
+        Args:
+
+            mod (str): The ``Module`` to retrieve the qualified name for.
+        """
+        # Prefer the O(1) algorithm
+        if self.submodule_paths:
+            path = self.submodule_paths.get(mod)
+            if path is None:
+                raise NameError('module is not installed as a submodule')
+            assert isinstance(path, str)
+            return path
+        # O(N^2) fallback in the case that we didn't store the submodule
+        # paths.
+        else:
+            for n, p in self.root.named_modules():
+                if mod is p:
+                    return n
+            raise NameError('module is not installed as a submodule')
