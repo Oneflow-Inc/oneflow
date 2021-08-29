@@ -357,7 +357,7 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
 #define OF_RUNTIME_ERROR()                                                                        \
   return Error::RuntimeError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) << "RuntimeError " \
                                                                                   ": "
-#define UPLOAD_OF_BUG_THROUGH_ISSUE() OF_RUNTIME_ERROR() << kOfBugIssueUploadPrompt
+#define RETURN_ERROR_WITH_BUG_PROMPT() OF_RUNTIME_ERROR() << kOfBugIssueUploadPrompt
 
 #define OF_COMPLIE_OPTION_ERROR()                                                    \
   return Error::CompileOptionWrong().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \

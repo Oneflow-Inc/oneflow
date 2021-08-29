@@ -121,11 +121,11 @@ class StaticZerosTensor final : public Tensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
   Symbol<DType> dtype() const { return CHECK_JUST(DType::Get(dtype_)); }
-  Maybe<TransportToken> transport_token() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<Symbol<ParallelDesc>> parallel_desc() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<TransportToken> transport_token() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Symbol<Device>> device() const { return device_; }
-  Maybe<Symbol<Device>*> mut_device() { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<Symbol<Device>*> mut_device() { RETURN_ERROR_WITH_BUG_PROMPT(); }
   bool is_cuda() const {
     LOG(FATAL) << kOfBugIssueUploadPrompt;
     return false;
@@ -142,27 +142,27 @@ class StaticZerosTensor final : public Tensor {
     return *(TensorMeta*)nullptr;
   }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const {
-    UPLOAD_OF_BUG_THROUGH_ISSUE();
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
-    UPLOAD_OF_BUG_THROUGH_ISSUE();
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
-  Maybe<vm::EagerBlobObject> eager_blob_object() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<LocalDepObject*> compute_local_dep_object() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<bool> has_eager_blob_object() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<TensorStorage> tensor_storage() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<const Stride> stride() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<int64_t> storage_offset() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<LocalDepObject*> compute_local_dep_object() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<bool> has_eager_blob_object() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<TensorStorage> tensor_storage() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<const Stride> stride() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<int64_t> storage_offset() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
   Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const {
-    UPLOAD_OF_BUG_THROUGH_ISSUE();
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
-  Maybe<MirroredTensor> cur_rank_phy_tensor() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<MirroredTensor> cur_rank_phy_tensor() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) {
-    UPLOAD_OF_BUG_THROUGH_ISSUE();
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
   // Getters for autograd
@@ -182,10 +182,10 @@ class StaticZerosTensor final : public Tensor {
     LOG(FATAL) << kOfBugIssueUploadPrompt;
     return nullptr;
   }
-  Maybe<Tensor> acc_grad() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<TensorArg> current_grad() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<Tensor> detach() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<Tensor> clone() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<Tensor> acc_grad() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<TensorArg> current_grad() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Tensor> detach() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Tensor> clone() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
   std::shared_ptr<Tensor> data() const {
     LOG(FATAL) << kOfBugIssueUploadPrompt;
     return nullptr;
@@ -193,7 +193,7 @@ class StaticZerosTensor final : public Tensor {
 
   // Setters for autograd
   void set_requires_grad(bool requires_grad) { LOG(FATAL) << kOfBugIssueUploadPrompt; }
-  Maybe<void> set_retain_grad(bool retain_grad) { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<void> set_retain_grad(bool retain_grad) { RETURN_ERROR_WITH_BUG_PROMPT(); }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
     LOG(FATAL) << kOfBugIssueUploadPrompt;
   }
@@ -201,8 +201,8 @@ class StaticZerosTensor final : public Tensor {
     LOG(FATAL) << kOfBugIssueUploadPrompt;
     return *(std::shared_ptr<FunctionNode>*)nullptr;
   }
-  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
-  Maybe<Tensor> mut_acc_grad() { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Tensor> mut_acc_grad() { RETURN_ERROR_WITH_BUG_PROMPT(); }
   void set_is_leaf(bool is_leaf) { LOG(FATAL) << kOfBugIssueUploadPrompt; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() {
     LOG(FATAL) << kOfBugIssueUploadPrompt;
@@ -222,7 +222,7 @@ class StaticZerosTensor final : public Tensor {
   }
 
   Maybe<MirroredTensor> AsMirroredTensor();
-  Maybe<ConsistentTensor> AsConsistentTensor() { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<ConsistentTensor> AsConsistentTensor() { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
   StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -348,7 +348,7 @@ class Parameter final : public TensorIf<Parameter> {
     if (const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor_)) {
       return consistent_tensor;
     }
-    UPLOAD_OF_BUG_THROUGH_ISSUE();
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
  private:
@@ -440,7 +440,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
   Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
-  Maybe<ConsistentTensor> AsConsistentTensor() override { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
@@ -535,7 +535,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
-  Maybe<MirroredTensor> AsMirroredTensor() override { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<MirroredTensor> AsMirroredTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override { return shared_from_this(); }
 
  private:
