@@ -66,7 +66,7 @@ def scatter(input, dim, index, src):
 
     """
 
-    return flow.F.scatter(input, dim, index, src)
+    return flow._C.scatter(input, dim, index, src)
 
 
 def scatter_add(input, dim, index, src):
@@ -110,7 +110,32 @@ def scatter_add(input, dim, index, src):
         flow.Tensor
     ], f"type of src must be oneflow.Tensor, but %s givien" % type(src)
 
-    return flow.F.scatter_add(input, dim, index, src)
+    return flow._C.scatter_add(input, dim, index, src)
+
+
+def _scatter_nd_op(index, update, shape):
+    """This operator inserts the elements in `update` according to the `index` and create a new Tensor.
+
+    Args:
+        index: The indices of `update`. Its type should be `flow.int`.
+        update: The update Tensor.
+        shape (Sequence[int]): The constant tensor shape, the constant tensor elements are all zero.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> index = flow.Tensor(np.array([[1], [6], [4]]), dtype=flow.int)
+        >>> update = flow.Tensor(np.array([10.2,5.1,12.7]), dtype=flow.float)
+        >>> out = flow.scatter_nd(index, update, [8])
+        >>> out
+        tensor([ 0.0000, 10.2000,  0.0000,  0.0000, 12.7000,  0.0000,  5.1000,  0.0000],
+               dtype=oneflow.float32)
+
+    """
+    return flow._C.scatternd(index, update, shape)
 
 
 if __name__ == "__main__":

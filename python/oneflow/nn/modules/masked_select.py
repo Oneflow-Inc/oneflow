@@ -68,9 +68,9 @@ def masked_select_op(input, mask):
             mask, broadcast_like_tensor, broadcast_axes=tuple(broadcast_mask_axes)
         )
     mask = mask.to(dtype=input.dtype)
-    res = flow.F.mul(input, mask)
+    res = flow._C.mul(input, mask)
     indices = flow.argwhere(res)
-    gather_res = flow.F.gather_nd(res, indices)
+    gather_res = flow._C.gather_nd(res, indices)
     return gather_res.flatten()
 
 
