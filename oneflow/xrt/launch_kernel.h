@@ -67,7 +67,6 @@ class XrtLaunchKernel : public Kernel {
   bool IsStateless() const override { return false; }
 
  private:
-  const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
   const JobDesc& job_desc() const;
   mutable BlobDescGetter<device_type> desc_getter_;
   mutable std::shared_ptr<xrt::CompilationCache> compilation_cache_;

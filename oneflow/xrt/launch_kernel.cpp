@@ -40,6 +40,14 @@ static Parameter BuildParameter(const Blob& blob, const std::string& name) {
 }
 }  // namespace xrt
 
+namespace {
+
+const LogicalBlobId& BnInOp2Lbi(const Kernel& kernel, std::string& bn_in_op) {
+  return kernel.op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
+}
+
+}  // namespace
+
 template<DeviceType device_type>
 void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
     std::unordered_map<std::string, BlobDesc>* entry_blob_desc) const {
@@ -48,7 +56,7 @@ void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
 
   for (const auto& bn : kernel_->op_attribute().input_bns()) {
     // Map blob_name to function's input name.
-    std::string blob_name = xrt::BlobIdToName(kernel_->BnInOp2Lbi(bn));
+    std::string blob_name = xrt::BlobIdToName(BnInOp2Lbi(*kernel_, bn));
     // CHECK_GT(io_mapping.count(blob_name), 0);
     const std::string& mapping_name = io_mapping.at(blob_name);
     entry_blob_desc->emplace(mapping_name, get_blob_fn_(bn)->blob_desc());
@@ -158,13 +166,13 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) 
   // Prepare input and output parameters
   std::vector<xrt::Parameter> entry_params, return_params;
   for (const std::string& bn : this->op_attribute().input_bns()) {
-    const LogicalBlobId& lbi = this->BnInOp2Lbi(bn);
+    const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter input = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
     entry_params.push_back(input);
   }
   for (const std::string& bn : this->op_attribute().output_bns()) {
-    const LogicalBlobId& lbi = this->BnInOp2Lbi(bn);
+    const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter output = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
     return_params.push_back(output);
@@ -206,11 +214,6 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) 
   const std::vector<xrt::Parameter>& results = executable->Results();
   CHECK_EQ(results.size(), return_params.size());
   for (int i = 0; i < results.size(); ++i) { CHECK_EQ(results[i].data(), return_params[i].data()); }
-}
-
-template<DeviceType device_type>
-const LogicalBlobId& XrtLaunchKernel<device_type>::BnInOp2Lbi(const std::string& bn_in_op) const {
-  return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
 }
 
 template<DeviceType device_type>
