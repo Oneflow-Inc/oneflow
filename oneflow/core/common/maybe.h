@@ -68,7 +68,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return GetFormatedSerializedError(error());
+    return GetFormatedSerializedError(this->error());
   }
 
   template<typename Type = T>
@@ -135,7 +135,7 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return GetFormatedSerializedError(error());
+    return GetFormatedSerializedError(this->error());
   }
 
   void GetDataAndSerializedErrorProto(std::string* error_str) const {
@@ -194,7 +194,7 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> {
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return GetFormatedSerializedError(error());
+    return GetFormatedSerializedError(this->error());
   }
 
   T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
@@ -253,7 +253,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return GetFormatedSerializedError(error());
+    return GetFormatedSerializedError(this->error());
   }
 
   T GetDataAndSerializedErrorProto(std::string* error_str) const {
