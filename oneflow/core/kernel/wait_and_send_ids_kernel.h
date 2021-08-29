@@ -36,7 +36,7 @@ class WaitAndSendIdsKernel final : public Kernel {
   ~WaitAndSendIdsKernel() = default;
 
  private:
-  void CreateState(void** state) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
   void DestroyState(void* state) const override;
   void ForwardDataContent(const KernelContext* ctx) const override;
 };

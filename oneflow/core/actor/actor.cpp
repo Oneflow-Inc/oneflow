@@ -36,7 +36,7 @@ class KernelContextImpl : public KernelContext {
   void* state() const override { return state_; }
 
   void set_state(void* state) override {
-    CHECK(state_ != nullptr);
+    CHECK(state_ == nullptr);
     state_ = state;
   }
 
@@ -82,9 +82,6 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
     ExecKernel ek;
     ek.kernel_ctx.reset(new KernelContextImpl(device_ctx_.get()));
     ek.kernel = ConstructKernel(job_desc_, node.kernel_conf(), ek.kernel_ctx.get());
-    void* state = nullptr;
-    ek.kernel->CreateState(&state);
-    ek.kernel_ctx->set_state(state);
     exec_kernel_vec_.push_back(std::move(ek));
   }
 

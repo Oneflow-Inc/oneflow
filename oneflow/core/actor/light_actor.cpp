@@ -206,7 +206,6 @@ class LightActor : public ActorBase, public KernelContext {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
       kernel_info_[0]->kernel = ConstructKernel(job_desc, kernel_conf, this);
-      kernel_info_[0]->kernel->CreateState(&kernel_info_[0]->state);
 #ifdef WITH_CUDA_GRAPHS
       auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx_.get());
       if (cuda_device_ctx != nullptr && kernel_conf.all_blobs_are_static()) {
@@ -502,6 +501,7 @@ class LightActor : public ActorBase, public KernelContext {
 
   void set_state(void* state) override {
     CHECK(exec_kernel);
+    CHECK(kernel_info_[0]->state == nullptr);
     kernel_info_[0]->state = state;
   }
 

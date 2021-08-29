@@ -49,18 +49,12 @@ void Kernel::Init(const JobDesc* job_desc, const KernelConf& kernel_conf, Kernel
   VirtualKernelInit(ctx);
 }
 
-void Kernel::CreateState(void** state) const { *state = nullptr; }
-
 void Kernel::DestroyState(void* state) const { CHECK(state == nullptr); }
 
 void Kernel::Launch(const KernelContext* ctx) const {
   Global<KernelObserver>::Get()->WillForward(ctx, this);
   Forward(ctx);
   Global<KernelObserver>::Get()->DidForward(ctx, this);
-}
-
-const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
-  return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
 }
 
 void Kernel::Forward(const KernelContext* ctx) const {

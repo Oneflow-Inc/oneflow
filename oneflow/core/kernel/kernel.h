@@ -35,11 +35,9 @@ class Kernel {
   const JobDesc& job_desc() const { return *job_desc_; }
 
   void Init(const JobDesc* job_desc, const KernelConf& kernel_conf, KernelContext* ctx);
-  virtual void CreateState(void** state) const;
   virtual void DestroyState(void* state) const;
   void Launch(const KernelContext* ctx) const;
 
-  const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
   const KernelConf& kernel_conf() const { return kernel_conf_; }

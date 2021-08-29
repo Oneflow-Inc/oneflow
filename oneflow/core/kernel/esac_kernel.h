@@ -28,8 +28,8 @@ class EsacKernel final : public Kernel {
   ~EsacKernel() override = default;
 
  private:
-  void CreateState(void** state) const override;
   void DestroyState(void* state) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
   void ForwardDataContent(const KernelContext* ctx) const override;
 };
 

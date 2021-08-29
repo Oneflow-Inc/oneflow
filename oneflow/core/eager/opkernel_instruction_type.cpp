@@ -415,6 +415,7 @@ Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction*
   std::function<Blob*(const std::string&)> Blob4BnInOp;
   JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
   opkernel_obj->kernel_ctx()->UpdateBnInOp2BlobFn(Blob4BnInOp);
+  opkernel_obj->kernel_ctx()->set_device_ctx(device_ctx);
   opkernel_obj->kernel().SystemForwardDataContent(opkernel_obj->kernel_ctx());
   return Maybe<void>::Ok();
 }

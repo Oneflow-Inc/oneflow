@@ -23,8 +23,8 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void WaitAndSendIdsKernel<T>::CreateState(void** state) const {
-  *state = new WaitAndSendIdsStatus;
+void WaitAndSendIdsKernel<T>::VirtualKernelInit(KernelContext* ctx) {
+  ctx->set_state(new WaitAndSendIdsStatus);
 }
 
 template<typename T>

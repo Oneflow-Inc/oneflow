@@ -81,8 +81,8 @@ void ReentrantLockStatus::ReleaseLock(int64_t lock_id, std::queue<int64_t>* unlo
 }
 
 template<typename T>
-void ReentrantLockKernel<T>::CreateState(void** state) const {
-  *state = new ReentrantLockStatus;
+void ReentrantLockKernel<T>::VirtualKernelInit(KernelContext* ctx) {
+  ctx->set_state(new ReentrantLockStatus);
 }
 
 template<typename T>

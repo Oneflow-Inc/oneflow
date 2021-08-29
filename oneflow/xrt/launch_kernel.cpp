@@ -203,6 +203,11 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) 
   for (int i = 0; i < results.size(); ++i) { CHECK_EQ(results[i].data(), return_params[i].data()); }
 }
 
+template<DeviceType device_type>
+const LogicalBlobId& XrtLaunchKernel<device_type>::BnInOp2Lbi(const std::string& bn_in_op) const {
+  return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
+}
+
 // ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXrtLaunchConf, XrtLaunchKernel,
 //                            FLOATING_DATA_TYPE_SEQ);
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kXrtLaunchConf, XrtLaunchKernel);

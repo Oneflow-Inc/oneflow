@@ -18,8 +18,8 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void EsacKernel<T>::CreateState(void** state) const {
-  *state = new int64_t;
+void EsacKernel<T>::VirtualKernelInit(KernelContext* ctx) {
+  ctx->set_state(new int64_t);
 }
 
 template<typename T>

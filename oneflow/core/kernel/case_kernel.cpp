@@ -20,8 +20,8 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-void CaseKernel<T>::CreateState(void** state) const {
-  *state = new CaseStatus;
+void CaseKernel<T>::VirtualKernelInit(KernelContext* ctx) {
+  ctx->set_state(new CaseStatus);
 }
 
 template<typename T>
