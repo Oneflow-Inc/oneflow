@@ -147,6 +147,11 @@ void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
 }
 
 template<DeviceType device_type>
+void XrtLaunchKernel<device_type>::VirtualKernelInit(KernelContext* ctx) override {
+  job_desc_ = ctx->job_desc();
+}
+
+template<DeviceType device_type>
 void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
   const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   desc_getter_ = BlobDescGetter<device_type>(this, BnInOp2Blob);
@@ -206,6 +211,11 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) 
 template<DeviceType device_type>
 const LogicalBlobId& XrtLaunchKernel<device_type>::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
+}
+
+template<DeviceType device_type>
+const JobDesc& XrtLaunchKernel<device_type>::job_desc() const {
+  return *job_desc_;
 }
 
 // ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXrtLaunchConf, XrtLaunchKernel,
