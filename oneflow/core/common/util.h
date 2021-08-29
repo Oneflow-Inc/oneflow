@@ -52,8 +52,8 @@ inline void HashCombine(size_t* seed, size_t hash) {
 }
 
 template<typename... T>
-inline void Hash(size_t* seed, const T& ...v) {
-  __attribute__((__unused__)) int dummy[] = { (HashCombine(seed, std::hash<T>()(v)), 0)... };
+inline void Hash(size_t* seed, const T&... v) {
+  __attribute__((__unused__)) int dummy[] = {(HashCombine(seed, std::hash<T>()(v)), 0)...};
 }
 
 inline size_t HashCombine(size_t lhs, size_t rhs) {
@@ -61,7 +61,7 @@ inline size_t HashCombine(size_t lhs, size_t rhs) {
 }
 
 template<typename T, typename... Ts>
-inline size_t Hash(const T& v1, const Ts& ...vn) {
+inline size_t Hash(const T& v1, const Ts&... vn) {
   size_t seed = std::hash<T>()(v1);
 
   Hash<Ts...>(&seed, vn...);
