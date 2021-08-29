@@ -48,6 +48,8 @@ class NNGraph final : public NNGraphIf {
 
  private:
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
+  Maybe<void> CreateAndRegisterNewVariableOpInJobPass();
+
   void NewRuntimeBuffers();
   void CloseRuntimeBuffers();
 

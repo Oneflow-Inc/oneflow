@@ -33,7 +33,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 self.para0 = flow.nn.Parameter(flow.Tensor(10, 4))
 
             def forward(self, x):
-                x = flow.F.matmul(x, self.para0)
+                x = flow._C.matmul(x, self.para0)
                 return x
 
         m = CustomModule()
@@ -86,8 +86,8 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 self.para4 = flow.nn.Parameter(flow.Tensor(1, 4))
 
             def forward(self, x):
-                x = flow.F.matmul(self.para0, x)
-                y = flow.F.matmul(self.para3, x)
+                x = flow._C.matmul(self.para0, x)
+                y = flow._C.matmul(self.para3, x)
                 return x, y
 
         m = CustomModule()
@@ -159,7 +159,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 self.para0 = flow.nn.Parameter(flow.Tensor(10, 4))
 
             def forward(self, x):
-                x = flow.F.matmul(x, self.para0)
+                x = flow._C.matmul(x, self.para0)
                 return x
 
         m = CustomModule()
