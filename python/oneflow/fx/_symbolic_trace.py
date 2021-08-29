@@ -1,6 +1,7 @@
 import builtins
 import functools
 import inspect
+import warnings
 import math
 import os
 from types import CodeType, FunctionType, ModuleType
@@ -120,7 +121,6 @@ def _patch_function(fn: FunctionType, nargs: int) -> FunctionType:
 
 # TODO(bbuf) Calls patch_function in order to intercept functions at the C-extension level
 # Generally, oneflow._C.xxx will not be called when building a Module
-
 class PHBase(object):
     """
     Object representing an input placeholder to `concrete_args`
@@ -131,7 +131,7 @@ class PHBase(object):
 PH = PHBase()
 
 
-class Tracer(TracerBase):
+class Tracer(TracerBase): 
     # Reference: https://github.com/pytorch/pytorch/issues/54354
     # The first line of this docstring overrides the one Sphinx generates for the
     # documentation. We need it so that Sphinx doesn't leak `math`s path from the
@@ -321,3 +321,489 @@ class Tracer(TracerBase):
                 if mod is p:
                     return n
             raise NameError('module is not installed as a submodule')
+    
+    def call_module(self, m: flow.nn.Module, forward: Callable[..., Any], args : Tuple[Any, ...], kwargs : Dict[str, Any]) -> Any:
+        """
+        Method that specifies the behavior of this ``Tracer`` when it encounters
+        a call to an ``nn.Module`` instance.
+
+        By default, the behavior is to check if the called module is a leaf module
+        via ``is_leaf_module``. If it is, emit a ``call_module`` node referring to
+        ``m`` in the ``Graph``. Otherwise, call the ``Module`` normally, tracing through
+        the operations in its ``forward`` function.
+
+        This method can be overridden to--for example--create nested traced
+        GraphModules, or any other behavior you would want while tracing across
+        ``Module`` boundaries.
+
+        Args:
+
+            m (Module): The module for which a call is being emitted
+            forward (Callable): The forward() method of the ``Module`` to be invoked
+            args (Tuple): args of the module callsite
+            kwargs (Dict): kwargs of the module callsite
+
+        Return:
+
+            The return value from the Module call. In the case that a ``call_module``
+            node was emitted, this is a ``Proxy`` value. Otherwise, it is whatever
+            value was returned from the ``Module`` invocation.
+        """
+        module_qualified_name = self.path_of_module(m)
+        if not self.is_leaf_module(m, module_qualified_name):
+            return forward(*args, **kwargs)
+        return self.create_proxy('call_module', module_qualified_name, args, kwargs)
+    
+    def create_args_for_root(self, root_fn, is_module, concrete_args=None):
+        """
+        Create ``placeholder`` nodes corresponding to the signature of the ``root``
+        Module. This method introspects root's signature and emits those
+        nodes accordingly, also supporting ``*args`` and ``**kwargs``.
+        """
+        # In some cases, a function or method has been decorated with a wrapper
+        # defined via ``functools.wraps``. In this case, the outer code object
+        # will likely not contain the actual parameters we care about, so unwrap
+        # the function to get to the innermost callable.
+        fn_for_analysis = inspect.unwrap(root_fn)
+        co = fn_for_analysis.__code__
+        total_args = co.co_argcount + co.co_kwonlyargcount
+        orig_args = list(co.co_varnames)
+        names_iter = iter(co.co_varnames)
+        args : List[Any] = []
+        skip_arg_idx = 0
+        if is_module:
+            if total_args == 0:
+                raise RuntimeError('``self`` argument cannot be part of *args expansion!')
+            skip_arg_idx = 1
+            next(names_iter)  # skip self
+            args.append(self.root)
+
+        sig = inspect.signature(fn_for_analysis)
+
+        def proxy_placeholder(name: str):
+            if concrete_args is not None and name in concrete_args :
+                cnt = 0
+
+                def replace_ph(x):
+                    nonlocal cnt
+                    cnt += 1
+                    out = self.create_proxy('placeholder', f'{name}_{str(cnt)}', (), {})
+                    if x == PH:
+                        return out
+                    # Union[int, bool] == bool in Python <= 3.6
+                    if type(x) == bool or type(x) in base_types and type(x) != flow.Tensor:
+                        flow._assert(out == x, f"{name} has been specialized to have value {x}")
+                    else:
+                        warnings.warn(
+                            "Was not able to add assertion to guarantee correct inputs to "
+                            "specialized function. It is up to the user to make sure that your inputs match the "
+                            "inputs you specialized the function with."
+                        )
+
+                    return x
+
+                return pytree.tree_map(replace_ph, concrete_args[name])
+            if name[0] == '*':
+                default = ()
+            else:
+                param = sig.parameters[name]
+                default = () if param.default is inspect.Parameter.empty else (param.default,)  # type: ignore[assignment]
+            return self.create_proxy('placeholder', name, default, {},
+                                     type_expr=fn_for_analysis.__annotations__.get(name, None))
+        arg_names = [next(names_iter) for idx in range(skip_arg_idx, total_args)]
+        if isinstance(concrete_args, tuple):
+            assert(len(arg_names) == len(concrete_args))
+            concrete_args = {name: val for name, val in zip(arg_names, concrete_args)}
+        args.extend(proxy_placeholder(names) for names in arg_names)
+
+
+        if co.co_kwonlyargcount > 0 or co.co_flags & HAS_VARSTUFF:
+            # TODO: type annotations for *args and **kwargs
+            if co.co_flags & inspect.CO_VARARGS:
+                args.append(proxy_placeholder('*' + next(names_iter)))
+            if co.co_flags & inspect.CO_VARKEYWORDS:
+                args.append(proxy_placeholder('**' + next(names_iter)))
+            root_fn = _patch_function(root_fn, len(args))
+
+        flat_args, in_spec = pytree.tree_flatten(tuple(args))
+        if any(not isinstance(i, pytree.LeafSpec) for i in in_spec.children_specs):
+            # In the case that we have pytree-flattened inputs in
+            # `concrete_args`, generate a flattening wrapper around the
+            # original root function and return that.
+            self.graph._pytree_info = _PyTreeInfo(orig_args[:total_args], in_spec, None)
+
+            def flatten_fn(*args):
+                tree_args = pytree.tree_unflatten(list(args), in_spec)
+                tree_out = root_fn(*tree_args)
+                out_args, out_spec = pytree.tree_flatten(tree_out)
+                assert(self.graph._pytree_info is not None)
+                self.graph._pytree_info = self.graph._pytree_info._replace(out_spec=out_spec)
+                return out_args
+
+            return flatten_fn, flat_args
+        return root_fn, args
+    
+    def _module_getattr(self, attr, attr_val, parameter_proxy_cache):
+        if isinstance(attr_val, flow.nn.Parameter):
+            for n, p in self.root.named_parameters():
+                if attr_val is p:
+                    if n not in parameter_proxy_cache:
+                        kwargs = {}
+                        if 'proxy_factory_fn' in inspect.signature(self.create_proxy).parameters:
+                            kwargs['proxy_factory_fn'] = (None if not self.param_shapes_constant else
+                                                          lambda node : ParameterProxy(self, node, n, attr_val))
+                        val_proxy = self.create_proxy('get_attr', n, (), {}, **kwargs)  # type: ignore[arg-type]
+                        parameter_proxy_cache[n] = val_proxy
+                    return parameter_proxy_cache[n]
+
+        return attr_val
+    
+    def trace(self, root: Union[flow.nn.Module, Callable], concrete_args: Optional[Dict[str, Any]] = None) -> Graph:
+        """
+        Trace ``root`` and return the corresponding FX ``Graph`` representation. ``root``
+        can either be an ``nn.Module`` instance or a Python callable.
+
+        Note that after this call, ``self.root`` may be different from the ``root`` passed
+        in here. For example, when a free function is passed to ``trace()``, we will
+        create an ``nn.Module`` instance to use as the root and add embedded constants
+        to.
+
+
+        Args:
+
+            root (Union[Module, Callable]): Either a ``Module`` or a function to be
+                traced through.
+            concrete_args (Optional[Dict[str, any]]): Concrete arguments that should not be treated as Proxies.
+
+        Returns:
+
+            A ``Graph`` representing the semantics of the passed-in ``root``.
+        """
+        if isinstance(root, flow.nn.Module):
+            self.root = root
+            fn = type(root).forward
+            self.submodule_paths = {mod: name for name, mod in root.named_modules()}
+        else:
+            self.root = flow.nn.Module()
+            fn = root
+
+        tracer_cls: Optional[Type['Tracer']] = getattr(self, '__class__', None)
+        self.graph = Graph(tracer_cls=tracer_cls)
+
+        # When we encounter a Tensor value that's not a parameter, we look if it
+        # is some other attribute on the model. Construct a dict mapping Tensor
+        # values to the qualified name here for efficiency. This is used downstream
+        # in create_arg
+        self.tensor_attrs : Dict[Union[flow.Tensor], str] = {}
+
+        def collect_tensor_attrs(m : flow.nn.Module, prefix_atoms : List[str]):
+            for k, v in m.__dict__.items():
+                if isinstance(v, (flow.Tensor)):
+                    self.tensor_attrs[v] = '.'.join(prefix_atoms + [k])
+            for k, v in m.named_children():
+                collect_tensor_attrs(v, prefix_atoms + [k])
+
+        collect_tensor_attrs(self.root, [])
+
+        assert isinstance(fn, FunctionType)
+
+        fn_globals = fn.__globals__  # run before it gets patched
+        fn, args = self.create_args_for_root(fn, isinstance(root, flow.nn.Module), concrete_args)
+
+        parameter_proxy_cache : Dict[str, Proxy] = {}  # Reduce number of get_attr calls
+
+        # Method dispatch on parameters is not recorded unless it's directly used.
+        # Thus, we need to insert a proxy when __getattr__ requests a parameter.
+        @functools.wraps(_orig_module_getattr)
+        def module_getattr_wrapper(mod, attr):
+            attr_val = _orig_module_getattr(mod, attr)
+            return self._module_getattr(attr, attr_val, parameter_proxy_cache)
+
+        @functools.wraps(_orig_module_call)
+        def module_call_wrapper(mod, *args, **kwargs):
+            def forward(*args, **kwargs):
+                return _orig_module_call(mod, *args, **kwargs)
+
+            _autowrap_check(patcher, getattr(getattr(mod, "forward", mod), "__globals__", {}),
+                            self._autowrap_function_ids)
+            return self.call_module(mod, forward, args, kwargs)
+        
+        with _Patcher() as patcher:
+            # allow duplicate patches to support the case of nested calls
+            patcher.patch_method(flow.nn.Module, "__getattr__", module_getattr_wrapper, deduplicate=False)
+            patcher.patch_method(flow.nn.Module, "__call__", module_call_wrapper, deduplicate=False)
+            _patch_wrapped_functions(patcher)
+            _autowrap_check(patcher, fn_globals, self._autowrap_function_ids)
+            for module in self._autowrap_search:
+                _autowrap_check(patcher, module.__dict__, self._autowrap_function_ids)
+            self.create_node('output', 'output', (self.create_arg(fn(*args)),), {},
+                                type_expr=fn.__annotations__.get('return', None))
+
+        self.submodule_paths = None
+
+        return self.graph
+
+# List of pairs of (global dict, function name) functions
+# to patch for the purposes of the wrap() API.
+_wrapped_fns_to_patch : List[Tuple[dict, str]] = []
+
+# List of methods on classes to wrap (class type, function name)
+# this currently only works for Tensor.* methods that aren't traced properly
+_wrapped_methods_to_patch : List[Tuple[type, str]] = []
+
+# TODO(bbuf) confirm it in oneflow
+if os.environ.get("FX_PATCH_GETITEM") == "1":
+    # This change is needed to trace models like PositionalEmbedding from BERT:
+    # https://github.com/pytorch/benchmark/blob/master/torchbenchmark/models/BERT_pytorch/bert_pytorch/model/embedding/position.py
+    # but causes issues in quantization documented here:
+    # https://github.com/pytorch/pytorch/issues/50710
+    # once that is fixed we can make this the default behavior.
+    _wrapped_methods_to_patch.append((flow.Tensor, "__getitem__"))
+
+def _find_proxy(*objects_to_search):
+    """
+    Recursively search a data structure for a Proxy() and return it,
+    return None if not found.
+    """
+    proxy = None
+
+    def find_proxy(x):
+        nonlocal proxy
+        if isinstance(x, Proxy):
+            proxy = x
+
+    map_aggregate(objects_to_search, find_proxy)
+    return proxy
+
+def _create_wrapped_method(cls, name):
+    orig_fn = getattr(cls, name)
+
+    @functools.wraps(orig_fn)
+    def wrapped(*args, **kwargs):
+        """
+        Search the args and kwargs for a Proxy object. If there is one,
+        emit a ``call_method`` node to preserve the call to this method
+        directly. Otherwise, just return the results of this function
+        call, as this function is not being traced.
+        """
+        proxy = _find_proxy(args, kwargs)
+        if proxy is not None:
+            return proxy.tracer.create_proxy('call_method', name, args, kwargs)
+        return orig_fn(*args, **kwargs)
+
+    return wrapped
+
+class _PatchedFn(NamedTuple):
+    frame_dict : Any
+    fn_name : str
+    orig_fn : Any
+
+    def revert(self):
+        raise NotImplementedError()
+
+class _PatchedFnSetItem(_PatchedFn):
+    def revert(self):
+        self.frame_dict[self.fn_name] = self.orig_fn
+
+
+class _PatchedFnDel(_PatchedFn):
+    def revert(self):
+        del self.frame_dict[self.fn_name]
+
+
+class _PatchedFnSetAttr(_PatchedFn):
+    def revert(self):
+        setattr(self.frame_dict, self.fn_name, self.orig_fn)
+
+
+class _Patcher(object):
+    def __init__(self):
+        super(_Patcher, self).__init__()
+        self.patches_made : List[_PatchedFn] = []
+        self.visited : Set[int] = set()
+
+    def patch(self, frame_dict : Dict[str, Any], name : str, new_fn : Callable,
+              deduplicate : bool = True):
+        """
+        Replace frame_dict[name] with new_fn until we exit the context manager.
+        """
+        new_fn.__fx_already_patched = deduplicate  # type: ignore[attr-defined]
+        if name not in frame_dict and hasattr(builtins, name):
+            self.patches_made.append(_PatchedFnDel(frame_dict, name, None))
+        elif getattr(frame_dict[name], "__fx_already_patched", False):
+            return  # already patched, no need to do it again
+        else:
+            self.patches_made.append(_PatchedFnSetItem(frame_dict, name, frame_dict[name]))
+        frame_dict[name] = new_fn
+
+    def patch_method(self, cls: type, name : str, new_fn : Callable,
+                     deduplicate : bool = True):
+        """
+        Replace object_or_dict.name with new_fn until we exit the context manager.
+        """
+        new_fn.__fx_already_patched = deduplicate  # type: ignore[attr-defined]
+        orig_fn = getattr(cls, name)
+        if getattr(orig_fn, "__fx_already_patched", False):
+            return  # already patched, no need to do it again
+        self.patches_made.append(_PatchedFnSetAttr(cls, name, orig_fn))
+        setattr(cls, name, new_fn)
+
+    def visit_once(self, thing: Any):
+        """ Return True on the first call to with thing, otherwise false """
+        idx = id(thing)
+        if idx in self.visited:
+            return False
+        self.visited.add(idx)
+        return True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Undo all the changes made via self.patch() and self.patch_method()
+        """
+        while self.patches_made:
+            # unpatch in reverse order to handle duplicates correctly
+            self.patches_made.pop().revert()
+        self.visited.clear()
+
+
+def _patch_wrapped_functions(patcher : _Patcher):
+    """
+    Go through ``_wrapped_fn_patch_table`` and, for each frame object, wrap
+    the listed global functions in the `_create_wrapped_func` wrapper.
+    """
+    for frame_dict, name in _wrapped_fns_to_patch:
+        if name not in frame_dict and hasattr(builtins, name):
+            orig_fn = getattr(builtins, name)
+        else:
+            orig_fn = frame_dict[name]
+        patcher.patch(frame_dict, name, _create_wrapped_func(orig_fn))
+
+    for cls, name in _wrapped_methods_to_patch:
+        patcher.patch_method(cls, name, _create_wrapped_method(cls, name))
+
+
+def _autowrap_check(patcher : _Patcher, frame_dict : Dict[str, Any], function_ids : Set[int]):
+    """
+    Some methods, like `math.sqrt` are common enough we want to automatically wrap them as we see them.
+    This method searches a scope for them and patches them if found.
+    """
+    if patcher.visit_once(frame_dict):
+        for name, value in frame_dict.items():
+            if not name.startswith("_") and callable(value) and id(value) in function_ids:
+                patcher.patch(frame_dict, name, _create_wrapped_func(value))
+
+
+def wrap(fn_or_name : Union[str, Callable]):
+    """
+    This function can be called at module-level scope to register fn_or_name as a "leaf function".
+    A "leaf function" will be preserved as a CallFunction node in the FX trace instead of being
+    traced through::
+
+        # foo/bar/baz.py
+        def my_custom_function(x, y):
+            return x * x + y * y
+
+        torch.fx.wrap('my_custom_function')
+
+        def fn_to_be_traced(x, y):
+            # When symbolic tracing, the below call to my_custom_function will be inserted into
+            # the graph rather than tracing it.
+            return my_custom_function(x, y)
+
+    This function can also equivalently be used as a decorator::
+
+        # foo/bar/baz.py
+        @torch.fx.wrap
+        def my_custom_function(x, y):
+            return x * x + y * y
+
+    A wrapped function can be thought of a "leaf function", analogous to the concept of
+    "leaf modules", that is, they are functions that are left as calls in the FX trace
+    rather than traced through.
+
+    Args:
+
+        fn_or_name (Union[str, Callable]): The function or name of the global function to insert into the
+            graph when it's called
+    """
+    if not callable(fn_or_name) and not isinstance(fn_or_name, str):
+        raise RuntimeError('Unsupported type for global function! Must be either a callable or '
+                           'string name')
+
+    if hasattr(fn_or_name, '__code__'):
+        assert not isinstance(fn_or_name, str)  # to make mypy happy
+        fn_name = fn_or_name.__code__.co_name
+    else:
+        assert isinstance(fn_or_name, str), "fn_or_name must be a global function or string name"
+        fn_name = fn_or_name
+
+    currentframe = inspect.currentframe()
+    assert currentframe is not None
+    f = currentframe.f_back
+    assert f is not None
+    if f.f_code.co_name != '<module>':
+        raise NotImplementedError('wrap must be called at the top level of a module')
+
+    # consider implementing Callable version of this via _autowrap_function_ids / _autowrap_search
+    # semantics would be slightly different, but would add support `from x import wrapped_function`
+    _wrapped_fns_to_patch.append((f.f_globals, fn_name))
+    return fn_or_name
+
+def symbolic_trace(root : Union[flow.nn.Module, Callable], concrete_args: Optional[Dict[str, Any]] = None,
+                   enable_cpatching: bool = False) -> GraphModule:
+    """Symbolic tracing API
+
+    Given an ``nn.Module`` or function instance ``root``, this function will return a ``GraphModule``
+    constructed by recording operations seen while tracing through ``root``.
+
+    ``concrete_args`` allows you to partially specialize your function, whether it's to remove control flow or data structures.
+
+    For example::
+
+        def f(a, b):
+            if b == True:
+                return a
+            else:
+                return a*2
+
+    FX can typically not trace through this due to the presence of control
+    flow. However, we can use `concrete_args` to specialize on the value of
+    `b` to trace through this.
+
+        f = fx.symbolic_trace(f, concrete_args={'b': False})
+        assert f(3, False)  == 6
+
+    Note that although you can still pass in different values of `b`, they will be ignored.
+
+    We can also use `concrete_args` to eliminate data-structure handling from
+    our function. This will use pytrees to flatten your input. To avoid
+    overspecializing, pass in `fx.PH` for values that shouldn't be
+    specialized. For example::
+
+        def f(x):
+            out = 0
+            for v in x.values():
+                out += v
+            return out
+        f = fx.symbolic_trace(f, concrete_args={'x': {'a': fx.PH, 'b': fx.PH, 'c': fx.PH}})
+        assert f({'a': 1, 'b': 2, 'c': 4}) == 7
+
+
+    Args:
+        root (Union[torch.nn.Module, Callable]): Module or function to be traced and converted
+            into a Graph representation.
+        concrete_args (Optional[Dict[str, any]]): Inputs to be partially specialized
+        enable_cpatching: Enables C-level patching of functions (captures things like `torch.randn`)
+
+    Returns:
+        GraphModule: a Module created from the recorded operations from ``root``.
+
+    """
+    tracer = Tracer(enable_cpatching=enable_cpatching)
+    graph = tracer.trace(root, concrete_args)
+    name = root.__class__.__name__ if isinstance(root, flow.nn.Module) else root.__name__
+    return GraphModule(tracer.root, graph, name)
+
