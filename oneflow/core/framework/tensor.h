@@ -374,7 +374,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
     OF_RUNTIME_ERROR()
         << "Local tensor has no sbp property. "
            "sbp is the description in the oneflow distributed case, you can refer to "
-           "https://docs.oneflow.org/master/basics_topics/essentials_of_oneflow.html"
+           "https://docs.oneflow.org/master/basics_topics/essentials_of_oneflow.html; "
            "For example, create a consistent tensor like this : 'x = flow.tensor((2,3, "
            "placement=flow.placement(\"cuda\", {0: 0}), sbp=flow.sbp.broadcast)) x.sbp';";
   }
