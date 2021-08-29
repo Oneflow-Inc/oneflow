@@ -174,7 +174,7 @@ inline const std::shared_ptr<cfg::ErrorProto>& UninitializedValueError() {
 }
 
 template<typename T>
-class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> {
+class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
  public:
   Maybe(T data) : error_or_scalar_(data) {}
   Maybe(const Error& error) : error_or_scalar_(error.error_proto()) { CheckError(); }
