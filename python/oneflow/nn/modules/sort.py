@@ -33,13 +33,13 @@ class Sort(Module):
         dim = self.dim if self.dim >= 0 else self.dim + num_dims
         assert 0 <= dim < num_dims, "dim out of range"
         if dim == num_dims - 1:
-            indices = flow.F.arg_sort(input, self.direction)
+            indices = flow._C.arg_sort(input, self.direction)
             return (flow.gather(input, indices, dim), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_dims, dim)
-            x = flow.F.transpose(input, perm=perm)
-            indices = flow.F.arg_sort(x, self.direction)
-            indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
+            x = flow._C.transpose(input, perm=perm)
+            indices = flow._C.arg_sort(x, self.direction)
+            indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.gather(input, indices, dim), indices)
 
 

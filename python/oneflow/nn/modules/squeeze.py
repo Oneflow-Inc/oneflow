@@ -53,7 +53,7 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         dim = range(input.ndim)
     dim = list(filter(lambda i: input.size(i) == 1, dim))
 
-    return flow.F.squeeze(input, dim)
+    return flow._C.squeeze(input, dim)
 
 
 if __name__ == "__main__":
