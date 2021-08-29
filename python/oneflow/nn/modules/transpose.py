@@ -61,7 +61,7 @@ def transpose_op(input, dim0, dim1):
     for i in range(len(x_shape)):
         perm.append(i)
     (perm[dim0], perm[dim1]) = (perm[dim1], perm[dim0])
-    return flow.F.transpose(input, perm=perm)
+    return flow._C.transpose(input, perm=perm)
 
 
 if __name__ == "__main__":

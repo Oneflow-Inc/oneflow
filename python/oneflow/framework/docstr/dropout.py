@@ -17,7 +17,7 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.F.dropout,
+    oneflow._C.dropout,
     r"""
     dropout(x: Tensor, p:float = 0.5, generator :Generator = None) -> Tensor 
     
@@ -33,9 +33,9 @@ add_docstr(
 
     Description of Parameter misalignment:
 
-    Parameter generator : oneflow.F.dropout have it but torch.nn.functional.dropout do not.
+    Parameter generator : oneflow._C.dropout have it but torch.nn.functional.dropout do not.
     
-    Parameter training : torch.nn.functional.dropout have it but oneflow.F.dropout do not.
+    Parameter training : torch.nn.functional.dropout have it but oneflow._C.dropout do not.
 
     Args:      
         p: (float)probability of an element to be zeroed. Default: 0.5        
@@ -63,7 +63,7 @@ add_docstr(
         ...    ]
         ... )
         >>> x = flow.Tensor(arr)
-        >>> y = flow.F.dropout(x, p=0) 
+        >>> y = flow._C.dropout(x, p=0) 
 
         >>> arr = np.array(
         ...    [
@@ -74,7 +74,7 @@ add_docstr(
         ... )
         >>> x = flow.Tensor(arr)    
         >>> generator = flow.Generator()
-        >>> y = flow.F.dropout(x, 0.5, generator) 
+        >>> y = flow._C.dropout(x, 0.5, generator) 
       
 
     

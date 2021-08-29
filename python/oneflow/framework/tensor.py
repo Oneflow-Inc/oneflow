@@ -91,7 +91,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
 
 def _getitem(self, key):
     try:
-        return flow.F.tensor_getitem(self, key)
+        return flow._C.tensor_getitem(self, key)
     except IndexException as e:
         # The stop condition of for in python is IndexError,
         # so we have to catch IndexException from C++ and throw IndexError
@@ -101,8 +101,12 @@ def _getitem(self, key):
 def _setitem(self, key, value):
     if self.is_consistent:
         if isinstance(value, (int, float)):
-            value = flow.F.consistent_constant(
-                [1], value, self.dtype, placement=self.placement, sbp=flow.sbp.broadcast
+            value = flow._C.consistent_constant(
+                [1],
+                value,
+                dtype=self.dtype,
+                placement=self.placement,
+                sbp=flow.sbp.broadcast,
             )
         else:
             if value.is_consistent:
@@ -118,11 +122,11 @@ def _setitem(self, key, value):
                 value = value.to_consistent(self.placement, sbp=flow.sbp.broadcast)
     else:
         if isinstance(value, (int, float)):
-            value = flow.F.constant([1], value, self.dtype, device=self.device)
+            value = flow._C.constant([1], value, dtype=self.dtype, device=self.device)
         else:
             value = value.to(device=self.device)
 
-    flow.F.tensor_setitem(self, key, value)
+    flow._C.tensor_setitem(self, key, value)
     return self
 
 
@@ -252,6 +256,15 @@ def _uniform(self, a=0, b=1):
     return _init_by_initializer_conf(self, initializer_conf)
 
 
+def _trunc_normal_(
+    self, mean=0.0, std=1.0, a=-2.0, b=2.0,
+):
+    initializer_conf = flow.truncated_normal_initializer(mean=mean, stddev=std)
+    res = _init_by_initializer_conf(self, initializer_conf)
+    res = flow.clamp(res, min=a, max=b)
+    return res
+
+
 def _kaiming_uniform(
     self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
@@ -357,7 +370,7 @@ def _get_device(self):
 
 def _format(self, format_spec):
     if self.dim() == 0:
-        return self.tolist().__format__(format_spec)
+        return self.numpy().tolist().__format__(format_spec)
     return object.__format__(self, format_spec)
 
 
@@ -366,7 +379,6 @@ def RegisterMethods():
     Tensor.__rmul__ = lambda self, other: self.mul(other)
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
-    Tensor.tolist = lambda self: self.numpy().tolist()
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _tensor_numpy
     Tensor.size = _size
@@ -400,6 +412,7 @@ def RegisterMethods():
     Tensor.__pow__ = _pow
     Tensor.__format__ = _format
     Tensor.uniform_ = _uniform
+    Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal
     Tensor.xavier_normal_ = _xavier_normal

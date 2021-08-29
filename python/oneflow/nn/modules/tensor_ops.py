@@ -19,6 +19,34 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
 
+@register_tensor_op("negative")
+def negative_op(input):
+    """This operator computes the negative value of Tensor.
+
+    Args:
+        input (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input = flow.Tensor(
+        ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
+        ... )
+        >>> out = flow.negative(input)
+        >>> out
+        tensor([-1.0000,  1.0000, -2.3000], dtype=oneflow.float32)
+
+    """
+    return flow._C.negative(input)
+
+
 @register_tensor_op("type_as")
 def type_as_op(input, target):
     r"""Returns this tensor cast to the type of the given tensor.
@@ -199,6 +227,53 @@ def cuda(input, device: Union[int, str, flow.device] = None):
     elif device is isinstance(int):
         device = "cuda:" + str(device)
     return input.to(device=device)
+
+
+@register_tensor_op("item")
+def item_op(input):
+    r"""Returns the value of this tensor as a standard Python number. This only works for tensors with one element. 
+    For other cases, see tolist().
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1.0])
+        >>> x.item()
+        1.0
+    """
+    assert input.numel() == 1, "Only a Tensor with 1 element can be converted to Scalar"
+    return input.numpy().item()
+
+
+@register_tensor_op("tolist")
+def tolist_op(input):
+    r"""Returns the tensor as a (nested) list. For scalars, a standard Python number is returned, 
+    just like with `item()`. Tensors are automatically moved to the CPU first if necessary.
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.tensor([[1,2,3], [4,5,6]])
+        >>> input.tolist()
+        [[1, 2, 3], [4, 5, 6]]
+    """
+    if input.numel() == 1 and input.ndim == 0:
+        return input.item()
+    return input.numpy().tolist()
 
 
 if __name__ == "__main__":
