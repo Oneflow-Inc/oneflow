@@ -48,7 +48,7 @@ def diag_op(input, diagonal=0):
         >>> flow.diag(input)
         tensor([1., 5., 9.], dtype=oneflow.float32)
     """
-    return flow.F.diag(input, diagonal)
+    return flow._C.diag(input, diagonal)
 
 
 @register_tensor_op("diag")
@@ -58,7 +58,7 @@ def diag_op_tensor(input, diagonal=0):
     See :func:`oneflow.diag`
     
     """
-    return flow.F.diag(input, diagonal)
+    return flow._C.diag(input, diagonal)
 
 
 if __name__ == "__main__":

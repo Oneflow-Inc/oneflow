@@ -44,7 +44,7 @@ def tril_op(input, diagonal=0):
                 [1., 1., 1.]], dtype=oneflow.float32)
 
     """
-    return flow.F.tril(input, diagonal)
+    return flow._C.tril(input, diagonal)
 
 
 @register_tensor_op("tril")

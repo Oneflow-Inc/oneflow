@@ -75,7 +75,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
 
 def _getitem(self, key):
     try:
-        return flow.F.tensor_getitem(self, key)
+        return flow._C.tensor_getitem(self, key)
     except IndexException as e:
         # The stop condition of for in python is IndexError,
         # so we have to catch IndexException from C++ and throw IndexError
@@ -84,8 +84,8 @@ def _getitem(self, key):
 
 def _setitem(self, key, value):
     if isinstance(value, (int, float)):
-        value = flow.F.constant([1], value, self.dtype)
-    flow.F.tensor_setitem(self, key, value)
+        value = flow._C.constant([1], value, self.dtype)
+    flow._C.tensor_setitem(self, key, value)
     return self
 
 

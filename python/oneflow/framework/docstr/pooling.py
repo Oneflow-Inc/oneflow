@@ -17,7 +17,7 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.F.adaptive_avg_pool1d,
+    oneflow._C.adaptive_avg_pool1d,
     r"""
     adaptive_avg_pool1d(input, output_size) -> Tensor
 
@@ -45,7 +45,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.adaptive_avg_pool2d,
+    oneflow._C.adaptive_avg_pool2d,
     r"""
     adaptive_avg_pool2d(input, output_size) -> Tensor
 
@@ -71,7 +71,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.F.adaptive_avg_pool3d,
+    oneflow._C.adaptive_avg_pool3d,
     r"""
     adaptive_avg_pool3d(input, output_size) -> Tensor
 
