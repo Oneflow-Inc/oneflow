@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 import oneflow.nn as nn
 import linecache
@@ -15,35 +30,44 @@ import warnings
 # the linecache module to still recover it.
 # using exec_with_source will add it to our local cache
 _next_id = 0
+
+
 def exec_with_source(src: str, globals: Dict[str, Any]):
     global _next_id
-    key = f'<eval_with_key_{_next_id}>'
+    key = f"<eval_with_key_{_next_id}>"
     _next_id += 1
-    _eval_cache[key] = [line + '\n' for line in src.splitlines()]
-    exec(compile(src, key, 'exec'), globals)
+    _eval_cache[key] = [line + "\n" for line in src.splitlines()]
+    exec(compile(src, key, "exec"), globals)
+
 
 # patch linecache so that any code we exec using exec_with_source
 # works with inspect
-_eval_cache : Dict[str, List[str]] = {}
+_eval_cache: Dict[str, List[str]] = {}
 _orig_getlines = linecache.getlines
+
+
 def patched_getline(*args, **kwargs):
     if args[0] in _eval_cache:
         return _eval_cache[args[0]]
     return _orig_getlines(*args, **kwargs)
+
+
 linecache.getlines = patched_getline
+
 
 def _forward_from_src(src: str, globals: Dict[str, Any]):
     # avoid mutating the passed in dict
     globals_copy = globals.copy()
     exec_with_source(src, globals_copy)
-    forward_fn = globals_copy['forward']
-    del globals_copy['forward']
+    forward_fn = globals_copy["forward"]
+    del globals_copy["forward"]
     return forward_fn
+
 
 # copy an attribute value with qualified name 'target' from 'from_module' to 'to_module'
 # This installs empty Modules where none exist yet if they are subpaths of target
 def _copy_attr(from_module: flow.nn.Module, to_module: flow.nn.Module, target: str):
-    *prefix, field = target.split('.')
+    *prefix, field = target.split(".")
     for item in prefix:
         f = getattr(from_module, item)
         t = getattr(to_module, item, None)
@@ -66,11 +90,12 @@ def _copy_attr(from_module: flow.nn.Module, to_module: flow.nn.Module, target: s
         to_module.register_buffer(field, orig)
     else:
         setattr(to_module, field, orig)
-    
+
+
 # Assign attribute 'from_obj' to the qualified name 'target' on 'to_module
 # This installs empty Modules where none exist yet if they are subpaths of target
 def _assign_attr(from_obj: Any, to_module: flow.nn.Module, target: str):
-    *prefix, field = target.split('.')
+    *prefix, field = target.split(".")
     for item in prefix:
         t = getattr(to_module, item, None)
 
@@ -81,20 +106,23 @@ def _assign_attr(from_obj: Any, to_module: flow.nn.Module, target: str):
 
     # If it is a tensor and not a parameter attribute of a module, it should be a named buffer.
     # So, we register it as a named buffer in the target module.
-    if isinstance(from_obj, flow.Tensor) and not isinstance(from_obj, flow.nn.Parameter):
+    if isinstance(from_obj, flow.Tensor) and not isinstance(
+        from_obj, flow.nn.Parameter
+    ):
         to_module.register_buffer(field, from_obj)
     else:
         setattr(to_module, field, from_obj)
 
+
 def _addindent(s_, numSpaces):
-    s = s_.split('\n')
+    s = s_.split("\n")
     # don't do anything for single-line stuff
     if len(s) == 1:
         return s_
     first = s.pop(0)
-    s = [(numSpaces * ' ') + line for line in s]
-    s = '\n'.join(s)
-    s = first + '\n' + s
+    s = [(numSpaces * " ") + line for line in s]
+    s = "\n".join(s)
+    s = first + "\n" + s
     return s
 
 
@@ -112,7 +140,8 @@ class GraphModule(flow.nn.Module):
         code.
 
     """
-    def __new__(cls: 'Type[GraphModule]', *args, **kwargs):
+
+    def __new__(cls: "Type[GraphModule]", *args, **kwargs):
         # each instance of a graph module needs its own forward method
         # so create a new singleton class for each instance.
         # it is a subclass of the user-defined class, the only difference
@@ -120,12 +149,15 @@ class GraphModule(flow.nn.Module):
 
         class GraphModuleImpl(cls):  # type: ignore[misc, valid-type]
             pass
+
         return super().__new__(GraphModuleImpl)
 
-    def __init__(self,
-                 root: Union[flow.nn.Module, Dict[str, Any]],
-                 graph: Graph,
-                 class_name: str = 'GraphModule'):
+    def __init__(
+        self,
+        root: Union[flow.nn.Module, Dict[str, Any]],
+        graph: Graph,
+        class_name: str = "GraphModule",
+    ):
         """
         Construct a GraphModule.
 
@@ -150,20 +182,25 @@ class GraphModule(flow.nn.Module):
         super().__init__()
         self.__class__.__name__ = class_name
         if isinstance(root, flow.nn.Module):
-            if hasattr(root, 'training'):
+            if hasattr(root, "training"):
                 self.training = root.training
             for node in graph.nodes:
-                if node.op in ['get_attr', 'call_module']:
+                if node.op in ["get_attr", "call_module"]:
                     assert isinstance(node.target, str)
                     _copy_attr(root, self, node.target)
         elif isinstance(root, dict):
             targets_to_copy = []
             for node in graph.nodes:
-                if node.op in ['get_attr', 'call_module']:
+                if node.op in ["get_attr", "call_module"]:
                     assert isinstance(node.target, str)
                     if node.target not in root:
-                        raise RuntimeError('Node ' + str(node) + ' referenced target ' + node.target +
-                                           ' but that target was not provided in ``root``!')
+                        raise RuntimeError(
+                            "Node "
+                            + str(node)
+                            + " referenced target "
+                            + node.target
+                            + " but that target was not provided in ``root``!"
+                        )
                     targets_to_copy.append(node.target)
             # Sort targets in ascending order of the # of atoms.
             # This will ensure that less deeply nested attributes are assigned
@@ -171,11 +208,11 @@ class GraphModule(flow.nn.Module):
             # will be assigned before foo.bar.baz. Otherwise, we might assign
             # the user-provided ``foo.bar`` and wipe out the previously-assigned
             # ``foo.bar.baz``
-            targets_to_copy.sort(key=lambda t: t.count('.'))
+            targets_to_copy.sort(key=lambda t: t.count("."))
             for target_to_copy in targets_to_copy:
                 _assign_attr(root[target_to_copy], self, target_to_copy)
         else:
-            raise RuntimeError('Unsupported type ' + str(root) + ' passed for root!')
+            raise RuntimeError("Unsupported type " + str(root) + " passed for root!")
 
         self.graph = graph
 
@@ -185,7 +222,10 @@ class GraphModule(flow.nn.Module):
         # serialize a GraphModule without retaining the Graph, and needs to use the correct Tracer
         # to re-create the Graph during deserialization.
         self._tracer_cls = None
-        if self.graph._tracer_cls and '<locals>' not in self.graph._tracer_cls.__qualname__:
+        if (
+            self.graph._tracer_cls
+            and "<locals>" not in self.graph._tracer_cls.__qualname__
+        ):
             self._tracer_cls = self.graph._tracer_cls
 
     @property
@@ -196,18 +236,18 @@ class GraphModule(flow.nn.Module):
         return self._graph
 
     @graph.setter
-    def graph(self, g : Graph) -> None:
+    def graph(self, g: Graph) -> None:
         """
         Set the underlying ``Graph`` for this ``GraphModule``. This will internally
         recompile the ``GraphModule`` so that the generated ``forward()`` function
         corresponds to ``g``
         """
-        assert isinstance(g, Graph), f'Expected a Graph instance, but got {type(g)}'
+        assert isinstance(g, Graph), f"Expected a Graph instance, but got {type(g)}"
         self._graph = g
         g.owning_module = self
         self.recompile()
 
-    def to_folder(self, folder: Union[str, os.PathLike], module_name : str = "FxModule"):
+    def to_folder(self, folder: Union[str, os.PathLike], module_name: str = "FxModule"):
         """Dumps out module to ``folder`` with ``module_name`` so that it can be
         imported with ``from <folder> import <module_name>``
 
@@ -220,7 +260,7 @@ class GraphModule(flow.nn.Module):
         """
         folder = Path(folder)
         Path(folder).mkdir(exist_ok=True)
-        flow.save(self.state_dict(), folder / 'state_dict.pt')
+        flow.save(self.state_dict(), folder / "state_dict.pt")
         tab = " " * 4
         model_str = f"""import oneflow as flow
 from oneflow.nn import *
@@ -228,21 +268,30 @@ class {module_name}(flow.nn.Module):
     def __init__(self):
         super().__init__()
 """
+
         def _gen_model_repr(module_name: str, module: flow.nn.Module) -> Optional[str]:
-                safe_reprs = [nn.Linear, nn.Conv1d, nn.Conv2d, nn.Conv3d, nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d]
-                if type(module) in safe_reprs:
-                    return f"{module.__repr__()}"
-                else:
-                    return None
+            safe_reprs = [
+                nn.Linear,
+                nn.Conv1d,
+                nn.Conv2d,
+                nn.Conv3d,
+                nn.BatchNorm1d,
+                nn.BatchNorm2d,
+                nn.BatchNorm3d,
+            ]
+            if type(module) in safe_reprs:
+                return f"{module.__repr__()}"
+            else:
+                return None
 
         blobified_modules = []
         for module_name, module in self.named_children():
             module_str = _gen_model_repr(module_name, module)
             if module_str is None:
-                module_file = folder / f'{module_name}.pt'
+                module_file = folder / f"{module_name}.pt"
                 flow.save(module, module_file)
                 blobified_modules.append(module_name)
-                module_repr = module.__repr__().replace('\r', ' ').replace('\n', ' ')
+                module_repr = module.__repr__().replace("\r", " ").replace("\n", " ")
                 module_str = f"flow.load(r'{module_file}') # {module_repr}"
             model_str += f"{tab*2}self.{module_name} = {module_str}\n"
 
@@ -256,20 +305,23 @@ class {module_name}(flow.nn.Module):
                 continue
             model_str += f"{tab*2}self.{param_name} = flow.nn.Parameter(flow.empty({list(param.shape)}))\n"
 
-        model_str += f"{tab*2}self.load_state_dict(flow.load(r'{folder}/state_dict.pt'))\n"
+        model_str += (
+            f"{tab*2}self.load_state_dict(flow.load(r'{folder}/state_dict.pt'))\n"
+        )
         model_str += f"{_addindent(self.code, 4)}\n"
 
-        module_file = folder / 'module.py'
+        module_file = folder / "module.py"
         module_file.write_text(model_str)
 
-        init_file = folder / '__init__.py'
-        init_file.write_text('from .module import *')
+        init_file = folder / "__init__.py"
+        init_file.write_text("from .module import *")
 
         if len(blobified_modules) > 0:
-            warnings.warn("Was not able to save the following children modules as reprs -"
-                            f"saved as pickled files instead: {blobified_modules}")
+            warnings.warn(
+                "Was not able to save the following children modules as reprs -"
+                f"saved as pickled files instead: {blobified_modules}"
+            )
 
-    
     def add_submodule(self, target: str, m: flow.nn.Module) -> bool:
         """
         Adds the given submodule to ``self``.
@@ -292,7 +344,7 @@ class {module_name}(flow.nn.Module):
                 other attribute)
 
         """
-        *prefix, field = target.split('.')
+        *prefix, field = target.split(".")
         mod: flow.nn.Module = self
 
         for item in prefix:
@@ -310,7 +362,7 @@ class {module_name}(flow.nn.Module):
 
         mod.add_module(field, m)
         return True
-    
+
     def delete_all_unused_submodules(self) -> None:
         """
         Deletes all unused submodules from ``self``.
@@ -340,7 +392,7 @@ class {module_name}(flow.nn.Module):
                 # join them with a dot. Otherwise, return that single
                 # element without doing anything to it.
                 def join_fn(x: str, y: str) -> str:
-                    return '.'.join([x, y] if y else [x])
+                    return ".".join([x, y] if y else [x])
 
                 # Progressively collect all the names of intermediate
                 # modules. For example, if we have the target
@@ -349,8 +401,7 @@ class {module_name}(flow.nn.Module):
                 for path in itertools.accumulate(fullpath, join_fn):
                     used.append(path)
 
-        to_delete = [name for name, _ in self.named_modules()
-                     if name not in used]
+        to_delete = [name for name, _ in self.named_modules() if name not in used]
 
         for name in to_delete:
             self.delete_submodule(name)
@@ -361,10 +412,12 @@ class {module_name}(flow.nn.Module):
         Return the Python code generated from the ``Graph`` underlying this
         ``GraphModule``.
         """
-        if not hasattr(self, '_code'):
-            raise RuntimeError('Code has not been generated! Please report a bug to OneFlow')
+        if not hasattr(self, "_code"):
+            raise RuntimeError(
+                "Code has not been generated! Please report a bug to OneFlow"
+            )
         return self._code
-    
+
     def recompile(self) -> PythonCode:
         """
         Recompile this GraphModule from its ``graph`` attribute. This should be
@@ -374,7 +427,7 @@ class {module_name}(flow.nn.Module):
         if self._graph._pytree_info is not None:
             self._in_spec = self._graph._pytree_info.in_spec
             self._out_spec = self._graph._pytree_info.out_spec
-        python_code = self._graph.python_code(root_module='self')
+        python_code = self._graph.python_code(root_module="self")
         self._code = python_code.src
 
         cls = type(self)
@@ -405,15 +458,19 @@ class {module_name}(flow.nn.Module):
 
             # constituent substrings of the error message
             tb_repr = traceback.format_exc()
-            custom_msg = ("Call using an FX-traced Module, "
-                          f"line {err_lineno} of the traced Module's "
-                          "generated forward function:")
+            custom_msg = (
+                "Call using an FX-traced Module, "
+                f"line {err_lineno} of the traced Module's "
+                "generated forward function:"
+            )
             before_err = "".join(all_src_lines[err_lineno - 2 : err_lineno])
             marker = "~" * err_line_len + "~~~ <--- HERE"
             err_and_after_err = "\n".join(all_src_lines[err_lineno : err_lineno + 2])
 
             # joined message
-            return "\n".join([tb_repr, custom_msg, before_err, marker, err_and_after_err])
+            return "\n".join(
+                [tb_repr, custom_msg, before_err, marker, err_and_after_err]
+            )
 
         def wrapped_call(self, *args, **kwargs):
             try:
@@ -423,11 +480,13 @@ class {module_name}(flow.nn.Module):
                     return super(type(self), self).__call__(*args, **kwargs)
             except Exception as e:
                 assert e.__traceback__
-                topmost_framesummary: traceback.FrameSummary = \
-                    traceback.StackSummary.extract(traceback.walk_tb(e.__traceback__))[-1]  # type: ignore[arg-type]
+                topmost_framesummary: traceback.FrameSummary = traceback.StackSummary.extract(
+                    traceback.walk_tb(e.__traceback__)
+                )[
+                    -1
+                ]  # type: ignore[arg-type]
                 if "eval_with_key" in topmost_framesummary.filename:
-                    print(generate_error_message(topmost_framesummary),
-                          file=sys.stderr)
+                    print(generate_error_message(topmost_framesummary), file=sys.stderr)
                 raise e.with_traceback(None)
 
         cls.__call__ = wrapped_call
