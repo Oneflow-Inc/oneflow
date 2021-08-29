@@ -112,12 +112,10 @@ class MirroredTensorImpl : public TensorImpl {
   }
   Maybe<Symbol<Device>*> mut_device() { return mut_tensor_meta()->mut_device(); }
   virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG ;
+    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
   }
 
-  virtual Maybe<MirroredTensorImpl> detach() const {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG ;
-  }
+  virtual Maybe<MirroredTensorImpl> detach() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
 
  protected:
   MirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
@@ -142,20 +140,18 @@ class ConsistentTensorImpl : public TensorImpl {
     return consumer_nd_sbp_constraint_;
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG ;
+    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
   }
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG ;
+    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
   }
   Maybe<LocalDepObject*> compute_local_dep_object() const override {
-    OF_RUNTIME_ERROR() ERROR_ISSUE_MSG ;
+    OF_RUNTIME_ERROR() ERROR_ISSUE_MSG;
   }
-  Maybe<bool> has_eager_blob_object() const override {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG ;
-  }
+  Maybe<bool> has_eager_blob_object() const override { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
 
   // Setters
   void set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
@@ -199,17 +195,13 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG ;
+    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
   }
   Maybe<LocalDepObject*> compute_local_dep_object() const override {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG ;
+    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
   }
-  Maybe<TensorStorage> tensor_storage() const override {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG ;
-  }
-  Maybe<bool> has_eager_blob_object() const override {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG ;
-  }
+  Maybe<TensorStorage> tensor_storage() const override { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
+  Maybe<bool> has_eager_blob_object() const override { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
   Maybe<MirroredTensorImpl> detach() const override;
 };
 

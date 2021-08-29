@@ -538,7 +538,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
   Maybe<MirroredTensor> AsMirroredTensor() override {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;;
+    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
+    ;
   }
   Maybe<ConsistentTensor> AsConsistentTensor() override { return shared_from_this(); }
 
