@@ -52,7 +52,7 @@ inline void HashCombine(size_t* seed, size_t hash) {
 }
 
 template<typename... T>
-inline void Hash(size_t* seed, const T&... v) {
+inline void AddHash(size_t* seed, const T&... v) {
   __attribute__((__unused__)) int dummy[] = {(HashCombine(seed, std::hash<T>()(v)), 0)...};
 }
 
@@ -64,7 +64,7 @@ template<typename T, typename... Ts>
 inline size_t Hash(const T& v1, const Ts&... vn) {
   size_t seed = std::hash<T>()(v1);
 
-  Hash<Ts...>(&seed, vn...);
+  AddHash<Ts...>(&seed, vn...);
 
   return seed;
 }
@@ -84,7 +84,7 @@ template<typename T>
 struct hash<std::vector<T>> {
   std::size_t operator()(const std::vector<T>& vec) const {
     std::size_t hash_value = vec.size();
-    for (const auto& elem : vec) { oneflow::Hash<T>(&hash_value, elem); }
+    for (const auto& elem : vec) { oneflow::AddHash<T>(&hash_value, elem); }
     return hash_value;
   }
 };

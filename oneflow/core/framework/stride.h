@@ -55,7 +55,7 @@ template<>
 struct hash<oneflow::Stride> {
   size_t operator()(const oneflow::Stride& stride) const {
     size_t ret = stride.NumAxes();
-    FOR_RANGE(int, i, 0, stride.NumAxes()) { oneflow::Hash(&ret, stride.At(i)); }
+    FOR_RANGE(int, i, 0, stride.NumAxes()) { oneflow::AddHash(&ret, stride.At(i)); }
     return ret;
   }
 };

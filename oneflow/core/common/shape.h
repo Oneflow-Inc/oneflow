@@ -104,7 +104,7 @@ template<>
 struct hash<oneflow::Shape> {
   size_t operator()(const oneflow::Shape& shape) const {
     size_t ret = shape.NumAxes();
-    FOR_RANGE(int, i, 0, shape.NumAxes()) { oneflow::Hash(&ret, shape.At(i)); }
+    FOR_RANGE(int, i, 0, shape.NumAxes()) { oneflow::AddHash(&ret, shape.At(i)); }
     return ret;
   }
 };

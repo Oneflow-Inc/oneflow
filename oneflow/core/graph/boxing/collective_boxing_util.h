@@ -72,7 +72,7 @@ struct hash<oneflow::boxing::collective::DeviceSet> {
   size_t operator()(const oneflow::boxing::collective::DeviceSet& device_set) const {
     size_t hash = 0;
     for (const auto& device : device_set.device()) {
-      oneflow::HashCombine(&hash, std::hash<oneflow::boxing::collective::DeviceDesc>()(device));
+      oneflow::AddHash(&hash, device);
     }
     return hash;
   }
