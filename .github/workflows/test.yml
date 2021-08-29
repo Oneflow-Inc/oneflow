@@ -286,7 +286,7 @@ jobs:
         if: matrix.test_suite == 'cpu' && env.is_built != '1' && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
-          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
             oneflow-manylinux2014-cuda10.2:0.1 \
@@ -407,7 +407,7 @@ jobs:
           echo "container_name=${container_name}" >> $GITHUB_ENV
 
           extra_docker_args+=" --shm-size=8g --rm -w $PWD -v $PWD:$PWD"
-          extra_docker_args+=" -v /dataset:/dataset -v /model_zoo:/model_zoo"
+          extra_docker_args+=" -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro"
 
 
           oneflow_test_cache_dir="$HOME/ci-cache/${{ github.repository }}/test_cache"
