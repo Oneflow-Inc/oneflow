@@ -121,110 +121,108 @@ class StaticZerosTensor final : public Tensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
   Symbol<DType> dtype() const { return CHECK_JUST(DType::Get(dtype_)); }
-  Maybe<TransportToken> transport_token() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  Maybe<Symbol<ParallelDesc>> parallel_desc() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
+  Maybe<TransportToken> transport_token() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   Maybe<Symbol<Device>> device() const { return device_; }
-  Maybe<Symbol<Device>*> mut_device() { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
+  Maybe<Symbol<Device>*> mut_device() { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   bool is_cuda() const {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return false;
   }
   bool is_consistent() const { return false; }
   bool is_local() const { return !is_consistent(); }
   bool is_lazy() const {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return false;
   }
   bool is_eager() const { return !is_lazy(); }
   const TensorMeta& tensor_meta() const {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return *(TensorMeta*)nullptr;
   }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
+    UPLOAD_OF_BUG_THROUGH_ISSUE();
   }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
+    UPLOAD_OF_BUG_THROUGH_ISSUE();
   }
-  Maybe<vm::EagerBlobObject> eager_blob_object() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  Maybe<LocalDepObject*> compute_local_dep_object() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  Maybe<bool> has_eager_blob_object() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  Maybe<TensorStorage> tensor_storage() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  Maybe<const Stride> stride() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  Maybe<int64_t> storage_offset() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<LocalDepObject*> compute_local_dep_object() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<bool> has_eager_blob_object() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<TensorStorage> tensor_storage() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<const Stride> stride() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<int64_t> storage_offset() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
   Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
+    UPLOAD_OF_BUG_THROUGH_ISSUE();
   }
-  Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
+  Maybe<MirroredTensor> cur_rank_phy_tensor() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
+    UPLOAD_OF_BUG_THROUGH_ISSUE();
   }
 
   // Getters for autograd
   bool requires_grad() const {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return false;
   }
   bool is_leaf() const {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return false;
   }
   bool retain_grad() const {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return false;
   }
   std::shared_ptr<const FunctionNode> grad_fn_node() const {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return nullptr;
   }
-  Maybe<Tensor> acc_grad() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  Maybe<TensorArg> current_grad() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  Maybe<Tensor> detach() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  Maybe<Tensor> clone() const { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
+  Maybe<Tensor> acc_grad() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<TensorArg> current_grad() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<Tensor> detach() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<Tensor> clone() const { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   std::shared_ptr<Tensor> data() const {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return nullptr;
   }
 
   // Setters for autograd
-  void set_requires_grad(bool requires_grad) { LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG; }
-  Maybe<void> set_retain_grad(bool retain_grad) { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
+  void set_requires_grad(bool requires_grad) { RUNTIME_ERROR_CANNOT_RETURN_MAYBE(); }
+  Maybe<void> set_retain_grad(bool retain_grad) { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
   }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return *(std::shared_ptr<FunctionNode>*)nullptr;
   }
-  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
-  }
-  Maybe<Tensor> mut_acc_grad() { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
-  void set_is_leaf(bool is_leaf) { LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG; }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  Maybe<Tensor> mut_acc_grad() { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
+  void set_is_leaf(bool is_leaf) { RUNTIME_ERROR_CANNOT_RETURN_MAYBE(); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return nullptr;
   }
   bool has_autograd_meta() const {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return false;
   }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
   }
 
   user_op::TensorDesc* mut_tensor_meta() {
-    LOG(FATAL) << "RuntimeError: " << ERROR_ISSUE_MSG;
+    RUNTIME_ERROR_CANNOT_RETURN_MAYBE();
     return nullptr;
   }
 
   Maybe<MirroredTensor> AsMirroredTensor();
-  Maybe<ConsistentTensor> AsConsistentTensor() { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
+  Maybe<ConsistentTensor> AsConsistentTensor() { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
 
  private:
   StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -350,7 +348,7 @@ class Parameter final : public TensorIf<Parameter> {
     if (const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor_)) {
       return consistent_tensor;
     }
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
+    UPLOAD_OF_BUG_THROUGH_ISSUE();
   }
 
  private:
@@ -375,10 +373,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override {
     OF_RUNTIME_ERROR()
         << "Local tensor has no sbp property. "
-           "For example, create a consistent tensor like this : x = flow.tensor((2,3, "
-           "placement=flow.placement(\"cuda\", {0: 0}), sbp=flow.sbp.broadcast)) x.sbp"
            "sbp is the description in the oneflow distributed case, you can refer to "
-           "https://docs.oneflow.org/master/basics_topics/essentials_of_oneflow.html";
+           "https://docs.oneflow.org/master/basics_topics/essentials_of_oneflow.html"
+           "For example, create a consistent tensor like this : 'x = flow.tensor((2,3, "
+           "placement=flow.placement(\"cuda\", {0: 0}), sbp=flow.sbp.broadcast)) x.sbp'";
   }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
     OF_RUNTIME_ERROR() << "Only consistent tensors have 'placement'. Placement is used to describe "
@@ -442,7 +440,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
   Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
-  Maybe<ConsistentTensor> AsConsistentTensor() override { OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG; }
+  Maybe<ConsistentTensor> AsConsistentTensor() override { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
@@ -464,7 +462,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
     OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
-                          "'.placement' for local tensors.";
+                          "'.placement()' for local tensors.";
   }
   Maybe<Symbol<Device>*> mut_device() override {
     OF_RUNTIME_ERROR() << "ConsistentTensor has no mut_device property";
@@ -537,10 +535,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
-  Maybe<MirroredTensor> AsMirroredTensor() override {
-    OF_RUNTIME_ERROR() << ERROR_ISSUE_MSG;
-    ;
-  }
+  Maybe<MirroredTensor> AsMirroredTensor() override { UPLOAD_OF_BUG_THROUGH_ISSUE(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override { return shared_from_this(); }
 
  private:
