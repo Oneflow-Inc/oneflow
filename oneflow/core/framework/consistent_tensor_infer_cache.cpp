@@ -236,9 +236,14 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
 
 /* static */ Maybe<Symbol<Device>> ConsistentTensorInferCache::InferOpDevice(
     const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
-  CHECK_OR_RETURN(user_op_expr.device_infer_fn());
-  UserOpExprOpDeviceInferContext op_device_infer_ctx(&user_op_expr, &infer_args);
-  return TRY(user_op_expr.device_infer_fn()(&op_device_infer_ctx));
+  if (!user_op_expr.device_infer_fn()) {
+    Symbol<ParallelDesc> parallel_desc =
+        infer_args.input_consistent_tensor_metas().at(0).tensor_meta()->parallel_desc();
+    return GetTensorDevice(parallel_desc);
+  } else {
+    UserOpExprOpDeviceInferContext op_device_infer_ctx(&user_op_expr, &infer_args);
+    return TRY(user_op_expr.device_infer_fn()(&op_device_infer_ctx));
+  }
 }
 
 /* static */ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
