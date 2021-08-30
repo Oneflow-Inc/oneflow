@@ -16,14 +16,14 @@ limitations under the License.
 # Nodes represent a definition of a value in oneflow graph of operators.
 from typing import TYPE_CHECKING, Union, Callable, Any, Tuple, List, Optional, Dict, Set
 from .immutable_collections import immutable_dict, immutable_list
-import oneflow as flow
+import oneflow
 import types
 import builtins
 
 if TYPE_CHECKING:
     from .graph import Graph
 
-BaseArgumentTypes = Union[str, int, float, bool, flow.dtype, flow.Tensor, flow.device]
+BaseArgumentTypes = Union[str, int, float, bool, oneflow.dtype, oneflow.Tensor, oneflow.device]
 base_types = BaseArgumentTypes.__args__  # type: ignore[attr-defined]
 
 Target = Union[Callable[..., Any], str]
@@ -39,7 +39,7 @@ Argument = Optional[
     ]
 ]
 
-_side_effectful_functions: Set[Callable] = {flow._oneflow_internal._C}
+_side_effectful_functions: Set[Callable] = {oneflow._oneflow_internal._C}
 
 
 def _find_module_of_method(orig_method: Callable[..., Any]) -> str:
@@ -47,7 +47,7 @@ def _find_module_of_method(orig_method: Callable[..., Any]) -> str:
     module = orig_method.__module__
     if module is not None:
         return module
-    for guess in [flow, flow.nn.functional]:
+    for guess in [oneflow, oneflow.nn.functional]:
         if getattr(guess, name, None) is orig_method:
             return guess.__name__
     raise RuntimeError(f"cannot find module for {orig_method}")
@@ -84,7 +84,7 @@ def _get_qualified_name(func: Callable[..., Any]) -> str:
     name = func.__name__
     module = _find_module_of_method(func)
     module = module.replace(
-        "flow._oneflow_internal._C", "flow"
+        "oneflow._oneflow_internal._C", "oneflow"
     )  # WAR for bug in how torch.ops assigns module
     print(f"{module}.{name}")
     return f"{module}.{name}"
@@ -555,7 +555,7 @@ class Node:
 
 def map_arg(a: Argument, fn: Callable[[Node], Argument]) -> Argument:
     """ Apply fn to each Node appearing arg. arg may be a list, tuple, slice, or dict with string keys. """
-    assert callable(fn), "flow.fx.map_arg(a, fn): fn must be a callable"
+    assert callable(fn), "oneflow.fx.map_arg(a, fn): fn must be a callable"
     return map_aggregate(a, lambda x: fn(x) if isinstance(x, Node) else x)
 
 
@@ -577,4 +577,4 @@ def map_aggregate(a: Argument, fn: Callable[[Argument], Argument]) -> Argument:
         return fn(a)
 
 
-# _get_qualified_name(flow._oneflow_internal._C.exp)
+# _get_qualified_name(oneflow._oneflow_internal._C.exp)

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+import oneflow
 import oneflow.nn as nn
 import linecache
 from typing import Type, Dict, List, Any, Union, Optional, Set
@@ -66,7 +66,7 @@ def _forward_from_src(src: str, globals: Dict[str, Any]):
 
 # copy an attribute value with qualified name 'target' from 'from_module' to 'to_module'
 # This installs empty Modules where none exist yet if they are subpaths of target
-def _copy_attr(from_module: flow.nn.Module, to_module: flow.nn.Module, target: str):
+def _copy_attr(from_module: oneflow.nn.Module, to_module: oneflow.nn.Module, target: str):
     *prefix, field = target.split(".")
     for item in prefix:
         f = getattr(from_module, item)
@@ -79,14 +79,14 @@ def _copy_attr(from_module: flow.nn.Module, to_module: flow.nn.Module, target: s
             return
 
         if t is None:
-            t = flow.nn.Module()
+            t = oneflow.nn.Module()
             setattr(to_module, item, t)
         from_module, to_module = f, t
 
     orig = getattr(from_module, field)
     # If it is a tensor and not a parameter attribute of a module, it should be a named buffer.
     # So, we register it as a named buffer in the target module.
-    if isinstance(orig, flow.Tensor) and not isinstance(orig, flow.nn.Parameter):
+    if isinstance(orig, oneflow.Tensor) and not isinstance(orig, oneflow.nn.Parameter):
         to_module.register_buffer(field, orig)
     else:
         setattr(to_module, field, orig)
@@ -94,20 +94,20 @@ def _copy_attr(from_module: flow.nn.Module, to_module: flow.nn.Module, target: s
 
 # Assign attribute 'from_obj' to the qualified name 'target' on 'to_module
 # This installs empty Modules where none exist yet if they are subpaths of target
-def _assign_attr(from_obj: Any, to_module: flow.nn.Module, target: str):
+def _assign_attr(from_obj: Any, to_module: oneflow.nn.Module, target: str):
     *prefix, field = target.split(".")
     for item in prefix:
         t = getattr(to_module, item, None)
 
         if t is None:
-            t = flow.nn.Module()
+            t = oneflow.nn.Module()
             setattr(to_module, item, t)
         to_module = t
 
     # If it is a tensor and not a parameter attribute of a module, it should be a named buffer.
     # So, we register it as a named buffer in the target module.
-    if isinstance(from_obj, flow.Tensor) and not isinstance(
-        from_obj, flow.nn.Parameter
+    if isinstance(from_obj, oneflow.Tensor) and not isinstance(
+        from_obj, oneflow.nn.Parameter
     ):
         to_module.register_buffer(field, from_obj)
     else:
@@ -126,7 +126,7 @@ def _addindent(s_, numSpaces):
     return s
 
 
-class GraphModule(flow.nn.Module):
+class GraphModule(oneflow.nn.Module):
     """
     GraphModule is an nn.Module generated from an fx.Graph. Graphmodule has a
     ``graph`` attribute, as well as ``code`` and ``forward`` attributes generated
@@ -154,7 +154,7 @@ class GraphModule(flow.nn.Module):
 
     def __init__(
         self,
-        root: Union[flow.nn.Module, Dict[str, Any]],
+        root: Union[oneflow.nn.Module, Dict[str, Any]],
         graph: Graph,
         class_name: str = "GraphModule",
     ):
@@ -163,7 +163,7 @@ class GraphModule(flow.nn.Module):
 
         Args:
 
-            root (Union[flow.nn.Module, Dict[str, Any]):
+            root (Union[oneflow.nn.Module, Dict[str, Any]):
                 ``root`` can either be an nn.Module instance or a Dict mapping strings to any attribute type.
                 In the case that ``root`` is a Module, any references to Module-based objects (via qualified
                 name) in the Graph's Nodes' ``target`` field will be copied over from the respective place
@@ -181,7 +181,7 @@ class GraphModule(flow.nn.Module):
         """
         super().__init__()
         self.__class__.__name__ = class_name
-        if isinstance(root, flow.nn.Module):
+        if isinstance(root, oneflow.nn.Module):
             if hasattr(root, "training"):
                 self.training = root.training
             for node in graph.nodes:
@@ -218,7 +218,7 @@ class GraphModule(flow.nn.Module):
 
         # Store the Tracer class responsible for creating a Graph separately as part of the
         # GraphModule state, except when the Tracer is defined in a local namespace.
-        # Locally defined Tracers are not pickleable. This is needed because flow.package will
+        # Locally defined Tracers are not pickleable. This is needed because oneflow.package will
         # serialize a GraphModule without retaining the Graph, and needs to use the correct Tracer
         # to re-create the Graph during deserialization.
         self._tracer_cls = None
@@ -260,16 +260,16 @@ class GraphModule(flow.nn.Module):
         """
         folder = Path(folder)
         Path(folder).mkdir(exist_ok=True)
-        flow.save(self.state_dict(), folder / "state_dict.pt")
+        oneflow.save(self.state_dict(), folder / "state_dict.pt")
         tab = " " * 4
-        model_str = f"""import oneflow as flow
+        model_str = f"""import oneflow as oneflow
 from oneflow.nn import *
-class {module_name}(flow.nn.Module):
+class {module_name}(oneflow.nn.Module):
     def __init__(self):
         super().__init__()
 """
 
-        def _gen_model_repr(module_name: str, module: flow.nn.Module) -> Optional[str]:
+        def _gen_model_repr(module_name: str, module: oneflow.nn.Module) -> Optional[str]:
             safe_reprs = [
                 nn.Linear,
                 nn.Conv1d,
@@ -289,24 +289,24 @@ class {module_name}(flow.nn.Module):
             module_str = _gen_model_repr(module_name, module)
             if module_str is None:
                 module_file = folder / f"{module_name}.pt"
-                flow.save(module, module_file)
+                oneflow.save(module, module_file)
                 blobified_modules.append(module_name)
                 module_repr = module.__repr__().replace("\r", " ").replace("\n", " ")
-                module_str = f"flow.load(r'{module_file}') # {module_repr}"
+                module_str = f"oneflow.load(r'{module_file}') # {module_repr}"
             model_str += f"{tab*2}self.{module_name} = {module_str}\n"
 
         for buffer_name, buffer in self._buffers.items():
             if buffer is None:
                 continue
-            model_str += f"{tab*2}self.register_buffer('{buffer_name}', flow.empty({list(buffer.shape)}))\n"
+            model_str += f"{tab*2}self.register_buffer('{buffer_name}', oneflow.empty({list(buffer.shape)}))\n"
 
         for param_name, param in self._parameters.items():
             if param is None:
                 continue
-            model_str += f"{tab*2}self.{param_name} = flow.nn.Parameter(flow.empty({list(param.shape)}))\n"
+            model_str += f"{tab*2}self.{param_name} = oneflow.nn.Parameter(oneflow.empty({list(param.shape)}))\n"
 
         model_str += (
-            f"{tab*2}self.load_state_dict(flow.load(r'{folder}/state_dict.pt'))\n"
+            f"{tab*2}self.load_state_dict(oneflow.load(r'{folder}/state_dict.pt'))\n"
         )
         model_str += f"{_addindent(self.code, 4)}\n"
 
@@ -322,7 +322,7 @@ class {module_name}(flow.nn.Module):
                 f"saved as pickled files instead: {blobified_modules}"
             )
 
-    def add_submodule(self, target: str, m: flow.nn.Module) -> bool:
+    def add_submodule(self, target: str, m: oneflow.nn.Module) -> bool:
         """
         Adds the given submodule to ``self``.
 
@@ -345,17 +345,17 @@ class {module_name}(flow.nn.Module):
 
         """
         *prefix, field = target.split(".")
-        mod: flow.nn.Module = self
+        mod: oneflow.nn.Module = self
 
         for item in prefix:
 
             submod = getattr(mod, item, None)
 
             if submod is None:
-                submod = flow.nn.Module()
+                submod = oneflow.nn.Module()
                 setattr(mod, item, submod)
 
-            if not isinstance(submod, flow.nn.Module):
+            if not isinstance(submod, oneflow.nn.Module):
                 return False
 
             mod = submod

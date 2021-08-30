@@ -32,7 +32,7 @@ from typing import (
 from dataclasses import dataclass
 from contextlib import contextmanager
 import copy
-import oneflow as flow
+import oneflow
 import keyword
 import re
 import builtins
@@ -77,10 +77,10 @@ def _register_custom_builtin(name: str, import_str: str, obj: Any):
 _register_custom_builtin("inf", "from math import inf", math.inf)
 _register_custom_builtin("nan", "from math import nan", math.nan)
 _register_custom_builtin("NoneType", "NoneType = type(None)", type(None))
-_register_custom_builtin("flow", "import oneflow as flow", flow)
-_register_custom_builtin("device", "from oneflow import device", flow.device)
-_register_custom_builtin("fx_pytree", "import flow.fx._pytree as fx_pytree", fx_pytree)
-_register_custom_builtin("pytree", "import flow.utils._pytree as pytree", pytree)
+_register_custom_builtin("oneflow", "import oneflow", oneflow)
+_register_custom_builtin("device", "from oneflow import device", oneflow.device)
+_register_custom_builtin("fx_pytree", "import oneflow.fx._pytree as fx_pytree", fx_pytree)
+_register_custom_builtin("pytree", "import oneflow.utils._pytree as pytree", pytree)
 
 
 def _is_magic(x: str) -> bool:
@@ -110,12 +110,12 @@ def _is_from_flow(obj: Any) -> bool:
     module_name = getattr(obj, "__module__", None)
     if module_name is not None:
         base_module = module_name.partition(".")[0]
-        return base_module == "flow"
+        return base_module == "oneflow"
 
     name = getattr(obj, "__name__", None)
 
-    if name is not None and name != "flow":
-        for guess in [flow, flow.nn.functional]:
+    if name is not None and name != "oneflow":
+        for guess in [oneflow, oneflow.nn.functional]:
             if getattr(guess, name, None) is obj:
                 return True
 
@@ -595,11 +595,11 @@ class Graph:
         """
 
         def _get_attr_reference_exists(
-            mod: flow.nn.Module, qualified_name: str
+            mod: oneflow.nn.Module, qualified_name: str
         ) -> bool:
             module_path, _, name = qualified_name.rpartition(".")
 
-            submod: Optional[flow.nn.Module] = mod.get_submodule(module_path)
+            submod: Optional[oneflow.nn.Module] = mod.get_submodule(module_path)
 
             if not submod:
                 return False
@@ -610,8 +610,8 @@ class Graph:
             res = getattr(submod, name)
 
             if (
-                not isinstance(res, flow.nn.Module)
-                and not isinstance(res, flow.nn.Parameter)
+                not isinstance(res, oneflow.nn.Module)
+                and not isinstance(res, oneflow.nn.Parameter)
                 and name not in submod._buffers
             ):
                 return False
@@ -1202,7 +1202,7 @@ def forward({', '.join(orig_args)}){maybe_return_annotation[0]}:
                                 f"{atom} of {seen_qualname}"
                             )
                         if node.op == "call_module" and not isinstance(
-                            new_m_itr, flow.nn.Module
+                            new_m_itr, oneflow.nn.Module
                         ):
                             raise RuntimeError(
                                 f"Node {node} target {node.target} {atom} of {seen_qualname} does "
@@ -1210,8 +1210,8 @@ def forward({', '.join(orig_args)}){maybe_return_annotation[0]}:
                             )
                         elif (
                             node.op == "get_attr"
-                            and not isinstance(new_m_itr, flow.nn.Module)
-                            and not isinstance(new_m_itr, flow.nn.Parameter)
+                            and not isinstance(new_m_itr, oneflow.nn.Module)
+                            and not isinstance(new_m_itr, oneflow.nn.Parameter)
                             and atom not in m_itr._buffers
                         ):
                             warnings.warn(

@@ -7,7 +7,7 @@ import os
 from types import CodeType, FunctionType, ModuleType
 from typing import Any, Dict, NamedTuple, Optional, Set, Tuple, Type, List, Callable, Union
 from itertools import chain
-import oneflow as flow
+import oneflow
 import oneflow.fx.utils._pytree as pytree
 
 import sys
@@ -19,8 +19,8 @@ from .proxy import TracerBase, Proxy, ParameterProxy
 HAS_VARSTUFF = inspect.CO_VARARGS | inspect.CO_VARKEYWORDS
 
 # These need to run in global scope to handle nested calls correctly
-_orig_module_call : Callable = flow.nn.Module.__call__
-_orig_module_getattr : Callable = flow.nn.Module.__getattr__
+_orig_module_call : Callable = oneflow.nn.Module.__call__
+_orig_module_getattr : Callable = oneflow.nn.Module.__getattr__
 
 
 _proxyable_classes : Dict[Type, None] = {}
@@ -198,7 +198,7 @@ class Tracer(TracerBase):
         self.enable_cpatching = enable_cpatching
         self.param_shapes_constant = param_shapes_constant
 
-        self.submodule_paths: Optional[Dict[flow.nn.Module, str]] = None
+        self.submodule_paths: Optional[Dict[oneflow.nn.Module, str]] = None
     
     def create_arg(self, a: Any) -> 'Argument':
         """
@@ -231,16 +231,16 @@ class Tracer(TracerBase):
         # module hierarchy, so it can never create parameter references.
         # The default tracer adds the ability to refer to parameters when
         # tracing modules.
-        if isinstance(a, flow.nn.Parameter):
+        if isinstance(a, oneflow.nn.Parameter):
             for n, p in self.root.named_parameters():
                 if a is p:
                     return self.create_node('get_attr', n, (), {})
             raise NameError('parameter is not a member of this module')
-        elif isinstance(a, flow.Tensor):
+        elif isinstance(a, oneflow.Tensor):
             for n_, p_ in self.root.named_buffers():
                 if a is p_:
                     return self.create_node('get_attr', n_, (), {})
-        elif isinstance(a, flow.nn.Module):
+        elif isinstance(a, oneflow.nn.Module):
             for n_, p_ in self.root.named_modules():
                 if a is p_:
                     return self.create_node('get_attr', n_, (), {})
@@ -275,13 +275,13 @@ class Tracer(TracerBase):
 
         return super().create_arg(a)
 
-    def is_leaf_module(self, m: flow.nn.Module, module_qualified_name : str) -> bool:
+    def is_leaf_module(self, m: oneflow.nn.Module, module_qualified_name : str) -> bool:
         """
         A method to specify whether a given ``nn.Module`` is a "leaf" module.
 
         Leaf modules are the atomic units that appear in
         the IR, referenced by ``call_module`` calls. By default,
-        Modules in the OneFlow standard library namespace (flow.nn)
+        Modules in the OneFlow standard library namespace (oneflow.nn)
         are leaf modules. All other modules are traced through and
         their constituent ops are recorded, unless specified otherwise
         via this parameter.
@@ -294,9 +294,9 @@ class Tracer(TracerBase):
                 submodule ``bar``, which contains submodule ``baz``, that module will
                 appear with the qualified name ``foo.bar.baz`` here.
         """
-        return m.__module__.startswith('flow.nn') and not isinstance(m, flow.nn.Sequential)
+        return m.__module__.startswith('oneflow.nn') and not isinstance(m, oneflow.nn.Sequential)
     
-    def path_of_module(self, mod : flow.nn.Module) -> str:
+    def path_of_module(self, mod : oneflow.nn.Module) -> str:
         """
         Helper method to find the qualified name of ``mod`` in the Module hierarchy
         of ``root``. For example, if ``root`` has a submodule named ``foo``, which has
@@ -322,7 +322,7 @@ class Tracer(TracerBase):
                     return n
             raise NameError('module is not installed as a submodule')
     
-    def call_module(self, m: flow.nn.Module, forward: Callable[..., Any], args : Tuple[Any, ...], kwargs : Dict[str, Any]) -> Any:
+    def call_module(self, m: oneflow.nn.Module, forward: Callable[..., Any], args : Tuple[Any, ...], kwargs : Dict[str, Any]) -> Any:
         """
         Method that specifies the behavior of this ``Tracer`` when it encounters
         a call to an ``nn.Module`` instance.
@@ -391,8 +391,8 @@ class Tracer(TracerBase):
                     if x == PH:
                         return out
                     # Union[int, bool] == bool in Python <= 3.6
-                    if type(x) == bool or type(x) in base_types and type(x) != flow.Tensor:
-                        flow._assert(out == x, f"{name} has been specialized to have value {x}")
+                    if type(x) == bool or type(x) in base_types and type(x) != oneflow.Tensor:
+                        oneflow._assert(out == x, f"{name} has been specialized to have value {x}")
                     else:
                         warnings.warn(
                             "Was not able to add assertion to guarantee correct inputs to "
@@ -444,7 +444,7 @@ class Tracer(TracerBase):
         return root_fn, args
     
     def _module_getattr(self, attr, attr_val, parameter_proxy_cache):
-        if isinstance(attr_val, flow.nn.Parameter):
+        if isinstance(attr_val, oneflow.nn.Parameter):
             for n, p in self.root.named_parameters():
                 if attr_val is p:
                     if n not in parameter_proxy_cache:
@@ -458,7 +458,7 @@ class Tracer(TracerBase):
 
         return attr_val
     
-    def trace(self, root: Union[flow.nn.Module, Callable], concrete_args: Optional[Dict[str, Any]] = None) -> Graph:
+    def trace(self, root: Union[oneflow.nn.Module, Callable], concrete_args: Optional[Dict[str, Any]] = None) -> Graph:
         """
         Trace ``root`` and return the corresponding FX ``Graph`` representation. ``root``
         can either be an ``nn.Module`` instance or a Python callable.
@@ -479,12 +479,12 @@ class Tracer(TracerBase):
 
             A ``Graph`` representing the semantics of the passed-in ``root``.
         """
-        if isinstance(root, flow.nn.Module):
+        if isinstance(root, oneflow.nn.Module):
             self.root = root
             fn = type(root).forward
             self.submodule_paths = {mod: name for name, mod in root.named_modules()}
         else:
-            self.root = flow.nn.Module()
+            self.root = oneflow.nn.Module()
             fn = root
 
         tracer_cls: Optional[Type['Tracer']] = getattr(self, '__class__', None)
@@ -494,11 +494,11 @@ class Tracer(TracerBase):
         # is some other attribute on the model. Construct a dict mapping Tensor
         # values to the qualified name here for efficiency. This is used downstream
         # in create_arg
-        self.tensor_attrs : Dict[Union[flow.Tensor], str] = {}
+        self.tensor_attrs : Dict[Union[oneflow.Tensor], str] = {}
 
-        def collect_tensor_attrs(m : flow.nn.Module, prefix_atoms : List[str]):
+        def collect_tensor_attrs(m : oneflow.nn.Module, prefix_atoms : List[str]):
             for k, v in m.__dict__.items():
-                if isinstance(v, (flow.Tensor)):
+                if isinstance(v, (oneflow.Tensor)):
                     self.tensor_attrs[v] = '.'.join(prefix_atoms + [k])
             for k, v in m.named_children():
                 collect_tensor_attrs(v, prefix_atoms + [k])
@@ -508,7 +508,7 @@ class Tracer(TracerBase):
         assert isinstance(fn, FunctionType)
 
         fn_globals = fn.__globals__  # run before it gets patched
-        fn, args = self.create_args_for_root(fn, isinstance(root, flow.nn.Module), concrete_args)
+        fn, args = self.create_args_for_root(fn, isinstance(root, oneflow.nn.Module), concrete_args)
 
         parameter_proxy_cache : Dict[str, Proxy] = {}  # Reduce number of get_attr calls
 
@@ -530,8 +530,8 @@ class Tracer(TracerBase):
         
         with _Patcher() as patcher:
             # allow duplicate patches to support the case of nested calls
-            patcher.patch_method(flow.nn.Module, "__getattr__", module_getattr_wrapper, deduplicate=False)
-            patcher.patch_method(flow.nn.Module, "__call__", module_call_wrapper, deduplicate=False)
+            patcher.patch_method(oneflow.nn.Module, "__getattr__", module_getattr_wrapper, deduplicate=False)
+            patcher.patch_method(oneflow.nn.Module, "__call__", module_call_wrapper, deduplicate=False)
             _patch_wrapped_functions(patcher)
             _autowrap_check(patcher, fn_globals, self._autowrap_function_ids)
             for module in self._autowrap_search:
@@ -558,7 +558,7 @@ if os.environ.get("FX_PATCH_GETITEM") == "1":
     # but causes issues in quantization documented here:
     # https://github.com/pytorch/pytorch/issues/50710
     # once that is fixed we can make this the default behavior.
-    _wrapped_methods_to_patch.append((flow.Tensor, "__getitem__"))
+    _wrapped_methods_to_patch.append((oneflow.Tensor, "__getitem__"))
 
 def _find_proxy(*objects_to_search):
     """
@@ -752,14 +752,14 @@ def wrap(fn_or_name : Union[str, Callable]):
     _wrapped_fns_to_patch.append((f.f_globals, fn_name))
     return fn_or_name
 
-def symbolic_trace(root : Union[flow.nn.Module, Callable], concrete_args: Optional[Dict[str, Any]] = None,
+def symbolic_trace(root : Union[oneflow.nn.Module, Callable], concrete_args: Optional[Dict[str, Any]] = None,
                    enable_cpatching: bool = False) -> GraphModule:
     """Symbolic tracing API
 
     Given an ``nn.Module`` or function instance ``root``, this function will return a ``GraphModule``
     constructed by recording operations seen while tracing through ``root``.
 
-    ``concrete_args`` allows you to partially specialize your function, whether it's to remove control flow or data structures.
+    ``concrete_args`` allows you to partially specialize your function, whether it's to remove control oneflow or data structures.
 
     For example::
 
@@ -770,7 +770,7 @@ def symbolic_trace(root : Union[flow.nn.Module, Callable], concrete_args: Option
                 return a*2
 
     FX can typically not trace through this due to the presence of control
-    flow. However, we can use `concrete_args` to specialize on the value of
+    oneflow. However, we can use `concrete_args` to specialize on the value of
     `b` to trace through this.
 
         f = fx.symbolic_trace(f, concrete_args={'b': False})
@@ -804,6 +804,6 @@ def symbolic_trace(root : Union[flow.nn.Module, Callable], concrete_args: Option
     """
     tracer = Tracer(enable_cpatching=enable_cpatching)
     graph = tracer.trace(root, concrete_args)
-    name = root.__class__.__name__ if isinstance(root, flow.nn.Module) else root.__name__
+    name = root.__class__.__name__ if isinstance(root, oneflow.nn.Module) else root.__name__
     return GraphModule(tracer.root, graph, name)
 

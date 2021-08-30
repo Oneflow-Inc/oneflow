@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import dis
-import oneflow as flow
+import oneflow
 import inspect
 import operator
 import traceback
@@ -102,7 +102,7 @@ class TracerBase:
         # the user code during tracing.
         frame = inspect.currentframe()
 
-        fx_files = ["flow/fx/proxy.py", "flow/fx/symbolic_trace.py"]
+        fx_files = ["oneflow/fx/proxy.py", "oneflow/fx/symbolic_trace.py"]
         while frame:
             frame = frame.f_back
             if frame and all(
@@ -169,17 +169,17 @@ class TracerBase:
 
     def to_bool(self, obj: "Proxy") -> bool:
         """Called when a proxy object is being converted to a boolean, such as
-        when used in control flow.  Normally we don't know what to do because
+        when used in control oneflow.  Normally we don't know what to do because
         we don't know the value of the proxy, but a custom tracer can attach more
         information to the graph node using create_node and can choose to return a value.
         """
         raise TraceError(
-            "symbolically traced variables cannot be used as inputs to control flow"
+            "symbolically traced variables cannot be used as inputs to control oneflow"
         )
 
     def iter(self, obj: "Proxy") -> Iterator:
         """Called when a proxy object is being iterated over, such as
-        when used in control flow.  Normally we don't know what to do because
+        when used in control oneflow.  Normally we don't know what to do because
         we don't know the value of the proxy, but a custom tracer can attach more
         information to the graph node using create_node and can choose to return an iterator.
         """
@@ -189,7 +189,7 @@ class TracerBase:
             " as a *args or **kwargs function argument. "
             "See the oneflow.fx docs on https://docs.oneflow.org for a "
             "more detailed explanation of what types of "
-            "control flow can be traced, and check out the"
+            "control oneflow can be traced, and check out the"
             " Proxy docstring for help troubleshooting "
             "Proxy iteration errors"
         )
@@ -231,7 +231,7 @@ class Proxy:
     There are two main ways around this:
     1. Factor out the untraceable logic into a top-level function and
     use ``fx.wrap`` on it.
-    2. If the control flow is static (i.e. the loop trip count is
+    2. If the control oneflow is static (i.e. the loop trip count is
     based on some hyperparameter), the code can be kept in its original
     position and refactored into something like::
 
@@ -284,7 +284,7 @@ class Proxy:
     def __len__(self):
         raise RuntimeError(
             "'len' is not supported in symbolic tracing by default. If you want "
-            "this call to be recorded, please call flow.fx.wrap('len') at "
+            "this call to be recorded, please call oneflow.fx.wrap('len') at "
             "module scope"
         )
 
@@ -292,7 +292,7 @@ class Proxy:
         args = args if args else ()
         kwargs = kwargs if kwargs else {}
 
-        # TODO(bbuf) add flow._C.xxx method
+        # TODO(bbuf) add oneflow._C.xxx method
         # if isinstance(orig_method, torch._C.ScriptMethod):
         #     args = (orig_method.owner,) + args
         #     return self.tracer.create_proxy('call_method', orig_method.name, args, kwargs)
@@ -338,7 +338,7 @@ class ParameterProxy(Proxy):
 
     def __init__(self, tracer: TracerBase, node: Node, name, param):
         super().__init__(node, tracer)
-        assert isinstance(param, flow.nn.Parameter)
+        assert isinstance(param, oneflow.nn.Parameter)
         self.param = param
         self.name = name
 

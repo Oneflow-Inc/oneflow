@@ -27,15 +27,15 @@ class Interpreter:
     Example:
 
         # TODO(BBuf) try to match oneflow
-        Suppose we want to swap all instances of ``flow.neg`` with
-        ``flow.sigmoid`` and vice versa (including their ``Tensor``
+        Suppose we want to swap all instances of ``oneflow.neg`` with
+        ``oneflow.sigmoid`` and vice versa (including their ``Tensor``
         method equivalents). We could subclass Interpreter like so::
 
             class NegSigmSwapInterpreter(Interpreter):
                 def call_function(self, target : Target,
                                   args : Tuple, kwargs : Dict) -> Any:
-                    if target == flow.sigmoid:
-                        return flow.neg(*args, **kwargs)
+                    if target == oneflow.sigmoid:
+                        return oneflow.neg(*args, **kwargs)
                     return super().call_function(n)
 
                 def call_method(self, target : Target,
@@ -46,12 +46,12 @@ class Interpreter:
                     return super().call_method(n)
 
             def fn(x):
-                return flow.sigmoid(x).neg()
+                return oneflow.sigmoid(x).neg()
 
-            gm = flow.fx.symbolic_trace(fn)
-            input = flow.randn(3, 4)
+            gm = oneflow.fx.symbolic_trace(fn)
+            input = oneflow.randn(3, 4)
             result = NegSigmSwapInterpreter(gm).run(input)
-            flow.testing.assert_allclose(result, flow.neg(input).sigmoid())
+            oneflow.testing.assert_allclose(result, oneflow.neg(input).sigmoid())
 
     Args:
         module (GraphModule): The module to be executed
@@ -334,14 +334,14 @@ class Transformer(Interpreter):
 
         #TODO(BBuf) try to match oneflow
 
-        Suppose we want to swap all instances of ``flow.neg`` with
-        ``flow.sigmoid`` and vice versa (including their ``Tensor``
+        Suppose we want to swap all instances of ``oneflow.neg`` with
+        ``oneflow.sigmoid`` and vice versa (including their ``Tensor``
         method equivalents). We could subclass ``Transformer`` like so::
 
             class NegSigmSwapXformer(Transformer):
                 def call_function(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
-                    if target == flow.sigmoid:
-                        return flow.neg(*args, **kwargs)
+                    if target == oneflow.sigmoid:
+                        return oneflow.neg(*args, **kwargs)
                     return super().call_function(n)
 
                 def call_method(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
@@ -351,13 +351,13 @@ class Transformer(Interpreter):
                     return super().call_method(n)
 
             def fn(x):
-                return flow.sigmoid(x).neg()
+                return oneflow.sigmoid(x).neg()
 
-            gm = flow.fx.symbolic_trace(fn)
+            gm = oneflow.fx.symbolic_trace(fn)
 
-            transformed : flow.nn.Module = NegSigmSwapXformer(gm).transform()
-            input = flow.randn(3, 4)
-            flow.testing.assert_allclose(transformed(input), flow.neg(input).sigmoid())
+            transformed : oneflow.nn.Module = NegSigmSwapXformer(gm).transform()
+            input = oneflow.randn(3, 4)
+            oneflow.testing.assert_allclose(transformed(input), oneflow.neg(input).sigmoid())
 
     Args:
         module (GraphModule): The ``Module`` to be transformed.
