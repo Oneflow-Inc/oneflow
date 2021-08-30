@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename data_type>
-class AffineGridKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class AffineGridKernel final : public user_op::OpKernel {
  public:
   AffineGridKernel() = default;
   ~AffineGridKernel() = default;
@@ -95,7 +95,7 @@ REGISTER_AFFINE_GRID_KERNEL(DeviceType::kGPU, double);
 #endif
 
 template<DeviceType device_type, typename data_type>
-class AffineGridGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class AffineGridGradKernel final : public user_op::OpKernel {
  public:
   AffineGridGradKernel() = default;
   ~AffineGridGradKernel() = default;

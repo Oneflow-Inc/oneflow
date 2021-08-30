@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename data_type>
-class GridSampleKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class GridSampleKernel final : public user_op::OpKernel {
  public:
   GridSampleKernel() = default;
   ~GridSampleKernel() = default;
@@ -84,7 +84,7 @@ REGISTER_GRID_SAMPLE_KERNEL(DeviceType::kGPU, double);
 #endif
 
 template<DeviceType device_type, typename data_type>
-class GridSampleGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class GridSampleGradKernel final : public user_op::OpKernel {
  public:
   GridSampleGradKernel() = default;
   ~GridSampleGradKernel() = default;
