@@ -25,23 +25,41 @@ namespace functional {
 
 class FunctionLibrary {
  public:
-  using FunctorCreator = std::function<Maybe<PackedFunctor>()>;
-
   virtual ~FunctionLibrary() = default;
+
+  template<typename T>
+  struct TypedMap;
+
+  template<typename R, typename... Args>
+  struct TypedMap<R(Args...)> {
+    using FunctorCreator = typename std::function<Maybe<PackedFunctor<R(Args...)>>()>;
+
+    static HashMap<std::string, FunctorCreator>* Get() {
+      static HashMap<std::string, FunctorCreator> functors;
+      return &functors;
+    }
+  };
 
   template<typename Func>
   void add_functor(const std::string& func_name) {
-    CHECK_EQ(functors_.count(func_name), 0)
+    using func_type = typename function_traits<Func>::func_type;
+    using FType = typename PackedFunctorMaker<func_type>::FType;
+    auto* functors = TypedMap<FType>::Get();
+    CHECK_EQ(functors->count(func_name), 0)
         << "The functor with name " << func_name << " has been registered more than once.";
-    functors_.emplace(func_name, [func_name]() -> Maybe<PackedFunctor> {
+    functors->emplace(func_name, [func_name]() -> Maybe<PackedFunctor<FType>> {
       Func func;
-      return PackedFunctor::Make(func_name, func);
+      return PackedFunctorMaker<func_type>::make(func_name, func);
     });
   }
 
-  Maybe<PackedFunctor> find(const std::string& func_name) {
-    const auto& it = functors_.find(func_name);
-    CHECK_OR_RETURN(it != functors_.end())
+  template<typename R, typename... Args>
+  auto find(const std::string& func_name)
+      -> Maybe<PackedFunctor<typename PackedFunctorMaker<R(Args...)>::FType>> {
+    using FType = typename PackedFunctorMaker<R(Args...)>::FType;
+    auto* functors = TypedMap<FType>::Get();
+    const auto& it = functors->find(func_name);
+    CHECK_OR_RETURN(it != functors->end())
         << "Functor was not found for op " << func_name
         << ", please check whether the functor has been registered correctly or not.";
     return it->second();
@@ -54,8 +72,6 @@ class FunctionLibrary {
 
  private:
   FunctionLibrary() = default;
-
-  HashMap<std::string, FunctorCreator> functors_;
 };
 
 #define ONEFLOW_FUNCTION_LIBRARY(m) ONEFLOW_FUNCTION_LIBRARY_IMPL(m, __COUNTER__)

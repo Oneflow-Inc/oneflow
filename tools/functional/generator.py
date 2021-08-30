@@ -361,12 +361,12 @@ class Generator:
                 fmt += "\n"
                 fmt += signature.to_string(to_cpp=True)
                 fmt += " {\n"
-                fmt += '  static thread_local const auto& op = CHECK_JUST(FunctionLibrary::Global()->find("{0}"));\n'.format(
-                    signature._name
-                )
-                fmt += "  return op->call<{0}, {1}>({2});\n".format(
+                fmt += '  static thread_local const auto& op = CHECK_JUST(FunctionLibrary::Global()->find<{0}, {1}>("{2}"));\n'.format(
                     signature._ret._cpp_type,
                     ", ".join([arg._cpp_type for arg in signature._args]),
+                    signature._name,
+                )
+                fmt += "  return op->call({0});\n".format(
                     ", ".join([arg._name for arg in signature._args]),
                 )
                 fmt += "}\n"
