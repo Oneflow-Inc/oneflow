@@ -18,6 +18,8 @@ limitations under the License.
 
 #if __cplusplus < 201402L
 
+#include <memory>
+
 namespace std {
 template<class T>
 struct unique_if {
