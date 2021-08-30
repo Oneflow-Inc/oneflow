@@ -28,13 +28,11 @@ namespace one {
 namespace {
 
 Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
-                               bool current_rank_local_is_valid) {
-  if (!current_rank_local_is_valid) { return input; }
+                               Symbol<ParallelDesc> out_parallel_desc) {
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
   // Eager boxing
   const auto& in_nd_sbp = JUST(input->nd_sbp());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
-  const auto& out_parallel_desc = in_parallel_desc;
   const auto& boxing_interpreter = JUST(
       mgr->GetEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
   const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
@@ -42,8 +40,8 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg:
   return output;
 }
 
-auto* GetBoxingOutput =
-    DECORATE(DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta), DisableRecusiveBoxingCall);
+static constexpr auto* RecursiveGetBoxingOutput =
+    DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta);
 
 }  // namespace
 
@@ -73,16 +71,14 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
 
   Maybe<void> Apply(const CastConsistentCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     std::shared_ptr<Tensor> out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent());
     {
       Symbol<cfg::NdSbp> nd_sbp_constraint = ctx->nd_sbp;
-      Symbol<ParallelDesc> parallel_desc;
-      if (nd_sbp_constraint != JUST(out_grad->nd_sbp())) {
-        Optional<int64_t> parallel_id;
-        const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
-        out_grad = JUST(GetBoxingOutput(out_grad, nd_sbp_constraint, parallel_id.has_value()));
-      }
+      Symbol<ParallelDesc> parallel_desc_constraint = ctx->parallel_desc;
+      out_grad =
+          JUST(RecursiveGetBoxingOutput(out_grad, nd_sbp_constraint, parallel_desc_constraint));
     }
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grad}));
     return Maybe<void>::Ok();
@@ -119,6 +115,7 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
     const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", *ctx->shape));
+    JUST(attrs.SetAttr<DataType>("dtype", out_grads.at(0)->dtype()->data_type()));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
         *grad_op_, {out_grads.at(0)}, OpExprInterpContext(attrs, ctx->parallel_desc, dual_nd_sbp)));
     return Maybe<void>::Ok();
