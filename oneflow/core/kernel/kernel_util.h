@@ -35,6 +35,9 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
+
+auto AutoMemcpyFn(const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case)
+    -> void (*)(DeviceCtx*, void* dst, const void* src, size_t sz);
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,

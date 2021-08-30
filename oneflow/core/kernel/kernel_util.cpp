@@ -273,6 +273,19 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   func(ctx, dst, src, sz);
 }
 
+auto AutoMemcpyFn(const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case)
+    -> void (*)(DeviceCtx*, void* dst, const void* src, size_t sz) {
+  if (src_mem_case.has_host_mem() && dst_mem_case.has_host_mem()) {
+    return &Memcpy<DeviceType::kCPU>;
+  } else {
+#ifdef WITH_CUDA
+    return &Memcpy<DeviceType::kGPU>;
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
+  }
+}
+
 void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
   AutoMemcpy(ctx, dst, src, sz, dst_mem_case, src_mem_case);

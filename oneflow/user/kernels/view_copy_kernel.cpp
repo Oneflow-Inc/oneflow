@@ -43,6 +43,8 @@ class ViewCopyKernel final : public user_op::OpKernel {
     const char* in_dptr = static_cast<const char*>(in->raw_dptr()) + storage_offset * dsize;
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
 
+    auto copy = AutoMemcpyFn(out->mem_case(), in->mem_case());
+
     int64_t contiguous_block_size = 1;
     int64_t contiguous_dim = in_shape.NumAxes() - 1;
     for (; contiguous_dim != -1; --contiguous_dim) {
@@ -54,8 +56,7 @@ class ViewCopyKernel final : public user_op::OpKernel {
     }
 
     if (contiguous_dim == -1) {
-      AutoMemcpy(ctx->device_ctx(), out_dptr, in_dptr, contiguous_block_size * dsize,
-                 out->mem_case(), in->mem_case());
+      copy(ctx->device_ctx(), out_dptr, in_dptr, contiguous_block_size * dsize);
     } else {
       StrideVector out_stride(in_shape.NumAxes());
 
@@ -69,8 +70,8 @@ class ViewCopyKernel final : public user_op::OpKernel {
       int64_t in_offset = 0, out_offset = 0;
 
       while (true) {
-        AutoMemcpy(ctx->device_ctx(), out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
-                   contiguous_block_size * dsize, out->mem_case(), in->mem_case());
+        copy(ctx->device_ctx(), out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
+             contiguous_block_size * dsize);
 
         int64_t i = contiguous_dim;
         for (; i != -1; --i) {
