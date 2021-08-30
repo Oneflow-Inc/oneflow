@@ -31,7 +31,6 @@ class EnvGlobalObjectsScope final {
   ~EnvGlobalObjectsScope();
 
   Maybe<void> Init(const EnvProto& env_proto);
-
 };
 
 }  // namespace oneflow
