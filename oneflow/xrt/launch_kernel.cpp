@@ -42,7 +42,7 @@ static Parameter BuildParameter(const Blob& blob, const std::string& name) {
 
 namespace {
 
-const LogicalBlobId& BnInOp2Lbi(const Kernel& kernel, std::string& bn_in_op) {
+const LogicalBlobId& BnInOp2Lbi(const Kernel& kernel, const std::string& bn_in_op) {
   return kernel.op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
 }
 
