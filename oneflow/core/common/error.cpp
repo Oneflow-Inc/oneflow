@@ -311,4 +311,9 @@ void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
 
 const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError() { return *MutThreadLocalError(); }
 
+const char* kOfBugIssueUploadPrompt =
+    "This is a oneflow bug, please submit issues in "
+    "'https://github.com/Oneflow-Inc/oneflow/issues' include the log information of the error, the "
+    "minimum reproduction code, and the system information.";
+
 }  // namespace oneflow
