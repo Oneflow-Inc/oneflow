@@ -17,9 +17,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #include "oneflow/core/kernel/kernel_observer.h"
-// #ifdef WITH_CUDA
-#include "oneflow/core/cuda/check_inf_nan.cuh"
-// #endif
 
 namespace oneflow {
 
@@ -63,28 +60,6 @@ void Kernel::Forward(const KernelCtx& ctx,
   Global<KernelObserver>::Get()->WillForwardDataContent(ctx, this, BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
   Global<KernelObserver>::Get()->DidForwardDataContent(ctx, this, BnInOp2Blob);
-
-  if (std::getenv("ONEFLOW_CHECK_INF_NAN") != nullptr) {
-    for (const std::string& obn : this->op_attribute().output_bns()) {
-      Blob* blob = BnInOp2Blob(obn);
-      int check_code = CheckBlobInfNan(ctx.device_ctx, blob);
-      if (check_code == 0) {
-        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", check not completed";
-      } else if (check_code == -1) {
-        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", skip when not on gpu";
-      } else if (check_code == -2) {
-        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", obn: " << obn
-                  << ", skip when dtype is not float";
-      } else if (check_code == 1) {
-        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", obn: " << obn << " has inf";
-      } else if (check_code == 2) {
-        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", obn: " << obn << " has nan";
-      } else {
-        LOG(INFO) << "CheckBlobInfNan, op: " << op_conf().name() << ", obn: " << obn
-                  << ", meet unexcepted check code: " << check_code;
-      }
-    }
-  }
 }
 
 void Kernel::ForwardHeader(const KernelCtx& ctx,
