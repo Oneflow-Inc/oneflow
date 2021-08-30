@@ -563,10 +563,15 @@ if os.environ.get("FX_PATCH_GETITEM") == "1":
     # once that is fixed we can make this the default behavior.
     _wrapped_methods_to_patch.append((oneflow.Tensor, "__getitem__"))
 
-oneflow_funcs = ['topk', 'sum']
+# oneflow_funcs = ['topk', 'sum']
+internal_oneflow_funcs = ['FunctionConfig', 'Generator', 'INVALID_SPLIT_AXIS', 'MultiClientSession', 'Tensor', 
+                         'builtin_op', 'distributed', 'default_generator', 'docstr', 'eager', 'enable_eager_execution',
+                         'env', 'framework', ]
 
+oneflow_funcs = dir(oneflow)
 for funcs_name in oneflow_funcs:
-    _wrapped_methods_to_patch.append((oneflow, funcs_name))
+    if not funcs_name.startswith('_') and funcs_name not in internal_oneflow_funcs:
+        _wrapped_methods_to_patch.append((oneflow, funcs_name))
 
 
 def _find_proxy(*objects_to_search):

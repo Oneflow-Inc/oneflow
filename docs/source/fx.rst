@@ -119,3 +119,27 @@ output         output         output                   (topk,)             {}
 
 We can use this information to answer the questions we posed above.
 
+- What are the inputs to the method? In FX, method inputs are specified
+  via special ``placeholder`` nodes. In this case, we have a single
+  ``placeholder`` node with a ``target`` of ``x``, meaning we have
+  a single (non-self) argument named x.
+- What are the operations within the method? The ``get_attr``,
+  ``call_function``, ``call_module``, and ``call_method`` nodes
+  represent the operations in the method. A full treatment of
+  the semantics of all of these can be found in the :class:`Node`
+  documentation.
+- What is the return value of the method? The return value in a
+  :class:`Graph` is specified by a special ``output`` node.
+
+Given that we now know the basics of how code is represented in
+FX, we can now explore how we would edit a :class:`Graph`.
+
+Graph Manipulation
+^^^^^^^^^^^^^^^^^^
+
+One approach to building this new :class:`Graph` is to directly manipulate your old
+one. To aid in this, we can simply take the :class:`Graph` we obtain from symbolic
+tracing and modify it. For example, let’s say we desire to replace
+:func:`oneflow.add` calls with :func:`oneflow.mul` calls.
+
+
