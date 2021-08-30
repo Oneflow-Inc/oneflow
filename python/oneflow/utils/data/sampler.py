@@ -142,8 +142,12 @@ class RandomSampler(Sampler[int]):
         if self.generator is None:
             generator = flow.Generator()
             generator.manual_seed(
-                int(flow.empty((), dtype=flow.int64).random_().item())
+                np.random.randint(0, np.iinfo(np.int64).max)
             )
+            # TODO: use Tensor.random_
+            # generator.manual_seed(
+            #     int(flow.empty((), dtype=flow.int64).random_().item())
+            # )
         else:
             generator = self.generator
         if self.replacement:
