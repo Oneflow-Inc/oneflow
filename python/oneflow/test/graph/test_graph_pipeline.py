@@ -1,5 +1,14 @@
-import unittest
 import os
+import sys
+
+# For debug
+os.environ["MASTER_ADDR"] = "127.0.0.1"
+os.environ["MASTER_PORT"] = "8003"
+os.environ["WORLD_SIZE"] = "2"
+os.environ["RANK"] = str(sys.argv[1])
+os.environ["LOCAL_RANK"] = str(sys.argv[1])
+
+import unittest
 import numpy as np
 
 import oneflow as flow
@@ -50,17 +59,17 @@ def _test_train_graph(test_case, device):
             of_sgd.step()
             of_sgd.zero_grad()
             
-            print(of_out.numpy())
+            print("rank: ", rank, " eager out:", of_out.numpy())
             return of_out.numpy(), local_m.linear1.weight.numpy()
 
         check_list = []
         for i in range(iter_num):
-            print(i)
             check_list.append(one_iter())
         return check_list
 
     def train_with_graph(iter_num=3):
         B = [flow.sbp.broadcast]
+        P = flow.placement("cuda", {0: [0, 1]})
         P0 = flow.placement("cuda", {0: [0]})
         P1 = flow.placement("cuda", {0: [1]})
 
@@ -88,16 +97,21 @@ def _test_train_graph(test_case, device):
             def __init__(self):
                 super().__init__()
                 self.pp_m = pp_m
+                self.pp_m.linear0.stage_id = 0
+                self.pp_m.linear1.stage_id = 1
+                # TODO(): support gradient accumulation
+                #self.config.set_gradient_accumulation_steps(3)
                 self.add_optimizer(of_sgd)
 
             def build(self, x):
                 out = self.pp_m(x)
                 out = out.sum()
+                # TODO(): support partial placement of scalar tensor numpy()
+                out = out.to_consistent(placement=P, sbp=B)
                 out.backward()
                 return out
 
         pp_g = PipelineGraph()
-        pp_g.debug()
 
         x = flow.Tensor(
             [
@@ -116,11 +130,12 @@ def _test_train_graph(test_case, device):
         x = x.to_consistent(placement=P0, sbp=B)
 
         def one_iter():
-            print("rank: ", rank)
+            pp_m.train()
             of_graph_out = pp_g(x)
-            test_case.assertTrue(of_graph_out.placement == P1)
+            test_case.assertTrue(of_graph_out.placement == P)
             of_graph_out = of_graph_out.to_local()
             of_graph_out_np = of_graph_out.numpy()
+            print("rank: ", rank, " pipeline graph out: ", of_graph_out_np)
             return of_graph_out_np, pp_m.linear1.weight.to_local().numpy()
 
         check_list = []
@@ -128,7 +143,7 @@ def _test_train_graph(test_case, device):
             check_list.append(one_iter())
         return check_list
 
-    iter_num = 3
+    iter_num = 2
     if (rank == 1):
         module_check_list = train_with_module(iter_num)
 
@@ -154,4 +169,5 @@ class TestGraphPipeline(oneflow.unittest.TestCase):
 
 
 if __name__ == "__main__":
+    sys.argv.pop()
     unittest.main()

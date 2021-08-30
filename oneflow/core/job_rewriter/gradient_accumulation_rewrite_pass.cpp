@@ -49,6 +49,10 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](const OpNode* node) -> Maybe<void> {
     const OperatorConf& op_conf = node->op().op_conf();
     if (node->in_edges().empty()) {       // sources
+      if (op_conf.has_input_conf()) {  // input
+        // TODO(): make this work
+        return Maybe<void>::Ok();
+      }
       if (op_conf.has_variable_conf()) {  // repeat variable
         const LogicalBlobId variable_lbi = node->op().BnInOp2Lbi("out");
         const std::string variable_lbn = GenLogicalBlobName(variable_lbi);
@@ -103,6 +107,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
             .add_s(repeat_op.output("out", 0));
         return Maybe<void>::Ok();
       } else {
+        LOG(ERROR) << "Gradient accumulation unsupported op : " << op_conf.DebugString();
         return Error::Unimplemented();
       }
     } else if (op_conf.has_return_conf()) {  // pack return

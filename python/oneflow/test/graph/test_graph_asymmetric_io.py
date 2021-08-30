@@ -21,8 +21,8 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@flow.unittest.skip_unless_1n2d()
+#@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+#@flow.unittest.skip_unless_1n2d()
 class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
     def test_consistent_asymmetric_graph_gpu(test_case):
         Broadcast = [flow.sbp.broadcast]
@@ -87,7 +87,9 @@ class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
                 return self.my_net(x, y)
 
         my_g = MyAsymmetricGraph()
+        my_g.debug()
         graph_out = my_g(x, y)
+        print("graph proto: \n", my_g._graph_proto)
         test_case.assertTrue(graph_out.placement == Placement_rank_1)
         graph_local_out = graph_out.to_local()
         # NOTE(chengcheng): MUST call for each rank sync correct input copy

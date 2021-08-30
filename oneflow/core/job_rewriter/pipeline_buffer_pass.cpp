@@ -220,6 +220,7 @@ void TryInsertOrUseBufferOpBothSrcDst(
 }
 
 Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  LOG(ERROR) << "do pp pass.";
   if (GlobalJobDesc().job_conf().num_gradient_accumulation_steps() <= 1) {
     return Maybe<void>::Ok();
   }
