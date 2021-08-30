@@ -63,7 +63,7 @@ def flip_op(input, dims):
             i < input_len
         ), f"IndexError: Dimension out of range (expected to be in range of {input_len}, but got {i})"
         new_dims.append(i)
-    return flow.F.flip(input, new_dims)
+    return flow._C.flip(input, new_dims)
 
 
 @register_tensor_op("flip")

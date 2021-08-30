@@ -49,7 +49,7 @@ def floor_op(input):
                [-1.,  2.]], dtype=float32)
 
     """
-    return flow.F.floor(input)
+    return flow._C.floor(input)
 
 
 @register_tensor_op("floor")
@@ -57,7 +57,7 @@ def floor_op_tensor(input):
     """
     See :func:`oneflow.floor`
     """
-    return flow.F.floor(input)
+    return flow._C.floor(input)
 
 
 if __name__ == "__main__":
