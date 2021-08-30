@@ -35,7 +35,7 @@ def log1p_op(input):
         tensor([0.8329, 0.9163, 1.3083], dtype=oneflow.float32)
 
     """
-    return flow.F.log1p(input)
+    return flow._C.log1p(input)
 
 
 @register_tensor_op("log1p")
@@ -43,7 +43,7 @@ def log1p_op_tensor(input):
     """
     See :func:`oneflow.log1p`
     """
-    return flow.F.log1p(input)
+    return flow._C.log1p(input)
 
 
 if __name__ == "__main__":
