@@ -27,7 +27,7 @@ class OnesModule(flow.nn.Module):
         super().__init__()
         self.shape = shape
 
-    def forward(self, x):
+    def forward(self):
         ones = flow.ones(*self.shape)
         return ones
 
@@ -48,9 +48,7 @@ def _test_memmory_graph(test_case, device, ):
     ones_np = np.ones(shape)
     
     random = RandomModule(shape).to(flow.device("cuda"))
-
     of_eager_out = random()
-    print(of_eager_out)
 
     Ones = OnesModule(shape).to(flow.device("cuda"))
 
@@ -59,16 +57,15 @@ def _test_memmory_graph(test_case, device, ):
             super().__init__()
             self.ones = Ones
 
-        def build(self, x):
-            return self.ones(x)
+        def build(self):
+            return self.ones()
 
     ones_g = OnesGraph()
 
     for i in range(1000):
-        x = flow.Tensor(shape)
         of_eager_out = random()
-        of_lazy_out = ones_g(x)
-        # test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), ones_np))
+        of_lazy_out = ones_g()
+        test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), ones_np))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
