@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
@@ -102,17 +102,21 @@ def _test_gather_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestGather(flow.unittest.TestCase):
-    def test_gather(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_gather,
-            _test_gather_tensor_function,
-            _test_gather_random_array,
-            _test_gather_backward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest
+    def test_flow_gather_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        dim = random(0, 1).to(int)
+        index = random_pytorch_tensor(ndim=2, dim0=2, dim1=2)
+        return torch.gather(input, dim, index)
+
+    @autotest
+    def test_flow_tensor_gather_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        dim = random(0, 1).to(int)
+        index = random_pytorch_tensor(ndim=2, dim0=2, dim1=2)
+        return input.gather(dim, index)
 
 
 if __name__ == "__main__":

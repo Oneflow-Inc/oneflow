@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
@@ -70,15 +70,19 @@ def _test_view_flow_size(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestView(flow.unittest.TestCase):
-    def test_view(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_view,
-            _test_view_flow_size,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest
+    def test_flow_view_with_random_data(test_case):
+        device = random_device()
+        shape = random(1, 6).to(int)
+        x = random_pytorch_tensor().to(device)
+        return torch.view(x, shape)
+
+    @autotest()
+    def test_flow_tensor_view_with_0shape_data(test_case):
+        device = random_device()
+        shape = random(1, 3).to(int)
+        x = random_pytorch_tensor().to(device)
+        return x.view(shape)
 
 
 if __name__ == "__main__":

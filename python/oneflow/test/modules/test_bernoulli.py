@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
@@ -44,12 +44,11 @@ def _test_bernoulli_with_generator(test_case, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestBernoulli(flow.unittest.TestCase):
-    def test_bernoulli(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_functions"] = [_test_bernoulli]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest
+    def test_flow_bernoulli_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor().to(device)
+        return torch.bernoulli(input)
 
 
 if __name__ == "__main__":

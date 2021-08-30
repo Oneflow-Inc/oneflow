@@ -19,7 +19,6 @@ from collections import OrderedDict
 
 import numpy as np
 from automated_test_util import *
-from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -65,16 +64,19 @@ def _test_flip_input_tuple_int(test_case, device):
 
 
 class TestFlip(flow.unittest.TestCase):
-    def test_flip(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_flip,
-            _test_flip_input_int,
-            _test_flip_input_tuple_int,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest
+    def test_flow_flip_with_random_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=4).to(device)
+        dims = random(0, 2).to(int)
+        return torch.flip(input, dims)
+
+    @autotest(auto_backward=False)
+    def test_flow_tensor_flip_with_0shape_data(test_case):
+        device = random_device()
+        input = random_pytorch_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=4).to(device)
+        dims = random(0, 2).to(int)
+        return input.flip(dims)
 
 
 if __name__ == "__main__":

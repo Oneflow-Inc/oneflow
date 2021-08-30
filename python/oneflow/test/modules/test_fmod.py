@@ -20,7 +20,6 @@ from collections import OrderedDict
 
 import numpy as np
 from automated_test_util import *
-from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -76,14 +75,6 @@ def _test_fmod_tensor_vs_scalar(test_case, shape, device):
 
 
 class TestFmodModule(flow.unittest.TestCase):
-    def test_fmod(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["fun"] = [_test_fmod_same_shape_tensor, _test_fmod_tensor_vs_scalar]
-        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
     @autotest
     def test_flow_fmod_with_random_data(test_case):
         device = random_device()
@@ -92,7 +83,7 @@ class TestFmodModule(flow.unittest.TestCase):
         return torch.fmod(input, other)
 
     @autotest(auto_backward=False)
-    def test_fmod_with_0shape_data(test_case):
+    def test_flow_tensor_fmod_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
         y = torch.fmod(x, 2)
