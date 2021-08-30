@@ -46,11 +46,7 @@ def diagonal_op(input, offset=0, dim1=0, dim2=1):
     out = flow.F.diagonal(input, offset, dim1, dim2)
     return out
 
-@register_tensor_op("diagonal")
-def diagonal_op_tensor(input, offset=0, dim1=0, dim2=1):
-    """
-    diagonal() -> Tensor
-    See :func:`oneflow.diagonal`
-    
-    """
-    dim_num = len(input.shape)
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
