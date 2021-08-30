@@ -105,7 +105,7 @@ def get_loss(
         corss_entropy.to(device)
         label = torch.tensor(label_nd, dtype=torch.long).to(device)
 
-        print("start pytorch training loop....")
+        print("start pytorch training loop on %s model...." % module_name)
         start_t = time.time()
         for i in range(bp_iters):
             s_t = time.time()
@@ -178,7 +178,7 @@ def get_loss(
             oneflow_model.parameters(), lr=learning_rate, momentum=mom
         )
 
-        print("start oneflow training loop....")
+        print("start oneflow training loop on %s model...." % module_name)
         start_t = time.time()
         for i in range(bp_iters):
             s_t = time.time()
