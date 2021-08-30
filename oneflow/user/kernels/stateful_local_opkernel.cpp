@@ -419,7 +419,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   if (op_reg_val->logical_tensor_desc_infer_fn) {
     opkernel->tensor_desc_infer_fn_ = op_reg_val->logical_tensor_desc_infer_fn;
   } else {
-    return Error::Unimplemented();
+    return Error::UnimplementedError();
   }
   opkernel->data_type_infer_fn_ = op_reg_val->data_type_infer_fn;
 

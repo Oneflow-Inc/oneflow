@@ -20,8 +20,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-
-
 class OnesModule(flow.nn.Module):
     def __init__(self, shape):
         super().__init__()
