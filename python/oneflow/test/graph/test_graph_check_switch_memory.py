@@ -20,8 +20,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-
-
 class OnesModule(flow.nn.Module):
     def __init__(self, shape):
         super().__init__()
@@ -43,7 +41,6 @@ class RandomModule(flow.nn.Module):
 def _test_memmory_graph(test_case, device, ):
 
     shape = (100, 3, 512, 512)
-    # shape = (2,3,4)
 
     ones_np = np.ones(shape)
     
