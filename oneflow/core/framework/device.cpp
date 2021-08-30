@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -78,10 +79,6 @@ Maybe<void> Device::Init() {
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::LocalRank());
-}
-
-const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
-  return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
 }
 
 Maybe<const std::string&> Device::of_type() const {
@@ -198,5 +195,26 @@ Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& paral
 std::string Device::Type4DeviceTag(const std::string& device_tag) {
   return device_tag == "gpu" ? "cuda" : device_tag;
 }
+
+namespace {
+
+Maybe<Symbol<ParallelDesc>> RawGetPlacement(const Device& device) {
+  std::string machine_device_id =
+      "@" + std::to_string(GlobalProcessCtx::Rank()) + ":" + std::to_string(device.device_id());
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(JUST(device.of_type()));
+  parallel_conf.add_device_name(machine_device_id);
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
+Maybe<Symbol<ParallelDesc>> RawPlacement4Device(Symbol<Device> device) {
+  return RawGetPlacement(*device);
+}
+
+}  // namespace
+
+decltype(Device::GetPlacement) Device::GetPlacement =
+    DECORATE(&RawGetPlacement, ThreadLocalCopiable);
+decltype(Placement4Device) Placement4Device = DECORATE(&RawPlacement4Device, ThreadLocal);
 
 }  // namespace oneflow

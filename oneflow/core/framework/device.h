@@ -50,7 +50,6 @@ class Device final {
   bool operator!=(const Device& device) const {
     return !(type_ == device.type() && device_id_ == device.device_id());
   }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const;
   const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
 
   static Maybe<Symbol<Device>> ThreadLocalGetOrNew(const std::string& type, int64_t device_id);
@@ -61,6 +60,7 @@ class Device final {
   static const std::unordered_set<std::string> type_supported;
 
   static std::string Type4DeviceTag(const std::string& device_tag);
+  static Maybe<Symbol<ParallelDesc>> (*GetPlacement)(const Device& device);
   Maybe<const Optional<std::string>&> GetSharedTransportDeviceType() const;
   Maybe<const std::string&> GetSharedScheduleDeviceType() const;
 
@@ -84,6 +84,8 @@ class Device final {
 };
 
 Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);
+
+extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
 
 }  // namespace oneflow
 
