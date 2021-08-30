@@ -50,16 +50,8 @@ def all_reduce(tensor):
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.device.index == flow.env.get_local_rank()
     assert tensor.is_local
-    placement = None
-    machine_device_ids = {}
-    nproc_per_node = int(
-        flow.env.get_world_size() / flow.env.get_node_size()
-    )
-    for node_rank in range(flow.env.get_node_size()):
-        machine_device_ids[node_rank] = range(nproc_per_node)
-    placement = flow.placement(str(tensor.device).split(":")[0], machine_device_ids)
-
-    assert placement != None
+    device_type = str(tensor.device).split(":")[0]
+    placement = flow.env.all_device_placement(device_type)
     tensor = tensor.to_consistent(
         placement=placement, sbp=flow.sbp.partial_sum
     ).to_consistent(placement=placement, sbp=flow.sbp.broadcast)

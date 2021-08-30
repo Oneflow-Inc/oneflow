@@ -39,5 +39,6 @@ class TestAllReduce(flow.unittest.TestCase):
     def test_docs(test_case):
         oneflow.framework.unittest.check_multi_rank_docstr(oneflow.comm.primitive)
 
+
 if __name__ == "__main__":
     unittest.main()
