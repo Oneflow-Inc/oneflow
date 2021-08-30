@@ -105,13 +105,12 @@ REGISTER_USER_OP("affine_grid_grad")
     .Attr<bool>("align_corners")
     .SetCheckAttrFn(CheckAttr)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* theta = ctx->OutputTensorDesc("dtheta", 0);
       const Shape& size = ctx->Attr<Shape>("size");
 
       if (size.NumAxes() == 4) {
-        *(theta->mut_shape()) = {size.At(0), 2, 3};
+        *(ctx->OutputTensorDesc("dtheta", 0)->mut_shape()) = {size.At(0), 2, 3};
       } else if (size.NumAxes() == 5) {
-        *(theta->mut_shape()) = {size.At(0), 3, 4};
+        *(ctx->OutputTensorDesc("dtheta", 0)->mut_shape()) = {size.At(0), 3, 4};
       } else {
         CHECK_OR_RETURN(false) << "size MUST be 4D or 5D";
       }
@@ -131,7 +130,7 @@ REGISTER_USER_OP("affine_grid_grad")
 
 REGISTER_USER_OP_GRAD("affine_grid")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("theta", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =

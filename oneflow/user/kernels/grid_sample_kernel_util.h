@@ -165,7 +165,7 @@ static OF_DEVICE_FUNC scalar_t ReflectCoordinatesSetGrad(scalar_t in, int twice_
     *grad_in = static_cast<scalar_t>(0);
     return static_cast<scalar_t>(0);
   }
-  int grad_in_mult_;
+  int grad_in_mult_ = 1;
   scalar_t min = static_cast<scalar_t>(twice_low) / 2;
   scalar_t span = static_cast<scalar_t>(twice_high - twice_low) / 2;
   in = in - min;

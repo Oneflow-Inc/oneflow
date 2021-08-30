@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/framework/config_def.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "affine_grid_kernel.h"
 
 namespace oneflow {

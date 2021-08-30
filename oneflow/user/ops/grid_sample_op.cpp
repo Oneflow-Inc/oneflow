@@ -68,7 +68,6 @@ REGISTER_USER_OP("grid_sample")
       //              output = { N, C, D_out, H_out, W_out }
       const Shape& input_shape = input.shape();
       const Shape& grid_shape = grid.shape();
-      Shape& output_shape = *(output.mut_shape());
 
       bool is_4d_input = true;
       if (input_shape.NumAxes() == 4) {
@@ -87,10 +86,11 @@ REGISTER_USER_OP("grid_sample")
       }
       *output.mut_is_dynamic() = grid.is_dynamic();
       if (is_4d_input) {
-        output_shape = {input_shape.At(0), input_shape.At(1), grid_shape.At(1), grid_shape.At(2)};
+        *(output.mut_shape()) = {input_shape.At(0), input_shape.At(1), grid_shape.At(1),
+                                 grid_shape.At(2)};
       } else {
-        output_shape = {input_shape.At(0), input_shape.At(1), grid_shape.At(1), grid_shape.At(2),
-                        grid_shape.At(3)};
+        *(output.mut_shape()) = {input_shape.At(0), input_shape.At(1), grid_shape.At(1),
+                                 grid_shape.At(2), grid_shape.At(3)};
       }
       return Maybe<void>::Ok();
     })
@@ -152,7 +152,7 @@ REGISTER_USER_OP("grid_sample_grad")
 
 REGISTER_USER_OP_GRAD("grid_sample")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("input", 0) || op.NeedGenGradTensor4OpInput("grid", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =

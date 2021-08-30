@@ -17,7 +17,7 @@ limitations under the License.
 #define _ONEFLOW_USER_KERNELS_ACTIVATION_KERNELS_H_
 
 #include "oneflow/core/framework/op_kernel.h"
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 

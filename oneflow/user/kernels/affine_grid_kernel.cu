@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
-#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -84,13 +82,11 @@ void GenerateBaseGridImp<DeviceType::kGPU>::Generate2D(user_op::KernelComputeCon
                                                        bool align_corners) {
   int count = H * W;
   if (align_corners) {
-    Generate2DBaseGridGPUKernel<float, true>
-        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(count, grid_ptr, H, W);
+    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<float, true>), ctx->device_ctx(), count, count,
+                    grid_ptr, H, W);
   } else {
-    Generate2DBaseGridGPUKernel<float, false>
-        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(count, grid_ptr, H, W);
+    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<float, false>), ctx->device_ctx(), count, count,
+                    grid_ptr, H, W);
   }
 }
 void GenerateBaseGridImp<DeviceType::kGPU>::Generate2D(user_op::KernelComputeContext* ctx,
@@ -98,13 +94,11 @@ void GenerateBaseGridImp<DeviceType::kGPU>::Generate2D(user_op::KernelComputeCon
                                                        bool align_corners) {
   int count = H * W;
   if (align_corners) {
-    Generate2DBaseGridGPUKernel<double, true>
-        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(count, grid_ptr, H, W);
+    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<double, true>), ctx->device_ctx(), count, count,
+                    grid_ptr, H, W);
   } else {
-    Generate2DBaseGridGPUKernel<double, false>
-        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(count, grid_ptr, H, W);
+    RUN_CUDA_KERNEL((Generate2DBaseGridGPUKernel<double, false>), ctx->device_ctx(), count, count,
+                    grid_ptr, H, W);
   }
 }
 
@@ -113,13 +107,11 @@ void GenerateBaseGridImp<DeviceType::kGPU>::Generate3D(user_op::KernelComputeCon
                                                        int64_t W, bool align_corners) {
   int count = D * H;
   if (align_corners) {
-    Generate3DBaseGridGPUKernel<float, true>
-        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(count, grid_ptr, D, H, W);
+    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<float, true>), ctx->device_ctx(), count, count,
+                    grid_ptr, D, H, W);
   } else {
-    Generate3DBaseGridGPUKernel<float, false>
-        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(count, grid_ptr, D, H, W);
+    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<float, false>), ctx->device_ctx(), count, count,
+                    grid_ptr, D, H, W);
   }
 }
 
@@ -128,13 +120,11 @@ void GenerateBaseGridImp<DeviceType::kGPU>::Generate3D(user_op::KernelComputeCon
                                                        int64_t W, bool align_corners) {
   int count = D * H;
   if (align_corners) {
-    Generate3DBaseGridGPUKernel<double, true>
-        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(count, grid_ptr, D, H, W);
+    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<double, true>), ctx->device_ctx(), count, count,
+                    grid_ptr, D, H, W);
   } else {
-    Generate3DBaseGridGPUKernel<double, false>
-        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(count, grid_ptr, D, H, W);
+    RUN_CUDA_KERNEL((Generate3DBaseGridGPUKernel<double, false>), ctx->device_ctx(), count, count,
+                    grid_ptr, D, H, W);
   }
 }
 
