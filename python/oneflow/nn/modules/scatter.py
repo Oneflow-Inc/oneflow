@@ -66,7 +66,7 @@ def scatter(input, dim, index, src):
 
     """
 
-    return flow.F.scatter(input, dim, index, src)
+    return flow._C.scatter(input, dim, index, src)
 
 
 def scatter_add(input, dim, index, src):
@@ -110,7 +110,7 @@ def scatter_add(input, dim, index, src):
         flow.Tensor
     ], f"type of src must be oneflow.Tensor, but %s givien" % type(src)
 
-    return flow.F.scatter_add(input, dim, index, src)
+    return flow._C.scatter_add(input, dim, index, src)
 
 
 def _scatter_nd_op(index, update, shape):
@@ -135,7 +135,7 @@ def _scatter_nd_op(index, update, shape):
                dtype=oneflow.float32)
 
     """
-    return flow.F.scatternd(index, update, shape)
+    return flow._C.scatternd(index, update, shape)
 
 
 if __name__ == "__main__":

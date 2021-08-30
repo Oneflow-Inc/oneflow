@@ -1,53 +1,51 @@
 include (ExternalProject)
 
-set(GOOGLETEST_INCLUDE_DIR ${THIRD_PARTY_DIR}/googletest/include)
-set(GOOGLETEST_LIBRARY_DIR ${THIRD_PARTY_DIR}/googletest/lib)
-set(GOOGLEMOCK_INCLUDE_DIR ${THIRD_PARTY_DIR}/googlemock/include)
-set(GOOGLEMOCK_LIBRARY_DIR ${THIRD_PARTY_DIR}/googlemock/lib)
-
-
-set(googletest_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/include)
-set(googlemock_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/include)
-
-set(googletest_URL https://github.com/google/googletest/archive/release-1.8.0.tar.gz)
+set(googletest_URL https://github.com/google/googletest/archive/release-1.11.0.tar.gz)
 use_mirror(VARIABLE googletest_URL URL ${googletest_URL})
 
+set(GTEST_INSTALL_DIR ${THIRD_PARTY_DIR}/gtest)
+set(GTEST_INSTALL_INCLUDEDIR include)
+set(GTEST_INSTALL_LIBDIR lib)
+set(GTEST_INSTALL_BINDIR bin)
+set(GTEST_INCLUDE_DIR ${GTEST_INSTALL_DIR}/${GTEST_INSTALL_INCLUDEDIR})
+set(GTEST_LIBRARY_DIR ${GTEST_INSTALL_DIR}/${GTEST_INSTALL_LIBDIR})
+set(GTEST_BINARY_DIR ${GTEST_INSTALL_DIR}/${GTEST_INSTALL_BINDIR})
+
+# gtest has a fix CMAKE_DEBUG_POSTFIX "d"
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(gtest_CMAKE_DEBUG_POSTFIX "d")
+endif()
+
 if(WIN32)
-    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest/${CMAKE_BUILD_TYPE})
-    set(GOOGLETEST_LIBRARY_NAMES gtest.lib gtest_main.lib)
-    set(GOOGLEMOCK_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/${CMAKE_BUILD_TYPE})
-    set(GOOGLEMOCK_LIBRARY_NAMES gmock.lib gmock_main.lib)
+    set(GOOGLETEST_LIBRARY_NAMES gtest${gtest_CMAKE_DEBUG_POSTFIX}.lib gtest_main${gtest_CMAKE_DEBUG_POSTFIX}.lib)
+    set(GOOGLEMOCK_LIBRARY_NAMES gmock${gtest_CMAKE_DEBUG_POSTFIX}.lib gmock_main${gtest_CMAKE_DEBUG_POSTFIX}.lib)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
-    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest/${CMAKE_BUILD_TYPE})
-    set(GOOGLETEST_LIBRARY_NAMES libgtest.a libgtest_main.a)
-    set(GOOGLEMOCK_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/${CMAKE_BUILD_TYPE})
-    set(GOOGLEMOCK_LIBRARY_NAMES libgmock.a libgmock_main.a)
+    set(GOOGLETEST_LIBRARY_NAMES libgtest${gtest_CMAKE_DEBUG_POSTFIX}.a libgtest_main${gtest_CMAKE_DEBUG_POSTFIX}.a)
+    set(GOOGLEMOCK_LIBRARY_NAMES libgmock${gtest_CMAKE_DEBUG_POSTFIX}.a libgmock_main${gtest_CMAKE_DEBUG_POSTFIX}.a)
 else()
-    set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest)
-    set(GOOGLETEST_LIBRARY_NAMES libgtest.a libgtest_main.a)
-    set(GOOGLEMOCK_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock)
-    set(GOOGLEMOCK_LIBRARY_NAMES libgmock.a libgmock_main.a)
+    set(GOOGLETEST_LIBRARY_NAMES libgtest${gtest_CMAKE_DEBUG_POSTFIX}.a libgtest_main${gtest_CMAKE_DEBUG_POSTFIX}.a)
+    set(GOOGLEMOCK_LIBRARY_NAMES libgmock${gtest_CMAKE_DEBUG_POSTFIX}.a libgmock_main${gtest_CMAKE_DEBUG_POSTFIX}.a)
 endif()
 
 foreach(LIBRARY_NAME ${GOOGLETEST_LIBRARY_NAMES})
-    list(APPEND GOOGLETEST_STATIC_LIBRARIES ${GOOGLETEST_LIBRARY_DIR}/${LIBRARY_NAME})
-    list(APPEND GOOGLETEST_BUILD_STATIC_LIBRARIES ${GOOGLETEST_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
+    list(APPEND GOOGLETEST_STATIC_LIBRARIES ${GTEST_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
 foreach(LIBRARY_NAME ${GOOGLEMOCK_LIBRARY_NAMES})
-    list(APPEND GOOGLEMOCK_STATIC_LIBRARIES ${GOOGLEMOCK_LIBRARY_DIR}/${LIBRARY_NAME})
-    list(APPEND GOOGLEMOCK_BUILD_STATIC_LIBRARIES ${GOOGLEMOCK_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
+    list(APPEND GOOGLEMOCK_STATIC_LIBRARIES ${GTEST_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
+
+set(GOOGLETEST_INCLUDE_DIR ${GTEST_INCLUDE_DIR})
+set(GOOGLEMOCK_INCLUDE_DIR ${GTEST_INCLUDE_DIR})
 
 if(THIRD_PARTY)
 
 ExternalProject_Add(googletest
     PREFIX googletest
     URL ${googletest_URL}
-    URL_MD5 16877098823401d1bf2ed7891d7dce36
+    URL_MD5 e8a8df240b6938bb6384155d4c37d937
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
-    INSTALL_COMMAND ""
     BUILD_BYPRODUCTS ${GOOGLETEST_STATIC_LIBRARIES} ${GOOGLEMOCK_STATIC_LIBRARIES}
     CMAKE_CACHE_ARGS
         -DCMAKE_C_COMPILER_LAUNCHER:STRING=${CMAKE_C_COMPILER_LAUNCHER}
@@ -60,27 +58,11 @@ ExternalProject_Add(googletest
         -DBUILD_GMOCK:BOOL=ON
 	      -DBUILD_GTEST:BOOL=OFF  # gmock includes gtest
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
+        -DCMAKE_INSTALL_PREFIX:STRING=${GTEST_INSTALL_DIR}
+        -DCMAKE_INSTALL_INCLUDEDIR:STRING=${GTEST_INSTALL_INCLUDEDIR}
+        -DCMAKE_INSTALL_LIBDIR:STRING=${GTEST_INSTALL_LIBDIR}
+        -DCMAKE_INSTALL_BINDIR:STRING=${GTEST_INSTALL_BINDIR}
         #-Dgtest_force_shared_crt:BOOL=ON  #default value is OFF
 )
-
-add_copy_headers_target(NAME googletest SRC ${googletest_SRC_INCLUDE_DIR} DST ${GOOGLETEST_INCLUDE_DIR} DEPS googletest INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/gtest_headers.txt")
-
-add_custom_target(googletest_create_library_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLETEST_LIBRARY_DIR}
-  DEPENDS googletest)
-
-add_custom_target(googletest_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GOOGLETEST_BUILD_STATIC_LIBRARIES} ${GOOGLETEST_LIBRARY_DIR}
-  DEPENDS googletest_create_library_dir)
-
-add_copy_headers_target(NAME googlemock SRC ${googlemock_SRC_INCLUDE_DIR} DST ${GOOGLEMOCK_INCLUDE_DIR} DEPS googletest INDEX_FILE "${oneflow_cmake_dir}/third_party/header_index/gmock_headers.txt")
-
-add_custom_target(googlemock_create_library_dir
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${GOOGLEMOCK_LIBRARY_DIR}
-  DEPENDS googletest)
-
-add_custom_target(googlemock_copy_libs_to_destination
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GOOGLEMOCK_BUILD_STATIC_LIBRARIES} ${GOOGLEMOCK_LIBRARY_DIR}
-  DEPENDS googlemock_create_library_dir)
 
 endif(THIRD_PARTY)
