@@ -10,6 +10,30 @@ on:
         description: "placeholder, no effect"
         required: false
 jobs:
+  set-initial-variables:
+    name: Set initial variables
+    if: ${{ github.repository_owner == 'Oneflow-Inc' }}
+    runs-on: ubuntu-20.04
+    outputs:
+      build_matrix: ${{ steps.generating.outputs.build_matrix }}
+      test_matrix: ${{ steps.generating.outputs.test_matrix }}
+    steps:
+      - name: Clone pytorch/pytorch
+        uses: actions/checkout@v2
+      - name: Generating variables
+        id: generating
+        run: |
+          python3 -m pip install -r .github/scripts/requirements.txt --user
+          python3 .github/scripts/set_initial_variables.py --labels "${{ join(github.event.pull_request.labels.*.name, ', ') }}" --out initial-variables.json
+      - name: Print initial-variables.json
+        run: |
+          cat initial-variables.json
+      - name: Upload initial-variables.json
+        uses: actions/upload-artifact@v2
+        with:
+          name: initial-variables.json
+          path: initial-variables.json
+
   cancel_previous:
     name: Cancel previous runs
     runs-on: ubuntu-latest
@@ -147,6 +171,7 @@ jobs:
     name: Build
     needs:
       [
+        set-initial-variables,
         check_license_and_format,
         mirror_third_party,
         cancel_previous,
@@ -157,34 +182,41 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
     strategy:
       max-parallel: 5
-      matrix:
-        test_suite: ["cuda", "cpu", "xla", "xla_cpu"]
-        include:
-          - test_suite: cuda
-            cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
-            os: [self-hosted, linux, build]
-            allow_fail: false
-            python_version: 3.6,3.7
-          - test_suite: cpu
-            cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu
-            os: [self-hosted, linux, build]
-            allow_fail: false
-            python_version: 3.6,3.7
-          - test_suite: xla
-            cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
-            os: [self-hosted, linux, build]
-            allow_fail: true
-            python_version: 3.6
-          - test_suite: xla_cpu
-            cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --cpu --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
-            os: [self-hosted, linux, build]
-            allow_fail: true
-            python_version: 3.6
+      matrix: ${{ fromJson(needs.set-initial-variables.outputs.build_matrix) }}
     steps:
+      - name: Fix permissions
+        run: |
+          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+      - name: Checkout OneFlow source code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+        if: env.is_built != '1'
+      - name: Install Conda
+        run: |
+          CONDA=$HOME/miniconda3-prefixes/py39_4.10.3
+          echo "CONDA=${CONDA}" >> $GITHUB_ENV
+          if ! command -v $CONDA/bin/conda &> /dev/null
+          then
+              rm -rf $CONDA
+              wget https://oneflow-static.oss-cn-beijing.aliyuncs.com/downloads/conda-installers/Miniconda3-py39_4.10.3-Linux-x86_64.sh
+              bash Miniconda3-py39_4.10.3-Linux-x86_64.sh -b -u -s -p ${CONDA}
+          fi
+          cp ci/conda/tuna.condarc $HOME/.condarc
+          cat $HOME/.condarc
+          export PATH=$PATH:$CONDA/bin
+          conda clean -i
+          conda config --set auto_activate_base false
+          conda init
+      - name: Download conda environment.yml # TODO: remove this step if migrated to generated matrix
+        if: matrix.test_suite == 'cpu-clang'
+        run: |
+          wget https://raw.githubusercontent.com/Oneflow-Inc/conda-env/9cd37571cbd6cc6a81fc87faa7f6a43be772ae31/dev/clang10/environment-v2.yml -O environment.yml
+      - name: Update Conda env
+        if: matrix.test_suite == 'cpu-clang'
+        run: |
+          export PATH=$PATH:$CONDA/bin
+          conda env update -f environment.yml --prune
       - name: Set environments from secrets
         if: contains(${{ github.repository }}, "Oneflow-Inc")
         run: |
@@ -233,13 +265,12 @@ jobs:
           echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
 
           echo "pip_index_mirror=https://pypi.tuna.tsinghua.edu.cn/simple" >> $GITHUB_ENV
-      - name: Fix permissions
+      - name: Build with Conda
+        if: matrix.test_suite == 'cpu-clang'
         run: |
-          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-        if: env.is_built != '1'
+          set -x
+          export PATH=$PATH:$CONDA/bin
+          bash -i ci/conda/build-clang.sh
       - name: Build OneFlow
         timeout-minutes: 45
         if: env.is_built != '1' && ((contains(fromJson('["cuda", "cpu"]'), matrix.test_suite) || (contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && needs.changed_files.outputs.should_run_single_client_tests == '1')))
@@ -255,12 +286,12 @@ jobs:
         if: matrix.test_suite == 'cpu' && env.is_built != '1' && needs.changed_files.outputs.should_run_single_client_tests == '1'
         run: |
           set -x
-          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
+          docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
             oneflow-manylinux2014-cuda10.2:0.1 \
             bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && source scl_source enable devtoolset-7 && python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
-      - name: Remove cache
+      - name: Remove cache (remove tmp caches like a tmp wheel if failed)
         if: ${{ failure() }}
         run: |
           set -x
@@ -296,6 +327,11 @@ jobs:
         run: |
           set -x
           docker rm -f ${container_name} || true
+      - name: Reverse conda init
+        if: always()
+        run: |
+          export PATH=$PATH:$CONDA/bin
+          conda init --reverse
       - name: Save shared env
         run: |
           set -x
@@ -313,51 +349,12 @@ jobs:
 
   test:
     name: Test suite
-    needs: [build, wait_for_gpu_slot, changed_files]
+    needs: [set-initial-variables, build, wait_for_gpu_slot, changed_files]
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow_fail }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     strategy:
-      matrix:
-        test_suite:
-          [
-            "cuda",
-            "cuda_op",
-            "cuda_new_interface",
-            "cpu_new_interface",
-            "cpu",
-            "xla",
-            "xla_cpu",
-          ]
-        include:
-          - test_suite: "cuda"
-            os: [self-hosted, linux, gpu]
-            allow_fail: false
-            build_env: build.cuda.env
-          - test_suite: "cuda_op"
-            os: [self-hosted, linux, gpu]
-            allow_fail: false
-            build_env: build.cuda.env
-          - test_suite: "cuda_new_interface"
-            os: [self-hosted, linux, gpu]
-            allow_fail: false
-            build_env: build.cuda.env
-          - test_suite: "cpu"
-            os: [self-hosted, linux, cpu]
-            allow_fail: false
-            build_env: build.cpu.env
-          - test_suite: "cpu_new_interface"
-            os: [self-hosted, linux, cpu]
-            allow_fail: false
-            build_env: build.cpu.env
-          - test_suite: "xla"
-            os: [self-hosted, linux, gpu]
-            allow_fail: true
-            build_env: build.xla.env
-          - test_suite: "xla_cpu"
-            os: [self-hosted, linux, cpu]
-            allow_fail: true
-            build_env: build.xla_cpu.env
+      matrix: ${{ fromJson(needs.set-initial-variables.outputs.test_matrix) }}
     steps:
       - name: Fix permissions
         run: |
@@ -410,7 +407,7 @@ jobs:
           echo "container_name=${container_name}" >> $GITHUB_ENV
 
           extra_docker_args+=" --shm-size=8g --rm -w $PWD -v $PWD:$PWD"
-          extra_docker_args+=" -v /dataset:/dataset -v /model_zoo:/model_zoo"
+          extra_docker_args+=" -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro"
 
 
           oneflow_test_cache_dir="$HOME/ci-cache/${{ github.repository }}/test_cache"
@@ -703,7 +700,7 @@ jobs:
         if: always()
         run: |
           docker rm -f ${container_name} || true
-  
+
   static_analysis_with_clang_on_diff:
     name: Static analysis with clang on diff
     runs-on: ubuntu-20.04
