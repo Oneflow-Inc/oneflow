@@ -49,6 +49,7 @@ struct CastConsistentCaptureState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
   Symbol<cfg::NdSbp> nd_sbp;
   std::shared_ptr<const Shape> shape;
+  Symbol<DType> dtype;
 };
 
 class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
@@ -107,6 +108,7 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
     ctx->parallel_desc = JUST(input->parallel_desc());
     ctx->nd_sbp = JUST(input->nd_sbp());
     ctx->shape = input->shape();
+    ctx->dtype = input->dtype();
     return Maybe<void>::Ok();
   }
 
@@ -115,7 +117,7 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
     const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", *ctx->shape));
-    JUST(attrs.SetAttr<DataType>("dtype", out_grads.at(0)->dtype()->data_type()));
+    JUST(attrs.SetAttr<DataType>("dtype", ctx->dtype->data_type()));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
         *grad_op_, {out_grads.at(0)}, OpExprInterpContext(attrs, ctx->parallel_desc, dual_nd_sbp)));
     return Maybe<void>::Ok();
