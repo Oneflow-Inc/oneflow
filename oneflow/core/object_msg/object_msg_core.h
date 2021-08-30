@@ -550,7 +550,7 @@ class ObjectMsgPtr final {
 
  private:
   void Clear() {
-    if (ptr_ == nullptr) { return; }
+    if (ptr_ == nullptr) { return; } // NOLINT
     ObjectMsgPtrUtil::ReleaseRef<value_type>(ptr_);
     ptr_ = nullptr;
   }
