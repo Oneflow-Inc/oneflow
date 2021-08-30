@@ -194,15 +194,15 @@ from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import tensor as tensor
 from oneflow.framework.tensor import is_nonzero
 
-from oneflow.nn.modules.abs import abs_op as abs
-from oneflow.nn.modules.activation import gelu_op as gelu
-from oneflow.nn.modules.activation import mish_op as mish
-from oneflow.nn.modules.activation import sigmoid_op as sigmoid
-from oneflow.nn.modules.activation import softmax_op as softmax
-from oneflow.nn.modules.activation import tanh_op as tanh
-from oneflow.nn.modules.activation import silu_op as silu
-from oneflow.nn.modules.activation import selu_op as selu
-from oneflow.nn.modules.activation import softsign_op as softsign
+from oneflow._C import abs
+from oneflow._C import gelu
+from oneflow._C import mish
+from oneflow._C import sigmoid
+from oneflow._C import softmax
+from oneflow._C import tanh
+from oneflow._C import silu
+from oneflow._C import selu
+from oneflow._C import softsign
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
