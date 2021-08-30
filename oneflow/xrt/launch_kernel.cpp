@@ -155,7 +155,7 @@ void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
 }
 
 template<DeviceType device_type>
-void XrtLaunchKernel<device_type>::VirtualKernelInit(KernelContext* ctx) override {
+void XrtLaunchKernel<device_type>::VirtualKernelInit(KernelContext* ctx) {
   job_desc_ = ctx->job_desc();
 }
 
