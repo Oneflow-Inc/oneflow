@@ -129,7 +129,7 @@ def grid_sample(
         tensor([[[[0., 8., 5., 7., 9.],
                   [1., 8., 5., 8., 0.]]]], dtype=oneflow.float32)
     """
-    y = flow.F.grid_sample(
+    y = flow._C.grid_sample(
         input,
         grid,
         interpolation_mode=mode,

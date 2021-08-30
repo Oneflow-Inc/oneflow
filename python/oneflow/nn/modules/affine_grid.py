@@ -64,7 +64,7 @@ def affine_grid(theta, size: List[int], align_corners: bool = False):
                  [[ 4.,  7.],
                   [ 6., 15.]]]], dtype=oneflow.float32)
     """
-    y = flow.F.affine_grid(theta, size=size, align_corners=align_corners)
+    y = flow._C.affine_grid(theta, size=size, align_corners=align_corners)
     return y
 
 
