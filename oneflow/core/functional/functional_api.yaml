@@ -905,7 +905,6 @@
 
 - name: "diagonal"
   signature: "Tensor (Tensor x, Int32 offset=0, Int32 dim1=0, Int32 dim2=1) => Diagonal"
-
   bind_python: True
 
 - name: "diagonal_grad"

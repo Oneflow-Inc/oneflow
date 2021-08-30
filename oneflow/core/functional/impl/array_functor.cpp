@@ -1284,9 +1284,9 @@ class DiagonalFunctor {
      CHECK_LT_OR_RETURN(dim1,ndims);
      CHECK_GE_OR_RETURN(dim2,-ndims);
      CHECK_LT_OR_RETURN(dim2,ndims);
-
-     int32_t p_dim1 = dim1>0?dim1:dim1+ndims;
-     int32_t p_dim2 = dim2>0?dim2:dim2+ndims;
+    
+     int32_t p_dim1 = dim1>=0?dim1:dim1+ndims;
+     int32_t p_dim2 = dim2>=0?dim2:dim2+ndims;
      CHECK_NE_OR_RETURN(p_dim1,p_dim2);
 
      std::vector<int32_t> input_index{p_dim1,p_dim2};
@@ -1295,6 +1295,7 @@ class DiagonalFunctor {
          input_index.push_back(i);
        }
      }
+     
      std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x,input_index));
      
      MutableAttrMap attrs;
