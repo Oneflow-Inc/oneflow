@@ -28,10 +28,10 @@ class FunctionLibrary {
   virtual ~FunctionLibrary() = default;
 
   template<typename T>
-  struct TypedMap;
+  struct PackedFuncMap;
 
   template<typename R, typename... Args>
-  struct TypedMap<R(Args...)> {
+  struct PackedFuncMap<R(Args...)> {
     using FunctorCreator = typename std::function<Maybe<PackedFunctor<R(Args...)>>()>;
 
     static HashMap<std::string, FunctorCreator>* Get() {
@@ -44,7 +44,7 @@ class FunctionLibrary {
   void add_functor(const std::string& func_name) {
     using func_type = typename function_traits<Func>::func_type;
     using FType = typename PackedFunctorMaker<func_type>::FType;
-    auto* functors = TypedMap<FType>::Get();
+    auto* functors = PackedFuncMap<FType>::Get();
     CHECK_EQ(functors->count(func_name), 0)
         << "The functor with name " << func_name << " has been registered more than once.";
     functors->emplace(func_name, [func_name]() -> Maybe<PackedFunctor<FType>> {
@@ -57,7 +57,7 @@ class FunctionLibrary {
   auto find(const std::string& func_name)
       -> Maybe<PackedFunctor<typename PackedFunctorMaker<R(Args...)>::FType>> {
     using FType = typename PackedFunctorMaker<R(Args...)>::FType;
-    auto* functors = TypedMap<FType>::Get();
+    auto* functors = PackedFuncMap<FType>::Get();
     const auto& it = functors->find(func_name);
     CHECK_OR_RETURN(it != functors->end())
         << "Functor was not found for op " << func_name
