@@ -551,7 +551,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   // Operators for tensor
   Maybe<Tensor> detach() const override;
-  Maybe<Tensor> clone() const override { return Error::Unimplemented(); }
+  Maybe<Tensor> clone() const override { return Error::UnimplementedError(); }
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                             DataType dtype, Symbol<cfg::NdSbp> nd_sbp,
