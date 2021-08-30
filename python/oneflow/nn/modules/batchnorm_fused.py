@@ -66,28 +66,8 @@ class _FusedNormBase(Module):
     def _check_input_dim(self, input):
         raise NotImplementedError
 
-    def _load_from_state_dict(
-        self,
-        state_dict,
-        prefix,
-        local_metadata,
-        strict,
-        missing_keys,
-        unexpected_keys,
-        error_msgs,
-    ):
-        super(_FusedNormBase, self)._load_from_state_dict(
-            state_dict,
-            prefix,
-            local_metadata,
-            strict,
-            missing_keys,
-            unexpected_keys,
-            error_msgs,
-        )
-
     def extra_repr(self):
-        return "{num_features}, eps={eps}, momentum={momentum}, affine={affine}, track_running_stats={track_running_stats}".format(
+        return "num_features={num_features}, has_addend={has_addend}, eps={eps}, momentum={momentum}, affine={affine}, track_running_stats={track_running_stats}".format(
             **self.__dict__
         )
 
@@ -111,17 +91,14 @@ class _FusedBatchNorm(_FusedNormBase):
         # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
         # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
         # no device, however using `x.is_cuda` is not a good choice.
-        # import pdb
-        # pdb.set_trace()
         if self.has_addend is False:
             if not x.is_cuda:
-                # can add cpu version.
+                # TODO(zzk) add CPU version. 
                 raise NotImplementedError(
                     "Fused batchnorm version can be only used in GPU"
                 )
         else:
             if not x.is_cuda and not addend.is_cuda:
-                # can add cpu version.
                 raise NotImplementedError(
                     "Fused batchnorm version can be only used in GPU"
                 )

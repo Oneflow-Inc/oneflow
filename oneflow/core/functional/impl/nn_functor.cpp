@@ -577,7 +577,6 @@ class NormalizationAddReluFunctor {
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << "Both moving_mean and moving_variance should be None or Tensor.";
     if (!is_training) {
-      printf("here no training!");
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       if (addend) {
@@ -592,8 +591,6 @@ class NormalizationAddReluFunctor {
             {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
       }
     } else if (moving_mean) {
-      printf("here training!");
-
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(
             *addend_norm_training_stats_op_,
@@ -606,14 +603,10 @@ class NormalizationAddReluFunctor {
             {x, JUST(moving_mean.value()), JUST(moving_variance.value()), gamma, beta}, attrs);
       }
     } else {
-      printf("here no no states!");
-
       if (addend) {
-        printf("here add");
         return OpInterpUtil::Dispatch<one::Tensor>(*addend_norm_training_no_stats_op_,
                                                    {x, JUST(addend.value()), gamma, beta}, attrs);
       } else {
-        printf("here no add");
         return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
                                                    attrs);
       }

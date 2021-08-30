@@ -103,14 +103,6 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     ctx->SaveTensorForBackward(gamma);         // gamma 1
     ctx->SaveTensorForBackward(beta);          // beta 2
 
-    // input_size may be 3/4/5/6, as inputs may be
-    // (x, gamma, beta) or (x, moving_mean, moving_variance, gamma, beta)
-    // (x, addend, gamma, beta) or (x, addend, moving_mean, moving_variance, gamma, beta)
-
-    // ref to track_running_stats false/true
-    // output_size may be 2 or 4, as outputs may be
-    // (x, reserve_space) or (x, reserve_space, mean, inv_variance)
-    // ref to is_training false/true
     if (ctx->is_training || !ctx->track_running_stats) {
       ctx->SaveTensorForBackward(outputs.at(2));  // mean 3
       ctx->SaveTensorForBackward(outputs.at(3));  // inv_variance 4
