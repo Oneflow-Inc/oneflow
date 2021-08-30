@@ -23,8 +23,8 @@ namespace one {
 
 struct AffineGridInterpState : public AutoGradCaptureState {
   Shape size;
-  bool align_corners;
-  bool requires_grad;
+  bool align_corners = false;
+  bool requires_grad = false;
 };
 
 class AffineGrid : public OpExprGradFunction<AffineGridInterpState> {

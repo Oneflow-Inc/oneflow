@@ -22,14 +22,14 @@ namespace oneflow {
 namespace one {
 
 struct GridSampleInterpState : public AutoGradCaptureState {
-  std::string interpolation_mode;
-  std::string padding_mode;
-  bool align_corners;
-  size_t input_index;
-  size_t grid_index;
-  bool input_requires_grad;
-  bool grid_requires_grad;
-  bool requires_grad;
+  std::string interpolation_mode = "";
+  std::string padding_mode = "";
+  bool align_corners = false;
+  size_t input_index = -1;
+  size_t grid_index = -1;
+  bool input_requires_grad = false;
+  bool grid_requires_grad = false;
+  bool requires_grad = false;
 };
 
 class GridSample : public OpExprGradFunction<GridSampleInterpState> {
