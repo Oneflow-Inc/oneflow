@@ -32,7 +32,7 @@ class FunctionLibrary {
 
   template<typename R, typename... Args>
   struct PackedFuncMap<R(Args...)> {
-    using FunctorCreator = typename std::function<Maybe<PackedFunctor<R(Args...)>>()>;
+    using FunctorCreator = typename std::function<PackedFunctor<R(Args...)>()>;
 
     static HashMap<std::string, FunctorCreator>* Get() {
       static HashMap<std::string, FunctorCreator> functors;
@@ -47,7 +47,7 @@ class FunctionLibrary {
     auto* functors = PackedFuncMap<FType>::Get();
     CHECK_EQ(functors->count(func_name), 0)
         << "The functor with name " << func_name << " has been registered more than once.";
-    functors->emplace(func_name, [func_name]() -> Maybe<PackedFunctor<FType>> {
+    functors->emplace(func_name, [func_name]() -> PackedFunctor<FType> {
       Func func;
       return PackedFunctorMaker<func_type>::make(func_name, func);
     });
