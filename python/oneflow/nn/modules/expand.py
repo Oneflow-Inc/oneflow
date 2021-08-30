@@ -75,7 +75,7 @@ def expand_op(input, *sizes):
 
     if input.dtype == flow.int8:
         input = flow.cast(input, flow.int32)
-    return flow.F.expand(input, expand_size)
+    return flow._C.expand(input, expand_size)
 
 
 if __name__ == "__main__":
