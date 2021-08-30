@@ -62,7 +62,7 @@ HashMap<ValueType, std::string>* GetValueTypeNameMap() {
       {kPARALLEL_DESC, "placement"},
       {kSBP_PARALLEL, "sbp"},
       {kSBP_PARALLEL_LIST, "sbp list"},
-      {kPY_OBJECT, "pybind object"},
+      {kPY_OBJECT, "python object"},
   };
   return &value_type_name_map;
 }
