@@ -68,14 +68,13 @@ class ViewCopyKernel final : public user_op::OpKernel {
       DimVector index(contiguous_dim + 1, 0);
       int64_t in_offset = 0, out_offset = 0;
 
-      bool not_overflow = true;
-      while (not_overflow) {
+      while (true) {
         AutoMemcpy(ctx->device_ctx(), out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
                    contiguous_block_size * dsize, out->mem_case(), in->mem_case());
 
         int64_t i = contiguous_dim;
         for (; i != -1; --i) {
-          if (index[i] == in_shape.At(i)) {
+          if (index[i] == in_shape.At(i) - 1) {
             in_offset -= stride[i] * index[i];
             out_offset -= out_stride[i] * index[i];
             index[i] = 0;
@@ -86,7 +85,7 @@ class ViewCopyKernel final : public user_op::OpKernel {
             break;
           }
         }
-        if (i == -1) { not_overflow = false; }
+        if (i == -1) { break; }
       }
     }
   }
