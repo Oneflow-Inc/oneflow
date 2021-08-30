@@ -32,7 +32,6 @@ limitations under the License.
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/py_distribute.h"
-#include "oneflow/core/functional/value_types.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"

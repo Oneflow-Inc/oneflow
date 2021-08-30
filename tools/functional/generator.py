@@ -18,120 +18,6 @@ import re
 import argparse
 import yaml
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--yaml_file_path",
-    type=str,
-    default="oneflow/core/functional/functional_api.yaml",
-    help="The yaml format file that helps to generate the functional api or pybind cpp.",
-)
-parser.add_argument(
-    "--generate_pybind",
-    action="store_true",
-    default=False,
-    help="Enable to generate functional pybind cpp files.",
-)
-args = parser.parse_args()
-
-api_generate_dir = "oneflow/core/functional"
-pybind_generate_dir = "oneflow/api/python/functional"
-
-license = """/*
-Copyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the \"License\");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an \"AS IS\" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-// Generated from oneflow/core/functional/functional_api.yaml. DO NOT EDIT!"""
-
-header_fmt = (
-    license
-    + """
-
-#ifndef ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
-#define ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_
-
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/random_generator.h"
-#include "oneflow/core/functional/scalar.h"
-#include "oneflow/core/functional/tensor_index.h"
-
-namespace oneflow {{
-namespace one {{
-namespace functional {{
-{0}
-}}  // namespace functional
-}}  // namespace one
-}}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FUNCTIONAL_GENERATED_FUNCTIONAL_API_H_"""
-)
-
-source_fmt = (
-    license
-    + """
-
-#include "{0}/functional_api.yaml.h"
-#include "oneflow/core/functional/function_library.h"
-
-namespace oneflow {{
-namespace one {{
-namespace functional {{
-{1}
-}}  // namespace functional
-}}  // namespace one
-}}  // namespace oneflow
-"""
-)
-
-pybind_fmt = (
-    license
-    + """
-
-#include <vector>
-#include <pybind11/pybind11.h>
-
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/functional/function_def.h"
-#include "oneflow/api/python/functional/py_function.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/functional/functional.h"
-
-namespace oneflow {{
-namespace one {{
-namespace functional {{
-{0}
-}}  // namespace functional
-}}  // namespace one
-
-namespace functional = one::functional;
-
-ONEFLOW_API_PYBIND11_MODULE("_C", m) {{
-  py::options options;
-  options.disable_function_signatures();
-
-{1}
-  options.enable_function_signatures();
-}}
-
-}}  // namespace oneflow
-"""
-)
-
 types_allowed = {
     "Void",
     "Tensor",
@@ -160,6 +46,7 @@ types_allowed = {
     "Placement",
     "Sbp",
     "SbpList",
+    "PyObject",
 }
 
 generic_type_aliases = {
@@ -192,6 +79,7 @@ argument_type_aliases = {
     "Placement": "const Symbol<ParallelDesc>&",
     "Sbp": "const Symbol<cfg::SbpParallel>&",
     "SbpList": "const std::vector<Symbol<cfg::SbpParallel>>&",
+    "PyObject": "const PyObject*",
     **generic_type_aliases,
 }
 
@@ -216,6 +104,7 @@ optional_argument_type_aliases = {
     "Placement": "const Optional<Symbol<ParallelDesc>>&",
     "Sbp": "const Optional<Symbol<SbpParallel>>&",
     "SbpList": "const Optional<std::vector<Symbol<cfg::SbpParallel>>>&",
+    "PyObject": "const Optional<const PyObject*>&",
     **{k: "const Optional<{0}>".format(v) for k, v in generic_type_aliases.items()},
 }
 
@@ -430,7 +319,7 @@ class Block:
         self._bind_python = bind_python
 
 
-class FunctionalGenerator:
+class Generator:
     def __init__(self, input_file):
         self._blocks = {}
         with open(input_file) as f:
@@ -454,7 +343,7 @@ class FunctionalGenerator:
                         Block(name, FunctionSignature(signature), bind_python)
                     )
 
-    def generate_cpp_header_file(self, target_header_file):
+    def generate_cpp_header_file(self, header_fmt, target_header_file):
         fmt = ""
         for name, blocks in self._blocks.items():
             for block in blocks:
@@ -464,7 +353,7 @@ class FunctionalGenerator:
 
         render_file_if_different(target_header_file, header_fmt.format(fmt))
 
-    def generate_cpp_source_file(self, target_source_file):
+    def generate_cpp_source_file(self, source_fmt, target_source_file):
         fmt = ""
         for name, blocks in self._blocks.items():
             for block in blocks:
@@ -482,11 +371,9 @@ class FunctionalGenerator:
                 )
                 fmt += "}\n"
 
-        render_file_if_different(
-            target_source_file, source_fmt.format(api_generate_dir, fmt)
-        )
+        render_file_if_different(target_source_file, source_fmt.format(fmt))
 
-    def generate_pybind_for_python(self, target_pybind_source_file):
+    def generate_pybind_for_python(self, pybind_fmt, target_pybind_source_file):
         schema_fmt = ""
         module_fmt = ""
         for name, blocks in self._blocks.items():
@@ -566,28 +453,3 @@ class FunctionalGenerator:
         render_file_if_different(
             target_pybind_source_file, pybind_fmt.format(schema_fmt, module_fmt)
         )
-
-
-if __name__ == "__main__":
-    assert os.path.isfile(args.yaml_file_path), (
-        "It is not a regular file for the yaml file which is " + args.yaml_file_path
-    )
-    g = FunctionalGenerator(args.yaml_file_path)
-
-    assert os.path.isdir(api_generate_dir), (
-        "Could not locate the api generate directory which is " + api_generate_dir
-    )
-    target_header_file = os.path.join(api_generate_dir, "functional_api.yaml.h")
-    g.generate_cpp_header_file(target_header_file)
-    target_source_file = os.path.join(api_generate_dir, "functional_api.yaml.cpp")
-    g.generate_cpp_source_file(target_source_file)
-
-    if args.generate_pybind:
-        assert os.path.isdir(pybind_generate_dir), (
-            "Could not locate the pybind generate directory which is "
-            + pybind_generate_dir
-        )
-        target_pybind_source_file = os.path.join(
-            pybind_generate_dir, "functional_api.yaml.pybind.cpp"
-        )
-        g.generate_pybind_for_python(target_pybind_source_file)

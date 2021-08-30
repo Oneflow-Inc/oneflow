@@ -21,7 +21,6 @@ limitations under the License.
 
 #include "oneflow/core/common/function_traits.h"
 #include "oneflow/core/common/type_traits.h"
-#include "oneflow/core/functional/value_types.h"
 #include "oneflow/core/functional/function_signature.h"
 
 namespace oneflow {
@@ -42,12 +41,14 @@ class FunctionBodyImpl;
 template<typename R, typename... Args>
 class FunctionBodyImpl<R(Args...)> : public FunctionBody {
  public:
+  using type = R(const remove_cvref_t<Args>&...);
+
   template<typename Func,
            typename std::enable_if<
                std::is_same<typename function_traits<Func>::func_type, R(Args...)>::value,
                int>::type = 0>
   FunctionBodyImpl(const Func& func) {
-    func_ = [func](const remove_cvref_t<Args>&... args) {
+    func_ = [func](const remove_cvref_t<Args>&... args) -> R {
       return func(std::forward<const remove_cvref_t<Args>&>(args)...);
     };
   }
@@ -102,7 +103,8 @@ template<typename Func>
 PackedFunctor PackedFunctor::Make(const std::string& func_name, const Func& func) {
   using func_type = typename function_traits<Func>::func_type;
   auto body = std::make_shared<FunctionBodyImpl<func_type>>(func);
-  FunctionSignature signatute = detail::PackFunctionSignature<func_type>::pack();
+  FunctionSignature signatute =
+      detail::PackFunctionSignature<typename FunctionBodyImpl<func_type>::type>::pack();
   Functor functor(body, signatute);
   return PackedFunctor(func_name, std::move(functor));
 }

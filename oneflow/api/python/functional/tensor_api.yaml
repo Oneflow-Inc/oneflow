@@ -1,0 +1,5 @@
+- name: "tensor"
+  signature: [
+    "Tensor (PyObject obj) => NewTensor"
+  ]
+  bind_python: True

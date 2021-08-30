@@ -18,23 +18,22 @@ limitations under the License.
 #define ONEFLOW_CORE_FUNCTIONAL_FUNCTION_SIGNATURE_H_
 
 #include <memory>
-
-#include "oneflow/core/functional/value_types.h"
+#include <typeinfo>
 
 namespace oneflow {
 namespace one {
 namespace functional {
 
 struct FunctionSignature {
-  ValueType return_type;
-  std::vector<ValueType> argument_types;
+  const std::type_info* return_type;
+  std::vector<const std::type_info*> argument_types;
 };
 
 namespace detail {
 
 template<typename T>
-inline ValueType PackType() {
-  return ValueTypeOf<typename std::decay<T>::type>();
+inline const std::type_info* PackType() {
+  return &typeid(T);
 }
 
 template<typename... Args>
@@ -42,20 +41,20 @@ struct PackTypeListImpl;
 
 template<>
 struct PackTypeListImpl<> {
-  static void pack(std::vector<ValueType>* packed_types) {}
+  static void pack(std::vector<const std::type_info*>* packed_types) {}
 };
 
 template<typename T, typename... Args>
 struct PackTypeListImpl<T, Args...> {
-  static void pack(std::vector<ValueType>* packed_types) {
+  static void pack(std::vector<const std::type_info*>* packed_types) {
     packed_types->emplace_back(PackType<T>());
     PackTypeListImpl<Args...>::pack(packed_types);
   }
 };
 
 template<typename... Args>
-inline std::vector<ValueType> PackTypeList() {
-  std::vector<ValueType> packed_types;
+inline std::vector<const std::type_info*> PackTypeList() {
+  std::vector<const std::type_info*> packed_types;
   detail::PackTypeListImpl<Args...>::pack(&packed_types);
   return packed_types;
 }
@@ -96,9 +95,9 @@ class CheckSignature<R(Args...)> {
 
 template<typename R, typename... Args>
 bool CheckSignature<R(Args...)>::CheckSignatureImpl(const FunctionSignature& signature) {
-  static ValueType return_type = detail::PackType<R>();
+  static const std::type_info* return_type = detail::PackType<R>();
   if (signature.return_type != return_type) { return false; }
-  static std::vector<ValueType> argument_types = detail::PackTypeList<Args...>();
+  static std::vector<const std::type_info*> argument_types = detail::PackTypeList<Args...>();
   if (argument_types != signature.argument_types) { return false; }
   return true;
 }

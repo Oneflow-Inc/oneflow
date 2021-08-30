@@ -148,6 +148,16 @@ Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
   return PyUnpackTensorIndex(object_);
 }
 
+template<>
+Maybe<PyObject*> PythonArg::ObjectAs<PyObject*>() const {
+  return object_;
+}
+
+template<>
+Maybe<const PyObject*> PythonArg::ObjectAs<const PyObject*>() const {
+  return object_;
+}
+
 Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
   if (active_tag_ == HAS_IMMEDIATE) { return immediate_->value_type() == type; }
   switch (type) {
@@ -182,6 +192,7 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kPARALLEL_DESC: return PyParallelDescCheck(object_);
     case kSBP_PARALLEL: return PySbpParallelCheck(object_);
     case kSBP_PARALLEL_LIST: return PySbpParallelSequenceCheck(object_);
+    case kPY_OBJECT: return nullptr != object_;
     default: {
       OF_UNIMPLEMENTED() << "Can not check type " << JUST(ValueTypeName(type));
     }
