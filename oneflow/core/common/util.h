@@ -47,15 +47,15 @@ DECLARE_string(log_dir);
 
 namespace oneflow {
 
+inline size_t HashCombine(size_t lhs, size_t rhs) {
+  return lhs ^ (rhs + 0x9e3779b9 + (lhs << 6U) + (lhs >> 2U));
+}
+
 inline void HashCombine(size_t* seed, size_t hash) { *seed = HashCombine(*seed, hash); }
 
 template<typename... T>
 inline void AddHash(size_t* seed, const T&... v) {
   __attribute__((__unused__)) int dummy[] = {(HashCombine(seed, std::hash<T>()(v)), 0)...};
-}
-
-inline size_t HashCombine(size_t lhs, size_t rhs) {
-  return lhs ^ (rhs + 0x9e3779b9 + (lhs << 6U) + (lhs >> 2U));
 }
 
 template<typename T, typename... Ts>
