@@ -321,7 +321,7 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     CHECK_OR_RETURN(!inputs.at(0)->is_consistent());
     const auto& input_tensor = JUST(inputs.at(0)->detach());
     input_mirrored_tensor = JUST(input_tensor->AsMirroredTensor());
-    CHECK_OR_RETURN(input_mirrored_tensor) << Error::ValueError("Tensor Cast Error");
+    CHECK_OR_RETURN(input_mirrored_tensor) << Error::InvalidValueError("Tensor Cast Error");
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
     input_mirrored_tensor->set_requires_grad(requires_grad);
     input_mirrored_tensor->set_is_leaf(!requires_grad);

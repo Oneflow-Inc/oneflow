@@ -108,7 +108,7 @@ class ParallelDesc final {
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
-  ParallelDesc() : symbol_id_(Error::SymbolIdUninitialized()) {}
+  ParallelDesc() : symbol_id_(Error::SymbolIdUninitializedError()) {}
   ParallelDesc(int64_t symbol_id) : symbol_id_(symbol_id) {}
   void ClearUp();
   Maybe<void> SetMachineIdAndDeviceIdsByParsingDeviceName(const std::string& device_name,

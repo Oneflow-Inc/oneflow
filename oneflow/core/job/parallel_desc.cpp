@@ -72,7 +72,7 @@ Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
 }
 
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
-    : symbol_id_(Error::SymbolIdUninitialized()) {
+    : symbol_id_(Error::SymbolIdUninitializedError()) {
   CHECK_JUST(MaybeInit(user_conf));
   CHECK_JUST(CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get())));
 }
