@@ -41,7 +41,7 @@ def cast_op(x, dtype):
         True
 
     """
-    return flow.F.cast(x, dtype)
+    return flow._C.cast(x, dtype)
 
 
 if __name__ == "__main__":

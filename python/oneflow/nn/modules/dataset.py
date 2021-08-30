@@ -35,7 +35,7 @@ def mirrored_gen_random_seed(seed=None):
     return (seed, has_seed)
 
 
-class OfrecordReader(Module):
+class OFRecordReader(Module):
     def __init__(
         self,
         ofrecord_dir: str,
@@ -69,6 +69,7 @@ class OfrecordReader(Module):
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(sbp, flow.sbp.sbp):
                 nd_sbp.append(sbp._ToAttrStr())
+                sbp = (sbp,)
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
@@ -76,6 +77,8 @@ class OfrecordReader(Module):
             assert len(nd_sbp) == len(placement.hierarchy)
         else:
             assert sbp is None, "sbp: %s" % sbp
+
+        self.sbp = sbp
 
         (seed, has_seed) = mirrored_gen_random_seed(random_seed)
         self._op = (
@@ -97,13 +100,13 @@ class OfrecordReader(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = self._op.apply(self.placement, self.attrs)[0]
+            res = self._op.apply(self.placement, self.sbp, self.attrs)[0]
         else:
             res = self._op.apply(self.device, self.attrs)[0]
         return res
 
 
-class OfrecordRawDecoder(Module):
+class OFRecordRawDecoder(Module):
     def __init__(
         self,
         blob_name: str,
@@ -162,6 +165,7 @@ class CoinFlip(Module):
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(sbp, flow.sbp.sbp):
                 nd_sbp.append(sbp._ToAttrStr())
+                sbp = (sbp,)
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
@@ -169,6 +173,8 @@ class CoinFlip(Module):
             assert len(nd_sbp) == len(placement.hierarchy)
         else:
             assert sbp is None, "sbp: %s" % sbp
+
+        self.sbp = sbp
 
         (seed, has_seed) = mirrored_gen_random_seed(random_seed)
 
@@ -186,7 +192,7 @@ class CoinFlip(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = self._op.apply(self.placement, self.attrs)[0]
+            res = self._op.apply(self.placement, self.sbp, self.attrs)[0]
         else:
             res = self._op.apply(self.device, self.attrs)[0]
         return res
@@ -580,7 +586,7 @@ def raw_decoder(
         print(
             "WARNING: auto_zero_padding has been deprecated, Please use truncate instead.\n            "
         )
-    return OfrecordRawDecoder(
+    return OFRecordRawDecoder(
         blob_name,
         shape,
         dtype,
@@ -601,7 +607,7 @@ def get_ofrecord_handle(
     shuffle_after_epoch: bool = False,
     name: Optional[str] = None,
 ):
-    return OfrecordReader(
+    return OFRecordReader(
         ofrecord_dir,
         batch_size,
         data_part_num,
@@ -669,7 +675,7 @@ class ImageFlip(Module):
         self.flip_code = flip_code
 
     def forward(self, images):
-        return flow.F.image_flip(images, flip_code=self.flip_code)
+        return flow._C.image_flip(images, flip_code=self.flip_code)
 
 
 class ImageDecode(Module):
@@ -740,6 +746,7 @@ class COCOReader(Module):
                     nd_sbp.append(sbp_item._ToAttrStr())
             elif isinstance(sbp, flow.sbp.sbp):
                 nd_sbp.append(sbp._ToAttrStr())
+                sbp = (sbp,)
             else:
                 raise ValueError(f"invalid param sbp: {sbp}")
 
@@ -747,6 +754,7 @@ class COCOReader(Module):
                 raise ValueError(
                     "dimensions of sbp and dimensions of hierarchy of placement don't equal"
                 )
+        self.sbp = sbp
 
         self._op = (
             flow.builtin_op("COCOReader")
@@ -779,7 +787,7 @@ class COCOReader(Module):
             outputs = self._op.apply(self.device, self.attrs)
         else:
             # consistent apply
-            outputs = self._op.apply(self.placement, self.attrs)
+            outputs = self._op.apply(self.placement, self.sbp, self.attrs)
 
         # COCOReader has multiple output, so it return a TensorTuple
         # convert TensorTuple to tuple of Tensor
@@ -818,7 +826,7 @@ class OFRecordBytesDecoder(Module):
 
         name: The name for this component in the graph.
 
-        input: the Tensor which might be provided by an OfrecordReader.
+        input: the Tensor which might be provided by an OFRecordReader.
 
     Returns:
 
@@ -833,7 +841,7 @@ class OFRecordBytesDecoder(Module):
 
         >>> def example():
         ...      batch_size = 16
-        ...      record_reader = flow.nn.OfrecordReader(
+        ...      record_reader = flow.nn.OFRecordReader(
         ...         "dataset/",
         ...         batch_size=batch_size,
         ...         part_name_suffix_length=5,
@@ -904,6 +912,7 @@ class GPTIndexedBinDataReader(Module):
                     nd_sbp.append(sbp_item._ToAttrStr())
             elif isinstance(sbp, flow.sbp.sbp):
                 nd_sbp.append(sbp._ToAttrStr())
+                sbp = (sbp,)
             else:
                 raise ValueError(f"invalid param sbp: {sbp}")
 
@@ -911,6 +920,7 @@ class GPTIndexedBinDataReader(Module):
                 raise ValueError(
                     "dimensions of sbp and dimensions of hierarchy of placement don't equal"
                 )
+        self.sbp = sbp
 
         if random_seed is None:
             random_seed = random.randrange(sys.maxsize)
@@ -950,7 +960,7 @@ class GPTIndexedBinDataReader(Module):
         if self.placement is None:
             output = self.op_.apply(self.device, self.attrs)[0]
         else:
-            output = self.op_.apply(self.placement, self.attrs)[0]
+            output = self.op_.apply(self.placement, self.sbp, self.attrs)[0]
         return output
 
 

@@ -46,7 +46,7 @@ def eq_op(input, other):
         tensor([1, 1, 1, 0], dtype=oneflow.int8)
 
     """
-    return flow.F.equal(input, other)
+    return flow._C.equal(input, other)
 
 
 @register_tensor_op("ne")
@@ -78,7 +78,7 @@ def ne_op(input, other):
         tensor([0, 0, 0, 1], dtype=oneflow.int8)
 
     """
-    return flow.F.not_equal(input, other)
+    return flow._C.not_equal(input, other)
 
 
 def greater_op(input, other):
@@ -106,7 +106,7 @@ def greater_op(input, other):
         flow.Size([2, 6, 5, 3])
 
     """
-    return flow.F.greater(input, other)
+    return flow._C.greater(input, other)
 
 
 @register_tensor_op("gt")
@@ -146,7 +146,7 @@ def greater_equal_op(input, other):
         tensor([1, 1, 0], dtype=oneflow.int8)
 
     """
-    return flow.F.greater_equal(input, other)
+    return flow._C.greater_equal(input, other)
 
 
 @register_tensor_op("ge")
@@ -187,7 +187,7 @@ def less_op(input, other):
         tensor([0, 0, 1], dtype=oneflow.int8)
 
     """
-    return flow.F.less(input, other)
+    return flow._C.less(input, other)
 
 
 @register_tensor_op("le")
@@ -216,7 +216,7 @@ def less_equal_op(input, other):
         tensor([1, 0, 1], dtype=oneflow.int8)
 
     """
-    return flow.F.less_equal(input, other)
+    return flow._C.less_equal(input, other)
 
 
 @register_tensor_op("ne")
@@ -248,7 +248,7 @@ def ne_op(input, other):
         tensor([0, 0, 0, 1], dtype=oneflow.int8)
 
     """
-    return flow.F.not_equal(input, other)
+    return flow._C.not_equal(input, other)
 
 
 if __name__ == "__main__":

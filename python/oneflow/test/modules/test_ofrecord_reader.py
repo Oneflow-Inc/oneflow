@@ -27,7 +27,7 @@ class OFRecordDataLoader(flow.nn.Module):
         # don't shuffle, for comparing
         shuffle = False
 
-        self.ofrecord_reader = flow.nn.OfrecordReader(
+        self.ofrecord_reader = flow.nn.OFRecordReader(
             "/dataset/imagenet_227/train/32",
             batch_size=batch_size,
             data_part_num=2,
@@ -38,7 +38,7 @@ class OFRecordDataLoader(flow.nn.Module):
             sbp=sbp,
         )
 
-        self.record_label_decoder = flow.nn.OfrecordRawDecoder(
+        self.record_label_decoder = flow.nn.OFRecordRawDecoder(
             "class/label", shape=(), dtype=flow.int32
         )
 

@@ -45,7 +45,7 @@ def matmul_op(input, other):
         flow.Size([2, 5])
 
     """
-    return flow.F.matmul(input, other)
+    return flow._C.matmul(input, other)
 
 
 if __name__ == "__main__":
