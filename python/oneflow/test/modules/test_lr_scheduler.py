@@ -26,29 +26,64 @@ from oneflow.nn.parameter import Parameter
 class TestLrScheduler(flow.unittest.TestCase):
     base_lr = 1.0
 
-    def test_cosine_annealing_lr(test_case):
+    def test_cosine_decay_lr(test_case):
         optimizer = flow.optim.SGD(
             [{"params": [Parameter(flow.Tensor([1.0]))]}], lr=TestLrScheduler.base_lr
         )
 
-        def cosine_annealing_lr_step(base_lr, current_step, steps, alpha):
-            if current_step < steps:
-                cos_decay = 0.5 * (1 + math.cos(math.pi * current_step / steps))
+        def cosine_decay_lr_step(base_lr, current_step, decay_steps, alpha):
+            if current_step < decay_steps:
+                cos_decay = 0.5 * (1 + math.cos(math.pi * current_step / decay_steps))
                 decay_factor = (1 - alpha) * cos_decay + alpha
                 return base_lr * decay_factor
             else:
                 return base_lr * alpha
 
         alpha = 0.5
-        steps = 10
-        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, steps=steps, alpha=alpha
+        decay_steps = 10
+        cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
+            optimizer, decay_steps=decay_steps, alpha=alpha
         )
         for i in range(1, 21):
-            cosine_annealing_lr.step()
-            new_lr = cosine_annealing_lr_step(TestLrScheduler.base_lr, i, steps, alpha)
+            cosine_decay_lr.step()
+            new_lr = cosine_decay_lr_step(
+                TestLrScheduler.base_lr, i, decay_steps, alpha
+            )
             test_case.assertAlmostEqual(
-                cosine_annealing_lr.get_last_lr()[0], new_lr, places=4
+                cosine_decay_lr.get_last_lr()[0], new_lr, places=4
+            )
+
+    def test_cosine_annealing_lr(test_case):
+        optimizer = flow.optim.SGD(
+            [{"params": [Parameter(flow.Tensor([1.0]))]}], lr=TestLrScheduler.base_lr
+        )
+
+        def cosine_annealing_lr_step(base_lr, current_step, last_lr, T_max, eta_min):
+            if (current_step - 1 - T_max) % (2 * T_max) == 0:
+                return (
+                    last_lr
+                    + (TestLrScheduler.base_lr - eta_min)
+                    * (1 - math.cos(math.pi / T_max))
+                    / 2
+                )
+            else:
+                return (1 + math.cos(math.pi * current_step / T_max)) / (
+                    1 + math.cos(math.pi * (current_step - 1) / T_max)
+                ) * (last_lr - eta_min) + eta_min
+
+        T_max = 20
+        eta_min = 0.5
+        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=T_max, eta_min=eta_min
+        )
+        numpy_last_lr = TestLrScheduler.base_lr
+        for i in range(1, 101):
+            cosine_annealing_lr.step()
+            numpy_last_lr = cosine_annealing_lr_step(
+                TestLrScheduler.base_lr, i, numpy_last_lr, T_max, eta_min
+            )
+            test_case.assertAlmostEqual(
+                cosine_annealing_lr.get_last_lr()[0], numpy_last_lr, places=4
             )
 
     def test_step_lr(test_case):
@@ -68,6 +103,28 @@ class TestLrScheduler(flow.unittest.TestCase):
             step_lr.step()
             new_lr = step_lr_step(TestLrScheduler.base_lr, i, step_size, gamma)
             test_case.assertAlmostEqual(step_lr.get_last_lr()[0], new_lr, places=5)
+
+    def test_multistep_lr(test_case):
+        optimizer = flow.optim.SGD(
+            [{"params": [Parameter(flow.Tensor([1.0]))]}], lr=TestLrScheduler.base_lr
+        )
+
+        def multistep_lr_step(base_lr, current_step, milestones, gamma):
+            count = 0
+            for step in milestones:
+                if current_step >= step:
+                    count += 1
+            return base_lr * gamma ** count
+
+        gamma = 0.1
+        milestones = [5, 11, 15]
+        multistep_lr = flow.optim.lr_scheduler.MultiStepLR(
+            optimizer, milestones=milestones, gamma=gamma
+        )
+        for i in range(1, 18):
+            multistep_lr.step()
+            new_lr = multistep_lr_step(TestLrScheduler.base_lr, i, milestones, gamma)
+            test_case.assertAlmostEqual(multistep_lr.get_last_lr()[0], new_lr, places=5)
 
     def test_lambda_lr(test_case):
         optimizer = flow.optim.SGD(

@@ -205,6 +205,12 @@ Error Error::Unimplemented() {
   return error;
 }
 
+Error Error::RuntimeError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_runtime_error();
+  return error;
+}
+
 Error Error::BoxingNotSupportedError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_boxing_not_supported_error();

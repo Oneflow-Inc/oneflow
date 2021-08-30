@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -172,12 +173,14 @@ size_t InferGradTmpSize(user_op::InferContext* ctx) {
 }
 
 template<typename T>
-class NormalizationInferenceKernel final : public user_op::OpKernel {
+class NormalizationInferenceKernel final : public user_op::OpKernel,
+                                           public user_op::CudaGraphSupport {
  public:
   NormalizationInferenceKernel() = default;
   ~NormalizationInferenceKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const bool training = ctx->Attr<bool>("training");
     CHECK(!training);
@@ -349,12 +352,13 @@ void ReluBackward<float16>(DeviceCtx* device_ctx, int64_t n, const int32_t* mask
 }
 
 template<typename T>
-class NormalizationTrainKernel final : public user_op::OpKernel {
+class NormalizationTrainKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   NormalizationTrainKernel() = default;
   ~NormalizationTrainKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     if (ctx->op_type_name() == "normalization") { CHECK(ctx->Attr<bool>("training")); }
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -493,12 +497,14 @@ REGISTER_BN_ADD_RELU_KERNEL(float)
 REGISTER_BN_ADD_RELU_KERNEL(double)
 
 template<typename T>
-class NormalizationGradUserKernel final : public user_op::OpKernel {
+class NormalizationGradUserKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
  public:
   NormalizationGradUserKernel() = default;
   ~NormalizationGradUserKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -674,12 +680,14 @@ size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
 }
 
 template<typename T>
-class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
+class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
  public:
   FusedNormalizationAddReluKernel() = default;
   ~FusedNormalizationAddReluKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -760,12 +768,14 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
 REGISTER_FUSED_BN_ADD_RELU_KERNEL(float16)
 
 template<typename T>
-class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
+class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
+                                                      public user_op::CudaGraphSupport {
  public:
   FusedNormalizationAddReluGradUserKernel() = default;
   ~FusedNormalizationAddReluGradUserKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);

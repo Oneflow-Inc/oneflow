@@ -15,7 +15,6 @@ limitations under the License.
 """
 
 from oneflow.compatible.single_client.nn.module import Module
-from oneflow.compatible.single_client.nn.modules.sparse import Embedding
 from oneflow.compatible.single_client.nn.parameter import Parameter
 from oneflow.compatible.single_client.ops.domain_ops import (
     api_fused_self_attention_query_mul_key_and_value as fused_self_attention_query_mul_key_and_value,

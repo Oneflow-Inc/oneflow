@@ -377,6 +377,46 @@ class SparseSoftmaxCrossEntropyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SoftmaxCrossEntropyFunctor {
+ public:
+  SoftmaxCrossEntropyFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softmax_cross_entropy")
+                         .Input("prediction")
+                         .Input("label")
+                         .Output("out")
+                         .Output("prob")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
+                           const std::shared_ptr<one::Tensor>& label) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftmaxCrossEntropyGradFunctor {
+ public:
+  SoftmaxCrossEntropyGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softmax_cross_entropy_grad")
+                         .Input("dy")
+                         .Input("label")
+                         .Input("prob")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& prob) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, label, prob});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SmoothL1LossFunctor {
  public:
   SmoothL1LossFunctor() {
@@ -462,7 +502,8 @@ class NormalizationFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
-    JUST(attrs.SetAttr<float>("momentum", momentum));
+    // convert torch momentum to tensorflow momentum
+    JUST(attrs.SetAttr<float>("momentum", 1.0 - momentum));
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << "Both moving_mean and moving_variance should be None or Tensor.";
@@ -579,6 +620,24 @@ class DropoutFunctor {
   std::shared_ptr<OpExpr> dropout_op_;
 };
 
+class DropoutGradFunctor {
+ public:
+  DropoutGradFunctor() {
+    dropout_grad_op_ =
+        CHECK_JUST(one::OpBuilder("dropout_grad").Input("dy").Input("mask").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
+    MutableAttrMap dropout_grad_attrs;
+    JUST(dropout_grad_attrs.SetAttr<float>("scale", scale));
+
+    return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, dropout_grad_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> dropout_grad_op_;
+};
+
 class AvgPoolingNDFunctor {
  public:
   AvgPoolingNDFunctor() = default;
@@ -622,6 +681,60 @@ class Avgpool3DFunctor : public AvgPoolingNDFunctor {
   Avgpool3DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("avgpool_3d").Input("x").Output("y").Build());
   }
+};
+
+class UnfoldFunctor {
+ public:
+  UnfoldFunctor() {
+    unfold_op_ = CHECK_JUST(one::OpBuilder("unfold").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& data_format,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& dilation_rate,
+                           const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& strides) const {
+    const auto& x_shape = x->shape();
+    // Only Support 4d tensor now.
+    CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 4) << "Input Tensor dim should == 4";
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+
+    return OpInterpUtil::Dispatch<Tensor>(*unfold_op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> unfold_op_;
+};
+
+class FoldFunctor {
+ public:
+  FoldFunctor() { fold_op_ = CHECK_JUST(one::OpBuilder("fold").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& data_format,
+                           const std::vector<int32_t>& output_size,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& dilation_rate,
+                           const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& strides) const {
+    const auto& x_shape = x->shape();
+    // Only Support 3d tensor fold now. format is (N, C*K*K, L)
+    CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 3) << "Input Tensor dim should == 3";
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("output_size", output_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+
+    return OpInterpUtil::Dispatch<Tensor>(*fold_op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> fold_op_;
 };
 
 class OneHotFunctor {
@@ -742,6 +855,87 @@ class L2NormalizeGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedBiasAddGeluFunctor {
+ public:
+  FusedBiasAddGeluFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("fused_bias_add_gelu").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, const int32_t& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedBiasAddGeluGradFunctor {
+ public:
+  FusedBiasAddGeluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_bias_add_gelu_grad")
+                         .Input("a")
+                         .Input("b")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b,
+                           const std::shared_ptr<one::Tensor>& dy, const int32_t& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedBiasAddDropoutFunctor {
+ public:
+  FusedBiasAddDropoutFunctor() {
+    random_mask_like_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    fused_bias_add_mask_scale_op_ = CHECK_JUST(one::OpBuilder("fused_bias_add_mask_scale")
+                                                   .Input("a")
+                                                   .Input("b")
+                                                   .Input("mask")
+                                                   .Output("out")
+                                                   .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, const float& p,
+                           const int32_t& axis, const Optional<one::Generator>& generator) const {
+    MutableAttrMap random_mask_like_attrs;
+    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {a},
+        OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
+    float scale = 1.0;
+    if (p != 1.0) { scale = 1.0 / (1.0 - p); }
+    MutableAttrMap fused_bias_add_mask_attrs;
+    JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
+    JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, mask},
+                                          fused_bias_add_mask_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> random_mask_like_op_;
+  std::shared_ptr<OpExpr> fused_bias_add_mask_scale_op_;
+};
+
 class FusedScaleTrilFunctor {
  public:
   FusedScaleTrilFunctor() {
@@ -800,19 +994,27 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
+  m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
+  m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
+  m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
   m.add_functor<impl::Avgpool1DFunctor>("Avgpool1D");
   m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
   m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
+  m.add_functor<impl::UnfoldFunctor>("Unfold");
+  m.add_functor<impl::FoldFunctor>("Fold");
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::FusedSelfAttentionFunctor>("FusedSelfAttention");
   m.add_functor<impl::FusedSelfAttentionGradFunctor>("FusedSelfAttentionGrad");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
+  m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
+  m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
+  m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
 };
 

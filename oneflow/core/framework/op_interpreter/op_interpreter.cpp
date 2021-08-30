@@ -40,6 +40,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
   APPLY_IF(UserOp);
   APPLY_IF(ConsistentToConsistentOp);
   APPLY_IF(FunctionOp);
+  APPLY_IF(ImageDecoderRandomCropResizeOp);
 #undef APPLY_IF
 
   OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
