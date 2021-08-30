@@ -50,7 +50,7 @@ def all_reduce(tensor):
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.device.index == flow.env.get_local_rank()
     assert tensor.is_local
-    device_type = str(tensor.device).split(":")[0]
+    device_type = tensor.device.type
     placement = flow.env.all_device_placement(device_type)
     tensor = tensor.to_consistent(
         placement=placement, sbp=flow.sbp.partial_sum
