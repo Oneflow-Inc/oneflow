@@ -304,6 +304,7 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
 
 namespace {
 std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& error_proto) {
+  // return error msg got from formatted function or debugstring.
   const auto& maybe_error = TRY(FormatErrorStr(error_proto));
   const auto& error_str = maybe_error.GetDataAndErrorProto(error_proto->DebugString());
   return error_str.first;
