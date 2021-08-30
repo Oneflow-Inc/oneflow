@@ -40,17 +40,15 @@ class RandomModule(flow.nn.Module):
         random = flow.randn(*self.shape)
         return random
 
-def _test_memmory_graph(test_case, device, ):
+def _test_memmory_graph(test_case, device):
 
     shape = (100, 3, 512, 512)
-    # shape = (2,3,4)
 
     ones_np = np.ones(shape)
     
-    random = RandomModule(shape).to(flow.device("cuda"))
-    of_eager_out = random()
+    Random = RandomModule(shape).to(device)
 
-    Ones = OnesModule(shape).to(flow.device("cuda"))
+    Ones = OnesModule(shape).to(device)
 
     class OnesGraph(flow.nn.Graph):
         def __init__(self):
@@ -62,8 +60,8 @@ def _test_memmory_graph(test_case, device, ):
 
     ones_g = OnesGraph()
 
-    for i in range(1000):
-        of_eager_out = random()
+    for i in range(10):
+        of_eager_out = Random()
         of_lazy_out = ones_g()
         test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), ones_np))
 
