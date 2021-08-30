@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -116,6 +117,8 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
 
 Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
   JUST(vm::MultiClientSync());
+  // NOTE(chengcheng): New EagerTensor need set LazyMode false.
+  auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
   OpGraph op_graph(job_);
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }

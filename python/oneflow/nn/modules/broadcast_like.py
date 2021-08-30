@@ -44,7 +44,7 @@ class BroadCastLike(Module):
             broadcast_axes = _calc_broadcast_axes(x, like_tensor)
         else:
             broadcast_axes = self.broadcast_axes
-        return flow.F.broadcast_like(x, like_tensor, broadcast_axes=broadcast_axes)
+        return flow._C.broadcast_like(x, like_tensor, broadcast_axes=broadcast_axes)
 
 
 def broadcast_like_op(x, like_tensor, broadcast_axes: Optional[Sequence] = None):
