@@ -43,7 +43,7 @@ void CheckFunctionConfig(const JobConfigProto& job_conf) {
 }  // namespace
 
 JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
-    : job_conf_(job_conf), job_id_(job_id), symbol_id_(Error::SymbolIdUninitialized()) {
+    : job_conf_(job_conf), job_id_(job_id), symbol_id_(Error::SymbolIdUninitializedError()) {
   CHECK_JUST(Init());
   Global<ResourceDesc, ForSession>::Get()->DumpCudnnConf(job_conf);
 }
