@@ -58,7 +58,7 @@ def _test_memmory_graph(test_case, device):
 
     ones_g = OnesGraph()
 
-    for i in range(10):
+    for i in range(1000):
         of_eager_out = Random()
         of_lazy_out = ones_g()
         test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), ones_np))
