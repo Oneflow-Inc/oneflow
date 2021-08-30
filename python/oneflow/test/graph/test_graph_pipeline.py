@@ -1,94 +1,156 @@
-import os
 import unittest
+import os
 import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@flow.unittest.skip_unless_1n2d()
-class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
-    def test_consistent_asymmetric_graph_gpu(test_case):
-        Broadcast = [flow.sbp.broadcast]
-        Placement_rank_0 = flow.placement("cuda", {0: [0]})
-        Placement_rank_1 = flow.placement("cuda", {0: [1]})
-
-        class MyConsistentAsymmetricModule(flow.nn.Module):
+def _test_train_graph(test_case, device):
+    rank = flow.env.get_rank()
+    def train_with_module(iter_num=3):
+        class LocalModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
-                self.linear1 = flow.nn.Linear(3, 8, False)
-                self.linear2 = flow.nn.Linear(8, 7, False)
-                self.linear1.to_consistent(placement=Placement_rank_0, sbp=Broadcast)
-                self.linear2.to_consistent(placement=Placement_rank_1, sbp=Broadcast)
-                flow.nn.init.ones_(self.linear1.weight)
-                flow.nn.init.constant_(self.linear2.weight, 2.3)
+                self.linear0 = flow.nn.Linear(3, 8, False)
+                self.linear1 = flow.nn.Linear(8, 7, False)
+                flow.nn.init.ones_(self.linear0.weight)
+                flow.nn.init.constant_(self.linear1.weight, 2.3)
 
-            def forward(self, x, y):
-                out0 = x + y
+            def forward(self, x):
+                out0 = self.linear0(x)
                 out1 = self.linear1(out0)
-                out1 = out1.to_consistent(placement=Placement_rank_1, sbp=Broadcast)
-                out2 = self.linear2(out1)
-                return out2
+                return out1
 
-        class MyLocalModule(flow.nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.linear1 = flow.nn.Linear(3, 8, False)
-                self.linear2 = flow.nn.Linear(8, 7, False)
-                flow.nn.init.ones_(self.linear1.weight)
-                flow.nn.init.constant_(self.linear2.weight, 2.3)
+        local_m = LocalModule()
+        local_m = local_m.to(device)
 
-            def forward(self, x, y):
-                # print("local_x in rank : ", flow.env.get_rank(), " is : ", x)
-                # print("local_y in rank : ", flow.env.get_rank(), " is : ", y)
-                out0 = x + y
-                out1 = self.linear1(out0)
-                out2 = self.linear2(out1)
-                return out2
+        of_sgd = flow.optim.SGD(local_m.parameters(), lr=0.001, momentum=0.9)
 
-        my_local_module = MyLocalModule()
-        np_x = np.random.randn(5, 3)
-        np_y = np.ones(3)
-        local_x = flow.tensor(np_x, dtype=flow.float32)
-        consistent_x = local_x.to_consistent(
-            placement=flow.placement("cuda", {0: [0, 1]}), sbp=Broadcast
+        x = flow.Tensor(
+            [
+                [-0.94630778, -0.83378579, -0.87060891],
+                [2.0289922, -0.28708987, -2.18369248],
+                [0.35217619, -0.67095644, -1.58943879],
+                [0.08086036, -1.81075924, 1.20752494],
+                [0.8901075, -0.49976737, -1.07153746],
+                [-0.44872912, -1.07275683, 0.06256855],
+                [-0.22556897, 0.74798368, 0.90416439],
+                [0.48339456, -2.32742195, -0.59321527],
+            ],
+            device=device,
+            requires_grad=False,
         )
-        local_x = consistent_x.to_local().to("cpu")
-        local_y = flow.tensor(np_y, dtype=flow.float32)
-        local_out = my_local_module(local_x, local_y)
-        # print("eager_local_out: ", local_out)
 
-        my_module = MyConsistentAsymmetricModule()
-        x = local_x.to_consistent(placement=Placement_rank_0, sbp=Broadcast)
-        y = local_y.to_consistent(placement=Placement_rank_0, sbp=Broadcast)
+        def one_iter():
+            of_out = local_m(x)
+            of_out = of_out.sum()
 
-        class MyAsymmetricGraph(flow.nn.Graph):
+            of_out.backward()
+            of_sgd.step()
+            of_sgd.zero_grad()
+            
+            print(of_out.numpy())
+            return of_out.numpy(), local_m.linear1.weight.numpy()
+
+        check_list = []
+        for i in range(iter_num):
+            print(i)
+            check_list.append(one_iter())
+        return check_list
+
+    def train_with_graph(iter_num=3):
+        B = [flow.sbp.broadcast]
+        P0 = flow.placement("cuda", {0: [0]})
+        P1 = flow.placement("cuda", {0: [1]})
+
+        class PipelineModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
-                self.my_net = my_module
+                self.linear0 = flow.nn.Linear(3, 8, False)
+                self.linear1 = flow.nn.Linear(8, 7, False)
+                self.linear0.to_consistent(placement=P0, sbp=B)
+                self.linear1.to_consistent(placement=P1, sbp=B)
+                flow.nn.init.ones_(self.linear0.weight)
+                flow.nn.init.constant_(self.linear1.weight, 2.3)
 
-            def build(self, x, y):
-                return self.my_net(x, y)
+            def forward(self, x):
+                out0 = self.linear0(x)
+                out0 = out0.to_consistent(placement=P1, sbp=B)
+                out1 = self.linear1(out0)
+                return out1
 
-        my_g = MyAsymmetricGraph()
-        graph_out = my_g(x, y)
-        test_case.assertTrue(graph_out.placement == Placement_rank_1)
-        graph_local_out = graph_out.to_local()
-        # NOTE(chengcheng): MUST call for each rank sync correct input copy
-        graph_local_out_np = graph_local_out.numpy()
-        # print("graph_local_out in rank ", flow.env.get_rank(),  " is : ", graph_local_out)
-        if flow.env.get_rank() == 0:
-            test_case.assertTrue(graph_local_out.shape.numel() == 0)
-            test_case.assertTrue(graph_local_out_np.size == np.array([]).size)
-        elif flow.env.get_rank() == 1:
+        pp_m = PipelineModule()
+
+        of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.001, momentum=0.9)
+
+        class PipelineGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.pp_m = pp_m
+                self.add_optimizer(of_sgd)
+
+            def build(self, x):
+                out = self.pp_m(x)
+                out = out.sum()
+                out.backward()
+                return out
+
+        pp_g = PipelineGraph()
+        pp_g.debug()
+
+        x = flow.Tensor(
+            [
+                [-0.94630778, -0.83378579, -0.87060891],
+                [2.0289922, -0.28708987, -2.18369248],
+                [0.35217619, -0.67095644, -1.58943879],
+                [0.08086036, -1.81075924, 1.20752494],
+                [0.8901075, -0.49976737, -1.07153746],
+                [-0.44872912, -1.07275683, 0.06256855],
+                [-0.22556897, 0.74798368, 0.90416439],
+                [0.48339456, -2.32742195, -0.59321527],
+            ],
+            device=device,
+            requires_grad=False,
+        )
+        x = x.to_consistent(placement=P0, sbp=B)
+
+        def one_iter():
+            print("rank: ", rank)
+            of_graph_out = pp_g(x)
+            test_case.assertTrue(of_graph_out.placement == P1)
+            of_graph_out = of_graph_out.to_local()
+            of_graph_out_np = of_graph_out.numpy()
+            return of_graph_out_np, pp_m.linear1.weight.to_local().numpy()
+
+        check_list = []
+        for i in range(iter_num):
+            check_list.append(one_iter())
+        return check_list
+
+    iter_num = 3
+    if (rank == 1):
+        module_check_list = train_with_module(iter_num)
+
+    graph_check_list = train_with_graph(iter_num)
+
+    if (rank == 1):
+        for i in range(iter_num):
+            # check equal on loss
             test_case.assertTrue(
-                np.allclose(
-                    graph_local_out.numpy(), local_out.numpy(), atol=1e-4, rtol=1e-4
-                )
+                np.array_equal(module_check_list[i][0], graph_check_list[i][0])
             )
-        else:
-            test_case.assertTrue(False)
+            # check equal on weight
+            test_case.assertTrue(
+                np.array_equal(module_check_list[i][1], graph_check_list[i][1])
+            )
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n1d()
+class TestGraphPipeline(oneflow.unittest.TestCase):
+    def test_train_graph_gpu(test_case):
+        _test_train_graph(test_case, flow.device("cuda"))
 
 
 if __name__ == "__main__":
