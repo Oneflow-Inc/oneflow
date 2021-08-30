@@ -47,9 +47,7 @@ DECLARE_string(log_dir);
 
 namespace oneflow {
 
-inline void HashCombine(size_t* seed, size_t hash) {
-  *seed = HashCombine(*seed, hash);
-}
+inline void HashCombine(size_t* seed, size_t hash) { *seed = HashCombine(*seed, hash); }
 
 template<typename... T>
 inline void AddHash(size_t* seed, const T&... v) {
