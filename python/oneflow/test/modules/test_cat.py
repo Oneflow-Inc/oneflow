@@ -26,30 +26,19 @@ from automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
-class Test_Diag_module(flow.unittest.TestCase):
+class TestCat(flow.unittest.TestCase):
     @autotest()
-    def test_diag_one_dim(test_case):
+    def test_cat_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=1, dim0=random()).to(device)
-        return torch.diag(x)
-
-    @autotest()
-    def test_diag_other_dim(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
-        return torch.diag(x)
-
-    @autotest()
-    def test_tensor_diag_one_dim(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=1, dim0=random()).to(device)
-        return x.diag()
-
-    @autotest()
-    def test_tensor_diag_other_dim(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=2,dim0=random(),dim1=random()).to(device)
-        return x.diag()
+        x = random_pytorch_tensor(
+            ndim=2, 
+            dim0=random(), 
+            dim1=random()
+            ).to(device)
+        return torch.cat(
+            (x, x, x),
+            random(0,1).to(int)
+        )
 
 
 if __name__ == "__main__":
