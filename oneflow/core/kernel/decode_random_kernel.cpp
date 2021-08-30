@@ -13,9 +13,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/decode_random_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
+
+template<DeviceType device_type>
+class DecodeRandomKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DecodeRandomKernel);
+  DecodeRandomKernel() : is_init_(false){};
+  ~DecodeRandomKernel() = default;
+
+  void Forward(const KernelCtx& ctx,
+               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
+    ForwardDataContent(ctx, BnInOp2Blob);
+  }
+
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+
+ private:
+  void VirtualKernelInit() override;
+  uint32_t GenNextRandomSeed() const;
+
+  std::unique_ptr<std::mt19937> gen_;
+  std::unique_ptr<std::uniform_int_distribution<uint32_t>> dis_;
+
+  mutable bool is_init_;
+};
 
 namespace {
 

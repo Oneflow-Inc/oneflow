@@ -144,7 +144,7 @@ class MovingAverageMinMaxObserver(Module):
             self.moving_min.fill_(0)
 
     def forward(self, input, current_train_step):
-        return flow.F.moving_average_min_max_observer(
+        return flow._C.moving_average_min_max_observer(
             input,
             current_train_step,
             self.moving_max,

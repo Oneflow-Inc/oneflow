@@ -156,7 +156,7 @@ int64_t* MutThreadLocalTensorMetaCheckDepth() {
 Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(const one::Tensor& tensor) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdCheckTensorConsistency));
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckTensorConsistency));
   const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
   const auto& constaint = JUST(tensor.consumer_nd_sbp_constraint());
   const TransportToken& tensor_transport_token = JUST(tensor.transport_token());

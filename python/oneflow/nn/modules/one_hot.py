@@ -71,7 +71,7 @@ def one_hot(
 
         num_classes = input.max().numpy().item() + 1
 
-    return flow.F.one_hot(input, num_classes, on_value, off_value)
+    return flow._C.one_hot(input, num_classes, on_value, off_value)
 
 
 if __name__ == "__main__":

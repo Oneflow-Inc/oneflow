@@ -13,9 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/total_loss_instance_num_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
+
+template<typename T>
+class TotalLossInstanceNumKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(TotalLossInstanceNumKernel);
+  TotalLossInstanceNumKernel() = default;
+  ~TotalLossInstanceNumKernel() override = default;
+
+ private:
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+};
 
 template<typename T>
 void TotalLossInstanceNumKernel<T>::ForwardDataContent(

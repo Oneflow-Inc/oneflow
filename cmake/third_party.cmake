@@ -156,10 +156,7 @@ set(oneflow_third_party_dependencies
   protobuf
   gflags
   glog
-  googletest_copy_headers_to_destination
-  googletest_copy_libs_to_destination
-  googlemock_copy_headers_to_destination
-  googlemock_copy_libs_to_destination
+  googletest
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
@@ -276,9 +273,7 @@ add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
   foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-    set(oneflow_all_include_file)
-    file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
-    copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
+    copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
   endforeach()
 else()
   add_custom_target(prepare_oneflow_third_party ALL)

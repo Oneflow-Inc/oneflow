@@ -103,7 +103,7 @@ def chunk_op(input, chunks, dim):
                     tup_list, input.shape
                 )
                 splits.append(
-                    flow.F.slice(input, start=start_tup, stop=stop_tup, step=step_tup)
+                    flow._C.slice(input, start=start_tup, stop=stop_tup, step=step_tup)
                 )
         return splits
 

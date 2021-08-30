@@ -51,6 +51,7 @@ class CudaCopyD2HStreamType final : public StreamType {
   ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                           int64_t this_machine_id) const override;
   bool SharingVirtualMachineThread() const override { return true; }
+  bool SupportingTransportInstructions() const override { return false; }
 };
 
 }  // namespace vm
