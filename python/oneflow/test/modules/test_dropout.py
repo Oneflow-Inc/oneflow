@@ -26,7 +26,7 @@ from automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestCat(flow.unittest.TestCase):
+class TestDropout(flow.unittest.TestCase):
     @autotest()
     def test_dropout(test_case):
         device = random_device()

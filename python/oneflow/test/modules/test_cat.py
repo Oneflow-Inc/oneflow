@@ -37,7 +37,7 @@ class TestCat(flow.unittest.TestCase):
             ).to(device)
         return torch.cat(
             (x, x, x),
-            random(0,1).to(int)
+            random(0,2).to(int)
         )
 
 
