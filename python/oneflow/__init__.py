@@ -355,6 +355,7 @@ from . import (
     boxing,
     backends,
     amp,
+    fx,
 )  # , saved_model NOTE(chengcheng): unavailable now
 import oneflow.utils.data
 import oneflow.utils.vision

@@ -39,7 +39,7 @@ Argument = Optional[
     ]
 ]
 
-_side_effectful_functions: Set[Callable] = {flow._oneflow_internal.F}
+_side_effectful_functions: Set[Callable] = {flow._oneflow_internal._C}
 
 
 def _find_module_of_method(orig_method: Callable[..., Any]) -> str:
@@ -84,7 +84,7 @@ def _get_qualified_name(func: Callable[..., Any]) -> str:
     name = func.__name__
     module = _find_module_of_method(func)
     module = module.replace(
-        "flow._oneflow_internal.F", "flow"
+        "flow._oneflow_internal._C", "flow"
     )  # WAR for bug in how torch.ops assigns module
     print(f"{module}.{name}")
     return f"{module}.{name}"
@@ -577,4 +577,4 @@ def map_aggregate(a: Argument, fn: Callable[[Argument], Argument]) -> Argument:
         return fn(a)
 
 
-# _get_qualified_name(flow._oneflow_internal.F.exp)
+# _get_qualified_name(flow._oneflow_internal._C.exp)
