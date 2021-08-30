@@ -257,36 +257,4 @@ Maybe<BoxingDividor> RawInOutPlacementAndBroadcast() {
 
 decltype(InOutPlacementAndBroadcast) InOutPlacementAndBroadcast =
     DECORATE(&RawInOutPlacementAndBroadcast, ThreadLocal);
-
-namespace {
-
-Maybe<Symbol<ParallelDesc>> GetLastSingleDeviceInPlacement(Symbol<ParallelDesc> placement) {
-  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
-  int64_t parallel_num = placement->parallel_num();
-  int64_t machine_id = JUST(placement->MachineId4ParallelId(parallel_num - 1));
-  int64_t device_id = JUST(placement->DeviceId4ParallelId(parallel_num - 1));
-  parallel_conf->set_device_tag(placement->device_tag());
-  parallel_conf->add_device_name(std::string("@") + std::to_string(machine_id) + ":"
-                                 + std::to_string(device_id));
-  std::shared_ptr<ParallelDesc> parallel_desc;
-  JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-    parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-    return Maybe<void>::Ok();
-  }));
-  return SymbolOf(*parallel_desc);
-}
-
-Maybe<BoxingDividor> RawInLastPlacementAndBroadcast() {
-  return std::make_shared<BoxingDividor>(
-      "InLastPlacementAndBroadcast",
-      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
-        return PlacedNdSbp::New(JUST(CachedGetAllBroadcastNdSbp(in->nd_sbp()->sbp_parallel_size())),
-                                JUST(GetLastSingleDeviceInPlacement(in->placement())));
-      });
-}
-
-}  // namespace
-
-decltype(InLastPlacementAndBroadcast) InLastPlacementAndBroadcast =
-    DECORATE(&RawInLastPlacementAndBroadcast, ThreadLocal);
 }  // namespace oneflow

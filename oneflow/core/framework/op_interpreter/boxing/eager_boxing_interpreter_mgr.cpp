@@ -102,8 +102,6 @@ Maybe<BoxingExprIf> RawGenericBoxingExprNotEfficient() {
       JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
                       JUST(BoxingExpr("nccl-p-to-b")))),
       JUST(BoxingExpr("naive-b-to-1"))));
-  const auto& sec_mid = JUST(BoxingExpr(JUST(InLastPlacementAndBroadcast()), mid_boxing,
-                                        JUST(BoxingExpr("naive-b-to-1"))));
   const auto& rhs_boxing = JUST(BoxingExpr(
       JUST(OutSingleDevice()), JUST(BoxingExpr("identity")) | mid_boxing,
       JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),

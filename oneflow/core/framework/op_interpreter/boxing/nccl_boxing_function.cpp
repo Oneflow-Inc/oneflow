@@ -104,7 +104,9 @@ Maybe<one::Tensor> NcclP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
-  return JUST(one::functional::ConsistentAllReduce(tensor));
+  const auto& ret = JUST(one::functional::ConsistentAllReduce(tensor));
+  LOG(ERROR) << ret->shape()->ToString();
+  return ret;
 }
 
 Maybe<one::Tensor> NcclP2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,

@@ -119,13 +119,13 @@ auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
 class BroadcastFunctor {
  public:
   BroadcastFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     std::string device_type_str = JUST(x->device())->type();
     CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kGPU : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
-    return one::Broadcast(x, parallel_desc);
+    return one::Broadcast(x, parallel_desc, inplace);
   }
 };
 
@@ -156,6 +156,7 @@ class LocalAllReduceFunctor {
                          .Input("in")
                          .Output("out")
                          .Attr("parallel_conf", PbMessage2TxtString(parallel_conf))
+                         .Attr<bool>("async_launch", true)
                          .Build());
       rank_group2op_expr[rank_group] = op_expr;
     } else {
@@ -184,7 +185,8 @@ class SendFunctor {
       DataType dtype = x->dtype()->data_type();
       JUST(ccl::Send<DeviceType::kCPU>(&dtype, sizeof(dtype), DataType::kChar, dst, nullptr));
 
-      DeviceType device_type = JUST(x->device())->parallel_desc_ptr()->device_type();
+      // DeviceType device_type = JUST(x->device())->parallel_desc_ptr()->device_type();
+      DeviceType device_type = JUST(Device::GetPlacement(*JUST(x->device())))->device_type();
       JUST(ccl::Send<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, dst,
                                        nullptr));
     }

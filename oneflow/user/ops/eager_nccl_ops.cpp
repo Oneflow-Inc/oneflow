@@ -15,32 +15,22 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/user/ops/comm_net_device_infer_util.h"
 
 namespace oneflow {
-
-Maybe<Symbol<Device>> DeviceInferFn(user_op::DeviceInferContext* ctx) {
-  const auto& input_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = input_device;
-  if (input_device->type() == "cuda" || input_device->type() == "gpu") {
-    static thread_local const auto& nccl_device = Device::New("cuda");
-    return nccl_device;
-  } else if (input_device->type() == "cpu") {
-    return input_device;
-  } else {
-    UNIMPLEMENTED_THEN_RETURN();
-  }
-}
 
 REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
     .Input("in")
     .Output("out")
     .Attr<std::string>("parallel_conf")
+    .Attr<bool>("async_launch", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn)
+    .SetDeviceInferFn(DeviceInferFn<&IsAsyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))
@@ -62,7 +52,7 @@ REGISTER_USER_OP("eager_nccl_broadcast")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn)
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))
@@ -92,7 +82,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn)
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       UNIMPLEMENTED_THEN_RETURN() << "consistent tensor are not supported";
     })
@@ -128,6 +118,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_reduce_scatter")
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
       const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
       cfg::NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
@@ -189,6 +180,7 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_gather")
       }
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_NO_GRAD_USER_OP("eager_nccl_s2s")
@@ -230,5 +222,6 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_s2s")
       }
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 }  // namespace oneflow

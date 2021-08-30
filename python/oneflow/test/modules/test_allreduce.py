@@ -28,22 +28,22 @@ class TestAllReduce(flow.unittest.TestCase):
     def test_all_reduce(test_case):
         arr_rank1 = np.array([1, 2])
         arr_rank2 = np.array([3, 4])
-        if flow.distributed.get_rank() == 0:
+        if flow.env.get_rank() == 0:
             x = flow.Tensor(arr_rank1)
-        elif flow.distributed.get_rank() == 1:
+        elif flow.env.get_rank() == 1:
             x = flow.Tensor(arr_rank2)
         else:
             raise ValueError
         x = x.to("cuda")
-        y = flow.F.private_local_all_reduce(x)
+        y = flow._C.local_all_reduce(x)
         test_case.assertTrue(np.allclose(y.numpy(), arr_rank1 + arr_rank2))
 
     @flow.unittest.skip_unless_2n2d()
     def test_all_reduce_2nodes(test_case):
         np_arr = np.array([1, 2])
-        x = flow.Tensor(np_arr * (flow.distributed.get_rank() + 1))
+        x = flow.Tensor(np_arr * (flow.env.get_rank() + 1))
         x = x.to("cuda")
-        y = flow.F.private_local_all_reduce(x)
+        y = flow._C.local_all_reduce(x)
         test_case.assertTrue(np.allclose(y.numpy(), np_arr * 10))
 
 

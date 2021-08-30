@@ -46,7 +46,7 @@ class CustomModule(flow.nn.Module):
 
     def forward(self, x):
         x = self.layer(x)
-        x = oneflow.F.flatten(x, 1)
+        x = oneflow._C.flatten(x, 1)
         x = self.fc1(x) + self.dummy_buff
         return x
 
