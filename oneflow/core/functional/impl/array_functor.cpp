@@ -1578,20 +1578,13 @@ class SplitLikeFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
                                 const int64_t& axis) const {
     CHECK_GE_OR_RETURN(like.size(), 2);
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount);
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
-    TensorTuple outputs(like.size());
-    for (int i = 0; i < like.size(); i += kMaxInputCount) {
-      size_t size = (i + kMaxInputCount) < like.size() ? kMaxInputCount : like.size() - i;
-      TensorTuple partial_inputs(size + 1);
-      partial_inputs[0] = x;
-      for (int j = 0; j < size; ++j) { partial_inputs[j + 1] = like[i + j]; }
-      const auto& partial_outputs =
-          JUST(OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(size - 1), partial_inputs, attrs));
-      for (int j = 0; j < size; ++j) { outputs[i + j] = partial_outputs->at(j); }
-    }
-
-    return outputs;
+    TensorTuple inputs(like.size() + 1);
+    inputs[0] = x;
+    for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = like[i]; }
+    return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(like.size() - 1), inputs, attrs);
   }
 
  private:
