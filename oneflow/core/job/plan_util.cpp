@@ -236,7 +236,12 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
             .op_conf();
     if (!op_conf.has_variable_conf()) { return false; }
     const std::string& var_name = op_conf.name();
-    if (variable_op_names.find(var_name) == variable_op_names.end()) { return false; }
+    if (variable_op_names.find(var_name) == variable_op_names.end()) {
+      LOG(WARNING) << " Oh no! Cannot find variable_op_name: " << var_name
+                   << " in nn.Graph Compiler bind EagerTensor with VariableOp. "
+                   << " \n But each variable need bind with eager tensor for init.";
+      return false;
+    }
     *name = var_name;
     return true;
   };
