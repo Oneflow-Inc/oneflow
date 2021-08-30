@@ -21,7 +21,6 @@ limitations under the License.
 
 #include "oneflow/core/common/function_traits.h"
 #include "oneflow/core/common/type_traits.h"
-#include "oneflow/core/functional/function_signature.h"
 
 namespace oneflow {
 namespace one {
