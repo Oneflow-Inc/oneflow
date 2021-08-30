@@ -886,11 +886,9 @@ void Operator::GenKernelConf(
   }
 
   CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-                           [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
-    kernel_conf->set_need_do_shape(true);
-  }
-
+  kernel_conf->set_all_blobs_are_static(
+      !HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
+                            [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); }));
   {
     DataType data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns());
     if (data_type == DataType::kInvalidDataType) {

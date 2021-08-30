@@ -25,8 +25,8 @@ def bernoulli(input, *, generator=None, out=None):
 
     Args:
         input(Tensor) - the input tensor of probability values for the Bernoulli distribution
-        generator: (optional) – a pseudorandom number generator for sampling
-        out (Tensor, optional) – the output tensor.
+        generator: (optional): a pseudorandom number generator for sampling
+        out (Tensor, optional): the output tensor.
 
     Shape:
         - Input: :math:`(*)`. Input can be of any shape
@@ -55,7 +55,7 @@ def bernoulli(input, *, generator=None, out=None):
 
 
     """
-    return flow.F.bernoulli(input, flow.float32, generator)
+    return flow._C.bernoulli(input, dtype=flow.float32, generator=generator)
 
 
 def _rand_op_common_process(
@@ -109,11 +109,20 @@ class Rand(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow.F.consistent_rand(
-                self.size, self.placement, self.sbp, self.dtype, self.generator
+            res = flow._C.consistent_rand(
+                self.size,
+                placement=self.placement,
+                sbp=self.sbp,
+                dtype=self.dtype,
+                generator=self.generator,
             )
         else:
-            res = flow.F.rand(self.size, self.dtype, self.device, self.generator)
+            res = flow._C.rand(
+                self.size,
+                dtype=self.dtype,
+                device=self.device,
+                generator=self.generator,
+            )
         res.requires_grad = self.requires_grad
         return res
 
@@ -140,7 +149,7 @@ def rand_op(
         out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         layout (optional): The desired layout of returned Tensor.
-        generator (flow.Generator, optional) – a pseudorandom number generator for sampling
+        generator (flow.Generator, optional): a pseudorandom number generator for sampling
         device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
         placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
@@ -198,11 +207,20 @@ class RandN(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow.F.consistent_randn(
-                self.size, self.placement, self.sbp, self.dtype, self.generator
+            res = flow._C.consistent_randn(
+                self.size,
+                placement=self.placement,
+                sbp=self.sbp,
+                dtype=self.dtype,
+                generator=self.generator,
             )
         else:
-            res = flow.F.randn(self.size, self.dtype, self.device, self.generator)
+            res = flow._C.randn(
+                self.size,
+                dtype=self.dtype,
+                device=self.device,
+                generator=self.generator,
+            )
         res.requires_grad = self.requires_grad
         return res
 
@@ -229,7 +247,7 @@ def randn_op(
         out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         layout (optional): The desired layout of returned Tensor.
-        generator (flow.Generator, optional) – a pseudorandom number generator for sampling
+        generator (flow.Generator, optional): a pseudorandom number generator for sampling
         device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
         placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
@@ -262,6 +280,204 @@ def randn_op(
     return RandN(
         size, generator, dtype, layout, device, placement, sbp, requires_grad
     )()
+
+
+class RandInt(Module):
+    def __init__(
+        self,
+        low: flow.int64,
+        high: flow.int64,
+        size: tuple,
+        generator: flow.Generator = None,
+        dtype: Optional[flow.dtype] = None,
+        device=None,
+        placement=None,
+        sbp=None,
+        requires_grad=False,
+    ) -> None:
+        super().__init__()
+
+        if generator is None:
+            generator = flow.Generator()
+        assert low < high
+        self.requires_grad = requires_grad
+        (
+            self.size,
+            self.device,
+            self.generator,
+            self.placement,
+            self.sbp,
+        ) = _rand_op_common_process(size, device, generator, placement, sbp)
+        self.dtype = dtype
+        self.low = low
+        self.high = high
+
+    def forward(self):
+        if self.placement is not None:
+            res = flow._C.consistent_randint(
+                self.low,
+                self.high,
+                shape=self.size,
+                placement=self.placement,
+                sbp_tuple=self.sbp,
+                dtype=self.dtype,
+                generator=self.generator,
+            )
+        else:
+            res = flow._C.randint(
+                self.low,
+                self.high,
+                shape=self.size,
+                dtype=self.dtype,
+                device=self.device,
+                generator=self.generator,
+            )
+        res.requires_grad = self.requires_grad
+        return res.to(dtype=self.dtype)
+
+
+def randint_op(
+    low: flow.int64,
+    high: flow.int64,
+    size: tuple,
+    out=None,
+    generator=None,
+    dtype: Optional[flow.dtype] = None,
+    layout=None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False,
+):
+    """
+    Returns a tensor filled with random integers generated uniformly between low (inclusive) and high (exclusive).
+
+    The shape of the tensor is defined by the variable argument ``size``.
+
+    Args:
+        size (int... or flow.Size): Defining the shape of the output tensor.
+          Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
+        out (optional): The output tensor.
+        dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
+        layout (optional): The desired layout of returned Tensor.
+        generator (flow.Generator, optional) – a pseudorandom number generator for sampling
+        device (flow.device, optional): The desired device of returned local tensor. If None, uses the
+          current device.
+        placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
+          construct local tensor.
+        sbp (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
+          numbers of placement.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> generator = flow.Generator()
+        >>> generator.manual_seed(0)
+        >>> flow.randint(0, 5, (3,3), generator=generator)
+        tensor([[2, 2, 3],
+                [4, 3, 4],
+                [2, 4, 2]], dtype=oneflow.int64)
+
+    """
+    assert out is None, "out not supported yet"
+    assert layout is None, "layout not supported yet"
+    if generator is None:
+        generator = flow.default_generator()
+    return RandInt(
+        low, high, size, generator, dtype, device, placement, sbp, requires_grad
+    )()
+
+
+class RandPerm(Module):
+    def __init__(
+        self,
+        n,
+        generator: flow.Generator = None,
+        dtype: Optional[flow.dtype] = None,
+        layout=None,
+        device: Union[flow.device, str, None] = None,
+        placement: flow.placement = None,
+        sbp: flow._oneflow_internal.sbp.sbp = None,
+        requires_grad: bool = False,
+        pin_memory: bool = False,
+    ) -> None:
+        super().__init__()
+        assert n >= 0
+        self.n = n
+        self.dtype = dtype
+        (
+            _,
+            self.device,
+            self.generator,
+            self.placement,
+            self.sbp,
+        ) = _rand_op_common_process((), device, generator, placement, sbp)
+        self.requires_grad = requires_grad
+
+    def forward(self, out=None):
+        if self.placement is not None:
+            res = flow._C.consistent_randperm(
+                self.n, placement=self.placement, sbp=self.sbp, generator=self.generator
+            )
+        else:
+            res = flow._C.randperm(self.n, device=self.device, generator=self.generator)
+        res.requires_grad = self.requires_grad
+        return res.to(dtype=self.dtype)
+
+
+def randperm_op(
+    n: flow.int32,
+    generator: flow.Generator = None,
+    out=None,
+    dtype: Optional[flow.dtype] = None,
+    layout=None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False,
+    pin_memory: bool = False,
+) -> flow.Tensor:
+    r"""
+    Returns a random permutation of integers from ``0`` to ``n - 1``.
+
+    Args:
+        n (int): the upper bound (exclusive)
+
+    Keyword args:
+        generator(:class:`oneflow.Generator`, optional):  a pseudorandom number generator for sampling
+        out (Tensor, optional): output Tensor,not supported yet.
+        dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
+            Default: ``oneflow.int64``.
+        layout: layout is not supported yet.
+        device: the desired device of returned tensor. Default: cpu.
+        placement:(:class:`flow.placement`, optional): The desired device of returned consistent tensor. If None,
+            will construct local tensor.
+        sbp: (:class:`flow.sbp`, optional): The desired sbp of returned consistent tensor. It must be equal with the
+            numbers of placement.
+        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
+        pin_memory(bool, optional):pin_memory is not supported yet.
+
+    Example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> generator = flow.Generator()
+        >>> generator.manual_seed(0)
+        >>> flow.randperm(5, generator=generator)
+        tensor([2, 4, 3, 0, 1], dtype=oneflow.int32)
+    """
+    assert out is None, "out not supported yet"
+    assert layout is None, "layout not supported yet"
+    assert pin_memory is False, "pin_memory not supported yet"
+    if generator is None:
+        generator = flow.default_generator()
+    return RandPerm(n, generator, dtype, layout, device, placement, sbp, requires_grad)(
+        out
+    )
 
 
 if __name__ == "__main__":

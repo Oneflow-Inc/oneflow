@@ -477,7 +477,7 @@ def l2_normalize(input, dim=0, epsilon=1e-12):
                 [0.6000, 0.8000]], dtype=oneflow.float32)
 
     """
-    y, _ = flow.F.l2_normalize(input, dim, epsilon)
+    y, _ = flow._C.l2_normalize(input, dim, epsilon)
     return y
 
 

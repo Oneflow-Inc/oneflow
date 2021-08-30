@@ -125,6 +125,7 @@ class HWLocTopologyDescriptor : public TopologyDescriptor {
 
   std::shared_ptr<const TopologyCPUAffinityDescriptor> GetCPUAffinityByPCIBusID(
       const std::string& bus_id) const override {
+    if (bus_id.empty()) { return nullptr; }
     hwloc_obj_t non_io_ancestor = GetNonIOAncestorByPCIBusID(bus_id);
     if (non_io_ancestor == nullptr) { return nullptr; }
     if (non_io_ancestor->cpuset == nullptr) { return nullptr; }
@@ -134,6 +135,7 @@ class HWLocTopologyDescriptor : public TopologyDescriptor {
 
   std::shared_ptr<const TopologyMemoryAffinityDescriptor> GetMemoryAffinityByPCIBusID(
       const std::string& bus_id) const override {
+    if (bus_id.empty()) { return nullptr; }
     hwloc_obj_t non_io_ancestor = GetNonIOAncestorByPCIBusID(bus_id);
     if (non_io_ancestor == nullptr) { return nullptr; }
     if (non_io_ancestor->nodeset == nullptr) { return nullptr; }

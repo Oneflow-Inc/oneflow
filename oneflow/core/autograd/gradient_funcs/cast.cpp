@@ -24,11 +24,11 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct CastOpExprInterpState : public OpExprInterpState {
+struct CastCaptureState : public AutoGradCaptureState {
   DataType data_type;
 };
 
-class Cast : public OpExprGradFunction<CastOpExprInterpState> {
+class Cast : public OpExprGradFunction<CastCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -38,13 +38,13 @@ class Cast : public OpExprGradFunction<CastOpExprInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(CastOpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->data_type = inputs.at(0)->dtype();
+  Maybe<void> Capture(CastCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
+    ctx->data_type = inputs.at(0)->dtype()->data_type();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CastOpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CastCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
     MutableAttrMap attrs;

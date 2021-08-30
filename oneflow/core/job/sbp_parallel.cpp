@@ -18,6 +18,25 @@ limitations under the License.
 
 namespace oneflow {
 
+Maybe<Symbol<cfg::SbpParallel>> MakeSplitSbpParallel(int axis) {
+  CHECK_LT_OR_RETURN(axis, kMaxSplitAxis);
+  cfg::SbpParallel split_sbp_parallel;
+  split_sbp_parallel.mutable_split_parallel()->set_axis(axis);
+  return SymbolOf(split_sbp_parallel);
+}
+
+Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel() {
+  cfg::SbpParallel broadcast_sbp;
+  broadcast_sbp.mutable_broadcast_parallel();
+  return SymbolOf(broadcast_sbp);
+}
+
+Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
+  cfg::SbpParallel partial_sum_sbp;
+  partial_sum_sbp.mutable_partial_sum_parallel();
+  return SymbolOf(partial_sum_sbp);
+}
+
 //  S -> S
 //  P -> B
 //  B -> P
@@ -171,24 +190,6 @@ std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel) {
     UNIMPLEMENTED();
   }
   return sbp_str;
-}
-
-std::string NdSbpToString(const Symbol<cfg::NdSbp> nd_sbp) {
-  static HashMap<Symbol<cfg::NdSbp>, std::string>* nd_sbp2str =
-      new HashMap<Symbol<cfg::NdSbp>, std::string>();
-  auto iter = nd_sbp2str->find(nd_sbp);
-  if (iter == nd_sbp2str->end()) {
-    std::stringstream nd_sbp_str;
-    nd_sbp_str << "[";
-    int32_t idx = 0;
-    for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-      nd_sbp_str << SbpParallelToString(sbp_parallel);
-      if (++idx != nd_sbp->sbp_parallel_size()) { nd_sbp_str << ", "; }
-    }
-    nd_sbp_str << "]";
-    iter = nd_sbp2str->emplace(nd_sbp, nd_sbp_str.str()).first;
-  }
-  return iter->second;
 }
 
 void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,

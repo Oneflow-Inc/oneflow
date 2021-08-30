@@ -14,13 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/global.h"
-#include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
-
-Maybe<void> InferUniformNdSbp(user_op::InferNdSbpFnContext* ctx);
 
 REGISTER_NO_GRAD_USER_OP("uniform")
     .Output("out")
@@ -49,19 +44,10 @@ REGISTER_NO_GRAD_USER_OP("uniform")
       *ctx->OutputDType("out", 0) = dtype;
       return Maybe<void>::Ok();
     })
-    .SetNdSbpInferFn(&InferUniformNdSbp);
-
-Maybe<void> InferUniformNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  cfg::NdSbp* out = ctx->NdSbp4ArgNameAndIndex("out", 0);
-  if (JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-    const auto& pb_str = ctx->user_op_conf().attr<std::string>("nd_sbp");
-    NdSbp pb;
-    CHECK_OR_RETURN(TxtString2PbMessage(pb_str, &pb));
-    out->InitFromProto(pb);
-  } else {
-    out->mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-  }
-  return Maybe<void>::Ok();
-}
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      cfg::SbpParallel default_sbp;
+      default_sbp.mutable_broadcast_parallel();
+      return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
+    });
 
 }  // namespace oneflow

@@ -19,19 +19,19 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct MultiplyInterpState : public OpExprInterpState {
+struct MultiplyCaptureState : public AutoGradCaptureState {
   bool requires_grad_x;
   bool requires_grad_y;
   int32_t index_x;
   int32_t index_y;
 };
 
-class Multiply : public OpExprGradFunction<MultiplyInterpState> {
+class Multiply : public OpExprGradFunction<MultiplyCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(MultiplyInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(MultiplyCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const MultiplyInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const MultiplyCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -45,7 +45,7 @@ Maybe<void> Multiply::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Multiply::Capture(MultiplyInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> Multiply::Capture(MultiplyCaptureState* ctx, const TensorTuple& inputs,
                               const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
   ctx->requires_grad_x = inputs.at(0)->requires_grad();
@@ -55,17 +55,17 @@ Maybe<void> Multiply::Capture(MultiplyInterpState* ctx, const TensorTuple& input
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Multiply::Apply(const MultiplyInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> Multiply::Apply(const MultiplyCaptureState* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(2);
   if (ctx->requires_grad_x) {
     const auto& y = ctx->SavedTensors().at(ctx->index_y);
-    in_grads->at(0) = JUST(functional::Multiply(out_grads.at(0), y));
+    in_grads->at(0) = JUST(functional::Mul(out_grads.at(0), y));
   }
   if (ctx->requires_grad_y) {
     const auto& x = ctx->SavedTensors().at(ctx->index_x);
-    in_grads->at(1) = JUST(functional::Multiply(out_grads.at(0), x));
+    in_grads->at(1) = JUST(functional::Mul(out_grads.at(0), x));
   }
   return Maybe<void>::Ok();
 }

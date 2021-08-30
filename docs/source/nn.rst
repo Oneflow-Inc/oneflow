@@ -23,7 +23,9 @@ Operators for neural networks
         ConstantPad3d,
         Conv1d,
         Conv2d,
+        Conv3d,
         ConvTranspose2d,
+        CombinedMarginLoss,
         CropMirrorNormalize,
         CrossEntropyLoss,
         Dropout,
@@ -51,12 +53,14 @@ Operators for neural networks
         MaxPool1d,
         MaxPool2d,
         MaxPool3d,
+        ModuleDict,
+        ModuleList,
         Mish,
         NLLLoss,
         OFRecordImageDecoder,
         OFRecordImageDecoderRandomCrop,
-        OfrecordRawDecoder,
-        OfrecordReader,
+        OFRecordRawDecoder,
+        OFRecordReader,
         OFRecordBytesDecoder,
         PReLU,
         Parameter,
@@ -85,3 +89,4 @@ Operators for neural networks
         FakeQuantization,
         Quantization
 
+.. autofunction:: oneflow.nn.parallel.DistributedDataParallel

@@ -22,6 +22,10 @@ limitations under the License.
 
 namespace oneflow {
 
+Maybe<Symbol<cfg::SbpParallel>> MakeSplitSbpParallel(int axis);
+Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel();
+Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel();
+
 inline bool operator!=(const cfg::SbpParallel& lhs, const cfg::SbpParallel& rhs) {
   return !(lhs == rhs);
 }
@@ -49,7 +53,6 @@ void SortSbpSignatureListByCopyCost(
 bool IsValidSbpParallelString(const std::string& sbp_str);
 bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sbp_parallel);
 std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel);
-std::string NdSbpToString(const Symbol<cfg::NdSbp> nd_sbp);
 
 void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
                                   cfg::NdSbpSignature* nd_sbp_signature);
@@ -58,6 +61,7 @@ void NdSbpSignatureToSbpSignature(const NdSbpSignatureT& nd_sbp_signature,
                                   cfg::SbpSignature* sbp_signature);
 void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
                                      const cfg::NdSbpSignature& nd_sbp_sig);
+
 }  // namespace oneflow
 
 namespace std {

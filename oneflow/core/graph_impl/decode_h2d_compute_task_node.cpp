@@ -29,13 +29,6 @@ class DecodeH2DCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kDecodeH2D; }
-  CudaWorkType GetCudaWorkType() const override {
-#ifdef WITH_CUDA
-    return CudaWorkType::kDecodeH2D;
-#else
-    UNIMPLEMENTED();
-#endif
-  }
 
  private:
   void BuildExecGphAndRegst() override;
@@ -67,7 +60,7 @@ void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
 
 REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kGPU, TaskType::kDecodeH2D)
     .SetStreamIndexGetterFn([](CudaStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateDecodeH2DStreamIndex();
+      return generator->GenerateNamedStreamIndex("DECODE_H2D");
     });
 
 #endif

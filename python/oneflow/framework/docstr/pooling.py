@@ -17,7 +17,7 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.F.adaptive_avg_pool1d,
+    oneflow._C.adaptive_avg_pool1d,
     r"""
     adaptive_avg_pool1d(input, output_size) -> Tensor
 
@@ -27,6 +27,7 @@ add_docstr(
     See :class:`~oneflow.nn.AdaptiveAvgPool1d` for details and output shape.
 
     Args:
+        input: the input tensor
         output_size: the target output size (single integer)
 
     For examples:
@@ -44,18 +45,17 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.adaptive_avg_pool2d,
+    oneflow._C.adaptive_avg_pool2d,
     r"""
     adaptive_avg_pool2d(input, output_size) -> Tensor
 
-    Applies a 2D adaptive average pooling over an input signal composed of
-        several input planes.
+    Applies a 2D adaptive average pooling over an input signal composed of several input planes.
 
     See :class:`~oneflow.nn.AdaptiveAvgPool2d` for details and output shape.
 
     Args:
-        output_size: the target output size (single integer or
-            double-integer tuple)
+        input: the input tensor
+        output_size: the target output size (single integer or double-integer tuple)
 
     For examples:
 
@@ -71,18 +71,17 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.F.adaptive_avg_pool3d,
+    oneflow._C.adaptive_avg_pool3d,
     r"""
     adaptive_avg_pool3d(input, output_size) -> Tensor
 
-    Applies a 3D adaptive average pooling over an input signal composed of
-        several input planes.
+    Applies a 3D adaptive average pooling over an input signal composed of several input planes.
 
     See :class:`~oneflow.nn.AdaptiveAvgPool3d` for details and output shape.
 
     Args:
-        output_size: the target output size (single integer or
-            triple-integer tuple)
+        input: the input tensor
+        output_size: the target output size (single integer or triple-integer tuple)
 
     For examples:
 

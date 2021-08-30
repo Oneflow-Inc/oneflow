@@ -1,0 +1,51 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/util.h"
+
+namespace oneflow {
+namespace test {
+
+TEST(Maybe, JUST_MSG) {
+  auto f = [](int x) -> Maybe<int> {
+    if (x > 10) { return Error::ValueError("") << "input value " << x; }
+
+    return 233;
+  };
+
+  auto g = [](int x) { return x * x - 5 * x + 3; };
+
+  auto h = [&](int x) -> Maybe<int> {
+    auto y = g(x);
+    return JUST_MSG(f(y), "input value g(", x, ")");
+  };
+
+  auto i = [&](float x) -> Maybe<int> {
+    int y = x;
+    return JUST_MSG(h(y), std::stringstream() << "input value int(" << x << ")");
+  };
+
+  auto data = CHECK_JUST(i(1));
+  ASSERT_EQ(data, 233);
+
+  auto err = i(10.123).error();
+  ASSERT_EQ(err->msg(), "input value 53");
+  ASSERT_EQ(err->stack_frame(0).error_msg(), "(f(y)): input value g(10)");
+  ASSERT_EQ(err->stack_frame(1).error_msg(), "(h(y)): input value int(10.123)");
+}
+
+}  // namespace test
+}  // namespace oneflow

@@ -104,7 +104,7 @@ def has_node_list():
 def node_size():
     node_num_from_env = os.getenv("ONEFLOW_TEST_NODE_NUM", None)
     if node_num_from_env:
-        return node_num_from_env
+        return int(node_num_from_env)
     elif has_node_list():
         node_list_from_env = node_list()
         return len(node_list_from_env)
@@ -113,7 +113,7 @@ def node_size():
 
 
 def has_world_size():
-    if oneflow.distributed.is_multi_client():
+    if oneflow.env.is_multi_client():
         return True
     if os.getenv("ONEFLOW_TEST_WORLD_SIZE"):
         assert os.getenv(
@@ -125,8 +125,8 @@ def has_world_size():
 
 
 def world_size():
-    if oneflow.distributed.is_multi_client():
-        return oneflow.distributed.get_world_size()
+    if oneflow.env.is_multi_client():
+        return oneflow.env.get_world_size()
     return int(os.getenv("ONEFLOW_TEST_WORLD_SIZE"))
 
 

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/soft_sync_stream_phy_instr_operand.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {
 
@@ -22,26 +22,17 @@ namespace vm {
 
 void SoftSyncStreamPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  if (modifier_ == "const") {
-    auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
-    DoEach(nullptr, compute_local_dep_object->mut_mirrored_object());
-  }
+  if (modifier_ == "const") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
 }
 
 void SoftSyncStreamPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  if (modifier_ == "mut") {
-    auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
-    DoEach(nullptr, compute_local_dep_object->mut_mirrored_object());
-  }
+  if (modifier_ == "mut") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
 }
 
 void SoftSyncStreamPhyInstrOperand::ForEachMut2MirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  if (modifier_ == "mut2") {
-    auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
-    DoEach(nullptr, compute_local_dep_object->mut_mirrored_object());
-  }
+  if (modifier_ == "mut2") { DoEach(nullptr, compute_local_dep_object_->mut_mirrored_object()); }
 }
 
 }  // namespace vm

@@ -40,7 +40,7 @@ def triu_op(input, diagonal=0):
                 [0., 0., 1.]], dtype=oneflow.float32)
 
     """
-    return flow.F.triu(input, diagonal)
+    return flow._C.triu(input, diagonal)
 
 
 if __name__ == "__main__":

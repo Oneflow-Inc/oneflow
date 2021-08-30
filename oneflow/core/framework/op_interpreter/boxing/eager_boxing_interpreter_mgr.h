@@ -39,7 +39,7 @@ struct DisableRecusiveBoxingCall {
     static thread_local bool disable_boxing = false;
     CHECK_OR_RETURN(!disable_boxing);
     disable_boxing = true;
-    RetT&& ret = func(arg...);
+    RetT ret = func(arg...);
     disable_boxing = false;
     return ret;
   }

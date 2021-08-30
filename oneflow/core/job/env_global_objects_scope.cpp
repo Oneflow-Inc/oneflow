@@ -36,12 +36,14 @@ limitations under the License.
 #include "oneflow/core/transport/transport.h"
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
+#include "oneflow/core/kernel/kernel_observer_manager.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
@@ -195,10 +197,17 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     }
 #endif  // __linux__
   }
+  Global<KernelObserver>::SetAllocated(new KernelObserverManager());
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  auto session_ctx = Global<MultiClientSessionContext>::Get();
+  if (session_ctx != nullptr) {
+    VLOG(2) << "Multi client session has not closed , env close it at env scope destruction.";
+    CHECK_JUST(session_ctx->TryClose());
+  }
+  Global<KernelObserver>::Delete();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {

@@ -18,7 +18,6 @@ import numpy as np
 from typing import TypeVar, Optional, Iterator
 
 import oneflow as flow
-import oneflow.distributed as dist
 from oneflow.utils.data import Sampler, Dataset
 
 
@@ -82,18 +81,18 @@ class DistributedSampler(Sampler[T_co]):
         seed: int = 0,
         drop_last: bool = False,
     ) -> None:
-        if not dist.is_multi_client():
+        if not flow.env.is_multi_client():
             raise RuntimeError("Requires multi-client env to be available")
 
         if num_replicas is None:
-            num_replicas = dist.get_world_size()
+            num_replicas = flow.env.get_world_size()
         if rank is None:
-            rank = dist.get_rank()
+            rank = flow.env.get_rank()
         print(
-            "dist.get_world_size() >>>>> ",
-            dist.get_world_size(),
-            "dist.get_rank() >>>>>",
-            dist.get_rank(),
+            "flow.env.get_world_size() >>>>> ",
+            flow.env.get_world_size(),
+            "flow.env.get_rank() >>>>>",
+            flow.env.get_rank(),
         )
         if rank >= num_replicas or rank < 0:
             raise ValueError(
@@ -125,12 +124,9 @@ class DistributedSampler(Sampler[T_co]):
     def __iter__(self) -> Iterator[T_co]:
         if self.shuffle:
             # deterministically shuffle based on epoch and seed
-            # TODO:replace with flow.randperm
             g = flow.Generator()
             g.manual_seed(self.seed + self.epoch)
-            # indices = flow.randperm(len(self.dataset), generator=g).tolist()
-            indices = np.random.permutation(len(self.dataset)).tolist()
-
+            indices = flow.randperm(len(self.dataset), generator=g).tolist()
         else:
             indices = list(range(len(self.dataset)))
 

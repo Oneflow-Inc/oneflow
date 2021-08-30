@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from oneflow.support.blocking import BlockingInfoContext
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op, Tensor
 from oneflow.nn.module import Module
@@ -31,22 +32,20 @@ class ToConsistent(Module):
         self.sbp = sbp
 
     def forward(self, x, sbp, placement):
-        return flow.F.to_consistent(x, placement=placement, sbp=sbp)
+        return flow._C.to_consistent(x, placement=placement, sbp=sbp)
 
 
 @register_tensor_op("to_consistent")
-def to_consistent_op(
-    input, placement=None, sbp=None, identity_grad=False, grad_sbp=None
-):
+def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
     """Cast a local tensor to consistent tensor or cast a
-    consistent tensor to another consistent tensor with 
+    consistent tensor to another consistent tensor with
     different sbp or placement
 
 
     Args:
         input (Tensor): the input tensor.
-        placement (flow.placement, optional) – the desired placement of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own placement.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional) – the desired sbp descriptor of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
+        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own placement.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
 
     For example:
 
@@ -90,9 +89,6 @@ def to_consistent_op(
 
         grad_sbp = _check_sbp(grad_sbp)
 
-        if identity_grad is True and grad_sbp is not None:
-            raise ValueError("If identity_grad is True, grad_sbp should not be set.")
-
     else:
         # local tensor to consistent tensor
         if placement is None or sbp is None:
@@ -105,8 +101,8 @@ def to_consistent_op(
 
     if grad_sbp is None:
         grad_sbp = tuple()
-
-    return flow.F.to_consistent(input, placement, sbp, identity_grad, grad_sbp)
+    with BlockingInfoContext() as ctx:
+        return flow._C.to_consistent(input, placement, sbp, grad_sbp)
 
 
 class ToLocal(Module):
@@ -114,7 +110,7 @@ class ToLocal(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.to_local(x)
+        return flow._C.to_local(x)
 
 
 @register_tensor_op("to_local")
@@ -139,4 +135,4 @@ def to_local_op(input):
         tensor([0.5, 0.6, 0.7], dtype=oneflow.float32)
     """
     assert input.is_consistent, "input must be a consistent tensor!"
-    return flow.F.to_local(input)
+    return flow._C.to_local(input)

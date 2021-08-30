@@ -217,8 +217,8 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
     // The inferred results can be retrieved by op->NdSbp4BnInOp(obn).
     JUST(op->InferNdSbpSignatureIf(nd_sbp_constraints, *parallel_desc, NdSbpInferHint4Ibn));
   }
-  auto* result =
-      new ConsistentTensorInferResult(user_op_expr.input_size(), user_op_expr.output_size());
+  auto result = std::make_unique<ConsistentTensorInferResult>(user_op_expr.input_size(),
+                                                              user_op_expr.output_size());
   auto* input_metas = result->mut_input_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.input_size(); ++i) {
     const auto& old_consistent_tensor_meta =
@@ -240,7 +240,7 @@ Maybe<void> CheckIsDeviceSupportedByOp(const ParallelDesc& parallel_desc,
     ConsistentTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
-  return std::shared_ptr<const ConsistentTensorInferResult>(result);
+  return std::shared_ptr<const ConsistentTensorInferResult>(std::move(result));
 }
 
 /* static */ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
