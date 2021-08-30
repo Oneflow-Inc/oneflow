@@ -1105,6 +1105,14 @@
   signature: "Tensor (Tensor a, Tensor b, Tensor dy, Int32 axis) => FusedBiasAddGeluGrad"
   bind_python: false
 
+- name: "fused_tril_scale_softmax_mask_scale"
+  signature: "Tensor (Tensor x, Tensor mask, Int64 diagonal, Float tril_fill_value, Float tril_scale_value, Float mask_scale_value) => FusedTrilScaleSoftmaxMaskScale"
+  bind_python: True
+
+- name: "fused_tril_scale_softmax_mask_scale_grad"
+  signature: "Tensor (Tensor softmax_y, Tensor dy, Tensor mask, Int64 diagonal,Float tril_scale_value,Float mask_scale_value) => FusedTrilScaleSoftmaxMaskScaleGrad"
+  bind_python: false
+
 - name: "fused_bias_add_dropout"
   signature: "Tensor (Tensor a, Tensor b, *, Float p=0.5, Int32 axis, Generator generator=None) => FusedBiasAddDropout"
   bind_python: True

@@ -854,6 +854,62 @@ class FusedBiasAddGeluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedTrilScaleSoftmaxMaskScaleFunctor {
+ public:
+  FusedTrilScaleSoftmaxMaskScaleFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("fused_tril_scale_softmax_mask_scale")
+                .Input("x")
+                .Input("mask")
+                .Output("y")
+                .Output("softmax_y")
+                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mask, 
+                           const int64_t& diagonal,
+                           const float& tril_fill_value,
+                           const float& tril_scale_value,
+                           const float& mask_scale_value) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<int32_t>("tril_fill_value", tril_fill_value));
+    JUST(attrs.SetAttr<int32_t>("tril_scale_value", tril_scale_value));
+    JUST(attrs.SetAttr<int32_t>("mask_scale_value", mask_scale_value));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedTrilScaleSoftmaxMaskScaleGradFunctor {
+ public:
+  FusedTrilScaleSoftmaxMaskScaleGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_tril_scale_softmax_mask_scale_grad")
+                         .Input("softmax_y")
+                         .Input("dy")
+                         .Input("mask")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& softmax_y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask,
+                           const int64_t& diagonal,
+                           const float& tril_scale_value,
+                           const float& mask_scale_value) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    JUST(attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
+    JUST(attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y, dy, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FusedBiasAddDropoutFunctor {
  public:
   FusedBiasAddDropoutFunctor() {
@@ -972,6 +1028,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
+  m.add_functor<impl::FusedTrilScaleSoftmaxMaskScaleFunctor>("FusedTrilScaleSoftmaxMaskScale");
+  m.add_functor<impl::FusedTrilScaleSoftmaxMaskScaleGradFunctor>("FusedTrilScaleSoftmaxMaskScaleGrad");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
 };
