@@ -42,7 +42,7 @@ class Error final {
   static Error ProtoParseFailedError();
   static Error JobSetEmptyError();
   static Error DeviceTagNotFoundError();
-  static Error ValueError(const std::string& error_summary);
+  static Error InvalidValueError(const std::string& error_summary);
   static Error IndexError();
   static Error TypeError();
   static Error TimeoutError();
@@ -63,8 +63,8 @@ class Error final {
   static Error BlobSplitAxisInferError();
   static Error UnknownJobBuildAndInferError();
   static Error CheckFailedError();
-  static Error Todo();
-  static Error Unimplemented();
+  static Error TodoError();
+  static Error UnimplementedError();
   static Error RuntimeError();
   static Error BoxingNotSupportedError();
   static Error MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
@@ -78,12 +78,12 @@ class Error final {
   static Error RwMutexedObjectNotFoundError();
 
   // gradient
-  static Error GradientFunctionNotFound();
+  static Error GradientFunctionNotFoundError();
 
   // symbol
-  static Error SymbolIdUninitialized();
+  static Error SymbolIdUninitializedError();
 
-  static Error CompileOptionWrong();
+  static Error CompileOptionWrongError();
 
   static Error InputDeviceNotMatchError();
 

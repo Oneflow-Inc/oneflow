@@ -44,7 +44,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   } else if (like) {
     output_num_axes = like->shape().NumAxes();
   } else {
-    throw Error::Unimplemented();
+    throw Error::UnimplementedError();
   }
   CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
 
