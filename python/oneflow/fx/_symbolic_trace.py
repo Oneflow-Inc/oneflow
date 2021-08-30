@@ -164,7 +164,7 @@ class Tracer(TracerBase):
                 Python modules whose functions should be wrapped automatically
                 without needing to use fx.wrap().
 
-            autowrap_function (Tuple[Callable, ...]): defaults to `()`,
+            autowrap_functions (Tuple[Callable, ...]): defaults to `()`,
                 Python functions that should be wrapped automatically without
                 needing to use fx.wrap().
 
@@ -231,6 +231,7 @@ class Tracer(TracerBase):
         # module hierarchy, so it can never create parameter references.
         # The default tracer adds the ability to refer to parameters when
         # tracing modules.
+
         if isinstance(a, oneflow.nn.Parameter):
             for n, p in self.root.named_parameters():
                 if a is p:
@@ -532,8 +533,10 @@ class Tracer(TracerBase):
             # allow duplicate patches to support the case of nested calls
             patcher.patch_method(oneflow.nn.Module, "__getattr__", module_getattr_wrapper, deduplicate=False)
             patcher.patch_method(oneflow.nn.Module, "__call__", module_call_wrapper, deduplicate=False)
+
             _patch_wrapped_functions(patcher)
             _autowrap_check(patcher, fn_globals, self._autowrap_function_ids)
+            
             for module in self._autowrap_search:
                 _autowrap_check(patcher, module.__dict__, self._autowrap_function_ids)
             self.create_node('output', 'output', (self.create_arg(fn(*args)),), {},
@@ -551,7 +554,7 @@ _wrapped_fns_to_patch : List[Tuple[dict, str]] = []
 # this currently only works for Tensor.* methods that aren't traced properly
 _wrapped_methods_to_patch : List[Tuple[type, str]] = []
 
-# TODO(bbuf) confirm it in oneflow
+# TODO(BBuf) confirm it in oneflow
 if os.environ.get("FX_PATCH_GETITEM") == "1":
     # This change is needed to trace models like PositionalEmbedding from BERT:
     # https://github.com/pytorch/benchmark/blob/master/torchbenchmark/models/BERT_pytorch/bert_pytorch/model/embedding/position.py
@@ -559,6 +562,12 @@ if os.environ.get("FX_PATCH_GETITEM") == "1":
     # https://github.com/pytorch/pytorch/issues/50710
     # once that is fixed we can make this the default behavior.
     _wrapped_methods_to_patch.append((oneflow.Tensor, "__getitem__"))
+
+oneflow_funcs = ['topk', 'sum']
+
+for funcs_name in oneflow_funcs:
+    _wrapped_methods_to_patch.append((oneflow, funcs_name))
+
 
 def _find_proxy(*objects_to_search):
     """
@@ -574,6 +583,24 @@ def _find_proxy(*objects_to_search):
 
     map_aggregate(objects_to_search, find_proxy)
     return proxy
+
+def _create_wrapped_func(orig_fn):
+    @functools.wraps(orig_fn)
+    def wrapped(*args, **kwargs):
+        """
+        Given an closed-over ``orig_function`` to invoke, search the args and kwargs for
+        a Proxy object. If there is one, emit a ``call_function`` node to preserve the
+        call to this leaf function directly. Otherwise, just return the results of
+        this function call, as this function is not being traced.
+        """
+        proxy = _find_proxy(args, kwargs)
+        if proxy is not None:
+            return_proxy = proxy.tracer.create_proxy('call_function', orig_fn, args, kwargs)
+            return_proxy.node.meta['is_wrapped'] = True
+            return return_proxy
+        return orig_fn(*args, **kwargs)
+
+    return wrapped
 
 def _create_wrapped_method(cls, name):
     orig_fn = getattr(cls, name)
@@ -706,7 +733,7 @@ def wrap(fn_or_name : Union[str, Callable]):
         def my_custom_function(x, y):
             return x * x + y * y
 
-        torch.fx.wrap('my_custom_function')
+        flow.fx.wrap('my_custom_function')
 
         def fn_to_be_traced(x, y):
             # When symbolic tracing, the below call to my_custom_function will be inserted into
@@ -716,7 +743,7 @@ def wrap(fn_or_name : Union[str, Callable]):
     This function can also equivalently be used as a decorator::
 
         # foo/bar/baz.py
-        @torch.fx.wrap
+        @flow.fx.wrap
         def my_custom_function(x, y):
             return x * x + y * y
 
@@ -751,6 +778,7 @@ def wrap(fn_or_name : Union[str, Callable]):
     # semantics would be slightly different, but would add support `from x import wrapped_function`
     _wrapped_fns_to_patch.append((f.f_globals, fn_name))
     return fn_or_name
+
 
 def symbolic_trace(root : Union[oneflow.nn.Module, Callable], concrete_args: Optional[Dict[str, Any]] = None,
                    enable_cpatching: bool = False) -> GraphModule:

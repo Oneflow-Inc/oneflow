@@ -906,7 +906,7 @@ class Graph:
             Returns: the global name that should be used to reference 'obj' in generated source.
             """
             if (
-                _is_from_torch(obj) and obj != torch.device
+                _is_from_flow(obj) and obj != oneflow.device
             ):  # to support registering torch.device
                 # HACK: workaround for how torch custom ops are registered. We
                 # can't import them like normal modules so they must retain their
@@ -1085,7 +1085,7 @@ class Graph:
             orig_args = free_vars
 
         if len(wrapped_fns) > 0:
-            wrap_name = add_global("wrap", torch.fx.wrap)
+            wrap_name = add_global("wrap", oneflow.fx.wrap)
             wrap_stmts = "\n".join([f'{wrap_name}("{name}")' for name in wrapped_fns])
         else:
             wrap_stmts = ""
