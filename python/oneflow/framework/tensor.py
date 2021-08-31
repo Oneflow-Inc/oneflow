@@ -225,6 +225,8 @@ def _rmul(self, other):
 def _add(self, other):
     return flow.add(self, other)
 
+def _add_inplace(self, other):
+    return flow.add(self, other, inplace=True)
 
 def _iadd(self, other):
     return self.add_(other)
@@ -318,6 +320,9 @@ def _diag(self, diagonal=0):
 
 def _log1p(self):
     return flow.log1p(self)
+
+def _reciprocal(self):
+    return flow.reciprocal(self)
 
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
@@ -516,7 +521,12 @@ def RegisterMethods():
     Tensor.cast = _cast
     Tensor.diag = _diag
     Tensor.log1p = _log1p
-
+    Tensor.add = _add
+    Tensor.add_ = _add_inplace
+    Tensor.div = _truediv
+    Tensor.mul = _mul
+    Tensor.reciprocal = _reciprocal
+    Tensor.sub = _sub
 
 def register_tensor_op(op_name):
     def set_tensor_op(method):

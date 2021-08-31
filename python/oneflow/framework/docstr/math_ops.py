@@ -40,6 +40,187 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.add,
+    r"""Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
+    The formula is:
+
+    .. math::
+        out = input + other
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        # element-wise add
+        >>> x = flow.Tensor(np.random.randn(2,3))
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.add(x, y).numpy()
+        >>> out.shape
+        (2, 3)
+
+        # scalar add
+        >>> x = 5
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.add(x, y).numpy()
+        >>> out.shape
+        (2, 3)
+
+        # broadcast add
+        >>> x = flow.Tensor(np.random.randn(1,1))
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.add(x, y).numpy()
+        >>> out.shape
+        (2, 3)
+
+    """
+)
+
+add_docstr(
+    oneflow.div,
+    r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
+    The formula is:
+
+    .. math::
+        out = \\frac{input}{other}
+    
+    Args:
+        input (Union[int, float, flow.Tensor]): input.
+        other (Union[int, float, flow.Tensor]): other.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        # element-wise divide
+        >>> input = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.div(input,other).numpy()
+        >>> out.shape
+        (2, 3)
+
+        # scalar divide
+        >>> input = 5
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.div(input,other).numpy()
+        >>> out.shape
+        (2, 3)
+
+        # broadcast divide
+        >>> input = flow.Tensor(np.random.randn(1,1))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.div(input,other).numpy()
+        >>> out.shape 
+        (2, 3)
+
+    """
+)
+
+add_docstr(
+    oneflow.mul,
+    r"""Computes the multiplication of input by other for each element, scalar and broadcast promotation are supported.
+    
+    The formula is:
+
+    .. math::
+        out = input \\times other
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        # element-wise multiply
+        >>> input = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.mul(input,other).numpy()
+        >>> out.shape
+        (2, 3)
+
+        # scalar mutiply
+        >>> input = 5
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.mul(input,other).numpy()
+        >>> out.shape
+        (2, 3)
+
+        # broadcast mutiply
+        >>> input = flow.Tensor(np.random.randn(1,1))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.mul(input,other).numpy()
+        >>> out.shape 
+        (2, 3)
+
+    """
+)
+
+add_docstr(
+    oneflow.reciprocal,
+    r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will
+    be also set to zero.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
+        >>> out = flow.reciprocal(x)
+        >>> out.numpy()
+        array([[1.        , 0.5       , 0.33333334],
+               [0.25      , 0.2       , 0.16666667]], dtype=float32)
+    """
+)
+
+add_docstr(
+    oneflow.sub,
+    r"""Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
+    The formula is:
+
+    .. math::
+        out = input - other
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        # element-wise subtract
+        >>> input = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.sub(input,other).numpy()
+        >>> out.shape
+        (2, 3)
+
+        # scalar subtract
+        >>> input = 5
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.sub(input,other).numpy()
+        >>> out.shape
+        (2, 3)
+
+        # broadcast subtract
+        >>> input = flow.Tensor(np.random.randn(1,1))
+        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.sub(input,other).numpy()
+        >>> out.shape
+        (2, 3)
+
+    """
+)
+
+add_docstr(
     oneflow.log1p,
     r"""Returns a new tensor with the natural logarithm of (1 + input).
 

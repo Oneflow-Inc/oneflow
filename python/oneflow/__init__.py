@@ -81,7 +81,11 @@ from oneflow._C import ones_like
 from oneflow._C import zeros_like
 from oneflow._C import diag
 from oneflow._C import log1p
-
+from oneflow._C import add
+from oneflow._C import div
+from oneflow._C import mul
+from oneflow._C import reciprocal_no_nan as reciprocal
+from oneflow._C import sub
 
 from . import sbp
 import atexit
@@ -230,14 +234,14 @@ from oneflow.nn.modules.tensor_ops import negative_op as neg
 from oneflow.nn.modules.tensor_ops import negative_op as negative
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
-
 from oneflow.nn.modules.masked_fill import masked_fill_op as masked_fill
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
-from oneflow.nn.modules.math_ops import _add as add
-from oneflow.nn.modules.math_ops import _div as div
-from oneflow.nn.modules.math_ops import _mul as mul
-from oneflow.nn.modules.math_ops import _reciprocal as reciprocal
-from oneflow.nn.modules.math_ops import _sub as sub
+
+
+
+
+
+
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import arcsin_op as arcsin
 from oneflow.nn.modules.math_ops import arcsinh_op as arcsinh
