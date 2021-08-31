@@ -28,20 +28,20 @@ from test_util import GenArgList
 def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
     test_case, in_device, out_device
 ):
-    if flow.distributed.get_rank() == 0:
+    if flow.env.get_rank() == 0:
         np_arr = np.array(
             [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 1:
+    elif flow.env.get_rank() == 1:
         np_arr = np.array(
             [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
             dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 2:
+    elif flow.env.get_rank() == 2:
         np_arr = np.array(
             [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 3:
+    elif flow.env.get_rank() == 3:
         np_arr = np.array(
             [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
         )
@@ -52,14 +52,14 @@ def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
     new_placement = flow.placement(out_device, {0: [2, 3]})
     y = x.to_consistent(new_placement, flow.sbp.split(1))
     test_case.assertTrue(y.placement, new_placement)
-    if flow.distributed.get_rank() == 2:
+    if flow.env.get_rank() == 2:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
                 np.array([[6, 16], [9, 17], [7, 13], [12, 16],], dtype=np.float32,),
             )
         )
-    if flow.distributed.get_rank() == 3:
+    if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
@@ -71,20 +71,20 @@ def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
 def _test_eager_boxing_with_non_overlapping_placement_b_to_s1(
     test_case, in_device, out_device
 ):
-    if flow.distributed.get_rank() == 0:
+    if flow.env.get_rank() == 0:
         np_arr = np.array(
             [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 1:
+    elif flow.env.get_rank() == 1:
         np_arr = np.array(
             [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
             dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 2:
+    elif flow.env.get_rank() == 2:
         np_arr = np.array(
             [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 3:
+    elif flow.env.get_rank() == 3:
         np_arr = np.array(
             [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
         )
@@ -95,14 +95,14 @@ def _test_eager_boxing_with_non_overlapping_placement_b_to_s1(
     new_placement = flow.placement(out_device, {0: [2, 3]})
     y = x.to_consistent(new_placement, flow.sbp.split(1))
     test_case.assertTrue(y.placement, new_placement)
-    if flow.distributed.get_rank() == 2:
+    if flow.env.get_rank() == 2:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
                 np.array([[4, 6], [6, 8], [3, 7], [6, 8],], dtype=np.float32,),
             )
         )
-    if flow.distributed.get_rank() == 3:
+    if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
@@ -114,20 +114,20 @@ def _test_eager_boxing_with_non_overlapping_placement_b_to_s1(
 def _test_eager_boxing_with_non_overlapping_placement_s0_to_s1(
     test_case, in_device, out_device
 ):
-    if flow.distributed.get_rank() == 0:
+    if flow.env.get_rank() == 0:
         np_arr = np.array(
             [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 1:
+    elif flow.env.get_rank() == 1:
         np_arr = np.array(
             [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
             dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 2:
+    elif flow.env.get_rank() == 2:
         np_arr = np.array(
             [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 3:
+    elif flow.env.get_rank() == 3:
         np_arr = np.array(
             [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
         )
@@ -138,7 +138,7 @@ def _test_eager_boxing_with_non_overlapping_placement_s0_to_s1(
     new_placement = flow.placement(out_device, {0: [2, 3]})
     y = x.to_consistent(new_placement, flow.sbp.split(1))
     test_case.assertTrue(y.placement, new_placement)
-    if flow.distributed.get_rank() == 2:
+    if flow.env.get_rank() == 2:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
@@ -148,7 +148,7 @@ def _test_eager_boxing_with_non_overlapping_placement_s0_to_s1(
                 ),
             )
         )
-    if flow.distributed.get_rank() == 3:
+    if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
@@ -172,20 +172,20 @@ def _test_eager_boxing_with_non_overlapping_placement_s0_to_s1(
 def _test_eager_boxing_with_non_overlapping_placement_s1_to_s1(
     test_case, in_device, out_device
 ):
-    if flow.distributed.get_rank() == 0:
+    if flow.env.get_rank() == 0:
         np_arr = np.array(
             [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 1:
+    elif flow.env.get_rank() == 1:
         np_arr = np.array(
             [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
             dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 2:
+    elif flow.env.get_rank() == 2:
         np_arr = np.array(
             [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 3:
+    elif flow.env.get_rank() == 3:
         np_arr = np.array(
             [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
         )
@@ -197,7 +197,7 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s1(
     new_placement = flow.placement(out_device, {0: [2, 3]})
     z = y.to_consistent(new_placement, flow.sbp.split(1))
     test_case.assertTrue(y.placement, new_placement)
-    if flow.distributed.get_rank() == 2:
+    if flow.env.get_rank() == 2:
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
@@ -207,7 +207,7 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s1(
                 ),
             )
         )
-    if flow.distributed.get_rank() == 3:
+    if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
@@ -231,20 +231,20 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s1(
 def _test_eager_boxing_with_non_overlapping_placement_s1_to_s0(
     test_case, in_device, out_device
 ):
-    if flow.distributed.get_rank() == 0:
+    if flow.env.get_rank() == 0:
         np_arr = np.array(
             [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 1:
+    elif flow.env.get_rank() == 1:
         np_arr = np.array(
             [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
             dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 2:
+    elif flow.env.get_rank() == 2:
         np_arr = np.array(
             [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 3:
+    elif flow.env.get_rank() == 3:
         np_arr = np.array(
             [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
         )
@@ -256,7 +256,7 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s0(
     new_placement = flow.placement(out_device, {0: [2, 3]})
     z = y.to_consistent(new_placement, flow.sbp.split(0))
     test_case.assertTrue(y.placement, new_placement)
-    if flow.distributed.get_rank() == 2:
+    if flow.env.get_rank() == 2:
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
@@ -271,7 +271,7 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s0(
                 ),
             )
         )
-    if flow.distributed.get_rank() == 3:
+    if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
@@ -291,20 +291,20 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s0(
 def _test_eager_boxing_with_non_overlapping_placement_s1_to_b(
     test_case, in_device, out_device
 ):
-    if flow.distributed.get_rank() == 0:
+    if flow.env.get_rank() == 0:
         np_arr = np.array(
             [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 1:
+    elif flow.env.get_rank() == 1:
         np_arr = np.array(
             [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
             dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 2:
+    elif flow.env.get_rank() == 2:
         np_arr = np.array(
             [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 3:
+    elif flow.env.get_rank() == 3:
         np_arr = np.array(
             [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
         )
@@ -316,7 +316,7 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_b(
     new_placement = flow.placement(out_device, {0: [2, 3]})
     z = y.to_consistent(new_placement, flow.sbp.split(0))
     test_case.assertTrue(y.placement, new_placement)
-    if flow.distributed.get_rank() == 2:
+    if flow.env.get_rank() == 2:
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
@@ -335,7 +335,7 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_b(
                 ),
             )
         )
-    if flow.distributed.get_rank() == 3:
+    if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
@@ -359,20 +359,20 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_b(
 def _test_eager_boxing_with_non_overlapping_placement_s1_to_b(
     test_case, in_device, out_device
 ):
-    if flow.distributed.get_rank() == 0:
+    if flow.env.get_rank() == 0:
         np_arr = np.array(
             [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 1:
+    elif flow.env.get_rank() == 1:
         np_arr = np.array(
             [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
             dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 2:
+    elif flow.env.get_rank() == 2:
         np_arr = np.array(
             [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
         )
-    elif flow.distributed.get_rank() == 3:
+    elif flow.env.get_rank() == 3:
         np_arr = np.array(
             [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
         )
@@ -384,7 +384,7 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_b(
     new_placement = flow.placement(out_device, {0: [2, 3]})
     z = y.to_consistent(new_placement, flow.sbp.split(0))
     test_case.assertTrue(y.placement, new_placement)
-    if flow.distributed.get_rank() == 2:
+    if flow.env.get_rank() == 2:
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
@@ -403,7 +403,7 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_b(
                 ),
             )
         )
-    if flow.distributed.get_rank() == 3:
+    if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),

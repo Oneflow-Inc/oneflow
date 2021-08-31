@@ -104,9 +104,7 @@ Maybe<one::Tensor> NcclP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
-  const auto& ret = JUST(one::functional::ConsistentAllReduce(tensor));
-  LOG(ERROR) << ret->shape()->ToString();
-  return ret;
+  return JUST(one::functional::ConsistentAllReduce(tensor));
 }
 
 Maybe<one::Tensor> NcclP2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -145,11 +143,7 @@ Maybe<one::Tensor> NcclS2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
-  LOG(ERROR) << "NcclS2S";
-  LOG(ERROR) << "NcclS2S: " << *JUST(PlacementToString(tensor_placement));
-  const auto& ret = JUST(one::functional::ConsistentS2S(tensor, *JUST(GetSbpList(out->nd_sbp()))));
-  LOG(ERROR) << "NcclS2S end";
-  return ret;
+  return JUST(one::functional::ConsistentS2S(tensor, *JUST(GetSbpList(out->nd_sbp()))));
 }
 
 COMMAND(RegisterBoxingFunction("nccl-p-to-b", CheckNcclP2B, &NcclP2B));

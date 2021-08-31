@@ -30,7 +30,6 @@ extern Maybe<BoxingDividor> (*InPlacementAndSplit)();
 extern Maybe<BoxingDividor> (*OutPlacementAndSplit)();
 extern Maybe<BoxingDividor> (*InSingleDevice)();
 extern Maybe<BoxingDividor> (*OutSingleDevice)();
-extern Maybe<BoxingDividor> (*InOutPlacementAndBroadcast)();
 
 }  // namespace oneflow
 

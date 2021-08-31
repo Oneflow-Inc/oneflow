@@ -220,41 +220,4 @@ Maybe<BoxingDividor> RawOutSingleDevice() {
 
 decltype(InSingleDevice) InSingleDevice = DECORATE(&RawInSingleDevice, ThreadLocal);
 decltype(OutSingleDevice) OutSingleDevice = DECORATE(&RawOutSingleDevice, ThreadLocal);
-
-namespace {
-
-Maybe<Symbol<ParallelDesc>> GetCombinePlacement(Symbol<ParallelDesc> in_placement,
-                                                Symbol<ParallelDesc> out_placement) {
-  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
-  int64_t in_machine_id = JUST(in_placement->MachineId4ParallelId(0));
-  int64_t in_device_id = JUST(in_placement->DeviceId4ParallelId(0));
-  parallel_conf->set_device_tag(in_placement->device_tag());
-  parallel_conf->add_device_name(std::string("@") + std::to_string(in_machine_id) + ":"
-                                 + std::to_string(in_device_id));
-  int64_t out_machine_id = JUST(out_placement->MachineId4ParallelId(0));
-  int64_t out_device_id = JUST(out_placement->DeviceId4ParallelId(0));
-  parallel_conf->add_device_name(std::string("@") + std::to_string(out_machine_id) + ":"
-                                 + std::to_string(out_device_id));
-  std::shared_ptr<ParallelDesc> parallel_desc;
-  JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-    parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-    return Maybe<void>::Ok();
-  }));
-  return SymbolOf(*parallel_desc);
-}
-
-Maybe<BoxingDividor> RawInOutPlacementAndBroadcast() {
-  return std::make_shared<BoxingDividor>(
-      "InOutPlacementAndBroadcast",
-      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
-        return PlacedNdSbp::New(
-            JUST(CachedGetAllBroadcastNdSbp(out->nd_sbp()->sbp_parallel_size())),
-            JUST(GetCombinePlacement(in->placement(), out->placement())));
-      });
-}
-
-}  // namespace
-
-decltype(InOutPlacementAndBroadcast) InOutPlacementAndBroadcast =
-    DECORATE(&RawInOutPlacementAndBroadcast, ThreadLocal);
 }  // namespace oneflow

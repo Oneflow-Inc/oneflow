@@ -243,7 +243,6 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    LOG(ERROR) << "EagerNcclS2SKernel";
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
     // NOTE(hanbinbin): Compute logic copy from _nccl_logical_s2s
@@ -348,7 +347,6 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
           perm, unpack_from_shape.elem_cnt(), reinterpret_cast<const T*>(unpack_from_ptr),
           out->mut_dptr<T>());
     }
-    LOG(ERROR) << "EagerNcclS2SKernel end";
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
