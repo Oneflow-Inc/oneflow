@@ -12,4 +12,5 @@ Base class for running neural networks in Graph Mode.
             name,
             training,
             debug,
+            __repr__,
     :member-order: bysource
