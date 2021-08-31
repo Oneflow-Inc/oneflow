@@ -47,7 +47,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.gelu,
+    oneflow.gelu,
     r"""
     gelu(x: Tensor) -> Tensor 
 
@@ -66,7 +66,7 @@ add_docstr(
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
 
-        >>> out = flow._C.gelu(input)
+        >>> out = flow.gelu(input)
         >>> out
         tensor([-0.1543,  0.0000,  0.3457], dtype=oneflow.float32)
 

@@ -21,3 +21,4 @@ from .activation import *
 from .dropout import *
 from .vision import *
 from .onehot import *
+from .comparison import *

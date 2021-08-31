@@ -183,6 +183,62 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.sinh,
+    r"""Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\sinh(\\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x1 = flow.Tensor(np.array([1, 2, 3]))
+        >>> x2 = flow.Tensor(np.array([1.53123589,0.54242598,0.15117185]))
+        >>> x3 = flow.Tensor(np.array([1,0,-1]))
+
+        >>> flow.sinh(x1).numpy()
+        array([ 1.1752012,  3.6268604, 10.017875 ], dtype=float32)
+        >>> flow.sinh(x2).numpy()
+        array([2.20381  , 0.5694193, 0.1517483], dtype=float32)
+        >>> flow.sinh(x3).numpy()
+        array([ 1.1752012,  0.       , -1.1752012], dtype=float32)
+
+    """
+)
+
+add_docstr(
+    oneflow.tan,
+    r"""Returns  the tan value of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\tan(\\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> np_arr = np.array([-1/4*np.pi, 0, 1/4*np.pi]).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> output = flow.tan(input)
+        >>> output
+        tensor([-1.,  0.,  1.], dtype=oneflow.float32)
+
+    """
+)
+
+add_docstr(
     oneflow._C.sin,
     r"""
     sin(x: Tensor) -> Tensor

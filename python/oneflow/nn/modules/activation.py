@@ -352,40 +352,6 @@ class GELU(Module):
         return flow._C.gelu(x)
 
 
-@register_tensor_op("gelu")
-def gelu_op(x):
-    """Gelu activation operator.
-
-    The equation is:
-
-    .. math::
-        out = 0.5 * x * (1 + tanh(\\sqrt{\\frac{2}{\\pi}} * (x + 0.044715x^{3})))
-
-    Args:
-        x (oneflow.Tensor): Input Tensor
-
-    Returns:
-        oneflow.Tensor: A Tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        >>> input = flow.Tensor(x)
-        >>> gelu = flow.nn.GELU()
-
-        >>> out = gelu(input)
-        >>> out
-        tensor([-0.1543,  0.0000,  0.3457], dtype=oneflow.float32)
-
-    """
-    return GELU()(x)
-
-
 class Sigmoid(Module):
     """Applies the element-wise function:
 

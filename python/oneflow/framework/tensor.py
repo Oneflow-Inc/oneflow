@@ -199,23 +199,23 @@ def is_nonzero(input):
 
 
 def _gt(self, other):
-    return self.gt(other)
+    return flow.gt(self, other)
 
 
 def _lt(self, other):
-    return self.lt(other)
+    return flow.lt(self, other)
 
 
 def _ge(self, other):
-    return self.ge(other)
+    return flow.ge(self, other)
 
 
 def _le(self, other):
-    return self.le(other)
+    return flow.le(self, other)
 
 
 def _mul(self, other):
-    return self.mul(other)
+    return flow.mul(self, other)
 
 
 def _rmul(self, other):
@@ -223,7 +223,7 @@ def _rmul(self, other):
 
 
 def _add(self, other):
-    return self.add(other)
+    return flow.add(self, other)
 
 
 def _iadd(self, other):
@@ -231,11 +231,11 @@ def _iadd(self, other):
 
 
 def _radd(self, other):
-    return self.add(other)
+    return flow.add(self, other)
 
 
 def _sub(self, other):
-    return self.sub(other)
+    return flow.sub(self, other)
 
 
 def _rsub(self, other):
@@ -243,7 +243,7 @@ def _rsub(self, other):
 
 
 def _truediv(self, other):
-    return self.div(other)
+    return flow.div(self, other)
 
 
 def _rtruediv(self, other):
@@ -282,6 +282,15 @@ def _arctanh(self):
 
 def _sign(self):
     return flow.sign(self)
+
+def _sinh(self):
+    return flow.sinh(self)
+
+def _tan(self):
+    return flow.tan(self)
+
+def _gelu(self):
+    return flow.gelu(self)
 
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
@@ -466,6 +475,12 @@ def RegisterMethods():
     Tensor.atanh = _atanh
     Tensor.arctanh = _arctanh
     Tensor.sign = _sign
+    Tensor.sinh = _sinh
+    Tensor.tan = _tan
+    Tensor.gt = _gt
+    Tensor.ge = _ge
+    Tensor.gelu = _gelu
+
 
 
 def register_tensor_op(op_name):

@@ -63,6 +63,14 @@ from oneflow._C import acosh as arccosh
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
 from oneflow._C import sign
+from oneflow._C import sinh
+from oneflow._C import tan
+from oneflow._C import greater
+from oneflow._C import greater as gt
+from oneflow._C import greater_equal
+from oneflow._C import greater_equal as ge
+from oneflow._C import gelu
+
 
 from . import sbp
 import atexit
@@ -153,16 +161,7 @@ import oneflow.framework.docstr as docstr
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
-
-
-
-
 from oneflow.nn.modules.trigonometric_ops import atan2_op as atan2
-from oneflow.nn.modules.trigonometric_ops import sinh_op as sinh
-from oneflow.nn.modules.trigonometric_ops import tan_op as tan
-from oneflow.nn.modules.comparison import greater_op as greater
-from oneflow.nn.modules.comparison import greater_equal_op as greater_equal
-
 
 from oneflow.framework.check_point_v2 import Load as load
 from oneflow.framework.check_point_v2 import save
@@ -182,7 +181,6 @@ from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import tensor as tensor
 from oneflow.framework.tensor import is_nonzero
 
-from oneflow.nn.modules.activation import gelu_op as gelu
 from oneflow.nn.modules.activation import mish_op as mish
 from oneflow.nn.modules.activation import sigmoid_op as sigmoid
 from oneflow.nn.modules.activation import softmax_op as softmax
@@ -220,8 +218,6 @@ from oneflow.nn.modules.gather import gather_op as gather
 from oneflow.nn.modules.gather import gather_nd_op as gather_nd
 from oneflow.nn.modules.comparison import eq_op as eq
 from oneflow.nn.modules.comparison import eq_op as equal
-from oneflow.nn.modules.comparison import greater_op as gt
-from oneflow.nn.modules.comparison import greater_equal_op as ge
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
