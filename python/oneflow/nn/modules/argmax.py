@@ -30,22 +30,22 @@ class Argmax(Module):
 
     def forward(self, input):
         if self.dim == None:
-            input = flow.F.flatten(input)
+            input = flow._C.flatten(input)
             self.dim = 0
         num_axes = len(input.shape)
         axis = self.dim if self.dim >= 0 else self.dim + num_axes
         assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
-            x = flow.F.argmax(input)
+            x = flow._C.argmax(input)
             if self.keepdim == True:
                 x = flow.unsqueeze(x, -1)
             return x
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = flow.F.transpose(input, perm=perm)
-            x = flow.F.argmax(x)
+            x = flow._C.transpose(input, perm=perm)
+            x = flow._C.argmax(x)
             x = flow.unsqueeze(x, -1)
-            x = flow.F.transpose(x, perm=get_inversed_perm(perm))
+            x = flow._C.transpose(x, perm=get_inversed_perm(perm))
             if self.keepdim == False:
                 x = x.squeeze(dim=[axis])
             return x
