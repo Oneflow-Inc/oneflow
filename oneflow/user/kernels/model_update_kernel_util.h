@@ -91,6 +91,19 @@ struct AdamUpdateFunctor {
 };
 
 template<typename T, typename G>
+struct AdagradUpdateFunctor{
+  OF_DEVICE_FUNC 
+  void operator()(const G* model_diff, T* model, T* sum, T scale, float l1, float l2, float epsilon, float weight_decay, 
+  float learning_rate){
+    const T model_val = *model; 
+    T model_diff_t = CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2); 
+    const T next_sum = *sum + model_diff_t * model_diff_t; 
+    *sum = next_sum; 
+    *model = model_val - learning_rate / (sqrt(next_sum) + epsilon) * model_diff_t; 
+  }
+};
+
+template<typename T, typename G>
 struct LambGradFunctor {
   OF_DEVICE_FUNC
   void operator()(const T* beta1_t, const T* beta2_t, const G* model_diff, T* adam_diff, T* model,
@@ -153,6 +166,15 @@ struct AdamUpdateKernelUtil {
                      float beta2, float epsilon, float weight_decay, float learning_rate_val,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
                      const G* model_diff, T* model, T* m, T* v);
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct AdagradUpdateKernelUtil{
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float lr_decay, 
+                     float epsilon, float weight_decay, float learning_rate_val, int32_t train_step, 
+                     const float* learning_rate, const int32_t* train_step_ptr, 
+                     const T* scale_by_ptr, const int64_t* skip_if, 
+                     const G* model_diff, T* model, T* sum);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>

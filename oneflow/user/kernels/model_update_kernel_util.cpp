@@ -195,6 +195,37 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KE
 #undef INSTANTIATE_INDEXED_SLICES_ADAM_MODEL_UPDATE_KERNEL_UTIL_CPU
 
 template<typename T, typename G>
+struct AdagradUpdateKernelUtil<DeviceType::kCPU, T, G>{
+  static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float lr_decay, 
+                     float epsilon, float weight_decay, float learning_rate_val, int32_t train_step, 
+                     const float* learning_rate, const int32_t* train_step_ptr, 
+                     const T* scale_by_ptr, const int64_t* skip_if, 
+                     const G* model_diff, T* model, T* sum);
+};
+
+template<typename T, typename G>
+void AdagradUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, 
+                     float lr_decay, float epsilon, float weight_decay, 
+                     float learning_rate_val, int32_t train_step, 
+                     const float* learning_rate, const int32_t* train_step_ptr, 
+                     const T* scale_by_ptr, const int64_t* skip_if, 
+                     const G* model_diff, T* model, T* sum){
+  if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+  if (train_step_ptr != nullptr) { train_step = *train_step_ptr; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  learning_rate_val = learning_rate_val / (1 + (train_step - 1) * lr_decay);
+
+  FOR_RANGE(int64_t, i, 0, n) {
+    AdagradUpdateFunctor<T, G>()(model_diff + i, model + i, sum + i, scale, l1, l2, 
+                                 epsilon, weight_decay, learning_rate_val);
+  }                     
+}
+
+template struct AdagradUpdateKernelUtil<DeviceType::kCPU, float, float>;
+template struct AdagradUpdateKernelUtil<DeviceType::kCPU, double, double>;
+
+template<typename T, typename G>
 struct LambUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, float scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, const float* learning_rate,
