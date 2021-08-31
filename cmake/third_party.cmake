@@ -156,10 +156,7 @@ set(oneflow_third_party_dependencies
   protobuf
   gflags
   glog
-  googletest_copy_headers_to_destination
-  googletest_copy_libs_to_destination
-  googlemock_copy_headers_to_destination
-  googlemock_copy_libs_to_destination
+  googletest
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
