@@ -65,7 +65,7 @@ struct RegstState {
 struct KernelInfo {
   std::unique_ptr<const Kernel> kernel;
   HashMap<std::string, Blob*> bn_in_op2blob;
-  std::function<Blob*(const std::string&)> BnInOp2BlobFn;
+  void* state = nullptr;
 };
 
 template<typename IndexType, int max_size>
@@ -189,22 +189,24 @@ size_t GetConsumerCount(const TaskProto& task) {
 
 template<int exec_kernel, int inplace, typename IndexType, typename RegstIndex,
          typename StateContainer>
-class LightActor : public ActorBase {
+class LightActor : public ActorBase, public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LightActor);
-  explicit LightActor(std::unique_ptr<DeviceCtx> device_ctx) {
-    device_ctx_ = std::move(device_ctx);
+  explicit LightActor(std::unique_ptr<DeviceCtx> device_ctx)
+      : thread_(nullptr), device_ctx_(std::move(device_ctx)), job_desc_(nullptr) {}
+  ~LightActor() override {
+    if (exec_kernel) { kernel_info_[0]->kernel->DestroyState(kernel_info_[0]->state); }
   }
-  ~LightActor() override = default;
 
   void Init(const JobDesc* job_desc, const TaskProto& task_proto,
             const ThreadCtx& thread_ctx) override {
+    job_desc_ = job_desc;
     task_proto_.reset(new TaskProto(task_proto));
     CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
     if (exec_kernel) {
       kernel_info_[0].reset(new KernelInfo());
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
-      kernel_info_[0]->kernel = ConstructKernel(job_desc, kernel_conf, device_ctx_.get());
+      kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
 #ifdef WITH_CUDA_GRAPHS
       auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx_.get());
       if (cuda_device_ctx != nullptr && kernel_conf.all_blobs_are_static()) {
@@ -289,7 +291,7 @@ class LightActor : public ActorBase {
   }
 
  private:
-  void InitBnInOp2BlobFn() {
+  void InitBnInOp2Blob() {
     if (exec_kernel) {
       const ExecNodeProto& node = task_proto_->exec_sequence().exec_node(0);
       for (auto& pair : node.kernel_conf().op_attribute().arg_signature().bn_in_op2lbi()) {
@@ -312,14 +314,6 @@ class LightActor : public ActorBase {
         Blob* blob = regst->GetBlobByLbi(pair.second);
         CHECK(kernel_info_[0]->bn_in_op2blob.emplace(bn, blob).second);
       }
-      kernel_info_[0]->BnInOp2BlobFn = [this](const std::string& bn) -> Blob* {
-        auto it = kernel_info_[0]->bn_in_op2blob.find(bn);
-        if (it == kernel_info_[0]->bn_in_op2blob.end()) {
-          return nullptr;
-        } else {
-          return it->second;
-        }
-      };
     }
   }
 
@@ -437,7 +431,7 @@ class LightActor : public ActorBase {
 
   inline void ActOnce() {
     if (OF_PREDICT_FALSE(sync_post_act_msgs_.empty() && async_post_act_msgs_.empty())) {
-      InitBnInOp2BlobFn();
+      InitBnInOp2Blob();
       InitActMsg();
     }
     if (exec_kernel) { LaunchKernel(); }
@@ -460,10 +454,7 @@ class LightActor : public ActorBase {
       cuda_graph_ctx_[0]->BeginCapture();
     }
 #endif
-    KernelCtx kernel_ctx;
-    kernel_ctx.device_ctx = device_ctx_.get();
-    kernel_ctx.other = nullptr;
-    kernel_info_[0]->kernel->Launch(kernel_ctx, kernel_info_[0]->BnInOp2BlobFn);
+    kernel_info_[0]->kernel->Launch(this);
 #ifdef WITH_CUDA_GRAPHS
     if (cuda_graph_ctx_[0]) {
       cuda_graph_ctx_[0]->EndCapture();
@@ -486,6 +477,37 @@ class LightActor : public ActorBase {
     }
   }
 
+  DeviceCtx* device_ctx() const override { return device_ctx_.get(); }
+
+  Blob* BnInOp2Blob(const std::string& bn) const override {
+    if (exec_kernel) {
+      auto it = kernel_info_[0]->bn_in_op2blob.find(bn);
+      if (it == kernel_info_[0]->bn_in_op2blob.end()) {
+        return nullptr;
+      } else {
+        return it->second;
+      }
+    } else {
+      return nullptr;
+    }
+  }
+
+  void* state() const override {
+    if (exec_kernel) {
+      return kernel_info_[0]->state;
+    } else {
+      return nullptr;
+    }
+  }
+
+  void set_state(void* state) override {
+    CHECK(exec_kernel);
+    CHECK(kernel_info_[0]->state == nullptr);
+    kernel_info_[0]->state = state;
+  }
+
+  const JobDesc* job_desc() const override { return job_desc_; }
+
   RegstIndex regst_desc_id_index_;
   StateContainer index2state_;
   IndexType total_reading_cnt_;
@@ -505,6 +527,7 @@ class LightActor : public ActorBase {
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   std::unique_ptr<TaskProto> task_proto_;
+  const JobDesc* job_desc_;
 };
 
 namespace {
