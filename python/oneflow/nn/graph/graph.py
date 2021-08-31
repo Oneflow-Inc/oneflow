@@ -17,6 +17,7 @@ from collections import OrderedDict
 from functools import partial
 from typing import Dict
 
+import oneflow
 import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
@@ -38,7 +39,7 @@ from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 class Graph(object):
     _child_init_cnt = dict()
 
-    def __init__(self):
+    def __init__(self, outputs_buffer_size=2):
         self._generate_name()
         self.config = GraphConfig()
         self._blocks = OrderedDict()
@@ -50,6 +51,8 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
+        self._outputs_buffer_size = outputs_buffer_size
+        self._cur_index = 0
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
@@ -220,7 +223,25 @@ class Graph(object):
             self._outputs_tensor_tuple = convert_to_tensor_tuple(
                 self._flatten_io("output", *self._eager_outputs)
             )
-            self._eager_outputs = list_to_func_return(self._eager_outputs)
+            with oneflow._oneflow_internal.lazy_mode.guard(False):
+                self._eager_outputs = list_to_func_return(self._eager_outputs)
+                #for t in self._eager_outputs:
+                #    print("t = ", t)
+                #print("nn.Graph self._eager_outputs, ", self._eager_outputs)
+                #print("nn.Graph self._outputs_tensor_tuple", self._outputs_tensor_tuple)
+                #print("cclog: self._eager_outputs len = ", len(self._eager_outputs))
+                #print("cclog: self._outputs_tensor_tuple len = ", len(self._outputs_tensor_tuple))
+                self._outputs_tensor_tuple_list = []
+                self._outputs_tensor_tuple_list.append(self._outputs_tensor_tuple)
+                for i in range(self._outputs_buffer_size - 1):
+                    tmp_outputs = []
+                    for t in self._outputs_tensor_tuple:
+                        new_t = oneflow.zeros_like(t)
+                        tmp_outputs.append(t)
+                    #print("cclog: tmp_outputs len = ", len(tmp_outputs))
+                    tmp_outputs = convert_to_tensor_tuple(tmp_outputs)
+                    self._outputs_tensor_tuple_list.append(tmp_outputs)
+                assert len(self._outputs_tensor_tuple_list) == self._outputs_buffer_size
 
             # Register input/output/variable to _c_nn_graph
             self._c_nn_graph.register_input_op_names(arg_op_names)
@@ -237,13 +258,18 @@ class Graph(object):
     def _run(self, *args):
         try:
             flattened_eager_args = self._flatten_io("input", *args)
+            eager_outputs = self._outputs_tensor_tuple_list[self._cur_index]
             # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
-                self._outputs_tensor_tuple,
+                eager_outputs,
                 self._states_tensor_tuple,
                 self._c_nn_graph,
             )
+            print("nn.Graph cur_index = ", self._cur_index)
+            self._cur_index += 1
+            if self._cur_index >= self._outputs_buffer_size:
+                self._cur_index = 0
         except:
             print(
                 "[ERROR]"
@@ -252,7 +278,12 @@ class Graph(object):
                 + sys_exc_error_msg()
             )
             raise
-        return self._eager_outputs
+        tmp_eager_outputs = []
+        #print("cclog: eager_outputs len = ", len(eager_outputs))
+        for t in eager_outputs:
+            tmp_eager_outputs.append(t.to_local().to(copy=True))
+        #print("cclog: tmp_eager_outputs len = ", len(tmp_eager_outputs))
+        return tmp_eager_outputs
 
     def __call__(self, *args):
         if not self._is_compiled:
