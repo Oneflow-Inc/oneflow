@@ -55,14 +55,15 @@ def is_deprecated(func_or_class):
     )
 
 
+from oneflow._C import abs
+from oneflow._C import exp
+
 from . import sbp
 import atexit
 
 import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
 import oneflow.framework.register_python_callback
-
-
 
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
@@ -178,7 +179,6 @@ from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import tensor as tensor
 from oneflow.framework.tensor import is_nonzero
 
-from oneflow.nn.modules.abs import abs_op as abs
 from oneflow.nn.modules.activation import gelu_op as gelu
 from oneflow.nn.modules.activation import mish_op as mish
 from oneflow.nn.modules.activation import sigmoid_op as sigmoid
@@ -209,7 +209,6 @@ from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow.nn.modules.diag import diag_op as diag
-from oneflow.nn.modules.exp import exp_op as exp
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip
