@@ -1,12 +1,9 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -64,6 +61,8 @@ import atexit
 import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
 import oneflow.framework.register_python_callback
+
+
 
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
@@ -147,21 +146,6 @@ import oneflow.framework.docstr as docstr
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
-import oneflow.nn.modules.activation
-import oneflow.nn.modules.argwhere
-import oneflow.nn.modules.bmm
-import oneflow.nn.modules.constant
-import oneflow.nn.modules.diag
-import oneflow.nn.modules.flip
-import oneflow.nn.modules.floor
-import oneflow.nn.modules.in_top_k
-import oneflow.nn.modules.masked_select
-import oneflow.nn.modules.math_ops
-import oneflow.nn.modules.nonzero
-import oneflow.nn.modules.norm
-import oneflow.nn.modules.permute
-import oneflow.nn.modules.round
-
 
 from oneflow.nn.modules.trigonometric_ops import acos_op as acos
 from oneflow.nn.modules.trigonometric_ops import acosh_op as acosh
@@ -194,15 +178,15 @@ from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import tensor as tensor
 from oneflow.framework.tensor import is_nonzero
 
-from oneflow._C import abs
-from oneflow._C import gelu
-from oneflow._C import mish
-from oneflow._C import sigmoid
-from oneflow._C import softmax
-from oneflow._C import tanh
-from oneflow._C import silu
-from oneflow._C import selu
-from oneflow._C import softsign
+from oneflow.nn.modules.abs import abs_op as abs
+from oneflow.nn.modules.activation import gelu_op as gelu
+from oneflow.nn.modules.activation import mish_op as mish
+from oneflow.nn.modules.activation import sigmoid_op as sigmoid
+from oneflow.nn.modules.activation import softmax_op as softmax
+from oneflow.nn.modules.activation import tanh_op as tanh
+from oneflow.nn.modules.activation import silu_op as silu
+from oneflow.nn.modules.activation import selu_op as selu
+from oneflow.nn.modules.activation import softsign_op as softsign
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
@@ -301,6 +285,7 @@ from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
+from oneflow.nn.modules.permute import permute_op as permute
 from oneflow.nn.modules.round import round_op as round
 from oneflow.nn.modules.scatter import _scatter_nd_op as scatter_nd
 from oneflow.nn.modules.slice import slice_op as slice

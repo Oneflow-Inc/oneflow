@@ -258,6 +258,14 @@ def _pow(self, b):
     return flow.pow(self, b)
 
 
+def _exp(self):
+    return flow.exp(self)
+
+
+def _abs(self):
+    return flow.abs(self)
+
+
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
@@ -433,6 +441,8 @@ def RegisterMethods():
     Tensor.copy_ = _copy
     Tensor.get_device = _get_device
     Tensor._meta_repr = _meta_repr
+    Tensor.abs = _abs
+    Tensor.exp = _exp
 
 
 def register_tensor_op(op_name):
