@@ -17,7 +17,7 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.F.prelu,
+    oneflow._C.prelu,
     r"""
     prelu(x: Tensor, alpha: Tensor) -> Tensor  
 
@@ -35,7 +35,7 @@ add_docstr(
 
         >>> x = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
         >>> alpha = flow.nn.Parameter(flow.Tensor(1).fill_(0.25))
-        >>> print(flow.F.prelu(x, alpha).numpy())
+        >>> print(flow._C.prelu(x, alpha).numpy())
         [[[[ 1.  -0.5]
            [ 3.   4. ]]]]
    
@@ -47,7 +47,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow.F.gelu,
+    oneflow._C.gelu,
     r"""
     gelu(x: Tensor) -> Tensor 
 
@@ -66,7 +66,7 @@ add_docstr(
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
 
-        >>> out = flow.F.gelu(input)
+        >>> out = flow._C.gelu(input)
         >>> out
         tensor([-0.1543,  0.0000,  0.3457], dtype=oneflow.float32)
 
@@ -78,7 +78,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow.F.softmax,
+    oneflow._C.softmax,
     r"""
     softmax(x: Tensor) -> Tensor 
 
@@ -91,7 +91,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.softplus,
+    oneflow._C.softplus,
     r"""
     softplus(x: Tensor) -> Tensor 
 
@@ -105,7 +105,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.F.tanh,
+    oneflow._C.tanh,
     r"""
     tanh(x: Tensor) -> Tensor 
 
@@ -119,7 +119,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.log_sigmoid,
+    oneflow._C.log_sigmoid,
     r"""
     log_sigmoid(x: Tensor) -> Tensor 
 
@@ -139,7 +139,7 @@ add_docstr(
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)     
           
-        >>> out = flow.F.log_sigmoid(input)
+        >>> out = flow._C.log_sigmoid(input)
         >>> out
         tensor([-0.9741, -0.6931, -0.4741], dtype=oneflow.float32)
 
@@ -149,7 +149,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.F.softsign,
+    oneflow._C.softsign,
     r"""
     softsign(x: Tensor) -> Tensor 
 
@@ -168,7 +168,7 @@ add_docstr(
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x) 
-        >>> out = flow.F.softsign(input)
+        >>> out = flow._C.softsign(input)
         >>> out
         tensor([0.5000, 0.6667, 0.7500], dtype=oneflow.float32)
  
@@ -179,7 +179,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow.F.silu,
+    oneflow._C.silu,
     r"""
     silu(x: Tensor) -> Tensor
 
@@ -198,7 +198,7 @@ add_docstr(
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)       
-        >>> out = flow.F.silu(input)
+        >>> out = flow._C.silu(input)
         >>> out
         tensor([0.7311, 1.7616, 2.8577], dtype=oneflow.float32)
 
@@ -209,7 +209,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow.F.mish,
+    oneflow._C.mish,
     r""" 
     mish(x: Tensor) -> Tensor 
 
@@ -229,7 +229,7 @@ add_docstr(
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)       
 
-        >>> out = flow.F.mish(input)
+        >>> out = flow._C.mish(input)
         >>> out
         tensor([0.8651, 1.9440, 2.9865], dtype=oneflow.float32)
 
@@ -240,7 +240,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow.F.relu,
+    oneflow._C.relu,
     r"""
     relu(x: Tensor, inplace: bool =False) -> Tensor
 
@@ -254,7 +254,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.hardsigmoid,
+    oneflow._C.hardsigmoid,
     r"""
     hardsigmoid(x: Tensor)-> Tensor
 
@@ -272,7 +272,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.hardswish,
+    oneflow._C.hardswish,
     r"""
     hardswish(x: Tensor)-> Tensor
 
@@ -294,7 +294,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.sigmoid,
+    oneflow._C.sigmoid,
     r"""
     sigmoid(input) -> Tensor
 
@@ -319,7 +319,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.F.hardtanh,
+    oneflow._C.hardtanh,
     r"""
     hardtanh(input, min_val=-1., max_val=1.) -> Tensor
 
@@ -329,7 +329,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.leaky_relu,
+    oneflow._C.leaky_relu,
     r"""
     leaky_relu(x: Tensor,  alpha :Float) -> Tensor
 
@@ -341,7 +341,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.elu,
+    oneflow._C.elu,
     r"""
     elu(x: Tensor, alpha :Float) -> Tensor
 
@@ -365,7 +365,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.selu,
+    oneflow._C.selu,
     r"""
     selu(x: Tensor) -> Tensor
 
