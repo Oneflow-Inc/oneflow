@@ -92,6 +92,16 @@ from oneflow._C import asinh
 from oneflow._C import asinh as arcsinh
 from oneflow._C import atan
 from oneflow._C import atan as arctan
+from oneflow._C import ceil
+from oneflow._C import clamp
+from oneflow._C import clamp as clip
+from oneflow._C import cos
+from oneflow._C import cosh
+# from oneflow.nn.modules.math_ops import erf_op as erf
+# from oneflow.nn.modules.math_ops import erfc_op as erfc
+# from oneflow.nn.modules.math_ops import expm1_op as expm1
+# from oneflow.nn.modules.math_ops import fmod_op as fmod
+# from oneflow.nn.modules.math_ops import log_op as log
 
 
 from . import sbp
@@ -250,16 +260,6 @@ from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 
 
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import ceil_op as ceil
-from oneflow.nn.modules.math_ops import clamp_op as clamp
-from oneflow.nn.modules.math_ops import clip_op as clip
-from oneflow.nn.modules.math_ops import cos_op as cos
-from oneflow.nn.modules.math_ops import cosh_op as cosh
-from oneflow.nn.modules.math_ops import erf_op as erf
-from oneflow.nn.modules.math_ops import erfc_op as erfc
-from oneflow.nn.modules.math_ops import expm1_op as expm1
-from oneflow.nn.modules.math_ops import fmod_op as fmod
-from oneflow.nn.modules.math_ops import log_op as log
 from oneflow.nn.modules.math_ops import minimum as minimum
 from oneflow.nn.modules.math_ops import maximum as maximum
 from oneflow.nn.modules.math_ops import pow_op as pow

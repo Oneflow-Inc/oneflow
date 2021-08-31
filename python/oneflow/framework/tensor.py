@@ -340,7 +340,22 @@ def _atan(self):
     return flow.atan(self)
 
 def _arctan(self):
-    return flow.arctan(self)
+    return flow.arctan(self) 
+
+def _ceil(self):
+    return flow.ceil(self)
+
+def _clamp(self, min=None, max=None):
+    return flow.clamp(self, min=min, max=max)
+
+def _clip(self, min=None, max=None):
+    return flow.clip(self, min=min, max=max)
+
+def _cos(self):
+    return flow.cos(self)
+
+def _cosh(self):
+    return flow.cosh(self)
 
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
@@ -551,6 +566,11 @@ def RegisterMethods():
     Tensor.arcsinh = _arcsinh
     Tensor.atan = _atan
     Tensor.arctan = _arctan
+    Tensor.ceil = _ceil
+    Tensor.clamp = _clamp
+    Tensor.clip = _clip
+    Tensor.cos = _cos
+    Tensor.cosh = _cosh
 
 def register_tensor_op(op_name):
     def set_tensor_op(method):
