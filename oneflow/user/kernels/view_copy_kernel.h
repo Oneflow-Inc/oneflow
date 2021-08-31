@@ -13,13 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+#ifndef ONEFLOW_USER_KERNELS_VIEW_COPY_KERNEL_H_
+#define ONEFLOW_USER_KERNELS_VIEW_COPY_KERNEL_H_
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
-
-namespace {
 
 class ViewCopyUtilParam {
  protected:
@@ -108,13 +110,6 @@ struct ViewCopyUtil : ViewCopyUtilBase {
   void operator()();
 };
 
-template<>
-void ViewCopyUtil<DeviceType::kCPU>::operator()();
-
-#ifdef WITH_CUDA
-template<>
-void ViewCopyUtil<DeviceType::kGPU>::operator()();
-#endif
-
-}  // namespace
 }  // namespace oneflow
+
+#endif // ONEFLOW_USER_KERNELS_VIEW_COPY_KERNEL_H_

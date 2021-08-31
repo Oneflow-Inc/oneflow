@@ -20,6 +20,22 @@ limitations under the License.
 
 namespace oneflow {
 
+template<>
+void ViewCopyUtil<DeviceType::kCPU>::operator()() {
+  if (contiguous_dim == -1) {
+    std::memcpy(out_dptr, in_dptr, contiguous_block_size * dsize);
+  } else {
+    init_index_and_out_stride();
+
+    while (true) {
+      std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
+                  contiguous_block_size * dsize);
+
+      if (next_index()) break;
+    }
+  }
+}
+
 namespace {
 
 class ViewCopyKernel final : public user_op::OpKernel {
@@ -48,7 +64,7 @@ class ViewCopyKernel final : public user_op::OpKernel {
       ViewCopyUtil<kCPU>(ctx->device_ctx(), in_shape, dsize, in_stride, in_dptr, out_dptr)();
     } else {
 #ifdef WITH_CUDA
-      view_copy<kGPU>(ctx->device_ctx(), in_shape, dsize, in_stride, in_dptr, out_dptr);
+      ViewCopyUtil<kGPU>(ctx->device_ctx(), in_shape, dsize, in_stride, in_dptr, out_dptr)();
 #else
       UNIMPLEMENTED();
 #endif  // WITH_CUDA
@@ -57,22 +73,6 @@ class ViewCopyKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<>
-void ViewCopyUtil<DeviceType::kCPU>::operator()() {
-  if (contiguous_dim == -1) {
-    std::memcpy(out_dptr, in_dptr, contiguous_block_size * dsize);
-  } else {
-    init_index_and_out_stride();
-
-    while (true) {
-      std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
-                  contiguous_block_size * dsize);
-
-      if (next_index()) break;
-    }
-  }
-}
 
 REGISTER_USER_KERNEL("view_copy").SetCreateFn<ViewCopyKernel>().SetIsMatchedHob(user_op::HobTrue());
 
