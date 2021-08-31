@@ -111,7 +111,7 @@ Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(Symbol<ParallelDesc> par
   auto iter = map.find(key);
   if (iter == map.end()) {
     Optional<int64_t> opt_parallel_id;
-    JUST(GetDevice4CurrentProcessCtx(parallel_desc, &opt_parallel_id));
+    JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &opt_parallel_id));
     int64_t parallel_id = JUST(opt_parallel_id.value());
     const auto& sub_parallel_desc =
         JUST(GetBroadcastSubParallelDesc(*parallel_desc, *nd_sbp, parallel_id));
