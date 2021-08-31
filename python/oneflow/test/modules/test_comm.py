@@ -24,7 +24,7 @@ import oneflow.unittest
 
 class TestComm(flow.unittest.TestCase):
     def _test_send_recv(test_case, x0, src, dst):
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == src:
             x1 = x0
             flow.comm.send(x1, dst)
@@ -59,7 +59,7 @@ class TestComm(flow.unittest.TestCase):
         test_case._test_send_recv(x0, 0, 3)
 
     def _test_send_recv_without_sending_meta(test_case, x0, src, dst):
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == src:
             x1 = x0
             flow.comm.send(x1, dst, send_meta=False)
