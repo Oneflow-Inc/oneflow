@@ -34,9 +34,10 @@ namespace oneflow {
   Maybe<void> OfBlob_Copy##direction##Buffer(uint64_t of_blob_ptr, py::array_t<T> array) { \
     return Global<ForeignLockHelper>::Get()->WithScopedAcquire(                            \
         [&of_blob_ptr, &array]() -> Maybe<void> {                                          \
-          array = py::reinterpret_steal<py::array_t<T>>(reinterpret_cast<PyObject*>( \
-              PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(array.ptr()))));      \
-          py::buffer_info buf = array.request();                                           \
+          py::array contiguous_array =                                                     \
+              py::reinterpret_steal<py::array_t<T>>(reinterpret_cast<PyObject*>(           \
+                  PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(array.ptr()))));  \
+          py::buffer_info buf = contiguous_array.request();                                \
           T* buf_ptr = (T*)buf.ptr;                                                        \
           size_t size = buf.size;                                                          \
           using namespace oneflow;                                                         \
