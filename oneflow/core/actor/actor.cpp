@@ -23,6 +23,37 @@ namespace oneflow {
 
 namespace {
 
+class KernelContextImpl : public KernelContext {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelContextImpl);
+  explicit KernelContextImpl(const JobDesc* job_desc, DeviceCtx* device_ctx)
+      : job_desc_(job_desc), device_ctx_(device_ctx), state_(nullptr) {}
+  ~KernelContextImpl() = default;
+
+  DeviceCtx* device_ctx() const override { return device_ctx_; }
+
+  Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
+
+  void* state() const override { return state_; }
+
+  void set_state(void* state) override {
+    CHECK(state_ == nullptr);
+    state_ = state;
+  }
+
+  const JobDesc* job_desc() const override { return job_desc_; }
+
+  void UpdateBnInOp2BlobFn(std::function<Blob*(const std::string&)> fn) {
+    bn_in_op2blob_fn_ = std::move(fn);
+  }
+
+ private:
+  const JobDesc* job_desc_;
+  DeviceCtx* device_ctx_;
+  std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
+  void* state_;
+};
+
 void CheckInplaceRegstDescId(const TaskProto& task_proto) {
   HashSet<int64_t> consumed_regst_desc_ids;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
@@ -37,6 +68,10 @@ void CheckInplaceRegstDescId(const TaskProto& task_proto) {
 
 }  // namespace
 
+Actor::~Actor() {
+  for (ExecKernel& ek : exec_kernel_vec_) { ek.kernel->DestroyState(ek.kernel_ctx->state()); }
+}
+
 void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
                  const ThreadCtx& thread_ctx) {
   job_desc_ = job_desc;
@@ -49,7 +84,8 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = ConstructKernel(job_desc_, node.kernel_conf(), device_ctx_.get());
+    ek.kernel_ctx.reset(new KernelContextImpl(job_desc, device_ctx_.get()));
+    ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
     exec_kernel_vec_.push_back(std::move(ek));
   }
 
@@ -236,12 +272,6 @@ void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   DeviceCtx* dev_ctx = NewObj<int, DeviceCtx, const ThreadCtx&>(GetDeviceType(), thread_ctx);
   device_ctx_.reset(dev_ctx);
-}
-
-KernelCtx Actor::GenDefaultKernelCtx() const {
-  KernelCtx ctx;
-  ctx.device_ctx = device_ctx_.get();
-  return ctx;
 }
 
 void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> func) const {
@@ -467,32 +497,33 @@ bool Actor::IsWriteReady() const {
          && IsCustomizedWriteReady();
 }
 
-void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
-                              std::function<Regst*(int64_t)> Regst4RegstDescId) {
+void Actor::AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
-    ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
-      const auto blob_info_it = ek.bn_in_op2blob_info.find(bn_in_op);
-      if (blob_info_it == ek.bn_in_op2blob_info.cend()) { return nullptr; }
-      const BlobInfo& info = blob_info_it->second;
-      if (info.regst_desc_id == -1) { return nullptr; }
-      Regst* regst;
-      if (info.rs != nullptr) {
-        regst = info.rs->Front(info.regst_desc_id);
-      } else {
-        regst = Regst4RegstDescId(info.regst_desc_id);
-      }
-      if (regst == nullptr) { return nullptr; }
-      if (info.ordinal >= 0) {
-        return regst->GetBlobByOrdinal(info.ordinal);
-      } else {
-        return regst->GetBlobByLbi(info.lbi);
-      }
-    });
+    CHECK_NOTNULL(dynamic_cast<KernelContextImpl*>(ek.kernel_ctx.get()))
+        ->UpdateBnInOp2BlobFn([&](const std::string& bn_in_op) -> Blob* {
+          const auto blob_info_it = ek.bn_in_op2blob_info.find(bn_in_op);
+          if (blob_info_it == ek.bn_in_op2blob_info.cend()) { return nullptr; }
+          const BlobInfo& info = blob_info_it->second;
+          if (info.regst_desc_id == -1) { return nullptr; }
+          Regst* regst = nullptr;
+          if (info.rs != nullptr) {
+            regst = info.rs->Front(info.regst_desc_id);
+          } else {
+            regst = Regst4RegstDescId(info.regst_desc_id);
+          }
+          if (regst == nullptr) { return nullptr; }
+          if (info.ordinal >= 0) {
+            return regst->GetBlobByOrdinal(info.ordinal);
+          } else {
+            return regst->GetBlobByLbi(info.lbi);
+          }
+        });
+    ek.kernel->Launch(ek.kernel_ctx.get());
   }
 }
 
-void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
-  AsyncLaunchKernel(kernel_ctx, [](int64_t) -> Regst* {
+void Actor::AsyncLaunchKernel() {
+  AsyncLaunchKernel([](int64_t) -> Regst* {
     UNIMPLEMENTED();
     return nullptr;
   });

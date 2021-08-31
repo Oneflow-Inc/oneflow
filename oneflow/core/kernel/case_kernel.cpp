@@ -14,15 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/case_kernel.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
 template<typename T>
-void CaseKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  CaseStatus* const case_status = static_cast<CaseStatus*>(ctx.other);
+void CaseKernel<T>::VirtualKernelInit(KernelContext* ctx) {
+  ctx->set_state(new CaseStatus);
+}
+
+template<typename T>
+void CaseKernel<T>::DestroyState(void* state) const {
+  delete static_cast<CaseStatus*>(state);
+}
+
+template<typename T>
+void CaseKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
+  CaseStatus* const case_status = static_cast<CaseStatus*>(ctx->state());
   if (case_status->cmd == kCaseCmdHandleInput) {
-    int64_t cur_selected_id = static_cast<int64_t>(BnInOp2Blob("in")->dptr<T>()[0]);
+    int64_t cur_selected_id = static_cast<int64_t>(ctx->BnInOp2Blob("in")->dptr<T>()[0]);
     case_status->select_id2request_cnt[cur_selected_id] += 1;
   } else if (case_status->cmd == kCaseCmdHandleOutput) {
     int64_t cur_selected_id = case_status->cur_selected_id;
@@ -32,8 +43,8 @@ void CaseKernel<T>::ForwardDataContent(
       case_status->select_id2request_cnt.erase(cur_selected_id);
     }
     KernelUtil<DeviceType::kCPU, T>::Set(
-        ctx.device_ctx, cur_selected_id,
-        BnInOp2Blob(GenRepeatedBn("out", cur_selected_id))->mut_dptr<T>());
+        ctx->device_ctx(), cur_selected_id,
+        ctx->BnInOp2Blob(GenRepeatedBn("out", cur_selected_id))->mut_dptr<T>());
   } else {
     UNIMPLEMENTED();
   }
