@@ -96,14 +96,14 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   }
   const auto& output_tensor_metas = result->output_tensor_metas();
   Optional<int64_t> parallel_id;
-  const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+  const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   for (int i = 0; i < outputs->size(); ++i) {
-    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(output_tensor_metas.at(i), device,
-                                                                  parallel_id, false, false));
+    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
+        output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }
   // Run instruction LocalCallOpKernel
-  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(result->op_device()));
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
       << Error::UnimplementedError()
       << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
