@@ -951,29 +951,29 @@ class TestEagerBoxingWithNonOverlappingPlacement(flow.unittest.TestCase):
     
     def test_eager_boxing_with_overlapping_placement_s1_to_s1(test_case):
         arg_dict = OrderedDict()
-        arg_dict["in_device"] = ["cuda"]
-        arg_dict["out_device"] = ["cuda"]
+        arg_dict["in_device"] = ["cpu", "cuda"]
+        arg_dict["out_device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_overlapping_placement_s1_to_s1(test_case, *arg)
     
     def test_eager_boxing_with_overlapping_placement_s1_to_s0(test_case):
         arg_dict = OrderedDict()
-        arg_dict["in_device"] = ["cuda"]
-        arg_dict["out_device"] = ["cuda"]
+        arg_dict["in_device"] = ["cpu", "cuda"]
+        arg_dict["out_device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_overlapping_placement_s1_to_s0(test_case, *arg)
     
     def test_eager_boxing_with_overlapping_placement_s1_to_b(test_case):
         arg_dict = OrderedDict()
-        arg_dict["in_device"] = ["cuda"]
-        arg_dict["out_device"] = ["cuda"]
+        arg_dict["in_device"] = ["cpu", "cuda"]
+        arg_dict["out_device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_overlapping_placement_s1_to_b(test_case, *arg)
     
     def test_eager_boxing_with_overlapping_placement_s1_to_p(test_case):
         arg_dict = OrderedDict()
-        arg_dict["in_device"] = ["cuda"]
-        arg_dict["out_device"] = ["cuda"]
+        arg_dict["in_device"] = ["cpu", "cuda"]
+        arg_dict["out_device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_overlapping_placement_s1_to_p(test_case, *arg)
 
