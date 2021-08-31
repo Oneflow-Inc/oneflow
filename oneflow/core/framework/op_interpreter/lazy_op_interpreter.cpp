@@ -92,7 +92,9 @@ Maybe<void> GenVariableOpConfNdSbpStringByTensor(VariableOpConf* var_conf,
 
 Maybe<const ParallelDesc> GetParallelDescOfTensor(const std::shared_ptr<Tensor>& tensor) {
   if (tensor->is_local()) {
-    return JUST(tensor->device())->parallel_desc_ptr();
+    const auto& device = JUST(tensor->device());
+    const auto& placement = JUST(Placement4Device(device));
+    return placement.shared_from_symbol();
   } else {
     return JUST(tensor->parallel_desc()).shared_from_symbol();
   }
@@ -374,10 +376,14 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     // NOTE(chengcheng): local
     CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
     if (ctx.device.has_value()) {
-      parallel_desc = JUST(ctx.device.value())->parallel_desc_ptr();
+      const auto& device = JUST(ctx.device.value());
+      const auto& placement = JUST(Placement4Device(device));
+      parallel_desc = placement.shared_from_symbol();
     } else {
       // NOTE(chengcheng): if functor NOT set device, using cpu device default.
-      parallel_desc = JUST(Device::New("cpu"))->parallel_desc_ptr();
+      const auto& device = JUST(Device::New("cpu"));
+      const auto& placement = JUST(Placement4Device(device));
+      parallel_desc = placement.shared_from_symbol();
     }
     is_local = true;
   }
