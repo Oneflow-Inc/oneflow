@@ -225,23 +225,27 @@ class Graph(object):
             )
             with oneflow._oneflow_internal.lazy_mode.guard(False):
                 self._eager_outputs = list_to_func_return(self._eager_outputs)
-                #for t in self._eager_outputs:
+                # for t in self._eager_outputs:
                 #    print("t = ", t)
-                #print("nn.Graph self._eager_outputs, ", self._eager_outputs)
-                #print("nn.Graph self._outputs_tensor_tuple", self._outputs_tensor_tuple)
-                #print("cclog: self._eager_outputs len = ", len(self._eager_outputs))
-                #print("cclog: self._outputs_tensor_tuple len = ", len(self._outputs_tensor_tuple))
+                # print("nn.Graph self._eager_outputs, ", self._eager_outputs)
+                # print("nn.Graph self._outputs_tensor_tuple", self._outputs_tensor_tuple)
+                # print("cclog: self._eager_outputs len = ", len(self._eager_outputs))
+                # print("cclog: self._outputs_tensor_tuple len = ", len(self._outputs_tensor_tuple))
                 self._outputs_tensor_tuple_list = []
                 self._outputs_tensor_tuple_list.append(self._outputs_tensor_tuple)
                 for i in range(self._outputs_buffer_size - 1):
                     tmp_outputs = []
                     for t in self._outputs_tensor_tuple:
                         new_t = oneflow.zeros_like(t)
-                        tmp_outputs.append(t)
-                    #print("cclog: tmp_outputs len = ", len(tmp_outputs))
+                        tmp_outputs.append(new_t)
+                    # print("cclog: tmp_outputs len = ", len(tmp_outputs))
                     tmp_outputs = convert_to_tensor_tuple(tmp_outputs)
                     self._outputs_tensor_tuple_list.append(tmp_outputs)
                 assert len(self._outputs_tensor_tuple_list) == self._outputs_buffer_size
+                print(
+                    " eager self._outputs_tensor_tuple_list size = ",
+                    len(self._outputs_tensor_tuple_list),
+                )
 
             # Register input/output/variable to _c_nn_graph
             self._c_nn_graph.register_input_op_names(arg_op_names)
@@ -259,6 +263,9 @@ class Graph(object):
         try:
             flattened_eager_args = self._flatten_io("input", *args)
             eager_outputs = self._outputs_tensor_tuple_list[self._cur_index]
+            print(
+                "cur_index", self._cur_index, [id(eager_t) for eager_t in eager_outputs]
+            )
             # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
@@ -266,7 +273,7 @@ class Graph(object):
                 self._states_tensor_tuple,
                 self._c_nn_graph,
             )
-            print("nn.Graph cur_index = ", self._cur_index)
+            # print("nn.Graph cur_index = ", self._cur_index)
             self._cur_index += 1
             if self._cur_index >= self._outputs_buffer_size:
                 self._cur_index = 0
@@ -279,10 +286,15 @@ class Graph(object):
             )
             raise
         tmp_eager_outputs = []
-        #print("cclog: eager_outputs len = ", len(eager_outputs))
+        # print("cclog: eager_outputs len = ", len(eager_outputs))
         for t in eager_outputs:
             tmp_eager_outputs.append(t.to_local().to(copy=True))
-        #print("cclog: tmp_eager_outputs len = ", len(tmp_eager_outputs))
+        # print("cclog: tmp_eager_outputs len = ", len(tmp_eager_outputs))
+        print(
+            "final out: cur_index",
+            self._cur_index,
+            [id(eager_t) for eager_t in tmp_eager_outputs],
+        )
         return tmp_eager_outputs
 
     def __call__(self, *args):

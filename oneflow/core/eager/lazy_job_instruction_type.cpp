@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/vm/thread_ctx.msg.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -86,12 +87,23 @@ class RunLazyJobInstructionType final : public InstructionType {
   using stream_type = LazyJobStreamType;
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
+    const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
+    const auto* phy_instr_operand = dynamic_cast<const RunLazyJobPhyInstrOperand*>(ptr);
+    auto* mut_blob = phy_instr_operand->outputs()->at(0)->mut_blob();
+    CHECK_NOTNULL(phy_instr_operand);
+    OF_PROFILER_RANGE_GUARD(std::string("RunLazyJobInstructionType::Compute::id:")
+                            + std::to_string(reinterpret_cast<int64_t>(mut_blob)));
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
+    OF_PROFILER_RANGE_PUSH("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
     device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
+    OF_PROFILER_RANGE_POP();  // WaitUntilQueueEmptyIfFrontNNGraphNotEquals
     {
+      OF_PROFILER_RANGE_PUSH("MakeJobInstance");
       const auto& job_instance = MakeJobInstance(instruction);
+      OF_PROFILER_RANGE_POP();  // MakeJobInstance
+      OF_PROFILER_RANGE_PUSH("Send all buffers to BufferMgr");
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       for (const auto& op_name : cur_nn_graph->inputs_op_names()) {
@@ -102,8 +114,11 @@ class RunLazyJobInstructionType final : public InstructionType {
       }
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Send(job_instance);
+      OF_PROFILER_RANGE_POP();  // BufferMgr
     }
+    OF_PROFILER_RANGE_PUSH("EnqueueNNGraph");
     device_ctx->EnqueueNNGraph(cur_nn_graph);
+    OF_PROFILER_RANGE_POP();  // EnqueueNNGraph
   }
 
  private:
