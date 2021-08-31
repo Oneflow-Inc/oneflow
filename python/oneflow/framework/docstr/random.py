@@ -17,7 +17,7 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.F.bernoulli,
+    oneflow._C.bernoulli,
     r"""
     bernoulli(input, *, generator=None, out=None)
     
@@ -47,7 +47,7 @@ add_docstr(
         ...    ]
         ... )
         >>> x = flow.Tensor(arr)
-        >>> y = flow.F.bernoulli(x)
+        >>> y = flow._C.bernoulli(x)
         >>> y
         tensor([[1., 1., 1.],
                 [1., 1., 1.],

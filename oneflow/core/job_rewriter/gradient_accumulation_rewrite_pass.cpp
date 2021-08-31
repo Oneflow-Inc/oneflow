@@ -103,7 +103,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
             .add_s(repeat_op.output("out", 0));
         return Maybe<void>::Ok();
       } else {
-        return Error::Unimplemented();
+        return Error::UnimplementedError();
       }
     } else if (op_conf.has_return_conf()) {  // pack return
       const LogicalBlobId return_in_lbi = node->op().BnInOp2Lbi("in");

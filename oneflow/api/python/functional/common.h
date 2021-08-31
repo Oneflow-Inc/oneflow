@@ -59,7 +59,7 @@ using PyObjectPtr = std::unique_ptr<PyObject, PyObjectPtrDeleter>;
 
 template<typename T>
 T dereference(T&& val) {
-  return val;
+  return std::forward<T>(val);
 }
 
 template<typename T>

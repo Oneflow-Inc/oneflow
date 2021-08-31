@@ -21,7 +21,7 @@ import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
-from oneflow.framework.distribute import get_rank
+from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
@@ -425,6 +425,12 @@ class Graph(object):
                 accessed from this graph using the given name
             module (Module): child module to be added to the graph.
         """
+        if "_name" not in self.__dict__:
+            raise AttributeError(
+                "Base class nn.Graph has not been initialized, "
+                "please call super().__init__() in subclass of nn.Graph "
+                "before assigning any attribute."
+            )
         if not isinstance(module, Module) and module is not None:
             raise TypeError("{} is not a Module subclass".format(type(module)))
         elif not isinstance(name, str):
