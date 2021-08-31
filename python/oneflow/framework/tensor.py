@@ -265,9 +265,14 @@ def _abs(self):
 def _exp(self):
     return flow.exp(self)
 
-
 def _acos(self):
     return flow.acos(self)
+
+def _acosh(self):
+    return flow.acosh(self)
+
+def _arccosh(self):
+    return flow.arccosh(self)
 
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
@@ -446,6 +451,9 @@ def RegisterMethods():
     Tensor._meta_repr = _meta_repr
     Tensor.abs = _abs
     Tensor.exp = _exp
+    Tensor.acos = _acos
+    Tensor.acosh = _acosh
+    Tensor.arccosh = _arccosh
 
 
 def register_tensor_op(op_name):
