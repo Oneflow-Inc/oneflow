@@ -574,6 +574,307 @@ def _test_eager_boxing_with_overlapping_placement_s0_to_s1(
             )
         )
 
+def _test_eager_boxing_with_overlapping_placement_s1_to_s1(
+    test_case, in_device, out_device
+):
+    if flow.env.get_rank() == 0:
+        np_arr = np.array(
+            [[4, 6, 5, 20, 8, 9], [6, 8, 9, 0, 4, 6], [3, 7, 5, 0, 3, 5], [6, 8, 9, 0, 8, 7]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 1:
+        np_arr = np.array(
+            [[2, 10, 10, 7, 10, 3], [3, 9, 10, 5, 5, 6], [4, 6, 6, 9, 8, 6], [6, 8, 6, 4, 5, 3]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 2:
+        np_arr = np.array(
+            [[9, 6, 5, 8, 3, 6], [4, 9, 7, 0, 2, 1], [2, 5, 7, 9, 4, 8], [6, 8, 10, 0, 4, 9]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 3:
+        np_arr = np.array(
+            [[9, 4, 5, 8, 9, 6], [7, 2, 9, 5, 4, 1], [6, 3, 9, 2, 5, 2], [3, 7, 5, 8, 9, 3]],
+            dtype=np.float32,
+        )
+    device = flow.device(in_device)
+    tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    x = tensor.to_consistent(placement, flow.sbp.split(0))
+    y = x.to_consistent(placement, flow.sbp.split(1))
+    new_placement = flow.placement(out_device, {0: [2, 3]})
+    z = y.to_consistent(new_placement, flow.sbp.split(1))
+    test_case.assertTrue(z.placement == new_placement)
+    if flow.env.get_rank() == 2:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [
+                        [ 4.,  6.,  5.],
+                        [ 6.,  8.,  9.],
+                        [ 3.,  7.,  5.],
+                        [ 6.,  8.,  9.],
+                        [ 2., 10., 10.],
+                        [ 3.,  9., 10.],
+                        [ 4.,  6.,  6.],
+                        [ 6.,  8.,  6.],
+                        [ 9.,  4.,  5.],
+                        [ 7.,  2.,  9.],
+                        [ 6.,  3.,  9.],
+                        [ 3.,  7.,  5.],
+                    ],
+                    dtype=np.float32,
+                ),
+            )
+        )
+    if flow.env.get_rank() == 3:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [
+                        [20.,  8.,  9.],
+                        [ 0.,  4.,  6.],
+                        [ 0.,  3.,  5.],
+                        [ 0.,  8.,  7.],
+                        [ 7., 10.,  3.],
+                        [ 5.,  5.,  6.],
+                        [ 9.,  8.,  6.],
+                        [ 4.,  5.,  3.],
+                        [ 8.,  9.,  6.],
+                        [ 5.,  4.,  1.],
+                        [ 2.,  5.,  2.],
+                        [ 8.,  9.,  3.],
+                    ],
+                    dtype=np.float32,
+                ),
+            )
+        )
+
+
+def _test_eager_boxing_with_overlapping_placement_s1_to_s0(
+    test_case, in_device, out_device
+):
+    if flow.env.get_rank() == 0:
+        np_arr = np.array(
+            [[4, 6, 5, 20, 8, 9], [6, 8, 9, 0, 4, 6], [3, 7, 5, 0, 3, 5], [6, 8, 9, 0, 8, 7]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 1:
+        np_arr = np.array(
+            [[2, 10, 10, 7, 10, 3], [3, 9, 10, 5, 5, 6], [4, 6, 6, 9, 8, 6], [6, 8, 6, 4, 5, 3]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 2:
+        np_arr = np.array(
+            [[9, 6, 5, 8, 3, 6], [4, 9, 7, 0, 2, 1], [2, 5, 7, 9, 4, 8], [6, 8, 10, 0, 4, 9]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 3:
+        np_arr = np.array(
+            [[9, 4, 5, 8, 9, 6], [7, 2, 9, 5, 4, 1], [6, 3, 9, 2, 5, 2], [3, 7, 5, 8, 9, 3]],
+            dtype=np.float32,
+        )
+    device = flow.device(in_device)
+    tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    x = tensor.to_consistent(placement, flow.sbp.split(0))
+    y = x.to_consistent(placement, flow.sbp.split(1))
+    new_placement = flow.placement(out_device, {0: [2, 3]})
+    z = y.to_consistent(new_placement, flow.sbp.split(0))
+    test_case.assertTrue(z.placement == new_placement)
+    if flow.env.get_rank() == 2:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [
+                        [ 4.,  6.,  5., 20.,  8.,  9.],
+                        [ 6.,  8.,  9.,  0.,  4.,  6.],
+                        [ 3.,  7.,  5.,  0.,  3.,  5.],
+                        [ 6.,  8.,  9.,  0.,  8.,  7.],
+                        [ 2., 10., 10.,  7., 10.,  3.],
+                        [ 3.,  9., 10.,  5.,  5.,  6.],
+                    ],
+                    dtype=np.float32,
+                ),
+            )
+        )
+    if flow.env.get_rank() == 3:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [
+                        [4., 6., 6., 9., 8., 6.],
+                        [6., 8., 6., 4., 5., 3.],
+                        [9., 4., 5., 8., 9., 6.],
+                        [7., 2., 9., 5., 4., 1.],
+                        [6., 3., 9., 2., 5., 2.],
+                        [3., 7., 5., 8., 9., 3.],
+                    ],
+                    dtype=np.float32,
+                ),
+            )
+        )
+
+def _test_eager_boxing_with_overlapping_placement_s1_to_b(
+    test_case, in_device, out_device
+):
+    if flow.env.get_rank() == 0:
+        np_arr = np.array(
+            [[4, 6, 5, 20, 8, 9], [6, 8, 9, 0, 4, 6], [3, 7, 5, 0, 3, 5], [6, 8, 9, 0, 8, 7]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 1:
+        np_arr = np.array(
+            [[2, 10, 10, 7, 10, 3], [3, 9, 10, 5, 5, 6], [4, 6, 6, 9, 8, 6], [6, 8, 6, 4, 5, 3]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 2:
+        np_arr = np.array(
+            [[9, 6, 5, 8, 3, 6], [4, 9, 7, 0, 2, 1], [2, 5, 7, 9, 4, 8], [6, 8, 10, 0, 4, 9]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 3:
+        np_arr = np.array(
+            [[9, 4, 5, 8, 9, 6], [7, 2, 9, 5, 4, 1], [6, 3, 9, 2, 5, 2], [3, 7, 5, 8, 9, 3]],
+            dtype=np.float32,
+        )
+    device = flow.device(in_device)
+    tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    x = tensor.to_consistent(placement, flow.sbp.split(0))
+    y = x.to_consistent(placement, flow.sbp.split(1))
+    new_placement = flow.placement(out_device, {0: [2, 3]})
+    z = y.to_consistent(new_placement, flow.sbp.broadcast)
+    test_case.assertTrue(z.placement == new_placement)
+    if flow.env.get_rank() == 2:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [
+                        [ 4.,  6.,  5., 20.,  8.,  9.],
+                        [ 6.,  8.,  9.,  0.,  4.,  6.],
+                        [ 3.,  7.,  5.,  0.,  3.,  5.],
+                        [ 6.,  8.,  9.,  0.,  8.,  7.],
+                        [ 2., 10., 10.,  7., 10.,  3.],
+                        [ 3.,  9., 10.,  5.,  5.,  6.],
+                        [ 4.,  6.,  6.,  9.,  8.,  6.],
+                        [ 6.,  8.,  6.,  4.,  5.,  3.],
+                        [ 9.,  4.,  5.,  8.,  9.,  6.],
+                        [ 7.,  2.,  9.,  5.,  4.,  1.],
+                        [ 6.,  3.,  9.,  2.,  5.,  2.],
+                        [ 3.,  7.,  5.,  8.,  9.,  3.],
+                    ],
+                    dtype=np.float32,
+                ),
+            )
+        )
+    if flow.env.get_rank() == 3:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [
+                        [ 4.,  6.,  5., 20.,  8.,  9.],
+                        [ 6.,  8.,  9.,  0.,  4.,  6.],
+                        [ 3.,  7.,  5.,  0.,  3.,  5.],
+                        [ 6.,  8.,  9.,  0.,  8.,  7.],
+                        [ 2., 10., 10.,  7., 10.,  3.],
+                        [ 3.,  9., 10.,  5.,  5.,  6.],
+                        [ 4.,  6.,  6.,  9.,  8.,  6.],
+                        [ 6.,  8.,  6.,  4.,  5.,  3.],
+                        [ 9.,  4.,  5.,  8.,  9.,  6.],
+                        [ 7.,  2.,  9.,  5.,  4.,  1.],
+                        [ 6.,  3.,  9.,  2.,  5.,  2.],
+                        [ 3.,  7.,  5.,  8.,  9.,  3.],
+                    ],
+                    dtype=np.float32,
+                ),
+            )
+        )
+
+def _test_eager_boxing_with_overlapping_placement_s1_to_p(
+    test_case, in_device, out_device
+):
+    if flow.env.get_rank() == 0:
+        np_arr = np.array(
+            [[4, 6, 5, 20, 8, 9], [6, 8, 9, 0, 4, 6], [3, 7, 5, 0, 3, 5], [6, 8, 9, 0, 8, 7]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 1:
+        np_arr = np.array(
+            [[2, 10, 10, 7, 10, 3], [3, 9, 10, 5, 5, 6], [4, 6, 6, 9, 8, 6], [6, 8, 6, 4, 5, 3]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 2:
+        np_arr = np.array(
+            [[9, 6, 5, 8, 3, 6], [4, 9, 7, 0, 2, 1], [2, 5, 7, 9, 4, 8], [6, 8, 10, 0, 4, 9]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 3:
+        np_arr = np.array(
+            [[9, 4, 5, 8, 9, 6], [7, 2, 9, 5, 4, 1], [6, 3, 9, 2, 5, 2], [3, 7, 5, 8, 9, 3]],
+            dtype=np.float32,
+        )
+    device = flow.device(in_device)
+    tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    x = tensor.to_consistent(placement, flow.sbp.split(0))
+    y = x.to_consistent(placement, flow.sbp.split(1))
+    new_placement = flow.placement(out_device, {0: [2, 3]})
+    z = y.to_consistent(new_placement, flow.sbp.partial_sum)
+    test_case.assertTrue(z.placement == new_placement)
+    if flow.env.get_rank() == 2:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [
+                        [ 4.,  6.,  5., 20.,  8.,  9.],
+                        [ 6.,  8.,  9.,  0.,  4.,  6.],
+                        [ 3.,  7.,  5.,  0.,  3.,  5.],
+                        [ 6.,  8.,  9.,  0.,  8.,  7.],
+                        [ 2., 10., 10.,  7., 10.,  3.],
+                        [ 3.,  9., 10.,  5.,  5.,  6.],
+                        [ 4.,  6.,  6.,  9.,  8.,  6.],
+                        [ 6.,  8.,  6.,  4.,  5.,  3.],
+                        [ 9.,  4.,  5.,  8.,  9.,  6.],
+                        [ 7.,  2.,  9.,  5.,  4.,  1.],
+                        [ 6.,  3.,  9.,  2.,  5.,  2.],
+                        [ 3.,  7.,  5.,  8.,  9.,  3.],
+                    ],
+                    dtype=np.float32,
+                ),
+            )
+        )
+    if flow.env.get_rank() == 3:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                        [0., 0., 0., 0., 0., 0.],
+                    ],
+                    dtype=np.float32,
+                ),
+            )
+        )
+
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -647,6 +948,34 @@ class TestEagerBoxingWithNonOverlappingPlacement(flow.unittest.TestCase):
         arg_dict["out_device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_overlapping_placement_s0_to_s1(test_case, *arg)
+    
+    def test_eager_boxing_with_overlapping_placement_s1_to_s1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device"] = ["cuda"]
+        arg_dict["out_device"] = ["cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_with_overlapping_placement_s1_to_s1(test_case, *arg)
+    
+    def test_eager_boxing_with_overlapping_placement_s1_to_s0(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device"] = ["cuda"]
+        arg_dict["out_device"] = ["cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_with_overlapping_placement_s1_to_s0(test_case, *arg)
+    
+    def test_eager_boxing_with_overlapping_placement_s1_to_b(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device"] = ["cuda"]
+        arg_dict["out_device"] = ["cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_with_overlapping_placement_s1_to_b(test_case, *arg)
+    
+    def test_eager_boxing_with_overlapping_placement_s1_to_p(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device"] = ["cuda"]
+        arg_dict["out_device"] = ["cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_with_overlapping_placement_s1_to_p(test_case, *arg)
 
 
 if __name__ == "__main__":
