@@ -249,13 +249,23 @@ class Graph(object):
         return self.config.training
 
     def debug(self, mode: bool = True) -> None:
-        r"""If in debug mode, logs of computation graph building will be
+        r"""Open or close debug mode of the graph.
+
+        If in debug mode, logs of computation graph building will be
         printed on rank 0.
+
+        .. code-block:: python
+
+            g = CustomGraph()
+
+            # Open debug mode
+            g.debug()
+
+            out_tensors = g(input_tensors)  # Will print log for debug at the first call
+
         """
         if get_rank() != 0:
             return
-        else:
-            print("Note that nn.Graph.debug() only print debug info on rank 0.")
         self._debug = mode
         for name, block in self._blocks.items():
             assert block.type == BlockType.MODULE
