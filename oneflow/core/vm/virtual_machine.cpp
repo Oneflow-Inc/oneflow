@@ -601,7 +601,7 @@ Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) 
         const auto& ret = TRY(SpinWaitUntilTimeout(NeedSpin, InstructionMaxRunningSeconds()));
         if (ret.IsOk()) { break; }
         CHECK_NE_OR_RETURN(last_cnt, *mut_flying_instruction_cnt())
-            << Error::Unimplemented() << "The virtual machine don't respond in "
+            << Error::UnimplementedError() << "The virtual machine don't respond in "
             << InstructionMaxRunningSeconds() << " seconds.";
       }
       return Maybe<void>::Ok();
