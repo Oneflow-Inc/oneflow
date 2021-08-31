@@ -132,6 +132,10 @@ inline Error&& operator<<(Error&& error, const Error& other) {
   return std::move(error);
 }
 
+extern const char* kOfBugIssueUploadPrompt;
+
 }  // namespace oneflow
+
+#define PRINT_BUG_PROMPT_AND_ABORT() LOG(FATAL) << kOfBugIssueUploadPrompt
 
 #endif  // ONEFLOW_CORE_COMMON_ERROR_H_
