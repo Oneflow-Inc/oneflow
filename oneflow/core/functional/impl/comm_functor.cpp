@@ -185,7 +185,6 @@ class SendFunctor {
       DataType dtype = x->dtype()->data_type();
       JUST(ccl::Send<DeviceType::kCPU>(&dtype, sizeof(dtype), DataType::kChar, dst, nullptr));
 
-      // DeviceType device_type = JUST(x->device())->parallel_desc_ptr()->device_type();
       DeviceType device_type = JUST(Device::GetPlacement(*JUST(x->device())))->device_type();
       JUST(ccl::Send<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, dst,
                                        nullptr));
