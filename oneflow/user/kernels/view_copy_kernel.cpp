@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/user/kernels/view_copy_kernel.h"
 
 namespace oneflow {
 
@@ -36,62 +37,42 @@ class ViewCopyKernel final : public user_op::OpKernel {
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
 
-    const auto& stride = ctx->Attr<std::vector<int64_t>>("stride");
+    const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
     int64_t storage_offset = ctx->Attr<int64_t>("storage_offset");
 
     const size_t dsize = GetSizeOfDataType(in_data_type);
     const char* in_dptr = static_cast<const char*>(in->raw_dptr()) + storage_offset * dsize;
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
 
-    auto copy = AutoMemcpyFn(out->mem_case(), in->mem_case());
-
-    int64_t contiguous_block_size = 1;
-    int64_t contiguous_dim = in_shape.NumAxes() - 1;
-    for (; contiguous_dim != -1; --contiguous_dim) {
-      if (contiguous_block_size == stride[contiguous_dim]) {
-        contiguous_block_size *= in_shape.At(contiguous_dim);
-      } else {
-        break;
-      }
-    }
-
-    if (contiguous_dim == -1) {
-      copy(ctx->device_ctx(), out_dptr, in_dptr, contiguous_block_size * dsize);
+    if (in->mem_case().has_host_mem() && out->mem_case().has_host_mem()) {
+      ViewCopyUtil<kCPU>(ctx->device_ctx(), in_shape, dsize, in_stride, in_dptr, out_dptr)();
     } else {
-      StrideVector out_stride(in_shape.NumAxes());
-
-      int64_t sum = 1;
-      for (int64_t i = out_stride.size() - 1; i != -1; --i) {
-        out_stride[i] = sum;
-        sum *= in_shape.At(i);
-      }
-
-      DimVector index(contiguous_dim + 1, 0);
-      int64_t in_offset = 0, out_offset = 0;
-
-      while (true) {
-        copy(ctx->device_ctx(), out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
-             contiguous_block_size * dsize);
-
-        int64_t i = contiguous_dim;
-        for (; i != -1; --i) {
-          if (index[i] == in_shape.At(i) - 1) {
-            in_offset -= stride[i] * index[i];
-            out_offset -= out_stride[i] * index[i];
-            index[i] = 0;
-          } else {
-            index[i]++;
-            in_offset += stride[i];
-            out_offset += out_stride[i];
-            break;
-          }
-        }
-        if (i == -1) { break; }
-      }
+#ifdef WITH_CUDA
+      view_copy<kGPU>(ctx->device_ctx(), in_shape, dsize, in_stride, in_dptr, out_dptr);
+#else
+      UNIMPLEMENTED();
+#endif  // WITH_CUDA
     }
   }
+
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+template<>
+void ViewCopyUtil<DeviceType::kCPU>::operator()() {
+  if (contiguous_dim == -1) {
+    std::memcpy(out_dptr, in_dptr, contiguous_block_size * dsize);
+  } else {
+    init_index_and_out_stride();
+
+    while (true) {
+      std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
+                  contiguous_block_size * dsize);
+
+      if (next_index()) break;
+    }
+  }
+}
 
 REGISTER_USER_KERNEL("view_copy").SetCreateFn<ViewCopyKernel>().SetIsMatchedHob(user_op::HobTrue());
 
