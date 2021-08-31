@@ -221,6 +221,99 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.asin,
+    r"""
+    Returns a new tensor with the arcsine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\sin^{-1}(\\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.Tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
+        >>> output = flow.asin(input)
+        >>> output.shape
+        flow.Size([4])
+        >>> output
+        tensor([-0.5236,  0.9273,  1.5708, -0.9273], dtype=oneflow.float32)
+        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
+        >>> output1 = input1.asin()
+        >>> output1.shape
+        flow.Size([2, 2])
+        >>> output1
+        tensor([[ 0.9273,  1.5708],
+                [-0.6435, -1.5708]], dtype=oneflow.float32)
+    """
+)
+
+add_docstr(
+    oneflow.asinh,
+    r"""
+    Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\sinh^{-1}(\\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
+        >>> output = flow.asinh(input)
+        >>> output.shape
+        flow.Size([3])
+        >>> output
+        tensor([1.4436, 1.8184, 2.0947], dtype=oneflow.float32)
+
+        >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> output1 = input1.asinh()
+        >>> output1.shape
+        flow.Size([2, 3])
+        >>> output1
+        tensor([[-0.8814,  0.0000, -0.3900],
+                [ 2.3124,  2.6441,  0.7327]], dtype=oneflow.float32)
+
+    """
+)
+
+add_docstr(
+    oneflow.atan,
+    r"""
+    Returns a new tensor with the arctangent of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\tan^{-1}(\\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.Tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
+        >>> output = flow.atan(input)
+        >>> output.shape
+        flow.Size([3])
+        
+    """
+)
+
+add_docstr(
     oneflow.log1p,
     r"""Returns a new tensor with the natural logarithm of (1 + input).
 

@@ -86,6 +86,13 @@ from oneflow._C import div
 from oneflow._C import mul
 from oneflow._C import reciprocal_no_nan as reciprocal
 from oneflow._C import sub
+from oneflow._C import asin
+from oneflow._C import asin as arcsin
+from oneflow._C import asinh
+from oneflow._C import asinh as arcsinh
+from oneflow._C import atan
+from oneflow._C import atan as arctan
+
 
 from . import sbp
 import atexit
@@ -243,12 +250,6 @@ from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 
 
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import arcsin_op as arcsin
-from oneflow.nn.modules.math_ops import arcsinh_op as arcsinh
-from oneflow.nn.modules.math_ops import arctan_op as arctan
-from oneflow.nn.modules.math_ops import asin_op as asin
-from oneflow.nn.modules.math_ops import asinh_op as asinh
-from oneflow.nn.modules.math_ops import atan_op as atan
 from oneflow.nn.modules.math_ops import ceil_op as ceil
 from oneflow.nn.modules.math_ops import clamp_op as clamp
 from oneflow.nn.modules.math_ops import clip_op as clip

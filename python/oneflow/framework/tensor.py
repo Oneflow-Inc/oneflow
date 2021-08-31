@@ -324,6 +324,24 @@ def _log1p(self):
 def _reciprocal(self):
     return flow.reciprocal(self)
 
+def _asin(self):
+    return flow.asin(self)
+
+def _arcsin(self):
+    return flow.arcsin(self)
+
+def _asinh(self):
+    return flow.asinh(self)
+
+def _arcsinh(self):
+    return flow.arcsinh(self)
+
+def _atan(self):
+    return flow.atan(self)
+
+def _arctan(self):
+    return flow.arctan(self)
+
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
@@ -527,6 +545,12 @@ def RegisterMethods():
     Tensor.mul = _mul
     Tensor.reciprocal = _reciprocal
     Tensor.sub = _sub
+    Tensor.asin = _asin
+    Tensor.arcsin = _arcsin
+    Tensor.asinh = _asinh
+    Tensor.arcsinh = _arcsinh
+    Tensor.atan = _atan
+    Tensor.arctan = _arctan
 
 def register_tensor_op(op_name):
     def set_tensor_op(method):
