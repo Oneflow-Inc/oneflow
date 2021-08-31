@@ -190,8 +190,8 @@ class MyGraph(flow.nn.Graph):
         return y
 
 
-#@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-#@flow.unittest.skip_unless_1n2d()
+# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+# @flow.unittest.skip_unless_1n2d()
 class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
     # @unittest.skipIf(True, "")
     def test_fwd_P2B(test_case):
