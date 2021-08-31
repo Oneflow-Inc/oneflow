@@ -105,7 +105,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow._C.tanh,
+    oneflow.tanh,
     r"""
     tanh(x: Tensor) -> Tensor 
 
@@ -179,7 +179,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.silu,
+    oneflow.silu,
     r"""
     silu(x: Tensor) -> Tensor
 
@@ -198,7 +198,7 @@ add_docstr(
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)       
-        >>> out = flow._C.silu(input)
+        >>> out = flow.silu(input)
         >>> out
         tensor([0.7311, 1.7616, 2.8577], dtype=oneflow.float32)
 
@@ -209,7 +209,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.mish,
+    oneflow.mish,
     r""" 
     mish(x: Tensor) -> Tensor 
 
@@ -229,7 +229,7 @@ add_docstr(
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)       
 
-        >>> out = flow._C.mish(input)
+        >>> out = flow.mish(input)
         >>> out
         tensor([0.8651, 1.9440, 2.9865], dtype=oneflow.float32)
 
@@ -294,7 +294,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.sigmoid,
+    oneflow.sigmoid,
     r"""
     sigmoid(input) -> Tensor
 
@@ -311,7 +311,7 @@ add_docstr(
 
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
         >>> input = flow.Tensor(x)
-        >>> out = flow.nn.functional.sigmoid(input)
+        >>> out = flow.sigmoid(input)
         >>> out
         tensor([0.6937, 0.6074, 0.5259], dtype=oneflow.float32)
 
@@ -365,7 +365,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.selu,
+    oneflow.selu,
     r"""
     selu(x: Tensor) -> Tensor
 
@@ -382,7 +382,7 @@ add_docstr(
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)
-        >>> out = flow.nn.functional.selu(input)
+        >>> out = flow.selu(input)
         >>> out
         tensor([1.0507, 2.1014, 3.1521], dtype=oneflow.float32)
     """,

@@ -292,6 +292,27 @@ def _tan(self):
 def _gelu(self):
     return flow.gelu(self)
 
+def _mish(self):
+    return flow.mish(self)
+
+def _sigmoid(self):
+    return flow.sigmoid(self)
+
+def _tanh(self):
+    return flow.tanh(self)
+
+def _silu(self):
+    return flow.silu(self)
+
+def _selu(self):
+    return flow.selu(self)
+
+def _softsign(self):
+    return flow.softsign(self)
+
+def _cast(self, dtype):
+    return flow.cast(self, dtype)
+
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
@@ -480,7 +501,13 @@ def RegisterMethods():
     Tensor.gt = _gt
     Tensor.ge = _ge
     Tensor.gelu = _gelu
-
+    Tensor.mish = _mish
+    Tensor.sigmoid = _sigmoid
+    Tensor.tanh = _tanh
+    Tensor.silu = _silu
+    Tensor.selu = _selu
+    Tensor.softsign = _softsign
+    Tensor.cast = _cast
 
 
 def register_tensor_op(op_name):

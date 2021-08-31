@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-
-@register_tensor_op("cast")
-def cast_op(x, dtype):
-    """The operation takes input tensor `x` and casts it to the output with `dtype`
+add_docstr(
+    oneflow.cast,
+    r"""
+    
+    The operation takes input tensor `x` and casts it to the output with `dtype`
 
     Args:
         x (oneflow.Tensor): A Tensor
@@ -41,10 +42,4 @@ def cast_op(x, dtype):
         True
 
     """
-    return flow._C.cast(x, dtype)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+)
