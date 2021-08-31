@@ -258,13 +258,16 @@ def _pow(self, b):
     return flow.pow(self, b)
 
 
+def _abs(self):
+    return flow.abs(self)
+
+
 def _exp(self):
     return flow.exp(self)
 
 
-def _abs(self):
-    return flow.abs(self)
-
+def _acos(self):
+    return flow.acos(self)
 
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(

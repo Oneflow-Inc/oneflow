@@ -17,9 +17,8 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow._C.abs,
+    oneflow.abs,
     r"""
-    abs(x: Tensor) -> Tensor
 
     Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
 
@@ -42,9 +41,8 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.exp,
+    oneflow.exp,
     r"""
-    exp(x: Tensor) -> Tensor
 
     This operator computes the exponential of Tensor.
 
@@ -68,10 +66,36 @@ add_docstr(
         >>> import oneflow as flow
         
         >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        >>> y = flow._C.exp(x)
+        >>> y = flow.exp(x)
         >>> y
         tensor([ 2.7183,  7.3891, 20.0855], dtype=oneflow.float32)
 
+    """
+)
+
+add_docstr(
+    oneflow.acos,
+    r"""
+    Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\arccos(\\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> arr = np.array([0.5, 0.6, 0.7])
+        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> output = flow.acos(input)
+        >>> output
+        tensor([1.0472, 0.9273, 0.7954], dtype=oneflow.float32)
     """
 )
 

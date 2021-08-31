@@ -57,6 +57,7 @@ def is_deprecated(func_or_class):
 
 from oneflow._C import abs
 from oneflow._C import exp
+from oneflow._C import acos
 
 from . import sbp
 import atexit
@@ -148,7 +149,7 @@ import oneflow.framework.docstr as docstr
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 
-from oneflow.nn.modules.trigonometric_ops import acos_op as acos
+
 from oneflow.nn.modules.trigonometric_ops import acosh_op as acosh
 from oneflow.nn.modules.trigonometric_ops import arccosh_op as arccosh
 from oneflow.nn.modules.trigonometric_ops import atanh_op as atanh
