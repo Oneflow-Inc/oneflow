@@ -112,7 +112,7 @@ std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
     }
     return module.attr(attr_name);
   }();
-  return py::cast<std::shared_ptr<Tensor>>(legacy_tensor_ctor(args, kwargs));
+  return py::cast<std::shared_ptr<Tensor>>(legacy_tensor_ctor(*args, **kwargs));
 }
 
 void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {

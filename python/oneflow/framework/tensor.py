@@ -441,7 +441,3 @@ def register_tensor_op(op_name):
         return method
 
     return set_tensor_op
-
-
-def tensor(*args, **kwargs):
-    return flow._oneflow_internal.tensor(*args, **kwargs)
