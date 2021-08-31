@@ -129,6 +129,60 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.atanh,
+    r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\tanh^{-1}(\\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> output = flow.atanh(input)
+        >>> output
+        tensor([0.5493, 0.6931, 0.8673], dtype=oneflow.float32)
+
+    """
+)
+
+add_docstr(
+    oneflow.sign,
+    r"""Computes the sign of Tensor.
+
+    .. math::
+
+        \\text{out}_{i}  = \\text{sgn}(\\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x1 = flow.Tensor(np.array([-2, 0, 2]).astype(np.float32))
+        >>> out1 = flow.sign(x1)
+        >>> out1.numpy()
+        array([-1.,  0.,  1.], dtype=float32)
+        >>> x2 = flow.Tensor(np.array([-3.2, -4.5, 5.8]).astype(np.float32),device=flow.device('cuda'))
+        >>> out2 = flow.sign(x2)
+        >>> out2.numpy()
+        array([-1., -1.,  1.], dtype=float32)
+
+    """
+)
+
+add_docstr(
     oneflow._C.sin,
     r"""
     sin(x: Tensor) -> Tensor

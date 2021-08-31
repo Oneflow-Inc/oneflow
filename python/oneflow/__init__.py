@@ -60,10 +60,13 @@ from oneflow._C import exp
 from oneflow._C import acos
 from oneflow._C import acosh
 from oneflow._C import acosh as arccosh
+from oneflow._C import atanh
+from oneflow._C import atanh as arctanh
+from oneflow._C import sign
 
 from . import sbp
 import atexit
-
+ 
 import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
 import oneflow.framework.register_python_callback
@@ -152,10 +155,9 @@ from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabl
 import oneflow.nn.image
 
 
-from oneflow.nn.modules.trigonometric_ops import atanh_op as atanh
+
+
 from oneflow.nn.modules.trigonometric_ops import atan2_op as atan2
-from oneflow.nn.modules.trigonometric_ops import arctanh_op as arctanh
-from oneflow.nn.modules.trigonometric_ops import sign_op as sign
 from oneflow.nn.modules.trigonometric_ops import sinh_op as sinh
 from oneflow.nn.modules.trigonometric_ops import tan_op as tan
 from oneflow.nn.modules.comparison import greater_op as greater

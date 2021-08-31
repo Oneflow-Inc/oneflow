@@ -274,6 +274,15 @@ def _acosh(self):
 def _arccosh(self):
     return flow.arccosh(self)
 
+def _atanh(self):
+    return flow.atanh(self)
+
+def _arctanh(self):
+    return flow.arctanh(self)
+
+def _sign(self):
+    return flow.sign(self)
+
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
@@ -454,6 +463,9 @@ def RegisterMethods():
     Tensor.acos = _acos
     Tensor.acosh = _acosh
     Tensor.arccosh = _arccosh
+    Tensor.atanh = _atanh
+    Tensor.arctanh = _arctanh
+    Tensor.sign = _sign
 
 
 def register_tensor_op(op_name):
