@@ -65,7 +65,7 @@ class Graph(object):
 
     def __init__(self):
         """
-        Initializes internal Graph state.
+        Initializes internal Graph states.
         """
         self._generate_name()
         self.config = GraphConfig()
@@ -298,6 +298,21 @@ class Graph(object):
         return self._eager_outputs
 
     def __call__(self, *args):
+        r"""Just call nn.Graph subclass instance to run you customized graph.
+
+        Initlize a graph, then call it::
+
+            g = CustomGraph()
+            out_tensors = g(input_tensors)
+
+        Note that the first call takes longer than later calls, because nn.Graph
+        will do tracing and compilation at the first call.
+
+        nn.Graph.__call__ only accept positional arguements of
+        Tensor/List[Tensor]/TensorTuple/None at the moment.
+
+        Donot override this function.
+        """
         if not self._is_compiled:
             self._compile(*args)
 
@@ -459,7 +474,21 @@ class Graph(object):
         return state_op_names, state_tensor_tuple
 
     def _add_block(self, name: str, module: Module = None) -> None:
-        r"""Adds a module to the current graph as a block.
+        r"""Adds a nn.Module to the graph as a block to enable a nn.Module
+        be called in nn.Graph.build(*args).
+
+        Just assign nn.Module in nn.Graph, _add_block will to called to add the
+        module as a Block::
+
+            class LinearGraph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    # add a nn.Module as a block to graph.
+                    self.linear = flow.nn.Linear(3, 8, False)
+
+                def build(self, x):
+                    # call the nn.Module block.
+                    return self.linear(x)
 
         The block can be accessed as an attribute using the given name.
 
