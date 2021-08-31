@@ -48,6 +48,7 @@ class TestGridSample(flow.unittest.TestCase):
             np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8)
         )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest()
     def test_flow_grid_sample_cudnn_with_random_data(test_case):
         # cudnn only support 4D input, with mode = 'bilinear' && padding_mode = 'zeros' && align_corners
