@@ -78,12 +78,8 @@ def np_triplet_margin_loss_grad(np_anchor, np_pos, np_neg, np_p, reduction, eps,
         elem_cnt = np_d_an.size
         np_d_pn = np_d_pn.reshape(-1)
         np_d_an = np_d_an.reshape(-1)
-        print("old_total_grad:",total_grad)
         for i in np.arange(elem_cnt):
             if np_d_pn[i] < np_d_an[i]:
-                print("np_d_an[i]:",np_d_an[i], "np_d_pn[i]:",np_d_pn[i])
-                print("np_pos_grad[i]:",np_pos_grad[i])
-                print("total_grad[i]:",total_grad[i])
                 total_grad[i] = np_pos_grad[i]
    
     if reduction == "none":
@@ -107,21 +103,16 @@ def _test_tripletmarginloss(test_case, shape, margin, swap, p, reduction, device
     triplet_marginloss = flow.nn.TripletMarginLoss(margin=margin, p=p, eps=eps, swap=swap, reduction = reduction)
     output_triplet_marginloss = triplet_marginloss(of_anchor, of_pos, of_neg)
     test_case.assertTrue(np.allclose(output_triplet_marginloss.numpy(), np_triplet_marginloss, 1e-06, 1e-06))
-    print("@@@@shape:",shape, "swap:",swap,"p",p, "reduction",reduction, "device:",device)
-
     output_triplet_marginloss = output_triplet_marginloss.sum()
     output_triplet_marginloss.backward()
-    print("flow_anchor.grad:",of_anchor.grad)
-   
+  
     np_grad = np_triplet_margin_loss_grad(anchor, pos, neg, p, reduction, eps, margin, swap)
-    
-    print("np_autor_grad:",np_grad)
     test_case.assertTrue(np.allclose(of_anchor.grad.numpy(), np_grad, 0.002, 0.002))
     
 
 @flow.unittest.skip_unless_1n1d()
 class TestTripletMarginLoss(flow.unittest.TestCase):
-    
+    """
     def test_triplet_margin_loss(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
@@ -135,6 +126,23 @@ class TestTripletMarginLoss(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu","cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    """
+    @autotest(n=10)
+    def test_triplet_marginloss_with_random_data(test_case):
+        margin = random().to(float)
+        p = random().to(float)
+        swap = random_bool()
+        reduction=oneof("none", "sum", "mean", nothing())
+        m = torch.nn.TripletMarginLoss(margin=margin, p=p, swap=swap, reduction=reduction)
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        shape = random_tensor(ndim=2, dim0 = random(1, 8)).value().shape
+        anchor = random_pytorch_tensor(len(shape), *shape).to(device)
+        pos = random_pytorch_tensor(len(shape), *shape).to(device)
+        neg = random_pytorch_tensor(len(shape), *shape).to(device)
+        y = m(anchor, pos, neg)
+        return y
 
 
 if __name__ == "__main__":
