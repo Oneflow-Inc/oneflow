@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-
-def diag_op(input, diagonal=0):
-    """
+add_docstr(
+    oneflow.diag,
+    r"""
     If input is a vector (1-D tensor), then returns a 2-D square tensor with the elements of input as the diagonal.
     If input is a matrix (2-D tensor), then returns a 1-D tensor with diagonal elements of input.
 
@@ -48,20 +48,4 @@ def diag_op(input, diagonal=0):
         >>> flow.diag(input)
         tensor([1., 5., 9.], dtype=oneflow.float32)
     """
-    return flow._C.diag(input, diagonal)
-
-
-@register_tensor_op("diag")
-def diag_op_tensor(input, diagonal=0):
-    """
-    diag() -> Tensor
-    See :func:`oneflow.diag`
-    
-    """
-    return flow._C.diag(input, diagonal)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+)

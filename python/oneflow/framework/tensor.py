@@ -313,6 +313,9 @@ def _softsign(self):
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
+def _diag(self, diagonal=0):
+    return flow.diag(self, diagonal=diagonal)
+
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
@@ -508,6 +511,7 @@ def RegisterMethods():
     Tensor.selu = _selu
     Tensor.softsign = _softsign
     Tensor.cast = _cast
+    Tensor.diag = _diag
 
 
 def register_tensor_op(op_name):

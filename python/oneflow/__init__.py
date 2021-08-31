@@ -77,6 +77,10 @@ from oneflow._C import silu
 from oneflow._C import selu
 from oneflow._C import softsign
 from oneflow._C import cast
+from oneflow._C import ones_like
+from oneflow._C import zeros_like
+from oneflow._C import diag
+
 
 from . import sbp
 import atexit
@@ -200,14 +204,11 @@ from oneflow.nn.modules.bmm import bmm_op as bmm
 from oneflow.nn.modules.broadcast_like import broadcast_like_op as broadcast_like
 from oneflow.nn.modules.chunk import chunk_op as chunk
 from oneflow.nn.modules.concat import concat_op as cat
-from oneflow.nn.modules.constant import ones_like_op as ones_like
 from oneflow.nn.modules.constant import ones_op as ones
-from oneflow.nn.modules.constant import zeros_like_op as zeros_like
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
-from oneflow.nn.modules.diag import diag_op as diag
 from oneflow.nn.modules.expand import expand_op as expand
 from oneflow.nn.modules.flatten import _flow_flatten as flatten
 from oneflow.nn.modules.flip import flip_op as flip
@@ -226,7 +227,6 @@ from oneflow.nn.modules.comparison import ne_op as not_equal
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.tensor_ops import negative_op as neg
 from oneflow.nn.modules.tensor_ops import negative_op as negative
-
 from oneflow.nn.modules.in_top_k import in_top_k_op as in_top_k
 from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.log1p import log1p_op as log1p

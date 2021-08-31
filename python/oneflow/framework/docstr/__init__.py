@@ -23,3 +23,5 @@ from .vision import *
 from .onehot import *
 from .comparison import *
 from .cast import *
+from .constant import *
+from .array_ops import *
