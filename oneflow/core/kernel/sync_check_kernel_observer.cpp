@@ -19,11 +19,10 @@ limitations under the License.
 
 namespace oneflow {
 
-void SyncCheckKernelObserver::DidForwardDataContent(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+void SyncCheckKernelObserver::DidForwardDataContent(const KernelContext* kernel_ctx,
+                                                    const Kernel* kernel) {
 #ifdef WITH_CUDA
-  auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(kernel_ctx.device_ctx);
+  auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(kernel_ctx->device_ctx());
   if (cuda_device_ctx != nullptr) {
     OF_CUDA_CHECK(cudaStreamSynchronize(cuda_device_ctx->cuda_stream()))
         << kernel->op_conf().name();
