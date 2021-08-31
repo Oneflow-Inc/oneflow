@@ -39,6 +39,26 @@ add_docstr(
     """
 )
 
+add_docstr(
+    oneflow.log1p,
+    r"""Returns a new tensor with the natural logarithm of (1 + input).
+
+    .. math::
+        \\text{out}_{i}=\\log_e(1+\\text{input}_{i})
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
+        >>> out = flow.log1p(x)
+        >>> out
+        tensor([0.8329, 0.9163, 1.3083], dtype=oneflow.float32)
+
+    """
+)
 
 add_docstr(
     oneflow.exp,

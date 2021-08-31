@@ -316,6 +316,9 @@ def _cast(self, dtype):
 def _diag(self, diagonal=0):
     return flow.diag(self, diagonal=diagonal)
 
+def _log1p(self):
+    return flow.log1p(self)
+
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
@@ -512,6 +515,7 @@ def RegisterMethods():
     Tensor.softsign = _softsign
     Tensor.cast = _cast
     Tensor.diag = _diag
+    Tensor.log1p = _log1p
 
 
 def register_tensor_op(op_name):
