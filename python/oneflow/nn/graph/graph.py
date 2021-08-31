@@ -39,7 +39,9 @@ class Graph(object):
     r"""Base class for all neural network graphs traced from nn.Module.
 
     To use graph mode for model training or evaluation in OneFlow, you should 
-    subclass this class. Then assign modules as regular attributes::
+    subclass this class. Then modules should be added to subclass of Graph as regular attributes:
+
+    .. code-block:: python
     
         import oneflow as flow
 
@@ -52,12 +54,30 @@ class Graph(object):
                 return self.linear(x)
 
 
-    Modules assigned in Graph init will be registered and wrapped into a Block.
-    A Block reprents a segment of code and its scope in a Graph.
+    Modules added to Graph in `__init__` method will be registered and wrapped
+    and will be called in Graph.build.
+    
+    The first call of Graph.build will trace the neural network built by modules and
+    generate a graph which is compiled and optimized for later execution.
 
-    Modules registered in Graph can be call in Graph.build(). Module's operator
-    exectuion in Graph.build() is traced into a graph on the first call of a
-    Graph. The traced graph will be compiled and optimized for later execution.
+    The subsequent calls of Graph.build will directly execute the computation graph.
+
+    .. code-block:: python
+    
+        import oneflow as flow
+
+        class LinearGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.linear = flow.nn.Linear(3, 8, False)
+
+            def build(self, x):
+                return self.linear(x)
+
+        linear_graph = LinearGraph()
+        x = flow.randn(4, 3)
+        linear_graph(x) # first call, graph compiled and genrated
+        linear_graph(x) # executes computation graph directly
 
     Note that Graph cannot be nested at the moment.
     """
@@ -65,7 +85,17 @@ class Graph(object):
 
     def __init__(self):
         """
-        Initializes internal Graph states.
+        Initializes internal Graph states. It MUST be called in `__init__` method of subclass.
+
+        .. code-block:: python
+        
+            import oneflow as flow
+
+            class SubclassGraph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__() # MUST be called
+                    #... define neural networks blocks
+                    
         """
         self._generate_name()
         self.config = GraphConfig()
@@ -123,8 +153,53 @@ class Graph(object):
             block.debug(mode)
 
     def build(self, *args):
-        r"""Defines the computation graph traced at the first call of Graph.
-        Should be overridden by all subclasses.
+        r"""The build method should be overridden when users subclass nn.Graph.
+
+        The build method of nn.Graph is very similar to forward method of nn.Module and
+        is used to describe the computing process of neural network.
+
+        When Graph object be called directly, the build will be called implicitly.
+
+        .. code-block:: python
+        
+            import oneflow as flow
+            class LinearGraph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+
+                def build(self, x):
+                    return self.linear(x)
+
+            linear_graph = LinearGraph()
+            x = flow.randn(4, 3)
+            y = linear_graph(x) # build method is called implicitly
+
+        When nn.Graph.add_optimizer is called in build method, the Graph class can be used for
+        training. When training graph is used, backward of tensor should be called in build
+        method so that the Graph will run backward pass automatically.
+
+        .. code-block:: python
+
+            loss_fn = flow.nn.MSELoss(reduction="sum")
+            optimizer = flow.optim.SGD(model.parameters(), lr=1e-6)
+            class LinearTrainGraph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.model = flow.nn.Sequential(flow.nn.Linear(3, 1), flow.nn.Flatten(0, 1))
+                    self.loss_fn = loss_fn
+                    self.add_optimizer(optimizer)
+
+                def build(self, x, y):
+                    y_pred = self.model(x)
+                    loss = self.loss_fn(y_pred, y)
+                    loss.backward()
+                    return loss
+
+            linear_graph = LinearTrainGraph()
+
+            for t in range(20):
+                loss = linear_graph(x, y) #training...
         """
         raise NotImplementedError()
 
@@ -133,7 +208,11 @@ class Graph(object):
     ):
         r"""Add an optimizer, an learning rate scheduler for the graph.
         Optimizer.step(), LrScheduler.step() are automatically executed at each
-        call on Graph.
+        call on Graph. The add_optimizer should be called in build method.
+
+        Args:
+            optim (oneflow.optim.Optimizer): The optimizer.
+            lr_sch : The learning rate scheduler, see oneflow.optim.lr_scheduler.
         """
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
@@ -474,11 +553,17 @@ class Graph(object):
         return state_op_names, state_tensor_tuple
 
     def _add_block(self, name: str, module: Module = None) -> None:
-        r"""Adds a nn.Module to the graph as a block to enable a nn.Module
-        be called in nn.Graph.build(*args).
+        r"""Adds module to the graph as a block so that the module will
+        be called in nn.Graph.build.
 
-        Just assign nn.Module in nn.Graph, _add_block will to called to add the
-        module as a Block::
+        Args:
+            name (str): name of the child block. The child block can be accessed from this graph using the given name.
+            module (Module): child module to be added to the graph.
+            
+        Just assign nn.Module in nn.Graph, _add_block will be called to add the
+        module as a Block:
+
+        .. code-block:: python
 
             class LinearGraph(flow.nn.Graph):
                 def __init__(self):
@@ -490,12 +575,9 @@ class Graph(object):
                     # call the nn.Module block.
                     return self.linear(x)
 
+
         The block can be accessed as an attribute using the given name.
 
-        Args:
-            name (string): name of the child block. The child block can be
-                accessed from this graph using the given name.
-            module (Module): child module to be added to the graph.
         """
         if "_name" not in self.__dict__:
             raise AttributeError(
