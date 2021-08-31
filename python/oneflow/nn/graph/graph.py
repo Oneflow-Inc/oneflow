@@ -48,31 +48,30 @@ class Graph(object):
 
     .. code-block:: python
     
-        import oneflow as flow
+        >>> import oneflow as flow
 
-        class LinearGraph(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                # Add a module to the graph.
-                self.linear = flow.nn.Linear(3, 8, False)
-
-            def build(self, x):
-                # Use the module to build the computation logic of the graph.
-                return self.linear(x)
+        >>> class LinearGraph(flow.nn.Graph):
+        ...    def __init__(self):
+        ...        super().__init__()
+        ...        # Add a module to the graph.
+        ...        self.linear = flow.nn.Linear(3, 8, False)
+        ...    def build(self, x):
+        ...        # Use the module to build the computation logic of the graph.
+        ...        return self.linear(x)
 
         # Instantiate the graph
-        linear_graph = LinearGraph()
-
-        x = flow.randn(4, 3)
+        >>> linear_graph = LinearGraph()
+        >>> x = flow.randn(4, 3)
 
         # First call on graph will run graph's build() method to
         # trace a computatioin graph. Then the computation graph will be
         # optimized and executed for the first time.
-        linear_graph(x) 
+        >>> linear_graph(x).shape
+        flow.Size([4, 8])
 
         # Later call on graph will execute the computation graph directly.
-        linear_graph(x)
-
+        >>> linear_graph(x).shape
+        flow.Size([4, 8])
 
     Note that Graph cannot be nested at the moment.
     """
@@ -84,12 +83,13 @@ class Graph(object):
 
         .. code-block:: python
         
-            import oneflow as flow
-
-            class SubclassGraph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__() # MUST be called
-                    # Then define the graph attributes
+            >>> import oneflow as flow
+            >>> class SubclassGraph(flow.nn.Graph):
+            ...     def __init__(self):
+            ...         super().__init__() # MUST be called
+            ...         # Then define the graph attributes
+            ...     def build(self):
+            ...         pass   
                     
         """
         self._generate_name()
@@ -122,18 +122,17 @@ class Graph(object):
 
         .. code-block:: python
         
-            import oneflow as flow
-            class LinearGraph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
+            >>> import oneflow as flow
+            >>> class MyGraph(flow.nn.Graph):
+            ...     def __init__(self):
+            ...         super().__init__()
+            ...         self.linear = flow.nn.Linear(3, 8, False)
+            ...     def build(self, x):
+            ...         return self.linear(x)
 
-                def build(self, x):
-                    return self.linear(x)
-
-            linear_graph = LinearGraph()
-            x = flow.randn(4, 3)
-            y = linear_graph(x) # The build() method is called implicitly
+            >>> linear_graph = MyGraph()
+            >>> x = flow.randn(4, 3)
+            >>> y = linear_graph(x) # The build() method is called implicitly
 
         """
         raise NotImplementedError()
@@ -160,31 +159,30 @@ class Graph(object):
         or ``Tensor.mean()`` to make the loss tensor a scalar tensor.
 
         .. code-block:: python
+            
+            >>> import oneflow as flow
+            >>> loss_fn = flow.nn.MSELoss(reduction="sum")
+            >>> model = flow.nn.Sequential(flow.nn.Linear(3, 1), flow.nn.Flatten(0, 1))
+            >>> optimizer = flow.optim.SGD(model.parameters(), lr=1e-6)
+            >>> class LinearTrainGraph(flow.nn.Graph):
+            ...     def __init__(self):
+            ...         super().__init__()
+            ...         self.model = model
+            ...         self.loss_fn = loss_fn
+            ...         # Add an optimizer
+            ...         self.add_optimizer(optimizer)
+            ...     def build(self, x, y):
+            ...         y_pred = self.model(x)
+            ...         loss = self.loss_fn(y_pred, y)
+            ...         # Call loss tensor's backward(), loss tensor must be a scalar tensor
+            ...         loss.backward()
+            ...         return loss
 
-            loss_fn = flow.nn.MSELoss(reduction="sum")
-            optimizer = flow.optim.SGD(model.parameters(), lr=1e-6)
-            class LinearTrainGraph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.model = flow.nn.Sequential(flow.nn.Linear(3, 1), flow.nn.Flatten(0, 1))
-                    self.loss_fn = loss_fn
-
-                    # Add an optimizer
-                    self.add_optimizer(optimizer)
-
-                def build(self, x, y):
-                    y_pred = self.model(x)
-                    loss = self.loss_fn(y_pred, y)
-
-                    # Call loss tensor's backward(), loss tensor must be a scalar tensor
-                    loss.backward()
-
-                    return loss
-
-            linear_graph = LinearTrainGraph()
-
-            for t in range(20):
-                loss = linear_graph(x, y)
+            >>> linear_graph = LinearTrainGraph()
+            >>> x = flow.randn(10, 3)
+            >>> y = flow.randn(10)
+            >>> for t in range(3):
+            ...     loss = linear_graph(x, y)
 
         Args:
             optim (oneflow.optim.Optimizer): The optimizer.
@@ -636,19 +634,23 @@ class Graph(object):
 
         .. code-block:: python
 
-            class LinearGraph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    # add a nn.Module as a block to graph.
-                    self.linear = flow.nn.Linear(3, 8, False)
-
-                def build(self, x):
-                    # call the nn.Module block.
-                    return self.linear(x)
+            >>> import oneflow as flow
+            >>> class LinearGraph(flow.nn.Graph):
+            ...     def __init__(self):
+            ...         super().__init__()
+            ...         # add a nn.Module as a block to graph.
+            ...         self.linear = flow.nn.Linear(3, 8, False)
+            ...     def build(self, x):
+            ...         # call the nn.Module block.
+            ...         return self.linear(x)
 
 
         The block can be accessed as an attribute using the given name.
-
+            >>> g = LinearGraph()
+            >>> g.linear
+            (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
+              (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, requires_grad=True)): ()
+            )
         """
         if "_name" not in self.__dict__:
             raise AttributeError(
@@ -690,3 +692,9 @@ class Graph(object):
         raise AttributeError(
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
