@@ -97,11 +97,11 @@ from oneflow._C import clamp
 from oneflow._C import clamp as clip
 from oneflow._C import cos
 from oneflow._C import cosh
-# from oneflow.nn.modules.math_ops import erf_op as erf
-# from oneflow.nn.modules.math_ops import erfc_op as erfc
-# from oneflow.nn.modules.math_ops import expm1_op as expm1
-# from oneflow.nn.modules.math_ops import fmod_op as fmod
-# from oneflow.nn.modules.math_ops import log_op as log
+from oneflow._C import erf
+from oneflow._C import erfc
+from oneflow._C import expm1
+from oneflow._C import fmod
+from oneflow._C import log
 
 
 from . import sbp

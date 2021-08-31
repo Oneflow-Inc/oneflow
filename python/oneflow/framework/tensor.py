@@ -357,6 +357,21 @@ def _cos(self):
 def _cosh(self):
     return flow.cosh(self)
 
+def _erf(self):
+    return flow.erf(self)
+
+def _erfc(self):
+    return flow.erfc(self)
+
+def _expm1(self):
+    return flow.expm1(self)
+
+def _fmod(self, other):
+    return flow.fmod(self, other)
+
+def _log(self):
+    return flow.log(self)
+
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
@@ -571,6 +586,11 @@ def RegisterMethods():
     Tensor.clip = _clip
     Tensor.cos = _cos
     Tensor.cosh = _cosh
+    Tensor.erf = _erf
+    Tensor.erfc = _erfc
+    Tensor.expm1 = _expm1
+    Tensor.fmod = _fmod
+    Tensor.log = _log
 
 def register_tensor_op(op_name):
     def set_tensor_op(method):
