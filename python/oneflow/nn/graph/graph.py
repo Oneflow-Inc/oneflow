@@ -210,8 +210,6 @@ class Graph(object):
         assert isinstance(grad_scaler, GradScaler)
         self._grad_scaler = grad_scaler
 
-
-
     def __call__(self, *args):
         r"""Call nn.Graph subclass instance to run your customized graph.
 
@@ -234,7 +232,6 @@ class Graph(object):
             self._compile(*args)
 
         return self._run(*args)
-
 
     @property
     def name(self):
@@ -693,4 +690,3 @@ class Graph(object):
         raise AttributeError(
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
-
