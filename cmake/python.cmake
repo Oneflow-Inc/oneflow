@@ -82,4 +82,6 @@ set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 include(pybind11)
 
 set(CODEGEN_PYTHON_EXECUTABLE ${Python_EXECUTABLE} CACHE STRING "Python executable to generate .cpp/.h files")
-install_py_dev_deps(${CODEGEN_PYTHON_EXECUTABLE})
+if(NOT ${CODEGEN_PYTHON_EXECUTABLE} STREQUAL ${Python_EXECUTABLE})
+  install_py_dev_deps(${CODEGEN_PYTHON_EXECUTABLE})
+endif()
