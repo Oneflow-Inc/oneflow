@@ -46,7 +46,7 @@ types_allowed = {
     "Placement",
     "Sbp",
     "SbpList",
-    "PyObject",
+    "PyObject*",
 }
 
 generic_type_aliases = {
@@ -79,7 +79,7 @@ argument_type_aliases = {
     "Placement": "const Symbol<ParallelDesc>&",
     "Sbp": "const Symbol<cfg::SbpParallel>&",
     "SbpList": "const std::vector<Symbol<cfg::SbpParallel>>&",
-    "PyObject": "const PyObject*",
+    "PyObject*": "PyObject*",
     **generic_type_aliases,
 }
 
@@ -104,7 +104,7 @@ optional_argument_type_aliases = {
     "Placement": "const Optional<Symbol<ParallelDesc>>&",
     "Sbp": "const Optional<Symbol<SbpParallel>>&",
     "SbpList": "const Optional<std::vector<Symbol<cfg::SbpParallel>>>&",
-    "PyObject": "const Optional<const PyObject*>&",
+    "PyObject*": "const Optional<PyObject*>&",
     **{k: "const Optional<{0}>".format(v) for k, v in generic_type_aliases.items()},
 }
 

@@ -60,8 +60,8 @@ class FunctionLibrary {
     auto* functors = PackedFuncMap<FType>::Get();
     const auto& it = functors->find(func_name);
     CHECK_OR_RETURN(it != functors->end())
-        << "Functor was not found for op " << func_name
-        << ", please check whether the functor has been registered correctly or not.";
+        << "Functor was not found for \"" << func_name
+        << "\", please check whether the functor has been registered correctly or not.";
     return it->second();
   }
 
