@@ -102,7 +102,8 @@ from oneflow._C import erfc
 from oneflow._C import expm1
 from oneflow._C import fmod
 from oneflow._C import log
-
+from oneflow._C import minimum
+from oneflow._C import maximum
 
 from . import sbp
 import atexit
@@ -260,8 +261,6 @@ from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 
 
 from oneflow.nn.modules.math_ops import addmm_op as addmm
-from oneflow.nn.modules.math_ops import minimum as minimum
-from oneflow.nn.modules.math_ops import maximum as maximum
 from oneflow.nn.modules.math_ops import pow_op as pow
 from oneflow.nn.modules.math_ops import rsqrt_op as rsqrt
 from oneflow.nn.modules.math_ops import sin_op as sin

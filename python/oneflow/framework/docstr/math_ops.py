@@ -910,3 +910,50 @@ add_docstr(
 
     """
 )
+
+add_docstr(
+    oneflow.minimum,
+    r"""Computes the element-wise minimum of x and y.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x = flow.tensor((1, 2, -1), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.minimum(x, y)
+        tensor([ 1.,  0., -1.], dtype=oneflow.float32)
+
+        >>> x = flow.tensor((1,), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.minimum(x, y)
+        tensor([1., 0., 1.], dtype=oneflow.float32)
+    """
+)
+
+add_docstr(
+    oneflow.maximum,
+    r"""Computes the element-wise maximum of x and y.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x = flow.tensor((1, 2, -1), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.maximum(x, y)
+        tensor([3., 2., 4.], dtype=oneflow.float32)
+
+        >>> x = flow.tensor((1,), dtype=flow.float)
+        >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
+        >>> flow.maximum(x, y)
+        tensor([3., 1., 4.], dtype=oneflow.float32)
+    """
+)
+

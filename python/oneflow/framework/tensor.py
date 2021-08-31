@@ -372,6 +372,12 @@ def _fmod(self, other):
 def _log(self):
     return flow.log(self)
 
+def _minimum(self, y):
+    return flow.minimum(self, y)
+
+def _maximum(self, y):
+    return flow.maximum(self, y)
+
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
@@ -591,6 +597,8 @@ def RegisterMethods():
     Tensor.expm1 = _expm1
     Tensor.fmod = _fmod
     Tensor.log = _log
+    Tensor.minimum = _minimum
+    Tensor.maximum = _maximum
 
 def register_tensor_op(op_name):
     def set_tensor_op(method):
