@@ -42,4 +42,3 @@ Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array);
 
 }  // namespace numpy
 }  // namespace oneflow
-
