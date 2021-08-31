@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include<iostream>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/softmax.cuh"
 
@@ -200,6 +201,7 @@ class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel 
     const int64_t rows = dy_shape.Count(0, dy_shape.NumAxes() - 1);
     const int64_t tril_num_rows = dy_shape.At(dy_shape.NumAxes() - 2);
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
+
     cuda::softmax::DirectLoad<T, ComputeType> load_softmax_y(softmax_y->dptr<T>(), cols);
     MaskAndScaleLoad<T, ComputeType> load_dy(dy->dptr<T>(), mask->dptr<int8_t>(), cols,
                                              ctx->Attr<float>("mask_scale_value"));

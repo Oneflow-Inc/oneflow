@@ -872,10 +872,10 @@ class FusedTrilScaleSoftmaxMaskScaleFunctor {
                            const float& tril_scale_value,
                            const float& mask_scale_value) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
-    JUST(attrs.SetAttr<int32_t>("tril_fill_value", tril_fill_value));
-    JUST(attrs.SetAttr<int32_t>("tril_scale_value", tril_scale_value));
-    JUST(attrs.SetAttr<int32_t>("mask_scale_value", mask_scale_value));
+    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    JUST(attrs.SetAttr<float>("tril_fill_value", tril_fill_value));
+    JUST(attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
+    JUST(attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
   }
 
@@ -903,7 +903,7 @@ class FusedTrilScaleSoftmaxMaskScaleGradFunctor {
     JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
     JUST(attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
     JUST(attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y, dy, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y, dy, mask}, attrs);
   }
 
  private:

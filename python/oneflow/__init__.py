@@ -227,6 +227,7 @@ from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow.nn.modules.diag import diag_op as diag
+from oneflow.nn.modules.fused_tril_scale_softmax_mask_scale import fused_tril_scale_softmax_mask_scale_op as fused_tril_scale_softmax_mask_scale
 from oneflow.nn.modules.eq import eq_op as eq
 from oneflow.nn.modules.eq import eq_op as equal
 from oneflow.nn.modules.exp import exp_op as exp

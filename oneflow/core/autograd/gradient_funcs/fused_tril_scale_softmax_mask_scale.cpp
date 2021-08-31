@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 
@@ -48,22 +49,23 @@ class FusedTrilScaleSoftmaxMaskScale : public OpExprGradFunction<FusedTrilScaleS
 
     ctx->SaveTensorForBackward(outputs.at(1));
     ctx->SaveTensorForBackward(inputs.at(1));
-
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const FusedTrilScaleSoftmaxMaskScaleState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
+    if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     CHECK_EQ_OR_RETURN(out_grads.size(), 2);
     in_grads->resize(2);
     const auto& softmax_y = ctx->SavedTensors().at(0);
     const auto& mask = ctx->SavedTensors().at(1);
-    
+    const int64_t& diagonal = ctx->diagonal;
+    const float& tril_scale_value = ctx->tril_scale_value;
+    const float& mask_scale_value = ctx->mask_scale_value;
     const std::shared_ptr<oneflow::one::Tensor>& fused_tril_scale_softmax_mask_scale =
         JUST(functional::FusedTrilScaleSoftmaxMaskScaleGrad(softmax_y, out_grads.at(1), mask, diagonal, 
                                                             tril_scale_value, mask_scale_value));
-    in_grads->at(0) = fused_tril_scale_softmax_mask_scale
+    in_grads->at(0) = fused_tril_scale_softmax_mask_scale;
     
     return Maybe<void>::Ok();
   }
@@ -72,7 +74,7 @@ class FusedTrilScaleSoftmaxMaskScale : public OpExprGradFunction<FusedTrilScaleS
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_bias_add_gelu", FusedBiasAddGelu);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_tril_scale_softmax_mask_scale", FusedTrilScaleSoftmaxMaskScale);
 
 }  // namespace one
 }  // namespace oneflow
