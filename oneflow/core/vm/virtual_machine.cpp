@@ -688,7 +688,7 @@ void VirtualMachine::Schedule() {
 }
 
 bool VirtualMachine::Empty() const {
-  return pending_msg_list().empty() && waiting_instruction_list().empty()
+  return pending_msg_list().size() == 0 && waiting_instruction_list().empty()
          && active_stream_list().empty() && front_seq_compute_instr_list().empty()
          && flying_instruction_cnt() == 0;
 }
