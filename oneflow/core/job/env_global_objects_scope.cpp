@@ -43,6 +43,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
+#include "oneflow/core/kernel/kernel_observer_manager.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
@@ -196,6 +197,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     }
 #endif  // __linux__
   }
+  Global<KernelObserver>::SetAllocated(new KernelObserverManager());
   return Maybe<void>::Ok();
 }
 
@@ -205,7 +207,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
     VLOG(2) << "Multi client session has not closed , env close it at env scope destruction.";
     CHECK_JUST(session_ctx->TryClose());
   }
-
+  Global<KernelObserver>::Delete();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
@@ -239,27 +241,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #endif
   ClearAllSymbolAndIdCache();
   google::ShutdownGoogleLogging();
-}
-
-const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDesc4Device(
-    const Device& device) {
-  {
-    const std::lock_guard<std::mutex> lock(mutex_);
-    const auto& iter = device2parallel_desc_.find(device);
-    if (iter != device2parallel_desc_.end()) { return iter->second; }
-  }
-  std::string machine_device_id =
-      "@" + std::to_string(GlobalProcessCtx::Rank()) + ":" + std::to_string(device.device_id());
-  ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(CHECK_JUST(device.of_type()));
-  parallel_conf.add_device_name(machine_device_id);
-  std::shared_ptr<const ParallelDesc> parallel_desc =
-      std::make_shared<const ParallelDesc>(parallel_conf);
-  {
-    const std::lock_guard<std::mutex> lock(mutex_);
-    device2parallel_desc_.emplace(device, parallel_desc);
-  }
-  return device2parallel_desc_.at(device);
 }
 
 }  // namespace oneflow
