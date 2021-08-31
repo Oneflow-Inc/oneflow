@@ -64,14 +64,13 @@ bool DispatchHasNotFiniteDeviceType(const std::string& device_tag, DeviceCtx* ct
 
 }  // namespace
 
-void CheckNumericsKernelObserver::DidForwardDataContent(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+void CheckNumericsKernelObserver::DidForwardDataContent(const KernelContext* ctx,
+                                                        const Kernel* kernel) {
   for (const auto& obn : kernel->op_attribute().output_bns()) {
-    Blob* blob = BnInOp2Blob(obn);
+    Blob* blob = ctx->BnInOp2Blob(obn);
     if (blob != nullptr) {
-      bool has_not_finite = DispatchHasNotFiniteDeviceType(kernel->op_conf().device_tag(),
-                                                           kernel_ctx.device_ctx, blob);
+      bool has_not_finite =
+          DispatchHasNotFiniteDeviceType(kernel->op_conf().device_tag(), ctx->device_ctx(), blob);
       CHECK(!has_not_finite) << kernel->op_conf().name() << " : " << obn << " has nan or inf";
     }
   }
