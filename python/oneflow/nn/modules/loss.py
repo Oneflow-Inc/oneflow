@@ -1220,7 +1220,7 @@ class TripletMarginLoss(Module):
     :math:`(N, D)`.
 
     The distance swap is described in detail in the paper `Learning shallow
-    convolutional feature descriptors with triplet losses`_ by
+    convolutional feature descriptors with triplet losses <http://www.bmva.org/bmvc/2016/papers/paper119/index.html>`__ by
     V. Balntas, E. Riba et al.
 
     The loss function for each sample in the mini-batch is:
