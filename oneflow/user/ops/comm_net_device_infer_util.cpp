@@ -37,4 +37,9 @@ decltype(GetNcclDevice) GetNcclDevice = DECORATE(&RawGetNcclDevice, ThreadLocal)
 decltype(GetCpuTransportDevice) GetCpuTransportDevice =
     DECORATE(&RawGetCpuTransportDevice, ThreadLocal);
 
+Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceInferContext* ctx) {
+  CHECK_GT_OR_RETURN(ctx->inputs().size(), 0);
+  return ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
+}
+
 }  // namespace oneflow
