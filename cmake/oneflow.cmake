@@ -347,7 +347,12 @@ set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
 add_dependencies(oneflow_internal of_cfgobj of_functional_obj of_functional_tensor_obj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
-target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
+target_link_libraries(oneflow_internal PRIVATE
+                      ${of_libs}
+                      of_functional_tensor_obj
+                      ${oneflow_third_party_libs}
+                      of_pyext_obj
+                      ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 target_compile_options(oneflow_internal PRIVATE -Werror=return-type)
