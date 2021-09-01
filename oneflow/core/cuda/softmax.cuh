@@ -609,7 +609,7 @@ __global__ void SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t r
         if (algorithm == Algorithm::kSoftmax) {
           pack[i] = Div(Exp(pack[i] - row_max), row_sum);
         } else if (algorithm == Algorithm::kLogSoftmax) {
-          pack[i] = (pack[i] - row_sum) - Log(row_sum);
+          pack[i] = (pack[i] - row_max) - Log(row_sum);
         } else {
           __trap();
         }
