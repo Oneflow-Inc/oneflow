@@ -166,7 +166,7 @@ def _getstate(self):
 
 
 def _setstate(self, pickle_dict):
-    return self.__init__(pickle_dict["data"], dtype=pickle_dict["dtype"])
+    return self.__init__(flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"]))
 
 
 def is_nonzero(input):
