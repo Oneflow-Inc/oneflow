@@ -87,8 +87,6 @@ class TensorWithOtherCtorFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
-    //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
-    //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     return MakeTensorFromOtherTensor(other);
   }
@@ -105,7 +103,24 @@ class TensorWithDataCtorFunctor {
       Shape shape(DimVector{size});
       return TensorWithShapeCtor(shape, device, placement, sbp_tuple);
     }
-    return TensorWithData(data, DType::Float(), device, placement, sbp_tuple, false);
+
+    // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
+    LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
+
+    const auto& dtype = DType::Float();
+    if (PyTensorCheck(data)) {
+      const auto& other = JUST(PyUnpackTensor(data));
+      return MakeTensorFromOtherTensor(other, dtype, device, placement, sbp_tuple,
+                                       /*requires_grad=*/false);
+    }
+
+    // TODO(): Construct consistent tensor from sequence or numpy ndarray.
+    if (placement.has_value() || sbp_tuple.has_value()) {
+      return Error::RuntimeError()
+             << "Can not construct consistent tensor from sequence or numpy array currently.";
+    }
+    // Make tensor from python sequence or numpy array.
+    return MakeLocalTensorFromData(data, dtype, device, /*requires_grad=*/false);
   }
 };
 
@@ -115,8 +130,6 @@ class TensorWithShapeCtorFunctor {
                            const Optional<Symbol<ParallelDesc>>& placement,
                            const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp_tuple) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
-    //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
-    //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     if (placement) {
       if (!sbp_tuple) {
