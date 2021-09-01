@@ -161,7 +161,7 @@ def _ne(self, other):
 
 
 def _contiguous(self):
-    # TODO: support stride mechanism 
+    # TODO: support stride mechanism
     return self
 
 
