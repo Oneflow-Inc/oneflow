@@ -134,7 +134,7 @@ def to_tensor(pic):
     if accimage is not None and isinstance(pic, accimage.Image):
         nppic = np.zeros([pic.channels, pic.height, pic.width], dtype=np.float32)
         pic.copyto(nppic)
-        return flow.Tensor(nppic).to(dtype=default_float_dtype)
+        return flow.tensor(nppic, dtype=default_float_dtype)
 
     # handle PIL Image
     mode_to_nptype = {"I": np.int32, "I;16": np.int16, "F": np.float32}
