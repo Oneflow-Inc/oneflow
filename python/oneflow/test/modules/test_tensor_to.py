@@ -21,11 +21,12 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
+
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
     def test_consistent_tensor_clone(test_case):
-        placement = flow.placement("cuda", {0:range(2)})
+        placement = flow.placement("cuda", {0: range(2)})
         x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
         cloned = x.detach().clone()
         test_case.assertEqual(x.placement, cloned.placement)
@@ -36,7 +37,7 @@ class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
         test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
     def test_consistent_tensor_to(test_case):
-        placement = flow.placement("cuda", {0:range(2)})
+        placement = flow.placement("cuda", {0: range(2)})
         x = flow.ones((4,), placement=placement, sbp=flow.sbp.broadcast)
         cloned = x.to(copy=True)
         test_case.assertEqual(x.placement, cloned.placement)
@@ -46,11 +47,14 @@ class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
         test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
+
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTo(flow.unittest.TestCase):
     def test_consistent_tensor_clone(test_case):
-        x = flow.ones((4,), placement=flow.placement("cuda", {0:[0]}), sbp=flow.sbp.broadcast)
+        x = flow.ones(
+            (4,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
+        )
         cloned = x.detach().clone()
         test_case.assertEqual(x.placement, cloned.placement)
         test_case.assertEqual(x.sbp, cloned.sbp)
@@ -60,7 +64,9 @@ class TestTo(flow.unittest.TestCase):
         test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
 
     def test_consistent_tensor_to(test_case):
-        x = flow.ones((4,), placement=flow.placement("cuda", {0:[0]}), sbp=flow.sbp.broadcast)
+        x = flow.ones(
+            (4,), placement=flow.placement("cuda", {0: [0]}), sbp=flow.sbp.broadcast
+        )
         cloned = x.to(copy=True)
         test_case.assertEqual(x.placement, cloned.placement)
         test_case.assertEqual(x.sbp, cloned.sbp)

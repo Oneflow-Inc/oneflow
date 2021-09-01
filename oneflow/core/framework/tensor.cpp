@@ -80,9 +80,8 @@ Maybe<Tensor> ConsistentTensor::clone() const {
   int64_t device_id = JUST(local_tensor->device())->device_id();
   const auto& cloned_local_tensor = JUST(functional::Copy(local_tensor, device_type, device_id));
   DisableCheckConsistentTensorMetaScope disable_meta_check{};
-  return functional::LocalToConsistent(
-      cloned_local_tensor, JUST(parallel_desc()), *JUST(GetSbpList(JUST(nd_sbp()))),
-      *shape(), dtype());
+  return functional::LocalToConsistent(cloned_local_tensor, JUST(parallel_desc()),
+                                       *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype());
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
