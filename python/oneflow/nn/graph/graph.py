@@ -626,10 +626,7 @@ class Graph(object):
     def _copy_io(self, io_type, *args):
         def func(tensor):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
-                if tensor.is_consistent:
-                    build_arg = tensor.to_local().to(copy=True)
-                else:
-                    build_arg = tensor.to(copy=True)
+                build_arg = tensor.to(copy=True)
                 return build_arg
 
         return self._mapping_io(io_type, func, *args)
