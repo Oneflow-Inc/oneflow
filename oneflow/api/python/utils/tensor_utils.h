@@ -55,7 +55,7 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tenso
       },
       [&is_printed]() {
         if (!is_printed) {
-          blocking::GetStackInfo();
+          blocking::StackInfoCallback();
           is_printed = true;
         }
       }));
