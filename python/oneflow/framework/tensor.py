@@ -19,7 +19,6 @@ import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
-from oneflow.support.blocking import BlockingInfoContext
 
 import numpy as np
 from typing import Union
@@ -47,9 +46,8 @@ def _tensor_numpy(eager_local_tensor):
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
 
-    with BlockingInfoContext() as ctx:
-        if ndarray.size != 0:
-            copy_to_numpy(ndarray)
+    if ndarray.size != 0:
+        copy_to_numpy(ndarray)
     return ndarray
 
 

@@ -33,7 +33,7 @@ class TestAffineGrid(flow.unittest.TestCase):
         )
         groundtruth = np.array([[[[0.0, -3.0], [2.0, 5.0]], [[4.0, 7.0], [6.0, 15.0]]]])
         test_case.assertTrue(
-            np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8)
+            np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
         output = flow.nn.functional.affine_grid(
@@ -41,7 +41,7 @@ class TestAffineGrid(flow.unittest.TestCase):
         )
         groundtruth = np.array([[[[1.5, 1.5], [2.5, 5.5]], [[3.5, 6.5], [4.5, 10.5]]]])
         test_case.assertTrue(
-            np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8)
+            np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
     def test_affine_grid_3d(test_case):
@@ -64,7 +64,7 @@ class TestAffineGrid(flow.unittest.TestCase):
             ]
         )
         test_case.assertTrue(
-            np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8)
+            np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
         output = flow.nn.functional.affine_grid(
@@ -85,10 +85,10 @@ class TestAffineGrid(flow.unittest.TestCase):
             ]
         )
         test_case.assertTrue(
-            np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8)
+            np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
-    @autotest()
+    @autotest(rtol=1e-03, atol=1e-04)
     def test_flow_affine_grid_2d_with_random_data(test_case):
         N = randint(1, 8)
         C = randint(1, 8)
