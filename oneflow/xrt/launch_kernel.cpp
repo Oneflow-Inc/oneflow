@@ -40,6 +40,14 @@ static Parameter BuildParameter(const Blob& blob, const std::string& name) {
 }
 }  // namespace xrt
 
+namespace {
+
+const LogicalBlobId& BnInOp2Lbi(const Kernel& kernel, const std::string& bn_in_op) {
+  return kernel.op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
+}
+
+}  // namespace
+
 template<DeviceType device_type>
 void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
     std::unordered_map<std::string, BlobDesc>* entry_blob_desc) const {
@@ -48,7 +56,7 @@ void BlobDescGetter<device_type>::DumpEntryBlobDescTo(
 
   for (const auto& bn : kernel_->op_attribute().input_bns()) {
     // Map blob_name to function's input name.
-    std::string blob_name = xrt::BlobIdToName(kernel_->BnInOp2Lbi(bn));
+    std::string blob_name = xrt::BlobIdToName(BnInOp2Lbi(*kernel_, bn));
     // CHECK_GT(io_mapping.count(blob_name), 0);
     const std::string& mapping_name = io_mapping.at(blob_name);
     entry_blob_desc->emplace(mapping_name, get_blob_fn_(bn)->blob_desc());
@@ -147,19 +155,24 @@ void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
 }
 
 template<DeviceType device_type>
-void XrtLaunchKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void XrtLaunchKernel<device_type>::VirtualKernelInit(KernelContext* ctx) {
+  job_desc_ = ctx->job_desc();
+}
+
+template<DeviceType device_type>
+void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+  const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   desc_getter_ = BlobDescGetter<device_type>(this, BnInOp2Blob);
   // Prepare input and output parameters
   std::vector<xrt::Parameter> entry_params, return_params;
   for (const std::string& bn : this->op_attribute().input_bns()) {
-    const LogicalBlobId& lbi = this->BnInOp2Lbi(bn);
+    const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter input = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
     entry_params.push_back(input);
   }
   for (const std::string& bn : this->op_attribute().output_bns()) {
-    const LogicalBlobId& lbi = this->BnInOp2Lbi(bn);
+    const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
     xrt::Parameter output = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
     return_params.push_back(output);
@@ -181,7 +194,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   bool block_until_done = true;
   if (device_type == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-    run_options.stream = ctx.device_ctx->cuda_stream();
+    run_options.stream = ctx->device_ctx()->cuda_stream();
     run_options.device_memory_limit = FLAGS_max_workspace_bytes;
     block_until_done = false;
 #else
@@ -201,6 +214,11 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   const std::vector<xrt::Parameter>& results = executable->Results();
   CHECK_EQ(results.size(), return_params.size());
   for (int i = 0; i < results.size(); ++i) { CHECK_EQ(results[i].data(), return_params[i].data()); }
+}
+
+template<DeviceType device_type>
+const JobDesc& XrtLaunchKernel<device_type>::job_desc() const {
+  return *job_desc_;
 }
 
 // ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXrtLaunchConf, XrtLaunchKernel,

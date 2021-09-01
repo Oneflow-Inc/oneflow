@@ -199,8 +199,7 @@ class SspVariableProxyActor final : public Actor {
   }
 
   void CopyRefToValue(Regst* value_regst) {
-    KernelCtx kernel_ctx = GenDefaultKernelCtx();
-    AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
+    AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* {
       if (regst_desc_id == consumed_var_regst_desc_id_) {
         return var_regst_;
       } else if (regst_desc_id == produced_ref_regst_desc_id_) {

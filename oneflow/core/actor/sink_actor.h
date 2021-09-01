@@ -28,8 +28,6 @@ class SinkActor : public Actor {
 
  protected:
   virtual void VirtualSinkActorInit(const TaskProto&) {}
-  virtual void* NewOther() { return nullptr; }
-  virtual void DeleteOther(void*) {}
 
  private:
   void VirtualActorInit(const TaskProto&) override;
