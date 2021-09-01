@@ -124,6 +124,10 @@ class Graph(object):
         When a graph object being called for the first time, the ``build()``
         method will be called implicitly to build the computatioin graph.
 
+        Make sure to call modules's ``train()`` or ``eval()`` method before the
+        first call of your graph to make the module executing the right
+        training or evaluation logic if needed.
+
         .. code-block:: python
         
             >>> import oneflow as flow
@@ -143,7 +147,6 @@ class Graph(object):
 
         * ``Tensor``
         * ``list`` of ``Tensor``
-        * ``TensorTuple``
         * ``None``
 
         """
@@ -469,13 +472,7 @@ class Graph(object):
                     self._outputs_tensor_tuple_buffer.append(
                         outputs_tensor_tuple_buffer_item
                     )
-                assert (
-                    len(self._outputs_tensor_tuple_buffer) == self._outputs_buffer_size
-                )
-                print(
-                    " eager self._outputs_tensor_tuple_buffer size = ",
-                    len(self._outputs_tensor_tuple_buffer),
-                )
+            self._check_outputs_buffer()
 
             # Register input/output/variable to _c_nn_graph
             self._c_nn_graph.register_input_op_names(arg_op_names)
@@ -489,6 +486,28 @@ class Graph(object):
 
         return list_to_func_return(self._eager_outputs_buffer[0])
 
+    def _check_outputs_buffer(self):
+        has_len = len(self._outputs_tensor_tuple_buffer)
+        assert (
+            has_len == self._outputs_buffer_size
+        ), f"nn.Graph's outputs buffer size {has_len} donot match the set value {self._outputs_buffer_size}."
+        # Check there is not duplicated outputs buffer tensor.
+        out_id_dic = dict()
+
+        def check_id_and_add(t, name):
+            if t is not None:
+                tid = id(t)
+                assert (
+                    tid not in out_id_dic
+                ), f"nn.Graph's outputs buffer add buffer tensor tid {tid} has conflict, new item name {name}, old item name {out_id_dic[tid]}."
+                out_id_dic[tid] = name
+
+        for b_idx, buffer in enumerate(self._outputs_tensor_tuple_buffer):
+            for i_idx, item in enumerate(buffer):
+                check_id_and_add(
+                    item, "graph_ouputs_buffer_" + str(b_idx) + "_" + str(i_idx)
+                )
+
     def _run(self, *args):
         try:
             flattened_eager_args = self._flatten_io("input", *args)
@@ -496,11 +515,6 @@ class Graph(object):
                 self._cur_index_of_ouputs_buffer
             ]
             eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
-            print(
-                "cur_index",
-                self._cur_index_of_ouputs_buffer,
-                [id(eager_t) for eager_t in outputs_tensor_tuple],
-            )
             # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
@@ -521,15 +535,8 @@ class Graph(object):
             )
             raise
 
-        # tmp_eager_outputs = []
-        # for t in eager_outputs:
-        #    tmp_eager_outputs.append(t.to_local().to(copy=True))
+        # Copy outputs from buffer
         eager_outputs = self._copy_io("output", *eager_outputs)
-        print(
-            "final out: cur_index",
-            self._cur_index_of_ouputs_buffer,
-            [id(eager_t) for eager_t in eager_outputs],
-        )
         return list_to_func_return(eager_outputs)
 
     def _build_io(self, io_type, build_func, *args):
@@ -612,13 +619,18 @@ class Graph(object):
         def func(tensor):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
                 build_arg = oneflow.zeros_like(tensor)
+                return build_arg
 
         return self._mapping_io(io_type, func, *args)
 
     def _copy_io(self, io_type, *args):
         def func(tensor):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
-                build_arg = tensor.to_local().to(copy=True)
+                if tensor.is_consistent:
+                    build_arg = tensor.to_local().to(copy=True)
+                else:
+                    build_arg = tensor.to(copy=True)
+                return build_arg
 
         return self._mapping_io(io_type, func, *args)
 
@@ -657,7 +669,7 @@ class Graph(object):
             )
             print(repr_str)
             raise NotImplementedError(
-                "nn.Graph.build()'s input/output only support types: Tensor/TensorTuple/list(Tensor)/None."
+                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
 
     def _io_item_check_and_gen(self, item, expect_type, io_type, idx, second_idx=None):
@@ -704,7 +716,7 @@ class Graph(object):
             )
             print(repr_str)
             raise NotImplementedError(
-                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/TensorTuple/None."
+                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
 
     def _build_states(self):

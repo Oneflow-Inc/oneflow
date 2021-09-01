@@ -87,12 +87,6 @@ class RunLazyJobInstructionType final : public InstructionType {
   using stream_type = LazyJobStreamType;
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
-    const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const RunLazyJobPhyInstrOperand*>(ptr);
-    auto* mut_blob = phy_instr_operand->outputs()->at(0)->mut_blob();
-    CHECK_NOTNULL(phy_instr_operand);
-    OF_PROFILER_RANGE_GUARD(std::string("RunLazyJobInstructionType::Compute::id:")
-                            + std::to_string(reinterpret_cast<int64_t>(mut_blob)));
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 

@@ -235,7 +235,6 @@ void NNGraph::NewRuntimeBuffers() {
   //     in Pipeline Parallelism, this value need greater than pipeline stage num for pipelining.
   //   2. Input/Output Buffer is 2 because this is the minimum size of pipeline async launch job.
   size_t concurrency_width = job_.job_conf().concurrency_width();
-  std::cout << " cclog: concurrency_width = " << concurrency_width << "\n";
   buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), concurrency_width);
   buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), concurrency_width);
   for (const std::string& input_op_name : input_op_names_) {
