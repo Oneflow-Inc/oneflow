@@ -671,9 +671,14 @@ void VirtualMachine::Schedule() {
   TryDeleteLogicalObjects();
   TryRunFrontSeqInstruction(/*out*/ ready_instruction_list);
   auto* waiting_instruction_list = mut_waiting_instruction_list();
-  // Using thread_unsafe_size to avoid acquiring mutex lock. 
-  // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and pending_msg_list.list_head_.list_head_.size_ is not a fatal error because VirtualMachine::Schedule is always in a buzy loop. All instructions will get handled eventually.
-  //  VirtualMachine::Receive may be less effiencient if the thread safe version `pending_msg_list().size()` used here, because VirtualMachine::Schedule is more likely to get the mutex lock.
+  // Using thread_unsafe_size to avoid acquiring mutex lock.
+  // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and
+  // pending_msg_list.list_head_.list_head_.size_ is not a fatal error because
+  // VirtualMachine::Schedule is always in a buzy loop. All instructions will get handled
+  // eventually.
+  //  VirtualMachine::Receive may be less effiencient if the thread safe version
+  //  `pending_msg_list().size()` used here, because VirtualMachine::Schedule is more likely to get
+  //  the mutex lock.
   if (pending_msg_list().thread_unsafe_size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
