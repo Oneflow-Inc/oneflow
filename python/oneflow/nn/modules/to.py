@@ -41,7 +41,7 @@ def _tensor_to(input, device, dtype, copy=False):
     return ret
 
 
-def _consistent_tensor_to(input, device_type, dtype):
+def _consistent_tensor_to(input, device_type, dtype, copy=False):
     assert input.is_consistent
     # TODO(zwx): support lazy check_meta_consistency
     # input.check_meta_consistency()
@@ -53,7 +53,7 @@ def _consistent_tensor_to(input, device_type, dtype):
     assert isinstance(dtype, flow.dtype)
 
     if device_type == input.placement.device_type and dtype == input.dtype:
-        return input
+        return input if not copy else input.clone()
 
     if input.is_lazy:
         return _lazy_consistent_tensor_to(input, device_type, dtype)
@@ -184,10 +184,7 @@ def to_op(input, *args, **kwargs):
                 f"but device param {device} has been received."
             )
 
-        if copy is True:
-            return input.detach().clone()
-
-        return _consistent_tensor_to(input, device, dtype)
+        return _consistent_tensor_to(input, device, dtype, copy=copy)
     else:
         if isinstance(device, str):
             device = flow.device(device)
