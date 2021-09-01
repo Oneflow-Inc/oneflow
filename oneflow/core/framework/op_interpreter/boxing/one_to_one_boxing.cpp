@@ -50,7 +50,8 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
 
   if (GlobalProcessCtx::Rank() == src) {
     JUST(one::functional::Send(local_tensor, dst, /* send_meta */ false));
-  } else if (GlobalProcessCtx::Rank() == dst) {
+  }
+  if (GlobalProcessCtx::Rank() == dst) {
     local_tensor =
         JUST(one::functional::Recv(src, *tensor->shape(), tensor->dtype(),
                                    JUST(local_tensor->device()), Optional<one::Tensor>()));
