@@ -55,7 +55,7 @@ function(target_treat_warnings_as_errors target)
 
     target_try_compile_options(${target} -Wno-error=comment)
 
-    # disable visibility warnings related to "https://github.com/Oneflow-Inc/oneflow/pull/6099".
+    # disable visibility warnings related to https://github.com/Oneflow-Inc/oneflow/pull/3676.
     target_try_compile_options(${target} -Wno-error=attributes)
   endif()
 endfunction()
