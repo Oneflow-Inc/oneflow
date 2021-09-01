@@ -74,12 +74,12 @@ def _test_bcewithlogitsloss_impl(test_case, device, shape, reduction):
     y = np.random.randint(0, 2, [*shape]).astype(np.float32)
     w = np.random.randn(*shape).astype(np.float32)
     pw = np.random.randn([*shape][-1]).astype(np.float32)
-    input = flow.Tensor(
+    input = flow.tensor(
         x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
-    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
-    weight = flow.Tensor(w, dtype=flow.float32, device=flow.device(device))
-    pos_weight = flow.Tensor(pw, dtype=flow.float32, device=flow.device(device))
+    target = flow.tensor(y, dtype=flow.float32, device=flow.device(device))
+    weight = flow.tensor(w, dtype=flow.float32, device=flow.device(device))
+    pos_weight = flow.tensor(pw, dtype=flow.float32, device=flow.device(device))
     bcewithlogits_loss = flow.nn.BCEWithLogitsLoss(
         weight=weight, pos_weight=pos_weight, reduction=reduction
     )

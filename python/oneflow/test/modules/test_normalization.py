@@ -53,7 +53,7 @@ def _test_layernorm(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=np.float32, device=flow.device(device))
     m = flow.nn.LayerNorm(x.size()[1:]).to(device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
@@ -73,7 +73,7 @@ def _test_layernorm_v2(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=np.float32, device=flow.device(device))
     m = flow.nn.LayerNorm([2, 2], eps=1e-05).to(device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
@@ -93,7 +93,7 @@ def _test_layernorm_v3(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.Tensor(input_arr, dtype=np.float32, device=flow.device(device))
     m = flow.nn.LayerNorm(2, elementwise_affine=True).to(device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
@@ -113,7 +113,9 @@ def _test_layernorm_backward(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(
+        input_arr, dtype=np.float32, device=flow.device(device), requires_grad=True
+    )
     m = flow.nn.LayerNorm(x.size()[1:]).to(device=flow.device(device))
     y = m(x)
     z = y.sum()

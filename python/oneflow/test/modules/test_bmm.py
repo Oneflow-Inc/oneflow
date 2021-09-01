@@ -25,10 +25,10 @@ import oneflow.unittest
 
 
 def _test_bmm(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(10, 3, 4), dtype=flow.float32, device=flow.device(device)
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(10, 4, 5), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.bmm(input1, input2)
@@ -37,7 +37,7 @@ def _test_bmm(test_case, device):
 
 
 def _test_bmm_backward(test_case, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         [
             [
                 [-0.0036776792258024216, 1.9946473836898804, -0.423959881067276],
@@ -52,7 +52,7 @@ def _test_bmm_backward(test_case, device):
         device=flow.device(device),
         requires_grad=True,
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         [
             [
                 [1.118346929550171, -0.930071234703064],

@@ -26,28 +26,28 @@ from automated_test_util import *
 
 
 def _test_add_forward(test_case, shape, device):
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
-    y = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    x = flow.tensor(np.random.randn(*shape), device=flow.device(device))
+    y = flow.tensor(np.random.randn(*shape), device=flow.device(device))
     of_out = flow.add(x, y)
     np_out = np.add(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
     x = 5
-    y = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    y = flow.tensor(np.random.randn(*shape), device=flow.device(device))
     of_out = flow.add(x, y)
     np_out = np.add(x, y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    x = flow.tensor(np.random.randn(*shape), device=flow.device(device))
     y = 5
     of_out = flow.add(x, y)
     np_out = np.add(x.numpy(), y)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
-    y = flow.Tensor(np.array([5.0]), device=flow.device(device))
+    x = flow.tensor(np.random.randn(*shape), device=flow.device(device))
+    y = flow.tensor(np.array([5.0]), device=flow.device(device))
     of_out = flow.add(x, y)
     np_out = np.add(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
-    x = flow.Tensor(np.random.randn(1, 1), device=flow.device(device))
-    y = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    x = flow.tensor(np.random.randn(1, 1), device=flow.device(device))
+    y = flow.tensor(np.random.randn(*shape), device=flow.device(device))
     of_out = flow.add(x, y)
     np_out = np.add(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
@@ -55,7 +55,7 @@ def _test_add_forward(test_case, shape, device):
 
 def _test_add_backward(test_case, shape, device):
     x = 5
-    y = flow.Tensor(
+    y = flow.tensor(
         np.random.randn(*shape), requires_grad=True, device=flow.device(device)
     )
     of_out = flow.add(x, y).sum()
@@ -67,7 +67,7 @@ def _test_add_backward(test_case, shape, device):
 
 def _test_inplace_add(test_case, shape, device):
     np_x = np.random.randn(*shape)
-    of_x = flow.Tensor(
+    of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_x_inplace = of_x + 1
@@ -79,10 +79,10 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
-    of_x = flow.Tensor(
+    of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_y = flow.Tensor(
+    of_y = flow.tensor(
         np.random.randn(*shape), device=flow.device(device), requires_grad=False
     )
     of_x_inplace = of_x + 1
@@ -94,10 +94,10 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
-    of_x = flow.Tensor(
+    of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_y = flow.Tensor(
+    of_y = flow.tensor(
         np.random.randn(*shape), device=flow.device(device), requires_grad=False
     )
     of_x_inplace = of_x + 1
@@ -109,10 +109,10 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
-    of_x = flow.Tensor(
+    of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_y = flow.Tensor(np.array([5.0]), device=flow.device(device), requires_grad=False)
+    of_y = flow.tensor(np.array([5.0]), device=flow.device(device), requires_grad=False)
     of_x_inplace = of_x + 1
     id_old = id(of_x_inplace)
     of_x_inplace.add_(of_y)
@@ -122,11 +122,11 @@ def _test_inplace_add(test_case, shape, device):
     of_x_inplace = of_x_inplace.sum()
     of_x_inplace.backward()
     test_case.assertTrue(np.allclose(of_x.grad.numpy(), np.ones(shape), 1e-05, 1e-05))
-    of_x = flow.Tensor(
+    of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     np_y = np.random.randn(*shape[:-1], 1)
-    of_y = flow.Tensor(np_y, device=flow.device(device), requires_grad=False)
+    of_y = flow.tensor(np_y, device=flow.device(device), requires_grad=False)
     of_x_inplace = of_x + 1
     id_old = id(of_x_inplace)
     of_x_inplace.add_(of_y)

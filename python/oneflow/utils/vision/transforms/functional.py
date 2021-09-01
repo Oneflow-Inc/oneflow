@@ -143,7 +143,7 @@ def to_tensor(pic):
     else:
         dtype = flow.float32
 
-    img = flow.Tensor(
+    img = flow.tensor(
         np.array(pic, mode_to_nptype.get(pic.mode, np.uint8), copy=True), dtype=dtype,
     )
 

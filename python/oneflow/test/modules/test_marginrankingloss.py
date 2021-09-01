@@ -44,16 +44,16 @@ def np_margin_ranking_loss_grad(margin, input1, input2, targets):
 
 
 def _test_marginrankingloss_none(test_case, shape, margin, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
-    target_pos = flow.Tensor(
+    target_pos = flow.tensor(
         np.ones(shape), dtype=flow.float32, device=flow.device(device)
     )
-    target_neg = flow.Tensor(
+    target_neg = flow.tensor(
         -1 * np.ones(shape), dtype=flow.float32, device=flow.device(device)
     )
     margin_ranking_loss = flow.nn.MarginRankingLoss(margin=margin, reduction="none")
@@ -71,16 +71,16 @@ def _test_marginrankingloss_none(test_case, shape, margin, device):
 
 
 def _test_marginrankingloss_mean(test_case, shape, margin, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
-    target_pos = flow.Tensor(
+    target_pos = flow.tensor(
         np.ones(shape), dtype=flow.float32, device=flow.device(device)
     )
-    target_neg = flow.Tensor(
+    target_neg = flow.tensor(
         -1 * np.ones(shape), dtype=flow.float32, device=flow.device(device)
     )
     margin_ranking_loss = flow.nn.MarginRankingLoss(margin=margin, reduction="mean")
@@ -98,16 +98,16 @@ def _test_marginrankingloss_mean(test_case, shape, margin, device):
 
 
 def _test_marginrankingloss_sum(test_case, shape, margin, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
-    target_pos = flow.Tensor(
+    target_pos = flow.tensor(
         np.ones(shape), dtype=flow.float32, device=flow.device(device)
     )
-    target_neg = flow.Tensor(
+    target_neg = flow.tensor(
         -1 * np.ones(shape), dtype=flow.float32, device=flow.device(device)
     )
     margin_ranking_loss = flow.nn.MarginRankingLoss(margin=margin, reduction="sum")
@@ -125,19 +125,19 @@ def _test_marginrankingloss_sum(test_case, shape, margin, device):
 
 
 def _test_marginrankingloss_grad(test_case, shape, margin, device):
-    input1 = flow.Tensor(
+    input1 = flow.tensor(
         np.random.randn(*shape),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    input2 = flow.Tensor(
+    input2 = flow.tensor(
         np.random.randn(*shape),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    target = flow.Tensor(np.ones(shape), dtype=flow.float32, device=flow.device(device))
+    target = flow.tensor(np.ones(shape), dtype=flow.float32, device=flow.device(device))
     margin_ranking_loss = flow.nn.MarginRankingLoss(margin=margin, reduction="sum")
     margin_ranking_loss = margin_ranking_loss.to(device)
     of_out = margin_ranking_loss(input1, input2, target)

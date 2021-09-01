@@ -337,7 +337,7 @@ class TestConsistentCast(flow.unittest.TestCase):
             np_arr = np.array([4, 6, 7, 8], dtype=np.float32)
         else:
             np_arr = np.array([0, 0, 0, 0], dtype=np.float32)
-        tensor = flow.Tensor(np_arr, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(4)})
         device = flow.device("cuda")
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
@@ -354,7 +354,7 @@ class TestConsistentCast(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_consistent_with_wrong_device(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
-        tensor = flow.Tensor(
+        tensor = flow.tensor(
             np_arr,
             device=flow.device("cuda:%d" % ((flow.env.get_rank() + 1) % 4)),
             dtype=flow.float32,
@@ -382,7 +382,7 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(2)})
         split0_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
         split1_tensor = split0_tensor.to_consistent(placement, flow.sbp.split(1))
@@ -439,7 +439,7 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(2)})
         split_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
         split1_tensor = split_tensor.to_consistent(placement, flow.sbp.split(1))
@@ -501,7 +501,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(2)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
         new_placement = flow.placement("cuda", {0: range(3)})
@@ -542,7 +542,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(3)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(4)})
@@ -595,7 +595,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(3)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.partial_sum)
         new_placement = flow.placement("cuda", {0: range(4)})
@@ -634,7 +634,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(1)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(2)})
@@ -665,7 +665,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(1)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(2)})
@@ -706,7 +706,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(1)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(4)})
@@ -757,7 +757,7 @@ class TestConsistentCast_NTo1(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(2)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
         new_placement = flow.placement("cuda", {0: range(1)})
@@ -788,7 +788,7 @@ class TestConsistentCast_NTo1(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(2)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(1)})
@@ -828,7 +828,7 @@ class TestConsistentCast_NTo1(flow.unittest.TestCase):
                 dtype=np.float32,
             )
         device = flow.device("cuda")
-        tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
         placement = flow.placement("cuda", {0: range(2)})
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.partial_sum)
         new_placement = flow.placement("cuda", {0: range(1)})

@@ -27,7 +27,7 @@ import oneflow.unittest
 def _test_dropout(test_case, shape, device):
     input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=0)
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), input_arr))
 
@@ -35,7 +35,7 @@ def _test_dropout(test_case, shape, device):
 def _test_dropout_p1(test_case, shape, device):
     input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=1.0)
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     y = m(x)
     test_case.assertTrue(
         np.allclose(y.numpy(), np.zeros(input_arr.shape, dtype=np.float32))
@@ -45,7 +45,9 @@ def _test_dropout_p1(test_case, shape, device):
 def _test_dropout_backward_p0(test_case, shape, device):
     input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=0)
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     y = m(x)
     z = y.sum()
     z.backward()
@@ -59,7 +61,9 @@ def _test_dropout_backward_p0(test_case, shape, device):
 def _test_dropout_backward_p1(test_case, shape, device):
     input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=1)
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     y = m(x)
     z = y.sum()
     z.backward()
@@ -73,7 +77,7 @@ def _test_dropout_backward_p1(test_case, shape, device):
 def _test_dropout_eval(test_case, shape, device):
     input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=1)
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     m.eval()
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), input_arr))
@@ -83,7 +87,9 @@ def _test_dropout_with_generator(test_case, shape, device):
     generator = flow.Generator()
     generator.manual_seed(0)
     m = flow.nn.Dropout(p=0.5, generator=generator)
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    x = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
     y_1 = m(x)
     y_1.numpy()
     generator.manual_seed(0)

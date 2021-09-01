@@ -41,10 +41,10 @@ def _np_mseloss_grad(np_input, np_target):
 def _test_mseloss_impl(test_case, device, shape, reduction):
     x = np.random.randn(*shape)
     y = np.random.randn(*shape)
-    input = flow.Tensor(
+    input = flow.tensor(
         x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
-    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+    target = flow.tensor(y, dtype=flow.float32, device=flow.device(device))
     loss = flow.nn.MSELoss(reduction=reduction)
     loss = loss.to(device)
     of_out = loss(input, target)
