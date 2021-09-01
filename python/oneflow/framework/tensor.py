@@ -21,6 +21,7 @@ import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
 from oneflow.support.blocking import BlockingInfoContext
 
+import warnings
 import numpy as np
 from typing import Union
 
@@ -162,6 +163,7 @@ def _ne(self, other):
     return self.ne(other)
 
 def _contiguous(self):
+    # TODO: support stride mechanism 
     return self
 
 def _getstate(self):
