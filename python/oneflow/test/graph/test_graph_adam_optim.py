@@ -81,8 +81,11 @@ def compare_with_numpy_adam(
     adam_graph = CustomAdamGraph()
 
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
-            random_grad_seq[i], requires_grad=False, device=flow.device(device)
+        mask_tensor = flow.tensor(
+            random_grad_seq[i],
+            dtype=flow.float32,
+            requires_grad=False,
+            device=flow.device(device),
         )
         adam_x = adam_graph(mask_tensor)
 

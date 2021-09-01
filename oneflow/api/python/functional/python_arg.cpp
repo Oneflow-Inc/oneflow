@@ -145,6 +145,10 @@ Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() 
 template<>
 Maybe<std::vector<Symbol<cfg::SbpParallel>>>
 PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
+  if (PySbpParallelCheck(object_)) {
+    return std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(
+        1, JUST(PyUnpackSbpParallel(object_)));
+  }
   return PyUnpackSbpParallelSequence(object_);
 }
 
@@ -196,7 +200,8 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kDEVICE: return PyDeviceCheck(object_) || PyStringCheck(object_);
     case kPARALLEL_DESC: return PyParallelDescCheck(object_);
     case kSBP_PARALLEL: return PySbpParallelCheck(object_);
-    case kSBP_PARALLEL_LIST: return PySbpParallelSequenceCheck(object_);
+    case kSBP_PARALLEL_LIST:
+      return PySbpParallelSequenceCheck(object_) || PySbpParallelCheck(object_);
     case kPY_OBJECT: return nullptr != object_;
     default: {
       OF_UNIMPLEMENTED() << "Can not check type " << JUST(ValueTypeName(type));

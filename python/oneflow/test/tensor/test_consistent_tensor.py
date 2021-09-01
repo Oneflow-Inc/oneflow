@@ -56,7 +56,7 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(*shape, placement=placement, sbp=sbp)
         test_case.assertTrue(x.is_consistent)
         # ConsistentTensor -> LocalTensor
-        y = flow.Tensor(x)
+        y = flow.Tensor(x, device="cpu")
         test_case.assertTrue(y.is_local)
         y = flow.Tensor(x, device="cuda")
         test_case.assertTrue(y.is_local)
