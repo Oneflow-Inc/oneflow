@@ -348,3 +348,4 @@ import oneflow.utils.data
 import oneflow.utils.vision
 from oneflow.nn.modules.relu import relu_op as relu
 from oneflow.cuda import is_available
+import oneflow.comm
