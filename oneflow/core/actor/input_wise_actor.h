@@ -54,7 +54,6 @@ class InputWiseActor : public Actor {
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
 
-  virtual void SetKernelCtxOther(void** other) { *other = nullptr; }
   int64_t GetCurProcessedRegstDescId() const;
 
   RegstSlot consumed_rs_;

@@ -124,7 +124,10 @@ class MyModule2(flow.nn.Module):
         if self.weight.is_consistent:
             y = self.weight.to_consistent(grad_sbp=flow.sbp.broadcast)
         z = flow._C.matmul(y, x, transpose_b=True)
-        return self.activation(z)
+        out = self.activation(z).sum()
+        if self.weight.is_consistent:
+            out = out.to_consistent(sbp=flow.sbp.broadcast)
+        return out
 
 
 class MyModule3(flow.nn.Module):
@@ -241,6 +244,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
             local_y, flow.cat([local_x, local_x], dim=0), transpose_b=True,
         )
         z = flow._C.relu(z)
+        z = z.sum()
 
         placement = flow.placement("cuda", {0: [0, 1]})
         c_x = local_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
@@ -253,19 +257,18 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         g_z = g(c_x)
         # print(f"g_z shape: {g_z.shape}, placement: {g_z.placement}, sbp: {g_z.sbp}")
         test_case.assertTrue(g_z.is_consistent)
-        test_case.assertTrue(g_z.sbp[0] == flow.sbp.split(1))
+        test_case.assertTrue(g_z.sbp[0] == flow.sbp.broadcast)
         # S(1) -> B not supported yet
         # c_z = g_z.to_consistent(sbp=flow.sbp.broadcast)
-        c_z = g_z.transpose(0, 1).to_consistent(sbp=flow.sbp.broadcast)
         # print(f"c_z shape: {c_z.shape}, placement: {c_z.placement}, sbp: {c_z.sbp}")
-        test_case.assertTrue(np.allclose(z.numpy().T, c_z.to_local().numpy()))
+        test_case.assertTrue(np.allclose(z.numpy(), g_z.to_local().numpy()))
 
         e_y = c_y.detach()
         # print(f"e_y shape: {e_y.shape}, placement: {e_y.placement}, sbp: {e_y.sbp}")
         e_m = MyModule2(e_y)
         e_z = e_m(c_x)
         # print(f"e_z shape: {e_z.shape}, placement: {e_z.placement}, sbp: {e_z.sbp}")
-        e_z.backward(flow.ones_like(e_z))
+        e_z.backward()
 
         test_case.assertTrue(
             np.allclose(c_y.to_local().numpy(), e_y.to_local().numpy())

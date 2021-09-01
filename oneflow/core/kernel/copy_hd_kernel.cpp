@@ -19,29 +19,25 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
+class CopyHdKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
   CopyHdKernel() = default;
   ~CopyHdKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
-  void ForwardHeader(const KernelCtx& ctx,
-                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardHeader(const KernelContext* ctx) const override;
 };
 
-void CopyHdKernel::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob(op_attribute().input_bns(0));
-  Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(0));
-  out_blob->CopyValidDataContentFrom(ctx.device_ctx, in_blob);
+void CopyHdKernel::ForwardDataContent(const KernelContext* ctx) const {
+  const Blob* in_blob = ctx->BnInOp2Blob(op_attribute().input_bns(0));
+  Blob* out_blob = ctx->BnInOp2Blob(op_attribute().output_bns(0));
+  out_blob->CopyValidDataContentFrom(ctx->device_ctx(), in_blob);
 }
 
-void CopyHdKernel::ForwardHeader(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
+void CopyHdKernel::ForwardHeader(const KernelContext* ctx) const {
+  ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
 }
 
 REGISTER_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);

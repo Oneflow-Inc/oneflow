@@ -40,51 +40,37 @@ KernelObserverManager::KernelObserverManager() {
   kernel_observers_.emplace_back(new ProfilerKernelObserver());
 }
 
-void KernelObserverManager::WillForward(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+void KernelObserverManager::WillForward(const KernelContext* kernel_ctx, const Kernel* kernel) {
+  for (const auto& observer : kernel_observers_) { observer->WillForward(kernel_ctx, kernel); }
+}
+
+void KernelObserverManager::DidForward(const KernelContext* kernel_ctx, const Kernel* kernel) {
+  for (const auto& observer : kernel_observers_) { observer->DidForward(kernel_ctx, kernel); }
+}
+
+void KernelObserverManager::WillForwardHeader(const KernelContext* kernel_ctx,
+                                              const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) {
-    observer->WillForward(kernel_ctx, kernel, BnInOp2Blob);
+    observer->WillForwardHeader(kernel_ctx, kernel);
   }
 }
 
-void KernelObserverManager::DidForward(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+void KernelObserverManager::DidForwardHeader(const KernelContext* kernel_ctx,
+                                             const Kernel* kernel) {
+  for (const auto& observer : kernel_observers_) { observer->DidForwardHeader(kernel_ctx, kernel); }
+}
+
+void KernelObserverManager::WillForwardDataContent(const KernelContext* kernel_ctx,
+                                                   const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) {
-    observer->DidForward(kernel_ctx, kernel, BnInOp2Blob);
+    observer->WillForwardDataContent(kernel_ctx, kernel);
   }
 }
 
-void KernelObserverManager::WillForwardHeader(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+void KernelObserverManager::DidForwardDataContent(const KernelContext* kernel_ctx,
+                                                  const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) {
-    observer->WillForwardHeader(kernel_ctx, kernel, BnInOp2Blob);
-  }
-}
-
-void KernelObserverManager::DidForwardHeader(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  for (const auto& observer : kernel_observers_) {
-    observer->DidForwardHeader(kernel_ctx, kernel, BnInOp2Blob);
-  }
-}
-
-void KernelObserverManager::WillForwardDataContent(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  for (const auto& observer : kernel_observers_) {
-    observer->WillForwardDataContent(kernel_ctx, kernel, BnInOp2Blob);
-  }
-}
-
-void KernelObserverManager::DidForwardDataContent(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  for (const auto& observer : kernel_observers_) {
-    observer->DidForwardDataContent(kernel_ctx, kernel, BnInOp2Blob);
+    observer->DidForwardDataContent(kernel_ctx, kernel);
   }
 }
 
