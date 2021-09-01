@@ -44,7 +44,11 @@ class GraphConfig(object):
         raise NotImplementedError
 
     def set_outputs_buffer_size(self, value: int = 2):
-        r"""
+        r"""Set the outputs buffer size of ``nn.Graph``.
+        When graph's outputs buffer size is greater than 2, multiple call on the
+        graph can work like a pipeline. This makes multiple call takes less time.
+        
+        The default outputs buffer size is 2.
         """
         self._outputs_buffer_size = value
 
