@@ -83,7 +83,10 @@ def _test_inplace_add(test_case, shape, device):
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_y = flow.tensor(
-        np.random.randn(*shape), device=flow.device(device), requires_grad=False
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=False,
     )
     of_x_inplace = of_x + 1
     id_old = id(of_x_inplace)
@@ -98,7 +101,10 @@ def _test_inplace_add(test_case, shape, device):
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_y = flow.tensor(
-        np.random.randn(*shape), device=flow.device(device), requires_grad=False
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=False,
     )
     of_x_inplace = of_x + 1
     id_old = id(of_x_inplace)
@@ -112,7 +118,12 @@ def _test_inplace_add(test_case, shape, device):
     of_x = flow.tensor(
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_y = flow.tensor(np.array([5.0]), device=flow.device(device), requires_grad=False)
+    of_y = flow.tensor(
+        np.array([5.0]),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=False,
+    )
     of_x_inplace = of_x + 1
     id_old = id(of_x_inplace)
     of_x_inplace.add_(of_y)
@@ -126,7 +137,9 @@ def _test_inplace_add(test_case, shape, device):
         np_x, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     np_y = np.random.randn(*shape[:-1], 1)
-    of_y = flow.tensor(np_y, device=flow.device(device), requires_grad=False)
+    of_y = flow.tensor(
+        np_y, dtype=flow.float32, device=flow.device(device), requires_grad=False
+    )
     of_x_inplace = of_x + 1
     id_old = id(of_x_inplace)
     of_x_inplace.add_(of_y)
