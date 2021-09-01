@@ -53,7 +53,7 @@ function(target_treat_warnings_as_errors target)
     # disable for pointer operations of intrusive linked lists
     target_try_compile_options(${target} -Wno-error=array-bounds)
 
-    target_try_compile_options(${target} -Wno-error=comment -Wno-error=attribute)
+    target_try_compile_options(${target} -Wno-error=comment -Wno-error=attributes)
   endif()
 endfunction()
 
