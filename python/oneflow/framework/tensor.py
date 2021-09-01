@@ -456,15 +456,16 @@ def register_tensor_op(op_name):
 
 
 def tensor(*args, **kwargs):
-    """Constructs a tensor, return a consistent tensor if placement and sbp are in kwargs,
+    """Constructs a tensor with data, return a consistent tensor if placement and sbp are in kwargs,
        otherwise return a local tensor. 
        
     Arguments:
-        data: Initial data for the tensor. Can be a list, tuple, NumPy ndarray and scalar.
+        data: Initial data for the tensor. Can be a list, tuple, NumPy ndarray, scalar or tensor.
     Keyword Arguments:
         dtype (oneflow.dtype, optional) – the desired data type of returned tensor.
             Default: if None, infers data type from data.
-        device (oneflow.device, optional): the desired device of returned tensor.
+        device (oneflow.device, optional): the desired device of returned tensor. If placement
+            and sbp is None, uses the current cpu for the default tensor type.
         placement (oneflow.placement, optional): the desired placement of returned tensor.
         sbp (oneflow.sbp or tuple of oneflow.sbp, optional): the desired sbp of returned tensor.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False
