@@ -46,6 +46,7 @@ class TestGraphCheck(flow.unittest.TestCase):
 
         g = CustomGraphIOCheck()
         g.debug()
+        print("type(g.m) ", type(g.m))
 
         x = np.ones((10, 10))
         x = flow.tensor(x, dtype=flow.float32)

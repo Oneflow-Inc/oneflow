@@ -49,6 +49,9 @@ class GraphConfig(object):
         graph can work like a pipeline. This makes multiple call takes less time.
         
         The default outputs buffer size is 2.
+
+        Args:
+            value (int): graph ouputs buffer size.
         """
         self._outputs_buffer_size = value
 
@@ -89,7 +92,7 @@ class GraphConfig(object):
         """Set num of steps to accumulate gradient.
 
         Args:
-            value (int): num of steps
+            value (int): num of steps.
         """
         self.proto.set_num_gradient_accumulation_steps(value)
 
