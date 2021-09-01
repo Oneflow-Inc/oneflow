@@ -31,9 +31,9 @@ class Adagrad(Optimizer):
 
             & S_{t} = S_{t-1} + grad \odot grad 
             
-            & decay_lr = \frac{learning_rate}{(1 + (train_step - 1) * lr_decay)}
+            & decay\_lr = \frac{learning\_rate}{(1 + (train\_step - 1) * lr\_decay)}
 
-            & X_{t} = X_{t-1} - \frac{decay_lr}{\sqrt{S_{t} + \epsilon}} \odot grad
+            & X_{t} = X_{t-1} - \frac{decay\_lr}{\sqrt{S_{t} + \epsilon}} \odot grad
 
         Args:
             params (Union[Iterator[Parameter], List[Dict]]): iterable of parameters to optimize or dicts defining
@@ -42,8 +42,7 @@ class Adagrad(Optimizer):
             lr_decay (float, optional): The decay factor of learning rate. Defaults to 0.0.
             weight_decay (float, optional): The weight decay. Defaults to 0.
             initial_accumulator_value (float, optional): The initial value of S. Defaults to 0.0.
-            eps (float, optional): A small constant terms added to the denominator to improve
-            numerical stability. Defaults to 1e-10.
+            eps (float, optional): A small constant terms added to the denominator to improve numerical stability. Defaults to 1e-10.
         """
 
     def __init__(
