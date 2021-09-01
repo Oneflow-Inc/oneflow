@@ -111,7 +111,7 @@ Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(Symbol<ParallelDesc> par
   auto iter = map.find(key);
   if (iter == map.end()) {
     Optional<int64_t> opt_parallel_id;
-    JUST(GetDevice4CurrentProcessCtx(parallel_desc, &opt_parallel_id));
+    JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &opt_parallel_id));
     int64_t parallel_id = JUST(opt_parallel_id.value());
     const auto& sub_parallel_desc =
         JUST(GetBroadcastSubParallelDesc(*parallel_desc, *nd_sbp, parallel_id));
@@ -174,7 +174,7 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
       const auto& node_iter = node_id2src_process_id.find(GlobalProcessCtx::NodeId(process_id));
       if (node_iter == node_id2src_process_id.end()) {
         CHECK_OR_RETURN(allow_across_node)
-            << Error::Unimplemented() << "\n----[src_placement]----\n"
+            << Error::UnimplementedError() << "\n----[src_placement]----\n"
             << src_parallel_desc->parallel_conf().DebugString() << "\n----[dst_placement]----\n"
             << dst_parallel_desc->parallel_conf().DebugString();
         // handle `process_id` later.

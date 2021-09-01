@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/common/registry_error.h"
+#include "oneflow/extension/python/numpy_internal.h"
 
 namespace oneflow {
 
@@ -29,8 +30,8 @@ Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
     case DataType::kUInt8: return NPY_UINT8;
     case DataType::kFloat16: return NPY_FLOAT16;
     default:
-      return Error::ValueError("OneFlow data type " + DataType_Name(of_data_type)
-                               + " is not valid to Numpy data type.");
+      return Error::InvalidValueError("OneFlow data type " + DataType_Name(of_data_type)
+                                      + " is not valid to Numpy data type.");
   }
 }
 
@@ -44,8 +45,8 @@ Maybe<DataType> NumpyTypeToOFDataType(int np_type) {
     case NPY_UINT8: return DataType::kUInt8;
     case NPY_FLOAT16: return DataType::kFloat16;
     default:
-      return Error::ValueError("Numpy data type " + std::to_string(np_type)
-                               + " is not valid to OneFlow data type.");
+      return Error::InvalidValueError("Numpy data type " + std::to_string(np_type)
+                                      + " is not valid to OneFlow data type.");
   }
 }
 
@@ -53,6 +54,21 @@ Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array) {
   int np_array_type = PyArray_TYPE(array);
   return NumpyTypeToOFDataType(np_array_type);
 }
+
+// Executing any numpy c api before _import_array() results in segfault
+// NOTE: this InitNumpyCAPI() works because of `PY_ARRAY_UNIQUE_SYMBOL`
+// defined in numpy_internal.h
+// Reference:
+// https://numpy.org/doc/stable/reference/c-api/array.html#importing-the-api
+void InitNumpyCAPI() {
+  CatchRegistryError([]() -> Maybe<void> {
+    CHECK_ISNULL_OR_RETURN(PyArray_API);
+    CHECK_EQ_OR_RETURN(_import_array(), 0);
+    return Maybe<void>::Ok();
+  });
+}
+
+COMMAND(InitNumpyCAPI());
 
 }  // namespace numpy
 }  // namespace oneflow

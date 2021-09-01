@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class Kernel;
-class KernelCtx;
+class KernelContext;
 class Blob;
 
 class KernelObserver {
@@ -30,21 +30,14 @@ class KernelObserver {
   KernelObserver() = default;
   virtual ~KernelObserver() = default;
 
-  virtual void WillForward(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) {}
-  virtual void DidForward(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) {}
+  virtual void WillForward(const KernelContext* kernel_ctx, const Kernel* kernel) {}
+  virtual void DidForward(const KernelContext* kernel_ctx, const Kernel* kernel) {}
 
-  virtual void WillForwardHeader(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) {}
-  virtual void DidForwardHeader(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                                const std::function<Blob*(const std::string&)>& BnInOp2Blob) {}
+  virtual void WillForwardHeader(const KernelContext* kernel_ctx, const Kernel* kernel) {}
+  virtual void DidForwardHeader(const KernelContext* kernel_ctx, const Kernel* kernel) {}
 
-  virtual void WillForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                                      const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  }
-  virtual void DidForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {}
+  virtual void WillForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) {}
+  virtual void DidForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) {}
 };
 
 }  // namespace oneflow

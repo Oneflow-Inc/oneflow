@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
+#include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -34,6 +34,66 @@ namespace one {
 namespace functional {
 
 namespace impl {
+
+namespace {
+
+bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool IsAllSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis) {
+  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
+    if (!(sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == axis)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
+  return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+static constexpr auto* CachedEagerNcclAllReduceOpExpr = DECORATE(&EagerNcclAllReduce, ThreadLocal);
+
+Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
+                                              const std::string& op_type) {
+  return one::OpBuilder("eager_nccl_reduce_scatter", *JUST(UniqueStr("eager_nccl_reduce_scatter")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<std::string>("op_type", op_type)
+      .Build();
+}
+static constexpr auto* CachedNcclReduceScatterOpExpr =
+    DECORATE(&EagerNcclReduceScatter, ThreadLocalCopiable);
+
+Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
+  return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
+
+}  // namespace
+
 class BroadcastFunctor {
  public:
   BroadcastFunctor() = default;
@@ -47,9 +107,9 @@ class BroadcastFunctor {
   }
 };
 
-class AllReduceFunctor {
+class LocalAllReduceFunctor {
  public:
-  AllReduceFunctor() = default;
+  LocalAllReduceFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
       const auto& device = JUST(x->device());
@@ -74,6 +134,7 @@ class AllReduceFunctor {
                          .Input("in")
                          .Output("out")
                          .Attr("parallel_conf", PbMessage2TxtString(parallel_conf))
+                         .Attr<bool>("async_launch", true)
                          .Build());
       rank_group2op_expr[rank_group] = op_expr;
     } else {
@@ -87,11 +148,66 @@ class AllReduceFunctor {
     }
   }
 };
+
+class ConsistentAllReduceFunctor {
+ public:
+  ConsistentAllReduceFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    {
+      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
+      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
+    }
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+  }
+};
+
+class ConsistentReduceScatterFunctor {
+ public:
+  ConsistentReduceScatterFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::string& op_type) const {
+    {
+      CHECK_OR_RETURN(x->is_consistent());
+      if (op_type == "max") {
+        CHECK_OR_RETURN(IsAllBroadcastNdSbp(JUST(x->nd_sbp())));
+      } else if (op_type == "sum") {
+        CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
+      } else {
+        UNIMPLEMENTED_THEN_RETURN();
+      }
+      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
+    }
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedNcclReduceScatterOpExpr(JUST(x->parallel_desc()), op_type));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+  }
+};
+
+class ConsistentAllGatherFunctor {
+ public:
+  ConsistentAllGatherFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    {
+      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_OR_RETURN(IsAllSplitNdSbp(JUST(x->nd_sbp()), 0));
+      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
+    }
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+  }
+};
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::AllReduceFunctor>("AllReduce");
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
+  m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
+  m.add_functor<impl::ConsistentAllReduceFunctor>("ConsistentAllReduce");
+  m.add_functor<impl::ConsistentReduceScatterFunctor>("ConsistentReduceScatter");
+  m.add_functor<impl::ConsistentAllGatherFunctor>("ConsistentAllGather");
 };
 
 }  // namespace functional
