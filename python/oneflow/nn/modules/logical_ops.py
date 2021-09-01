@@ -25,7 +25,7 @@ class LogicalAnd(Module):
     def forward(self, input, other):
         if other.dtype != input.dtype:
             other = flow.cast(other, input.dtype)
-        return flow.F.logical_and(input, other)
+        return flow._C.logical_and(input, other)
 
 
 def logical_and_op(input, other):
@@ -77,7 +77,7 @@ class LogicalOr(Module):
     def forward(self, input, other):
         if other.dtype != input.dtype:
             other = flow.cast(other, input.dtype)
-        return flow.F.logical_or(input, other)
+        return flow._C.logical_or(input, other)
 
 
 def logical_or_op(input, other):
@@ -152,7 +152,7 @@ def logical_xor_op(input, other):
 
     if other.dtype != input.dtype:
         other = flow.cast(other, input.dtype)
-    return flow.F.logical_xor(input, other)
+    return flow._C.logical_xor(input, other)
 
 
 @register_tensor_op("logical_xor")

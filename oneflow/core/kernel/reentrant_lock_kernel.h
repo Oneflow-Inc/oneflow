@@ -71,15 +71,16 @@ class ReentrantLockStatus final {
 };
 
 template<typename T>
-class ReentrantLockKernel final : public KernelIf<DeviceType::kCPU> {
+class ReentrantLockKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReentrantLockKernel);
   ReentrantLockKernel() = default;
   ~ReentrantLockKernel() override = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
+  void DestroyState(void* state) const override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow

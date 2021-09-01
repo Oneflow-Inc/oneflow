@@ -19,7 +19,6 @@ import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
-from oneflow.support.blocking import BlockingInfoContext
 
 import numpy as np
 from typing import Union
@@ -47,9 +46,8 @@ def _tensor_numpy(eager_local_tensor):
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
 
-    with BlockingInfoContext() as ctx:
-        if ndarray.size != 0:
-            copy_to_numpy(ndarray)
+    if ndarray.size != 0:
+        copy_to_numpy(ndarray)
     return ndarray
 
 
@@ -86,12 +84,24 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         assert (
             self.is_lazy
         ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
+        assert (
+            self.shape.numel() == 1
+        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tesnor.sum() or loss_tensor.mean() to make it a scalar tensor."
+        assert (
+            gradient is None
+        ), "nn.Graph donot accept 'gradient' argument in backward() at the moment."
+        assert (
+            not retain_graph
+        ), "nn.Graph donot accept 'retain_graph' argument in backward() at the moment."
+        assert (
+            not create_graph
+        ), "nn.Graph donot accept 'create_graph' argument in backward() at the moment."
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
 
 def _getitem(self, key):
     try:
-        return flow.F.tensor_getitem(self, key)
+        return flow._C.tensor_getitem(self, key)
     except IndexException as e:
         # The stop condition of for in python is IndexError,
         # so we have to catch IndexException from C++ and throw IndexError
@@ -101,8 +111,12 @@ def _getitem(self, key):
 def _setitem(self, key, value):
     if self.is_consistent:
         if isinstance(value, (int, float)):
-            value = flow.F.consistent_constant(
-                [1], value, self.dtype, placement=self.placement, sbp=flow.sbp.broadcast
+            value = flow._C.consistent_constant(
+                [1],
+                value,
+                dtype=self.dtype,
+                placement=self.placement,
+                sbp=flow.sbp.broadcast,
             )
         else:
             if value.is_consistent:
@@ -118,11 +132,11 @@ def _setitem(self, key, value):
                 value = value.to_consistent(self.placement, sbp=flow.sbp.broadcast)
     else:
         if isinstance(value, (int, float)):
-            value = flow.F.constant([1], value, self.dtype, device=self.device)
+            value = flow._C.constant([1], value, dtype=self.dtype, device=self.device)
         else:
             value = value.to(device=self.device)
 
-    flow.F.tensor_setitem(self, key, value)
+    flow._C.tensor_setitem(self, key, value)
     return self
 
 
@@ -144,6 +158,15 @@ def _eq(self, other):
 
 def _ne(self, other):
     return self.ne(other)
+
+
+def _getstate(self):
+    assert self.is_local, "Only support local tensor to pickle"
+    return {"data": self.numpy(), "dtype": self.dtype}
+
+
+def _setstate(self, pickle_dict):
+    return self.__init__(pickle_dict["data"], dtype=pickle_dict["dtype"])
 
 
 def is_nonzero(input):
@@ -386,6 +409,8 @@ def RegisterMethods():
     Tensor.backward = _backward
     Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
+    Tensor.__setstate__ = _setstate
+    Tensor.__getstate__ = _getstate
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__eq__ = _eq

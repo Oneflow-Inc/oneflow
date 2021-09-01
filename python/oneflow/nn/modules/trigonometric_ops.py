@@ -44,7 +44,7 @@ def sign_op(input):
         array([-1., -1.,  1.], dtype=float32)
 
     """
-    return flow.F.sign(input)
+    return flow._C.sign(input)
 
 
 @register_tensor_op("sign")
@@ -56,7 +56,7 @@ def sign_op_tensor(input):
     See :func:`oneflow.sign`
 
     """
-    return flow.F.sign(input)
+    return flow._C.sign(input)
 
 
 def sinh_op(input):
@@ -87,7 +87,7 @@ def sinh_op(input):
         array([ 1.1752012,  0.       , -1.1752012], dtype=float32)
 
     """
-    return flow.F.sinh(input)
+    return flow._C.sinh(input)
 
 
 @register_tensor_op("sinh")
@@ -99,7 +99,7 @@ def sinh_op_tensor(input):
     See :func:`oneflow.sinh`
 
     """
-    return flow.F.sinh(input)
+    return flow._C.sinh(input)
 
 
 def tan_op(input):
@@ -124,7 +124,7 @@ def tan_op(input):
         tensor([-1.,  0.,  1.], dtype=oneflow.float32)
 
     """
-    return flow.F.tan(input)
+    return flow._C.tan(input)
 
 
 @register_tensor_op("tan")
@@ -134,7 +134,7 @@ def tan_op_tensor(input):
     See :func:`oneflow.tan`
 
     """
-    return flow.F.tan(input)
+    return flow._C.tan(input)
 
 
 @register_tensor_op("acos")
@@ -162,7 +162,7 @@ def acos_op(input):
         tensor([1.0472, 0.9273, 0.7954], dtype=oneflow.float32)
 
     """
-    return flow.F.acos(input)
+    return flow._C.acos(input)
 
 
 def acosh_op(input):
@@ -191,7 +191,7 @@ def acosh_op(input):
         tensor([0.9624, 1.6094, 1.9827], device='cuda:0', dtype=oneflow.float32)
 
     """
-    return flow.F.acosh(input)
+    return flow._C.acosh(input)
 
 
 @register_tensor_op("acosh")
@@ -203,7 +203,7 @@ def acosh_op_tensor(input):
     See :func:`oneflow.acosh`
 
     """
-    return flow.F.acosh(input)
+    return flow._C.acosh(input)
 
 
 def arccosh_op(input):
@@ -212,7 +212,7 @@ def arccosh_op(input):
     See :func:`oneflow.acosh`
 
     """
-    return flow.F.acosh(input)
+    return flow._C.acosh(input)
 
 
 @register_tensor_op("arccosh")
@@ -224,7 +224,7 @@ def arccosh_op_tensor(input):
     See :func:`oneflow.acosh`
 
     """
-    return flow.F.acosh(input)
+    return flow._C.acosh(input)
 
 
 class Atan2(Module):
@@ -308,7 +308,7 @@ def atanh_op(input):
         tensor([0.5493, 0.6931, 0.8673], dtype=oneflow.float32)
 
     """
-    return flow.F.atanh(input)
+    return flow._C.atanh(input)
 
 
 @register_tensor_op("atanh")
@@ -318,7 +318,7 @@ def atanh_op_tensor(input):
     See :func:`oneflow.atanh`
 
     """
-    return flow.F.atanh(input)
+    return flow._C.atanh(input)
 
 
 def arctanh_op(input):
@@ -326,7 +326,7 @@ def arctanh_op(input):
 
     Alias for :func:`oneflow.atanh`
     """
-    return flow.F.atanh(input)
+    return flow._C.atanh(input)
 
 
 @register_tensor_op("arctanh")
@@ -335,7 +335,7 @@ def arctanh_op_tensor(input):
 
     Alias for :func:`oneflow.atanh`
     """
-    return flow.F.atanh(input)
+    return flow._C.atanh(input)
 
 
 if __name__ == "__main__":

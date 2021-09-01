@@ -326,7 +326,7 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
     } else if (mode == "distributed_split") {
       return RewriteDistributedSplit(op_graph, &job_builder);
     } else {
-      return Error::Unimplemented();
+      return Error::UnimplementedError();
     }
   }
 };
