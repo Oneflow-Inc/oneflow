@@ -52,11 +52,11 @@ __global__ void copy_view(cudaStream_t cuda_stream, int64_t count, size_t dsize,
     compute_index(out_offset, ndim, out_stride, in_index);
     const int64_t in_offset = compute_offset(in_index, ndim, in_stride);
 
-    out_dptr = out_dptr + out_offset * dsize;
-    in_dptr = in_dptr + in_offset * dsize;
+    char *out_dptr_offset = out_dptr + out_offset * dsize;
+    const char *in_dptr_offset = in_dptr + in_offset * dsize;
 
 #pragma unroll
-    for (int j = 0; j < contiguous_block_size * dsize; ++j) { out_dptr[j] = in_dptr[j]; }
+    for (int j = 0; j < contiguous_block_size * dsize; ++j) { out_dptr_offset[j] = in_dptr_offset[j]; }
   }
 }
 
