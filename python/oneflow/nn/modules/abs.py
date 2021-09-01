@@ -36,7 +36,7 @@ def abs_op(input):
         tensor([1., 2., 3., 4.], dtype=oneflow.float32)
 
     """
-    return flow.F.abs(input)
+    return flow._C.abs(input)
 
 
 if __name__ == "__main__":

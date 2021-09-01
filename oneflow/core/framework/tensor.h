@@ -121,146 +121,108 @@ class StaticZerosTensor final : public Tensor {
   // Getters
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
   Symbol<DType> dtype() const { return CHECK_JUST(DType::Get(dtype_)); }
-  Maybe<TransportToken> transport_token() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no transport_token property";
-  }
-  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no nd_sbp property";
-  }
-  Maybe<Symbol<ParallelDesc>> parallel_desc() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no parallel_desc property";
-  }
+  Maybe<TransportToken> transport_token() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Symbol<Device>> device() const { return device_; }
-  Maybe<Symbol<Device>*> mut_device() {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no mut_device property";
-  }
+  Maybe<Symbol<Device>*> mut_device() { RETURN_ERROR_WITH_BUG_PROMPT(); }
   bool is_cuda() const {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have is_cuda property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   bool is_consistent() const { return false; }
   bool is_local() const { return !is_consistent(); }
   bool is_lazy() const {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have is_lazy property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   bool is_eager() const { return !is_lazy(); }
   const TensorMeta& tensor_meta() const {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have tensor_meta property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return *(TensorMeta*)nullptr;
   }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no consistent_tensor_meta property";
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no mut_eager_mirrored_tensor_impl property";
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
-  Maybe<vm::EagerBlobObject> eager_blob_object() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no eager_blob_object property";
-  }
-  Maybe<LocalDepObject*> compute_local_dep_object() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no compute_local_dep_object property";
-  }
-  Maybe<bool> has_eager_blob_object() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no has_eager_blob_object property";
-  }
-  Maybe<TensorStorage> tensor_storage() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no tensor_storage property";
-  }
-  Maybe<const Stride> stride() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no stride property";
-  }
-  Maybe<int64_t> storage_offset() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no storage_offset property";
-  }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<LocalDepObject*> compute_local_dep_object() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<bool> has_eager_blob_object() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<TensorStorage> tensor_storage() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<const Stride> stride() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<int64_t> storage_offset() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
   Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no consumer_nd_sbp_constraint property";
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
-  Maybe<MirroredTensor> cur_rank_phy_tensor() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no cur_rank_phy_tensor property";
-  }
+  Maybe<MirroredTensor> cur_rank_phy_tensor() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no set_consumer_nd_sbp_constraint property";
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
   // Getters for autograd
   bool requires_grad() const {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have requires_grad property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   bool is_leaf() const {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have is_leaf property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   bool retain_grad() const {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have retain_grad property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   std::shared_ptr<const FunctionNode> grad_fn_node() const {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have grad_fn_node property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
-  Maybe<Tensor> acc_grad() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no acc_grad property";
-  }
-  Maybe<TensorArg> current_grad() const {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no current_grad property";
-  }
-  Maybe<Tensor> detach() const { OF_RUNTIME_ERROR() << "StaticZerosTensor has no detach property"; }
-  Maybe<Tensor> clone() const { OF_RUNTIME_ERROR() << "StaticZerosTensor has no clone property"; }
+  Maybe<Tensor> acc_grad() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<TensorArg> current_grad() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Tensor> detach() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Tensor> clone() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
   std::shared_ptr<Tensor> data() const {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have data property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
 
   // Setters for autograd
-  void set_requires_grad(bool requires_grad) {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_requires_grad property";
-  }
-  Maybe<void> set_retain_grad(bool retain_grad) {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no retain_grad property";
-  }
+  void set_requires_grad(bool requires_grad) { PRINT_BUG_PROMPT_AND_ABORT(); }
+  Maybe<void> set_retain_grad(bool retain_grad) { RETURN_ERROR_WITH_BUG_PROMPT(); }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_grad_fn_node property";
+    PRINT_BUG_PROMPT_AND_ABORT();
   }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have mut_grad_fn_node property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return *(std::shared_ptr<FunctionNode>*)nullptr;
   }
-  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no set_acc_grad property";
-  }
-  Maybe<Tensor> mut_acc_grad() {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no mut_acc_grad property";
-  }
-  void set_is_leaf(bool is_leaf) {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_is_leaf property";
-  }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Tensor> mut_acc_grad() { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  void set_is_leaf(bool is_leaf) { PRINT_BUG_PROMPT_AND_ABORT(); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have mut_autograd_meta property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
   bool has_autograd_meta() const {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have has_autograd_meta property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have set_autograd_meta property";
+    PRINT_BUG_PROMPT_AND_ABORT();
   }
 
   user_op::TensorDesc* mut_tensor_meta() {
-    LOG(FATAL) << "RuntimeError: StaticZerosTensor don't have mut_tensor_meta property";
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
 
   Maybe<MirroredTensor> AsMirroredTensor();
-  Maybe<ConsistentTensor> AsConsistentTensor() {
-    OF_RUNTIME_ERROR() << "StaticZerosTensor has no AsConsistentTensor property";
-  }
+  Maybe<ConsistentTensor> AsConsistentTensor() { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
   StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -386,7 +348,7 @@ class Parameter final : public TensorIf<Parameter> {
     if (const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor_)) {
       return consistent_tensor;
     }
-    OF_RUNTIME_ERROR() << "Parameter Tensor has no AsConsistentTensor property";
+    RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
  private:
@@ -405,13 +367,22 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override {
-    OF_RUNTIME_ERROR() << "MirroredTensor Tensor has no transport_token property";
+    OF_RUNTIME_ERROR() << "Only consistent tensors have 'consistent_id', Consistent id is used to "
+                          "synchronize rank";
   }
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override {
-    OF_RUNTIME_ERROR() << "MirroredTensor has no nd_sbp property";
+    OF_RUNTIME_ERROR()
+        << "Local tensor has no sbp property. "
+           "sbp is the description in the oneflow distributed case, you can refer to "
+           "https://docs.oneflow.org/master/basics_topics/essentials_of_oneflow.html; "
+           "For example, create a consistent tensor like this : 'x = flow.tensor((2,3, "
+           "placement=flow.placement(\"cuda\", {0: 0}), sbp=flow.sbp.broadcast))', then 'x.sbp' is "
+           "'flow.sbp.broadcast'";
   }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
-    OF_RUNTIME_ERROR() << "MirroredTensor has no parallel_desc property";
+    OF_RUNTIME_ERROR() << "Only consistent tensors have 'placement'. Placement is used to describe "
+                          "the distribution of consistent tensor in multiple GPUs. Please use "
+                          "'.device' for local tensors.";
   }
   Maybe<Symbol<Device>> device() const override { return impl_->device(); }
   Maybe<Symbol<Device>*> mut_device() override { return impl_->mut_device(); }
@@ -470,9 +441,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
   Maybe<MirroredTensor> AsMirroredTensor() override { return shared_from_this(); }
-  Maybe<ConsistentTensor> AsConsistentTensor() override {
-    OF_RUNTIME_ERROR() << "MirroredTensor has no AsConsistentTensor property";
-  }
+  Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
@@ -493,7 +462,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
   Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
-    OF_RUNTIME_ERROR() << "ConsistentTensor has no device property";
+    OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
+                          "'.placement' for consistent tensors.";
   }
   Maybe<Symbol<Device>*> mut_device() override {
     OF_RUNTIME_ERROR() << "ConsistentTensor has no mut_device property";
@@ -551,7 +521,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   // Operators for tensor
   Maybe<Tensor> detach() const override;
-  Maybe<Tensor> clone() const override { return Error::Unimplemented(); }
+  Maybe<Tensor> clone() const override { return Error::UnimplementedError(); }
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                             DataType dtype, Symbol<cfg::NdSbp> nd_sbp,
@@ -566,9 +536,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
-  Maybe<MirroredTensor> AsMirroredTensor() override {
-    OF_RUNTIME_ERROR() << "ConsistentTensor has no AsMirroredTensor property";
-  }
+  Maybe<MirroredTensor> AsMirroredTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override { return shared_from_this(); }
 
  private:

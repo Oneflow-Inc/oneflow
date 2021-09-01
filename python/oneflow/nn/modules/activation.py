@@ -95,7 +95,7 @@ class PReLU(Module):
         assert (
             self.num_parameters == 1 or self.num_parameters == x.shape[1]
         ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
-        return flow.F.prelu(x, self.weight)
+        return flow._C.prelu(x, self.weight)
 
 
 class ReLU(Module):
@@ -132,7 +132,7 @@ class ReLU(Module):
     def forward(self, x):
         if self.inplace:
             _check_inplace_valid(x)
-        return flow.F.relu(x, self.inplace)
+        return flow._C.relu(x, self.inplace)
 
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""
@@ -182,7 +182,7 @@ class ReLU6(Module):
     def forward(self, x):
         if self.inplace:
             warnings.warn("ReLU6 module do not support inplace now")
-        return flow.F.hardtanh(x, min_val=0.0, max_val=6.0)
+        return flow._C.hardtanh(x, min_val=0.0, max_val=6.0)
 
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""
@@ -224,7 +224,7 @@ class Tanh(Module):
         super().__init__()
 
     def forward(self, input):
-        return flow.F.tanh(input)
+        return flow._C.tanh(input)
 
 
 @register_tensor_op("tanh")
@@ -306,7 +306,7 @@ class ELU(Module):
     def forward(self, x):
         if self.inplace:
             warnings.warn("ELU module do not support inplace now")
-        return flow.F.elu(x, alpha=self.alpha)
+        return flow._C.elu(x, alpha=self.alpha)
 
     def extra_repr(self):
         param_str = f"alpha={self.alpha}"
@@ -349,7 +349,7 @@ class GELU(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.gelu(x)
+        return flow._C.gelu(x)
 
 
 @register_tensor_op("gelu")
@@ -415,7 +415,7 @@ class Sigmoid(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.sigmoid(x)
+        return flow._C.sigmoid(x)
 
 
 @register_tensor_op("sigmoid")
@@ -489,7 +489,7 @@ class Hardsigmoid(Module):
     def forward(self, x):
         if self.inplace:
             warnings.warn("Hardsigmoid module do not support inplace now")
-        return flow.F.hardsigmoid(x)
+        return flow._C.hardsigmoid(x)
 
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""
@@ -504,10 +504,10 @@ class Softmax(Module):
     def forward(self, x):
         (need_transpose, permute) = _softmax_need_transpose(x, self.axis)
         if need_transpose:
-            x = flow.F.transpose(x, perm=permute)
-        res = flow.F.softmax(x)
+            x = flow._C.transpose(x, perm=permute)
+        res = flow._C.softmax(x)
         if need_transpose:
-            res = flow.F.transpose(res, perm=permute)
+            res = flow._C.transpose(res, perm=permute)
         return res
 
     def extra_repr(self):
@@ -611,10 +611,10 @@ class LogSoftmax(Module):
     def forward(self, x):
         (need_transpose, permute) = _softmax_need_transpose(x, self.dim)
         if need_transpose:
-            x = flow.F.transpose(x, perm=permute)
-        x = flow.F.logsoftmax(x)
+            x = flow._C.transpose(x, perm=permute)
+        x = flow._C.logsoftmax(x)
         if need_transpose:
-            x = flow.F.transpose(x, perm=permute)
+            x = flow._C.transpose(x, perm=permute)
         return x
 
     def extra_repr(self):
@@ -755,7 +755,7 @@ class Hardswish(Module):
     def forward(self, x):
         if self.inplace:
             warnings.warn("Hardswish module do not support inplace now")
-        return flow.F.hardswish(x)
+        return flow._C.hardswish(x)
 
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""
@@ -834,7 +834,7 @@ class Hardtanh(Module):
     def forward(self, x):
         if self.inplace:
             warnings.warn("Hardtanh module do not support inplace now")
-        return flow.F.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
+        return flow._C.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
 
     def extra_repr(self):
         param_str = f"min_val={self.min_val}, max_val={self.max_val}"
@@ -883,7 +883,7 @@ class LeakyReLU(Module):
     def forward(self, x):
         if self.inplace:
             warnings.warn("LeakyReLU module do not support inplace now")
-        return flow.F.leaky_relu(x, alpha=self.negative_slope)
+        return flow._C.leaky_relu(x, alpha=self.negative_slope)
 
     def extra_repr(self):
         param_str = f"negative_slope={self.negative_slope}"
@@ -926,7 +926,7 @@ class Mish(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.mish(x)
+        return flow._C.mish(x)
 
 
 def mish_op(x):
@@ -993,7 +993,7 @@ class SiLU(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.silu(x)
+        return flow._C.silu(x)
 
 
 def silu_op(x):
@@ -1072,7 +1072,7 @@ class SELU(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.selu(x)
+        return flow._C.selu(x)
 
 
 def selu_op(x):
@@ -1136,7 +1136,7 @@ class Softsign(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.softsign(x)
+        return flow._C.softsign(x)
 
 
 def softsign_op(x):

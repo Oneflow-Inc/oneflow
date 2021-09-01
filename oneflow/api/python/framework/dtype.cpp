@@ -31,6 +31,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__repr__", [](const Symbol<DType>& d) { return d->name(); })
       .def(py::self == py::self)
       .def(py::hash(py::self))
+      .def(py::pickle(
+          [](const Symbol<DType>& dtype) {  // __getstate__
+            return static_cast<int>(dtype->data_type());
+          },
+          [](int t) {  // __setstate__
+            return CHECK_JUST(DType::Get(DataType(t)));
+          }))
       .def_property_readonly(
           "bytes", [](const Symbol<DType>& dtype) { return dtype->bytes().GetOrThrow(); });
 

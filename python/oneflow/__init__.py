@@ -65,6 +65,7 @@ import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
 import oneflow.framework.register_python_callback
 
+
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
@@ -142,26 +143,11 @@ del ExitHook
 del atexit
 del oneflow
 
-import oneflow.F
+import oneflow._C
 import oneflow.framework.docstr as docstr
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
-import oneflow.nn.modules.activation
-import oneflow.nn.modules.argwhere
-import oneflow.nn.modules.bmm
-import oneflow.nn.modules.constant
-import oneflow.nn.modules.diag
-import oneflow.nn.modules.flip
-import oneflow.nn.modules.floor
-import oneflow.nn.modules.in_top_k
-import oneflow.nn.modules.masked_select
-import oneflow.nn.modules.math_ops
-import oneflow.nn.modules.nonzero
-import oneflow.nn.modules.norm
-import oneflow.nn.modules.permute
-import oneflow.nn.modules.round
-
 
 from oneflow.nn.modules.trigonometric_ops import acos_op as acos
 from oneflow.nn.modules.trigonometric_ops import acosh_op as acosh
@@ -291,7 +277,8 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.random_ops import bernoulli
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
-from oneflow.nn.modules.random_ops import randperm
+from oneflow.nn.modules.random_ops import randint_op as randint
+from oneflow.nn.modules.random_ops import randperm_op as randperm
 from oneflow.nn.modules.reduce_ops import _max as max
 from oneflow.nn.modules.reduce_ops import _mean as mean
 from oneflow.nn.modules.reduce_ops import _min as min
@@ -300,6 +287,7 @@ from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
+from oneflow.nn.modules.permute import permute_op as permute
 from oneflow.nn.modules.round import round_op as round
 from oneflow.nn.modules.scatter import _scatter_nd_op as scatter_nd
 from oneflow.nn.modules.slice import slice_op as slice
@@ -351,6 +339,7 @@ from . import (
     distributed,
     linalg,
     optim,
+    comm,
     boxing,
     backends,
     amp,

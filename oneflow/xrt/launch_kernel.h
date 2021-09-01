@@ -31,27 +31,25 @@ template<DeviceType device_type>
 class BlobDescGetter {
  public:
   BlobDescGetter() = default;
-  BlobDescGetter(const KernelIf<device_type>* kernel,
-                 std::function<Blob*(const std::string&)> get_blob_fn)
+  BlobDescGetter(const Kernel* kernel, std::function<Blob*(const std::string&)> get_blob_fn)
       : kernel_(kernel), get_blob_fn_(get_blob_fn) {}
 
   void DumpEntryBlobDescTo(std::unordered_map<std::string, BlobDesc>* entry_blob_desc) const;
 
  private:
-  const KernelIf<device_type>* kernel_;
+  const Kernel* kernel_;
   std::function<Blob*(const std::string&)> get_blob_fn_;
 };
 
 template<DeviceType device_type>
-class XrtLaunchKernel : public KernelIf<device_type> {
+class XrtLaunchKernel : public Kernel {
  public:
   XrtLaunchKernel() = default;
   virtual ~XrtLaunchKernel() {}
 
  private:
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
 
   xrt::Executable* BuildExecutable(const std::vector<xrt::Parameter>& entry_params,
                                    const std::vector<xrt::Parameter>& return_params,
@@ -69,8 +67,10 @@ class XrtLaunchKernel : public KernelIf<device_type> {
   bool IsStateless() const override { return false; }
 
  private:
+  const JobDesc& job_desc() const;
   mutable BlobDescGetter<device_type> desc_getter_;
   mutable std::shared_ptr<xrt::CompilationCache> compilation_cache_;
+  const JobDesc* job_desc_;
 };
 
 }  // namespace oneflow

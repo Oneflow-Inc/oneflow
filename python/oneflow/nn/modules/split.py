@@ -33,13 +33,13 @@ class Split(Module):
         dim = dim + x.dim if self.dim < 0 else self.dim
         if isinstance(self.split_size_or_sections, list):
             return tuple(
-                flow.F.split_with_size(
+                flow._C.split_with_size(
                     x, split_sizes=self.split_size_or_sections, dim=dim
                 )
             )
         else:
             return tuple(
-                flow.F.split(x, split_size=self.split_size_or_sections, dim=dim)
+                flow._C.split(x, split_size=self.split_size_or_sections, dim=dim)
             )
 
 
