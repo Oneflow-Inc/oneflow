@@ -172,7 +172,9 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   if (Global<ResourceDesc, ForEnv>::Get()->enable_debug_mode()) {
     Global<device::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
-  Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
+  const int32_t thread_pool_size = Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize();
+  LOG(INFO) << " Init Global<ThreadPool> with size: " << thread_pool_size;
+  Global<ThreadPool>::New(thread_pool_size);
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
