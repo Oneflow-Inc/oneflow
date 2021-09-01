@@ -20,7 +20,7 @@ namespace oneflow {
 namespace blocking {
 
 std::function<void()>* MutStackInfoCallback() {
-  static thread_local std::function<void()> StackInfoCallback = []{};
+  static thread_local std::function<void()> StackInfoCallback = [] {};
   return &StackInfoCallback;
 }
 
@@ -30,7 +30,9 @@ void RegisterStackInfoCallback(const std::function<void()>& Callback) {
   *MutStackInfoCallback() = Callback;
 }
 
-void ClearStackInfoCallback() { *MutStackInfoCallback() = []{}; }
+void ClearStackInfoCallback() {
+  *MutStackInfoCallback() = [] {};
+}
 
 }  // namespace blocking
 

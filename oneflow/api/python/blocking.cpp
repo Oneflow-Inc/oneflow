@@ -24,9 +24,10 @@ namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("blocking", m) {
   m.def("register_stack_info_callback", [](const std::function<std::string()>& Callback) {
-    blocking::RegisterStackInfoCallback([Callback]{
+    blocking::RegisterStackInfoCallback([Callback] {
       LOG(ERROR) << "[rank=" << std::to_string(GlobalProcessCtx::Rank()) << "]"
-         << " Blocking detected. Python stack:\n" << Callback();
+                 << " Blocking detected. Python stack:\n"
+                 << Callback();
     });
   });
   m.def("clear_stack_info_callback", []() { blocking::ClearStackInfoCallback(); });
