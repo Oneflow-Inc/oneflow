@@ -45,11 +45,11 @@ class TestGridSample(flow.unittest.TestCase):
             input, grid, mode="nearest", padding_mode="zeros", align_corners=True
         )
         test_case.assertTrue(
-            np.allclose(output.numpy(), groundtruth, rtol=1e-4, atol=1e-8)
+            np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest()
+    @autotest(rtol=1e-03, atol=1e-04)
     def test_flow_grid_sample_cudnn_with_random_data(test_case):
         # cudnn only support 4D input, with mode = 'bilinear' && padding_mode = 'zeros' && align_corners
         N = randint(1, 8)
@@ -78,7 +78,7 @@ class TestGridSample(flow.unittest.TestCase):
         )
         return output
 
-    @autotest()
+    @autotest(rtol=1e-03, atol=1e-04)
     def test_flow_grid_sample_4d_with_random_data(test_case):
         N = randint(1, 8)
         C = randint(1, 8)

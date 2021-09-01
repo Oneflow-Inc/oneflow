@@ -14,15 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <glog/logging.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/thread_local_callback.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include <pybind11/functional.h>
 
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("blocking", m) {
-  m.def("register_stack_info_callback", [](const blocking::StackInfoCallbackType& Callback) {
-    blocking::RegisterStackInfoCallback(Callback);
+  m.def("register_stack_info_callback", [](const std::function<std::string()>& Callback) {
+    blocking::RegisterStackInfoCallback([Callback] {
+      LOG(ERROR) << "[rank=" << std::to_string(GlobalProcessCtx::Rank()) << "]"
+                 << " Blocking detected. Python stack:\n"
+                 << Callback();
+    });
   });
   m.def("clear_stack_info_callback", []() { blocking::ClearStackInfoCallback(); });
 }
