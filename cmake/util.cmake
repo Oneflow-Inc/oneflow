@@ -120,14 +120,15 @@ function(use_mirror)
     set(UTIL_PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
   endif(Python3_EXECUTABLE)
   if(DEFINED THIRD_PARTY_MIRROR)
+    set(THIRD_PARTY_MIRROR_CMD "${UTIL_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL}")
     if(THIRD_PARTY_MIRROR STREQUAL "aliyun")
       execute_process(
-        COMMAND ${UTIL_PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL}
+        COMMAND ${THIRD_PARTY_MIRROR_CMD}
         OUTPUT_VARIABLE temp_url
         ERROR_VARIABLE err
         RESULT_VARIABLE ret_code)
       if (NOT (ret_code EQUAL "0"))
-        message(FATAL_ERROR "Fail to execute the script package_mirror.py. Cmd: python3 ${CMAKE_CURRENT_SOURCE_DIR}/tools/package_mirror.py -u ${PARSED_ARGS_URL}. Error: ${err}. Output: ${temp_url}")
+        message(FATAL_ERROR "Fail to execute the script package_mirror.py. Cmd: ${THIRD_PARTY_MIRROR_CMD}. Error: ${err}. Output: ${temp_url}")
       else()
         set(${PARSED_ARGS_VARIABLE} ${temp_url} PARENT_SCOPE)
       endif()
