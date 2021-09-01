@@ -169,7 +169,7 @@ auto* CachedGetSplitNdSbp = DECORATE(&GetSplitNdSbp, ThreadLocal);
 Maybe<BoxingDividor> RawInPlacementAndSplit(int64_t axis) {
   return std::make_shared<BoxingDividor>(
       "InPlacementAndSplit",
-      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+      [=](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
         Symbol<cfg::NdSbp> split_nd_sbp = JUST(CachedGetSplitNdSbp(axis));
         return PlacedNdSbp::New(split_nd_sbp, in->placement());
       });
@@ -178,7 +178,7 @@ Maybe<BoxingDividor> RawInPlacementAndSplit(int64_t axis) {
 Maybe<BoxingDividor> RawOutPlacementAndSplit(int64_t axis) {
   return std::make_shared<BoxingDividor>(
       "OutPlacementAndSplit",
-      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+      [=](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
         Symbol<cfg::NdSbp> split_nd_sbp = JUST(CachedGetSplitNdSbp(axis));
         return PlacedNdSbp::New(split_nd_sbp, out->placement());
       });
