@@ -367,10 +367,10 @@ class TestConsistentCast(flow.unittest.TestCase):
         test_case.assertEqual(consistent_tensor.placement, placement)
 
 
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestConsistentCast_S2S(flow.unittest.TestCase):
-    @flow.unittest.skip_unless_1n2d()
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_consistent_to_consistent_s0ts1(test_case):
+    def test_consistent_to_consistent_s0_to_s1(test_case):
         if flow.env.get_rank() == 0:
             np_arr = np.array(
                 [[4, 6, 5, 20], [6, 2, 5, 7], [3, 7, 5, 4], [6, 8, 9, 4]],
@@ -405,7 +405,7 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
                     ),
                 )
             )
-        else:
+        elif flow.env.get_rank() == 1:
             test_case.assertTrue(
                 np.array_equal(
                     split1_tensor.to_local().numpy(),
@@ -425,8 +425,6 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
                 )
             )
 
-    @flow.unittest.skip_unless_1n2d()
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_consistent_to_consistent_s1_to_s0(test_case):
         if flow.env.get_rank() == 0:
             np_arr = np.array(
@@ -459,7 +457,7 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
                     ),
                 )
             )
-        else:
+        elif flow.env.get_rank() == 1:
             test_case.assertTrue(
                 np.array_equal(
                     split0_tensor.to_local().numpy(),

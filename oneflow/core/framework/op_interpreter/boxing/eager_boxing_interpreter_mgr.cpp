@@ -78,18 +78,65 @@ Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_b
                                  JUST(OptionalBoxing("cuda-copy-d2h"))))));
 }
 
+Maybe<BoxingExprIf> NcclSxToBBoxingExpr() {
+  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(OptionalBoxing("nccl-s-to-s")),
+                         JUST(BoxingExpr("nccl-s-to-b"))));
+}
+
+Maybe<BoxingExprIf> NcclBToSxBoxingExpr() {
+  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(BoxingExpr("nccl-b-to-s")),
+                         JUST(OptionalBoxing("nccl-s-to-s"))));
+}
+
+Maybe<BoxingExprIf> NcclPToSxBoxingExpr() {
+  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)), JUST(BoxingExpr("nccl-p-to-s")),
+                         JUST(OptionalBoxing("nccl-s-to-s"))));
+}
+
+Maybe<BoxingExprIf> NToOneBoxingExpr() {
+  return JUST(BoxingExpr(
+      JUST(InPlacementAndBroadcast()),
+      JUST(BoxingExpr("nccl-p-to-b")) | JUST(NcclSxToBBoxingExpr()) | JUST(BoxingExpr("identity")),
+      JUST(BoxingExpr("naive-b-to-1"))));
+}
+
+Maybe<BoxingExprIf> OneToNBoxingExpr() {
+  return JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
+                         JUST(BoxingExpr("nccl-p-to-b")) | JUST(NcclPToSxBoxingExpr())
+                             | JUST(BoxingExpr("identity"))));
+}
+
+Maybe<BoxingExprIf> GenericBoxingExpr() {
+  // in_placement contain out_placement or out_placement contain in_placement
+  const auto& boxing_expr_with_inclusive_placement =
+      JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(BoxingExpr("asymmetric-x-to-b")),
+                      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("naive-b-to-p"))
+                          | JUST(NcclBToSxBoxingExpr())));
+  // in_placement and out_placement have no containment relationship
+  // n to 1
+  const auto& lhs_boxing = JUST(NToOneBoxingExpr());
+  // 1 to 1 -> 1 to n
+  const auto& rhs_boxing =
+      JUST(BoxingExpr(JUST(OutFirstDeviceAndAllBroadcast()), JUST(OptionalBoxing("naive-1-to-1")),
+                      JUST(OneToNBoxingExpr())));
+  const auto& core =
+      boxing_expr_with_inclusive_placement
+      | JUST(BoxingExpr(JUST(InFirstDeviceAndAllBroadcast()), lhs_boxing, rhs_boxing));
+
+  return core | JUST(OptionalCudaCopy(core));
+}
+
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
   const auto& core =
       JUST(BoxingExpr("identity")) | JUST(BoxingExpr("flatten-hierarchy"))
-      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(BoxingExpr("naive-1-to-p"))
-      | JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
-                        JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))))
-      | JUST(BoxingExpr("naive-b-to-1"))
-      | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()),
-                        JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-s-to-b")),
-                        JUST(BoxingExpr("naive-b-to-1"))))
+      | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))
+      | JUST(BoxingExpr("nccl-b-to-s")) | JUST(BoxingExpr("nccl-s-to-b"))
+      | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("naive-b-to-p"))
+      | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()), JUST(BoxingExpr("nccl-s-to-b")),
+                        JUST(BoxingExpr("naive-b-to-p"))))
+      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr())
       | JUST(BoxingExpr("naive-1-to-1"));
-  return core | JUST(OptionalCudaCopy(core));
+  return core | JUST(OptionalCudaCopy(core)) | JUST(GenericBoxingExpr());
 }
 
 }  // namespace
@@ -109,20 +156,6 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
       && EagerBoxingInterpreterUtil::IsBoxingB2P(in_nd_sbp->sbp_parallel(0),
                                                  out_nd_sbp->sbp_parallel(0))) {
     return std::shared_ptr<EagerBoxingInterpreter>(new NaiveB2PBoxingInterpreter());
-  }
-  if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
-      && in_parallel_desc == out_parallel_desc
-      && in_parallel_desc->device_type() == DeviceType::kGPU
-      && EagerBoxingInterpreterUtil::IsBoxingS2S(in_nd_sbp->sbp_parallel(0),
-                                                 out_nd_sbp->sbp_parallel(0))) {
-    return std::shared_ptr<EagerBoxingInterpreter>(new NcclCollectiveS2SBoxingInterpreter());
-  }
-  if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
-      && in_parallel_desc == out_parallel_desc
-      && in_parallel_desc->device_type() == DeviceType::kGPU) {
-    const auto& gpu_boxing_interpreter =
-        TRY(GetOneDimNcclCollectiveEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp));
-    if (gpu_boxing_interpreter.IsOk()) { return JUST(gpu_boxing_interpreter); }
   }
   if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
       && in_parallel_desc == out_parallel_desc

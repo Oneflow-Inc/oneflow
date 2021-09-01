@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -63,6 +64,10 @@ bool IsAllSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis) {
   return true;
 }
 
+bool IsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+  return sbp_parallel->has_split_parallel();
+}
+
 Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
   return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
       .Input("in")
@@ -94,6 +99,20 @@ Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
 }
 
 static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
+
+Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc,
+                                    Symbol<cfg::SbpParallel> src_sbp,
+                                    Symbol<cfg::SbpParallel> dst_sbp) {
+  return one::OpBuilder("eager_nccl_s2s", *JUST(UniqueStr("eager_nccl_s2s")))
+      .Input("in")
+      .Output("out")
+      .Attr<int64_t>("in_split_axis", src_sbp->split_parallel().axis())
+      .Attr<int64_t>("out_split_axis", dst_sbp->split_parallel().axis())
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Build();
+}
+
+auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
 
 }  // namespace
 
@@ -204,6 +223,30 @@ class ConsistentAllGatherFunctor {
   }
 };
 
+class ConsistentS2SFunctor {
+ public:
+  ConsistentS2SFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) const {
+    Symbol<cfg::NdSbp> in_nd_sbp = JUST(x->nd_sbp());
+    Symbol<cfg::NdSbp> out_nd_sbp = JUST(GetNdSbp(sbp_parallels));
+    {
+      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
+      CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
+      CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
+      CHECK_OR_RETURN(IsSplitSbp(out_nd_sbp->sbp_parallel(0)));
+      CHECK_NE_OR_RETURN(in_nd_sbp->sbp_parallel(0).split_parallel().axis(),
+                         out_nd_sbp->sbp_parallel(0).split_parallel().axis());
+      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
+    }
+    std::shared_ptr<OpExpr> op_expr = JUST(
+        CachedEagerNcclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),
+                                 SymbolOf(out_nd_sbp->sbp_parallel(0))));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+  }
+};
+
 class SendFunctor {
  public:
   SendFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
@@ -293,6 +336,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentAllReduceFunctor>("ConsistentAllReduce");
   m.add_functor<impl::ConsistentReduceScatterFunctor>("ConsistentReduceScatter");
   m.add_functor<impl::ConsistentAllGatherFunctor>("ConsistentAllGather");
+  m.add_functor<impl::ConsistentS2SFunctor>("ConsistentS2S");
   m.add_functor<impl::SendFunctor>("Send");
   m.add_functor<impl::RecvFunctor>("Recv");
 };
