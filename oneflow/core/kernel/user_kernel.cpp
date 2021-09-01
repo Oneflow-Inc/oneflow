@@ -24,8 +24,8 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_helper.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/operator/operator.h"
 
 #ifdef WITH_CUDA_GRAPHS
 
@@ -34,6 +34,19 @@ limitations under the License.
 #endif  // WITH_CUDA_GRAPHS
 
 namespace oneflow {
+
+namespace {
+
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                    const std::function<Blob*(const std::string& bn)>& BnInOp2Blob) {
+  for (const auto& bn : bns) {
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob && !blob->IsBodyEmpty()) { return false; }
+  }
+  return true;
+}
+
+}  // namespace
 
 using Arg2Tensor =
     HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::BlobTensorView>>;
@@ -668,19 +681,20 @@ bool UserKernel::IsCudaGraphSupported() const {
 #endif  // WITH_CUDA_GRAPHS
 }
 
-void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {
-  InitUserKernel(device_ctx);
+void UserKernel::VirtualKernelInit(KernelContext* ctx) {
+  job_desc_ = ctx->job_desc();
+  InitUserKernel(ctx->device_ctx());
   CHECK(opkernel_state_.get() == nullptr);
-  opkernel_state_ = CreateOpKernelState(device_ctx);
+  opkernel_state_ = CreateOpKernelState(ctx->device_ctx());
 }
 
-void UserKernel::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void UserKernel::ForwardDataContent(const KernelContext* ctx) const {
+  const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
 }
 
-void UserKernel::ForwardShape(const KernelCtx& ctx,
-                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void UserKernel::ForwardShape(const KernelContext* ctx) const {
+  const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
   infer_cache_->UpdateCacheKey(infer_ctx_.get());
   if (!infer_cache_->IsCacheHit()) {
@@ -717,7 +731,8 @@ NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](con
   return true;
 });
 
-EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf) {
+EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf)
+    : job_desc_(job_desc) {
   InitBase(job_desc, kernel_conf);
   InitOpKernel(kernel_conf);
 }
@@ -725,7 +740,7 @@ EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf)
 void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
   auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-      op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
+      op_type_name, UserKernelRegContext(kernel_conf, *job_desc_)));
   CHECK_NOTNULL(kernel_reg_val);
   KernelCreateContext create_ctx(kernel_conf);
   kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
@@ -733,7 +748,7 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf().all_blobs_are_static()) { return; }
-  UserKernelInferContext infer_ctx(nullptr, kernel_conf(), job_desc());
+  UserKernelInferContext infer_ctx(nullptr, kernel_conf(), *job_desc_);
   infer_ctx.UpdateArg2Tensor(BnInOp2Blob);
   auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.MutOpInferContext());
   if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
@@ -747,8 +762,8 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
-    CHECK_NOTNULL(&job_desc());
-    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
+    CHECK_NOTNULL(job_desc_);
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), *job_desc_);
     new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
   }
 
@@ -758,7 +773,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   }
 
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
-  UserKernelComputeContext compute_ctx(device_ctx, kernel_conf(), job_desc());
+  UserKernelComputeContext compute_ctx(device_ctx, kernel_conf(), *job_desc_);
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
   kernel_->Compute(&compute_ctx, new_opkernel_state.get());
   return new_opkernel_state;

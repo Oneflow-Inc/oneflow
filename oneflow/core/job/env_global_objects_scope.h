@@ -31,12 +31,6 @@ class EnvGlobalObjectsScope final {
   ~EnvGlobalObjectsScope();
 
   Maybe<void> Init(const EnvProto& env_proto);
-
-  const std::shared_ptr<const ParallelDesc>& MutParallelDesc4Device(const Device& device);
-
- private:
-  std::mutex mutex_;
-  HashMap<Device, std::shared_ptr<const ParallelDesc>> device2parallel_desc_;
 };
 
 }  // namespace oneflow
