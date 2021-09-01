@@ -26,6 +26,7 @@ extern Maybe<BoxingDividor> (*ReplaceOutDeviceType)(DeviceType device_type);
 extern Maybe<BoxingDividor> (*FlattenInHierarchy)();
 extern Maybe<BoxingDividor> (*OutPlacementAndPartialSum)();
 extern Maybe<BoxingDividor> (*InPlacementAndBroadcast)();
+extern Maybe<BoxingDividor> (*OutPlacementAndBroadcast)();
 extern Maybe<BoxingDividor> (*InPlacementAndSplit)();
 extern Maybe<BoxingDividor> (*OutPlacementAndSplit)();
 extern Maybe<BoxingDividor> (*InSingleDevice)();

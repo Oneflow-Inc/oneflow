@@ -756,15 +756,11 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
       && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {
     return new_opkernel_state;
   }
-  if (op_conf().has_user_conf()) { LOG(ERROR) << op_conf().user_conf().op_type_name(); }
 
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
   UserKernelComputeContext compute_ctx(device_ctx, kernel_conf(), job_desc());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
   kernel_->Compute(&compute_ctx, new_opkernel_state.get());
-  if (op_conf().has_user_conf()) {
-    LOG(ERROR) << op_conf().user_conf().op_type_name() << "Compute end";
-  }
   return new_opkernel_state;
 }
 

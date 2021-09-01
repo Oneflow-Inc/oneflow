@@ -83,6 +83,11 @@ Maybe<BoxingExprIf> NcclSxToBBoxingExpr() {
                          JUST(BoxingExpr("nccl-s-to-b"))));
 }
 
+Maybe<BoxingExprIf> NcclBToSxBoxingExpr() {
+  return JUST(BoxingExpr(JUST(InPlacementAndSplit()), JUST(BoxingExpr("nccl-b-to-s")),
+                         JUST(OptionalBoxing("nccl-s-to-s"))));
+}
+
 Maybe<BoxingExprIf> NcclPToSxBoxingExpr() {
   return JUST(BoxingExpr(JUST(OutPlacementAndSplit()), JUST(BoxingExpr("nccl-p-to-s")),
                          JUST(OptionalBoxing("nccl-s-to-s"))));
@@ -102,12 +107,20 @@ Maybe<BoxingExprIf> OneToNBoxingExpr() {
 }
 
 Maybe<BoxingExprIf> RawGenericBoxingExprNotEfficient() {
+  // in_placement contain out_placement or out_placement contain in_placement
+  const auto& boxing_expr_with_inclusive_placement =
+      JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(BoxingExpr("asymmetric-x-to-b")),
+                      JUST(BoxingExpr("identity")) | JUST(BoxingExpr("naive-b-to-p"))
+                          | JUST(NcclBToSxBoxingExpr())));
+  // in_placement and out_placement have no containment relationship
   // n to 1
   const auto& lhs_boxing = JUST(NToOneBoxingExpr());
   // 1 to 1 -> 1 to n
   const auto& rhs_boxing = JUST(BoxingExpr(
       JUST(OutSingleDevice()), JUST(OptionalBoxing("naive-1-to-1")), JUST(OneToNBoxingExpr())));
-  const auto& core = JUST(BoxingExpr(JUST(InSingleDevice()), lhs_boxing, rhs_boxing));
+  const auto& core = boxing_expr_with_inclusive_placement
+                     | JUST(BoxingExpr(JUST(InSingleDevice()), lhs_boxing, rhs_boxing));
+
   return core | JUST(OptionalCudaCopy(core));
 }
 

@@ -1120,6 +1120,194 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s0_to_s1(
         )
 
 
+def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s1(
+    test_case, in_device, out_device
+):
+    if flow.env.get_rank() == 0:
+        np_arr = np.array(
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 1:
+        np_arr = np.array(
+            [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 2:
+        np_arr = np.array(
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 3:
+        np_arr = np.array(
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+        )
+    device = flow.device(in_device)
+    tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+    placement = flow.placement(in_device, {0: [0, 2, 1, 3]})
+    x = tensor.to_consistent(placement, flow.sbp.broadcast)
+    y = x.to_consistent(placement, flow.sbp.split(1))
+    new_placement = flow.placement(out_device, {0: [1, 3]})
+    z = y.to_consistent(new_placement, flow.sbp.split(1))
+    test_case.assertTrue(z.placement == new_placement)
+    if flow.env.get_rank() == 1:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array([[4, 6], [6, 8], [3, 7], [6, 8],], dtype=np.float32,),
+            )
+        )
+    if flow.env.get_rank() == 3:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array([[5, 20], [9, 0], [5, 0], [9, 0],], dtype=np.float32,),
+            )
+        )
+
+
+def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s0(
+    test_case, in_device, out_device
+):
+    if flow.env.get_rank() == 0:
+        np_arr = np.array(
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 1:
+        np_arr = np.array(
+            [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 2:
+        np_arr = np.array(
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 3:
+        np_arr = np.array(
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+        )
+    device = flow.device(in_device)
+    tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+    placement = flow.placement(in_device, {0: [0, 2, 1, 3]})
+    x = tensor.to_consistent(placement, flow.sbp.broadcast)
+    y = x.to_consistent(placement, flow.sbp.split(1))
+    new_placement = flow.placement(out_device, {0: [1, 3]})
+    z = y.to_consistent(new_placement, flow.sbp.split(0))
+    test_case.assertTrue(z.placement == new_placement)
+    if flow.env.get_rank() == 1:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array([[4, 6, 5, 20], [6, 8, 9, 0],], dtype=np.float32,),
+            )
+        )
+    if flow.env.get_rank() == 3:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array([[3, 7, 5, 0], [6, 8, 9, 0],], dtype=np.float32,),
+            )
+        )
+
+
+def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_p(
+    test_case, in_device, out_device
+):
+    if flow.env.get_rank() == 0:
+        np_arr = np.array(
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 1:
+        np_arr = np.array(
+            [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 2:
+        np_arr = np.array(
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 3:
+        np_arr = np.array(
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+        )
+    device = flow.device(in_device)
+    tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+    placement = flow.placement(in_device, {0: [0, 2, 1, 3]})
+    x = tensor.to_consistent(placement, flow.sbp.broadcast)
+    y = x.to_consistent(placement, flow.sbp.split(1))
+    new_placement = flow.placement(out_device, {0: [1, 3]})
+    z = y.to_consistent(new_placement, flow.sbp.partial_sum)
+    test_case.assertTrue(z.placement == new_placement)
+    if flow.env.get_rank() == 1:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0],],
+                    dtype=np.float32,
+                ),
+            )
+        )
+    if flow.env.get_rank() == 3:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0],],
+                    dtype=np.float32,
+                ),
+            )
+        )
+
+
+def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_b(
+    test_case, in_device, out_device
+):
+    if flow.env.get_rank() == 0:
+        np_arr = np.array(
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 1:
+        np_arr = np.array(
+            [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4]],
+            dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 2:
+        np_arr = np.array(
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+        )
+    elif flow.env.get_rank() == 3:
+        np_arr = np.array(
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+        )
+    device = flow.device(in_device)
+    tensor = flow.Tensor(np_arr, device=device, dtype=flow.float32)
+    placement = flow.placement(in_device, {0: [0, 2, 1, 3]})
+    x = tensor.to_consistent(placement, flow.sbp.broadcast)
+    y = x.to_consistent(placement, flow.sbp.split(1))
+    new_placement = flow.placement(out_device, {0: [1, 3]})
+    z = y.to_consistent(new_placement, flow.sbp.broadcast)
+    test_case.assertTrue(z.placement == new_placement)
+    if flow.env.get_rank() == 1:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0],],
+                    dtype=np.float32,
+                ),
+            )
+        )
+    if flow.env.get_rank() == 3:
+        test_case.assertTrue(
+            np.array_equal(
+                z.to_local().numpy(),
+                np.array(
+                    [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0],],
+                    dtype=np.float32,
+                ),
+            )
+        )
+
+
 def _test_eager_boxing_with_out_placement_contain_in_placement_p_to_s1(
     test_case, in_device, out_device
 ):
@@ -2556,6 +2744,42 @@ class TestEagerBoxingWithInPlacementContainOutPlacement(flow.unittest.TestCase):
         arg_dict["out_device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_in_placement_contain_out_placement_s0_to_s1(
+                test_case, *arg
+            )
+
+    def test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device"] = ["cpu", "cuda"]
+        arg_dict["out_device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s1(
+                test_case, *arg
+            )
+
+    def test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s0(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device"] = ["cpu", "cuda"]
+        arg_dict["out_device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s0(
+                test_case, *arg
+            )
+
+    def test_eager_boxing_with_in_placement_contain_out_placement_s1_to_p(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device"] = ["cpu", "cuda"]
+        arg_dict["out_device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_p(
+                test_case, *arg
+            )
+
+    def test_eager_boxing_with_in_placement_contain_out_placement_s1_to_b(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device"] = ["cpu", "cuda"]
+        arg_dict["out_device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_b(
                 test_case, *arg
             )
 

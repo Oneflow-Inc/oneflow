@@ -141,10 +141,20 @@ Maybe<BoxingDividor> RawInPlacementAndBroadcast() {
       });
 }
 
+Maybe<BoxingDividor> RawOutPlacementAndBroadcast() {
+  return std::make_shared<BoxingDividor>(
+      "OutPlacementAndBroadcast",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return ReplaceNdSbpWithBroadcast(out);
+      });
+}
+
 }  // namespace
 
 decltype(InPlacementAndBroadcast) InPlacementAndBroadcast =
     DECORATE(&RawInPlacementAndBroadcast, ThreadLocal);
+decltype(OutPlacementAndBroadcast) OutPlacementAndBroadcast =
+    DECORATE(&RawOutPlacementAndBroadcast, ThreadLocal);
 
 namespace {
 
