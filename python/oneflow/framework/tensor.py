@@ -378,6 +378,15 @@ def _minimum(self, y):
 def _maximum(self, y):
     return flow.maximum(self, y)
 
+def _rsqrt(self):
+    return flow.rsqrt(self)
+
+def _sqrt(self):
+    return flow.sqrt(self)
+
+def _square(self):
+    return flow.square(self)
+
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
         minval=a, maxval=b, dtype=self.dtype
@@ -599,6 +608,10 @@ def RegisterMethods():
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
+    Tensor.pow = _pow
+    Tensor.rsqrt = _rsqrt
+    Tensor.sqrt = _sqrt
+    Tensor.square = _square
 
 def register_tensor_op(op_name):
     def set_tensor_op(method):

@@ -71,32 +71,7 @@ def variance_op(input, dim=None, unbiased=True, keepdim=False):
 
 
 def sin_op(input):
-    """
-    Returns a new tensor with the sine of the elements of :attr:`input`.
-
-    .. math::
-
-        \\text{out}_{i} = \\sin(\\text{input}_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
-        >>> out1 = flow.sin(x1)
-        >>> out1
-        tensor([-0.5194,  0.1343, -0.4032, -0.2712], dtype=oneflow.float32)
-        >>> x2 = flow.Tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
-        >>> out2 = flow.sin(x2)
-        >>> out2
-        tensor([-0.9854,  0.5155, -0.5298], device='cuda:0', dtype=oneflow.float32)
-
-    """
+    
     return flow._C.sin(input, False)
 
 
@@ -120,83 +95,6 @@ def inplace_sin_op_tensor(input):
     """
     return flow._C.sin(input, True)
 
-
-@register_tensor_op("rsqrt")
-def rsqrt_op(input):
-    """Returns a new tensor with the reciprocal of the square-root of each of
-        the elements of :attr:`input`.
-
-        .. math::
-            \\text{out}_{i} = \\frac{1}{\\sqrt{\\text{input}_{i}}}
-
-        Args:
-            input (Tensor): the input tensor.
-
-         For example:
-
-        .. code-block:: python
-
-            >>> import oneflow as flow
-            >>> import numpy as np
-            
-            >>> a = flow.Tensor(np.array([1.0, 2.0, 3.0]))
-            >>> out = flow.rsqrt(a).numpy()
-            >>> out
-            array([1.        , 0.70710677, 0.57735026], dtype=float32)
-    """
-    return flow._C.rsqrt(input)
-
-
-@register_tensor_op("sqrt")
-def sqrt_op(input):
-    """Returns a new tensor with the square-root of the elements of :attr:`input`.
-
-        .. math::
-            \\text{out}_{i} = \\sqrt{\\text{input}_{i}}
-
-        Args:
-            input (Tensor): the input tensor.
-
-         For example:
-
-        .. code-block:: python
-
-            >>> import oneflow as flow
-            >>> import numpy as np
-            
-            >>> arr = np.array([1.0, 2.0, 3.0])
-            >>> input = flow.Tensor(arr)
-            >>> output = flow.sqrt(input).numpy()
-            >>> output
-            array([1.       , 1.4142135, 1.7320508], dtype=float32)
-        """
-    return flow._C.sqrt(input)
-
-
-@register_tensor_op("square")
-def square_op(input):
-    """Returns a new tensor with the square of the elements of :attr:`input`.
-
-        .. math::
-            \\text{out}_{i} = \\sqrt{\\text{input}_{i}}
-
-        Args:
-            input (Tensor): the input tensor.
-
-         For example:
-
-        .. code-block:: python
-
-            >>> import oneflow as flow
-            >>> import numpy as np
-            
-            >>> arr = np.array([1.0, 2.0, 3.0])
-            >>> input = flow.Tensor(arr)
-            >>> output = flow.square(input).numpy()
-            >>> output
-            array([1., 4., 9.], dtype=float32)
-        """
-    return flow._C.square(input)
 
 
 @register_tensor_op("std")
@@ -253,54 +151,12 @@ def std_op(input, dim, unbiased=False, keepdim=False):
         return res
 
 
-@register_tensor_op("pow")
-def pow_op(input, exponent):
-    """Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
-    When exponent is a scalar value, the operation applied is:
-
-    .. math::
-        \\text{out}_i = x_i ^ \\text{exponent}
-\u200b
-    When exponent is a tensor, the operation applied is:
-
-    .. math::
-        \\text{out}_i = x_i ^ {\\text{exponent}_i}
-
-    Args:
-        - input (Tensor): the input tensor.
-        - exponent (int, float, Tensor): the exponent.
-
-    Returns:
-        Tensor: The result of variance on the specified axis of input Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]))
-        >>> out = flow.pow(x, 2)
-        >>> out
-        tensor([ 1.,  4.,  9., 16., 25., 36.], dtype=oneflow.float32)
-
-        >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
-        >>> y = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
-        >>> out = flow.pow(x, y)
-        >>> out
-        tensor([  1.,   4.,  27., 256.], dtype=oneflow.float32)
-        
-    """
-    return flow._C.pow(input, exponent)
-
-
 def addmm(x, mat1, mat2, alpha=1, beta=1):
     if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
         raise ValueError("input matrixes shape can not be greater than 2")
     else:
-        return _mul(x, beta) + _mul(flow._C.matmul(mat1, mat2), alpha)
-
+        return flow.mul(x, beta) + flow.mul(flow._C.matmul(mat1, mat2), alpha)
+   
 
 def addmm_op(input, mat1, mat2, alpha=1, beta=1):
     """addmm(beta=1, input, alpha=1, mat1, mat2, out=None) -> Tensor
