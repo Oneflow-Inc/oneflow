@@ -20,6 +20,9 @@ import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 
 
 class GraphConfig(object):
+    r"""For configuration of nn.Graph.
+    """
+
     def __init__(self):
         super().__init__()
         self.proto = job_conf_cfg.JobConfigProto()
@@ -73,6 +76,11 @@ class GraphConfig(object):
         self.proto.set_enable_fuse_cast_scale(mode)
 
     def set_gradient_accumulation_steps(self, value):
+        """Set num of steps to accumulate gradient.
+
+        Args:
+            value (int): num of steps
+        """
         self.proto.set_num_gradient_accumulation_steps(value)
 
     def _generate_optimizer_and_variable_configs(
