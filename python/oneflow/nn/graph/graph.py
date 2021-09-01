@@ -39,7 +39,7 @@ from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 class Graph(object):
     _child_init_cnt = dict()
 
-    def __init__(self, outputs_buffer_size=2):
+    def __init__(self, *, outputs_buffer_size=2):
         self._generate_name()
         self.config = GraphConfig()
         self._blocks = OrderedDict()

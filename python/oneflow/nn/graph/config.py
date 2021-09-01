@@ -22,6 +22,7 @@ import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 class GraphConfig(object):
     def __init__(self):
         super().__init__()
+        self._outputs_buffer_size = 2
         self.proto = job_conf_cfg.JobConfigProto()
         self._train(False)
 
@@ -38,6 +39,11 @@ class GraphConfig(object):
         if self.proto.has_predict_conf():
             return False
         raise NotImplementedError
+
+    def set_outputs_buffer_size(self, value: int = 2):
+        r"""
+        """
+        self._outputs_buffer_size = value
 
     def enable_amp(self, mode: bool = True):
         """If true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
