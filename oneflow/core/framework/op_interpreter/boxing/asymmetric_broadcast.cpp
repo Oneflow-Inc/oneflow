@@ -107,8 +107,8 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
     }
   }
   return one::functional::LocalToConsistent(local_tensor, out_placement,
-                                            *JUST(GetSbpList(out->nd_sbp())),
-                                            *local_tensor->shape(), local_tensor->dtype());
+                                            *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+                                            tensor->dtype());
 }
 
 COMMAND(RegisterBoxingFunction("asymmetric-broadcast", CheckAsymmetricBroadcast,
