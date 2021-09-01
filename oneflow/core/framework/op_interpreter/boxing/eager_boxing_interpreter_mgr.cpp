@@ -79,17 +79,17 @@ Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_b
 }
 
 Maybe<BoxingExprIf> NcclSxToBBoxingExpr() {
-  return JUST(BoxingExpr(JUST(InPlacementAndSplit()), JUST(OptionalBoxing("nccl-s-to-s")),
+  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(OptionalBoxing("nccl-s-to-s")),
                          JUST(BoxingExpr("nccl-s-to-b"))));
 }
 
 Maybe<BoxingExprIf> NcclBToSxBoxingExpr() {
-  return JUST(BoxingExpr(JUST(InPlacementAndSplit()), JUST(BoxingExpr("nccl-b-to-s")),
+  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(BoxingExpr("nccl-b-to-s")),
                          JUST(OptionalBoxing("nccl-s-to-s"))));
 }
 
 Maybe<BoxingExprIf> NcclPToSxBoxingExpr() {
-  return JUST(BoxingExpr(JUST(OutPlacementAndSplit()), JUST(BoxingExpr("nccl-p-to-s")),
+  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)), JUST(BoxingExpr("nccl-p-to-s")),
                          JUST(OptionalBoxing("nccl-s-to-s"))));
 }
 
@@ -116,10 +116,12 @@ Maybe<BoxingExprIf> RawGenericBoxingExprNotEfficient() {
   // n to 1
   const auto& lhs_boxing = JUST(NToOneBoxingExpr());
   // 1 to 1 -> 1 to n
-  const auto& rhs_boxing = JUST(BoxingExpr(
-      JUST(OutSingleDevice()), JUST(OptionalBoxing("naive-1-to-1")), JUST(OneToNBoxingExpr())));
-  const auto& core = boxing_expr_with_inclusive_placement
-                     | JUST(BoxingExpr(JUST(InSingleDevice()), lhs_boxing, rhs_boxing));
+  const auto& rhs_boxing =
+      JUST(BoxingExpr(JUST(OutFirstDeviceAndAllBroadcast()), JUST(OptionalBoxing("naive-1-to-1")),
+                      JUST(OneToNBoxingExpr())));
+  const auto& core =
+      boxing_expr_with_inclusive_placement
+      | JUST(BoxingExpr(JUST(InFirstDeviceAndAllBroadcast()), lhs_boxing, rhs_boxing));
 
   return core | JUST(OptionalCudaCopy(core));
 }
