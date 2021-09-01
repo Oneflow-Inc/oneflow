@@ -20,7 +20,6 @@ import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
 
-import warnings
 import numpy as np
 from typing import Union
 

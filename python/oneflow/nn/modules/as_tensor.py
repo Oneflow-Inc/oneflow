@@ -15,7 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
 
 def as_tensor(*args, **kwargs):
     # TODO: support construct tensor with sharing memory with data
