@@ -31,7 +31,7 @@ class Test2DeviceConsistentTensorTo(flow.unittest.TestCase):
         cloned = x.detach().clone()
         test_case.assertEqual(x.placement, cloned.placement)
         test_case.assertEqual(x.sbp, cloned.sbp)
-        if flow.env.get_rank() == 0: 
+        if flow.env.get_rank() == 0:
             cloned_local = cloned.to_local()
             cloned_local[0] = 0
             test_case.assertEqual(cloned_local[0].numpy().item(), 0)
