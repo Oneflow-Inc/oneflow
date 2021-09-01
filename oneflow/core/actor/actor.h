@@ -33,7 +33,7 @@ namespace oneflow {
 class Actor : public ActorBase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
-  virtual ~Actor() = default;
+  virtual ~Actor();
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
@@ -58,6 +58,7 @@ class Actor : public ActorBase {
   struct ExecKernel {
     std::unique_ptr<const Kernel> kernel;
     HashMap<std::string, BlobInfo> bn_in_op2blob_info;
+    std::unique_ptr<KernelContext> kernel_ctx;
   };
   using MsgHandler = int (Actor::*)(const ActorMsg&);
   enum class RegstNameType { kNaive = 0, kCustomized };
@@ -73,7 +74,6 @@ class Actor : public ActorBase {
   const std::vector<int64_t>& Name2RegstDescIds(const std::string& name) const;
   virtual void InitDeviceCtx(const ThreadCtx&);
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
-  KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
   void ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)>) const;
 
@@ -98,8 +98,8 @@ class Actor : public ActorBase {
 
   // Async Do on device_ctx_
   void AsyncDo(std::function<void()> func) { device_ctx_->AddCallBack(func); }
-  void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
-  void AsyncLaunchKernel(const KernelCtx&);
+  void AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4RegstDescId);
+  void AsyncLaunchKernel();
 
   // Util For Derived Actor to Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
