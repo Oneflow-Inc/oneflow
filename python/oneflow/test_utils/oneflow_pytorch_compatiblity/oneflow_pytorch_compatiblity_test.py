@@ -150,6 +150,7 @@ def get_loss(
                 + [
                     "import oneflow as torch",
                     "import oneflow.nn as nn",
+                    "import oneflow.nn.functional as F",
                     "from oneflow import Tensor",
                     "from oneflow.nn import Parameter",
                 ]
@@ -232,8 +233,8 @@ def test_train_loss_oneflow_pytorch(
     if verbose:
         indes = [i for i in range(len(oneflow_model_loss))]
 
-        plt.plot(indes, oneflow_model_loss, label="oneflow")
-        plt.plot(indes, pytorch_model_loss, label="pytorch")
+        plt.plot(indes, oneflow_model_loss, label="oneflow " + module_name)
+        plt.plot(indes, pytorch_model_loss, label="pytorch " + module_name)
 
         plt.xlabel("iter - axis")
         # Set the y axis label of the current axis.
