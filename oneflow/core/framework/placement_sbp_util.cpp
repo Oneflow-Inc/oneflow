@@ -439,7 +439,7 @@ Maybe<std::vector<int64_t>> GetNdSbpValidTransformationAxisSequence(Symbol<cfg::
                                               dst_nd_sbp));
   bool is_acyclic = JUST(
       IsNdSbpBoxingAcyclic(src_nd_sbp->sbp_parallel_size(), ExclusiveSrcNdSbpAxis4DstNdSbpAxis));
-  CHECK_OR_RETURN(is_acyclic) << Error::Unimplemented()
+  CHECK_OR_RETURN(is_acyclic) << Error::UnimplementedError()
                               << "cyclic split axis boxing are not supported";
   std::vector<int64_t> nd_sbp_axis_sequence;
   JUST(InitNdSbpValidTransformationAxisSequence(&nd_sbp_axis_sequence, src_nd_sbp, dst_nd_sbp,
@@ -521,7 +521,7 @@ Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
                                                 dst_nd_sbp));
     bool is_acyclic = JUST(
         IsNdSbpBoxingAcyclic(src_nd_sbp->sbp_parallel_size(), ExclusiveSrcNdSbpAxis4DstNdSbpAxis));
-    CHECK_OR_RETURN(is_acyclic) << Error::Unimplemented()
+    CHECK_OR_RETURN(is_acyclic) << Error::UnimplementedError()
                                 << GetCyclicBoxingDebugString(src_nd_sbp, dst_nd_sbp,
                                                               ExclusiveSrcNdSbpAxis4DstNdSbpAxis);
     JUST(InitNdSbpValidTransformationAxisSequence(&nd_sbp_axis_sequence, src_nd_sbp, dst_nd_sbp,
@@ -581,7 +581,7 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
       const auto& node_iter = node_id2src_process_id.find(GlobalProcessCtx::NodeId(process_id));
       if (node_iter == node_id2src_process_id.end()) {
         CHECK_OR_RETURN(allow_across_node)
-            << Error::Unimplemented() << "\n----[src_placement]----\n"
+            << Error::UnimplementedError() << "\n----[src_placement]----\n"
             << src_parallel_desc->parallel_conf().DebugString() << "\n----[dst_placement]----\n"
             << dst_parallel_desc->parallel_conf().DebugString();
         // handle `process_id` later.
@@ -630,7 +630,7 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclic(Symbol<PlacedNdSbp> in, Symbol<PlacedNd
                                               dst_nd_sbp));
   bool is_acyclic = JUST(
       IsNdSbpBoxingAcyclic(src_nd_sbp->sbp_parallel_size(), ExclusiveSrcNdSbpAxis4DstNdSbpAxis));
-  CHECK_OR_RETURN(is_acyclic) << Error::Unimplemented()
+  CHECK_OR_RETURN(is_acyclic) << Error::UnimplementedError()
                               << GetCyclicBoxingDebugString(src_nd_sbp, dst_nd_sbp,
                                                             ExclusiveSrcNdSbpAxis4DstNdSbpAxis);
   return Maybe<void>::Ok();

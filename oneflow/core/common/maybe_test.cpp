@@ -21,7 +21,7 @@ namespace test {
 
 TEST(Maybe, JUST_MSG) {
   auto f = [](int x) -> Maybe<int> {
-    if (x > 10) { return Error::ValueError("") << "input value " << x; }
+    if (x > 10) { return Error::InvalidValueError("") << "input value " << x; }
 
     return 233;
   };

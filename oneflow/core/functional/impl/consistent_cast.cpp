@@ -244,7 +244,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 const std::shared_ptr<OpExpr>& op) {
   CHECK_OR_RETURN(!x->is_lazy())
       << "local_tensor.to_consistent() is not supported within nn.Graph for now";
-  CHECK_OR_RETURN(x->is_local()) << Error::Unimplemented() << "local tensors supported only";
+  CHECK_OR_RETURN(x->is_local()) << Error::UnimplementedError() << "local tensors supported only";
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
   if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
@@ -263,9 +263,9 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   }
   const auto& device = JUST(input->device());
   CHECK_EQ_OR_RETURN(JUST(device->of_type()), parallel_desc->device_tag())
-      << Error::Unimplemented() << "tensor' device type must be same with placement.";
+      << Error::UnimplementedError() << "tensor' device type must be same with placement.";
   CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
-      << Error::Unimplemented() << "tensor must be on default device of the current rank.";
+      << Error::UnimplementedError() << "tensor must be on default device of the current rank.";
   Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
@@ -296,6 +296,7 @@ class LocalToConsistentFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    CHECK_OR_RETURN(IsConsistentTensorMetaCheckDisabled());
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {x}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
     return tensor;

@@ -100,10 +100,6 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
                                                    Symbol<cfg::NdSbp> out_nd_sbp,
                                                    Symbol<ParallelDesc> in_parallel_desc,
                                                    Symbol<ParallelDesc> out_parallel_desc) {
-  if (in_parallel_desc == out_parallel_desc
-      && (in_parallel_desc->parallel_num() == 1 || in_nd_sbp == out_nd_sbp)) {
-    return std::shared_ptr<EagerBoxingInterpreter>(new IdentityBoxingInterpreter());
-  }
   if (in_nd_sbp->sbp_parallel_size() == 1 && out_nd_sbp->sbp_parallel_size() == 1
       && in_parallel_desc == out_parallel_desc
       && EagerBoxingInterpreterUtil::IsBoxingB2P(in_nd_sbp->sbp_parallel(0),
@@ -155,7 +151,6 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
 
   const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
   const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
-
   const auto& main_boxing_expr = JUST(MainBoxingExpr());
   if (TRY(main_boxing_expr->Check(in, out)).IsOk()) {
     const auto& boxing_func = JUST(main_boxing_expr->GetBoxingFunction(in, out));

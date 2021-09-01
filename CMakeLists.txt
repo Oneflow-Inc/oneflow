@@ -169,7 +169,8 @@ if (BUILD_CUDA)
 
   list(APPEND CUDA_NVCC_FLAGS -Werror cross-execution-space-call -Wno-deprecated-gpu-targets)
   if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL "11.2")
-    list(APPEND CUDA_NVCC_FLAGS --display-error-number)
+    # warning #177-D: parameter "args" was declared but never referenced
+    list(APPEND CUDA_NVCC_FLAGS --display-error-number --diag-suppress 177)
     set(CUDA_NVCC_THREADS_NUMBER "1" CACHE STRING "")
     list(APPEND CUDA_NVCC_FLAGS -t ${CUDA_NVCC_THREADS_NUMBER})
   endif()
