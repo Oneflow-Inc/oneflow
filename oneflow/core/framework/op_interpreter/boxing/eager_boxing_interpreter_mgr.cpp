@@ -106,7 +106,7 @@ Maybe<BoxingExprIf> OneToNBoxingExpr() {
                              | JUST(BoxingExpr("identity"))));
 }
 
-Maybe<BoxingExprIf> RawGenericBoxingExprNotEfficient() {
+Maybe<BoxingExprIf> GenericBoxingExpr() {
   // in_placement contain out_placement or out_placement contain in_placement
   const auto& boxing_expr_with_inclusive_placement =
       JUST(BoxingExpr(JUST(OutPlacementAndBroadcast()), JUST(BoxingExpr("asymmetric-x-to-b")),
@@ -136,14 +136,12 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
                         JUST(BoxingExpr("naive-b-to-p"))))
       | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr())
       | JUST(BoxingExpr("naive-1-to-1"));
-  return core | JUST(OptionalCudaCopy(core));
+  return core | JUST(OptionalCudaCopy(core)) | JUST(GenericBoxingExpr());
 }
 
 }  // namespace
 
 static constexpr auto* MainBoxingExpr = DECORATE(&RawMainBoxingExpr, ThreadLocal);
-static constexpr auto* GenericBoxingExprNotEfficient =
-    DECORATE(&RawGenericBoxingExprNotEfficient, ThreadLocal);
 
 Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
                                                    Symbol<cfg::NdSbp> out_nd_sbp,
@@ -193,11 +191,6 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
   const auto& main_boxing_expr = JUST(MainBoxingExpr());
   if (TRY(main_boxing_expr->Check(in, out)).IsOk()) {
     const auto& boxing_func = JUST(main_boxing_expr->GetBoxingFunction(in, out));
-    return std::shared_ptr<EagerBoxingInterpreter>(new NaiveEagerBoxingInterpreter(boxing_func));
-  }
-  const auto& generic_boxing_expr_not_efficient = JUST(GenericBoxingExprNotEfficient());
-  if (TRY(generic_boxing_expr_not_efficient->Check(in, out)).IsOk()) {
-    const auto& boxing_func = JUST(generic_boxing_expr_not_efficient->GetBoxingFunction(in, out));
     return std::shared_ptr<EagerBoxingInterpreter>(new NaiveEagerBoxingInterpreter(boxing_func));
   }
 
