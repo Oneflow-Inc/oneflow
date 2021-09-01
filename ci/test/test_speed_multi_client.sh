@@ -25,8 +25,8 @@ python3 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet
 python3 -m oneflow.distributed.launch --nproc_per_node 2 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 16x3x224x224 --no-show-memory --times 50 --ddp | check_relative_speed 0.8 | write_to_file_and_print
 python3 -m oneflow.distributed.launch --nproc_per_node 2 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 8x3x224x224 --no-show-memory --times 50 --ddp | check_relative_speed 0.8 | write_to_file_and_print
 python3 -m oneflow.distributed.launch --nproc_per_node 2 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 4x3x224x224 --no-show-memory --times 50 --ddp | check_relative_speed 0.8 | write_to_file_and_print
-python3 -m oneflow.distributed.launch --nproc_per_node 2 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 2x3x224x224 --no-show-memory --times 50 --ddp | check_relative_speed 0.75 | write_to_file_and_print
-python3 -m oneflow.distributed.launch --nproc_per_node 2 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 1x3x224x224 --no-show-memory --times 50 --ddp | check_relative_speed 0.75 | write_to_file_and_print
+python3 -m oneflow.distributed.launch --nproc_per_node 2 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 2x3x224x224 --no-show-memory --times 50 --ddp | check_relative_speed 0.72 | write_to_file_and_print
+python3 -m oneflow.distributed.launch --nproc_per_node 2 scripts/compare_speed_with_pytorch.py resnet50/models/resnet50.py resnet50 1x3x224x224 --no-show-memory --times 50 --ddp | check_relative_speed 0.72 | write_to_file_and_print
 
 result="GPU Name: `nvidia-smi --query-gpu=name --format=csv,noheader -i 0` \n\n `cat result`"
 # escape newline for github actions: https://github.community/t/set-output-truncates-multiline-strings/16852/2
