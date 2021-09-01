@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/scalar.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -161,6 +162,44 @@ class GeluGradFunctor : public BinaryFunctor {
  public:
   GeluGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("gelu_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+};
+
+class GluFunctor {
+ public:
+  GluFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dim) const {
+    int64_t nc = x->dim(dim);
+    CHECK_EQ_OR_RETURN(nc % 2, 0) << "Halving dimension must be even, but dimension " << dim
+                                  << " is size " << nc;
+    nc = nc / 2;
+    std::vector<int64_t> split_sizes(2, nc);
+    auto split_x = JUST(SplitWithSize(x, split_sizes, dim));
+    auto sgmd_x1 = JUST(Sigmoid(split_x->at(1)));
+    return Mul(split_x->at(0), sgmd_x1);
+  }
+};
+
+class GluGradFunctor : public BinaryFunctor {
+ public:
+  GluGradFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, int64_t dim) const {
+    int64_t nc = x->dim(dim);
+    CHECK_EQ_OR_RETURN(nc % 2, 0) << "Halving dimension must be even, but dimension " << dim
+                                  << " is size " << nc;
+    nc = nc / 2;
+    std::vector<int64_t> split_sizes(2, nc);
+    TensorTuple inputs(2);
+    auto split_x = JUST(SplitWithSize(x, split_sizes, dim));
+    auto sgmd_x1 = JUST(Sigmoid(split_x->at(1)));
+    auto sub_sgmd_x1 = JUST(ScalarSub2(1, sgmd_x1));
+    auto sgmd_dx1 = JUST(Mul(sgmd_x1, sub_sgmd_x1));
+    auto sgmd_dx1_mul_x0 = JUST(Mul(sgmd_dx1, split_x->at(0)));
+    inputs[0] = JUST(Mul(dy, sgmd_x1));
+    inputs[1] = JUST(Mul(dy, sgmd_dx1_mul_x0));
+
+    return Concat(inputs, dim, -1);
   }
 };
 
@@ -307,6 +346,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::EluGradFunctor>("EluGrad");
   m.add_functor<impl::GeluFunctor>("Gelu");
   m.add_functor<impl::GeluGradFunctor>("GeluGrad");
+  m.add_functor<impl::GluFunctor>("Glu");
+  m.add_functor<impl::GluGradFunctor>("GluGrad");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");

@@ -1162,8 +1162,8 @@ def softsign_op_tensor(x):
     return Softsign()(x)
 
 
-def glu_op(x, dim=-1):
-    r"""The gated linear unit.
+class GLU(Module):
+    r"""The GLU activation.
 
     Args:
         x (Tensor, float): input tensor. 
@@ -1173,10 +1173,10 @@ def glu_op(x, dim=-1):
     
     .. math::  
 
-        GLU(x) = GLU(a, b) = a ⊗ sigmoid(b)
+        GLU(x) = GLU(a, b) = a \otimes sigmoid(b)
 
     .. note::
-        where x is split in half along dim to form a and b, ⊗ is the element-wise product between matrices.
+        where x is split in half along dim to form a and b, \otimes is the element-wise product between matrices.
 
     For example:
     
@@ -1191,25 +1191,55 @@ def glu_op(x, dim=-1):
                 [4.9954, 5.9980]], dtype=oneflow.float32)
     
     """
-    ndim = len(x.shape)
-    assert isinstance(dim, int), "Invalid dim {} , dim must be Integer".format(dim)
-    assert (
-        -ndim <= dim <= ndim - 1
-    ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
-        -ndim, ndim - 1, dim
-    )
 
-    if dim < 0:
-        dim += ndim
+    def __init__(self, dim: Optional[int] = -1):
+        super().__init__()
+        self.dim = dim
 
-    nc = x.size(dim)
-    assert (
-        nc % 2 == 0
-    ), "Halving dimension must be even, but dimension {} is size {}".format(dim, nc)
-    nc = int(nc / 2)
-    y = x.split([nc, nc], dim)
+    def forward(self, x):
+        ndim = len(x.shape)
+        assert (
+            -ndim <= self.dim <= ndim - 1
+        ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
+            -ndim, ndim - 1, self.dim
+        )
+        if self.dim < 0:
+            self.dim += ndim
 
-    return y[0] * flow.sigmoid(y[1])
+        return flow.F.glu(x, self.dim)
+
+
+def glu_op(input, dim=-1):
+    r"""The gated linear unit.
+
+    Args:
+        x (Tensor, float): input tensor. 
+        dim (int, optional): dimension on which to split the input. Default: -1
+
+    The formula is: 
+    
+    .. math::  
+
+        GLU(x) = GLU(a, b) = a \otimes sigmoid(b)
+
+    .. note::
+        where x is split in half along dim to form a and b, \otimes is the element-wise product between matrices.
+
+    For example:
+    
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        >>> x = flow.tensor([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=flow.float32)
+        >>> y = nn.functional.glu(x)
+        >>> y
+        tensor([[0.9526, 1.9640],
+                [4.9954, 5.9980]], dtype=oneflow.float32)
+    
+    """
+
+    return GLU(dim)(input)
 
 
 if __name__ == "__main__":
