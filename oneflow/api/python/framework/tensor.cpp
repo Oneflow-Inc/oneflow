@@ -350,11 +350,11 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
     try {
       dim_vector.push_back(py::cast<int64_t>(arg));
     } catch (const py::cast_error& e) {
-      return Error::ValueError("invalid arg: " + py::str(arg).cast<std::string>());
+      return Error::InvalidValueError("invalid arg: " + py::str(arg).cast<std::string>());
     }
   }
   const Shape shape = Shape(dim_vector);
-  if (!desired_dtype) { return Error::ValueError("Desired dtype is null"); }
+  if (!desired_dtype) { return Error::InvalidValueError("Desired dtype is null"); }
   std::shared_ptr<Tensor> tensor;
   if (placement) {
     // Shape -> ConsistentTensor

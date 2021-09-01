@@ -45,7 +45,6 @@ void PackActor::VirtualActorInit(const TaskProto& proto) {
 }
 
 void PackActor::Act() {
-  KernelCtx ctx = GenDefaultKernelCtx();
   CHECK_GE(exec_kernel_vec().size(), 1);
   auto user_kernel = dynamic_cast<const UserKernel*>(exec_kernel_vec().at(0).kernel.get());
   CHECK_NOTNULL(user_kernel);
@@ -54,7 +53,7 @@ void PackActor::Act() {
   CHECK_NOTNULL(state);
   state->Mutable()->first = act_num_cnt_;
   state->Mutable()->second = total_pack_num_;
-  AsyncLaunchKernel(ctx);
+  AsyncLaunchKernel();
   act_num_cnt_ += 1;
 }
 

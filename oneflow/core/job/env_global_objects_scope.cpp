@@ -243,25 +243,4 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   google::ShutdownGoogleLogging();
 }
 
-const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDesc4Device(
-    const Device& device) {
-  {
-    const std::lock_guard<std::mutex> lock(mutex_);
-    const auto& iter = device2parallel_desc_.find(device);
-    if (iter != device2parallel_desc_.end()) { return iter->second; }
-  }
-  std::string machine_device_id =
-      "@" + std::to_string(GlobalProcessCtx::Rank()) + ":" + std::to_string(device.device_id());
-  ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(CHECK_JUST(device.of_type()));
-  parallel_conf.add_device_name(machine_device_id);
-  std::shared_ptr<const ParallelDesc> parallel_desc =
-      std::make_shared<const ParallelDesc>(parallel_conf);
-  {
-    const std::lock_guard<std::mutex> lock(mutex_);
-    device2parallel_desc_.emplace(device, parallel_desc);
-  }
-  return device2parallel_desc_.at(device);
-}
-
 }  // namespace oneflow
