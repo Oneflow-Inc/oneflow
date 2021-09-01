@@ -21,7 +21,7 @@ import oneflow.unittest
 
 
 def generate_necessity_for_cross_entropy_or_nll_loss(dim: int):
-    if dim > 4 or dim < 2:
+    if dim > 5 or dim < 2:
         raise ValueError("dim should be less than 5 or greater than 1. ")
     device = random_device()
     num_classes = random(low=2).to(int)
@@ -104,6 +104,10 @@ class TestCrossEntropyLossModule(flow.unittest.TestCase):
     def test_cross_entropy_loss_with_random_data_dim_4(test_case):
         test_cross_entropy_loss(4)
 
+    @autotest()
+    def test_cross_entropy_loss_with_random_data_dim_5(test_case):
+        test_cross_entropy_loss(5)
+
 
 def test_nll_loss(dim=int):
     (
@@ -135,6 +139,10 @@ class TestNLLLossModule(flow.unittest.TestCase):
     @autotest()
     def test_nll_loss_with_random_data_dim_4(test_case):
         test_nll_loss(4)
+
+    @autotest()
+    def test_nll_loss_with_random_data_dim_5(test_case):
+        test_nll_loss(5)
 
 
 def test_bce_loss(dim=int, with_logits: bool = False):
