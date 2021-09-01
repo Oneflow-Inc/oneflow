@@ -379,6 +379,7 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
 #define OF_RUNTIME_ERROR()                                                                        \
   return Error::RuntimeError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) << "RuntimeError " \
                                                                                   ": "
+#define RETURN_ERROR_WITH_BUG_PROMPT() OF_RUNTIME_ERROR() << kOfBugIssueUploadPrompt
 
 #define OF_COMPLIE_OPTION_ERROR()                                                         \
   return Error::CompileOptionWrongError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \

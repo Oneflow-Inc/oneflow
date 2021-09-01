@@ -122,6 +122,7 @@ import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
 import oneflow.framework.register_python_callback
 
+
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
@@ -333,6 +334,7 @@ from . import (
     distributed,
     linalg,
     optim,
+    comm,
     boxing,
     backends,
     amp,

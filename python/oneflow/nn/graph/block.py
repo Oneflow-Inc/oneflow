@@ -389,22 +389,33 @@ class Block(object):
 
 
 class BlockConfig(object):
+    r"""Configurations on Block in nn.Graph.
+    """
+
     def __init__(self):
         self._stage_id = None
         self._activation_checkpointing = None
 
     @property
     def stage_id(self):
+        r"""Get stage id of Block in pipeline parallelism.
+        """
         return self._stage_id
 
     @stage_id.setter
     def stage_id(self, value: int = None):
+        r"""Set stage id of Block in pipeline parallelism.
+        """
         self._stage_id = value
 
     @property
     def activation_checkpointing(self):
+        r"""Get whether do activation checkpointing in this Block.
+        """
         return self._activation_checkpointing
 
     @activation_checkpointing.setter
     def activation_checkpointing(self, value: bool = False):
+        r"""Set whether do activation checkpointing in this Block.
+        """
         self._activation_checkpointing = value

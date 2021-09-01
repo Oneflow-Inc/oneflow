@@ -1,7 +1,16 @@
 oneflow.nn.Graph
-================================================
-Graph class for building neural networks
----------------------------------------------------
+======================================================
+Base class for running neural networks in Graph Mode.
+------------------------------------------------------
 .. currentmodule:: oneflow.nn
 .. autoclass:: oneflow.nn.Graph
-    :members:
+    :members: __init__,
+            build,
+            __call__,
+            add_optimizer,
+            set_grad_scaler,
+            name,
+            training,
+            debug,
+            __repr__,
+    :member-order: bysource
