@@ -121,7 +121,7 @@ def FlowJob1(
     a: oft.Numpy.Placeholder(bmm_a_shape, dtype=flow.float),
     b: oft.Numpy.Placeholder(bmm_b_shape, dtype=flow.float),
 ):
-    with flow.scope.placement("gpu", "0:0-3", (1, 4)):
+    with flow.scope.placement("gpu", "0:0-3", (4, 1)):
         a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(2)"])
         b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(1)"])
         out = summa_broadcast_matmul(a, b, "summa")
@@ -134,7 +134,7 @@ def FlowJob2(
     a: oft.Numpy.Placeholder(bmm_a_grad_a_shape, dtype=flow.float),
     b: oft.Numpy.Placeholder(bmm_a_grad_b_shape, dtype=flow.float),
 ):
-    with flow.scope.placement("gpu", "0:0-3", (1, 4)):
+    with flow.scope.placement("gpu", "0:0-3", (4, 1)):
         a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(2)"])
         b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(1)"])
         out = summa_broadcast_matmul_grad_a(a, b, "summa")
@@ -147,7 +147,7 @@ def FlowJob3(
     a: oft.Numpy.Placeholder(bmm_b_grad_a_shape, dtype=flow.float),
     b: oft.Numpy.Placeholder(bmm_b_grad_b_shape, dtype=flow.float),
 ):
-    with flow.scope.placement("gpu", "0:0-3", (1, 4)):
+    with flow.scope.placement("gpu", "0:0-3", (4, 1)):
         a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(2)"])
         b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(2)"])
         out = summa_broadcast_matmul_grad_b(a, b, "summa")
@@ -160,7 +160,7 @@ def FlowJob4(
     a: oft.Numpy.Placeholder(a_shape, dtype=flow.float),
     b: oft.Numpy.Placeholder(b_shape, dtype=flow.float),
 ):
-    with flow.scope.placement("gpu", "0:0-3", (1, 4)):
+    with flow.scope.placement("gpu", "0:0-3", (4, 1)):
         a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(1)"])
         b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(1)"])
         out = summa_matmul(a, b, False, False, "summa")
@@ -173,7 +173,7 @@ def FlowJob5(
     a: oft.Numpy.Placeholder(mm_a_grad_a_shape, dtype=flow.float),
     b: oft.Numpy.Placeholder(mm_a_grad_b_shape, dtype=flow.float),
 ):
-    with flow.scope.placement("gpu", "0:0-3", (1, 4)):
+    with flow.scope.placement("gpu", "0:0-3", (4, 1)):
         a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(1)"])
         b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(1)"])
         out = summa_matmul(a, b, False, True, "summa")
@@ -186,7 +186,7 @@ def FlowJob6(
     a: oft.Numpy.Placeholder(mm_b_grad_a_shape, dtype=flow.float),
     b: oft.Numpy.Placeholder(mm_b_grad_b_shape, dtype=flow.float),
 ):
-    with flow.scope.placement("gpu", "0:0-3", (1, 4)):
+    with flow.scope.placement("gpu", "0:0-3", (4, 1)):
         a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(1)"])
         b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(1)"])
         out = summa_matmul(a, b, True, False, "summa")
@@ -236,7 +236,7 @@ mm_b_grad_a = np.random.randn(*mm_b_grad_a_shape).astype(np.float32)
 mm_b_grad_b = np.random.randn(*mm_b_grad_b_shape).astype(np.float32)
 
 for i in range(1):
-    """
+
     c1 = FlowJob1(bmm_a, bmm_b).get().numpy()
     np_c1 = np.matmul(bmm_a, bmm_b)
     diff1 = np_c1 - c1
@@ -244,20 +244,22 @@ for i in range(1):
     print(diff1.min())
 
     c2 = FlowJob2(bmm_a_grad_a, bmm_a_grad_b).get().numpy()
-    np_c2 = np.matmul(bmm_a_grad_a, bmm_a_grad_b.transpose(1,0))
+    np_c2 = np.matmul(bmm_a_grad_a, bmm_a_grad_b.transpose(1, 0))
     diff2 = np_c2 - c2
     print(diff2.max())
     print(diff2.min())
 
     c3 = FlowJob3(bmm_b_grad_a, bmm_b_grad_b).get().numpy()
-    np_c3 = np.matmul(bmm_b_grad_a.transpose(2,0,1).reshape(k, b*m), bmm_b_grad_b.reshape(b*m, n))
+    np_c3 = np.matmul(
+        bmm_b_grad_a.transpose(2, 0, 1).reshape(k, b * m),
+        bmm_b_grad_b.reshape(b * m, n),
+    )
     diff3 = np_c3 - c3
     print(diff3.max())
     print(diff3.min())
-    """
+
     c4 = FlowJob4(mm_a, mm_b).get().numpy()
     np_c4 = np.matmul(mm_a, mm_b)
-    print(np_c4)
     diff4 = np_c4 - c4
     print(diff4.max())
     print(diff4.min())
@@ -265,13 +267,11 @@ for i in range(1):
     c5 = FlowJob5(mm_a_grad_a, mm_a_grad_b).get().numpy()
     np_c5 = np.matmul(mm_a_grad_a, mm_a_grad_b.transpose(1, 0))
     diff5 = np_c5 - c5
-    print(c5)
     print(diff5.max())
     print(diff5.min())
 
     c6 = FlowJob6(mm_b_grad_a, mm_b_grad_b).get().numpy()
     np_c6 = np.matmul(mm_b_grad_a.transpose(1, 0), mm_b_grad_b)
     diff6 = np_c6 - c6
-    print(c6)
     print(diff6.max())
     print(diff6.min())

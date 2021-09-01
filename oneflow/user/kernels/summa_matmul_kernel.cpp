@@ -21,6 +21,11 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_client.h"
 
 namespace oneflow {
+
+namespace {
+int64_t Gcd(int64_t a, int64_t b) { return b == 0 ? a : Gcd(b, a % b); }
+}  // namespace
+
 namespace user_op {
 
 class SummaMatmulKernelCommState final : public user_op::OpKernelState {
@@ -32,6 +37,7 @@ class SummaMatmulKernelCommState final : public user_op::OpKernelState {
     CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 2);
     summa_dim0_ = parallel_desc_.hierarchy()->At(0);
     summa_dim1_ = parallel_desc_.hierarchy()->At(1);
+    lcm_summa_dim_ = summa_dim0_ * summa_dim1_ / Gcd(summa_dim0_, summa_dim1_);
   }
 
   ncclComm_t row_comm() { return GetOrCreate().row_comm; }
@@ -40,6 +46,8 @@ class SummaMatmulKernelCommState final : public user_op::OpKernelState {
 
   int64_t summa_dim0() { return summa_dim0_; }
   int64_t summa_dim1() { return summa_dim1_; }
+  int64_t lcm_summa_dim() { return lcm_summa_dim_; }
+  int64_t parallel_id() { return this_parallel_id_; }
 
   struct Comm {
     Comm(ncclComm_t row_comm, ncclComm_t col_comm) : row_comm(row_comm), col_comm(col_comm) {}
@@ -83,6 +91,7 @@ class SummaMatmulKernelCommState final : public user_op::OpKernelState {
   int64_t this_parallel_id_;
   int64_t summa_dim0_;
   int64_t summa_dim1_;
+  int64_t lcm_summa_dim_;
   std::string op_name_;
 };
 
@@ -107,56 +116,86 @@ class SummaMatmulABKernel final : public user_op::OpKernel {
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    char* a_buffer = tmp_buffer->mut_dptr<char>();
-    const size_t a_buffer_size = GetCudaAlignedSize(a->shape().elem_cnt() * sizeof(T));
-    char* b_buffer = tmp_buffer->mut_dptr<char>() + a_buffer_size;
     const int32_t num_axes = a->shape().NumAxes();
     const int n = out->shape().At(num_axes - 1);
     const int m = out->shape().elem_cnt() / n;
     const int a_k = a->shape().At(num_axes - 1);
     const int b_k = b->shape().At(0);
-    CHECK_EQ(b_k % a_k, 0);
     CHECK_EQ(a->shape().elem_cnt() / a_k, m);
     CHECK_EQ(b->shape().elem_cnt() / b_k, n);
     const double alpha = ctx->Attr<double>("alpha");
     double beta = 1.0;
     Memset<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr(), 0,
                              out->shape().elem_cnt() * sizeof(T));
-    CHECK_EQ(kernel_state->summa_dim1() % kernel_state->summa_dim0(),
-             0);  // for a not col copy, and ncclBroadcast
-    const int64_t dim_0 = kernel_state->summa_dim0();
-    const int64_t dim_1 = kernel_state->summa_dim1() / kernel_state->summa_dim0();
-    for (int64_t i = 0; i < dim_0; ++i) {
-      OF_NCCL_CHECK(ncclBroadcast(b->dptr(), b_buffer, b->shape().elem_cnt(),
-                                  GetNcclDataType(b->data_type()), i, kernel_state->col_comm(),
-                                  ctx->device_ctx()->cuda_stream()));
-      for (int64_t j = 0; j < dim_1; ++j) {
-        const T* b_ptr = reinterpret_cast<T*>(b_buffer) + j * b->shape().elem_cnt() / dim_1;
-        const int64_t id = i * dim_1 + j;
-        OF_NCCL_CHECK(ncclBroadcast(a->dptr(), a_buffer, a->shape().elem_cnt(),
-                                    GetNcclDataType(a->data_type()), id, kernel_state->row_comm(),
-                                    ctx->device_ctx()->cuda_stream()));
-        NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), CblasNoTrans, CblasNoTrans, m, n,
-                                                a_k, alpha, reinterpret_cast<T*>(a_buffer), b_ptr,
-                                                beta, out->mut_dptr<T>());
+
+    const int64_t lcm_summa_dim = kernel_state->lcm_summa_dim();
+    const int64_t num_a = lcm_summa_dim / kernel_state->summa_dim1();
+    const int64_t summa_k = a_k / num_a;
+    const int64_t a_send_elem_cnt = m * summa_k;
+    const int64_t num_b = lcm_summa_dim / kernel_state->summa_dim0();
+    CHECK_EQ(b_k / num_b, summa_k);
+    const int64_t b_send_elem_cnt = summa_k * n;
+
+    const size_t a_recv_buffer_size = GetCudaAlignedSize(a_send_elem_cnt * sizeof(T));
+    const size_t a_send_buffer_size = num_a > 1 ? a_recv_buffer_size : 0;
+    void* a_send_buffer = reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>());
+    void* a_recv_buffer =
+        reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + a_send_buffer_size);
+    void* b_recv_buffer = reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + a_send_buffer_size
+                                                  + a_recv_buffer_size);
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(),
+             a_send_buffer_size + a_recv_buffer_size + b_send_elem_cnt * sizeof(T));
+
+    const int64_t cur_a_rank = kernel_state->parallel_id() % kernel_state->summa_dim1();
+    const void* a_ptr = a->dptr();
+    for (int64_t i = 0; i < lcm_summa_dim; ++i) {
+      const int64_t a_data_id = i % num_a;
+      const int64_t a_rank_id = i / num_a;
+      if (num_a > 1 && cur_a_rank == a_rank_id) {
+        NewKernelUtil<DeviceType::kGPU>::CopyColsRegion(
+            ctx->device_ctx(), m, summa_k, a->dptr<T>(), a_data_id * summa_k, a_k,
+            reinterpret_cast<T*>(a_send_buffer), 0, summa_k);
+        a_ptr = a_send_buffer;
       }
+      OF_NCCL_CHECK(ncclBroadcast(a_ptr, a_recv_buffer, a_send_elem_cnt,
+                                  GetNcclDataType(a->data_type()), a_rank_id,
+                                  kernel_state->row_comm(), ctx->device_ctx()->cuda_stream()));
+
+      const int64_t b_data_id = i % num_b;
+      const int64_t b_rank_id = i / num_b;
+      const void* b_ptr = reinterpret_cast<const void*>(b->dptr<T>() + b_data_id * b_send_elem_cnt);
+      OF_NCCL_CHECK(ncclBroadcast(b_ptr, b_recv_buffer, b_send_elem_cnt,
+                                  GetNcclDataType(b->data_type()), b_rank_id,
+                                  kernel_state->col_comm(), ctx->device_ctx()->cuda_stream()));
+
+      NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), CblasNoTrans, CblasNoTrans, m, n,
+                                              summa_k, alpha, reinterpret_cast<T*>(a_recv_buffer),
+                                              reinterpret_cast<T*>(b_recv_buffer), beta,
+                                              out->mut_dptr<T>());
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SUMMA_MATMUL_AB_KERNEL(dtype)                                       \
-  REGISTER_USER_KERNEL("summa_matmul")                                               \
-      .SetCreateFn<SummaMatmulABKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                 \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobAttr<bool>("transpose_a") == false)            \
-                       & (user_op::HobAttr<bool>("transpose_b") == false))           \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                            \
-        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);          \
-        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);          \
-        return GetCudaAlignedSize(a_desc->shape().elem_cnt() * sizeof(dtype))        \
-               + GetCudaAlignedSize(b_desc->shape().elem_cnt() * sizeof(dtype));     \
+#define REGISTER_SUMMA_MATMUL_AB_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("summa_matmul")                                                      \
+      .SetCreateFn<SummaMatmulABKernel<dtype>>()                                            \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                        \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)        \
+                       & (user_op::HobAttr<bool>("transpose_a") == false)                   \
+                       & (user_op::HobAttr<bool>("transpose_b") == false))                  \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);                 \
+        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);                 \
+        const int64_t a_k = a_desc->shape().At(a_desc->shape().NumAxes() - 1);              \
+        const int64_t b_k = b_desc->shape().At(0);                                          \
+        const int64_t summa_k = Gcd(a_k, b_k);                                              \
+        const int64_t num_a = a_k / summa_k;                                                \
+        const int64_t num_b = b_k / summa_k;                                                \
+        const int64_t num_a_buffer = (num_a > 1) ? 2 : 1;                                   \
+        return num_a_buffer                                                                 \
+                   * GetCudaAlignedSize(a_desc->shape().elem_cnt() / num_a * sizeof(dtype)) \
+               + GetCudaAlignedSize(b_desc->shape().elem_cnt() / num_b * sizeof(dtype));    \
       });
 
 #ifdef WITH_CUDA
@@ -165,16 +204,23 @@ REGISTER_SUMMA_MATMUL_AB_KERNEL(float);
 REGISTER_SUMMA_MATMUL_AB_KERNEL(double);
 #endif
 
-#define REGISTER_SUMMA_BROADCAST_MATMUL_AB_KERNEL(dtype)                              \
-  REGISTER_USER_KERNEL("summa_broadcast_matmul")                                      \
-      .SetCreateFn<SummaMatmulABKernel<dtype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);           \
-        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);           \
-        return GetCudaAlignedSize(a_desc->shape().elem_cnt() * sizeof(dtype))         \
-               + GetCudaAlignedSize(b_desc->shape().elem_cnt() * sizeof(dtype));      \
+#define REGISTER_SUMMA_BROADCAST_MATMUL_AB_KERNEL(dtype)                                    \
+  REGISTER_USER_KERNEL("summa_broadcast_matmul")                                            \
+      .SetCreateFn<SummaMatmulABKernel<dtype>>()                                            \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                        \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))       \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);                 \
+        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);                 \
+        const int64_t a_k = a_desc->shape().At(a_desc->shape().NumAxes() - 1);              \
+        const int64_t b_k = b_desc->shape().At(0);                                          \
+        const int64_t summa_k = Gcd(a_k, b_k);                                              \
+        const int64_t num_a = a_k / summa_k;                                                \
+        const int64_t num_b = b_k / summa_k;                                                \
+        const int64_t num_a_buffer = (num_a > 1) ? 2 : 1;                                   \
+        return num_a_buffer                                                                 \
+                   * GetCudaAlignedSize(a_desc->shape().elem_cnt() / num_a * sizeof(dtype)) \
+               + GetCudaAlignedSize(b_desc->shape().elem_cnt() / num_b * sizeof(dtype));    \
       });
 
 #ifdef WITH_CUDA
@@ -209,53 +255,75 @@ class SummaMatmulABTKernel final : public user_op::OpKernel {
     const int b_n = b->shape().At(0);
     const int m = out->shape().elem_cnt() / c_n;
     const int k = a->shape().At(num_axes - 1);
-
-    CHECK_EQ(b_n % c_n, 0);
     CHECK_EQ(a->shape().elem_cnt() / k, m);
     CHECK_EQ(b->shape().elem_cnt() / b_n, k);
 
-    const size_t b_buffer_size = GetCudaAlignedSize(b->shape().elem_cnt() * sizeof(T));
-    char* b_buffer = tmp_buffer->mut_dptr<char>();
-    char* out_buffer = tmp_buffer->mut_dptr<char>() + b_buffer_size;
+    const int64_t lcm_summa_dim = kernel_state->lcm_summa_dim();
+    const int64_t num_c = lcm_summa_dim / kernel_state->summa_dim1();
+    const int64_t summa_n = c_n / num_c;
+    const int64_t c_send_elem_cnt = m * summa_n;
+    const int64_t num_b = lcm_summa_dim / kernel_state->summa_dim0();
+    CHECK_EQ(b_n / num_b, summa_n);
+    const int64_t b_send_elem_cnt = summa_n * k;
+    const size_t c_send_buffer_size = GetCudaAlignedSize(c_send_elem_cnt * sizeof(T));
+    const size_t c_recv_buffer_size = num_c > 1 ? c_send_buffer_size : 0;
+    const size_t b_buffer_size = GetCudaAlignedSize(b_send_elem_cnt * sizeof(T));
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(),
+             c_send_buffer_size + c_recv_buffer_size + b_buffer_size);
+    void* b_recv_buffer = reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>());
+    void* out_send_buffer = reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + b_buffer_size);
+    void* out_recv_buffer =
+        reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + b_buffer_size + c_send_buffer_size);
+    if (num_c == 1) { out_recv_buffer = out->mut_dptr(); }
     const double alpha = ctx->Attr<double>("alpha");
     double beta = 0.0;
 
-    CHECK_EQ(kernel_state->summa_dim1() % kernel_state->summa_dim0(),
-             0);  // for c not col copy, and ncclBroadcast
-    const int64_t dim_0 = kernel_state->summa_dim0();
-    const int64_t dim_1 = kernel_state->summa_dim1() / kernel_state->summa_dim0();
-    for (int64_t i = 0; i < dim_0; ++i) {
-      OF_NCCL_CHECK(ncclBroadcast(b->dptr(), b_buffer, b->shape().elem_cnt(),
-                                  GetNcclDataType(b->data_type()), i, kernel_state->col_comm(),
-                                  ctx->device_ctx()->cuda_stream()));
-      for (int64_t j = 0; j < dim_1; ++j) {
-        const T* b_ptr = reinterpret_cast<T*>(b_buffer) + j * b->shape().elem_cnt() / dim_1;
-        const int64_t id = i * dim_1 + j;
-        NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), CblasNoTrans, CblasTrans, m, c_n,
-                                                k, alpha, a->dptr<T>(), b_ptr, beta,
-                                                reinterpret_cast<T*>(out_buffer));
-        OF_NCCL_CHECK(ncclReduce(reinterpret_cast<T*>(out_buffer), out->mut_dptr<T>(),
-                                 out->shape().elem_cnt(), GetNcclDataType(out->data_type()),
-                                 ncclRedOp_t::ncclSum, id, kernel_state->row_comm(),
-                                 ctx->device_ctx()->cuda_stream()));
+    for (int64_t i = 0; i < lcm_summa_dim; ++i) {
+      const int64_t b_data_id = i % num_b;
+      const int64_t b_rank_id = i / num_b;
+      const void* b_ptr = reinterpret_cast<const void*>(b->dptr<T>() + b_data_id * b_send_elem_cnt);
+      OF_NCCL_CHECK(ncclBroadcast(b_ptr, b_recv_buffer, b_send_elem_cnt,
+                                  GetNcclDataType(b->data_type()), b_rank_id,
+                                  kernel_state->col_comm(), ctx->device_ctx()->cuda_stream()));
+
+      NewKernelUtil<DeviceType::kGPU>::OFGemm(
+          ctx->device_ctx(), CblasNoTrans, CblasTrans, m, summa_n, k, alpha, a->dptr<T>(),
+          reinterpret_cast<T*>(b_recv_buffer), beta, reinterpret_cast<T*>(out_send_buffer));
+      const int64_t c_data_id = i % num_c;
+      const int64_t c_rank_id = i / num_c;
+
+      OF_NCCL_CHECK(ncclReduce(out_send_buffer, out_recv_buffer, c_send_elem_cnt,
+                               GetNcclDataType(out->data_type()), ncclRedOp_t::ncclSum, c_rank_id,
+                               kernel_state->row_comm(), ctx->device_ctx()->cuda_stream()));
+      if (num_c > 1) {
+        NewKernelUtil<DeviceType::kGPU>::CopyColsRegion(
+            ctx->device_ctx(), m, summa_n, reinterpret_cast<T*>(out_recv_buffer), 0, summa_n,
+            out->mut_dptr<T>(), c_data_id * summa_n, c_n);
       }
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SUMMA_MATMUL_ABT_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("summa_matmul")                                               \
-      .SetCreateFn<SummaMatmulABTKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                 \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobAttr<bool>("transpose_a") == false)            \
-                       & (user_op::HobAttr<bool>("transpose_b") == true))            \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                            \
-        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);          \
-        const TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);      \
-        return GetCudaAlignedSize(b_desc->shape().elem_cnt() * sizeof(dtype))        \
-               + GetCudaAlignedSize(out_desc->shape().elem_cnt() * sizeof(dtype));   \
+#define REGISTER_SUMMA_MATMUL_ABT_KERNEL(dtype)                                                  \
+  REGISTER_USER_KERNEL("summa_matmul")                                                           \
+      .SetCreateFn<SummaMatmulABTKernel<dtype>>()                                                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                             \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)             \
+                       & (user_op::HobAttr<bool>("transpose_a") == false)                        \
+                       & (user_op::HobAttr<bool>("transpose_b") == true))                        \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);                      \
+        const TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);                  \
+        const int c_n = out_desc->shape().At(out_desc->shape().NumAxes() - 1);                   \
+        const int b_n = b_desc->shape().At(0);                                                   \
+        const int summa_n = Gcd(c_n, b_n);                                                       \
+        const int64_t num_b = b_n / summa_n;                                                     \
+        const int64_t num_c = c_n / summa_n;                                                     \
+        const int64_t num_c_buffer = num_c > 1 ? 2 : 1;                                          \
+        return GetCudaAlignedSize(b_desc->shape().elem_cnt() / num_b * sizeof(dtype))            \
+               + num_c_buffer                                                                    \
+                     * GetCudaAlignedSize(out_desc->shape().elem_cnt() / num_c * sizeof(dtype)); \
       });
 
 #ifdef WITH_CUDA
@@ -264,16 +332,23 @@ REGISTER_SUMMA_MATMUL_ABT_KERNEL(float);
 REGISTER_SUMMA_MATMUL_ABT_KERNEL(double);
 #endif
 
-#define REGISTER_SUMMA_BROADCAST_MATMUL_ABT_KERNEL(dtype)                             \
-  REGISTER_USER_KERNEL("summa_broadcast_matmul_grad_a")                               \
-      .SetCreateFn<SummaMatmulABTKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);           \
-        const TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);       \
-        return GetCudaAlignedSize(b_desc->shape().elem_cnt() * sizeof(dtype))         \
-               + GetCudaAlignedSize(out_desc->shape().elem_cnt() * sizeof(dtype));    \
+#define REGISTER_SUMMA_BROADCAST_MATMUL_ABT_KERNEL(dtype)                                        \
+  REGISTER_USER_KERNEL("summa_broadcast_matmul_grad_a")                                          \
+      .SetCreateFn<SummaMatmulABTKernel<dtype>>()                                                \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                             \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))            \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);                      \
+        const TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);                  \
+        const int c_n = out_desc->shape().At(out_desc->shape().NumAxes() - 1);                   \
+        const int b_n = b_desc->shape().At(0);                                                   \
+        const int summa_n = Gcd(c_n, b_n);                                                       \
+        const int64_t num_b = b_n / summa_n;                                                     \
+        const int64_t num_c = c_n / summa_n;                                                     \
+        const int64_t num_c_buffer = num_c > 1 ? 2 : 1;                                          \
+        return GetCudaAlignedSize(b_desc->shape().elem_cnt() / num_b * sizeof(dtype))            \
+               + num_c_buffer                                                                    \
+                     * GetCudaAlignedSize(out_desc->shape().elem_cnt() / num_c * sizeof(dtype)); \
       });
 
 #ifdef WITH_CUDA
@@ -309,51 +384,78 @@ class SummaMatmulATBKernel final : public user_op::OpKernel {
     const int k = b->shape().elem_cnt() / n;
     const int a_m = a->shape().At(num_axes - 1);
     CHECK_EQ(a->shape().elem_cnt() / a_m, k);
-    const size_t a_buffer_size = GetCudaAlignedSize(a->shape().elem_cnt() * sizeof(T));
-    char* a_buffer = tmp_buffer->mut_dptr<char>();
-    char* out_buffer = tmp_buffer->mut_dptr<char>() + a_buffer_size;
+
+    const int64_t lcm_summa_dim = kernel_state->lcm_summa_dim();
+    const int64_t num_a = lcm_summa_dim / kernel_state->summa_dim1();
+    const int64_t summa_m = a_m / num_a;
+    const int64_t a_send_elem_cnt = k * summa_m;
+    const int64_t num_c = lcm_summa_dim / kernel_state->summa_dim0();
+    CHECK_EQ(c_m / num_c, summa_m);
+    const int64_t c_send_elem_cnt = summa_m * n;
+    const size_t a_recv_buffer_size = GetCudaAlignedSize(a_send_elem_cnt * sizeof(T));
+    const size_t a_send_buffer_size = num_a > 1 ? a_recv_buffer_size : 0;
+    const size_t c_buffer_size = GetCudaAlignedSize(c_send_elem_cnt * sizeof(T));
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(),
+             a_send_buffer_size + a_recv_buffer_size + c_buffer_size);
+    void* a_send_buffer = reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>());
+    void* a_recv_buffer =
+        reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + a_send_buffer_size);
+    void* out_send_buffer = reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>()
+                                                    + a_send_buffer_size + a_recv_buffer_size);
+
     const double alpha = ctx->Attr<double>("alpha");
     double beta = 0.0;
 
-    CHECK_EQ(c_m % a_m, 0);
-    CHECK_EQ(b->shape().elem_cnt() / k, n);
-    const T* b_ptr = b->dptr<T>();
-    CHECK_EQ(kernel_state->summa_dim1() % kernel_state->summa_dim0(),
-             0);  // for c not col copy, and ncclBroadcast
-    const int64_t dim_0 = kernel_state->summa_dim0();
-    const int64_t dim_1 = kernel_state->summa_dim1() / kernel_state->summa_dim0();
-    for (int64_t i = 0; i < dim_0; ++i) {
-      for (int64_t j = 0; j < dim_1; ++j) {
-        const int64_t id = i * dim_1 + j;
-        OF_NCCL_CHECK(ncclBroadcast(a->dptr(), a_buffer, a->shape().elem_cnt(),
-                                    GetNcclDataType(a->data_type()), id, kernel_state->row_comm(),
-                                    ctx->device_ctx()->cuda_stream()));
-        const T* a_ptr = reinterpret_cast<T*>(a_buffer);
-        T* out_ptr = reinterpret_cast<T*>(out_buffer) + j * out->shape().elem_cnt() / dim_1;
-        NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), CblasTrans, CblasNoTrans, a_m, n,
-                                                k, alpha, a_ptr, b_ptr, beta, out_ptr);
+    const int64_t cur_a_rank = kernel_state->parallel_id() % kernel_state->summa_dim1();
+    const void* a_ptr = a->dptr();
+    for (int64_t i = 0; i < lcm_summa_dim; ++i) {
+      const int64_t a_data_id = i % num_a;
+      const int64_t a_rank_id = i / num_a;
+      if (num_a > 1 && cur_a_rank == a_rank_id) {
+        NewKernelUtil<DeviceType::kGPU>::CopyColsRegion(
+            ctx->device_ctx(), k, summa_m, a->dptr<T>(), a_data_id * summa_m, a_m,
+            reinterpret_cast<T*>(a_send_buffer), 0, summa_m);
+        a_ptr = a_send_buffer;
       }
-      OF_NCCL_CHECK(ncclReduce(reinterpret_cast<T*>(out_buffer), out->mut_dptr<T>(),
-                               out->shape().elem_cnt(), GetNcclDataType(out->data_type()),
-                               ncclRedOp_t::ncclSum, i, kernel_state->col_comm(),
-                               ctx->device_ctx()->cuda_stream()));
+      OF_NCCL_CHECK(ncclBroadcast(a_ptr, a_recv_buffer, a_send_elem_cnt,
+                                  GetNcclDataType(a->data_type()), a_rank_id,
+                                  kernel_state->row_comm(), ctx->device_ctx()->cuda_stream()));
+
+      NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), CblasTrans, CblasNoTrans, summa_m,
+                                              n, k, alpha, reinterpret_cast<T*>(a_recv_buffer),
+                                              b->dptr<T>(), beta,
+                                              reinterpret_cast<T*>(out_send_buffer));
+      const int64_t c_data_id = i % num_c;
+      const int64_t c_rank_id = i / num_c;
+      void* out_ptr = reinterpret_cast<void*>(out->mut_dptr<T>() + c_data_id * c_send_elem_cnt);
+      OF_NCCL_CHECK(ncclReduce(reinterpret_cast<T*>(out_send_buffer), out_ptr, c_send_elem_cnt,
+                               GetNcclDataType(out->data_type()), ncclRedOp_t::ncclSum, c_rank_id,
+                               kernel_state->col_comm(), ctx->device_ctx()->cuda_stream()));
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SUMMA_MATMUL_ATB_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("summa_matmul")                                               \
-      .SetCreateFn<SummaMatmulATBKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                 \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value) \
-                       & (user_op::HobAttr<bool>("transpose_a") == true)             \
-                       & (user_op::HobAttr<bool>("transpose_b") == false))           \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                            \
-        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);          \
-        const TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);      \
-        return GetCudaAlignedSize(a_desc->shape().elem_cnt() * sizeof(dtype))        \
-               + GetCudaAlignedSize(out_desc->shape().elem_cnt() * sizeof(dtype));   \
+#define REGISTER_SUMMA_MATMUL_ATB_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("summa_matmul")                                                      \
+      .SetCreateFn<SummaMatmulATBKernel<dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                        \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)        \
+                       & (user_op::HobAttr<bool>("transpose_a") == true)                    \
+                       & (user_op::HobAttr<bool>("transpose_b") == false))                  \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);                 \
+        const TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);             \
+        const int n = out_desc->shape().At(out_desc->shape().NumAxes() - 1);                \
+        const int c_m = out_desc->shape().elem_cnt() / n;                                   \
+        const int a_m = a_desc->shape().At(a_desc->shape().NumAxes() - 1);                  \
+        const int summa_m = Gcd(c_m, a_m);                                                  \
+        const int num_a = a_m / summa_m;                                                    \
+        const int num_c = c_m / summa_m;                                                    \
+        const int64_t num_a_buffer = (num_a > 1) ? 2 : 1;                                   \
+        return num_a_buffer                                                                 \
+                   * GetCudaAlignedSize(a_desc->shape().elem_cnt() / num_a * sizeof(dtype)) \
+               + GetCudaAlignedSize(out_desc->shape().elem_cnt() / num_c * sizeof(dtype));  \
       });
 
 #ifdef WITH_CUDA
@@ -362,16 +464,24 @@ REGISTER_SUMMA_MATMUL_ATB_KERNEL(float);
 REGISTER_SUMMA_MATMUL_ATB_KERNEL(double);
 #endif
 
-#define REGISTER_BROADCAST_SUMMA_MATMUL_ATB_KERNEL(dtype)                             \
-  REGISTER_USER_KERNEL("summa_broadcast_matmul_grad_b")                               \
-      .SetCreateFn<SummaMatmulATBKernel<dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);           \
-        const TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);       \
-        return GetCudaAlignedSize(a_desc->shape().elem_cnt() * sizeof(dtype))         \
-               + GetCudaAlignedSize(out_desc->shape().elem_cnt() * sizeof(dtype));    \
+#define REGISTER_BROADCAST_SUMMA_MATMUL_ATB_KERNEL(dtype)                                   \
+  REGISTER_USER_KERNEL("summa_broadcast_matmul_grad_b")                                     \
+      .SetCreateFn<SummaMatmulATBKernel<dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                        \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))       \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                   \
+        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);                 \
+        const TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);             \
+        const int n = out_desc->shape().At(out_desc->shape().NumAxes() - 1);                \
+        const int c_m = out_desc->shape().elem_cnt() / n;                                   \
+        const int a_m = a_desc->shape().At(a_desc->shape().NumAxes() - 1);                  \
+        const int summa_m = Gcd(c_m, a_m);                                                  \
+        const int num_a = a_m / summa_m;                                                    \
+        const int num_c = c_m / summa_m;                                                    \
+        const int64_t num_a_buffer = (num_a > 1) ? 2 : 1;                                   \
+        return num_a_buffer                                                                 \
+                   * GetCudaAlignedSize(a_desc->shape().elem_cnt() / num_a * sizeof(dtype)) \
+               + GetCudaAlignedSize(out_desc->shape().elem_cnt() / num_c * sizeof(dtype));  \
       });
 
 #ifdef WITH_CUDA

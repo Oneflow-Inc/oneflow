@@ -727,8 +727,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
               << src_parallel_distribution.DebugString();
     LOG(INFO) << "dst: " << dst_op_node->op().op_name() << " "
               << dst_parallel_distribution.DebugString();
-    LOG(INFO) << "src parallel_conf " << src_parallel_desc.parallel_conf().DebugString();
-    LOG(INFO) << "dst parallel_conf " << dst_parallel_desc.parallel_conf().DebugString();
     auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
         dst_parallel_desc, lbi, blob_desc, src_parallel_distribution, dst_parallel_distribution,
