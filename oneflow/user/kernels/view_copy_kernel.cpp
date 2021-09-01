@@ -25,7 +25,8 @@ void ViewCopyUtil<DeviceType::kCPU>::operator()() {
   if (contiguous_dim == -1) {
     std::memcpy(out_dptr, in_dptr, contiguous_block_size * dsize);
   } else {
-    init_index_and_out_stride();
+    init_index();
+    init_out_stride();
 
     while (true) {
       std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,

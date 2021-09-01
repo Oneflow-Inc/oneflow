@@ -64,15 +64,21 @@ class ViewCopyUtilBase : public ViewCopyUtilParam {
     }
   }
 
-  void init_index_and_out_stride() {
-    std::fill(index.begin(), index.end(), 0);
-
+  void init_out_stride() {
     int64_t sum = 1;
     for (int64_t i = out_stride.size() - 1; i != -1; --i) {
       out_stride[i] = sum;
       sum *= in_shape.At(i);
     }
   }
+
+  int64_t count_blocks() {
+    int64_t count = 1;
+    for (int i = 0; i <= contiguous_dim; ++i) { count *= in_shape.At(i); }
+    return count;
+  }
+
+  void init_index() { std::fill(index.begin(), index.end(), 0); }
 
   bool next_index() {
     int64_t i = contiguous_dim;
@@ -112,4 +118,4 @@ struct ViewCopyUtil : ViewCopyUtilBase {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_USER_KERNELS_VIEW_COPY_KERNEL_H_
+#endif  // ONEFLOW_USER_KERNELS_VIEW_COPY_KERNEL_H_
