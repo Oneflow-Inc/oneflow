@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/error_util.h"
 
 namespace oneflow {
 
@@ -34,9 +35,11 @@ std::shared_ptr<cfg::ErrorProto>* MutThreadLocalError() {
 
 }  // namespace
 
-Error&& Error::AddStackFrame(const std::string& location, const std::string& function) {
+Error&& Error::AddStackFrame(const std::string& file, const int64_t& line,
+                             const std::string& function) {
   auto* stack_frame = error_proto_->add_stack_frame();
-  stack_frame->set_location(location);
+  stack_frame->set_file(file);
+  stack_frame->set_line(line);
   stack_frame->set_function(function);
   return std::move(*this);
 }
@@ -63,10 +66,28 @@ Error Error::DeviceTagNotFoundError() {
   return error;
 }
 
-Error Error::ValueError(const std::string& error_summary) {
+Error Error::InvalidValueError(const std::string& error_summary) {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->set_error_summary(error_summary);
-  error->mutable_value_error();
+  error->mutable_invalid_value_error();
+  return error;
+}
+
+Error Error::IndexError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_index_error();
+  return error;
+}
+
+Error Error::TypeError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_type_error();
+  return error;
+}
+
+Error Error::TimeoutError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_timeout_error();
   return error;
 }
 
@@ -172,15 +193,21 @@ Error Error::CheckFailedError() {
   return error;
 }
 
-Error Error::Todo() {
+Error Error::TodoError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_todo_error();
   return error;
 }
 
-Error Error::Unimplemented() {
+Error Error::UnimplementedError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_unimplemented_error();
+  return error;
+}
+
+Error Error::RuntimeError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_runtime_error();
   return error;
 }
 
@@ -237,31 +264,43 @@ Error Error::RwMutexedObjectNotFoundError() {
   return error;
 }
 
-Error Error::GradientFunctionNotFound() {
+Error Error::GradientFunctionNotFoundError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_gradient_function_not_found_error();
   return error;
 }
 
-Error Error::SymbolIdUninitialized() {
+Error Error::SymbolIdUninitializedError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_symbol_id_uninitialized_error();
   return error;
 }
 
-Error Error::CompileOptionWrong() {
+Error Error::CompileOptionWrongError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_compile_option_wrong_error();
   return error;
 }
 
+Error Error::InputDeviceNotMatchError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  auto* input_device_not_match_error = error->mutable_input_device_not_match_error();
+  input_device_not_match_error->add_info(
+      std::string("The devices of input tensors are inconsistent, please try to use tensor.to or "
+                  "module.to to correct it."));
+  return error;
+}
+
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
+  const auto& maybe_error = TRY(FormatErrorStr(error));
+  const auto& error_str = maybe_error.GetDataAndErrorProto(error->DebugString());
+
   *MutThreadLocalError() = error;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
   switch (error->error_type_case()) {
 #define MAKE_ENTRY(cls)                                      \
   case cfg::ErrorProto::OF_PP_CAT(k, OF_PP_CAT(cls, Error)): \
-    throw OF_PP_CAT(cls, Exception)(error->DebugString());
+    throw OF_PP_CAT(cls, Exception)(error_str.first);
 
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, EXCEPTION_SEQ)
 
@@ -271,5 +310,10 @@ void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
 }
 
 const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError() { return *MutThreadLocalError(); }
+
+const char* kOfBugIssueUploadPrompt =
+    "This is a oneflow bug, please submit issues in "
+    "'https://github.com/Oneflow-Inc/oneflow/issues' include the log information of the error, the "
+    "minimum reproduction code, and the system information.";
 
 }  // namespace oneflow

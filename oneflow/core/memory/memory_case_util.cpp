@@ -19,6 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
+<<<<<<< HEAD
 namespace {
 
 // MemCaseId int64_t encode
@@ -56,6 +57,36 @@ MemCaseId::MemCaseId(const MemoryCase& mem_case) {
 void MemCaseId::ToProto(MemoryCase* mem_case) const {
   MemCaseRegistryMgr<MemCaseIdToProtoRegistry>::Get().LookupRegistry(*this).ToProto(*this,
                                                                                     mem_case);
+=======
+bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& b,
+                                         MemoryCase* common) {
+  if (a.has_device_cuda_mem() && b.has_device_cuda_mem()) {
+    if (a.device_cuda_mem().device_id() == b.device_cuda_mem().device_id()) {
+      *common = a;
+      return true;
+    } else {
+      return false;
+    }
+  } else if (a.has_host_mem() && b.has_host_mem()) {
+    *common = a;
+    if (b.host_mem().has_cuda_pinned_mem()) {
+      *common->mutable_host_mem()->mutable_cuda_pinned_mem() = b.host_mem().cuda_pinned_mem();
+    }
+    return true;
+  } else {
+    return false;
+  }
+}
+
+MemoryCase MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case) {
+  MemoryCase ret;
+  ret.mutable_host_mem();
+  if (mem_case.has_device_cuda_mem()) {
+    ret.mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
+        mem_case.device_cuda_mem().device_id());
+  }
+  return ret;
+>>>>>>> origin/master
 }
 
 int64_t EncodeMemCaseIdToInt64(const MemCaseId& mem_case_id) {
@@ -79,6 +110,7 @@ bool PatchMemCase(const MemoryCase& src_mem_case, MemoryCase* dst_mem_case) {
       .Patch(src_mem_case, dst_mem_case);
 }
 
+<<<<<<< HEAD
 MemoryCase GenerateCorrespondingPageLockedHostMemoryCase(const MemoryCase& mem_case) {
   MemoryCase page_locked_mem_case;
   MemCaseRegistryMgr<PageLockedMemCaseRegistry>::Get().LookupRegistry(mem_case).PageLock(
@@ -86,6 +118,8 @@ MemoryCase GenerateCorrespondingPageLockedHostMemoryCase(const MemoryCase& mem_c
   return page_locked_mem_case;
 }
 
+=======
+>>>>>>> origin/master
 std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_type,
                                                         const int64_t device_id) {
   const auto& mem_case = std::make_shared<MemoryCase>();

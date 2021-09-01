@@ -24,32 +24,33 @@ REGISTER_USER_OP("unsorted_segment_sum")
     .Attr<int64_t>("axis")
     .Attr<int64_t>("num_segments")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* data_shape = ctx->Shape4ArgNameAndIndex("data", 0);
+      const Shape& data_shape = ctx->InputShape("data", 0);
       const int64_t axis = ctx->Attr<int64_t>("axis");
       const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      Shape* segment_ids_shape = ctx->Shape4ArgNameAndIndex("segment_ids", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
+      const Shape& segment_ids_shape = ctx->InputShape("segment_ids", 0);
 
       DimVector dim_vec;
-      dim_vec.insert(dim_vec.end(), data_shape->dim_vec().cbegin(),
-                     data_shape->dim_vec().cbegin() + axis);
+      dim_vec.insert(dim_vec.end(), data_shape.dim_vec().cbegin(),
+                     data_shape.dim_vec().cbegin() + axis);
       dim_vec.push_back(num_segments);
       dim_vec.insert(dim_vec.end(),
-                     data_shape->dim_vec().cbegin() + axis + segment_ids_shape->NumAxes(),
-                     data_shape->dim_vec().end());
+                     data_shape.dim_vec().cbegin() + axis + segment_ids_shape.NumAxes(),
+                     data_shape.dim_vec().end());
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("data", 0);
+      CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
+      *ctx->OutputDType("out", 0) = ctx->InputDType("data", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
-      CHECK_NOTNULL(segment_ids_modifier);
+      CHECK_NOTNULL_OR_RETURN(segment_ids_modifier);
       segment_ids_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t data_num_axes =
@@ -83,7 +84,8 @@ REGISTER_USER_OP("unsorted_segment_sum")
     });
 
 REGISTER_USER_OP_GRAD("unsorted_segment_sum")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       bool need_grad_data = op.NeedGenGradTensor4OpInput("data", 0);
       if (need_grad_data) {
         user_op::UserOpConfWrapperBuilder data_grad_builder(op.op_name() + "_grad");
@@ -97,6 +99,7 @@ REGISTER_USER_OP_GRAD("unsorted_segment_sum")
         op.BindGradTensorWithOpInput(data_grad_op.output("out", 0), "data", 0);
         AddOp(data_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("unsorted_segment_sum_like")
@@ -106,38 +109,39 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
     .Output("out")
     .Attr<int64_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* data_shape = ctx->Shape4ArgNameAndIndex("data", 0);
-      const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-      const Shape* segment_ids_shape = ctx->Shape4ArgNameAndIndex("segment_ids", 0);
+      const Shape& data_shape = ctx->InputShape("data", 0);
+      const Shape& like_shape = ctx->InputShape("like", 0);
+      const Shape& segment_ids_shape = ctx->InputShape("segment_ids", 0);
       const int64_t axis = ctx->Attr<int64_t>("axis");
       CHECK_GE_OR_RETURN(axis, 0);
-      CHECK_LE_OR_RETURN(axis, like_shape->NumAxes());
-      FOR_RANGE(int64_t, i, 0, axis) { CHECK_EQ_OR_RETURN(like_shape->At(i), data_shape->At(i)); }
-      CHECK_EQ_OR_RETURN(data_shape->NumAxes() - segment_ids_shape->NumAxes() + 1,
-                         like_shape->NumAxes());
-      FOR_RANGE(int64_t, i, axis + 1, like_shape->NumAxes()) {
-        CHECK_EQ_OR_RETURN(like_shape->At(i), data_shape->At(i + segment_ids_shape->NumAxes() - 1));
+      CHECK_LE_OR_RETURN(axis, like_shape.NumAxes());
+      FOR_RANGE(int64_t, i, 0, axis) { CHECK_EQ_OR_RETURN(like_shape.At(i), data_shape.At(i)); }
+      CHECK_EQ_OR_RETURN(data_shape.NumAxes() - segment_ids_shape.NumAxes() + 1,
+                         like_shape.NumAxes());
+      FOR_RANGE(int64_t, i, axis + 1, like_shape.NumAxes()) {
+        CHECK_EQ_OR_RETURN(like_shape.At(i), data_shape.At(i + segment_ids_shape.NumAxes() - 1));
       }
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("like", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("like", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("like", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = ctx->InputIsDynamic("like", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
-      const user_op::TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
-      CHECK_EQ_OR_RETURN(data->data_type(), like->data_type());
-      CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+      const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
+      const user_op::TensorDesc& like = ctx->InputTensorDesc("like", 0);
+      CHECK_EQ_OR_RETURN(data.data_type(), like.data_type());
+      CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
+      *ctx->OutputDType("out", 0) = ctx->InputDType("like", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
-      CHECK_NOTNULL(segment_ids_modifier);
+      CHECK_NOTNULL_OR_RETURN(segment_ids_modifier);
       segment_ids_modifier->set_requires_grad(false);
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK_NOTNULL(like_modifier);
+      CHECK_NOTNULL_OR_RETURN(like_modifier);
       like_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t data_num_axes =

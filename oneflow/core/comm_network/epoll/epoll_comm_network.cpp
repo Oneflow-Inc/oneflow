@@ -92,14 +92,13 @@ EpollCommNet::~EpollCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollCommNet::RegisterMemoryDone() {
-  // do nothing
-}
-
 void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_msg) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kActor;
   msg.actor_msg = actor_msg;
+  if (actor_msg.IsDataRegstMsgToConsumer()) {
+    msg.actor_msg.set_comm_net_token(actor_msg.regst()->comm_net_token());
+  }
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 

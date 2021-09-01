@@ -33,12 +33,12 @@ REGISTER_USER_OP("expand_dims")
     .Output("out")
     .Attr<int32_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape->NumAxes());
+          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes());
 
-      auto dim_vec = in_shape->dim_vec();
+      auto dim_vec = in_shape.dim_vec();
       dim_vec.insert(dim_vec.begin() + axis, 1);
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
@@ -62,12 +62,13 @@ REGISTER_USER_OP("expand_dims")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("expand_dims")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -79,6 +80,7 @@ REGISTER_USER_OP_GRAD("expand_dims")
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

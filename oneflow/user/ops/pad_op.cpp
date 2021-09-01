@@ -26,16 +26,16 @@ REGISTER_USER_OP("pad")
     .Attr<double>("floating_constant_value")
     .Attr<int64_t>("integral_constant_value")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+      const Shape& x_shape = ctx->InputShape("x", 0);
       const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
       const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-      CHECK_EQ(padding_before.size(), x_shape->NumAxes());
-      CHECK_EQ(padding_after.size(), x_shape->NumAxes());
-      DimVector y_dim_vec(x_shape->NumAxes());
-      FOR_RANGE(int64_t, i, 0, x_shape->NumAxes()) {
-        y_dim_vec[i] = x_shape->At(i) + padding_before[i] + padding_after[i];
+      CHECK_EQ_OR_RETURN(padding_before.size(), x_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(padding_after.size(), x_shape.NumAxes());
+      DimVector y_dim_vec(x_shape.NumAxes());
+      FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
+        y_dim_vec[i] = x_shape.At(i) + padding_before[i] + padding_after[i];
       }
-      *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(y_dim_vec);
+      *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -53,7 +53,7 @@ REGISTER_USER_OP("pad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
@@ -65,16 +65,16 @@ REGISTER_USER_OP("pad_grad")
     .Attr<double>("floating_constant_value")
     .Attr<int64_t>("integral_constant_value")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
       const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
       const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-      CHECK_EQ(padding_before.size(), dy_shape->NumAxes());
-      CHECK_EQ(padding_after.size(), dy_shape->NumAxes());
-      DimVector dx_dim_vec(dy_shape->NumAxes());
-      FOR_RANGE(int64_t, i, 0, dy_shape->NumAxes()) {
-        dx_dim_vec[i] = dy_shape->At(i) - padding_before[i] - padding_after[i];
+      CHECK_EQ_OR_RETURN(padding_before.size(), dy_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(padding_after.size(), dy_shape.NumAxes());
+      DimVector dx_dim_vec(dy_shape.NumAxes());
+      FOR_RANGE(int64_t, i, 0, dy_shape.NumAxes()) {
+        dx_dim_vec[i] = dy_shape.At(i) - padding_before[i] - padding_after[i];
       }
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = Shape(dx_dim_vec);
+      *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -92,12 +92,12 @@ REGISTER_USER_OP("pad_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("pad").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                       user_op::AddOpFn AddOp) {
+                                                       user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("x", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op =
@@ -112,10 +112,12 @@ REGISTER_USER_OP_GRAD("pad").SetGenBackwardOpConfFn([](const user_op::UserOpWrap
     op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 REGISTER_USER_OP_GRAD("pad_grad")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("dy", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -130,6 +132,7 @@ REGISTER_USER_OP_GRAD("pad_grad")
         op.BindGradTensorWithOpInput(grad_op.output("y", 0), "dy", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

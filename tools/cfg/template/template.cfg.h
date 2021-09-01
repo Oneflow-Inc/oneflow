@@ -327,7 +327,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   // enable nothrow for ::std::vector<{{ util.class_name(cls) }}> resize 
   {{ util.class_name(cls) }}({{ util.class_name(cls) }}&&) noexcept;
   {{ util.class_name(cls) }}();
-  {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
+  explicit {{ util.class_name(cls) }}(const {{ util.module_package_namespace(module) }}::{{ util.class_name(cls) }}& proto_{{ util.class_name(cls).lower() }});
 
   ~{{ util.class_name(cls) }}() override;
 
@@ -342,6 +342,7 @@ class {{ util.class_name(cls) }} final : public Const{{ util.class_name(cls) }} 
   void Clear();
   void CopyFrom(const {{ util.class_name(cls) }}& other);
   {{ util.class_name(cls) }}& operator=(const {{ util.class_name(cls) }}& other);
+  {{ util.class_name(cls) }}& operator=({{ util.class_name(cls) }}&& other);
 
 {% for field in util.message_type_fields(cls) %}
 {% if util.field_has_required_or_optional_label(field) %}

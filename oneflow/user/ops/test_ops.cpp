@@ -22,13 +22,13 @@ REGISTER_USER_OP("ccrelu")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
+      *out_shape = in_shape;
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -41,15 +41,15 @@ REGISTER_USER_OP("ccrelu_grad")
     .Input("dy")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_shape == *y_shape);
-      *dx_shape = *y_shape;
+      const Shape& y_shape = ctx->InputShape("y", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
+      CHECK_OR_RETURN(dy_shape == y_shape);
+      *dx_shape = y_shape;
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("y", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -62,7 +62,7 @@ REGISTER_USER_OP("ccrelu_grad")
     });
 
 REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                          user_op::AddOpFn AddOp) {
+                                                          user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper ccrelu_grad_op =
@@ -74,6 +74,7 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
     op.BindGradTensorWithOpInput(ccrelu_grad_op.output("dx", 0), "in", 0);
     AddOp(ccrelu_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 REGISTER_USER_OP("TestReshape")
@@ -81,22 +82,23 @@ REGISTER_USER_OP("TestReshape")
     .Output("out")
     .Attr<Shape>("shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& conf_shape = ctx->Attr<Shape>("shape");
-      CHECK_EQ(in_shape->NumAxes(), conf_shape.NumAxes());
+      CHECK_EQ_OR_RETURN(in_shape.NumAxes(), conf_shape.NumAxes());
       *out_shape = conf_shape;
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("TestSource")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       *out_shape = Shape({5});
       return Maybe<void>::Ok();
     })
@@ -105,7 +107,7 @@ REGISTER_USER_OP("TestSource")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      *ctx->OutputDType("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     });
 
@@ -114,18 +116,18 @@ REGISTER_USER_OP("TestMultiOutputOrder")
     .Output("out1")
     .Output("out2")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out1_shape = ctx->Shape4ArgNameAndIndex("out1", 0);
-      Shape* out2_shape = ctx->Shape4ArgNameAndIndex("out2", 0);
-      *out1_shape = *in_shape;
-      *out2_shape = *in_shape;
-      int32_t last_axis = in_shape->NumAxes() - 1;
-      out2_shape->Set(last_axis, in_shape->At(last_axis) * 2);
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      Shape* out1_shape = ctx->OutputShape("out1", 0);
+      Shape* out2_shape = ctx->OutputShape("out2", 0);
+      *out1_shape = in_shape;
+      *out2_shape = in_shape;
+      int32_t last_axis = in_shape.NumAxes() - 1;
+      out2_shape->Set(last_axis, in_shape.At(last_axis) * 2);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out1", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      *ctx->Dtype4ArgNameAndIndex("out2", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out1", 0) = ctx->InputDType("in", 0);
+      *ctx->OutputDType("out2", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -137,24 +139,24 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
     .Output("out")
     .Attr<int64_t>("out_num")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       int64_t out_num = ctx->Attr<int64_t>("out_num");
       *out_shape = Shape({out_num});
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       int64_t out_num = ctx->Attr<int64_t>("out_num");
       const ParallelContext& parallel_ctx = ctx->parallel_ctx();
       BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
       *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
 
-      const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-      CHECK(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
+      const cfg::SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      CHECK_OR_RETURN(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      *ctx->OutputDType("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -171,15 +173,15 @@ REGISTER_USER_OP("TestMultiInput")
     .Input("x2")
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* x1_shape = ctx->Shape4ArgNameAndIndex("x1", 0);
-      Shape* x2_shape = ctx->Shape4ArgNameAndIndex("x2", 0);
-      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      CHECK(*x1_shape == *x2_shape);
-      *y_shape = *x1_shape;
+      const Shape& x1_shape = ctx->InputShape("x1", 0);
+      const Shape& x2_shape = ctx->InputShape("x2", 0);
+      Shape* y_shape = ctx->OutputShape("y", 0);
+      CHECK_OR_RETURN(x1_shape == x2_shape);
+      *y_shape = x1_shape;
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x1", 0);
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x1", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -197,17 +199,17 @@ REGISTER_USER_OP("TestMultiInputGrad")
     .Output("x1_diff")
     .Output("x2_diff")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* x1_shape = ctx->Shape4ArgNameAndIndex("x1", 0);
-      Shape* x2_shape = ctx->Shape4ArgNameAndIndex("x2", 0);
-      Shape* x1_diff_shape = ctx->Shape4ArgNameAndIndex("x1_diff", 0);
-      Shape* x2_diff_shape = ctx->Shape4ArgNameAndIndex("x2_diff", 0);
-      *x1_diff_shape = *x1_shape;
-      *x2_diff_shape = *x2_shape;
+      const Shape& x1_shape = ctx->InputShape("x1", 0);
+      const Shape& x2_shape = ctx->InputShape("x2", 0);
+      Shape* x1_diff_shape = ctx->OutputShape("x1_diff", 0);
+      Shape* x2_diff_shape = ctx->OutputShape("x2_diff", 0);
+      *x1_diff_shape = x1_shape;
+      *x2_diff_shape = x2_shape;
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("x1_diff", 0) = *ctx->Dtype4ArgNameAndIndex("x1", 0);
-      *ctx->Dtype4ArgNameAndIndex("x2_diff", 0) = *ctx->Dtype4ArgNameAndIndex("x2", 0);
+      *ctx->OutputDType("x1_diff", 0) = ctx->InputDType("x1", 0);
+      *ctx->OutputDType("x2_diff", 0) = ctx->InputDType("x2", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -219,7 +221,8 @@ REGISTER_USER_OP("TestMultiInputGrad")
     });
 
 REGISTER_USER_OP_GRAD("TestMultiInput")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x1", 0) || op.NeedGenGradTensor4OpInput("x2", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper test_multi_input_grad_op =
@@ -234,18 +237,19 @@ REGISTER_USER_OP_GRAD("TestMultiInput")
         op.BindGradTensorWithOpInput(test_multi_input_grad_op.output("x2_diff", 0), "x2", 0);
         AddOp(test_multi_input_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("TestDynamicSource")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       *out_tensor->mut_shape() = Shape({5});
       out_tensor->set_is_dynamic(true);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      *ctx->OutputDType("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -253,39 +257,42 @@ REGISTER_USER_OP("TestDynamicSource")
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) {
+                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
-      CHECK(out_modifier != nullptr);
+      CHECK_OR_RETURN(out_modifier != nullptr);
       out_modifier->set_header_infered_before_compute(false);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("TestRandomSource")
     .Output("out")
     .Attr<int64_t>("seed")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       *out_tensor->mut_shape() = Shape({5});
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      *ctx->OutputDType("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("TestDataTypeAttr")
     .Input("in")
     .Output("out")
     .Attr<DataType>("output_type")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
+      *out_shape = in_shape;
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->Attr<DataType>("output_type");
+      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("output_type");
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
     .Input("in")
@@ -297,7 +304,7 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
       const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
       const auto& string_list = ctx->Attr<std::vector<std::string>>("string_list");
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-        *ctx->Shape4ArgNameAndIndex("out", i) = out_shapes.at(i);
+        *ctx->OutputShape("out", i) = out_shapes.at(i);
       }
       CHECK_GT_OR_RETURN(string_list.size(), 0);
       return Maybe<void>::Ok();
@@ -305,10 +312,11 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-        *ctx->Dtype4ArgNameAndIndex("out", i) = out_types.at(i);
+        *ctx->OutputDType("out", i) = out_types.at(i);
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("test_user_op_attr_auto_type")
     .Input("in")
@@ -316,20 +324,21 @@ REGISTER_USER_OP("test_user_op_attr_auto_type")
     .Attr<int32_t>("int1")
     .Attr<int32_t>("int2")
     .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)
-    .SetDataTypeInferFn(user_op::TensorDescInferFnUtil::UnchangedDataType);
+    .SetDataTypeInferFn(user_op::TensorDescInferFnUtil::UnchangedDataType)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const auto* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      auto* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc->mut_shape() = in_desc->shape();
-      *out_desc->mut_is_dynamic() = in_desc->is_dynamic();
+      const auto& in_desc = ctx->InputTensorDesc("in", 0);
+      auto* out_desc = ctx->OutputTensorDesc("out", 0);
+      *out_desc->mut_shape() = in_desc.shape();
+      *out_desc->mut_is_dynamic() = in_desc.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

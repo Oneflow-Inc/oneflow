@@ -16,8 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 #define ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 
+<<<<<<< HEAD
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.pb.h"
+=======
+#include "oneflow/core/common/device_type.h"
+>>>>>>> origin/master
 #include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
@@ -61,9 +65,13 @@ class MemCaseId {
   bool host_mem_registered_by_network_;
 };
 
+<<<<<<< HEAD
 class GlobalMemCaseId {
  public:
   using node_index_t = uint32_t;
+=======
+  static MemoryCase GetHostMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case);
+>>>>>>> origin/master
 
   explicit GlobalMemCaseId(node_index_t node_index, const MemCaseId& mem_case_id)
       : node_index_(node_index), mem_case_id_(mem_case_id) {}
@@ -73,6 +81,7 @@ class GlobalMemCaseId {
   node_index_t node_index() const { return node_index_; }
   const MemCaseId& mem_case_id() const { return mem_case_id_; }
 
+<<<<<<< HEAD
   bool operator==(const GlobalMemCaseId& rhs) const {
     return node_index_ == rhs.node_index_ && mem_case_id_ == rhs.mem_case_id_;
   }
@@ -108,6 +117,8 @@ bool PatchMemCase(const MemoryCase& src_mem_case, MemoryCase* dst_mem_case);
 MemoryCase GenerateCorrespondingPageLockedHostMemoryCase(const MemoryCase& mem_case);
 
 struct MemoryCaseUtil {
+=======
+>>>>>>> origin/master
   static std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type,
                                                  const int64_t device_id);
 };

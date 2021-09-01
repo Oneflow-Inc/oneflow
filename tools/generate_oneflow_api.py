@@ -4,6 +4,7 @@ import argparse
 import inspect
 
 import oneflow
+import oneflow.compatible.single_client
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-root", "--root_path", type=str, required=True)
@@ -33,6 +34,28 @@ def dtype_related_symbols():
         """locals()["uint8"] = oneflow._oneflow_internal.uint8""",
         """locals()["record"] = oneflow._oneflow_internal.record""",
         """locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer""",
+    ]
+
+
+def customized_symbols():
+    return [
+        # Note that the imported module name shouldn't be same with existing module, use import ... as ... if there is same module with same name
+        # oneflow.device
+        """from oneflow._oneflow_internal import device""",
+        """device.__module__ = \"oneflow\"""",
+        # oneflow.Size
+        """from oneflow._oneflow_internal import Size""",
+        """Size.__module__ = \"oneflow\"""",
+        # oneflow.sbp.sbp
+        """from oneflow._oneflow_internal.sbp import sbp""",
+        """sbp.__module__ = \"oneflow.sbp\"""",
+        """del sbp""",  # Note that del is used here carefully to avoid deleting the class that was originally exported under the oneflow namespace
+        # oneflow.Tensor
+        """from oneflow.python.framework.tensor import Tensor""",
+        """Tensor.__module__ = \"oneflow\"""",
+        # oneflow.placement
+        """from oneflow._oneflow_internal import placement""",
+        """placement.__module__ = \"oneflow\"""",
     ]
 
 
@@ -83,6 +106,8 @@ class VirtualModule(object):
             if "experimental/__init__.py" in init_file_path:
                 lines += dtype_related_symbols()
             lines = list(mod_set) + lines
+            if "oneflow/__init__.py" in init_file_path:
+                lines = customized_symbols() + lines
             f.write("\n" + "\n".join(lines) + "\n")
 
     def submodule_names(self):
@@ -95,24 +120,27 @@ def include_submodule(modname):
 
 def include_export(api_name_base, symbol):
     if symbol.__name__ == api_name_base:
-        return ["from {} import {}".format(symbol.__module__, api_name_base)]
+        output = ["from {} import {}".format(symbol.__module__, api_name_base)]
     else:
         if inspect.isclass(symbol):
-            return [
+            output = [
                 "from {} import {}".format(symbol.__module__, symbol.__name__),
                 "{} = {}".format(api_name_base, symbol.__name__),
             ]
         else:
-            return [
+            output = [
                 "from {} import {} as {}".format(
                     symbol.__module__, symbol.__name__, api_name_base
                 )
             ]
+    if symbol._IS_VALUE:
+        output.append("{} = {}()".format(api_name_base, api_name_base))
+    return output
 
 
-def exported_symbols():
+def exported_symbols(module_name):
     for mod in sys.modules.values():
-        if mod.__name__.startswith("oneflow.python"):
+        if mod.__name__.startswith(module_name):
             for attr in dir(mod):
                 symbol = getattr(mod, attr)
                 if hasattr(symbol, "__dict__") and "_ONEFLOW_API" in vars(symbol):
@@ -120,10 +148,10 @@ def exported_symbols():
                         yield api_name, symbol, mod
 
 
-def collect_exports():
+def collect_exports(module_name):
     exports = {}
     api_name2module = {}
-    for api_name, symbol, module in exported_symbols():
+    for api_name, symbol, module in exported_symbols(module_name):
         has_another_symbol_exported = (
             api_name in exports and exports[api_name] != symbol
         )
@@ -152,8 +180,10 @@ def collect_exports():
 
 
 def main():
-    mod = collect_exports()
+    mod = collect_exports("oneflow.python")
     mod.dump(args.root_path, is_root=True)
+    mod = collect_exports("oneflow.compatible.single_client.python")
+    mod.dump(args.root_path + "/compatible/single_client", is_root=True)
 
 
 if __name__ == "__main__":

@@ -37,16 +37,30 @@ ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name) 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
   auto* oneflow_vm = JUST(GlobalMaybe<OneflowVM>());
   auto* vm = oneflow_vm->mut_vm();
-  vm->Receive(instr_msg_list);
+  JUST(vm->Receive(instr_msg_list));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> SingleClientSync() {
   BlockingCounter bc(1);
-  LogicalRun([&bc](InstructionsBuilder* builder) {
-    builder->ComputeGlobalFrontSeqBarrier();
-    builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); });
-  });
+  JUST(LogicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->ComputeGlobalFrontSeqBarrier());
+    JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
+    return Maybe<void>::Ok();
+  }));
+
+  bc.WaitUntilCntEqualZero();
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MultiClientSync() {
+  BlockingCounter bc(1);
+  JUST(PhysicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->ComputeGlobalFrontSeqBarrier());
+    JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
+    return Maybe<void>::Ok();
+  }));
 
   bc.WaitUntilCntEqualZero();
 

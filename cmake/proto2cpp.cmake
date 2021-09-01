@@ -29,7 +29,7 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
       COMMAND ${CMAKE_COMMAND}
       ARGS -E touch ${of_proto_python_dir}/${REL_DIR}/__init__.py
 
-      DEPENDS ${ABS_FIL} ${PROTOBUF_COPY_TARGETS}
+      DEPENDS ${ABS_FIL} protobuf
       COMMENT "Running Protocol Buffer Compiler on ${FIL}"
       VERBATIM )
   endforeach()

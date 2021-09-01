@@ -10,11 +10,15 @@ message DummyDevicePinnedMemory {
 }
 
 message HostMemory {
+<<<<<<< HEAD
   oneof page_lock_case {
     CudaPinnedMemory cuda_pinned_mem = 1;
     DummyDevicePinnedMemory dummy_device_pinned_mem = 3;
   }
   optional bool used_by_network = 2 [default = false];
+=======
+  optional CudaPinnedMemory cuda_pinned_mem = 1;
+>>>>>>> origin/master
 }
 
 message DeviceCudaMemory {

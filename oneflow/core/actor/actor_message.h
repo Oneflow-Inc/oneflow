@@ -22,18 +22,17 @@ limitations under the License.
 namespace oneflow {
 
 enum class ActorCmd {
-  kInitModel = 0,     // MdUpdt Actor
-  kSendInitialModel,  // MdUpdt Actor
-  kStart,             // Source Actor
+  kStart = 0,  // Source Actor
   kStopThread,
   kConstructActor
 };
 
 enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
 
+constexpr uint8_t kActorMsgUserDataMaxSize = 32;
+
 class ActorMsg final {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(ActorMsg);
   ActorMsg() = default;
   ~ActorMsg() = default;
 
@@ -51,11 +50,16 @@ class ActorMsg final {
   ActorCmd actor_cmd() const;
   Regst* regst() const;
   int64_t regst_desc_id() const;
-  int64_t piece_id() const;
-  int64_t act_id() const;
   void* comm_net_token() const;
+  void set_comm_net_token(void* token);
   bool has_sole_empty_blob() const;
   int64_t eord_regst_desc_id() const;
+  void AddUserData(uint8_t size, const void* data);
+  uint8_t user_data_size() const;
+  const void* user_data() const;
+  bool IsDataRegstMsgToConsumer() const;
+  int64_t comm_net_sequence_number() const;
+  void set_comm_net_sequence_number(int64_t sequence_number);
 
   // Serialize
   template<typename StreamT>
@@ -71,8 +75,10 @@ class ActorMsg final {
   struct RegstWrapper {
     Regst* regst;
     void* comm_net_token;
-    RegstStatus regst_status;
+    int64_t comm_net_sequence_number;
+    int64_t regst_desc_id;
     bool has_sole_empty_blob;
+    bool is_data_regst_to_consumer;
   };
 
   int64_t src_actor_id_;
@@ -83,6 +89,8 @@ class ActorMsg final {
     RegstWrapper regst_wrapper_;
     int64_t eord_regst_desc_id_;
   };
+  uint8_t user_data_size_;
+  unsigned char user_data_[kActorMsgUserDataMaxSize];
 };
 
 template<typename StreamT>

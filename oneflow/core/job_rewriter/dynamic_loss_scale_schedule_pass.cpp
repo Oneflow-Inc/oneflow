@@ -113,7 +113,8 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
                      {loss_scale_var_op_conf, loss_scale_val_op_conf, good_step_counter_var_conf,
                       count_not_finite_stub_op.op_conf(), schedule.op_conf()});
   if (!JUST(ctx->HasState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"))) {
-    ctx->ResetState("dynamic_loss_scale_state", std::make_unique<DynamicLossScaleJobPassState>());
+    JUST(ctx->ResetState("dynamic_loss_scale_state",
+                         std::make_unique<DynamicLossScaleJobPassState>()));
   }
   auto state = JUST(ctx->MutableState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
   state->set_loss_scale_val_lbn(loss_scale_val_lbn);

@@ -30,9 +30,9 @@ class Resource;
 
 namespace vm {
 
-class Stream;
-class Instruction;
-class InstructionStatusBuffer;
+struct Stream;
+struct Instruction;
+struct InstructionStatusBuffer;
 
 struct InferStreamTypeUtil final {
   static void InitInstructionStatus(const Stream& stream, InstructionStatusBuffer* status_buffer);
@@ -77,6 +77,7 @@ class InferStreamType final : public StreamType {
     return stream_desc;
   }
   bool SharingVirtualMachineThread() const override { return true; }
+  bool SupportingTransportInstructions() const override { return false; }
 };
 
 template<>
@@ -112,6 +113,7 @@ class InferStreamType<ControlStreamType> final : public StreamType {
   void Compute(VirtualMachine*, InstructionMsg*) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
 
   bool SharingVirtualMachineThread() const override { return true; }
+  bool SupportingTransportInstructions() const override { return false; }
   bool IsControlStreamType() const override { return true; }
 
   ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,

@@ -23,6 +23,7 @@ namespace oneflow {
 static const int64_t kInvalidSessionId = -1;
 static const std::string kNoPassTag = "";
 static const std::string kMainOp = "main_op";
+static const int64_t kMaxSplitAxis = 6;
 
 }  // namespace oneflow
 

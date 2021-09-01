@@ -275,7 +275,12 @@ void MergeSharedMemBlockR2L(RegstDescProto* lhs, RegstDescProto* rhs,
     CHECK_EQ(separated_header_mem_size, right_rt_regst.TotalSeparatedHeaderByteSize4AllRegst());
     int64_t merged_header_id = lhs->separated_header_mem_block_id();
     int64_t erased_header_id = rhs->separated_header_mem_block_id();
+<<<<<<< HEAD
     MemoryCase header_mem_case = GenerateCorrespondingPageLockedHostMemoryCase(lhs->mem_case());
+=======
+    MemoryCase header_mem_case =
+        MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(lhs->mem_case());
+>>>>>>> origin/master
     MemBlockProto* merged_header_block =
         CheckValidAndGetMemBlock(merged_header_id, separated_header_mem_size, header_mem_case);
     MemBlockProto* erased_header_block =

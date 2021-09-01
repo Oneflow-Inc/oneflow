@@ -14,14 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
+void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id) {
+  *machine_id = Rank();
+  *device_id = LocalRank();
+}
+
 int64_t GlobalProcessCtx::Rank() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->rank();
+}
+
+int64_t GlobalProcessCtx::LocalRank() {
+  char* local_rank_env = std::getenv("LOCAL_RANK");
+  if (!local_rank_env) { return 0; }
+  CHECK(IsStrInt(local_rank_env));
+  static int64_t local_rank = std::stol(local_rank_env);
+  return local_rank;
 }
 
 int64_t GlobalProcessCtx::NodeSize() {
@@ -31,13 +45,15 @@ int64_t GlobalProcessCtx::NodeSize() {
 
 int64_t GlobalProcessCtx::ThisNodeId() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return int64_t(Rank() / NumOfProcessPerNode());
+  return NodeId(Rank());
+}
+
+int64_t GlobalProcessCtx::NodeId(int64_t process_id) {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return process_id / NumOfProcessPerNode();
 }
 
 int64_t GlobalProcessCtx::NumOfProcessPerNode() {
-  if (Global<NumProcessPerNode>::Get() != nullptr) {
-    return int64_t(Global<NumProcessPerNode>::Get()->value());
-  }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   CHECK_EQ(WorldSize() % NodeSize(), 0);
   return int64_t(WorldSize() / NodeSize());
@@ -59,6 +75,10 @@ std::string GlobalProcessCtx::LogDirEntry() {
   const auto& addr = process_ctx.ctrl_addr(process_ctx.rank());
   CHECK(addr.has_host());
   return addr.host() + "-" + std::to_string(addr.port()) + "-" + std::to_string(process_ctx.rank());
+}
+
+/* static */ int64_t GlobalProcessCtx::LocalRank(int64_t rank) {
+  return rank % NumOfProcessPerNode();
 }
 
 }  // namespace oneflow

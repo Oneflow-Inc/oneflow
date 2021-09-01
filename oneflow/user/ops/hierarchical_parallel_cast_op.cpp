@@ -21,24 +21,22 @@ namespace oneflow {
 REGISTER_USER_OP("hierarchical_parallel_cast")
     .Input("in")
     .Output("out")
-    .Attr<std::vector<std::string>>("parallel_distribution")
+    .Attr<std::vector<std::string>>("nd_sbp")
     .Attr<std::string>("grad_mode")
-    .Attr<std::vector<std::string>>("grad_parallel_distribution")
+    .Attr<std::vector<std::string>>("grad_nd_sbp")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
-                                        -> Maybe<void> {
-      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
       const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
-      const auto& conf =
-          ctx->user_op_conf().attr<std::vector<std::string>>("parallel_distribution");
+      const auto& conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
       CHECK_EQ_OR_RETURN(conf.size(), parallel_hierarchy.NumAxes());
       for (const std::string& sbp_str : conf) {
-        SbpParallel sbp_parallel;
+        cfg::SbpParallel sbp_parallel;
         CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
         *in_distribution->add_sbp_parallel() = sbp_parallel;
         *out_distribution->add_sbp_parallel() = sbp_parallel;
@@ -46,39 +44,38 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("hierarchical_parallel_cast_like")
     .Input("in")
     .Input("like")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
-                                        -> Maybe<void> {
-      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
-      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
-      ParallelDistribution* like_distribution =
-          ctx->ParallelDistribution4ArgNameAndIndex("like", 0);
-      const ParallelDistribution& hint_distribution =
-          ctx->ParallelDistributionHint4InputArgNameAndIndex("like", 0);
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
+      cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+      cfg::NdSbp* like_distribution = ctx->NdSbp4ArgNameAndIndex("like", 0);
+      const cfg::NdSbp& hint_distribution = ctx->NdSbpHint4InputArgNameAndIndex("like", 0);
       *in_distribution = hint_distribution;
       *out_distribution = hint_distribution;
       *like_distribution = hint_distribution;
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP_GRAD("hierarchical_parallel_cast")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       if (ctx->FwOp().NeedGenGradTensor4OpInput("in", 0)) {
         const auto& grad_mode = ctx->FwOp().attr<std::string>("grad_mode");
         if (grad_mode == "identity") {
@@ -91,10 +88,8 @@ REGISTER_USER_OP_GRAD("hierarchical_parallel_cast")
                 .InputBind("in", ctx->FwOp().output_grad("out", 0))
                 .Output("out")
                 .Attr<std::vector<std::string>>(
-                    "parallel_distribution",
-                    ctx->FwOp().attr<std::vector<std::string>>("grad_parallel_distribution"))
-                .Attr<std::vector<std::string>>("grad_parallel_distribution",
-                                                std::vector<std::string>())
+                    "nd_sbp", ctx->FwOp().attr<std::vector<std::string>>("grad_nd_sbp"))
+                .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
                 .Build();
           });
           ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&]() -> const std::string& {
@@ -116,6 +111,7 @@ REGISTER_USER_OP_GRAD("hierarchical_parallel_cast")
           UNIMPLEMENTED();
         }
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

@@ -55,7 +55,8 @@ class JobPassCtx {
     const auto& iter = key2state_.find(key);
     CHECK_OR_RETURN(iter != key2state_.end());
     const T* ptr = dynamic_cast<T*>(iter->second.get());
-    CHECK_NOTNULL_OR_RETURN(ptr) << typeid(*iter->second).name();
+    const auto& origin_obj = *iter->second;
+    CHECK_NOTNULL_OR_RETURN(ptr) << typeid(origin_obj).name();
     return *ptr;
   }
 
@@ -64,7 +65,8 @@ class JobPassCtx {
     const auto& iter = key2state_.find(key);
     CHECK_OR_RETURN(iter != key2state_.end());
     T* ptr = dynamic_cast<T*>(iter->second.get());
-    CHECK_NOTNULL_OR_RETURN(ptr) << typeid(*iter->second).name();
+    const auto& origin_obj = *iter->second;
+    CHECK_NOTNULL_OR_RETURN(ptr) << typeid(origin_obj).name();
     return ptr;
   }
 

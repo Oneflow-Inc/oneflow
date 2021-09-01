@@ -26,7 +26,7 @@ class AccTickOp final : public Operator {
   AccTickOp() = default;
   ~AccTickOp() = default;
 
-  void InitFromOpConf() override;
+  Maybe<void> InitFromOpConf() override;
 
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
@@ -39,7 +39,7 @@ class AccTickOp final : public Operator {
       std::shared_ptr<const Shape>* time_shape) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override;
+      cfg::SbpSignatureList* sbp_sig_list) const override;
 
  private:
 };

@@ -24,7 +24,7 @@ REGISTER_USER_OP("scalar_pow")
     .Attr<double>("exponent")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -38,7 +38,7 @@ REGISTER_USER_OP("scalar_pow")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -48,7 +48,7 @@ REGISTER_USER_OP("scalar_pow_grad")
     .Attr<double>("exponent")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
+      *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -63,26 +63,28 @@ REGISTER_USER_OP("scalar_pow_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("x", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("scalar_pow").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto scalar_pow_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(scalar_pow_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("scalar_pow_grad")
-        .InputBind("x", ctx->FwOp().input("in", 0))
-        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr<double>("exponent", ctx->FwOp().attr<double>("exponent"))
-        .Output("dx")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                            [&ctx, &scalar_pow_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(scalar_pow_grad_op_name).output("dx", 0);
-                            });
-});
+REGISTER_USER_OP_GRAD("scalar_pow")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const auto scalar_pow_grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(scalar_pow_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("scalar_pow_grad")
+            .InputBind("x", ctx->FwOp().input("in", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+            .Attr<double>("exponent", ctx->FwOp().attr<double>("exponent"))
+            .Output("dx")
+            .Build();
+      });
+      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
+                                [&ctx, &scalar_pow_grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(scalar_pow_grad_op_name).output("dx", 0);
+                                });
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace
 

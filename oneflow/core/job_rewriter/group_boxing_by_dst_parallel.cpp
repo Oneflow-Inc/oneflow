@@ -19,8 +19,8 @@ limitations under the License.
 
 namespace oneflow {
 
-void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) {
-  HashMap<LogicalBlobId, HashMap<std::pair<ParallelDesc, ParallelDistribution>,
+Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) {
+  HashMap<LogicalBlobId, HashMap<std::pair<ParallelDesc, cfg::NdSbp>,
                                  std::vector<std::pair<const OpNode*, std::string>>>>
       lbi2consumer_grouped_by_parallel;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
@@ -30,17 +30,13 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
-      const ParallelDistribution& producer_parallel_distribution =
-          producer.ParallelDistribution4Lbi(lbi);
-      const ParallelDistribution& consumer_parallel_distribution =
-          node->ParallelDistribution4BnInOp(ibn);
+      const cfg::NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
+      const cfg::NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
 
       if (producer.parallel_desc() != node->parallel_desc()
-          || (node->parallel_desc().parallel_num() != 1
-              && producer_parallel_distribution != consumer_parallel_distribution)) {
-        lbi2consumer_grouped_by_parallel[lbi]
-                                        [{node->parallel_desc(), consumer_parallel_distribution}]
-                                            .push_back({node, ibn});
+          || (node->parallel_desc().parallel_num() != 1 && producer_nd_sbp != consumer_nd_sbp)) {
+        lbi2consumer_grouped_by_parallel[lbi][{node->parallel_desc(), consumer_nd_sbp}].push_back(
+            {node, ibn});
         if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
           op_node2op_conf[node] = node->op().op_conf();
         }
@@ -52,20 +48,17 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
     for (const auto& parallel7group : lbi7groups.second) {
       if (parallel7group.second.size() < 2) { continue; }
       const ParallelDesc& dst_parallel_desc = parallel7group.first.first;
-      const ParallelDistribution& dst_parallel_distribution = parallel7group.first.second;
+      const cfg::NdSbp& dst_nd_sbp = parallel7group.first.second;
       OperatorConf identity_op_conf{};
       identity_op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
       identity_conf->set_in(GenLogicalBlobName(lbi));
       identity_conf->set_out("out");
       job_builder->AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
-      ParallelDistributionSignature identity_parallel_distribution_signature;
-      (*identity_parallel_distribution_signature.mutable_bn_in_op2parallel_distribution())["in"] =
-          dst_parallel_distribution;
-      (*identity_parallel_distribution_signature.mutable_bn_in_op2parallel_distribution())["out"] =
-          dst_parallel_distribution;
-      job_builder->AddParallelDistributionSignature4OpName(
-          identity_op_conf.name(), identity_parallel_distribution_signature);
+      cfg::NdSbpSignature identity_nd_sbp_signature;
+      (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["in"] = dst_nd_sbp;
+      (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["out"] = dst_nd_sbp;
+      job_builder->AddNdSbpSignature4OpName(identity_op_conf.name(), identity_nd_sbp_signature);
 
       LogicalBlobId grouped_lbi;
       grouped_lbi.set_op_name(identity_op_conf.name());
@@ -76,13 +69,14 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) 
         OperatorConf& consumer_op_conf = op_node2op_conf[consumer];
         const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn,
                                                                 GenLogicalBlobName(grouped_lbi));
-        CHECK_EQ(GenLogicalBlobName(lbi), old_val);
+        CHECK_EQ_OR_RETURN(GenLogicalBlobName(lbi), old_val);
       }
     }
   }
   for (const auto& op_node7op_conf : op_node2op_conf) {
-    job_builder->MutOpsOnlyOnce({op_node7op_conf.second});
+    JUST(job_builder->MutOpOnlyOnce(op_node7op_conf.second));
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow

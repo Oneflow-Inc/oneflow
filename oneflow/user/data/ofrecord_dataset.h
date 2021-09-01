@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace data {
@@ -49,15 +50,25 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
           JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
     }
 
-    parallel_id_ = ctx->parallel_ctx().parallel_id();
-    parallel_num_ = ctx->parallel_ctx().parallel_num();
+    // NOTE(zwx): dataset infer the part of the files needed to be read by
+    //     1) ddp, when parallel_id == 0 and parallel_num == 1 and world_size > 1,
+    //        according to rank and world size.
+    //     2) consistent, when parallel_num > 1 or
+    //                         parallel_id == 0 and parallel_num == 1 and world_size == 1,
+    //        according to parallel_ctx.parallel_id and parallel_ctx.parallel_num.
+    if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+      parallel_id_ = GlobalProcessCtx::Rank();
+      parallel_num_ = GlobalProcessCtx::WorldSize();
+    } else {
+      parallel_id_ = ctx->parallel_ctx().parallel_id();
+      parallel_num_ = ctx->parallel_ctx().parallel_num();
+    }
     CHECK_LE(parallel_num_, data_part_num_);
     BalancedSplitter bs(data_part_num_, parallel_num_);
     range_ = bs.At(parallel_id_);
     std::vector<std::string> local_file_paths = GetLocalFilePaths();
-    save_to_local_ = Global<const IOConf>::Get()->save_downloaded_file_to_local_fs();
     in_stream_.reset(
-        new PersistentInStream(DataFS(), local_file_paths, !shuffle_after_epoch_, save_to_local_));
+        new PersistentInStream(DataFS(), local_file_paths, !shuffle_after_epoch_, false));
   }
   ~OFRecordDataset() = default;
 
@@ -88,7 +99,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
     std::mt19937 g(kOneflowDatasetSeed + current_epoch_);
     std::shuffle(data_file_paths_.begin(), data_file_paths_.end(), g);
     std::vector<std::string> local_file_paths = GetLocalFilePaths();
-    in_stream_.reset(new PersistentInStream(DataFS(), local_file_paths, false, save_to_local_));
+    in_stream_.reset(new PersistentInStream(DataFS(), local_file_paths, false, false));
   }
 
   std::vector<std::string> GetLocalFilePaths() {
@@ -105,7 +116,6 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
   int32_t parallel_num_;
   Range range_;
   std::vector<std::string> data_file_paths_;
-  bool save_to_local_;
   std::unique_ptr<PersistentInStream> in_stream_;
 };
 

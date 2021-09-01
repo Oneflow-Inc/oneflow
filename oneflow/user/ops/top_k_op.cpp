@@ -17,22 +17,22 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("top_k")
+REGISTER_NO_GRAD_USER_OP("top_k")
     .Input("in")
     .Output("out")
     .Attr<int32_t>("k")
     .Attr<bool>("sorted")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
+      *out_shape = in_shape;
       out_shape->Set(
-          in_shape->NumAxes() - 1,
-          std::min(ctx->Attr<int32_t>("k"), static_cast<int32_t>(in_shape->dim_vec().back())));
+          in_shape.NumAxes() - 1,
+          std::min(ctx->Attr<int32_t>("k"), static_cast<int32_t>(in_shape.dim_vec().back())));
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt32;
+      *ctx->OutputDType("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

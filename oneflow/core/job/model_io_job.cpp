@@ -61,7 +61,7 @@ OperatorConf GenOutputOpConf(const std::string& op_name, const std::string& in,
   auto* output_conf = output_op_conf.mutable_output_conf();
   output_conf->set_in(in);
   output_conf->set_out(out);
-  InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf);
+  CHECK_JUST(InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf));
   return output_op_conf;
 }
 
@@ -71,7 +71,7 @@ OperatorConf GenInputOpConf(const std::string& op_name, const std::string& out,
   input_op_conf.set_name(op_name);
   auto* input_conf = input_op_conf.mutable_input_conf();
   input_conf->set_out(out);
-  InterfaceOpUtil::InitBlobConf(input_conf->mutable_blob_conf(), parallel_blob_conf);
+  CHECK_JUST(InterfaceOpUtil::InitBlobConf(input_conf->mutable_blob_conf(), parallel_blob_conf));
   return input_op_conf;
 }
 

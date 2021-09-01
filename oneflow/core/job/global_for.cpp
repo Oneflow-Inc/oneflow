@@ -14,11 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 COMMAND(Global<bool, EagerExecution>::SetAllocated(new bool(false)));
+COMMAND(Global<Maybe<bool>, MultiClient>::SetAllocated(
+    new Maybe<bool>(Error::InvalidValueError("is_multi_client is not set"))));
 
 }  // namespace oneflow

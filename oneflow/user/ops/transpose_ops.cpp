@@ -34,33 +34,33 @@ REGISTER_USER_OP("transpose")
     .Output("output")
     .Attr<std::vector<int32_t>>("perm")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("input", 0);
-      user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-      const Shape& in_shape = in_tensor_desc->shape();
+      const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("input", 0);
+      user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("output", 0);
+      const Shape& in_shape = in_tensor_desc.shape();
       Shape* out_shape = out_tensor_desc->mut_shape();
       const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
       CHECK_EQ_OR_RETURN(perm.size(), in_shape.NumAxes());
       CheckIsPerm(perm);
       // if (perm.at(0) != 0) { CHECK_OR_RETURN(!in_tensor_desc->is_dynamic()); }
-      *out_tensor_desc->mut_shape() = in_tensor_desc->shape();
-      *out_tensor_desc->mut_is_dynamic() = in_tensor_desc->is_dynamic();
+      *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
+      *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
       FOR_RANGE(size_t, i, 0, perm.size()) { out_shape->Set(i, in_shape.At(perm[i])); }
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("output", 0) = *ctx->Dtype4ArgNameAndIndex("input", 0);
+      *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& input_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0);
       const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
-      CHECK_EQ(perm.size(), input_tensor.shape().NumAxes());
+      CHECK_EQ_OR_RETURN(perm.size(), input_tensor.shape().NumAxes());
       FOR_RANGE(int32_t, i, 0, perm.size()) {
         int32_t axis = perm.at(i);
         if (axis < 0) { axis += perm.size(); }
-        CHECK_GE(axis, 0);
-        CHECK_LT(axis, perm.size());
+        CHECK_GE_OR_RETURN(axis, 0);
+        CHECK_LT_OR_RETURN(axis, perm.size());
         ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), i).Build();
       }
       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
@@ -68,7 +68,8 @@ REGISTER_USER_OP("transpose")
     });
 
 REGISTER_USER_OP_GRAD("transpose")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("input", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         const auto& tmp = op.attr<std::vector<int32_t>>("perm");
@@ -84,5 +85,6 @@ REGISTER_USER_OP_GRAD("transpose")
         op.BindGradTensorWithOpInput(transpose_grad_op.output("output", 0), "input", 0);
         AddOp(transpose_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 }  // namespace oneflow

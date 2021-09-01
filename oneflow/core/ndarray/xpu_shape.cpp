@@ -51,16 +51,24 @@ XpuShape::XpuShape(const ShapeView& shape) {
 }
 
 XpuShape::XpuShape(const ShapeView& shape, int ndims_left_extend_to) {
-  CHECK_LE(shape.NumAxes(), ndims_left_extend_to);
-  num_axes_ = ndims_left_extend_to;
-  size_t left_ones_num = num_axes_ - shape.NumAxes();
-  int i = 0;
-  for (; i < left_ones_num; ++i) { dim_[i] = 1; }
-  for (; i < num_axes_; ++i) { dim_[i] = shape.At(i - left_ones_num); }
-  UpdateDimElemNumAndElemNum();
-  for (; i < sizeof(dim_) / sizeof(dim_[0]); ++i) {
-    dim_[i] = 1;
-    dim_elem_num_[i] = 1;
+  if (shape.NumAxes() == 1 && ndims_left_extend_to == 0) {
+    num_axes_ = 0;
+    int i = 0;
+    dim_[i] = shape.At(i);
+    UpdateDimElemNumAndElemNum();
+    for (; i < sizeof(dim_) / sizeof(dim_[0]); ++i) { dim_[i] = 1; }
+  } else {
+    CHECK_LE(shape.NumAxes(), ndims_left_extend_to);
+    num_axes_ = ndims_left_extend_to;
+    size_t left_ones_num = num_axes_ - shape.NumAxes();
+    int i = 0;
+    for (; i < left_ones_num; ++i) { dim_[i] = 1; }
+    for (; i < num_axes_; ++i) { dim_[i] = shape.At(i - left_ones_num); }
+    UpdateDimElemNumAndElemNum();
+    for (; i < sizeof(dim_) / sizeof(dim_[0]); ++i) {
+      dim_[i] = 1;
+      dim_elem_num_[i] = 1;
+    }
   }
 }
 

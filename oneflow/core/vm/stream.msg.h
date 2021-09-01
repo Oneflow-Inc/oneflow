@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class ThreadCtx;
+struct ThreadCtx;
 
 // clang-format off
 OBJECT_MSG_BEGIN(Stream);

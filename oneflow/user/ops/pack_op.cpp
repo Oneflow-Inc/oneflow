@@ -24,12 +24,12 @@ REGISTER_USER_OP("pack")
     .Output("out")
     .Attr<int32_t>("pack_num")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const Shape& in_shape = in_desc->shape();
-      CHECK_GT(in_shape.NumAxes(), 0);
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc->mut_is_dynamic() = in_desc->is_dynamic();
-      *out_desc->mut_shape() = in_desc->shape();
+      const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
+      const Shape& in_shape = in_desc.shape();
+      CHECK_GT_OR_RETURN(in_shape.NumAxes(), 0);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+      *out_desc->mut_is_dynamic() = in_desc.is_dynamic();
+      *out_desc->mut_shape() = in_desc.shape();
       out_desc->mut_shape()->Set(0, in_shape.At(0) * ctx->Attr<int32_t>("pack_num"));
       return Maybe<void>::Ok();
     })
@@ -59,11 +59,12 @@ REGISTER_USER_OP("pack")
           return Maybe<void>::Ok();
         })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("pack").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("pack").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
+                                                         -> Maybe<void> {
   const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("unpack")
@@ -75,6 +76,7 @@ REGISTER_USER_OP_GRAD("pack").SetBackwardOpConfGenFn([](user_op::BackwardOpConfC
   ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
     return ctx->GetOp(grad_op_name).output("out", 0);
   });
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

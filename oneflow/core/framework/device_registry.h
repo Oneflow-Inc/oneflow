@@ -17,7 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_
 
 #include "oneflow/core/common/util.h"
+<<<<<<< HEAD
 #include "oneflow/core/common/device_type.pb.h"
+=======
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/device_type.h"
+>>>>>>> origin/master
 
 namespace std {
 

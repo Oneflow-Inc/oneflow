@@ -29,8 +29,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   OF_DISALLOW_COPY_AND_MOVE(EpollCommNet);
   ~EpollCommNet();
 
-  void RegisterMemoryDone() override;
-
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
   void SendTransportMsg(int64_t dst_machine_id, const TransportMsg& msg);
@@ -51,6 +49,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
 
 }  // namespace oneflow
 
-#endif  // OF_PLATFORM_POSIX
+#endif  // __linux__
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_

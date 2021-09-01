@@ -31,7 +31,7 @@ const Shape OutputTimeShape(const OpNode* op_node) {
   return *CHECK_JUST(op_node->op().GetOpTimeShape());
 }
 
-const SbpParallel& BlobSbpPolicy(const OpNode* op_node, const std::string& name) {
+const cfg::SbpParallel& BlobSbpPolicy(const OpNode* op_node, const std::string& name) {
   CHECK_NOTNULL(op_node);
   LogicalBlobId lbi = BlobNameToId(name);
   return op_node->SbpParallel4Lbi(lbi);
@@ -76,7 +76,7 @@ GraphBuilder::GraphBuilder(const XrtLaunchOpConf::Function& function, const Devi
     XrtNode* node = graph_->AddNode(node_conf);
     SetupXrtNode(node, node_conf);
     auto& input_output_keys = node_info_[node].input_output_keys;
-    auto op = ConstructOp(node_conf, device_type);
+    auto op = CHECK_JUST(ConstructOp(node_conf, device_type));
     for (const std::string& bn : op->output_bns()) {
       std::string output = BlobIdToName(op->BnInOp2Lbi(bn));
       producers_[output] = node;
@@ -127,7 +127,7 @@ void GraphBuilder::SetupGraphEdges() {
     time_shape.push_back(InputTimeShape(dst));
     edge->Attr("time_shape", time_shape);
     // Set sbp policy
-    std::vector<SbpParallel> sbp_policy;
+    std::vector<cfg::SbpParallel> sbp_policy;
     sbp_policy.push_back(BlobSbpPolicy(src, name));
     sbp_policy.push_back(BlobSbpPolicy(dst, name));
     edge->Attr("sbp_policy", sbp_policy);

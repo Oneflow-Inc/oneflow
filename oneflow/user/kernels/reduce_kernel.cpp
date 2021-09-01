@@ -16,13 +16,15 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
 namespace {
 
 template<template<typename> class BinaryFunc, DeviceType device_type, typename T>
-class ReduceKernel final : public user_op::OpKernel {
+class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ReduceKernel() = default;
   ~ReduceKernel() = default;
@@ -33,6 +35,16 @@ class ReduceKernel final : public user_op::OpKernel {
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+
+    if (input_tensor->shape().elem_cnt() == 0) {
+      if (output_tensor->shape().elem_cnt() != 0) {
+        AutoMemset(
+            ctx->device_ctx(), output_tensor->mut_dptr<T>(), 0,
+            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()),
+            output_tensor->mem_case());
+      }
+      return;
+    }
     const Shape& reduced_shape =
         CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
@@ -51,8 +63,8 @@ class ReduceKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                        \
                        & (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);                    \
-        return in_shape->elem_cnt() * sizeof(dtype);                                              \
+        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                               \
+        return in_shape.elem_cnt() * sizeof(dtype);                                               \
       });
 
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS(device, dtype)                  \
@@ -100,7 +112,7 @@ void GetReduceSumLayout(const std::vector<int32_t>& axis, const ShapeView& in_sh
 
 }  // namespace
 
-class ReduceSumHalfKernel final : public user_op::OpKernel {
+class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   explicit ReduceSumHalfKernel(user_op::KernelCreateContext* ctx) {
     axis_ = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
@@ -168,8 +180,8 @@ REGISTER_USER_KERNEL("reduce_sum")
     .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
                      & (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
-      const Shape& in_shape = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0)->shape();
-      const Shape& out_shape = ctx->TensorDesc4ArgNameAndIndex("output_tensor", 0)->shape();
+      const Shape& in_shape = ctx->InputTensorDesc("input_tensor", 0).shape();
+      const Shape& out_shape = ctx->OutputTensorDesc("output_tensor", 0)->shape();
       const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
       bool is_axis_contiguous = false;
       int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
