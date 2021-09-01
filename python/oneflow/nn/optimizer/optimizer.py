@@ -191,7 +191,15 @@ class Optimizer(object):
         raise NotImplementedError()
 
     def clip_grad(self):
-        r"""Clips the gradient of parameters in param_groups.
+        r"""Clips gradient norm of an iterable of parameters. 
+        The norm is computed over all gradients together, as if they were concatenated into a single vector.
+        
+        You can set the max_norm and norm_type. 
+
+        For more details, you can refer to the documentation of each optimizer(like Adam, SGD and so on). 
+
+        You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
+        
         """
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
