@@ -44,6 +44,7 @@ class Adagrad(Optimizer):
 
         options = dict()
         options["lr"] = lr
+        options["initial_accumulator_value"] = initial_accumulator_value
         options["lr_decay"] = lr_decay
         options["weight_decay"] = weight_decay
         options["eps"] = eps
@@ -106,12 +107,16 @@ class Adagrad(Optimizer):
                 else param_group["lr"]
             )
             l2 = param_group["weight_decay"]
-            lr_decay = param_group["lr_decay"][0]
+            initial_accumulator_value = param_group["initial_accumulator_value"]
+            lr_decay = param_group["lr_decay"]
             epsilon = param_group["eps"]
 
             optimizer_conf.set_base_learning_rate(lr)
-            optimizer_conf.mutable_adam_conf().set_lr_decay(lr_decay)
-            optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
+            optimizer_conf.mutable_adagrad_conf().set_initial_accumulator_value(
+                initial_accumulator_value
+            )
+            optimizer_conf.mutable_adagrad_conf().set_lr_decay(lr_decay)
+            optimizer_conf.mutable_adagrad_conf().set_epsilon(epsilon)
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 

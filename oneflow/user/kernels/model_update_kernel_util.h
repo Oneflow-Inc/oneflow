@@ -172,8 +172,8 @@ struct AdamUpdateKernelUtil {
 template<DeviceType device_type, typename T, typename G>
 struct AdagradUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float lr_decay,
-                     float epsilon, float weight_decay, float learning_rate_val, int32_t train_step,
-                     const float* learning_rate, const int32_t* train_step_ptr,
+                     float epsilon, float weight_decay, float learning_rate_val, int64_t train_step,
+                     const float* learning_rate, const int64_t* train_step_ptr,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
                      T* sum);
 };

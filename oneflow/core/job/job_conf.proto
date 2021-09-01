@@ -51,7 +51,8 @@ message LambModelUpdateConf {
 
 message AdagradModelUpdateConf {
   required float lr_decay = 1 [default = 0.0];
-  required float epsilon = 2 [default = 1e-10];
+  required float initial_accumulator_value = 2 [default = 0.0];
+  required float epsilon = 3 [default = 1e-10];
 }
 
 message ClipByGlobalNormConf {

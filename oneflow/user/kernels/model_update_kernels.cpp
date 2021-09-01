@@ -470,8 +470,8 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float* learning_rate_ptr = nullptr;
-    const int32_t train_step_val = ctx->Attr<int32_t>("train_step_val");
-    const int32_t* train_step_ptr = nullptr;
+    const int64_t train_step_val = ctx->Attr<int32_t>("train_step_val");
+    const int64_t* train_step_ptr = nullptr;
 
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
@@ -479,7 +479,7 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
     }
     if (ctx->has_input("train_step", 0)) {
       const user_op::Tensor* train_step = ctx->Tensor4ArgNameAndIndex("train_step", 0);
-      train_step_ptr = train_step->dptr<int32_t>();
+      train_step_ptr = train_step->dptr<int64_t>();
     }
 
     const T* scale_by_ptr = nullptr;

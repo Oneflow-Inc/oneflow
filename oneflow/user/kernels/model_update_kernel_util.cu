@@ -351,12 +351,14 @@ template struct AdamUpdateKernelUtil<DeviceType::kGPU, float, float16>;
 template<typename T, typename G>
 __global__ void AdagradUpdateGpu(int64_t n, T scale, float l1, float l2, float lr_decay,
                                  float epsilon, float weight_decay, float learning_rate_val,
-                                 int32_t train_step, const float* learning_rate,
-                                 const int32_t* train_step_ptr, const T* scale_by_ptr,
+                                 int64_t train_step, const float* learning_rate,
+                                 const int64_t* train_step_ptr, const T* scale_by_ptr,
                                  const int64_t* skip_if, const G* model_diff, T* model, T* sum) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
-  if (train_step_ptr != nullptr) { train_step = *train_step_ptr; }
+  if (train_step_ptr != nullptr) {
+    train_step = *train_step_ptr + 1;
+  }  // train_step_ptr start from zero.
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   learning_rate_val = learning_rate_val / (1 + (train_step - 1) * lr_decay);
 
@@ -369,8 +371,8 @@ __global__ void AdagradUpdateGpu(int64_t n, T scale, float l1, float l2, float l
 template<typename T, typename G>
 struct AdagradUpdateKernelUtil<DeviceType::kGPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float lr_decay,
-                     float epsilon, float weight_decay, float learning_rate_val, int32_t train_step,
-                     const float* learning_rate, const int32_t* train_step_ptr,
+                     float epsilon, float weight_decay, float learning_rate_val, int64_t train_step,
+                     const float* learning_rate, const int64_t* train_step_ptr,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
                      T* sum);
 };
@@ -378,8 +380,8 @@ struct AdagradUpdateKernelUtil<DeviceType::kGPU, T, G> {
 template<typename T, typename G>
 void AdagradUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float lr_decay, float epsilon,
-    float weight_decay, float learning_rate_val, int32_t train_step, const float* learning_rate,
-    const int32_t* train_step_ptr, const T* scale_by_ptr, const int64_t* skip_if,
+    float weight_decay, float learning_rate_val, int64_t train_step, const float* learning_rate,
+    const int64_t* train_step_ptr, const T* scale_by_ptr, const int64_t* skip_if,
     const G* model_diff, T* model, T* sum) {
   AdagradUpdateGpu<T, G>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
