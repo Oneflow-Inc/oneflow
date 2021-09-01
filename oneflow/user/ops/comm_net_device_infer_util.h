@@ -30,15 +30,21 @@ Maybe<bool> IsAsyncLaunched(user_op::DeviceInferContext* ctx);
 extern Maybe<Symbol<Device>> (*GetNcclDevice)(bool is_async_launced);
 extern Maybe<Symbol<Device>> (*GetCpuTransportDevice)();
 
-template<Maybe<bool> (*GetIsAsyncLaunched)(user_op::DeviceInferContext*)>
+Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceInferContext* ctx);
+
+template<
+    Maybe<bool> (*GetIsAsyncLaunched)(user_op::DeviceInferContext*),
+    Maybe<Symbol<Device>> (*GetOutputDeivce)(user_op::DeviceInferContext*) = DefaultGetOutputDeivce>
 Maybe<Symbol<Device>> DeviceInferFn(user_op::DeviceInferContext* ctx) {
-  const auto& input_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = input_device;
-  if (input_device->type() == "cuda" || input_device->type() == "gpu") {
+  Symbol<Device> output_device = JUST(GetOutputDeivce(ctx));
+  if (ctx->outputs().size() > 0) {
+    *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = output_device;
+  }
+  if (output_device->type() == "cuda" || output_device->type() == "gpu") {
     bool is_async_launched = JUST(GetIsAsyncLaunched(ctx));
     const auto& cuda_device = JUST(GetNcclDevice(is_async_launched));
     return cuda_device;
-  } else if (input_device->type() == "cpu") {
+  } else if (output_device->type() == "cpu") {
     return JUST(GetCpuTransportDevice());
   } else {
     UNIMPLEMENTED_THEN_RETURN();
