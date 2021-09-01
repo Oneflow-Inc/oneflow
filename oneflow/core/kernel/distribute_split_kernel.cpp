@@ -27,39 +27,34 @@ void CheckSizeAndCopyBlob(DeviceCtx* ctx, Blob* dst, const Blob* src) {
 }  // namespace
 
 template<DeviceType device_type>
-class DistributeSplitKernel final : public KernelIf<device_type> {
+class DistributeSplitKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DistributeSplitKernel);
   DistributeSplitKernel() = default;
   ~DistributeSplitKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
-  void ForwardShape(const KernelCtx& ctx,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
-  Blob* GetOutBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardShape(const KernelContext* ctx) const override;
+  Blob* GetOutBlob(const KernelContext* ctx) const;
 };
 
 template<DeviceType device_type>
-void DistributeSplitKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  CheckSizeAndCopyBlob(ctx.device_ctx, GetOutBlob(BnInOp2Blob), BnInOp2Blob("in"));
+void DistributeSplitKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+  CheckSizeAndCopyBlob(ctx->device_ctx(), GetOutBlob(ctx), ctx->BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type>
-void DistributeSplitKernel<device_type>::ForwardShape(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  Blob* out_blob = GetOutBlob(BnInOp2Blob);
-  out_blob->mut_shape_view()->set_shape(BnInOp2Blob("in")->shape());
+void DistributeSplitKernel<device_type>::ForwardShape(const KernelContext* ctx) const {
+  Blob* out_blob = GetOutBlob(ctx);
+  out_blob->mut_shape_view()->set_shape(ctx->BnInOp2Blob("in")->shape());
 }
 
 template<DeviceType device_type>
-Blob* DistributeSplitKernel<device_type>::GetOutBlob(
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+Blob* DistributeSplitKernel<device_type>::GetOutBlob(const KernelContext* ctx) const {
   Blob* out_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().output_bns().size()) {
-    Blob* cur_blob = BnInOp2Blob(this->op_attribute().output_bns().Get(i));
+    Blob* cur_blob = ctx->BnInOp2Blob(this->op_attribute().output_bns().Get(i));
     if (cur_blob != nullptr && cur_blob != out_blob) {
       CHECK_ISNULL(out_blob);
       out_blob = cur_blob;

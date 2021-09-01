@@ -276,6 +276,50 @@ class CombinedMarginLossGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class AffineGridGradFunctor {
+ public:
+  AffineGridGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("affine_grid_grad").Input("dgrid").Output("dtheta").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dgrid, const Shape& size,
+                           const bool& align_corners) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("size", size));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dgrid}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class GridSampleGradFunctor {
+ public:
+  GridSampleGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("grid_sample_grad")
+                         .Input("doutput")
+                         .Input("input")
+                         .Input("grid")
+                         .Output("dinput")
+                         .Output("dgrid")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& doutput,
+                                const std::shared_ptr<one::Tensor>& input,
+                                const std::shared_ptr<one::Tensor>& grid,
+                                const std::string& interpolation_mode,
+                                const std::string& padding_mode, const bool& align_corners) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("interpolation_mode", interpolation_mode));
+    JUST(attrs.SetAttr<std::string>("padding_mode", padding_mode));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {doutput, input, grid}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class PadGradFunctor {
  public:
   PadGradFunctor() {
@@ -412,6 +456,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
+  m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
+  m.add_functor<impl::GridSampleGradFunctor>("GridSampleGrad");
   m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");

@@ -171,86 +171,6 @@ class LocalAllReduceFunctor {
   }
 };
 
-class SendFunctor {
- public:
-  SendFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
-  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool send_meta) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr("dst_process_id", dst));
-    if (send_meta) {
-      std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
-      JUST(ccl::Send<DeviceType::kCPU>(flat_shape.get(), sizeof(*flat_shape), DataType::kChar, dst,
-                                       nullptr));
-
-      DataType dtype = x->dtype()->data_type();
-      JUST(ccl::Send<DeviceType::kCPU>(&dtype, sizeof(dtype), DataType::kChar, dst, nullptr));
-
-      DeviceType device_type = JUST(Device::GetPlacement(*JUST(x->device())))->device_type();
-      JUST(ccl::Send<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, dst,
-                                       nullptr));
-    }
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_expr_, {x}, attrs));
-    return Maybe<void>::Ok();
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_expr_;
-};
-
-class RecvFunctor {
- public:
-  RecvFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("recv").Output("out").Build()); }
-  Maybe<Tensor> operator()(int64_t src, const Optional<Shape>& optional_shape,
-                           const Optional<Symbol<DType>>& optional_dtype,
-                           const Optional<Symbol<Device>>& optional_device,
-                           const Optional<one::Tensor>& out) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr("src_process_id", src));
-    Shape shape;
-    DataType data_type = DataType::kInvalidDataType;
-    Symbol<Device> device;
-    if (optional_shape.has_value() && optional_dtype.has_value() && optional_device.has_value()) {
-      shape = *JUST(optional_shape.value());
-      data_type = JUST(optional_dtype.value())->data_type();
-      device = JUST(optional_device.value());
-    } else if (!optional_shape.has_value() && !optional_dtype.has_value()
-               && !optional_device.has_value()) {
-      FlatShape flat_shape{};
-      JUST(ccl::Recv<DeviceType::kCPU>(&flat_shape, sizeof(flat_shape), DataType::kChar, src,
-                                       nullptr));
-      shape = *JUST(flat_shape.ToShape());
-
-      JUST(ccl::Recv<DeviceType::kCPU>(&data_type, sizeof(data_type), DataType::kChar, src,
-                                       nullptr));
-
-      DeviceType device_type = DeviceType::kInvalidDevice;
-      JUST(ccl::Recv<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, src,
-                                       nullptr));
-      device = JUST(Device::New(Device::Type4DeviceTag(*JUST(DeviceTag4DeviceType(device_type)))));
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
-    }
-    JUST(attrs.SetAttr("shape", shape));
-    JUST(attrs.SetAttr("dtype", data_type));
-
-    OpExprInterpContext op_expr_interp_context(attrs, device);
-
-    if (out.has_value()) {
-      std::shared_ptr<one::Tensor> out_tensor = JUST(out.value());
-      Symbol<Device> out_tensor_device = JUST(out_tensor->device());
-      CHECK_OR_RETURN(out_tensor_device == device);
-      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = out_tensor;
-      JUST(OpInterpUtil::Dispatch(*op_expr_, {}, outputs.get(), op_expr_interp_context));
-      return outputs->at(0);
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op_expr_, {}, op_expr_interp_context);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_expr_;
-};
-
 class ConsistentAllReduceFunctor {
  public:
   ConsistentAllReduceFunctor() = default;
@@ -326,17 +246,99 @@ class ConsistentS2SFunctor {
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
+
+class SendFunctor {
+ public:
+  SendFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool send_meta) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dst_process_id", dst));
+    if (send_meta) {
+      std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
+      JUST(ccl::Send<DeviceType::kCPU>(flat_shape.get(), sizeof(*flat_shape), DataType::kChar, dst,
+                                       nullptr));
+
+      DataType dtype = x->dtype()->data_type();
+      JUST(ccl::Send<DeviceType::kCPU>(&dtype, sizeof(dtype), DataType::kChar, dst, nullptr));
+
+      DeviceType device_type = JUST(Device::GetPlacement(*JUST(x->device())))->device_type();
+      JUST(ccl::Send<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, dst,
+                                       nullptr));
+    }
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_expr_, {x}, attrs));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_expr_;
+};
+
+class RecvFunctor {
+ public:
+  RecvFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("recv").Output("out").Build()); }
+  Maybe<Tensor> operator()(int64_t src, const Optional<Shape>& optional_shape,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<Symbol<Device>>& optional_device,
+                           const Optional<one::Tensor>& out) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("src_process_id", src));
+    Shape shape;
+    DataType data_type = DataType::kInvalidDataType;
+    Symbol<Device> device;
+    if (optional_shape.has_value() && optional_dtype.has_value() && optional_device.has_value()) {
+      shape = *JUST(optional_shape.value());
+      data_type = JUST(optional_dtype.value())->data_type();
+      device = JUST(optional_device.value());
+    } else if (!optional_shape.has_value() && !optional_dtype.has_value()
+               && !optional_device.has_value()) {
+      FlatShape flat_shape{};
+      JUST(ccl::Recv<DeviceType::kCPU>(&flat_shape, sizeof(flat_shape), DataType::kChar, src,
+                                       nullptr));
+      shape = *JUST(flat_shape.ToShape());
+
+      JUST(ccl::Recv<DeviceType::kCPU>(&data_type, sizeof(data_type), DataType::kChar, src,
+                                       nullptr));
+
+      DeviceType device_type = DeviceType::kInvalidDevice;
+      JUST(ccl::Recv<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, src,
+                                       nullptr));
+      device = JUST(Device::New(Device::Type4DeviceTag(*JUST(DeviceTag4DeviceType(device_type)))));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
+    }
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", data_type));
+    JUST(attrs.SetAttr<std::string>("device_type", device->type()));
+    JUST(attrs.SetAttr<int64_t>("device_id", device->device_id()));
+
+    OpExprInterpContext op_expr_interp_context(attrs, device);
+
+    if (out.has_value()) {
+      std::shared_ptr<one::Tensor> out_tensor = JUST(out.value());
+      Symbol<Device> out_tensor_device = JUST(out_tensor->device());
+      CHECK_OR_RETURN(out_tensor_device == device);
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = out_tensor;
+      JUST(OpInterpUtil::Dispatch(*op_expr_, {}, outputs.get(), op_expr_interp_context));
+      return outputs->at(0);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_expr_, {}, op_expr_interp_context);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_expr_;
+};
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
-  m.add_functor<impl::SendFunctor>("Send");
-  m.add_functor<impl::RecvFunctor>("Recv");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
   m.add_functor<impl::ConsistentAllReduceFunctor>("ConsistentAllReduce");
   m.add_functor<impl::ConsistentReduceScatterFunctor>("ConsistentReduceScatter");
   m.add_functor<impl::ConsistentAllGatherFunctor>("ConsistentAllGather");
   m.add_functor<impl::ConsistentS2SFunctor>("ConsistentS2S");
+  m.add_functor<impl::SendFunctor>("Send");
+  m.add_functor<impl::RecvFunctor>("Recv");
 };
 
 }  // namespace functional
