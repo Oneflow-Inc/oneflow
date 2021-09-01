@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from math import log
 import os
+import random
 import importlib.util
 import unittest
 
@@ -210,7 +212,11 @@ def get_loss(
             print("backward avg time : {}".format(bp_time / bp_iters))
             print("update parameters avg time : {}".format(update_time / bp_iters))
 
-    return model_loss
+    training_loop_avg_time = (end_t - start_t) / bp_iters
+    forward_avg_time = for_time / bp_iters
+    backward_avg_time = bp_time / bp_iters
+    update_parameters_avg_time = update_time / bp_iters
+    return model_loss, training_loop_avg_time, forward_avg_time, backward_avg_time, update_parameters_avg_time
 
 
 def test_train_loss_oneflow_pytorch(
@@ -223,12 +229,22 @@ def test_train_loss_oneflow_pytorch(
     pytorch_model_loss = []
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        pytorch_model_loss = get_loss(
+        pytorch_model_loss, pytorch_train_avg_time, pytorch_for_avg_time, pytorch_bp_avg_time, pytorch_update_avg_time = get_loss(
             image_nd, label_nd, model_path, module_name, True, "cuda", tmpdirname
         )
-        oneflow_model_loss = get_loss(
+        oneflow_model_loss, of_train_avg_time, of_for_avg_time, of_bp_avg_time, of_update_avg_time = get_loss(
             image_nd, label_nd, model_path, module_name, False, "cuda", tmpdirname
         )
+
+    # save test report
+    with open("./model_test_report.txt", "a") as file:
+        file.write("")
+        file.write("Test Model: %s \n" % module_name)
+        file.write("| test info                    | pytorch   | oneflow   |\n")
+        file.write("| train avg time               | %.4f    | %.4f    |\n" % (pytorch_train_avg_time, of_train_avg_time))
+        file.write("| forward avg time             | %.4f    | %.4f    |\n" % (pytorch_for_avg_time, of_for_avg_time))
+        file.write("| backward avg time            | %.4f    | %.4f    |\n" % (pytorch_bp_avg_time, of_bp_avg_time))
+        file.write("| update parameters avg time   | %.4f    | %.4f    |\n\n" % (pytorch_update_avg_time, of_update_avg_time))
 
     if verbose:
         indes = [i for i in range(len(oneflow_model_loss))]
