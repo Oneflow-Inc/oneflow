@@ -300,14 +300,14 @@ class LayerNorm(Module):
                     self.bias,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,
-                    eps=self.eps,
+                    epsilon=self.eps,
                 )
             else:
                 res = flow._C.layer_norm(
                     x,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,
-                    eps=self.eps,
+                    epsilon=self.eps,
                 )
             return res
 
