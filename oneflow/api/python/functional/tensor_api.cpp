@@ -83,7 +83,7 @@ class TensorEmptyCtorFunctor {
   }
 };
 
-class TensorWithOtherCtor {
+class TensorWithOtherCtorFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
@@ -105,7 +105,7 @@ class TensorWithDataCtorFunctor {
       Shape shape(DimVector{size});
       return TensorWithShapeCtor(shape, device, placement, sbp_tuple);
     }
-    return TensorWithData(data, Optional<Symbol<DType>>(), device, placement, sbp_tuple, false);
+    return TensorWithData(data, DType::Float(), device, placement, sbp_tuple, false);
   }
 };
 
@@ -142,6 +142,7 @@ class TensorWithShapeCtorFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorWithDataFunctor>("TensorWithData");
   m.add_functor<impl::TensorEmptyCtorFunctor>("TensorEmptyCtor");
+  m.add_functor<impl::TensorWithOtherCtorFunctor>("TensorWithOtherCtor");
   m.add_functor<impl::TensorWithDataCtorFunctor>("TensorWithDataCtor");
   m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
 }
