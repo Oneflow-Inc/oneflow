@@ -159,8 +159,10 @@ def _eq(self, other):
 def _ne(self, other):
     return self.ne(other)
 
+
 def _contiguous(self):
     return self
+
 
 def _getstate(self):
     assert self.is_local, "Only support local tensor to pickle"
