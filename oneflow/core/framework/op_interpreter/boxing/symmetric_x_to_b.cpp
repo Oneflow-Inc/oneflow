@@ -25,7 +25,7 @@ namespace oneflow {
 
 namespace {
 
-bool IsSplitSbpWithAxisNotEqualZero(const cfg::SbpParallel sbp) {
+bool IsSplitSbpWithAxisNotEqualZero(const cfg::SbpParallel& sbp) {
   return sbp.has_split_parallel() && sbp.split_parallel().axis() != 0;
 }
 
