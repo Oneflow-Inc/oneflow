@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, Union, Sequence
+from typing import Optional, Union, Sequence, List
 import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.framework.tensor import _init_by_initializer_conf
@@ -28,6 +28,10 @@ class DecodeRandom(Module):
         initializer: Optional[initializer_conf_util.InitializerConf],
         dtype: Optional[flow.dtype] = flow.float32,
         device: Optional[flow.device] = None,
+        placement: flow.placement = None,
+        sbp: Union[
+            flow._oneflow_internal.sbp.sbp, List[flow._oneflow_internal.sbp.sbp]
+        ] = None,
     ) -> None:
         super(DecodeRandom, self).__init__()
         assert isinstance(shape, (list, tuple))
@@ -35,9 +39,17 @@ class DecodeRandom(Module):
         self.dtype = dtype
         self.initializer = initializer
         self.device = flow.device("cpu") if device is None else device
+        self.placement = placement
+        self.sbp = sbp
 
     def forward(self):
-        data = flow.empty(*self.shape, dtype=self.dtype, device=self.device)
+        data = flow.empty(
+            *self.shape,
+            dtype=self.dtype,
+            device=self.device,
+            placement=self.placement,
+            sbp=self.sbp
+        )
         _init_by_initializer_conf(data, self.initializer)
         return data
 
@@ -48,11 +60,19 @@ def decode_random(
     initializer: Optional[initializer_conf_util.InitializerConf],
     dtype: Optional[flow.dtype] = flow.float32,
     device: Optional[flow.device] = None,
+    placement: flow.placement = None,
+    sbp: Union[
+        flow._oneflow_internal.sbp.sbp, List[flow._oneflow_internal.sbp.sbp]
+    ] = None,
 ):
     assert isinstance(shape, (list, tuple))
     shape = (batch_size,) + tuple(shape)
     data = flow.empty(
-        *shape, dtype=dtype, device=flow.device("cpu") if device is None else device
+        *shape,
+        dtype=dtype,
+        device=flow.device("cpu") if device is None else device,
+        placement=placement,
+        sbp=sbp
     )
     _init_by_initializer_conf(data, initializer)
     return data
