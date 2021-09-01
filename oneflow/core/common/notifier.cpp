@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 NotifierStatus Notifier::Notify() {
-  bool notify;
+  bool notify = false;
   {
     std::unique_lock<std::mutex> lock(mutex_);
     if (is_closed_) { return kNotifierStatusErrorClosed; }
