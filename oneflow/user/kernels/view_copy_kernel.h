@@ -64,18 +64,13 @@ class ViewCopyUtilBase : public ViewCopyUtilParam {
     }
   }
 
-  void init_out_stride() {
+  int64_t init_out_stride() {
     int64_t sum = 1;
     for (int64_t i = out_stride.size() - 1; i != -1; --i) {
       out_stride[i] = sum;
       sum *= in_shape.At(i);
     }
-  }
-
-  int64_t count_blocks() {
-    int64_t count = 1;
-    for (int i = 0; i <= contiguous_dim; ++i) { count *= in_shape.At(i); }
-    return count;
+    return sum;
   }
 
   void init_index() { std::fill(index.begin(), index.end(), 0); }

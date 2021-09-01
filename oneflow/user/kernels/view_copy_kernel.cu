@@ -53,12 +53,10 @@ struct StrideParam {
 
 __global__ void copy_view(int64_t count, size_t dsize,
                           StrideParam in_stride, StrideParam out_stride,
-                          const char* in_dptr, char* out_dptr, int64_t ndim,
-                          int64_t contiguous_block_size) {
+                          const char* in_dptr, char* out_dptr, int64_t ndim) {
   int64_t in_index[SHAPE_MAX_AXIS_SIZE];
 
-  CUDA_1D_KERNEL_LOOP_T(int64_t, i, count) {
-    const int64_t out_offset = i * contiguous_block_size;
+  CUDA_1D_KERNEL_LOOP_T(int64_t, out_offset, count) {
 
     out_stride.compute_index(out_offset, ndim, in_index);
     const int64_t in_offset = in_stride.compute_offset(in_index, ndim);
@@ -67,7 +65,7 @@ __global__ void copy_view(int64_t count, size_t dsize,
     const char *in_dptr_offset = in_dptr + in_offset * dsize;
 
 #pragma unroll
-    for (int j = 0; j < contiguous_block_size * dsize; ++j) { out_dptr_offset[j] = in_dptr_offset[j]; }
+    for (int j = 0; j < dsize; ++j) { out_dptr_offset[j] = in_dptr_offset[j]; }
   }
 }
 
@@ -79,16 +77,14 @@ void ViewCopyUtil<kGPU>::operator()() {
     OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, contiguous_block_size * dsize,
                                   cudaMemcpyDeviceToDevice, ctx->cuda_stream()));
   } else {
-    int64_t count = count_blocks();
-    init_out_stride();
+    const int64_t count = init_out_stride();
 
-    int ndim = contiguous_dim + 1;
+    const int ndim = in_shape.NumAxes();
 
     StrideParam param_in_stride(in_stride.data(), ndim), param_out_stride(out_stride.data(), ndim);
 
     copy_view<<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        count, dsize, param_in_stride, param_out_stride, in_dptr, out_dptr, ndim,
-        contiguous_block_size);
+        count, dsize, param_in_stride, param_out_stride, in_dptr, out_dptr, ndim);
   }
 }
 
