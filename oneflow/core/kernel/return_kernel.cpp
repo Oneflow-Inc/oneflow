@@ -29,12 +29,12 @@ class ReturnKernel final : public Kernel {
   ~ReturnKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  void ForwardHeader(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void ReturnKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void ReturnKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     const auto& job_name = ctx->job_desc()->job_name();
     const auto& op_name = this->op_conf().name();
@@ -54,7 +54,7 @@ void ReturnKernel<device_type>::ForwardDataContent(const KernelContext* ctx) con
 }
 
 template<DeviceType device_type>
-void ReturnKernel<device_type>::ForwardHeader(const KernelContext* ctx) const {
+void ReturnKernel<device_type>::ForwardHeader(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     // Do nothing.
   } else {

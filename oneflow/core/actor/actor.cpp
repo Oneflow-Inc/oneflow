@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/stream/stream_context.h"
 
 namespace oneflow {
 
@@ -72,13 +73,12 @@ Actor::~Actor() {
   for (ExecKernel& ek : exec_kernel_vec_) { ek.kernel->DestroyState(ek.kernel_ctx->state()); }
 }
 
-void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
-                 const ThreadCtx& thread_ctx) {
+void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto, StreamContext* stream_ctx) {
   job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
   thrd_id_ = Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
-  InitDeviceCtx(thread_ctx);
+  InitDeviceCtx(stream_ctx);
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
   }
@@ -269,10 +269,7 @@ void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
   produced_regst2reading_cnt_.at(regst) += val;
 }
 
-void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
-  DeviceCtx* dev_ctx = NewObj<int, DeviceCtx, const ThreadCtx&>(GetDeviceType(), thread_ctx);
-  device_ctx_.reset(dev_ctx);
-}
+void Actor::InitDeviceCtx(StreamContext* stream_ctx) { device_ctx_ = stream_ctx->device_ctx(); }
 
 void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> func) const {
   naive_consumed_rs_.ForEachFrontRegst([func](int64_t regst_desc_id, Regst* regst) {
@@ -568,7 +565,7 @@ void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
   for (auto& pair : produced_regsts_) {
     CHECK(!pair.second.empty());
     const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
-    device_ctx_->AddCallBack([regst_desc]() {
+    AddCallback([regst_desc]() {
       for (int64_t consumer : regst_desc->consumers_actor_id()) {
         Global<ActorMsgBus>::Get()->SendMsg(
             ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
@@ -649,10 +646,14 @@ void Actor::AsyncSendQueuedMsg() {
   if (!async_msg_queue_.empty()) {
     std::deque<ActorMsg> msgs;
     msgs.swap(async_msg_queue_);
-    device_ctx_->AddCallBack([msgs]() {
+    AddCallback([msgs]() {
       for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
     });
   }
+}
+
+void Actor::AddCallback(std::function<void()> callback) {
+  device_ctx_->AddCallBack(std::move(callback));
 }
 
 }  // namespace oneflow

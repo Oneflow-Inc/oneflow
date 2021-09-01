@@ -26,14 +26,14 @@ class KernelObserverManager final : public KernelObserver {
   KernelObserverManager();
   ~KernelObserverManager() override = default;
 
-  void WillForward(const KernelContext* kernel_ctx, const Kernel* kernel) override;
-  void DidForward(const KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
 
-  void WillForwardHeader(const KernelContext* kernel_ctx, const Kernel* kernel) override;
-  void DidForwardHeader(const KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override;
 
-  void WillForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) override;
-  void DidForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
 
  private:
   std::vector<std::unique_ptr<KernelObserver>> kernel_observers_;

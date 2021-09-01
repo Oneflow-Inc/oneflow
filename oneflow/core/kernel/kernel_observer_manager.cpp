@@ -40,35 +40,32 @@ KernelObserverManager::KernelObserverManager() {
   kernel_observers_.emplace_back(new ProfilerKernelObserver());
 }
 
-void KernelObserverManager::WillForward(const KernelContext* kernel_ctx, const Kernel* kernel) {
+void KernelObserverManager::WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) { observer->WillForward(kernel_ctx, kernel); }
 }
 
-void KernelObserverManager::DidForward(const KernelContext* kernel_ctx, const Kernel* kernel) {
+void KernelObserverManager::DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) { observer->DidForward(kernel_ctx, kernel); }
 }
 
-void KernelObserverManager::WillForwardHeader(const KernelContext* kernel_ctx,
-                                              const Kernel* kernel) {
+void KernelObserverManager::WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) {
     observer->WillForwardHeader(kernel_ctx, kernel);
   }
 }
 
-void KernelObserverManager::DidForwardHeader(const KernelContext* kernel_ctx,
-                                             const Kernel* kernel) {
+void KernelObserverManager::DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) { observer->DidForwardHeader(kernel_ctx, kernel); }
 }
 
-void KernelObserverManager::WillForwardDataContent(const KernelContext* kernel_ctx,
+void KernelObserverManager::WillForwardDataContent(KernelContext* kernel_ctx,
                                                    const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) {
     observer->WillForwardDataContent(kernel_ctx, kernel);
   }
 }
 
-void KernelObserverManager::DidForwardDataContent(const KernelContext* kernel_ctx,
-                                                  const Kernel* kernel) {
+void KernelObserverManager::DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) {
     observer->DidForwardDataContent(kernel_ctx, kernel);
   }

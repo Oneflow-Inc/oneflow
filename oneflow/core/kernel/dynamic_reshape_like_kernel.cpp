@@ -25,11 +25,11 @@ class DynamicReshapeLikeKernel final : public Kernel {
   ~DynamicReshapeLikeKernel() override = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void DynamicReshapeLikeKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void DynamicReshapeLikeKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   const Blob* in_blob = ctx->BnInOp2Blob("x");
   Blob* out_blob = ctx->BnInOp2Blob("y");
   out_blob->CopyDataContentFrom(ctx->device_ctx(), in_blob);

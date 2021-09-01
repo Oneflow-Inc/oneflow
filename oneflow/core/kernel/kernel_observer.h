@@ -30,14 +30,14 @@ class KernelObserver {
   KernelObserver() = default;
   virtual ~KernelObserver() = default;
 
-  virtual void WillForward(const KernelContext* kernel_ctx, const Kernel* kernel) {}
-  virtual void DidForward(const KernelContext* kernel_ctx, const Kernel* kernel) {}
+  virtual void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {}
+  virtual void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {}
 
-  virtual void WillForwardHeader(const KernelContext* kernel_ctx, const Kernel* kernel) {}
-  virtual void DidForwardHeader(const KernelContext* kernel_ctx, const Kernel* kernel) {}
+  virtual void WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {}
+  virtual void DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {}
 
-  virtual void WillForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) {}
-  virtual void DidForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) {}
+  virtual void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {}
+  virtual void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {}
 };
 
 }  // namespace oneflow

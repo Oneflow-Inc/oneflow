@@ -26,7 +26,7 @@ class CheckNumericsKernelObserver final : public KernelObserver {
   CheckNumericsKernelObserver() = default;
   ~CheckNumericsKernelObserver() override = default;
 
-  void DidForwardDataContent(const KernelContext* ctx, const Kernel* kernel) override;
+  void DidForwardDataContent(KernelContext* ctx, const Kernel* kernel) override;
 };
 
 }  // namespace oneflow

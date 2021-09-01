@@ -64,8 +64,7 @@ bool DispatchHasNotFiniteDeviceType(const std::string& device_tag, DeviceCtx* ct
 
 }  // namespace
 
-void CheckNumericsKernelObserver::DidForwardDataContent(const KernelContext* ctx,
-                                                        const Kernel* kernel) {
+void CheckNumericsKernelObserver::DidForwardDataContent(KernelContext* ctx, const Kernel* kernel) {
   for (const auto& obn : kernel->op_attribute().output_bns()) {
     Blob* blob = ctx->BnInOp2Blob(obn);
     if (blob != nullptr) {

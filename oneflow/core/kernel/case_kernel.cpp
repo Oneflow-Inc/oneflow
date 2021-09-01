@@ -30,7 +30,7 @@ void CaseKernel<T>::DestroyState(void* state) const {
 }
 
 template<typename T>
-void CaseKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
+void CaseKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   CaseStatus* const case_status = static_cast<CaseStatus*>(ctx->state());
   if (case_status->cmd == kCaseCmdHandleInput) {
     int64_t cur_selected_id = static_cast<int64_t>(ctx->BnInOp2Blob("in")->dptr<T>()[0]);

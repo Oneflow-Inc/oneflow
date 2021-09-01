@@ -32,7 +32,7 @@ class InputKernel final : public Kernel {
   ~InputKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override {
+  void ForwardDataContent(KernelContext* ctx) const override {
     if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
       const auto& job_name = ctx->job_desc()->job_name();
       const auto& op_name = this->op_conf().name();
@@ -47,7 +47,7 @@ class InputKernel final : public Kernel {
       }
     }
   }
-  void ForwardHeader(const KernelContext* ctx) const override {}
+  void ForwardHeader(KernelContext* ctx) const override {}
 };
 
 }  // namespace

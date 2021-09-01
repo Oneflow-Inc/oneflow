@@ -620,11 +620,14 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
     UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
-    CudaDeviceCtx* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx);
+    auto* provider = dynamic_cast<StreamContextProvider*>(device_ctx);
+    if (provider) {
+      cuda_graph_ctx_ = dynamic_cast<CudaGraphContext*>(provider->GetStreamContext());
+    }
     const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
-    if (cuda_device_ctx != nullptr) {
+    if (cuda_graph_ctx_ != nullptr) {
       if (cuda_graph_support != nullptr && cuda_graph_support->IsCudaGraphSupported(&init_ctx)) {
-        cuda_graph_ctx_.reset(new CudaGraphContext(cuda_device_ctx->cuda_stream()));
+        cuda_graph_exec_.reset(new CudaGraphExecutable());
         LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
                   << op_conf().user_conf().op_type_name() << ")";
       } else {
@@ -650,15 +653,15 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
   const bool updated = ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
 
 #ifdef WITH_CUDA_GRAPHS
-  bool capturing = false;
-  if (cuda_graph_ctx_) {
-    if (!cuda_graph_ctx_->IsCapturing()) {
-      if (cuda_graph_ctx_->IsCaptured() && (!updated)) {
-        cuda_graph_ctx_->Launch();
+  bool current_scope_capturing = false;
+  if (cuda_graph_exec_) {
+    if (!cuda_graph_ctx_->IsGraphCapturing()) {
+      if (cuda_graph_exec_->IsInstantiated() && (!updated)) {
+        cuda_graph_ctx_->LaunchGraph(cuda_graph_exec_.get());
         return;
       }
-      capturing = true;
-      cuda_graph_ctx_->BeginCapture();
+      current_scope_capturing = true;
+      cuda_graph_ctx_->BeginGraphCapture();
     }
   }
 #endif  // WITH_CUDA_GRAPHS
@@ -666,16 +669,16 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
   kernel_->Compute(ctx_.get(), opkernel_state);
 
 #ifdef WITH_CUDA_GRAPHS
-  if (cuda_graph_ctx_ && capturing) {
-    cuda_graph_ctx_->EndCapture();
-    cuda_graph_ctx_->Launch();
+  if (cuda_graph_exec_ && current_scope_capturing) {
+    cuda_graph_ctx_->EndGraphCapture(cuda_graph_exec_.get());
+    cuda_graph_ctx_->LaunchGraph(cuda_graph_exec_.get());
   }
 #endif  // WITH_CUDA_GRAPHS
 }
 
 bool UserKernel::IsCudaGraphSupported() const {
 #ifdef WITH_CUDA_GRAPHS
-  return cuda_graph_ctx_.get() != nullptr;
+  return cuda_graph_exec_.get() != nullptr;
 #else
   return false;
 #endif  // WITH_CUDA_GRAPHS
@@ -688,12 +691,12 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
   opkernel_state_ = CreateOpKernelState(ctx->device_ctx());
 }
 
-void UserKernel::ForwardDataContent(const KernelContext* ctx) const {
+void UserKernel::ForwardDataContent(KernelContext* ctx) const {
   const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
 }
 
-void UserKernel::ForwardShape(const KernelContext* ctx) const {
+void UserKernel::ForwardShape(KernelContext* ctx) const {
   const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
   infer_cache_->UpdateCacheKey(infer_ctx_.get());

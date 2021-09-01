@@ -49,7 +49,7 @@ class XrtLaunchKernel : public Kernel {
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 
   xrt::Executable* BuildExecutable(const std::vector<xrt::Parameter>& entry_params,
                                    const std::vector<xrt::Parameter>& return_params,
