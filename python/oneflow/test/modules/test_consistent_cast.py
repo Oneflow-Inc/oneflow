@@ -341,8 +341,8 @@ class TestConsistentCast(flow.unittest.TestCase):
         placement = flow.placement("cuda", {0: range(4)})
         device = flow.device("cuda")
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
-        test_case.assertTrue(consistent_tensor.to_local().device == device)
-        test_case.assertTrue(consistent_tensor.placement == placement)
+        test_case.assertEqual(consistent_tensor.to_local().device, device)
+        test_case.assertEqual(consistent_tensor.placement, placement)
         test_case.assertTrue(
             np.array_equal(
                 consistent_tensor.to_local().numpy(),
@@ -363,8 +363,8 @@ class TestConsistentCast(flow.unittest.TestCase):
         device = flow.device("cuda")
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.broadcast)
         local_tensor = consistent_tensor.to_local()
-        test_case.assertTrue(local_tensor.device == device)
-        test_case.assertTrue(consistent_tensor.placement == placement)
+        test_case.assertEqual(local_tensor.device, device)
+        test_case.assertEqual(consistent_tensor.placement, placement)
 
 
 class TestConsistentCast_S2S(flow.unittest.TestCase):
@@ -508,7 +508,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
         broadcast_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.broadcast
         )
-        test_case.assertTrue(broadcast_tensor.placement == new_placement)
+        test_case.assertEqual(broadcast_tensor.placement, new_placement)
         if flow.env.get_rank() != 3:
             test_case.assertTrue(
                 np.array_equal(
@@ -549,7 +549,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
         broadcast_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.broadcast
         )
-        test_case.assertTrue(broadcast_tensor.placement == new_placement)
+        test_case.assertEqual(broadcast_tensor.placement, new_placement)
         test_case.assertTrue(
             np.array_equal(
                 broadcast_tensor.to_local().numpy(),
@@ -602,7 +602,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
         broadcast_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.broadcast
         )
-        test_case.assertTrue(broadcast_tensor.placement == new_placement)
+        test_case.assertEqual(broadcast_tensor.placement, new_placement)
         test_case.assertTrue(
             np.array_equal(
                 broadcast_tensor.to_local().numpy(),
@@ -641,7 +641,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         broadcast_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.broadcast
         )
-        test_case.assertTrue(broadcast_tensor.placement == new_placement)
+        test_case.assertEqual(broadcast_tensor.placement, new_placement)
         if flow.env.get_rank() < 2:
             test_case.assertTrue(
                 np.array_equal(
@@ -672,7 +672,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         partial_sum_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.partial_sum
         )
-        test_case.assertTrue(partial_sum_tensor.placement == new_placement)
+        test_case.assertEqual(partial_sum_tensor.placement, new_placement)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(
                 np.array_equal(
@@ -711,7 +711,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
         consistent_tensor = tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: range(4)})
         split_tensor = consistent_tensor.to_consistent(new_placement, flow.sbp.split(0))
-        test_case.assertTrue(split_tensor.placement == new_placement)
+        test_case.assertEqual(split_tensor.placement, new_placement)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(
                 np.array_equal(
@@ -764,7 +764,7 @@ class TestConsistentCast_NTo1(flow.unittest.TestCase):
         broadcast_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.broadcast
         )
-        test_case.assertTrue(broadcast_tensor.placement == new_placement)
+        test_case.assertEqual(broadcast_tensor.placement, new_placement)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(
                 np.array_equal(
@@ -795,7 +795,7 @@ class TestConsistentCast_NTo1(flow.unittest.TestCase):
         partial_sum_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.broadcast
         )
-        test_case.assertTrue(partial_sum_tensor.placement == new_placement)
+        test_case.assertEqual(partial_sum_tensor.placement, new_placement)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(
                 np.array_equal(
@@ -835,7 +835,7 @@ class TestConsistentCast_NTo1(flow.unittest.TestCase):
         partial_sum_tensor = consistent_tensor.to_consistent(
             new_placement, flow.sbp.broadcast
         )
-        test_case.assertTrue(partial_sum_tensor.placement == new_placement)
+        test_case.assertEqual(partial_sum_tensor.placement, new_placement)
         if flow.env.get_rank() == 0:
             test_case.assertTrue(
                 np.array_equal(
@@ -873,7 +873,7 @@ class TestConsistentCast_1To1(flow.unittest.TestCase):
         x = local_tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: [2]})
         y = x.to_consistent(new_placement, flow.sbp.broadcast)
-        test_case.assertTrue(y.placement == new_placement)
+        test_case.assertEqual(y.placement, new_placement)
         if flow.env.get_rank() == 2:
             test_case.assertTrue(
                 np.array_equal(
@@ -902,7 +902,7 @@ class TestConsistentCast_1To1(flow.unittest.TestCase):
         x = local_tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cpu", {0: [2]})
         y = x.to_consistent(new_placement, flow.sbp.broadcast)
-        test_case.assertTrue(y.placement == new_placement)
+        test_case.assertEqual(y.placement, new_placement)
         if flow.env.get_rank() == 2:
             test_case.assertTrue(
                 np.array_equal(
@@ -931,7 +931,7 @@ class TestConsistentCast_1To1(flow.unittest.TestCase):
         x = local_tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cpu", {0: [3]})
         y = x.to_consistent(new_placement, flow.sbp.broadcast)
-        test_case.assertTrue(y.placement == new_placement)
+        test_case.assertEqual(y.placement, new_placement)
         if flow.env.get_rank() == 3:
             test_case.assertTrue(
                 np.array_equal(
@@ -960,7 +960,7 @@ class TestConsistentCast_1To1(flow.unittest.TestCase):
         x = local_tensor.to_consistent(placement, flow.sbp.split(0))
         new_placement = flow.placement("cuda", {0: [3]})
         y = x.to_consistent(new_placement, flow.sbp.broadcast)
-        test_case.assertTrue(y.placement == new_placement)
+        test_case.assertEqual(y.placement, new_placement)
         if flow.env.get_rank() == 3:
             test_case.assertTrue(
                 np.array_equal(
