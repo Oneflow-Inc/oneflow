@@ -14,37 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/thread_local_callback.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
 namespace blocking {
 
-using StackInfoCallbackType = std::function<std::string()>;
-
-StackInfoCallbackType GetDefaultStackInfoCallback() {
-  return []() {
-    return "[rank=" + std::to_string(GlobalProcessCtx::Rank()) + "]" + " Blocking detected.";
-  };
-}
-
-StackInfoCallbackType* GetMutStackInfoCallback() {
-  static thread_local StackInfoCallbackType StackInfoCallback = GetDefaultStackInfoCallback();
+std::function<void()>* MutStackInfoCallback() {
+  static thread_local std::function<void()> StackInfoCallback = [] {};
   return &StackInfoCallback;
 }
 
-StackInfoCallbackType GetStackInfoCallback() { return *GetMutStackInfoCallback(); }
+void StackInfoCallback() { (*MutStackInfoCallback())(); }
 
-std::string GetStackInfo() {
-  return "[rank=" + std::to_string(GlobalProcessCtx::Rank()) + "]"
-         + " Blocking detected. Python stack:\n" + GetStackInfoCallback()();
+void RegisterStackInfoCallback(const std::function<void()>& Callback) {
+  *MutStackInfoCallback() = Callback;
 }
 
-void RegisterStackInfoCallback(const StackInfoCallbackType& Callback) {
-  *GetMutStackInfoCallback() = Callback;
+void ClearStackInfoCallback() {
+  *MutStackInfoCallback() = [] {};
 }
-
-void ClearStackInfoCallback() { *GetMutStackInfoCallback() = GetDefaultStackInfoCallback(); }
 
 }  // namespace blocking
 
