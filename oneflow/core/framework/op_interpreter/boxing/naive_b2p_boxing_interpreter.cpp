@@ -70,7 +70,6 @@ Maybe<one::Tensor> NaiveBToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   } else {
     const std::string& device_type = Device::Type4DeviceTag(tensor_placement->device_tag());
     local_tensor = JUST(one::functional::ZerosLike(local_tensor));
-    ;
   }
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
                                                  *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
