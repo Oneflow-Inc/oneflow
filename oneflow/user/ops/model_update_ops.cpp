@@ -199,7 +199,7 @@ Maybe<void> InferAdamUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferAdagradUpdateTensorDesc(user_op::InferContext* ctx){
+Maybe<void> InferAdagradUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
   const Shape& shape = model.shape();
   const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
@@ -207,14 +207,14 @@ Maybe<void> InferAdagradUpdateTensorDesc(user_op::InferContext* ctx){
   const user_op::TensorDesc& sum = ctx->InputTensorDesc("sum", 0);
   JUST(CheckShapeLike(&sum, &model));
   JUST(CheckLearningRateShape(ctx));
-  return Maybe<void>::Ok(); 
+  return Maybe<void>::Ok();
 }
 
-Maybe<void> InferAdagradUpdateDataType(user_op::InferContext* ctx){
+Maybe<void> InferAdagradUpdateDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
   const user_op::TensorDesc& sum = ctx->InputTensorDesc("sum", 0);
   JUST(CheckDataTypeLike(&sum, &model));
-  JUST(CheckLearningRateDataType(ctx)); 
+  JUST(CheckLearningRateDataType(ctx));
   return Maybe<void>::Ok();
 }
 
@@ -297,11 +297,11 @@ Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AdagradInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn, 
-                                    const user_op::UserOpConfWrapper& conf){
+Maybe<void> AdagradInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                                    const user_op::UserOpConfWrapper& conf) {
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "sum", 0));
-  return Maybe<void>::Ok();                                    
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
@@ -611,7 +611,6 @@ REGISTER_NO_GRAD_USER_OP("adagrad_update")
     })
     .SetInputArgModifyFn(AdagradInputArgModifyFn)
     .SetDataTypeInferFn(InferAdagradUpdateDataType);
-
 
 REGISTER_NO_GRAD_USER_OP("indexed_slices_adam_update")
     .Input("model")

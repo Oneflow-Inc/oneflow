@@ -451,7 +451,6 @@ REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 #endif  // WITH_CUDA
 
-
 template<DeviceType device_type, typename T, typename G>
 class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -497,17 +496,16 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     AdagradUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, 
-        lr_decay, epsilon, weight_decay, learning_rate_val, train_step_val, 
-        learning_rate_ptr, train_step_ptr, scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), model->mut_dptr<T>(), sum->mut_dptr<T>());
+        ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, lr_decay,
+        epsilon, weight_decay, learning_rate_val, train_step_val, learning_rate_ptr, train_step_ptr,
+        scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), sum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_ADAGRAD_UPDATE_KERNEL(device, dtype, gtype)                                \
-  REGISTER_USER_KERNEL("adagrad_update")                                                    \
-      .SetCreateFn<AdagradUpdateKernel<device, dtype, gtype>>()                             \
+#define REGISTER_ADAGRAD_UPDATE_KERNEL(device, dtype, gtype)                             \
+  REGISTER_USER_KERNEL("adagrad_update")                                                 \
+      .SetCreateFn<AdagradUpdateKernel<device, dtype, gtype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                               \
                        & (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        & (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
