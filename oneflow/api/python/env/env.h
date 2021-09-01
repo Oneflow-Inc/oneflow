@@ -90,7 +90,7 @@ inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }
 inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }
 inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
 inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
-inline Maybe<int32_t> CudaGetDeviceCount() { return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum(); }
+inline Maybe<size_t> CudaGetDeviceCount() { return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum(); }
 
 }  // namespace oneflow
 
