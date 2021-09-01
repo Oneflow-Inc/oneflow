@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +12,5 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#define NO_IMPORT_ARRAY
-#include "oneflow/extension/python/numpy_internal.h"
+"""
+from oneflow.comm.primitive import all_reduce

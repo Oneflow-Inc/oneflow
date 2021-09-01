@@ -339,6 +339,7 @@ from . import (
     distributed,
     linalg,
     optim,
+    comm,
     boxing,
     backends,
     amp,

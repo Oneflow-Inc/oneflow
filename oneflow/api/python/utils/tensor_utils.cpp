@@ -121,8 +121,6 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyMirroredTensorFromUntypedArray, MAKE_
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device, bool requires_grad) {
-  // Executing any numpy c api before _import_array() results in segfault
-  if (PyArray_API == nullptr) { _import_array(); }
   auto* np_arr_pyobject = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
   if (!np_arr_pyobject) {
     return Error::RuntimeError() << "Can not convert input data to a numpy array.";
@@ -142,7 +140,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
     device_ = JUST(Device::New("cpu"));
   }
   std::shared_ptr<Tensor> tensor =
-      JUST(functional::Empty(shape, CHECK_JUST(DType::Get(data_type)), device_));
+      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, np_arr_raii));
 
   // Cast to float if data is double sequence, rather than numpy array.
