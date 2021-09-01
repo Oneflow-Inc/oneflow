@@ -185,7 +185,7 @@ def to_op(input, *args, **kwargs):
             )
 
         if copy is True:
-            raise TypeError("A consistent tensor do not support to(copy=True)")
+            return input.detach().clone()
 
         return _consistent_tensor_to(input, device, dtype)
     else:

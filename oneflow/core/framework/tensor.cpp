@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -70,6 +72,17 @@ Maybe<Tensor> MirroredTensor::clone() const {
   std::shared_ptr<MirroredTensor> input =
       std::const_pointer_cast<MirroredTensor>(shared_from_this());
   return JUST(functional::Copy(input, device_type, device_id));
+}
+
+Maybe<Tensor> ConsistentTensor::clone() const {
+  const auto& local_tensor = JUST(cur_rank_phy_tensor());
+  const auto& device_type = JUST(local_tensor->device())->type();
+  int64_t device_id = JUST(local_tensor->device())->device_id();
+  const auto& cloned_local_tensor = JUST(functional::Copy(local_tensor, device_type, device_id));
+  DisableCheckConsistentTensorMetaScope disable_meta_check{};
+  return functional::LocalToConsistent(
+      cloned_local_tensor, JUST(parallel_desc()), *JUST(GetSbpList(JUST(nd_sbp()))),
+      *shape(), dtype());
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
