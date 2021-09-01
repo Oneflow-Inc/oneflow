@@ -19,7 +19,6 @@ import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
-from oneflow.support.blocking import BlockingInfoContext
 
 import numpy as np
 from typing import Union
@@ -47,9 +46,8 @@ def _tensor_numpy(eager_local_tensor):
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
 
-    with BlockingInfoContext() as ctx:
-        if ndarray.size != 0:
-            copy_to_numpy(ndarray)
+    if ndarray.size != 0:
+        copy_to_numpy(ndarray)
     return ndarray
 
 
@@ -86,6 +84,18 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         assert (
             self.is_lazy
         ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
+        assert (
+            self.shape.numel() == 1
+        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tesnor.sum() or loss_tensor.mean() to make it a scalar tensor."
+        assert (
+            gradient is None
+        ), "nn.Graph donot accept 'gradient' argument in backward() at the moment."
+        assert (
+            not retain_graph
+        ), "nn.Graph donot accept 'retain_graph' argument in backward() at the moment."
+        assert (
+            not create_graph
+        ), "nn.Graph donot accept 'create_graph' argument in backward() at the moment."
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
 

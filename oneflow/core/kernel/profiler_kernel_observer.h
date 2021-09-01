@@ -26,10 +26,8 @@ class ProfilerKernelObserver final : public KernelObserver {
   ProfilerKernelObserver() = default;
   ~ProfilerKernelObserver() override = default;
 
-  void WillForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
-  void DidForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
+  void WillForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) override;
 };
 
 }  // namespace oneflow

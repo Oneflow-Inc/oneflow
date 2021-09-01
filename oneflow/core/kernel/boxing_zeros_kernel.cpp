@@ -19,23 +19,20 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type>
-class BoxingZerosKernel final : public KernelIf<device_type> {
+class BoxingZerosKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingZerosKernel);
   BoxingZerosKernel() = default;
   ~BoxingZerosKernel() override = default;
 
  private:
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void BoxingZerosKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  Blob* out = BnInOp2Blob("out");
-  Memset<device_type>(ctx.device_ctx, out->mut_dptr(), 0, out->ByteSizeOfBlobBody());
+void BoxingZerosKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+  Blob* out = ctx->BnInOp2Blob("out");
+  Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out->ByteSizeOfBlobBody());
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kBoxingZerosConf, BoxingZerosKernel);

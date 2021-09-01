@@ -20,25 +20,19 @@ limitations under the License.
 
 namespace oneflow {
 
-class ForeignInputKernel final : public KernelIf<DeviceType::kCPU> {
+class ForeignInputKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForeignInputKernel);
   ForeignInputKernel() = default;
   ~ForeignInputKernel() = default;
 
-  void Forward(const KernelCtx& ctx,
-               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
-    ForwardDataContent(ctx, BnInOp2Blob);
-  }
+  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
 
  private:
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
 };
 
-void ForeignInputKernel::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void ForeignInputKernel::ForwardDataContent(const KernelContext* ctx) const {
   const auto& buffer_name = op_conf().foreign_input_conf().ofblob_buffer_name();
   std::shared_ptr<JobInstance> foreign_job_instance;
   BufferStatus buffer_status = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get()
@@ -46,7 +40,7 @@ void ForeignInputKernel::ForwardDataContent(
                                    ->TryReceive(&foreign_job_instance);
   CHECK_NE(buffer_status, kBufferStatusEmpty);
   if (buffer_status == kBufferStatusSuccess) {
-    OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("out"));
+    OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("out"));
     foreign_job_instance->PushBlob(reinterpret_cast<uint64_t>(&ofblob));
   }
 }

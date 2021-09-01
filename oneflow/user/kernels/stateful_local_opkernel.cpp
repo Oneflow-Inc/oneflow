@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 namespace one {
