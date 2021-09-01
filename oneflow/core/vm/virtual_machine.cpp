@@ -671,7 +671,10 @@ void VirtualMachine::Schedule() {
   TryDeleteLogicalObjects();
   TryRunFrontSeqInstruction(/*out*/ ready_instruction_list);
   auto* waiting_instruction_list = mut_waiting_instruction_list();
-  if (pending_msg_list().size() > 0) {
+  // Using thread_unsafe_size to avoid acquiring mutex lock. 
+  // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and pending_msg_list.list_head_.list_head_.size_ is not a fatal error because VirtualMachine::Schedule is always in a buzy loop. All instructions will get handled eventually.
+  //  VirtualMachine::Receive may be less effiencient if the thread safe version `pending_msg_list().size()` used here, because VirtualMachine::Schedule is more likely to get the mutex lock.
+  if (pending_msg_list().thread_unsafe_size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
     FilterAndRunInstructionsInAdvance(&tmp_pending_msg_list);
@@ -687,8 +690,14 @@ void VirtualMachine::Schedule() {
                                   + mutable_vm_stat_running_instruction_list()->size();
 }
 
+bool VirtualMachine::ThreadUnsafeEmpty() const {
+  return pending_msg_list().thread_unsafe_size() == 0 && waiting_instruction_list().empty()
+         && active_stream_list().empty() && front_seq_compute_instr_list().empty()
+         && flying_instruction_cnt() == 0;
+}
+
 bool VirtualMachine::Empty() const {
-  return pending_msg_list().size() == 0 && waiting_instruction_list().empty()
+  return pending_msg_list().empty() && waiting_instruction_list().empty()
          && active_stream_list().empty() && front_seq_compute_instr_list().empty()
          && flying_instruction_cnt() == 0;
 }
