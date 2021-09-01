@@ -15,8 +15,6 @@ limitations under the License.
 """
 
 import unittest
-
-import numpy as np
 from automated_test_util import *
 
 import oneflow as flow
@@ -25,21 +23,29 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
-    @unittest.skip("nn.CrossEntropyLoss has bug")
-    @autotest(n=200)
+    @autotest()
     def test_CrossEntropyLoss_with_random_data(test_case):
-        num_classes = random()
-        shape = random_tensor(ndim=random(2, 5), dim1=num_classes).value().shape
+        num_classes = random(low=2)
+        shape = (
+            random_tensor(
+                ndim=random(3, 5), dim0=random(low=10, high=100), dim1=num_classes
+            )
+            .value()
+            .shape
+        )
+        ignore_index = (
+            random(0, num_classes) | nothing() if num_classes.value() > 2 else nothing()
+        )
         m = torch.nn.CrossEntropyLoss(
             reduction=oneof("none", "sum", "mean", nothing()),
-            ignore_index=random(0, num_classes) | nothing(),
+            ignore_index=ignore_index,
         )
         m.train(random())
         device = random_device()
         m.to(device)
         x = random_pytorch_tensor(len(shape), *shape).to(device)
         target = random_pytorch_tensor(
-            len(shape) - 1, *shape[:1] + shape[2:], low=0, high=num_classes, dtype=int
+            2, shape[0], 1, low=0, high=num_classes, dtype=int
         ).to(device)
         y = m(x, target)
         return y

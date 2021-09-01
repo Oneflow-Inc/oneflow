@@ -35,6 +35,7 @@ for gpu in gpus:
 def compare_with_tensorflow(
     device_type, data_type, label_type, num_classes, batch_size
 ):
+    print(device_type, data_type, label_type, num_classes, batch_size)
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()
@@ -77,7 +78,8 @@ def compare_with_tensorflow(
         tf_out = tf.math.square(tf_out)
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-05, atol=1e-05)
+    print(of_out.numpy(), "\n", tf_out.numpy())
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-4, atol=1e-04)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-05, atol=1e-05
     )
@@ -90,11 +92,26 @@ class TestSparseSoftmaxCrossEntropy(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["data_type"] = ["float32", "double"]
+        # arg_dict["data_type"] = ["double"]
+        # arg_dict["data_type"] = ["float32"]
         arg_dict["label_type"] = ["int32", "int64"]
-        arg_dict["num_classes"] = [1000]
-        arg_dict["batch_size"] = [64]
+        # arg_dict["num_classes"] = [2001,3001,4001,5001,6001,10001,20001]
+        # arg_dict["num_classes"] = [4096]
+        arg_dict["num_classes"] = [2000, 3000, 4000, 5000, 6000, 10000, 20000]
+        arg_dict["batch_size"] = [64, 128, 512, 1024]
+        # arg_dict["batch_size"] = [1024]
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
+
+    # def test_sparse_softmax_cross_entropy_with_logits(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["device_type"] = ["gpu"]
+    #     arg_dict["data_type"] = ["double"]
+    #     arg_dict["label_type"] = ["int32"]
+    #     arg_dict["num_classes"] = [3600]
+    #     arg_dict["batch_size"] = [1024]
+    #     for arg in GenArgList(arg_dict):
+    #         compare_with_tensorflow(*arg)
 
 
 if __name__ == "__main__":
