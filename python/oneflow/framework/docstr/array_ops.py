@@ -49,3 +49,58 @@ add_docstr(
         tensor([1., 5., 9.], dtype=oneflow.float32)
     """
 )
+
+add_docstr(
+    oneflow.tril,
+    r"""Returns the lower triangular part of a matrix (2-D tensor) or batch of matrices input along the specified diagonal, 
+    the other elements of the result tensor out are set to 0.
+    
+    .. note::
+        if diagonal = 0, the diagonal of the returned tensor will be the main diagonal,
+        if diagonal > 0, the diagonal of the returned tensor will be above the main diagonal, 
+        if diagonal < 0, the diagonal of the returned tensor will be below the main diagonal.
+
+    Args:
+        input (Tensor): the input tensor. 
+        diagonal (int, optional): the diagonal to specify. 
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> x = flow.Tensor(np.ones(shape=(3, 3)).astype(np.float32))
+        >>> flow.tril(x)
+        tensor([[1., 0., 0.],
+                [1., 1., 0.],
+                [1., 1., 1.]], dtype=oneflow.float32)
+
+    """
+)
+
+add_docstr(
+    oneflow.triu,
+    r"""Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input, 
+    the other elements of the result tensor out are set to 0.
+    
+    Args:
+        input (Tensor): the input tensor. 
+        diagonal (int, optional): the diagonal to consider
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        
+        >>> x = flow.Tensor(np.ones(shape=(3, 3)).astype(np.float32))
+        >>> flow.triu(x)
+        tensor([[1., 1., 1.],
+                [0., 1., 1.],
+                [0., 0., 1.]], dtype=oneflow.float32)
+
+    """
+)

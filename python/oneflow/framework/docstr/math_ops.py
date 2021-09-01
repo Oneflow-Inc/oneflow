@@ -1073,3 +1073,54 @@ add_docstr(
             array([1., 4., 9.], dtype=float32)
         """
 )
+
+add_docstr(
+    oneflow.matmul,
+    r"""This operator applies matrix multiplication to two Tensor.
+
+    Args:
+        a (oneflow.Tensor): A Tensor
+        b (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.random.randn(6, 5), dtype=flow.float32)
+        >>> of_out = flow.matmul(input1, input2)
+        >>> of_out.shape
+        flow.Size([2, 5])
+
+    """
+)
+
+add_docstr(
+    oneflow.round,
+    r"""This operator rounds the value of Blob to the nearest integer.
+    Args:
+        input (oneflow.Tensor): A Tensor
+    Returns:
+        oneflow.Tensor: The result Tensor
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x1 = flow.Tensor(np.array([1.49999, 1.500001, 2.7]).astype(np.float32))
+        >>> out1 = flow.round(x1)
+        >>> out1.numpy()
+        array([1., 2., 3.], dtype=float32)
+        >>> x2 = flow.Tensor(np.array([2.499999, 7.5000001, 5.3, 6.8]).astype(np.float32))
+        >>> out2 = flow.round(x2)
+        >>> out2.numpy()
+        array([2., 8., 5., 7.], dtype=float32)
+
+    """
+)

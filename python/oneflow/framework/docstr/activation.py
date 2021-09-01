@@ -91,7 +91,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.softplus,
+    oneflow.softplus,
     r"""
     softplus(x: Tensor) -> Tensor 
 
