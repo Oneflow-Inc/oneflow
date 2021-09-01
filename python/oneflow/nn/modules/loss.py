@@ -1286,8 +1286,7 @@ class TripletMarginLoss(Module):
            "sum",
            "none",
            "mean",
-           None,
-       ], "only 'sum', 'mean' and None supported by now"
+       ], "only 'sum', 'mean' and none supported by now"
        self.reduction = reduction
        
 
