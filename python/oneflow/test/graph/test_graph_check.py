@@ -115,6 +115,7 @@ class TestGraphCheck(flow.unittest.TestCase):
 
         # Check there is not duplicated tensor in outputs buffer and outputs.
         out_id_dic = dict()
+        out_tensor_holder = dict()
 
         def check_id_and_add(t, name):
             if t is not None:
@@ -124,6 +125,9 @@ class TestGraphCheck(flow.unittest.TestCase):
                 ), f"tid {tid}, now name {name}, inserted name {out_id_dic[tid]}"
                 test_case.assertTrue(tid not in out_id_dic)
                 out_id_dic[tid] = name
+                # It seems that python id maybe re-used, hold it to avoid gc re-using it.
+                # ref: https://stackoverflow.com/questions/52096582/how-unique-is-pythons-id
+                out_tensor_holder[name] = t
 
         def call_and_check(idx):
             # ot, otp, olt, on = g(x, tp0, lt0, None)
@@ -137,11 +141,7 @@ class TestGraphCheck(flow.unittest.TestCase):
                         )
 
             test_case.assertTrue(np.array_equal(x.numpy(), ot.numpy()))
-            # It seems that python id maybe re-used,
-            # so it's not stable to check output id duplication because it's id
-            # maybe re-used at later call of this function.
-            # ref: https://stackoverflow.com/questions/52096582/how-unique-is-pythons-id
-            # check_id_and_add(ot, "ot_" + str(idx))
+            check_id_and_add(ot, "ot_" + str(idx))
 
             # test_case.assertTrue(isinstance(otp, TensorTuple))
             # check_id_and_add(otp, "otp_" + str(idx))
@@ -153,20 +153,20 @@ class TestGraphCheck(flow.unittest.TestCase):
             # test_case.assertTrue(np.array_equal(otp[1].numpy(), tp0[1].numpy()))
 
             test_case.assertTrue(isinstance(otp, Tensor))
-            # check_id_and_add(otp, "otp_" + str(idx))
+            check_id_and_add(otp, "otp_" + str(idx))
             test_case.assertTrue(np.array_equal(y.numpy(), otp.numpy()))
 
             test_case.assertTrue(isinstance(olt, list))
-            # check_id_and_add(olt, "olt_" + str(idx))
+            check_id_and_add(olt, "olt_" + str(idx))
             test_case.assertTrue(isinstance(olt[0], Tensor))
-            # check_id_and_add(olt[0], "olt0_" + str(idx))
+            check_id_and_add(olt[0], "olt0_" + str(idx))
             test_case.assertTrue(np.array_equal(olt[0].numpy(), lt0[0].numpy()))
-            # check_id_and_add(olt[1], "olt1_" + str(idx))
+            check_id_and_add(olt[1], "olt1_" + str(idx))
             test_case.assertTrue(np.array_equal(olt[1].numpy(), lt0[1].numpy()))
 
             test_case.assertTrue(on is None)
 
-        for i in range(5):
+        for i in range(15):
             call_and_check(i)
 
 
