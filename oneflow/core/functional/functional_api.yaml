@@ -250,7 +250,7 @@
   bind_python: True
 
 - name: "hardsigmoid"
-  signature: "Tensor (Tensor x) => HardSigmoid"
+  signature: "Tensor (Tensor input, Bool inplace=False, *) => HardSigmoid"
   bind_python: True
 
 - name: "hardsigmoid_grad"
