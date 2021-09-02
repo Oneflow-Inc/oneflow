@@ -28,7 +28,7 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType
 from oneflow.nn.graph.config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-from oneflow.amp import GradScaler
+from oneflow.amp import GradScaler, StaticGradScaler
 from oneflow.nn.graph.util import add_indent, sys_exc_error_msg, list_to_func_return
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
@@ -205,7 +205,7 @@ class Graph(object):
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
         r"""Set the GradScaler for gradient and loss scaling.
         """
-        assert isinstance(grad_scaler, GradScaler)
+        assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
     def __call__(self, *args):
