@@ -248,16 +248,16 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
   if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
-    LOG(INFO) << "The device_type of the input tensor is different from placement, now copy it to "
-              << Device::Type4DeviceTag(parallel_desc->device_tag());
+    VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
+            << Device::Type4DeviceTag(parallel_desc->device_tag());
     input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                   GlobalProcessCtx::LocalRank()));
   }
   // copy to default device of the current rank if input's device type is right but not on default
   // device
   if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
-    LOG(INFO) << "The tensor isn't on default device of the current rank., now copy it to "
-              << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+    VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
+            << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
     input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                   GlobalProcessCtx::LocalRank()));
   }
@@ -292,13 +292,29 @@ class LocalToConsistentFunctor {
                            const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
                            const Shape& shape, const Symbol<DType>& dtype) const {
     CHECK_OR_RETURN(x->is_local());
+    std::shared_ptr<one::Tensor> input = x;
+    // copy to right device first if input's device type is wrong
+    if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
+      VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
+              << Device::Type4DeviceTag(parallel_desc->device_tag());
+      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
+                                    GlobalProcessCtx::LocalRank()));
+    }
+    // copy to default device of the current rank if input's device type is right but not on default
+    // device
+    if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
+      VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
+              << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
+                                    GlobalProcessCtx::LocalRank()));
+    }
     Symbol<cfg::NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     CHECK_OR_RETURN(IsConsistentTensorMetaCheckDisabled());
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_, {x}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+        *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
     return tensor;
   }
 

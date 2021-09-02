@@ -26,6 +26,11 @@ extern Maybe<BoxingDividor> (*ReplaceOutDeviceType)(DeviceType device_type);
 extern Maybe<BoxingDividor> (*FlattenInHierarchy)();
 extern Maybe<BoxingDividor> (*OutPlacementAndPartialSum)();
 extern Maybe<BoxingDividor> (*InPlacementAndBroadcast)();
+extern Maybe<BoxingDividor> (*OutPlacementAndBroadcast)();
+extern Maybe<BoxingDividor> (*InPlacementAndSplit)(int64_t axis);
+extern Maybe<BoxingDividor> (*OutPlacementAndSplit)(int64_t axis);
+extern Maybe<BoxingDividor> (*InFirstDeviceAndAllBroadcast)();
+extern Maybe<BoxingDividor> (*OutFirstDeviceAndAllBroadcast)();
 
 }  // namespace oneflow
 
