@@ -250,11 +250,15 @@ REGISTER_USER_OP("normalization_add_relu")
         MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                    user_op::TensorDesc* reserve_space) -> Maybe<void> {
           const auto& x_desc = ctx->InputTensorDesc("x", 0);
-          const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
           size_t reserve_space_bits = x_desc.shape().elem_cnt();
-          if (x_sbp.has_split_parallel()) {
-            CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
-            reserve_space_bits = reserve_space_bits / ctx->parallel_num();
+          int64_t parallel_num = ctx->parallel_num();
+          if (parallel_num != 1) {
+            // There no need to call SbpParallel4ArgNameAndIndex when parallel_num = 1 in local.
+            const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+            if (x_sbp.has_split_parallel()) {
+              CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
+              reserve_space_bits = reserve_space_bits / ctx->parallel_num();
+            }
           }
           *reserve_space->mut_shape() =
               Shape({static_cast<int64_t>(RoundUp(reserve_space_bits, 32) / 32)});
@@ -268,14 +272,6 @@ REGISTER_USER_OP("normalization_add_relu")
               Shape({static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)});
           return Maybe<void>::Ok();
         }))
-    // .SetTensorDescInferFn(
-    //     MakeFwTensorDescInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
-    //                                user_op::TensorDesc* reserve_space) -> Maybe<void> {
-    //       const auto& x_desc = ctx->InputTensorDesc("x", 0);
-    //       *reserve_space->mut_shape() =
-    //           Shape({static_cast<int64_t>(RoundUp(x_desc.shape().elem_cnt(), 32) / 32)});
-    //       return Maybe<void>::Ok();
-    //     }))
     .SetGetSbpFn(FwGetSbpFn)
     .SetDataTypeInferFn(
         MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
