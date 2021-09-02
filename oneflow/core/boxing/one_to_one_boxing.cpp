@@ -16,8 +16,8 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
 
@@ -25,30 +25,42 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
-  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(in->nd_sbp()));
-  CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));
+  CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
+  CHECK_OR_RETURN(in->placement() != out->placement());
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocal);
+static constexpr auto* CheckNaiveOneToOne = DECORATE(&RawCheckNaiveOneToOne, ThreadLocal);
 
 }  // namespace
 
-Maybe<one::Tensor> NaiveBTo1(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                             Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                                 Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
+  int64_t src = JUST(tensor_placement->MachineId4ParallelId(0));
+  int64_t dst = JUST(out->placement()->MachineId4ParallelId(0));
+
+  if (GlobalProcessCtx::Rank() == src) {
+    JUST(one::functional::Send(local_tensor, dst, /* send_meta */ false));
+  }
+  if (GlobalProcessCtx::Rank() == dst) {
+    local_tensor =
+        JUST(one::functional::Recv(src, *tensor->shape(), tensor->dtype(),
+                                   JUST(local_tensor->device()), Optional<one::Tensor>()));
+  }
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
                                                  *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
                                                  tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("naive-b-to-1", CheckNaiveBTo1, &NaiveBTo1));
+COMMAND(RegisterBoxingFunction("naive-1-to-1", CheckNaiveOneToOne, &NaiveOneToOne));
 
 }  // namespace oneflow
