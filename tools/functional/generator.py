@@ -373,7 +373,13 @@ class Generator:
 
         render_file_if_different(target_source_file, source_fmt.format(fmt))
 
-    def generate_pybind_for_python(self, pybind_header_fmt, pybind_source_fmt, target_pybind_header_file, target_pybind_source_file):
+    def generate_pybind_for_python(
+        self,
+        pybind_header_fmt,
+        pybind_source_fmt,
+        target_pybind_header_file,
+        target_pybind_source_file,
+    ):
         schema_fmt = ""
         module_fmt = ""
         header_fmt = ""
@@ -451,8 +457,12 @@ class Generator:
                     name, ", ".join(schema_types)
                 )
 
-                header_fmt += "\npy::object {0}(const py::args& args, const py::kwargs& kwargs);\n".format(name)
-                schema_fmt += "\npy::object {0}(const py::args& args, const py::kwargs& kwargs) {{\n  return functional::PyFunction<{1}>(args, kwargs);\n}}\n".format(name, ", ".join(schema_types))
+                header_fmt += "\npy::object {0}(const py::args& args, const py::kwargs& kwargs);\n".format(
+                    name
+                )
+                schema_fmt += "\npy::object {0}(const py::args& args, const py::kwargs& kwargs) {{\n  return functional::PyFunction<{1}>(args, kwargs);\n}}\n".format(
+                    name, ", ".join(schema_types)
+                )
 
         render_file_if_different(
             target_pybind_header_file, pybind_header_fmt.format(header_fmt)

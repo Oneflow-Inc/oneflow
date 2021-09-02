@@ -175,4 +175,9 @@ if __name__ == "__main__":
     target_pybind_source_file = os.path.join(
         generated_pybind_dir, "tensor_api.yaml.pybind.cpp"
     )
-    g.generate_pybind_for_python(pybind_header_fmt, pybind_source_fmt, target_pybind_header_file, target_pybind_source_file)
+    g.generate_pybind_for_python(
+        pybind_header_fmt,
+        pybind_source_fmt,
+        target_pybind_header_file,
+        target_pybind_source_file,
+    )
