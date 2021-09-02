@@ -160,6 +160,11 @@ def _ne(self, other):
     return self.ne(other)
 
 
+def _contiguous(self):
+    # TODO: support stride mechanism
+    return self
+
+
 def _getstate(self):
     assert self.is_local, "Only support local tensor to pickle"
     return {"data": self.numpy(), "dtype": self.dtype}
@@ -443,6 +448,7 @@ def RegisterMethods():
     Tensor.copy_ = _copy
     Tensor.get_device = _get_device
     Tensor._meta_repr = _meta_repr
+    Tensor.contiguous = _contiguous
 
 
 def register_tensor_op(op_name):
