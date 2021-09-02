@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_ASYNC_CPU_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_ASYNC_CPU_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_CPU_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_CPU_STREAM_TYPE_H_
 
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -25,10 +25,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class AsyncCpuStreamType final : public StreamType {
+class CpuStreamType final : public StreamType {
  public:
-  AsyncCpuStreamType() = default;
-  ~AsyncCpuStreamType() override = default;
+  CpuStreamType() = default;
+  ~CpuStreamType() override = default;
 
   const char* device_tag() const override { return "cpu"; }
 
@@ -43,11 +43,11 @@ class AsyncCpuStreamType final : public StreamType {
   void Compute(Instruction* instruction) const override;
   ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                           int64_t this_machine_id) const override;
-  bool SharingVirtualMachineThread() const override { return false; }
+  bool SharingVirtualMachineThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return true; }
 };
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_ASYNC_CPU_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_CPU_STREAM_TYPE_H_
