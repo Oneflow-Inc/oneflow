@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/case_kernel.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
