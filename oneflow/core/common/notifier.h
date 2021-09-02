@@ -13,27 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/thread_local_callback.h"
+#ifndef ONEFLOW_CORE_COMMON_NOTIFIER_H_
+#define ONEFLOW_CORE_COMMON_NOTIFIER_H_
+
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-namespace blocking {
+enum NotifierStatus { kNotifierStatusSuccess = 0, kNotifierStatusErrorClosed };
 
-std::function<void()>* MutStackInfoCallback() {
-  static thread_local std::function<void()> StackInfoCallback = [] {};
-  return &StackInfoCallback;
-}
+class Notifier final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Notifier);
+  Notifier() : notified_cnt_(0), is_closed_(false) {}
+  ~Notifier() = default;
 
-void StackInfoCallback() { (*MutStackInfoCallback())(); }
+  NotifierStatus Notify();
+  NotifierStatus WaitAndClearNotifiedCnt();
+  void Close();
 
-void RegisterStackInfoCallback(const std::function<void()>& Callback) {
-  *MutStackInfoCallback() = Callback;
-}
-
-void ClearStackInfoCallback() {
-  *MutStackInfoCallback() = [] {};
-}
-
-}  // namespace blocking
+ private:
+  size_t notified_cnt_;
+  std::mutex mutex_;
+  bool is_closed_;
+  std::condition_variable cond_;
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_NOTIFIER_H_
