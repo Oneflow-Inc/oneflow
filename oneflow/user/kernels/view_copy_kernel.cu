@@ -21,29 +21,6 @@ namespace oneflow {
 
 namespace {
 
-template <size_t n>
-struct StrideParam {
-  int64_t stride[SHAPE_MAX_AXIS_SIZE];
-
-  // NOLINTNEXTLINE
-  StrideParam(const int64_t* input) {
-    for (int i = 0; i < n; ++i) { stride[i] = input[i]; }
-  }
-
-  __device__ int64_t compute_offset(int64_t offset, const StrideParam& other) const {
-    int64_t v = 0;
-
-#pragma unroll
-    for (int i = 0; i < n; ++i) {
-      int64_t idx = offset / stride[i];
-      v += idx * other.stride[i];
-      offset -= idx * stride[i];
-    }
-
-    return v;
-  }
-};
-
 template<size_t N>
 struct uint_type;
 
@@ -72,8 +49,31 @@ struct uint_type<16> {
   using type = ulonglong2;
 };
 
-template <size_t N>
+template<size_t N>
 using uint_t = typename uint_type<N>::type;
+
+template<size_t n>
+struct StrideParam {
+  int64_t stride[SHAPE_MAX_AXIS_SIZE];
+
+  // NOLINTNEXTLINE
+  StrideParam(const int64_t* input) {
+    for (int i = 0; i < n; ++i) { stride[i] = input[i]; }
+  }
+
+  __device__ int64_t compute_offset(int64_t offset, const StrideParam& other) const {
+    int64_t v = 0;
+
+#pragma unroll
+    for (int i = 0; i < n; ++i) {
+      int64_t idx = offset / stride[i];
+      v += idx * other.stride[i];
+      offset -= idx * stride[i];
+    }
+
+    return v;
+  }
+};
 
 template<size_t dsize, size_t ndim>
 __global__ void copy_view(int64_t count, StrideParam<ndim> in_stride, StrideParam<ndim> out_stride,
@@ -93,8 +93,9 @@ void copy_view_wrapper(const DeviceCtx* ctx, int64_t count, const std::vector<in
   auto out_dptr_typed = reinterpret_cast<uint_t<dsize>*>(out_dptr);
   auto in_dptr_typed = reinterpret_cast<const uint_t<dsize>*>(in_dptr);
 
-  copy_view<dsize><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      count, param_in_stride, param_out_stride, in_dptr_typed, out_dptr_typed);
+  copy_view<dsize, ndim>
+      <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          count, param_in_stride, param_out_stride, in_dptr_typed, out_dptr_typed);
 }
 
 using copy_view_type = decltype(copy_view_wrapper<1, 1>)*;
@@ -103,7 +104,8 @@ template<size_t... n>
 struct copy_view_fn_map_type : std::unordered_map<std::pair<size_t, size_t>, copy_view_type> {
   using base_type = std::unordered_map<std::pair<size_t, size_t>, copy_view_type>;
 
-  copy_view_fn_map_type() : base_type{{{1 << (n % 5), 1 + n / 5}, copy_view_wrapper<1 << (n % 5), 1 + n / 5>}...} {}
+  copy_view_fn_map_type()
+      : base_type{{{1 << (n % 5), 1 + n / 5}, copy_view_wrapper<1 << (n % 5), 1 + n / 5>}...} {}
 
   copy_view_type call(size_t dsize, size_t ndim) {
     auto iter = find(std::make_pair(dsize, ndim));
@@ -118,7 +120,7 @@ struct copy_view_fn_map_type : std::unordered_map<std::pair<size_t, size_t>, cop
   }
 };
 
-template <size_t ...I>
+template<size_t... I>
 copy_view_fn_map_type<I...> create_copy_view_fn_map(std::index_sequence<I...>) {
   return {};
 }
