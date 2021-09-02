@@ -204,6 +204,7 @@ del atexit
 del oneflow
 
 import oneflow._C
+from oneflow._C import tensor
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image

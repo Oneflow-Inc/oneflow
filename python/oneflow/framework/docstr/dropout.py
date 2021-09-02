@@ -62,7 +62,7 @@ add_docstr(
         ...        [-1.4115, 1.2183, -0.5503, 0.6520],
         ...    ]
         ... )
-        >>> x = flow.Tensor(arr)
+        >>> x = flow.tensor(arr)
         >>> y = flow._C.dropout(x, p=0) 
 
         >>> arr = np.array(
@@ -72,7 +72,7 @@ add_docstr(
         ...        [-1.4115, 1.2183, -0.5503, 0.6520],
         ...    ]
         ... )
-        >>> x = flow.Tensor(arr)    
+        >>> x = flow.tensor(arr)    
         >>> generator = flow.Generator()
         >>> y = flow._C.dropout(x, 0.5, generator) 
       

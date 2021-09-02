@@ -17,438 +17,439 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-<<<<<<< HEAD
-    oneflow.Tensor.abs, 
+    oneflow.Tensor.abs,
     """
     abs() -> Tensor
     See :func:`oneflow.abs`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.exp, 
+    oneflow.Tensor.exp,
     """
     exp() -> Tensor
     See :func:`oneflow.exp`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.acos, 
+    oneflow.Tensor.acos,
     """
     acos() -> Tensor
     See :func:`oneflow.acos`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.acosh, 
+    oneflow.Tensor.acosh,
     """
     acosh() -> Tensor
     See :func:`oneflow.acosh`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.arccosh, 
+    oneflow.Tensor.arccosh,
     """
     arccosh() -> Tensor
     See :func:`oneflow.arccosh`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.atanh, 
+    oneflow.Tensor.atanh,
     """
     atanh() -> Tensor
     See :func:`oneflow.atanh`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.arctanh, 
+    oneflow.Tensor.arctanh,
     """
     arctanh() -> Tensor
     See :func:`oneflow.arctanh`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.sign, 
+    oneflow.Tensor.sign,
     """
     sign() -> Tensor
     See :func:`oneflow.sign`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.sinh, 
+    oneflow.Tensor.sinh,
     """
     sinh() -> Tensor
     See :func:`oneflow.sinh`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.tan, 
+    oneflow.Tensor.tan,
     """
     tan() -> Tensor
     See :func:`oneflow.tan`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.gt, 
+    oneflow.Tensor.gt,
     """
     gt() -> Tensor
     See :func:`oneflow.gt`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.ge, 
+    oneflow.Tensor.ge,
     """
     ge() -> Tensor
     See :func:`oneflow.ge`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.gelu, 
+    oneflow.Tensor.gelu,
     """
     gelu() -> Tensor
     See :func:`oneflow.gelu`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.mish, 
+    oneflow.Tensor.mish,
     """
     mish() -> Tensor
     See :func:`oneflow.mish`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.sigmoid, 
+    oneflow.Tensor.sigmoid,
     """
     sigmoid() -> Tensor
     See :func:`oneflow.sigmoid`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.tanh, 
+    oneflow.Tensor.tanh,
     """
     tanh() -> Tensor
     See :func:`oneflow.tanh`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.silu, 
+    oneflow.Tensor.silu,
     """
     silu() -> Tensor
     See :func:`oneflow.silu`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.selu, 
+    oneflow.Tensor.selu,
     """
     selu() -> Tensor
     See :func:`oneflow.selu`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.softsign, 
+    oneflow.Tensor.softsign,
     """
     softsign() -> Tensor
     See :func:`oneflow.softsign`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.cast, 
+    oneflow.Tensor.cast,
     """
     cast() -> Tensor
     See :func:`oneflow.cast`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.log1p, 
+    oneflow.Tensor.log1p,
     """
     log1p() -> Tensor
     See :func:`oneflow.log1p`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.add, 
+    oneflow.Tensor.add,
     """
     add() -> Tensor
     See :func:`oneflow.add`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.add_, 
+    oneflow.Tensor.add_,
     """
     add_() -> Tensor
     See :func:`oneflow.add_`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.div, 
+    oneflow.Tensor.div,
     """
     div() -> Tensor
     See :func:`oneflow.div`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.mul, 
+    oneflow.Tensor.mul,
     """
     mul() -> Tensor
     See :func:`oneflow.mul`
-    """
+    """,
 )
 
 
 add_docstr(
-    oneflow.Tensor.reciprocal, 
+    oneflow.Tensor.reciprocal,
     """
     reciprocal() -> Tensor
     See :func:`oneflow.reciprocal`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.sub, 
+    oneflow.Tensor.sub,
     """
     sub() -> Tensor
     See :func:`oneflow.sub`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.asin, 
+    oneflow.Tensor.asin,
     """
     asin() -> Tensor
     See :func:`oneflow.asin`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.arcsin, 
+    oneflow.Tensor.arcsin,
     """
     arcsin() -> Tensor
     See :func:`oneflow.arcsin`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.asinh, 
+    oneflow.Tensor.asinh,
     """
     asinh() -> Tensor
     See :func:`oneflow.asinh`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.arcsinh, 
+    oneflow.Tensor.arcsinh,
     """
     arcsinh() -> Tensor
     See :func:`oneflow.arcsinh`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.atan, 
+    oneflow.Tensor.atan,
     """
     atan() -> Tensor
     See :func:`oneflow.atan`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.arctan, 
+    oneflow.Tensor.arctan,
     """
     arctan() -> Tensor
     See :func:`oneflow.arctan`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.ceil, 
+    oneflow.Tensor.ceil,
     """
     ceil() -> Tensor
     See :func:`oneflow.ceil`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.clamp, 
+    oneflow.Tensor.clamp,
     """
     clamp() -> Tensor
     See :func:`oneflow.clamp`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.clip, 
+    oneflow.Tensor.clip,
     """
     clip() -> Tensor
     See :func:`oneflow.clip`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.cos, 
+    oneflow.Tensor.cos,
     """
     cos() -> Tensor
     See :func:`oneflow.cos`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.cosh, 
+    oneflow.Tensor.cosh,
     """
     cosh() -> Tensor
     See :func:`oneflow.cosh`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.erf, 
+    oneflow.Tensor.erf,
     """
     erf() -> Tensor
     See :func:`oneflow.erf`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.erfc, 
+    oneflow.Tensor.erfc,
     """
     erfc() -> Tensor
     See :func:`oneflow.erfc`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.expm1, 
+    oneflow.Tensor.expm1,
     """
     expm1() -> Tensor
     See :func:`oneflow.expm1`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.fmod, 
+    oneflow.Tensor.fmod,
     """
     fmod() -> Tensor
     See :func:`oneflow.fmod`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.log, 
+    oneflow.Tensor.log,
     """
     log() -> Tensor
     See :func:`oneflow.log`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.minimum, 
+    oneflow.Tensor.minimum,
     """
     minimum() -> Tensor
     See :func:`oneflow.minimum`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.maximum, 
+    oneflow.Tensor.maximum,
     """
     maximum() -> Tensor
     See :func:`oneflow.maximum`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.pow, 
+    oneflow.Tensor.pow,
     """
     pow() -> Tensor
     See :func:`oneflow.pow`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.rsqrt, 
+    oneflow.Tensor.rsqrt,
     """
     rsqrt() -> Tensor
     See :func:`oneflow.rsqrt`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.sqrt, 
+    oneflow.Tensor.sqrt,
     """
     sqrt() -> Tensor
     See :func:`oneflow.sqrt`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.square, 
+    oneflow.Tensor.square,
     """
     square() -> Tensor
     See :func:`oneflow.square`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.matmul, 
+    oneflow.Tensor.matmul,
     """
     matmul() -> Tensor
     See :func:`oneflow.matmul`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.round, 
+    oneflow.Tensor.round,
     """
     round() -> Tensor
     See :func:`oneflow.round`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.softplus, 
+    oneflow.Tensor.softplus,
     """
     softplus() -> Tensor
     See :func:`oneflow.softplus`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.tril, 
+    oneflow.Tensor.tril,
     """
     tril() -> Tensor
     See :func:`oneflow.tril`
-    """
+    """,
 )
 
 add_docstr(
-    oneflow.Tensor.triu, 
+    oneflow.Tensor.triu,
     """
     triu() -> Tensor
     See :func:`oneflow.triu`
-    """
-=======
+    """,
+)
+
+add_docstr(
     oneflow.tensor,
     r"""
     Constructs a tensor with data, return a consistent tensor if placement and sbp are in kwargs,
@@ -481,5 +482,4 @@ add_docstr(
         tensor([1, 2, 3], dtype=oneflow.int64)
 
     """,
->>>>>>> origin/dev_tensor_functional_api
 )

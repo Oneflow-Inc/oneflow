@@ -44,7 +44,7 @@ add_docstr(
         ...     ]
         ... )
 
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> flow.diag(input)
         tensor([1., 5., 9.], dtype=oneflow.float32)
     """,
@@ -71,7 +71,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> x = flow.Tensor(np.ones(shape=(3, 3)).astype(np.float32))
+        >>> x = flow.tensor(np.ones(shape=(3, 3)).astype(np.float32))
         >>> flow.tril(x)
         tensor([[1., 0., 0.],
                 [1., 1., 0.],
@@ -96,7 +96,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> x = flow.Tensor(np.ones(shape=(3, 3)).astype(np.float32))
+        >>> x = flow.tensor(np.ones(shape=(3, 3)).astype(np.float32))
         >>> flow.triu(x)
         tensor([[1., 1., 1.],
                 [0., 1., 1.],

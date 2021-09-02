@@ -30,7 +30,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
+        >>> x = flow.tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
         >>> flow.abs(x)
         tensor([1., 2., 3., 4.], dtype=oneflow.float32)
     
@@ -53,22 +53,22 @@ add_docstr(
         >>> import oneflow as flow
         
         # element-wise add
-        >>> x = flow.Tensor(np.random.randn(2,3))
-        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> x = flow.tensor(np.random.randn(2,3))
+        >>> y = flow.tensor(np.random.randn(2,3))
         >>> out = flow.add(x, y).numpy()
         >>> out.shape
         (2, 3)
 
         # scalar add
         >>> x = 5
-        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> y = flow.tensor(np.random.randn(2,3))
         >>> out = flow.add(x, y).numpy()
         >>> out.shape
         (2, 3)
 
         # broadcast add
-        >>> x = flow.Tensor(np.random.randn(1,1))
-        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> x = flow.tensor(np.random.randn(1,1))
+        >>> y = flow.tensor(np.random.randn(2,3))
         >>> out = flow.add(x, y).numpy()
         >>> out.shape
         (2, 3)
@@ -85,8 +85,8 @@ add_docstr(
         out = \\frac{input}{other}
     
     Args:
-        input (Union[int, float, flow.Tensor]): input.
-        other (Union[int, float, flow.Tensor]): other.
+        input (Union[int, float, oneflow.Tensor]): input.
+        other (Union[int, float, oneflow.Tensor]): other.
     
     For example:
 
@@ -96,22 +96,22 @@ add_docstr(
         >>> import oneflow as flow
         
         # element-wise divide
-        >>> input = flow.Tensor(np.random.randn(2,3))
-        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> input = flow.tensor(np.random.randn(2,3))
+        >>> other = flow.tensor(np.random.randn(2,3))
         >>> out = flow.div(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # scalar divide
         >>> input = 5
-        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.tensor(np.random.randn(2,3))
         >>> out = flow.div(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # broadcast divide
-        >>> input = flow.Tensor(np.random.randn(1,1))
-        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> input = flow.tensor(np.random.randn(1,1))
+        >>> other = flow.tensor(np.random.randn(2,3))
         >>> out = flow.div(input,other).numpy()
         >>> out.shape 
         (2, 3)
@@ -136,22 +136,22 @@ add_docstr(
         >>> import oneflow as flow
         
         # element-wise multiply
-        >>> input = flow.Tensor(np.random.randn(2,3))
-        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> input = flow.tensor(np.random.randn(2,3))
+        >>> other = flow.tensor(np.random.randn(2,3))
         >>> out = flow.mul(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # scalar mutiply
         >>> input = 5
-        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.tensor(np.random.randn(2,3))
         >>> out = flow.mul(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # broadcast mutiply
-        >>> input = flow.Tensor(np.random.randn(1,1))
-        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> input = flow.tensor(np.random.randn(1,1))
+        >>> other = flow.tensor(np.random.randn(2,3))
         >>> out = flow.mul(input,other).numpy()
         >>> out.shape 
         (2, 3)
@@ -171,7 +171,7 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
+        >>> x = flow.tensor(np.array([[1, 2, 3], [4, 5, 6]]), dtype=flow.float32)
         >>> out = flow.reciprocal(x)
         >>> out.numpy()
         array([[1.        , 0.5       , 0.33333334],
@@ -195,22 +195,22 @@ add_docstr(
         >>> import oneflow as flow
         
         # element-wise subtract
-        >>> input = flow.Tensor(np.random.randn(2,3))
-        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> input = flow.tensor(np.random.randn(2,3))
+        >>> other = flow.tensor(np.random.randn(2,3))
         >>> out = flow.sub(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # scalar subtract
         >>> input = 5
-        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> other = flow.tensor(np.random.randn(2,3))
         >>> out = flow.sub(input,other).numpy()
         >>> out.shape
         (2, 3)
 
         # broadcast subtract
-        >>> input = flow.Tensor(np.random.randn(1,1))
-        >>> other = flow.Tensor(np.random.randn(2,3))
+        >>> input = flow.tensor(np.random.randn(1,1))
+        >>> other = flow.tensor(np.random.randn(2,3))
         >>> out = flow.sub(input,other).numpy()
         >>> out.shape
         (2, 3)
@@ -235,13 +235,13 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
         >>> output = flow.asin(input)
         >>> output.shape
         flow.Size([4])
         >>> output
         tensor([-0.5236,  0.9273,  1.5708, -0.9273], dtype=oneflow.float32)
-        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
         >>> output1 = input1.asin()
         >>> output1.shape
         flow.Size([2, 2])
@@ -268,14 +268,14 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([2, 3, 4]), dtype=flow.float32)
         >>> output = flow.asinh(input)
         >>> output.shape
         flow.Size([3])
         >>> output
         tensor([1.4436, 1.8184, 2.0947], dtype=oneflow.float32)
 
-        >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
         >>> output1 = input1.asinh()
         >>> output1.shape
         flow.Size([2, 3])
@@ -303,7 +303,7 @@ add_docstr(
     
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
         >>> output = flow.atan(input)
         >>> output.shape
         flow.Size([3])
@@ -334,20 +334,20 @@ add_docstr(
         
         >>> import oneflow as flow
         >>> import numpy as np   
-        >>> x = flow.Tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
+        >>> x = flow.tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
         >>> y = flow.ceil(x)
         >>> y.shape
         flow.Size([3])
         >>> y
         tensor([ 1., -2.,  4.], dtype=oneflow.float32)
-        >>> x = flow.Tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
+        >>> x = flow.tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
         >>> y = x.ceil()
         >>> y.shape
         flow.Size([2, 3])
         >>> y
         tensor([[ 3.,  5.,  1.],
                 [ 8.,  9., 10.]], dtype=oneflow.float32)
-        >>> x = flow.Tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
+        >>> x = flow.tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
         >>> y = flow.ceil(x)
         >>> y.shape
         flow.Size([2, 2, 3])
@@ -374,7 +374,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
+        >>> x = flow.tensor(np.array([1.3, 1.5, 2.7]))
         >>> out = flow.log1p(x)
         >>> out
         tensor([0.8329, 0.9163, 1.3083], dtype=oneflow.float32)
@@ -407,7 +407,7 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
+        >>> x = flow.tensor(np.array([1, 2, 3]).astype(np.float32))
         >>> y = flow.exp(x)
         >>> y
         tensor([ 2.7183,  7.3891, 20.0855], dtype=oneflow.float32)
@@ -434,7 +434,7 @@ add_docstr(
         >>> import numpy as np
 
         >>> arr = np.array([0.5, 0.6, 0.7])
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.acos(input)
         >>> output
         tensor([1.0472, 0.9273, 0.7954], dtype=oneflow.float32)
@@ -459,11 +459,11 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x1 = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
+        >>> x1 = flow.tensor(np.array([2, 3, 4]).astype(np.float32))
         >>> out1 = flow.acosh(x1)
         >>> out1
         tensor([1.3170, 1.7627, 2.0634], dtype=oneflow.float32)
-        >>> x2 = flow.Tensor(np.array([1.5, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
+        >>> x2 = flow.tensor(np.array([1.5, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
         >>> out2 = flow.acosh(x2)
         >>> out2
         tensor([0.9624, 1.6094, 1.9827], device='cuda:0', dtype=oneflow.float32)
@@ -487,7 +487,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
-        >>> input = flow.Tensor(np_arr)
+        >>> input = flow.tensor(np_arr)
         >>> output = flow.atanh(input)
         >>> output
         tensor([0.5493, 0.6931, 0.8673], dtype=oneflow.float32)
@@ -512,11 +512,11 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x1 = flow.Tensor(np.array([-2, 0, 2]).astype(np.float32))
+        >>> x1 = flow.tensor(np.array([-2, 0, 2]).astype(np.float32))
         >>> out1 = flow.sign(x1)
         >>> out1.numpy()
         array([-1.,  0.,  1.], dtype=float32)
-        >>> x2 = flow.Tensor(np.array([-3.2, -4.5, 5.8]).astype(np.float32),device=flow.device('cuda'))
+        >>> x2 = flow.tensor(np.array([-3.2, -4.5, 5.8]).astype(np.float32),device=flow.device('cuda'))
         >>> out2 = flow.sign(x2)
         >>> out2.numpy()
         array([-1., -1.,  1.], dtype=float32)
@@ -541,9 +541,9 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> x1 = flow.Tensor(np.array([1, 2, 3]))
-        >>> x2 = flow.Tensor(np.array([1.53123589,0.54242598,0.15117185]))
-        >>> x3 = flow.Tensor(np.array([1,0,-1]))
+        >>> x1 = flow.tensor(np.array([1, 2, 3]), dtype=flow.float32)
+        >>> x2 = flow.tensor(np.array([1.53123589,0.54242598,0.15117185]), dtype=flow.float32)
+        >>> x3 = flow.tensor(np.array([1,0,-1]), dtype=flow.float32)
 
         >>> flow.sinh(x1).numpy()
         array([ 1.1752012,  3.6268604, 10.017875 ], dtype=float32)
@@ -572,7 +572,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> np_arr = np.array([-1/4*np.pi, 0, 1/4*np.pi]).astype(np.float32)
-        >>> input = flow.Tensor(np_arr)
+        >>> input = flow.tensor(np_arr)
         >>> output = flow.tan(input)
         >>> output
         tensor([-1.,  0.,  1.], dtype=oneflow.float32)
@@ -601,11 +601,11 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
+        >>> x1 = flow.tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
         >>> y1 = flow._C.sin(x1)
         >>> y1
         tensor([-0.5194,  0.1343, -0.4032, -0.2712], dtype=oneflow.float32)
-        >>> x2 = flow.Tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32), device=flow.device('cuda'))
+        >>> x2 = flow.tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32), device=flow.device('cuda'))
         >>> y2 = flow._C.sin(x2)
         >>> y2
         tensor([-0.9854,  0.5155, -0.5298], device='cuda:0', dtype=oneflow.float32)
@@ -642,19 +642,19 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.tensor(arr)
         >>> output = flow.clamp(input, min=-0.5, max=0.5)
         >>> output
         tensor([ 0.2000,  0.5000, -0.5000, -0.3000], dtype=oneflow.float32)
 
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.tensor(arr)
         >>> output = flow.clamp(input, min=None, max=0.5)
         >>> output
         tensor([ 0.2000,  0.5000, -1.5000, -0.3000], dtype=oneflow.float32)
 
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.tensor(arr)
         >>> output = flow.clamp(input, min=-0.5, max=None)
         >>> output
         tensor([ 0.2000,  0.6000, -0.5000, -0.3000], dtype=oneflow.float32)
@@ -680,7 +680,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.cos(input).numpy()
 
     """,
@@ -705,7 +705,7 @@ add_docstr(
         >>> import oneflow as flow
         
         >>> arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.cosh(input).numpy()
         >>> output
         array([1.0133467, 1.7859949, 1.2535787, 1.2804903], dtype=float32)
@@ -733,14 +733,14 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erf(x)
         >>> out.shape
         flow.Size([3])
         >>> out.numpy()
         array([ 0.       , -0.8427008,  1.       ], dtype=float32)
 
-        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
         >>> out = flow.erf(x)
         >>> out.shape
         flow.Size([2, 3])
@@ -748,7 +748,7 @@ add_docstr(
         array([[ 0.        , -0.8427008 ,  1.        ],
                [ 1.        ,  1.        ,  0.74210095]], dtype=float32)
 
-        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
         >>> out = x.erf()
         >>> out.shape
         flow.Size([3, 3])
@@ -781,12 +781,12 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
         >>> out = flow.erfc(x)
         >>> out
         tensor([1.0000e+00, 1.8427e+00, 2.8026e-45], dtype=oneflow.float32)
 
-        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
         >>> out = flow.erfc(x)
         >>> out
         tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
@@ -818,7 +818,7 @@ add_docstr(
         
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
+        >>> x = flow.tensor(np.array([1, 2, 3]).astype(np.float32))
         >>> y = flow.expm1(x)
         >>> y.shape
         flow.Size([3])
@@ -826,23 +826,17 @@ add_docstr(
         tensor([ 1.7183,  6.3891, 19.0855], dtype=oneflow.float32)
 
 
-<<<<<<< HEAD
-        >>> x = flow.Tensor(np.array([[2, 4, 6],[7, 8, 9]]).astype(np.float32))
+        >>> x = flow.tensor(np.array([[2, 4, 6],[7, 8, 9]]).astype(np.float32))
         >>> y = x.expm1()
         >>> y.shape
         flow.Size([2, 3])
-=======
-        >>> x = np.array([1.4309,  1.2706, -0.8562,  0.9796])
-        >>> x = flow.Tensor(x)
-        >>> y = flow._C.cos(x)
->>>>>>> origin/dev_tensor_functional_api
         >>> y
         tensor([[6.3891e+00, 5.3598e+01, 4.0243e+02],
                 [1.0956e+03, 2.9800e+03, 8.1021e+03]], dtype=oneflow.float32)
 
 
 
-        >>> x = flow.Tensor(np.array([[[2, 4, 6],[7, 8, 9]],[[10,11,12],[13,14,15]]]).astype(np.float32))
+        >>> x = flow.tensor(np.array([[[2, 4, 6],[7, 8, 9]],[[10,11,12],[13,14,15]]]).astype(np.float32))
         >>> y = flow.expm1(x)
         >>> print(y.shape)
         flow.Size([2, 2, 3])
@@ -908,7 +902,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> arr = np.random.randn(2, 3, 4, 5)
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.log(input)
 
 
@@ -988,13 +982,13 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]))
+        >>> x = flow.tensor(np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]))
         >>> out = flow.pow(x, 2)
         >>> out
         tensor([ 1.,  4.,  9., 16., 25., 36.], dtype=oneflow.float32)
 
-        >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
-        >>> y = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
+        >>> x = flow.tensor(np.array([1.0, 2.0, 3.0, 4.0]))
+        >>> y = flow.tensor(np.array([1.0, 2.0, 3.0, 4.0]))
         >>> out = flow.pow(x, y)
         >>> out
         tensor([  1.,   4.,  27., 256.], dtype=oneflow.float32)
@@ -1020,7 +1014,7 @@ add_docstr(
             >>> import oneflow as flow
             >>> import numpy as np
             
-            >>> a = flow.Tensor(np.array([1.0, 2.0, 3.0]))
+            >>> a = flow.tensor(np.array([1.0, 2.0, 3.0]))
             >>> out = flow.rsqrt(a).numpy()
             >>> out
             array([1.        , 0.70710677, 0.57735026], dtype=float32)
@@ -1045,7 +1039,7 @@ add_docstr(
             >>> import numpy as np
             
             >>> arr = np.array([1.0, 2.0, 3.0])
-            >>> input = flow.Tensor(arr)
+            >>> input = flow.tensor(arr)
             >>> output = flow.sqrt(input).numpy()
             >>> output
             array([1.       , 1.4142135, 1.7320508], dtype=float32)
@@ -1071,7 +1065,7 @@ add_docstr(
             >>> import numpy as np
             
             >>> arr = np.array([1.0, 2.0, 3.0])
-            >>> input = flow.Tensor(arr)
+            >>> input = flow.tensor(arr)
             >>> output = flow.square(input).numpy()
             >>> output
             array([1., 4., 9.], dtype=float32)
@@ -1095,8 +1089,8 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.random.randn(6, 5), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.random.randn(2, 6), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.random.randn(6, 5), dtype=flow.float32)
         >>> of_out = flow.matmul(input1, input2)
         >>> of_out.shape
         flow.Size([2, 5])
@@ -1117,11 +1111,11 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x1 = flow.Tensor(np.array([1.49999, 1.500001, 2.7]).astype(np.float32))
+        >>> x1 = flow.tensor(np.array([1.49999, 1.500001, 2.7]).astype(np.float32))
         >>> out1 = flow.round(x1)
         >>> out1.numpy()
         array([1., 2., 3.], dtype=float32)
-        >>> x2 = flow.Tensor(np.array([2.499999, 7.5000001, 5.3, 6.8]).astype(np.float32))
+        >>> x2 = flow.tensor(np.array([2.499999, 7.5000001, 5.3, 6.8]).astype(np.float32))
         >>> out2 = flow.round(x2)
         >>> out2.numpy()
         array([2., 8., 5., 7.], dtype=float32)

@@ -35,8 +35,8 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
         >>> out = flow.gt(input1, input2).shape
         >>> out
@@ -63,8 +63,8 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
 
         >>> out = flow.ge(input1, input2)
         >>> out
