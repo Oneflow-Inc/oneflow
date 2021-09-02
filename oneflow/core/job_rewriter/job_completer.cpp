@@ -122,6 +122,7 @@ Maybe<void> SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_
 
 Maybe<void> JobCompleter::Complete(Job* job) const {
   JobPassCtx job_pass_ctx(GlobalJobDesc());
+  JUST(JobPass4Name("SystemOpFillJobNamePass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   // NOTE(chengcheng): disable this pass for reduce boxing memory life cycle to memory cost.
   if (!Global<ResourceDesc, ForSession>::Get()->resource().disable_group_boxing_by_dst_parallel()) {
