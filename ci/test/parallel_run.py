@@ -13,7 +13,13 @@ import uuid
 def gen_cmds(cmd=None, dir=None, doctest=False):
     if doctest:
         paths = glob.glob(os.path.join(dir, "**/*.py"), recursive=True)
-        paths = [p for p in paths if "compatible" not in p and "single_client" not in p]
+        paths = [
+            p
+            for p in paths
+            if "compatible" not in p
+            and "single_client" not in p
+            and "unittest.py" not in p
+        ]
         with_doctest = []
         for p in paths:
             with open(p) as f:

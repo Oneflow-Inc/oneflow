@@ -30,8 +30,12 @@ namespace oneflow {
 
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
-  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds,
-                            [] { LOG(ERROR) << blocking::GetStackInfo(); },
+  bool is_printed = false;
+  const auto& TryPrintStackInfo = [&is_printed] {
+    if (!is_printed) { blocking::StackInfoCallback(); }
+    is_printed = true;
+  };
+  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds, TryPrintStackInfo,
                             TransportUtil::BlockingWarningIntervalSeconds()));
   return Maybe<void>::Ok();
 }
@@ -232,6 +236,24 @@ Maybe<int64_t> GetCurrentRankIndex(const std::vector<int64_t>& rank_heap) {
     return DoEach(rank_heap.at((current_rank_index - 1) / 2));
   };
   return AccessToOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(ForEachRank,
+                                                                                     token, ctx);
+}
+
+/*static*/ Maybe<void> TransportUtil::ReceiveDataFromRank(int64_t rank, const TransportToken& token,
+                                                          AsyncTransportCtx* ctx) {
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    return DoEach(rank);
+  };
+  return AccessToOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(ForEachRank,
+                                                                                     token, ctx);
+}
+
+/*static*/ Maybe<void> TransportUtil::SendDataToRank(int64_t rank, const TransportToken& token,
+                                                     AsyncTransportCtx* ctx) {
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    return DoEach(rank);
+  };
+  return AccessToOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(ForEachRank,
                                                                                      token, ctx);
 }
 

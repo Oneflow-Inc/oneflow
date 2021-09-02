@@ -29,6 +29,11 @@ namespace oneflow {
 template<typename T, typename Enabled = void>
 class Maybe;
 
+Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>&);
+namespace {
+std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>&);
+}
+
 template<typename T>
 struct is_maybe {
   static const bool value = false;
@@ -61,7 +66,10 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
     return data_or_error_.template Get<cfg::ErrorProto>();
   }
 
-  std::string GetSerializedError() const { return this->error()->DebugString(); }
+  std::string GetSerializedError() const {
+    CHECK(!IsOk());
+    return GetFormatedSerializedError(this->error());
+  }
 
   template<typename Type = T>
   Type GetDataAndSerializedErrorProto(std::string* error_str, const Type& default_for_error) const {
@@ -127,7 +135,7 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return this->error()->DebugString();
+    return GetFormatedSerializedError(this->error());
   }
 
   void GetDataAndSerializedErrorProto(std::string* error_str) const {
@@ -161,7 +169,8 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 };
 
 inline const std::shared_ptr<cfg::ErrorProto>& UninitializedValueError() {
-  static thread_local const auto& error = Error::ValueError("uninitialized value").error_proto();
+  static thread_local const auto& error =
+      Error::InvalidValueError("uninitialized value").error_proto();
   return error;
 }
 
@@ -186,7 +195,7 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return this->error()->DebugString();
+    return GetFormatedSerializedError(this->error());
   }
 
   T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
@@ -243,7 +252,10 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   }
   std::shared_ptr<cfg::ErrorProto> error() const { return maybe_ptr_.error(); }
 
-  std::string GetSerializedError() const { return maybe_ptr_.GetSerializedError(); }
+  std::string GetSerializedError() const {
+    CHECK(!IsOk());
+    return maybe_ptr_.GetSerializedError();
+  }
 
   T GetDataAndSerializedErrorProto(std::string* error_str) const {
     return *maybe_ptr_.GetDataAndSerializedErrorProto(error_str, static_cast<PtrT>(nullptr));
@@ -261,7 +273,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 #define __MaybeErrorStackCheckWrapper__(...) __VA_ARGS__
 
 inline bool MaybeIsOk(Maybe<void>&& maybe) {
-  if (!maybe.IsOk()) { LOG(ERROR) << "\n" << maybe.GetSerializedError(); }
+  if (!maybe.IsOk()) { LOG(ERROR) << maybe.GetSerializedError(); }
   return maybe.IsOk();
 }
 
@@ -290,6 +302,16 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
 }  // namespace private_details
 
 #define TRY(...) __MaybeErrorStackCheckWrapper__(__VA_ARGS__)
+
+namespace {
+std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& error_proto) {
+  // return error msg got from formatted function or debugstring.
+  const auto& maybe_error = TRY(FormatErrorStr(error_proto));
+  const auto& error_str = maybe_error.GetDataAndErrorProto(error_proto->DebugString());
+  return error_str.first;
+}
+}  // namespace
+
 #define JUST(...)                                                                           \
   ({                                                                                        \
     auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                            \
@@ -350,16 +372,17 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
 
 }  // namespace oneflow
 
-#define OF_TODO() return Error::Todo().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
+#define OF_TODO() return Error::TodoError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 #define OF_UNIMPLEMENTED() \
-  return Error::Unimplemented().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
+  return Error::UnimplementedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
 #define OF_RUNTIME_ERROR()                                                                        \
   return Error::RuntimeError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) << "RuntimeError " \
                                                                                   ": "
+#define RETURN_ERROR_WITH_BUG_PROMPT() OF_RUNTIME_ERROR() << kOfBugIssueUploadPrompt
 
-#define OF_COMPLIE_OPTION_ERROR()                                                    \
-  return Error::CompileOptionWrong().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
+#define OF_COMPLIE_OPTION_ERROR()                                                         \
+  return Error::CompileOptionWrongError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << " Compile option wrong: "
 
 #define CHECK_OR_RETURN(expr)                                                      \

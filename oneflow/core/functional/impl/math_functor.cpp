@@ -290,6 +290,14 @@ class ArangeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class Arange2Functor {
+ public:
+  Maybe<Tensor> operator()(const int64_t& limit, const Symbol<DType>& dtype,
+                           const Optional<Symbol<Device>>& device) const {
+    return Arange(0, limit, 1, dtype, device);
+  }
+};
+
 class ConsistentArangeFunctor {
  public:
   ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
@@ -317,6 +325,15 @@ class ConsistentArangeFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentArange2Functor {
+ public:
+  Maybe<Tensor> operator()(const int64_t& limit, const Symbol<DType>& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    return ConsistentArange(0, limit, 1, dtype, placement, sbp_tuple);
+  }
 };
 
 class ArgMaxFunctor : public UnaryFunctor {
@@ -662,7 +679,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReduceMeanFunctor>("ReduceMean");
   m.add_functor<impl::TransposeFunctor>("Transpose");
   m.add_functor<impl::ArangeFunctor>("Arange");
+  m.add_functor<impl::Arange2Functor>("Arange2");
   m.add_functor<impl::ConsistentArangeFunctor>("ConsistentArange");
+  m.add_functor<impl::ConsistentArange2Functor>("ConsistentArange2");
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::CastFunctor>("Cast");
   m.add_functor<impl::ClampFunctor>("Clamp");

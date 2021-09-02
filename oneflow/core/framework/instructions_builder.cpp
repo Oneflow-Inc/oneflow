@@ -932,12 +932,15 @@ namespace {
 
 const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
     const std::shared_ptr<one::MirroredTensor> tensor) {
-  return CHECK_JUST(tensor->device())->parallel_desc_ptr();
+  const auto& device = CHECK_JUST(tensor->device());
+  const auto& placement = CHECK_JUST(Placement4Device(device));
+  return placement.shared_from_symbol();
 }
 
 const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
     const one::EagerMirroredTensorImpl* tensor) {
-  return tensor->device()->parallel_desc_ptr();
+  const auto& placement = CHECK_JUST(Placement4Device(tensor->device()));
+  return placement.shared_from_symbol();
 }
 
 }  // namespace

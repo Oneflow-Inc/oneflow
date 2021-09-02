@@ -17,14 +17,15 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
-#include "oneflow/core/framework/id_util.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 
 namespace {
+
+bool IsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+  return sbp_parallel->has_split_parallel();
+}
 
 Maybe<void> RawCheckNcclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
@@ -52,6 +53,19 @@ Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 
 static constexpr auto* CheckNcclP2S = DECORATE(&RawCheckNcclP2S, ThreadLocal);
 
+Maybe<void> RawCheckNcclB2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(in->nd_sbp()));
+  CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllSplitNdSbp(out->nd_sbp(), 0));
+
+  CHECK_OR_RETURN(in->placement() == out->placement());
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
+  return Maybe<void>::Ok();
+}
+
+static constexpr auto* CheckNcclB2S = DECORATE(&RawCheckNcclB2S, ThreadLocal);
+
 Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
@@ -65,37 +79,21 @@ Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 
 static constexpr auto* CheckNcclS2B = DECORATE(&RawCheckNcclS2B, ThreadLocal);
 
-Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Build();
+Maybe<void> RawCheckNcclS2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
+
+  CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0)));
+  CHECK_OR_RETURN(IsSplitSbp(out->nd_sbp()->sbp_parallel(0)));
+  CHECK_NE_OR_RETURN(in->nd_sbp()->sbp_parallel(0).split_parallel().axis(),
+                     out->nd_sbp()->sbp_parallel(0).split_parallel().axis());
+
+  CHECK_OR_RETURN(in->placement() == out->placement());
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kGPU);
+  return Maybe<void>::Ok();
 }
 
-static constexpr auto* CachedEagerNcclAllReduceOpExpr = DECORATE(&EagerNcclAllReduce, ThreadLocal);
-
-Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
-                                              const std::string& op_type) {
-  return one::OpBuilder("eager_nccl_reduce_scatter", *JUST(UniqueStr("eager_nccl_reduce_scatter")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<std::string>("op_type", op_type)
-      .Build();
-}
-static constexpr auto* CachedNcclReduceScatterOpExpr =
-    DECORATE(&EagerNcclReduceScatter, ThreadLocalCopiable);
-
-Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Build();
-}
-
-static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
+static constexpr auto* CheckNcclS2S = DECORATE(&RawCheckNcclS2S, ThreadLocal);
 
 }  // namespace
 
@@ -106,8 +104,7 @@ Maybe<one::Tensor> NcclP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
-  const auto& op_expr = JUST(CachedEagerNcclAllReduceOpExpr(in->placement()));
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+  return JUST(one::functional::ConsistentAllReduce(tensor));
 }
 
 Maybe<one::Tensor> NcclP2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -117,8 +114,17 @@ Maybe<one::Tensor> NcclP2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
-  const auto& op_expr = JUST(CachedNcclReduceScatterOpExpr(in->placement(), "sum"));
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+  return JUST(one::functional::ConsistentReduceScatter(tensor, "sum"));
+}
+
+Maybe<one::Tensor> NcclB2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                           Symbol<PlacedNdSbp> out) {
+  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  const auto& tensor_placement = JUST(tensor->parallel_desc());
+  CHECK_OR_RETURN(tensor_placement == in->placement());
+
+  return JUST(one::functional::ConsistentReduceScatter(tensor, "max"));
 }
 
 Maybe<one::Tensor> NcclS2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -128,12 +134,22 @@ Maybe<one::Tensor> NcclS2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
 
-  const auto& op_expr = JUST(CachedEagerNcclAllGatherOpExpr(in->placement()));
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {tensor}));
+  return JUST(one::functional::ConsistentAllGather(tensor));
+}
+
+Maybe<one::Tensor> NcclS2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                           Symbol<PlacedNdSbp> out) {
+  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  const auto& tensor_placement = JUST(tensor->parallel_desc());
+  CHECK_OR_RETURN(tensor_placement == in->placement());
+  return JUST(one::functional::ConsistentS2S(tensor, *JUST(GetSbpList(out->nd_sbp()))));
 }
 
 COMMAND(RegisterBoxingFunction("nccl-p-to-b", CheckNcclP2B, &NcclP2B));
 COMMAND(RegisterBoxingFunction("nccl-p-to-s", CheckNcclP2S, &NcclP2S));
+COMMAND(RegisterBoxingFunction("nccl-b-to-s", CheckNcclB2S, &NcclB2S));
 COMMAND(RegisterBoxingFunction("nccl-s-to-b", CheckNcclS2B, &NcclS2B));
+COMMAND(RegisterBoxingFunction("nccl-s-to-s", CheckNcclS2S, &NcclS2S));
 
 }  // namespace oneflow

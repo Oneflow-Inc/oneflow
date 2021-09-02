@@ -86,6 +86,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
 
   const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
       [&array, &Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array)); });
+  bool is_printed = false;
   JUST(SpinCounter::SpinWait(
       1,
       [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
@@ -93,7 +94,12 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
           return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
         });
       },
-      []() { LOG(ERROR) << blocking::GetStackInfo(); }));
+      [&is_printed]() {
+        if (!is_printed) {
+          blocking::StackInfoCallback();
+          is_printed = true;
+        }
+      }));
   return Maybe<void>::Ok();
 }
 
@@ -152,8 +158,7 @@ const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tenso
 
 Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dtype,
                                      const Symbol<Device>& device, bool requires_grad) {
-  // Executing any numpy c api before _import_array() results in segfault
-  if (PyArray_API == nullptr) { _import_array(); }
+  // NOTE: NPY_ARRAY_DEFAULT is needed to get a contiguous array.
   auto* np_arr_pyobject = PyArray_FromAny(array.ptr(), nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
   CHECK_NOTNULL_OR_RETURN(np_arr_pyobject) << "input data cannot convert to a numpy array";
   // transfer the ownership to np_arr_raii so that the ref count
@@ -165,7 +170,7 @@ Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, Symbol<DType> desired_dty
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
   std::shared_ptr<Tensor> tensor =
-      JUST(functional::Empty(shape, CHECK_JUST(DType::Get(flow_dtype)), device));
+      JUST(functional::Empty(shape, JUST(DType::Get(flow_dtype)), device));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(flow_dtype), tensor, np_arr_raii));
   if (flow_dtype == DataType::kDouble && !init_from_numpy && !desired_dtype) {
     desired_dtype = DType::Float();
@@ -345,11 +350,11 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
     try {
       dim_vector.push_back(py::cast<int64_t>(arg));
     } catch (const py::cast_error& e) {
-      return Error::ValueError("invalid arg: " + py::str(arg).cast<std::string>());
+      return Error::InvalidValueError("invalid arg: " + py::str(arg).cast<std::string>());
     }
   }
   const Shape shape = Shape(dim_vector);
-  if (!desired_dtype) { return Error::ValueError("Desired dtype is null"); }
+  if (!desired_dtype) { return Error::InvalidValueError("Desired dtype is null"); }
   std::shared_ptr<Tensor> tensor;
   if (placement) {
     // Shape -> ConsistentTensor

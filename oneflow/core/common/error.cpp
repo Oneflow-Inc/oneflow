@@ -66,10 +66,10 @@ Error Error::DeviceTagNotFoundError() {
   return error;
 }
 
-Error Error::ValueError(const std::string& error_summary) {
+Error Error::InvalidValueError(const std::string& error_summary) {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->set_error_summary(error_summary);
-  error->mutable_value_error();
+  error->mutable_invalid_value_error();
   return error;
 }
 
@@ -193,13 +193,13 @@ Error Error::CheckFailedError() {
   return error;
 }
 
-Error Error::Todo() {
+Error Error::TodoError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_todo_error();
   return error;
 }
 
-Error Error::Unimplemented() {
+Error Error::UnimplementedError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_unimplemented_error();
   return error;
@@ -264,19 +264,19 @@ Error Error::RwMutexedObjectNotFoundError() {
   return error;
 }
 
-Error Error::GradientFunctionNotFound() {
+Error Error::GradientFunctionNotFoundError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_gradient_function_not_found_error();
   return error;
 }
 
-Error Error::SymbolIdUninitialized() {
+Error Error::SymbolIdUninitializedError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_symbol_id_uninitialized_error();
   return error;
 }
 
-Error Error::CompileOptionWrong() {
+Error Error::CompileOptionWrongError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_compile_option_wrong_error();
   return error;
@@ -310,5 +310,10 @@ void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
 }
 
 const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError() { return *MutThreadLocalError(); }
+
+const char* kOfBugIssueUploadPrompt =
+    "This is a oneflow bug, please submit issues in "
+    "'https://github.com/Oneflow-Inc/oneflow/issues' include the log information of the error, the "
+    "minimum reproduction code, and the system information.";
 
 }  // namespace oneflow
