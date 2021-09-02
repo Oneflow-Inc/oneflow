@@ -89,3 +89,15 @@ class GraphConfig(object):
         opt_dict.generate_optimizer_and_variable_configs(
             self.proto.mutable_train_conf(), variables_conf
         )
+
+    def __repr__(self):
+        main_str = (
+            "("
+            + "CONFIG"
+            + ":config:"
+            + self.__class__.__name__
+            + "("
+            + ("training=" + str(self.training) + ", ")
+            + "))"
+        )
+        return main_str

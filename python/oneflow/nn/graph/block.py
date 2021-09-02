@@ -342,6 +342,8 @@ class Block(object):
         lines = None
         if self._type == BlockType.MODULE:
             child_lines = []
+            if not self.config._is_null:
+                child_lines.append(add_indent(repr(self.config), 2))
             if len(self._args_repr) > 0:
                 for in_str in self._args_repr:
                     input_str = add_indent(in_str, 2)
@@ -393,6 +395,7 @@ class BlockConfig(object):
     """
 
     def __init__(self):
+        self._is_null = True 
         self._stage_id = None
         self._activation_checkpointing = None
 
@@ -406,6 +409,7 @@ class BlockConfig(object):
     def stage_id(self, value: int = None):
         r"""Set stage id of Block in pipeline parallelism.
         """
+        self._is_null = False
         self._stage_id = value
 
     @property
@@ -418,4 +422,19 @@ class BlockConfig(object):
     def activation_checkpointing(self, value: bool = False):
         r"""Set whether do activation checkpointing in this Block.
         """
+        self._is_null = False
         self._activation_checkpointing = value
+    
+    def __repr__(self):
+        main_str = (
+            "("
+            + "CONFIG"
+            + ":config:"
+            + self.__class__.__name__
+            + "("
+            + (("stage_id=" + str(self.stage_id) + ", ") if self.stage_id is not None else "")
+            + (("activation_checkpointing=" + str(self.activation_checkpointing) + ", ") if self.activation_checkpointing is not None else "")
+            + "))"
+        )
+        return main_str
+

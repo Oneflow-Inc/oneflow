@@ -201,6 +201,8 @@ class Graph(object):
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
         self._opts.append(opt_dict)
+        if len(self._opts) == 1:
+            self.config._train(True)
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
         r"""Set the GradScaler for gradient and loss scaling.
@@ -284,6 +286,7 @@ class Graph(object):
 
         """
         child_lines = []
+        child_lines.append(add_indent(repr(self.config), 2))
         if len(self._args_repr) > 0:
             for in_str in self._args_repr:
                 input_str = add_indent(in_str, 2)
@@ -348,8 +351,6 @@ class Graph(object):
                 self.config.proto.mutable_train_conf()
             )
 
-        if len(self._opts) > 0:
-            self.config._train(True)
         for state_block in self._state():
             if state_block.type == BlockType.PARAMETER:
                 self._variables_conf[state_block.origin] = VariableConfig(

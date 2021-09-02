@@ -202,9 +202,11 @@ def _test_train_graph(test_case, device):
             def __init__(self):
                 super().__init__()
                 self.pp_m = pp_m
-                self.pp_m.train_data_loader.stage_id =0
-                self.pp_m.linear0.stage_id = 0
-                self.pp_m.linear1.stage_id = 1
+                self.pp_m.train_data_loader.config.stage_id =0
+                self.pp_m.linear0.config.stage_id = 0
+                self.pp_m.relu0.config.stage_id = 0
+                self.pp_m.linear1.config.stage_id = 1
+                self.pp_m.relu1.config.stage_id = 1
                 # TODO(): support gradient accumulation
                 #self.config.set_gradient_accumulation_steps(2)
                 self.add_optimizer(of_sgd)
@@ -218,11 +220,12 @@ def _test_train_graph(test_case, device):
                 return out
 
         pp_g = PipelineGraph()
+        print(pp_g)
 
         def one_iter():
             pp_m.train()
             of_graph_out = pp_g()
-            #test_case.assertTrue(of_graph_out.placement == P)
+            print("out sbp: ", of_graph_out.sbp)
             of_graph_out = of_graph_out.to_local()
             of_graph_out_np = of_graph_out.numpy()
             print("rank: ", rank, " pipeline graph out: ", of_graph_out_np)

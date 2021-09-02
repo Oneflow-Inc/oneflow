@@ -220,10 +220,11 @@ void TryInsertOrUseBufferOpBothSrcDst(
 }
 
 Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-  LOG(ERROR) << "do pp pass.";
+  LOG(ERROR) << "do pp pass 0.";
   if (GlobalJobDesc().job_conf().num_gradient_accumulation_steps() <= 1) {
     return Maybe<void>::Ok();
   }
+  LOG(ERROR) << "do pp pass 1.";
 
   int64_t max_stage_id = 0;
   op_graph.ForEachNode([&](const OpNode* this_node) {
@@ -233,8 +234,10 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
     }
     max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
   });
+  LOG(ERROR) << "do pp pass 2.";
 
   if (max_stage_id == 0) { return Maybe<void>::Ok(); }
+  LOG(ERROR) << "do pp pass 3.";
   const int64_t total_stage_num = max_stage_id + 1;
   LOG(INFO) << "total stage num = " << total_stage_num;
 
@@ -277,6 +280,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
     }
   });
 
+  LOG(ERROR) << "do pp pass 4.";
   op_graph.ForEachEdge([&](const OpEdge* edge) {
     const OpNode* src_node = edge->src_node();
     const OpNode* dst_node = edge->dst_node();
@@ -315,11 +319,13 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
     }
   });
 
+  LOG(ERROR) << "do pp pass 5.";
   for (auto& pair : buffer_op_name2op_conf) {
     CHECK(buffer_op_name2parallel_conf.find(pair.first) != buffer_op_name2parallel_conf.end());
     JUST(job_builder->AddOp(buffer_op_name2parallel_conf.at(pair.first), pair.second));
   }
   for (auto& pair : mut_op_name2conf) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
+  LOG(ERROR) << "do pp pass 6.";
   return Maybe<void>::Ok();
 }
 
