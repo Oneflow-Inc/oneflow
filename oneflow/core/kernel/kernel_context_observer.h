@@ -13,18 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_KERNEL_OBSERVER_MANAGER_H_
-#define ONEFLOW_CORE_KERNEL_KERNEL_OBSERVER_MANAGER_H_
+#ifndef ONEFLOW_CORE_KERNEL_CONTEXT_OBSERVER_H_
+#define ONEFLOW_CORE_KERNEL_CONTEXT_OBSERVER_H_
 
 #include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
-class KernelObserverManager : public KernelObserver {
+class KernelContextObserver final : public KernelObserver {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelObserverManager);
-  KernelObserverManager() = default;
-  ~KernelObserverManager() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(KernelContextObserver);
+  KernelContextObserver() = default;
+  ~KernelContextObserver() override = default;
 
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
@@ -34,11 +34,8 @@ class KernelObserverManager : public KernelObserver {
 
   void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
   void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
-
- protected:
-  std::vector<std::unique_ptr<KernelObserver>> kernel_observers_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_KERNEL_OBSERVER_MANAGER_H_
+#endif  // ONEFLOW_CORE_KERNEL_CONTEXT_OBSERVER_H_

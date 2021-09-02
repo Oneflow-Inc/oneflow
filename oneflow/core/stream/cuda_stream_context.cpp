@@ -23,6 +23,8 @@ limitations under the License.
 #include "oneflow/core/device/cuda_device_descriptor.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/kernel/kernel_observer_manager.h"
+#include "oneflow/core/kernel/cuda_check_numerics_kernel_observer.h"
 
 #ifdef WITH_CUDA
 
@@ -64,6 +66,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
   std::shared_ptr<DeviceCtx> device_ctx() override;
+  std::shared_ptr<KernelObserver> Observer() override;
 
   cudaStream_t cuda_stream() const override;
   cublasHandle_t cublas_pmh_handle() const override;
@@ -98,6 +101,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   StreamId stream_id_;
   std::shared_ptr<DeviceCtx> device_ctx_;
   bool is_graph_capturing_;
+  std::shared_ptr<KernelObserver> kernel_observer_;
 };
 
 class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
@@ -124,6 +128,20 @@ class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
 
  protected:
   CudaStreamContextImpl* stream_ctx_;
+};
+
+class CudaStreamKernelObserverManager final : public KernelObserverManager {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaStreamKernelObserverManager);
+  CudaStreamKernelObserverManager() {
+    if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
+      LOG(WARNING) << "Environment variable ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS has been set "
+                      "to a truthy "
+                      "value, it will impact performance";
+      kernel_observers_.emplace_back(new CudaCheckNumericsKernelObserver());
+    }
+  }
+  ~CudaStreamKernelObserverManager() override = default;
 };
 
 }  // namespace
@@ -177,7 +195,7 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id)
   OF_CUDNN_CHECK(cudnnSetStream(cudnn_handle_, cuda_stream_));
 
   device_ctx_.reset(new DeviceCtxImpl(this));
-
+  kernel_observer_.reset(new CudaStreamKernelObserverManager());
   poller_thread_ = std::thread([this, stream_id]() {
     int dev_id = stream_id.device_id().device_index();
     CudaCurrentDeviceGuard guard(dev_id);
@@ -266,6 +284,8 @@ Maybe<void> CudaStreamContextImpl::Sync() {
 }
 
 std::shared_ptr<DeviceCtx> CudaStreamContextImpl::device_ctx() { return device_ctx_; }
+
+std::shared_ptr<KernelObserver> CudaStreamContextImpl::Observer() { return kernel_observer_; }
 
 cudaStream_t CudaStreamContextImpl::cuda_stream() const { return cuda_stream_; }
 

@@ -22,6 +22,7 @@ namespace oneflow {
 
 class Blob;
 class JobDesc;
+class KernelObserver;
 class KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelContext);
@@ -33,6 +34,7 @@ class KernelContext {
   virtual void* state() const = 0;
   virtual void set_state(void* state) = 0;
   virtual const JobDesc* job_desc() const = 0;
+  virtual std::shared_ptr<KernelObserver> Observer() = 0;
 };
 
 }  // namespace oneflow

@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
+#include "oneflow/core/kernel/kernel_context_observer.h"
 
 namespace oneflow {
 
@@ -83,7 +84,9 @@ class SystemOpKernelContext : public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SystemOpKernelContext);
   SystemOpKernelContext(const JobDesc* job_desc, DeviceCtx* device_ctx)
-      : job_desc_(job_desc), device_ctx_(device_ctx) {}
+      : job_desc_(job_desc), device_ctx_(device_ctx) {
+    kernel_observer_.reset(new KernelContextObserver());
+  }
   ~SystemOpKernelContext() = default;
 
   DeviceCtx* device_ctx() const override { return device_ctx_; }
@@ -105,10 +108,13 @@ class SystemOpKernelContext : public KernelContext {
     bn_in_op2blob_fn_ = std::move(fn);
   }
 
+  std::shared_ptr<KernelObserver> Observer() override { return kernel_observer_; }
+
  private:
   const JobDesc* job_desc_;
   DeviceCtx* device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
+  std::shared_ptr<KernelObserver> kernel_observer_;
 };
 
 class SystemOpKernelObject : public vm::Object {

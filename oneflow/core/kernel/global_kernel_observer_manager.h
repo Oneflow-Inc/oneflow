@@ -13,22 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_CHECK_NUMBERICS_KERNEL_OBSERVER_H_
-#define ONEFLOW_CORE_KERNEL_CHECK_NUMBERICS_KERNEL_OBSERVER_H_
+#ifndef ONEFLOW_CORE_KERNEL_GLOBAL_KERNEL_OBSERVER_MANAGER_H_
+#define ONEFLOW_CORE_KERNEL_GLOBAL_KERNEL_OBSERVER_MANAGER_H_
 
-#include "oneflow/core/kernel/kernel_observer.h"
+#include "oneflow/core/kernel/kernel_observer_manager.h"
 
 namespace oneflow {
 
-class CheckNumericsKernelObserver final : public KernelObserver {
+class GlobalKernelObserverManager final : public KernelObserverManager {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CheckNumericsKernelObserver);
-  CheckNumericsKernelObserver() = default;
-  ~CheckNumericsKernelObserver() override = default;
-
-  void DidForwardDataContent(KernelContext* ctx, const Kernel* kernel) override;
+  OF_DISALLOW_COPY_AND_MOVE(GlobalKernelObserverManager);
+  GlobalKernelObserverManager();
+  ~GlobalKernelObserverManager() override = default;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_CHECK_NUMBERICS_KERNEL_OBSERVER_H_
+#endif  // ONEFLOW_CORE_KERNEL_GLOBAL_KERNEL_OBSERVER_MANAGER_H_

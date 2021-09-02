@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/kernel/kernel_context_observer.h"
 
 namespace oneflow {
 
@@ -28,7 +29,9 @@ class KernelContextImpl : public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelContextImpl);
   explicit KernelContextImpl(const JobDesc* job_desc, DeviceCtx* device_ctx)
-      : job_desc_(job_desc), device_ctx_(device_ctx), state_(nullptr) {}
+      : job_desc_(job_desc), device_ctx_(device_ctx), state_(nullptr) {
+    kernel_observer_.reset(new KernelContextObserver());
+  }
   ~KernelContextImpl() = default;
 
   DeviceCtx* device_ctx() const override { return device_ctx_; }
@@ -48,11 +51,14 @@ class KernelContextImpl : public KernelContext {
     bn_in_op2blob_fn_ = std::move(fn);
   }
 
+  std::shared_ptr<KernelObserver> Observer() override { return kernel_observer_; }
+
  private:
   const JobDesc* job_desc_;
   DeviceCtx* device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
   void* state_;
+  std::shared_ptr<KernelObserver> kernel_observer_;
 };
 
 void CheckInplaceRegstDescId(const TaskProto& task_proto) {

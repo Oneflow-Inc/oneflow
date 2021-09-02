@@ -43,7 +43,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
-#include "oneflow/core/kernel/kernel_observer_manager.h"
+#include "oneflow/core/kernel/global_kernel_observer_manager.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
@@ -197,7 +197,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     }
 #endif  // __linux__
   }
-  Global<KernelObserver>::SetAllocated(new KernelObserverManager());
+  Global<KernelObserver>::SetAllocated(new GlobalKernelObserverManager());
   return Maybe<void>::Ok();
 }
 
