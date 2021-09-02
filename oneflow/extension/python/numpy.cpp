@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/common/registry_error.h"
+#include "oneflow/extension/python/numpy_internal.h"
 
 namespace oneflow {
 
@@ -53,6 +54,21 @@ Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array) {
   int np_array_type = PyArray_TYPE(array);
   return NumpyTypeToOFDataType(np_array_type);
 }
+
+// Executing any numpy c api before _import_array() results in segfault
+// NOTE: this InitNumpyCAPI() works because of `PY_ARRAY_UNIQUE_SYMBOL`
+// defined in numpy_internal.h
+// Reference:
+// https://numpy.org/doc/stable/reference/c-api/array.html#importing-the-api
+void InitNumpyCAPI() {
+  CatchRegistryError([]() -> Maybe<void> {
+    CHECK_ISNULL_OR_RETURN(PyArray_API);
+    CHECK_EQ_OR_RETURN(_import_array(), 0);
+    return Maybe<void>::Ok();
+  });
+}
+
+COMMAND(InitNumpyCAPI());
 
 }  // namespace numpy
 }  // namespace oneflow

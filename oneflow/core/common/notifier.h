@@ -13,20 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_COMMON_NOTIFIER_H_
+#define ONEFLOW_CORE_COMMON_NOTIFIER_H_
 
-#ifndef ONEFLOW_CORE_KERNEL_KERNEL_HELPER_H_
-#define ONEFLOW_CORE_KERNEL_KERNEL_HELPER_H_
-
-#include <string>
-#include <functional>
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob);
+enum NotifierStatus { kNotifierStatusSuccess = 0, kNotifierStatusErrorClosed };
+
+class Notifier final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Notifier);
+  Notifier() : notified_cnt_(0), is_closed_(false) {}
+  ~Notifier() = default;
+
+  NotifierStatus Notify();
+  NotifierStatus WaitAndClearNotifiedCnt();
+  void Close();
+
+ private:
+  size_t notified_cnt_;
+  std::mutex mutex_;
+  bool is_closed_;
+  std::condition_variable cond_;
+};
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_KERNEL_HELPER_H_
+#endif  // ONEFLOW_CORE_COMMON_NOTIFIER_H_

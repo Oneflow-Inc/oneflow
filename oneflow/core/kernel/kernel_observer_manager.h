@@ -26,20 +26,14 @@ class KernelObserverManager final : public KernelObserver {
   KernelObserverManager();
   ~KernelObserverManager() override = default;
 
-  void WillForward(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                   const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
-  void DidForward(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                  const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
+  void WillForward(const KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForward(const KernelContext* kernel_ctx, const Kernel* kernel) override;
 
-  void WillForwardHeader(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
-  void DidForwardHeader(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                        const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
+  void WillForwardHeader(const KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForwardHeader(const KernelContext* kernel_ctx, const Kernel* kernel) override;
 
-  void WillForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
-  void DidForwardDataContent(const KernelCtx& kernel_ctx, const Kernel* kernel,
-                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) override;
+  void WillForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) override;
 
  private:
   std::vector<std::unique_ptr<KernelObserver>> kernel_observers_;

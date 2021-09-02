@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,11 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
+"""
 
-#include "oneflow/core/kernel/kernel_helper.h"
+import oneflow as flow
 
-namespace oneflow {
 
-bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  for (const auto& bn : bns) {
-    Blob* blob = BnInOp2Blob(bn);
-    if (blob && !blob->IsBodyEmpty()) { return false; }
-  }
-  return true;
-}
-
-}  // namespace oneflow
+def as_tensor(*args, **kwargs):
+    # TODO: support construct tensor with sharing memory with data
+    return flow.tensor(*args, **kwargs)
