@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_BOXING_EAGER_BOXING_INTERPRETER_MANAGER_H_
-#define ONEFLOW_CORE_FRAMEWORK_BOXING_EAGER_BOXING_INTERPRETER_MANAGER_H_
+#ifndef ONEFLOW_CORE_BOXING_EAGER_BOXING_INTERPRETER_MANAGER_H_
+#define ONEFLOW_CORE_BOXING_EAGER_BOXING_INTERPRETER_MANAGER_H_
 
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter.h"
 
 namespace oneflow {
 
@@ -47,4 +47,4 @@ struct DisableRecusiveBoxingCall {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_BOXING_EAGER_BOXING_INTERPRETER_MANAGER_H_
+#endif  // ONEFLOW_CORE_BOXING_EAGER_BOXING_INTERPRETER_MANAGER_H_
