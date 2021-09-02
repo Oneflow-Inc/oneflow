@@ -224,6 +224,38 @@ class SmoothL1LossGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CTCLossGradFunctor {
+ public:
+  CTCLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("ctc_loss_grad").Input("grad_out")
+      .Input("log_probs")
+      .Input("targets")
+      .Input("input_lengths")
+      .Input("target_lengths")
+      .Input("loss")
+      .Input("alpha")
+      .Output("grad").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& grad_out,
+    const std::shared_ptr<one::Tensor>& log_probs,
+    const std::shared_ptr<one::Tensor>& targets,
+    const std::shared_ptr<one::Tensor>& input_lengths,
+    const std::shared_ptr<one::Tensor>& target_lengths,
+    const std::shared_ptr<one::Tensor>& loss,
+    const std::shared_ptr<one::Tensor>& alpha,
+    const int32_t& blank,
+    const bool& zero_infinity) const {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("blank", blank));
+      JUST(attrs.SetAttr<bool>("zero_infinity", zero_infinity));
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {grad_out, log_probs, targets, input_lengths, target_lengths, loss, alpha},
+        attrs);
+  }
+
+  private:
+   std::shared_ptr<OpExpr> op_;
+};
+
 class PadGradFunctor {
  public:
   PadGradFunctor() {
@@ -274,8 +306,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvBiasGradFunctor>("ConvBiasGrad");
   m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
-  m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
+  m.add_functor<impl::PoolNdGraOpBuilderdFunctor>("PoolNdGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
+  m.add_functor<impl::CTCLossGradFunctor>("CTCLossGrad");
   m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
 };

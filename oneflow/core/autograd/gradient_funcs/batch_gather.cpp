@@ -24,7 +24,7 @@ namespace oneflow {
 namespace one {
 
 struct BatchGatherInterpState : public OpExprInterpState {
-  int64_t num_segments;
+  int32_t num_segments;
   bool requires_grad;
 };
 
@@ -60,7 +60,7 @@ Maybe<void> BatchGather::Apply(const BatchGatherInterpState* ctx, const TensorTu
   in_grads->resize(2);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& indices = ctx->SavedTensors().at(0);
-  in_grads->at(0) = JUST(functional::UnsortedBatchSegmentSum({out_grads.at(0), indices}, ctx->num_segments));
+  in_grads->at(0) = JUST(functional::UnsortedBatchSegmentSum(out_grads.at(0), indices, ctx->num_segments));
   return Maybe<void>::Ok();
 }
 

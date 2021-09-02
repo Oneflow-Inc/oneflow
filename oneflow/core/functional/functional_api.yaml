@@ -365,6 +365,12 @@
     "Tensor SmoothL1LossGrad(Tensor loss_grad, Tensor prediction, Tensor label, *, Float beta)"
   bind_python: False
 
+- name: "ctc_loss_grad"
+  signature:
+    "Tensor CTCLossGrad(Tensor loss_grad, Tensor log_probs, Tensor targets,
+      Tensor input_lengths, Tensor target_lengths, Tensor loss, Tensor alpha, Int32 blank, Bool zero_infinity)"
+  bind_python: True
+
 - name: "where"
   signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
   bind_python: True
@@ -559,7 +565,7 @@
 
 - name: "unsorted_batch_segment_sum"
   signature:
-    "Tensor UnsortedBatchSegmentSum(Tensor x, Tensor segment_ids, Int32 num_segments)"
+    "Tensor UnsortedBatchSegmentSum(Tensor x, Tensor segment_ids, *, Int32 num_segments)"
   bind_python: False
 
 - name: "triu"
