@@ -416,19 +416,19 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       learning_rate_ptr = learning_rate->dptr<float>();
     }
 
+    const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
     const float* bias_correction1_ptr = nullptr;
     if (ctx->has_input("bias_correction1", 0)) {
       const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
-      // CHECK_EQ(bias_correction1->shape().elem_cnt(), 1); // todo(zzk): In eager it need
-      // consistent tensor. if use ones_like, it will not equal to 1.
+      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
       bias_correction1_ptr = bias_correction1->dptr<float>();
     }
 
+    const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
     const float* bias_correction2_ptr = nullptr;
     if (ctx->has_input("bias_correction2", 0)) {
       const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
-      // CHECK_EQ(bias_correction2->shape().elem_cnt(), 1); // todo(zzk): In eager it need
-      // consistent tensor. if use ones_like, it will not equal to 1.
+      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }
 
@@ -449,10 +449,10 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 
     AdamUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, learning_rate_ptr,
-        scale_by_ptr, skip_if_ptr, bias_correction1_ptr, bias_correction2_ptr,
-        model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(),
-        max_v->mut_dptr<T>());
+        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_correction1_val,
+        bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
+        bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(),
+        v->mut_dptr<T>(), max_v->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -682,8 +682,8 @@ REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kGPU, double, double);
 #endif  // WITH_CUDA
 
 template<DeviceType device_type>
-class BiasCorrectionFactorKernel final : public user_op::OpKernel ,
-                                                   public user_op::CudaGraphSupport {
+class BiasCorrectionFactorKernel final : public user_op::OpKernel,
+                                         public user_op::CudaGraphSupport {
  public:
   BiasCorrectionFactorKernel() = default;
   ~BiasCorrectionFactorKernel() override = default;

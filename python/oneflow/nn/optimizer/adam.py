@@ -133,6 +133,8 @@ class Adam(Optimizer):
         options["betas"] = betas
         options["weight_decay"] = weight_decay
         options["amsgrad"] = amsgrad
+        options["bias_correction1"] = 1.0
+        options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
         super().__init__(parameters, options)
 
@@ -144,35 +146,17 @@ class Adam(Optimizer):
                 self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
                 self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
 
-        self._state["bias_correction1"] = flow.ones_like(param)
-        self._state["bias_correction2"] = flow.ones_like(param)
-
-        if options["do_bias_correction"]:
-            self._op = (
-                flow.builtin_op("adam_update")
-                .Input("model")
-                .Input("model_diff")
-                .Input("bias_correction1")
-                .Input("bias_correction2")
-                .Input("m")
-                .Input("v")
-                .Input("max_v")
-                .Attr("l1", 0.0)
-                .Attr("weight_decay", 0.0)
-                .Build()
-            )
-        else:
-            self._op = (
-                flow.builtin_op("adam_update")
-                .Input("model")
-                .Input("model_diff")
-                .Input("m")
-                .Input("v")
-                .Input("max_v")
-                .Attr("l1", 0.0)
-                .Attr("weight_decay", 0.0)
-                .Build()
-            )
+        self._op = (
+            flow.builtin_op("adam_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("m")
+            .Input("v")
+            .Input("max_v")
+            .Attr("l1", 0.0)
+            .Attr("weight_decay", 0.0)
+            .Build()
+        )
 
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
@@ -187,8 +171,17 @@ class Adam(Optimizer):
                 loss = closure()
 
             for param_group in self.param_groups:
+                if param_group["do_bias_correction"]:
+                    param_group["bias_correction1"] = float(
+                        1 - math.pow(param_group["betas"][0], self._state["step"] + 1)
+                    )
+                    param_group["bias_correction2"] = float(
+                        1 - math.pow(param_group["betas"][1], self._state["step"] + 1)
+                    )
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
+                    "bias_correction1_val": param_group["bias_correction1"],
+                    "bias_correction2_val": param_group["bias_correction2"],
                     "l2": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
@@ -196,47 +189,15 @@ class Adam(Optimizer):
                     "do_bias_correction": param_group["do_bias_correction"],
                     "amsgrad": param_group["amsgrad"],
                 }
-                if param_group["do_bias_correction"]:
-                    self._state["bias_correction1"] = self._state[
-                        "bias_correction1"
-                    ].fill_(
-                        (1 - math.pow(param_group["betas"][0], self._state["step"] + 1))
-                    )
-                    self._state["bias_correction2"] = self._state[
-                        "bias_correction2"
-                    ].fill_(
-                        (1 - math.pow(param_group["betas"][1], self._state["step"] + 1))
-                    )
-
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
                     max_v_tensor = self._state[param]["max_exp_avg_sq"]
-                    if param_group["do_bias_correction"]:
-                        bias_correction_tensor_a = self._state["bias_correction1"]
-                        bias_correction_tensor_b = self._state["bias_correction2"]
-                        # when set bias_correction tensor a as 1.0, it equal to no do bias correction.
-                        self._op(
-                            param,
-                            param.grad,
-                            bias_correction_tensor_a,
-                            bias_correction_tensor_b,
-                            m_tensor,
-                            v_tensor,
-                            max_v_tensor,
-                            **kwargs,
-                        )
-                    else:
-                        self._op(
-                            param,
-                            param.grad,
-                            m_tensor,
-                            v_tensor,
-                            max_v_tensor,
-                            **kwargs,
-                        )
+                    self._op(
+                        param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs,
+                    )
 
             self._state["step"] += 1
 

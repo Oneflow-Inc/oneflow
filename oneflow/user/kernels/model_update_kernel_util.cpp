@@ -142,8 +142,9 @@ template<typename T, typename G>
 struct AdamUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, bool amsgrad,
-                     bool do_bias_correction, float learning_rate_val, const float* learning_rate,
-                     const T* scale_by_ptr, const int64_t* skip_if, const float* bias_correction1,
+                     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
+                     float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const float* bias_correction1,
                      const float* bias_correction2, const G* model_diff, T* model, T* m, T* v,
                      T* max_v);
 };
@@ -152,21 +153,19 @@ template<typename T, typename G>
 void AdamUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1, float beta2, float epsilon,
     float weight_decay, bool amsgrad, bool do_bias_correction, float learning_rate_val,
-    const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-    const float* bias_correction1_ptr, const float* bias_correction2_ptr, const G* model_diff,
-    T* model, T* m, T* v, T* max_v) {
+    float bias_correction1_val, float bias_correction2_val, const float* learning_rate,
+    const T* scale_by_ptr, const int64_t* skip_if, const float* bias_correction1_ptr,
+    const float* bias_correction2_ptr, const G* model_diff, T* model, T* m, T* v, T* max_v) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
-  float bias_correction1 = 1.0;
-  float bias_correction2 = 1.0;
-  if (bias_correction1_ptr != nullptr) { bias_correction1 = *bias_correction1_ptr; }
-  if (bias_correction2_ptr != nullptr) { bias_correction2 = *bias_correction2_ptr; }
+  if (bias_correction1_ptr != nullptr) { bias_correction1_val = *bias_correction1_ptr; }
+  if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
 
   FOR_RANGE(int64_t, i, 0, n) {
     AdamUpdateFunctor<T, G>()(model_diff + i, model + i, m + i, v + i, max_v + i, scale, l1, l2,
-                              beta1, beta2, epsilon, weight_decay, amsgrad, bias_correction1,
-                              bias_correction2, learning_rate_val);
+                              beta1, beta2, epsilon, weight_decay, amsgrad, bias_correction1_val,
+                              bias_correction2_val, learning_rate_val);
   }
 }
 
