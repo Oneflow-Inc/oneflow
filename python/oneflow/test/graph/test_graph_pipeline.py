@@ -28,9 +28,9 @@ class OFRecordDataLoader(flow.nn.Module):
         channel_last = False
         output_layout = "NHWC" if channel_last else "NCHW"
         self.train_record_reader = flow.nn.OFRecordReader(
-            ofrecord_root,
+            ofrecord_root + "/" + mode,
             batch_size=batch_size,
-            data_part_num=1,
+            data_part_num=2,
             part_name_suffix_length=5,
             random_shuffle=True if mode == "train" else False,
             shuffle_after_epoch=True if mode == "train" else False,
@@ -162,7 +162,7 @@ def _test_train_graph(test_case, device):
         P1 = flow.placement("cuda", {0: [1]})
 
         train_data_loader = OFRecordDataLoader(
-            ofrecord_root="/dataset/imagenette/ofrecord",
+            ofrecord_root="/dataset/ImageNet/ofrecord",
             mode="train",
             dataset_size=400,
             batch_size=4,
@@ -175,7 +175,9 @@ def _test_train_graph(test_case, device):
                 super().__init__()
                 self.train_data_loader = train_data_loader
                 self.linear0 = flow.nn.Linear(224, 8, False)
+                self.relu0 = flow.nn.ReLU()
                 self.linear1 = flow.nn.Linear(8, 7, False)
+                self.relu1 = flow.nn.ReLU()
                 self.linear0.to_consistent(placement=P0, sbp=B)
                 self.linear1.to_consistent(placement=P1, sbp=B)
                 flow.nn.init.ones_(self.linear0.weight)
@@ -186,13 +188,15 @@ def _test_train_graph(test_case, device):
                 image = image.to(D)
                 label = label.to(D)
                 out0 = self.linear0(image)
+                #out0 = self.relu0(out0)
                 out0 = out0.to_consistent(placement=P1, sbp=B)
                 out1 = self.linear1(out0)
+                #out1 = self.relu1(out1)
                 return out1
 
         pp_m = PipelineModule()
 
-        of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.001, momentum=0.9)
+        of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.001, momentum=0.1)
 
         class PipelineGraph(flow.nn.Graph):
             def __init__(self):
@@ -202,24 +206,23 @@ def _test_train_graph(test_case, device):
                 self.pp_m.linear0.stage_id = 0
                 self.pp_m.linear1.stage_id = 1
                 # TODO(): support gradient accumulation
-                #self.config.set_gradient_accumulation_steps(3)
+                #self.config.set_gradient_accumulation_steps(2)
                 self.add_optimizer(of_sgd)
 
             def build(self):
                 out = self.pp_m()
                 out = out.sum()
                 # TODO(): support partial placement of scalar tensor numpy()
-                out = out.to_consistent(placement=P, sbp=B)
+                #out = out.to_consistent(placement=P, sbp=B)
                 out.backward()
                 return out
 
         pp_g = PipelineGraph()
-        pp_g.debug()
 
         def one_iter():
             pp_m.train()
             of_graph_out = pp_g()
-            test_case.assertTrue(of_graph_out.placement == P)
+            #test_case.assertTrue(of_graph_out.placement == P)
             of_graph_out = of_graph_out.to_local()
             of_graph_out_np = of_graph_out.numpy()
             print("rank: ", rank, " pipeline graph out: ", of_graph_out_np)

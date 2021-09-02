@@ -59,7 +59,13 @@ class Shape final {
   bool is_initialized() const { return elem_cnt_.has_value(); }
   const DimVector& dim_vec() const { return dim_vec_; }
   int64_t elem_cnt() const { return CHECK_JUST(elem_cnt_.value()); }
-  int64_t At(int64_t index) const { return dim_vec_.at(index); }
+  int64_t At(int64_t index) const { 
+    if (index < dim_vec_.size()) {
+      return dim_vec_.at(index);
+    } else {
+      return 0;
+    }
+  }
   void Set(int64_t index, int64_t val);
   int64_t NumAxes() const {
     CHECK(is_initialized());
