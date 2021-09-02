@@ -18,9 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.abs,
-    r"""
-
-    Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
+    """Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
 
     Args:
         input (Tensor): the input tensor.
@@ -41,7 +39,7 @@ add_docstr(
 
 add_docstr(
     oneflow.add,
-    r"""Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
+    """Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
@@ -80,7 +78,7 @@ add_docstr(
 
 add_docstr(
     oneflow.div,
-    r"""Computes the division of input by other for each element, scalar and broadcast promotation are supported.
+    """Computes the division of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
@@ -123,7 +121,7 @@ add_docstr(
 
 add_docstr(
     oneflow.mul,
-    r"""Computes the multiplication of input by other for each element, scalar and broadcast promotation are supported.
+    """Computes the multiplication of input by other for each element, scalar and broadcast promotation are supported.
     
     The formula is:
 
@@ -163,7 +161,7 @@ add_docstr(
 
 add_docstr(
     oneflow.reciprocal,
-    r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will
+    """Computes the safe reciprocal of x. If x is zero, the reciprocal will
     be also set to zero.
 
     For example:
@@ -183,7 +181,7 @@ add_docstr(
 
 add_docstr(
     oneflow.sub,
-    r"""Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
+    """Computes the subtraction of input by other for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
@@ -222,7 +220,7 @@ add_docstr(
 
 add_docstr(
     oneflow.asin,
-    r"""
+    """
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
 
     .. math::
@@ -255,7 +253,7 @@ add_docstr(
 
 add_docstr(
     oneflow.asinh,
-    r"""
+    """
     Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
 
     .. math::
@@ -290,7 +288,7 @@ add_docstr(
 
 add_docstr(
     oneflow.atan,
-    r"""
+    """
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
 
     .. math::
@@ -315,7 +313,7 @@ add_docstr(
 
 add_docstr(
     oneflow.ceil,
-    r"""Returns a new tensor with the ceil of the elements of :attr:`input`,
+    """Returns a new tensor with the ceil of the elements of :attr:`input`,
     the smallest integer greater than or equal to each element.
 
     The equation is: 
@@ -365,7 +363,7 @@ add_docstr(
 
 add_docstr(
     oneflow.log1p,
-    r"""Returns a new tensor with the natural logarithm of (1 + input).
+    """Returns a new tensor with the natural logarithm of (1 + input).
 
     .. math::
         \\text{out}_{i}=\\log_e(1+\\text{input}_{i})
@@ -386,7 +384,7 @@ add_docstr(
 
 add_docstr(
     oneflow.exp,
-    r"""
+    """
 
     This operator computes the exponential of Tensor.
 
@@ -419,7 +417,7 @@ add_docstr(
 
 add_docstr(
     oneflow.acos,
-    r"""
+    """
     Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
 
     .. math::
@@ -445,7 +443,7 @@ add_docstr(
 
 add_docstr(
     oneflow.acosh,
-    r"""
+    """
     Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
 
     .. math::
@@ -474,7 +472,7 @@ add_docstr(
 
 add_docstr(
     oneflow.atanh,
-    r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
+    """Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
 
     .. math::
         \\text{out}_{i} = \\tanh^{-1}(\\text{input}_{i})
@@ -499,7 +497,7 @@ add_docstr(
 
 add_docstr(
     oneflow.sign,
-    r"""Computes the sign of Tensor.
+    """Computes the sign of Tensor.
 
     .. math::
 
@@ -528,7 +526,7 @@ add_docstr(
 
 add_docstr(
     oneflow.sinh,
-    r"""Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
+    """Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
 
     .. math::
         \\text{out}_{i} = \\sinh(\\text{input}_{i})
@@ -559,7 +557,7 @@ add_docstr(
 
 add_docstr(
     oneflow.tan,
-    r"""Returns  the tan value of the elements of :attr:`input`.
+    """Returns  the tan value of the elements of :attr:`input`.
 
     .. math::
         \\text{out}_{i} = \\tan(\\text{input}_{i})
@@ -584,7 +582,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.sin,
-    r"""
+    """
     sin(x: Tensor) -> Tensor
 
     Returns a new tensor with the sine of the elements of :attr:`input`.
@@ -616,7 +614,7 @@ add_docstr(
 
 add_docstr(
     oneflow.clamp,
-    r"""
+    """
     Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
     a resulting tensor:
 
@@ -666,7 +664,7 @@ add_docstr(
 
 add_docstr(
     oneflow.cos,
-    r"""
+    """
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
     
     .. math::
@@ -690,7 +688,7 @@ add_docstr(
 
 add_docstr(
     oneflow.cosh,
-    r"""
+    """
     Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
 
     .. math::
@@ -717,7 +715,7 @@ add_docstr(
 
 add_docstr(
     oneflow.erf,
-    r"""Computes the error function of each element. The error function is defined as follows:
+    """Computes the error function of each element. The error function is defined as follows:
 
     .. math::
             \\operatorname{erf}(x)=\\frac{2}{\\sqrt{\\pi}} \\int_{0}^{x} e^{-t^{2}} d t
@@ -764,7 +762,7 @@ add_docstr(
 
 add_docstr(
     oneflow.erfc,
-    r"""Computes the complementary error function of each element of input. The complementary error 
+    """Computes the complementary error function of each element of input. The complementary error 
     function is defined as follows:
 
     .. math::
@@ -799,7 +797,7 @@ add_docstr(
 
 add_docstr(
     oneflow.expm1,
-    r"""Returns a new tensor with the exponential of the elements minus 1
+    """Returns a new tensor with the exponential of the elements minus 1
     of :attr:`input`.
 
 
@@ -855,7 +853,7 @@ add_docstr(
 
 add_docstr(
     oneflow.fmod,
-    r"""
+    """
     fmod(input, other, *, out=None) -> Tensor
 
     Computes the element-wise remainder of division.
@@ -888,7 +886,7 @@ add_docstr(
 
 add_docstr(
     oneflow.log,
-    r"""
+    """
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
     
     .. math::
@@ -913,7 +911,7 @@ add_docstr(
 
 add_docstr(
     oneflow.minimum,
-    r"""Computes the element-wise minimum of x and y.
+    """Computes the element-wise minimum of x and y.
 
     For example:
 
@@ -936,7 +934,7 @@ add_docstr(
 
 add_docstr(
     oneflow.maximum,
-    r"""Computes the element-wise maximum of x and y.
+    """Computes the element-wise maximum of x and y.
 
     For example:
 
@@ -959,7 +957,7 @@ add_docstr(
 
 add_docstr(
     oneflow.pow,
-    r"""Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
+    """Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
     When exponent is a scalar value, the operation applied is:
 
     .. math::
@@ -1000,7 +998,7 @@ add_docstr(
 
 add_docstr(
     oneflow.rsqrt,
-    r"""Returns a new tensor with the reciprocal of the square-root of each of
+    """Returns a new tensor with the reciprocal of the square-root of each of
         the elements of :attr:`input`.
 
         .. math::
@@ -1025,7 +1023,7 @@ add_docstr(
 
 add_docstr(
     oneflow.sqrt,
-    r"""Returns a new tensor with the square-root of the elements of :attr:`input`.
+    """Returns a new tensor with the square-root of the elements of :attr:`input`.
 
         .. math::
             \\text{out}_{i} = \\sqrt{\\text{input}_{i}}
@@ -1051,7 +1049,7 @@ add_docstr(
 
 add_docstr(
     oneflow.square,
-    r"""Returns a new tensor with the square of the elements of :attr:`input`.
+    """Returns a new tensor with the square of the elements of :attr:`input`.
 
         .. math::
             \\text{out}_{i} = \\sqrt{\\text{input}_{i}}
@@ -1076,7 +1074,7 @@ add_docstr(
 
 add_docstr(
     oneflow.matmul,
-    r"""This operator applies matrix multiplication to two Tensor.
+    """This operator applies matrix multiplication to two Tensor.
 
     Args:
         a (oneflow.Tensor): A Tensor
@@ -1102,7 +1100,7 @@ add_docstr(
 
 add_docstr(
     oneflow.round,
-    r"""This operator rounds the value of Blob to the nearest integer.
+    """This operator rounds the value of Blob to the nearest integer.
     Args:
         input (oneflow.Tensor): A Tensor
     Returns:

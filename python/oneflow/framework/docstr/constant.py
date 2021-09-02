@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.ones_like,
-    r"""
+    """
     Returns a tensor filled with the scalar value 1, with the same size as input.
     flow.ones_like(input) is equivalent to flow.ones(input.shape, dtype=input.dtype)
 
@@ -41,7 +41,7 @@ add_docstr(
 
 add_docstr(
     oneflow.zeros_like,
-    r"""
+    """
     Returns a tensor filled with the scalar value 0, with the same size as input.
     flow.zeros_like(input) is equivalent to flow.zeros(input.shape, dtype=input.dtype)
 

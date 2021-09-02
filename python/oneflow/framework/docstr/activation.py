@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow._C.prelu,
-    r"""
+    """
     prelu(x: Tensor, alpha: Tensor) -> Tensor  
 
     Applies the element-wise function:
@@ -48,7 +48,7 @@ add_docstr(
 
 add_docstr(
     oneflow.gelu,
-    r"""
+    """
     gelu(x: Tensor) -> Tensor 
 
     The equation is:
@@ -79,7 +79,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.softmax,
-    r"""
+    """
     softmax(x: Tensor) -> Tensor 
 
     Softmax is defined as:
@@ -92,7 +92,7 @@ add_docstr(
 )
 add_docstr(
     oneflow.softplus,
-    r"""
+    """
     softplus(x: Tensor) -> Tensor 
 
     Applies the element-wise function:
@@ -106,7 +106,7 @@ add_docstr(
 
 add_docstr(
     oneflow.tanh,
-    r"""
+    """
     tanh(x: Tensor) -> Tensor 
 
     The equation is:
@@ -120,7 +120,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.log_sigmoid,
-    r"""
+    """
     log_sigmoid(x: Tensor) -> Tensor 
 
     Applies the element-wise function:
@@ -150,7 +150,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.softsign,
-    r"""
+    """
     softsign(x: Tensor) -> Tensor 
 
     The formula is: 
@@ -180,7 +180,7 @@ add_docstr(
 
 add_docstr(
     oneflow.silu,
-    r"""
+    """
     silu(x: Tensor) -> Tensor
 
     The formula is: 
@@ -210,7 +210,7 @@ add_docstr(
 
 add_docstr(
     oneflow.mish,
-    r""" 
+    """ 
     mish(x: Tensor) -> Tensor 
 
     Applies the element-wise function:
@@ -241,7 +241,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.relu,
-    r"""
+    """
     relu(x: Tensor, inplace: bool =False) -> Tensor
 
     Applies the rectified linear unit function element-wise. See
@@ -255,7 +255,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.hardsigmoid,
-    r"""
+    """
     hardsigmoid(x: Tensor)-> Tensor
 
     Applies the element-wise function
@@ -273,7 +273,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.hardswish,
-    r"""
+    """
     hardswish(x: Tensor)-> Tensor
 
     Applies the hardswish function, element-wise, as described in the paper:
@@ -295,7 +295,7 @@ add_docstr(
 )
 add_docstr(
     oneflow.sigmoid,
-    r"""
+    """
     sigmoid(input) -> Tensor
 
     Applies the element-wise function :math:`\text{Sigmoid}(x) = \frac{1}{1 + \exp(-x)}`
@@ -320,7 +320,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.hardtanh,
-    r"""
+    """
     hardtanh(input, min_val=-1., max_val=1.) -> Tensor
 
     Applies the HardTanh function element-wise. See :class:`~oneflow.nn.Hardtanh` for more
@@ -330,7 +330,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.leaky_relu,
-    r"""
+    """
     leaky_relu(x: Tensor,  alpha :Float) -> Tensor
 
     Applies element-wise,
@@ -342,7 +342,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.elu,
-    r"""
+    """
     elu(x: Tensor, alpha :Float) -> Tensor
 
     Applies element-wise,
@@ -366,7 +366,7 @@ add_docstr(
 )
 add_docstr(
     oneflow.selu,
-    r"""
+    """
     selu(x: Tensor) -> Tensor
 
     Applies element-wise function :math:`\text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`, with :math:`\alpha=1.6732632423543772848170429916717` and  :math:`scale=1.0507009873554804934193349852946`.

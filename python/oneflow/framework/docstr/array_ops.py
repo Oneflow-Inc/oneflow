@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.diag,
-    r"""
+    """
     If input is a vector (1-D tensor), then returns a 2-D square tensor with the elements of input as the diagonal.
     If input is a matrix (2-D tensor), then returns a 1-D tensor with diagonal elements of input.
 
@@ -52,7 +52,7 @@ add_docstr(
 
 add_docstr(
     oneflow.tril,
-    r"""Returns the lower triangular part of a matrix (2-D tensor) or batch of matrices input along the specified diagonal, 
+    """Returns the lower triangular part of a matrix (2-D tensor) or batch of matrices input along the specified diagonal, 
     the other elements of the result tensor out are set to 0.
     
     .. note::
@@ -82,7 +82,7 @@ add_docstr(
 
 add_docstr(
     oneflow.triu,
-    r"""Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input, 
+    """Returns the upper triangular part of a matrix (2-D tensor) or batch of matrices input, 
     the other elements of the result tensor out are set to 0.
     
     Args:

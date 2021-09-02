@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow._C.one_hot,
-    r"""
+    """
     one_hot(input, num_classes=-1, on_value=1, off_value=0)
     This operator generates a onehot Tensor from input Tensor.
 

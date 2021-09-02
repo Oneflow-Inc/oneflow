@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.bernoulli,
-    r"""
+    """
     bernoulli(input, *, generator=None, out=None)
     
     This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
