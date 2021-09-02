@@ -198,14 +198,14 @@ class ConsistentTensorWithShapeCtorFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorWithDataFunctor>("TensorWithData");
-  m.add_functor<impl::TensorWithDataFunctor>("ConsistentTensorWithData");
+  m.add_functor<impl::ConsistentTensorWithDataFunctor>("ConsistentTensorWithData");
   m.add_functor<impl::TensorEmptyCtorFunctor>("TensorEmptyCtor");
-  m.add_functor<impl::TensorEmptyCtorFunctor>("ConsistentTensorEmptyCtor");
+  m.add_functor<impl::ConsistentTensorEmptyCtorFunctor>("ConsistentTensorEmptyCtor");
   m.add_functor<impl::TensorWithOtherCtorFunctor>("TensorWithOtherCtor");
   m.add_functor<impl::TensorWithDataCtorFunctor>("TensorWithDataCtor");
-  m.add_functor<impl::TensorWithDataCtorFunctor>("ConsistentTensorWithDataCtor");
+  m.add_functor<impl::ConsistentTensorWithDataCtorFunctor>("ConsistentTensorWithDataCtor");
   m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
-  m.add_functor<impl::TensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
+  m.add_functor<impl::ConsistentTensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
 }
 
 }  // namespace functional
