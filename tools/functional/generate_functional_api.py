@@ -87,7 +87,25 @@ namespace functional {{
 """
 )
 
-pybind_fmt = (
+pybind_header_fmt = (
+    license
+    + """
+
+#include <pybind11/pybind11.h>
+
+namespace py = pybind11;
+
+namespace oneflow {{
+namespace one {{
+namespace functional {{
+{0}
+}}  // namespace functional
+}}  // namespace one
+}}  // namespace oneflow
+"""
+)
+
+pybind_source_fmt = (
     license
     + """
 
@@ -146,7 +164,10 @@ if __name__ == "__main__":
         "Could not locate the pybind generate directory which is "
         + generated_pybind_dir
     )
+    target_pybind_header_file = os.path.join(
+        generated_pybind_dir, "functional_api.yaml.pybind.h"
+    )
     target_pybind_source_file = os.path.join(
         generated_pybind_dir, "functional_api.yaml.pybind.cpp"
     )
-    g.generate_pybind_for_python(pybind_fmt, target_pybind_source_file)
+    g.generate_pybind_for_python(pybind_header_fmt, pybind_source_fmt, target_pybind_header_file, target_pybind_source_file)
