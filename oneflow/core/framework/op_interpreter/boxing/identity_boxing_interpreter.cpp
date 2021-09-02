@@ -13,10 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
 namespace oneflow {
+
 namespace {
 
 Maybe<void> RawCheckIdentity(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
@@ -33,7 +34,7 @@ Maybe<one::Tensor> GetIdentity(const std::shared_ptr<one::Tensor>& tensor, Symbo
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
-  if (tensor_nd_sbp == out->nd_sbp()) { return tensor; }
+  // reset sbp if parallel_num == 1 and reset transport_token
   const auto& local_tensor = JUST(tensor->cur_rank_phy_tensor());
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
