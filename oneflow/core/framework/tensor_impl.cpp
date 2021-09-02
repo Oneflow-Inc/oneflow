@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -223,13 +224,22 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
   const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
   const auto& cur_rank_phy_shape =
       JUST(GetPhysicalShape(*shape, *nd_sbp, *parallel_desc, parallel_id));
-  const auto& cur_rank_phy_tensor_meta =
-      std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
-  auto cur_rank_phy_tensor_impl =
-      std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
-  const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(device));
-  JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
-  const auto& cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
+  std::shared_ptr<MirroredTensor> cur_rank_phy_tensor;
+  if (parallel_id.has_value()) {
+    const auto& cur_rank_phy_tensor_meta =
+        std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
+    auto cur_rank_phy_tensor_impl =
+        std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
+    const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(device));
+    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
+    cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
+  } else {
+    const auto& dtype_symbol = JUST(DType::Get(dtype));
+    const auto& empty = JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device));
+    cur_rank_phy_tensor = JUST(empty->AsMirroredTensor());
+    cur_rank_phy_tensor->set_requires_grad(requires_grad);
+    cur_rank_phy_tensor->set_is_leaf(is_leaf);
+  }
   auto* tensor_impl =
       new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
                                     cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);
