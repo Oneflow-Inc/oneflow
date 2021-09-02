@@ -143,7 +143,7 @@ class RNN(Module):
         if self.nonlinearity == 'tanh':
             self.act = nn.Tanh()
         elif self.nonlinearity == 'relu':
-            self.act = nn.LeakyReLU()
+            self.act = nn.ReLU()
         else:
             raise ValueError("Unknown nonlinearity '{}'".format(self.nonlinearity))
 
@@ -177,9 +177,9 @@ class RNN(Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        for param in self.parameters():
-            if param.dim() > 1:
-                nn.init.xavier_uniform_(param)
+        stdv = 1.0 / sqrt(self.hidden_size)
+        for weight in self.parameters():
+            weight.uniform_(-stdv, stdv)
     
     def permute_tensor(self, input):
         return input.permute(1,0,2)
