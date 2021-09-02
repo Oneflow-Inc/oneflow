@@ -238,6 +238,7 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
   auto CanFuse = [&](const RequestDesc* lhs, const RequestDesc* rhs) -> bool {
     const bool enable_mixed_fusion = (!collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer())
                                      && collective_boxing_conf_.nccl_enable_mixed_fusion();
+    // Workaround for https://github.com/NVIDIA/nccl/issues/560
     if (nccl_version == 21003) { return false; }
     if (lhs->device_set() != rhs->device_set()) { return false; }
     if (!IsOpFusionEnabled(lhs) || !IsOpFusionEnabled(rhs)) { return false; }
