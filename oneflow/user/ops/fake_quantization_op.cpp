@@ -32,29 +32,30 @@ REGISTER_USER_OP("fake_quantization")
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
     .Attr<std::string>("quantization_scheme", "symmetric")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      const Shape* scale_shape = ctx->Shape4ArgNameAndIndex("scale", 0);
-      const Shape* zero_point_shape = ctx->Shape4ArgNameAndIndex("zero_point", 0);
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      const Shape& scale_shape = ctx->InputShape("scale", 0);
+      const Shape& zero_point_shape = ctx->InputShape("zero_point", 0);
 
       // NOTE(Liang Depeng): scale_shape->elem_cnt() > 1 means per-channel quantization for
       // convolution weights.
-      if (scale_shape->elem_cnt() > 1) {
-        CHECK_EQ_OR_RETURN(scale_shape->elem_cnt(), in_shape->At(0));
-        CHECK_EQ_OR_RETURN(zero_point_shape->elem_cnt(), in_shape->At(0));
+      if (scale_shape.elem_cnt() > 1) {
+        CHECK_EQ_OR_RETURN(scale_shape.elem_cnt(), in_shape.At(0));
+        CHECK_EQ_OR_RETURN(zero_point_shape.elem_cnt(), in_shape.At(0));
       }
 
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *in_shape;
+      *ctx->OutputShape("out", 0) = in_shape;
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* scale = GetInputArgModifierFn("scale", 0);
-      CHECK(scale != nullptr);
+      CHECK_OR_RETURN(scale != nullptr);
       scale->set_requires_grad(false);
 
       user_op::InputArgModifier* zero_point = GetInputArgModifierFn("zero_point", 0);
-      CHECK(zero_point != nullptr);
+      CHECK_OR_RETURN(zero_point != nullptr);
       zero_point->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -108,12 +109,13 @@ REGISTER_USER_OP("fake_quantization")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("fake_quantization")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper identity_op =
@@ -124,6 +126,7 @@ REGISTER_USER_OP_GRAD("fake_quantization")
         op.BindGradTensorWithOpInput(identity_op.output("out", 0), "in", 0);
         AddOp(identity_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace

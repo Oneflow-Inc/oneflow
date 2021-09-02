@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include <unordered_map>
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/rpc/include/base.h"
@@ -49,7 +50,6 @@ class LocalCtrlClient : public CtrlClient {
   void PullKV(const std::string& k, std::string* v) override;
   void PullKV(const std::string& k, PbMessage* msg) override;
   void PullMasterKV(const std::string& k, PbMessage* msg) override;
-  void PushActEvent(const ActEvent&) override {}
   void Clear() override;
   int32_t IncreaseCount(const std::string& k, int32_t v) override;
   void EraseCount(const std::string& k) override;
@@ -63,6 +63,8 @@ class LocalCtrlClient : public CtrlClient {
   std::condition_variable kv_cv_;
   HashMap<std::string, int32_t> counter_;
   std::mutex counter_mtx_;
+  HashMap<std::string, std::shared_ptr<BlockingCounter>> barrier_counter_;
+  std::mutex barrier_counter_mtx_;
 };
 
 class LocalRpcManager : public RpcManager {

@@ -20,12 +20,13 @@ limitations under the License.
 
 namespace oneflow {
 
-void InputOp::InitFromOpConf() {
+Maybe<void> InputOp::InitFromOpConf() {
   CHECK(op_conf().has_input_conf());
   if (op_conf().input_conf().has_tick()) { EnrollInputBn("tick", false); }
   OutputBlobModifier* modifier = EnrollOutputBn("out", false);
   modifier->set_is_mutable(true);
   modifier->set_header_infered_before_compute(false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InputOp::InferLogicalOutBlobDescs(
@@ -47,8 +48,8 @@ Maybe<void> InputOp::InferOutBlobDescs(
 }
 
 Maybe<void> InputOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   JUST(InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
@@ -56,31 +57,26 @@ Maybe<void> InputOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> InputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
   JUST(InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
                                                    output_bns(),
                                                    sbp_sig_list->mutable_sbp_signature()->Add()));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InputOp::InferParallelDistributionSignature(
-    ParallelDistributionSignature* parallel_distribution_signature,
-    const ParallelDistributionSignature& parallel_distribution_constraints,
+Maybe<void> InputOp::InferNdSbpSignature(
+    cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
-    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-        ParallelDistributionInferHint4Ibn) const {
+    std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const InterfaceBlobConf& blob_conf = op_conf().input_conf().blob_conf();
-  ParallelDistribution& tick_parallel_distribution =
-      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["tick"];
-  tick_parallel_distribution.clear_sbp_parallel();
+  cfg::NdSbp& tick_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["tick"];
+  tick_nd_sbp.clear_sbp_parallel();
   FOR_RANGE(int64_t, i, 0, parallel_hierarchy->NumAxes()) {
-    tick_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
+    tick_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
   }
-  ParallelDistribution& out_parallel_distribution =
-      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
-  JUST(InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
-                                                              &out_parallel_distribution));
+  cfg::NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));
   return Maybe<void>::Ok();
 }
 

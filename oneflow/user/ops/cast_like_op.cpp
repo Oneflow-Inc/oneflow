@@ -17,20 +17,21 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("cast_like")
+REGISTER_NO_GRAD_USER_OP("cast_like")
     .Input("in")
     .Input("dtype_like")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* dtype_like_modifier = GetInputArgModifierFn("dtype_like", 0);
-      CHECK_NOTNULL(dtype_like_modifier);
+      CHECK_NOTNULL_OR_RETURN(dtype_like_modifier);
       dtype_like_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
@@ -59,10 +60,9 @@ REGISTER_USER_OP("cast_like")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* dtype_like_tensor_desc =
-          ctx->TensorDesc4ArgNameAndIndex("dtype_like", 0);
-      user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc->data_type();
+      const user_op::TensorDesc& dtype_like_tensor_desc = ctx->InputTensorDesc("dtype_like", 0);
+      user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
+      *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc.data_type();
       return Maybe<void>::Ok();
     });
 

@@ -33,7 +33,25 @@ void LocalCtrlClient::Barrier(const std::string& barrier_name) {
 }
 
 void LocalCtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
-  CHECK(barrier_num == 1);
+  std::shared_ptr<BlockingCounter> counter;
+  bool is_first = false;
+  {
+    std::unique_lock<std::mutex> lck(barrier_counter_mtx_);
+    auto it = barrier_counter_.find(barrier_name);
+    if (it == barrier_counter_.end()) {
+      is_first = true;
+      counter = std::make_shared<BlockingCounter>(barrier_num);
+      CHECK(barrier_counter_.emplace(barrier_name, counter).second);
+    } else {
+      counter = it->second;
+    }
+  }
+  counter->Decrease();
+  counter->WaitUntilCntEqualZero();
+  if (is_first) {
+    std::unique_lock<std::mutex> lck(barrier_counter_mtx_);
+    CHECK_EQ(barrier_counter_.erase(barrier_name), 1);
+  }
 }
 
 TryLockResult LocalCtrlClient::TryLock(const std::string& name) {
@@ -193,7 +211,6 @@ class DryRunCtrlClient : public CtrlClient {
   void PullMasterKV(const std::string& k, PbMessage* msg) override {
     local_ctrl_client_->PullMasterKV(k, msg);
   }
-  void PushActEvent(const ActEvent& ev) override { local_ctrl_client_->PushActEvent(ev); }
   void Clear() override { local_ctrl_client_->Clear(); }
   int32_t IncreaseCount(const std::string& k, int32_t v) override {
     return local_ctrl_client_->IncreaseCount(k, v);

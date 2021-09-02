@@ -68,17 +68,17 @@ bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shap
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const auto& broadcast_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
   CHECK_OR_RETURN(!broadcast_axes.empty());
-  const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-  const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-  Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+  const Shape& in_shape = ctx->InputShape("x", 0);
+  const Shape& like_shape = ctx->InputShape("like", 0);
+  Shape* out_shape = ctx->OutputShape("y", 0);
   const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
-  CHECK_OR_RETURN(IsAxesLegal(axis_vec, *like_shape, *in_shape));
-  *out_shape = *like_shape;
+  CHECK_OR_RETURN(IsAxesLegal(axis_vec, like_shape, in_shape));
+  *out_shape = like_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("like", 0);
   return Maybe<void>::Ok();
 }
 
@@ -91,16 +91,17 @@ REGISTER_USER_OP("broadcast_like")
     .Output("y")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_modifier != nullptr);
+      CHECK_OR_RETURN(like_modifier != nullptr);
       like_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbpSignatures)
     .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("broadcast_like")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
       ctx->DefineOp(x_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("reduce_sum_like")
@@ -115,6 +116,7 @@ REGISTER_USER_OP_GRAD("broadcast_like")
                                 [&ctx, &x_grad_op_name]() -> const std::string& {
                                   return ctx->GetOp(x_grad_op_name).output("y", 0);
                                 });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

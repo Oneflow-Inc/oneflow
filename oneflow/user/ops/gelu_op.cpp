@@ -21,9 +21,9 @@ REGISTER_USER_OP("gelu")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
+      *out_shape = in_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -37,7 +37,7 @@ REGISTER_USER_OP("gelu")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -46,11 +46,11 @@ REGISTER_USER_OP("gelu_grad")
     .Input("dy")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_shape == *x_shape);
-      *dx_shape = *dy_shape;
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
+      CHECK_OR_RETURN(dy_shape == x_shape);
+      *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -70,13 +70,13 @@ REGISTER_USER_OP("gelu_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("x", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("gelu").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) {
+                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op("gelu_grad")
@@ -87,6 +87,7 @@ REGISTER_USER_OP_GRAD("gelu").SetGenBackwardOpConfFn([](const user_op::UserOpWra
     op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

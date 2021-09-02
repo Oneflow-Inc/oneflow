@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 #define ONEFLOW_CORE_FRAMEWORK_USER_OP_KERNEL_REGISTRY_H_
 
-#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/job/placement.pb.h"
@@ -93,10 +93,9 @@ class OpKernelRegistry final {
   OpKernelRegistry& SetInferTmpSizeFn(InferTmpSizeFn fn);
   OpKernelRegistry& SetInplaceProposalFn(InplaceProposalFn fn);
 
-  OpKernelRegistry& Finish();
+  Maybe<OpKernelRegistry&> Finish();
   OpKernelRegistryResult GetResult() { return result_; }
 
- private:
   OpKernelRegistry& SetCreateFn(OpKernelCreateFn fn);
 
  private:

@@ -197,6 +197,7 @@ int64_t EagerBlobTrait::split_axis() const {
     return INVALID_SPLIT_AXIS;
   } else {
     UNIMPLEMENTED();
+    return 0;
   }
 }
 

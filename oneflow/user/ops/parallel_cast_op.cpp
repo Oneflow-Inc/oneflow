@@ -24,8 +24,8 @@ REGISTER_USER_OP("parallel_cast")
     .Attr<std::string>("sbp_parallel", "")
     .Attr<std::string>("grad_sbp_parallel", "")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetSbpSignatureInferFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
@@ -38,7 +38,7 @@ REGISTER_USER_OP("parallel_cast")
         (*bn2sbp)[ibn] = sbp_parallel;
         (*bn2sbp)[obn] = sbp_parallel;
       } else {
-        SbpParallel sbp_parallel;
+        cfg::SbpParallel sbp_parallel;
         CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
             << "invalid sbp_parallel: " << sbp_parallel_str;
         if (sbp_parallel.has_split_parallel()) {
@@ -54,19 +54,20 @@ REGISTER_USER_OP("parallel_cast")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP_GRAD("parallel_cast")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       if (ctx->FwOp().NeedGenGradTensor4OpInput("in", 0)) {
         const auto& grad_sbp_parallel_str = ctx->FwOp().attr<std::string>("grad_sbp_parallel");
         if (grad_sbp_parallel_str.empty()) {
           ctx->FwOp().BindGradTensorWithOpInput(ctx->FwOp().GetGradTensorWithOpOutput("out", 0),
                                                 "in", 0);
         } else {
-          CHECK(IsValidSbpParallelString(grad_sbp_parallel_str));
+          CHECK_OR_RETURN(IsValidSbpParallelString(grad_sbp_parallel_str));
           const std::string grad_op_name = "System-AutoGrad-" + ctx->FwOp().op_name();
           ctx->DefineOp(grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
             return builder.OpTypeName("parallel_cast")
@@ -80,6 +81,7 @@ REGISTER_USER_OP_GRAD("parallel_cast")
           });
         }
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

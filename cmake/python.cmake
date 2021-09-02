@@ -1,3 +1,16 @@
+if (NOT DEFINED Python3_EXECUTABLE)
+  execute_process(
+    COMMAND which python3
+    RESULT_VARIABLE STATUS
+    OUTPUT_VARIABLE OUTPUT
+    ERROR_QUIET
+  )
+  if(STATUS EQUAL 0)
+    string(STRIP ${OUTPUT} STRIPPED)
+    message(STATUS "Using Python3 from 'which python3': ${STRIPPED}")
+    set(Python3_EXECUTABLE ${STRIPPED})
+  endif()
+endif()
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 message(STATUS "Python3 specified. Version found: " ${Python3_VERSION})
 set(Python_EXECUTABLE ${Python3_EXECUTABLE})
@@ -6,10 +19,22 @@ message(STATUS "Using Python executable: " ${Python_EXECUTABLE})
 message(STATUS "Installing necessary Python packages...")
 set(requirements_txt ${PROJECT_SOURCE_DIR}/dev-requirements.txt)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${requirements_txt})
-execute_process(
-  COMMAND ${Python_EXECUTABLE} -m pip install -r ${requirements_txt} --user
-)
-message(STATUS "Python packages are installed.")
+message(STATUS "PIP_INDEX_MIRROR: ${PIP_INDEX_MIRROR}")
+if(PIP_INDEX_MIRROR)
+  set(extra_index_arg "-i")
+endif()
+
+function(install_py_dev_deps)
+  execute_process(
+    COMMAND ${ARGV0} -m pip install ${extra_index_arg} ${PIP_INDEX_MIRROR} -r ${requirements_txt} --user
+    RESULT_VARIABLE PIP_INSTALL_STATUS
+  )
+  if(NOT PIP_INSTALL_STATUS EQUAL 0)
+    message(FATAL_ERROR "fail to install pip packages")
+  endif()
+  message(STATUS "Python packages are installed.")
+endfunction(install_py_dev_deps)
+install_py_dev_deps(${Python_EXECUTABLE})
 
 find_package(Python3 COMPONENTS Development NumPy)
 if (Python3_Development_FOUND AND Python3_INCLUDE_DIRS)
@@ -55,3 +80,8 @@ message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 # PYTHON_EXECUTABLE will be used by pybind11
 set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 include(pybind11)
+
+set(CODEGEN_PYTHON_EXECUTABLE ${Python_EXECUTABLE} CACHE STRING "Python executable to generate .cpp/.h files")
+if(NOT "${CODEGEN_PYTHON_EXECUTABLE}" STREQUAL "${Python_EXECUTABLE}")
+  install_py_dev_deps(${CODEGEN_PYTHON_EXECUTABLE})
+endif()

@@ -59,6 +59,7 @@ class ConcatKernel final : public user_op::OpKernel {
     for (const auto& in_arg_pair : ctx->inputs()) {
       const user_op::Tensor* in_tensor =
           ctx->Tensor4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
+      if (in_tensor->shape().elem_cnt() == 0) { continue; }
       const int64_t in_cols = in_tensor->shape().Count(axis);
       CHECK_EQ(in_tensor->shape().elem_cnt(), rows * in_cols);
       if (in_cols > 0) {

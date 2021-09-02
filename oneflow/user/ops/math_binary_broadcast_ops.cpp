@@ -25,33 +25,45 @@ bool IsScalarTensor(const user_op::TensorDesc* tensor) {
   return tensor->shape().NumAxes() == 1 && tensor->shape().At(0) == 1;
 }
 
-Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  user_op::TensorDesc* tensor_z = ctx->TensorDesc4ArgNameAndIndex("z", 0);
+bool IsZeroDimTensor(const user_op::TensorDesc* tensor) {
+  return tensor->shape().NumAxes() == 0 && tensor->shape().elem_cnt() == 1;
+}
 
-  size_t output_num_axes = std::max(tensor_x->shape().NumAxes(), tensor_y->shape().NumAxes());
-  if (IsScalarTensor(tensor_x)) {
-    *ctx->Shape4ArgNameAndIndex("z", 0) = *ctx->Shape4ArgNameAndIndex("y", 0);
-    *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("y", 0);
-  } else if (IsScalarTensor(tensor_y)) {
-    *ctx->Shape4ArgNameAndIndex("z", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
-    *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
+  user_op::TensorDesc* tensor_z = ctx->OutputTensorDesc("z", 0);
+
+  size_t output_num_axes = std::max(tensor_x.shape().NumAxes(), tensor_y.shape().NumAxes());
+  if (IsZeroDimTensor(&tensor_x)) {
+    *ctx->OutputShape("z", 0) = ctx->InputShape("y", 0);
+    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
+  } else if (IsZeroDimTensor(&tensor_y)) {
+    *ctx->OutputShape("z", 0) = ctx->InputShape("x", 0);
+    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
+  } else if (IsScalarTensor(&tensor_x)) {
+    *ctx->OutputShape("z", 0) = ctx->InputShape("y", 0);
+    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
+  } else if (IsScalarTensor(&tensor_y)) {
+    *ctx->OutputShape("z", 0) = ctx->InputShape("x", 0);
+    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
   } else {
-    const auto& x_shape = CreateLeftExtendedShape(ShapeView(tensor_x->shape()), output_num_axes);
-    const auto& y_shape = CreateLeftExtendedShape(ShapeView(tensor_y->shape()), output_num_axes);
-    *ctx->Shape4ArgNameAndIndex("z", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
-    *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+    const auto& x_shape = CreateLeftExtendedShape(ShapeView(tensor_x.shape()), output_num_axes);
+    const auto& y_shape = CreateLeftExtendedShape(ShapeView(tensor_y.shape()), output_num_axes);
+    *ctx->OutputShape("z", 0) = ctx->InputShape("x", 0);
+    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
     Shape out_shape(x_shape);
     FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
       CHECK_OR_RETURN(x_shape.At(i) == 1 || y_shape.At(i) == 1 || x_shape.At(i) == y_shape.At(i))
           << "op: " << ctx->op_name() << ", type: " << ctx->op_type_name() << ", i: " << i
           << ", x_shape: " << x_shape << ", y_shape: " << y_shape;
-      out_shape.Set(i, std::max(x_shape.At(i), y_shape.At(i)));
+      out_shape.Set(i, (x_shape.At(i) == 0 || y_shape.At(i) == 0)
+                           ? 0
+                           : std::max(x_shape.At(i), y_shape.At(i)));
     }
     *tensor_z->mut_shape() = out_shape;
   }
-  tensor_z->set_is_dynamic(tensor_x->is_dynamic() || tensor_y->is_dynamic());
+  tensor_z->set_is_dynamic(tensor_x.is_dynamic() || tensor_y.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -60,18 +72,18 @@ Maybe<void> InferTensorDescBinaryBroadcastLogical(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x->data_type(), tensor_y->data_type());
-  *ctx->Dtype4ArgNameAndIndex("z", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());
+  *ctx->OutputDType("z", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataTypeBinaryBroadcastLogical(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x->data_type(), tensor_y->data_type());
-  *ctx->Dtype4ArgNameAndIndex("z", 0) = DataType::kInt8;
+  const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());
+  *ctx->OutputDType("z", 0) = DataType::kInt8;
   return Maybe<void>::Ok();
 }
 
@@ -181,20 +193,23 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_BINARY_BROADCAST_USER_OP(op_name, sbp_suffix, tensor_suffix) \
-  REGISTER_USER_OP(op_name)                                                   \
-      .Input("x")                                                             \
-      .Input("y")                                                             \
-      .Output("z")                                                            \
-      .SetTensorDescInferFn(InferTensorDescBinaryBroadcast##tensor_suffix)    \
-      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>)    \
-      .SetDataTypeInferFn(InferDataTypeBinaryBroadcast##tensor_suffix);
+#define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix)      \
+  REGISTER_USER_OP(op_name)                                            \
+      .Input("x")                                                      \
+      .Input("y")                                                      \
+      .Output("z")                                                     \
+      .SetTensorDescInferFn(InferTensorDescBinaryBroadcastNormal)      \
+      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>) \
+      .SetDataTypeInferFn(InferDataTypeBinaryBroadcastNormal);
 
-#define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix) \
-  REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Normal)
-
-#define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix) \
-  REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Logical)
+#define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix)     \
+  REGISTER_NO_GRAD_USER_OP(op_name)                                    \
+      .Input("x")                                                      \
+      .Input("y")                                                      \
+      .Output("z")                                                     \
+      .SetTensorDescInferFn(InferTensorDescBinaryBroadcastLogical)     \
+      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>) \
+      .SetDataTypeInferFn(InferDataTypeBinaryBroadcastLogical);
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_NORMAL_USER_OP, MATH_BINARY_BROADCAST_FUNC_SEQ)
 OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP,

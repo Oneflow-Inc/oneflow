@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/sparse_cross_entropy_kernel_util.h"
 #include "oneflow/core/cuda/softmax.cuh"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 namespace user_op {
@@ -24,30 +25,33 @@ namespace {
 
 template<typename T>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const T* in, T* prob) {
-  cuda::softmax::DirectFetch<T> fetch(in, col);
-  cuda::softmax::DirectStore<T> store(prob, col);
-  cuda::softmax::DispatchSoftmax<decltype(fetch), decltype(store), T>(ctx->cuda_stream(), fetch,
-                                                                      store, row, col);
+  using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
+  cuda::softmax::DirectLoad<T, ComputeType> load(in, col);
+  cuda::softmax::DirectStore<ComputeType, T> store(prob, col);
+  cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+      ctx->cuda_stream(), load, store, row, col);
 }
 
 template<>
 void ComputeProb(DeviceCtx* ctx, const int64_t row, const int64_t col, const float16* in,
                  float16* prob) {
-  cuda::softmax::DirectFetch<half> fetch(reinterpret_cast<const half*>(in), col);
-  cuda::softmax::DirectStore<half> store(reinterpret_cast<half*>(prob), col);
-  cuda::softmax::DispatchSoftmax<decltype(fetch), decltype(store), half>(ctx->cuda_stream(), fetch,
+  cuda::softmax::DirectLoad<half, float> load(reinterpret_cast<const half*>(in), col);
+  cuda::softmax::DirectStore<float, half> store(reinterpret_cast<half*>(prob), col);
+  cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), float>(ctx->cuda_stream(), load,
                                                                          store, row, col);
 }
 
 }  // namespace
 
 template<typename T, typename K>
-class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel {
+class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
+                                              public user_op::CudaGraphSupport {
  public:
   SparseSoftmaxCrossEntropyKernel() = default;
   ~SparseSoftmaxCrossEntropyKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);

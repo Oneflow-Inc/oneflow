@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/memory/memory_zone.h"
 
 namespace std {
 
@@ -66,7 +67,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
-  int64_t GlobalWorkStreamId() const;
   int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
 
   // Setters
@@ -85,7 +85,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
       const std::function<void(const std::string&, const RegstDesc*)>& Handler) const;
   void Build();
 
-  void EraseZeroSizeProducedBlob();
+  void EraseUninitializedShapeProducedBlob();
   void EraseZeroSizeConsumedRegst();
   void EraseZeroSizeProducedRegst();
   void UnbindBnWithEmptyRegst();
@@ -97,7 +97,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ToProto(TaskProto*) const;
   virtual bool IsIndependent() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
-  virtual int64_t MemZoneId121() const;
+  virtual MemZoneId MemZoneId121() const;
   bool BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);

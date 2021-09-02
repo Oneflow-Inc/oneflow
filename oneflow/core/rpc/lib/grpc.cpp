@@ -15,11 +15,10 @@ limitations under the License.
 */
 #ifdef RPC_BACKEND_GRPC
 
-#include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/rpc/include/grpc.h"
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/job/env_desc.h"
-#include "oneflow/core/rpc/include/grpc.h"
 
 namespace oneflow {
 
@@ -41,7 +40,8 @@ Maybe<void> GrpcRpcManager::Bootstrap() {
   } else {
     ctrl_bootstrap.reset(new HostListCtrlBootstrap(env_desc));
   }
-  ctrl_bootstrap->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get());
+  JUST(
+      ctrl_bootstrap->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   return Maybe<void>::Ok();
 }
 
@@ -57,6 +57,10 @@ Maybe<void> GrpcRpcManager::CreateClient() {
 }
 
 GrpcRpcManager::~GrpcRpcManager() {
+  auto* grpc_client = dynamic_cast<GrpcCtrlClient*>(Global<CtrlClient>::Get());
+  CHECK_NOTNULL(grpc_client);
+  grpc_client->StopHeartbeat();
+  OF_ENV_BARRIER();
   Global<CtrlClient>::Delete();
   CHECK_NOTNULL(Global<CtrlServer>::Get());
   Global<CtrlServer>::Delete();
@@ -64,4 +68,4 @@ GrpcRpcManager::~GrpcRpcManager() {
 
 }  // namespace oneflow
 
-#endif  // RPC_BACKEND_GPRC
+#endif  // RPC_BACKEND_GRPC

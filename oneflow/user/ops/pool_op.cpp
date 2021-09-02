@@ -21,12 +21,12 @@ namespace oneflow {
 namespace {
 
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
-typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
+typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
 
 TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
-    const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+    const Shape& x_shape = ctx->InputShape("x", 0);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
@@ -40,28 +40,28 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
     CHECK_EQ_OR_RETURN(strides.size(), dim);
     for (int32_t stride_dim : strides) { CHECK_GT_OR_RETURN(stride_dim, 0); }
 
-    const Params3D params_3d(dim, *x_shape, data_format, padding, padding_before, padding_after,
+    const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                              pool_size, strides, ceil_mode);
-    user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+    user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
-    *y_desc->mut_is_dynamic() = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+    *y_desc->mut_is_dynamic() = ctx->InputIsDynamic("x", 0);
     return Maybe<void>::Ok();
   };
 }
 
 Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
-  *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
+  *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -87,7 +87,7 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 }
 
 GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32_t dim) {
-  return [mode, dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+  return [mode, dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       user_op::UserOpConfWrapper grad_op =
@@ -107,6 +107,7 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
       op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
       AddOp(grad_op);
     }
+    return Maybe<void>::Ok();
   };
 }
 

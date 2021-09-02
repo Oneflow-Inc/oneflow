@@ -19,16 +19,20 @@ limitations under the License.
 #include "oneflow/api/python/framework/framework.h"
 #include "oneflow/core/serving/saved_model.cfg.h"
 
-inline void RegisterForeignCallbackOnlyOnce(
+inline void RegisterGlobalForeignCallback(
     const std::shared_ptr<oneflow::ForeignCallback>& callback) {
-  return oneflow::RegisterForeignCallbackOnlyOnce(callback).GetOrThrow();
+  return oneflow::RegisterGlobalForeignCallback(callback).GetOrThrow();
 }
 
-inline void RegisterWatcherOnlyOnce(const std::shared_ptr<oneflow::ForeignWatcher>& watcher) {
-  return oneflow::RegisterWatcherOnlyOnce(watcher).GetOrThrow();
+inline void DestroyGlobalForeignCallback() {
+  return oneflow::DestroyGlobalForeignCallback().GetOrThrow();
 }
 
-inline void LaunchJob(const std::shared_ptr<oneflow::ForeignJobInstance>& cb) {
+inline void RegisterGlobalWatcher(const std::shared_ptr<oneflow::ForeignWatcher>& watcher) {
+  return oneflow::RegisterGlobalWatcher(watcher).GetOrThrow();
+}
+
+inline void LaunchJob(const std::shared_ptr<oneflow::JobInstance>& cb) {
   return oneflow::LaunchJob(cb).GetOrThrow();
 }
 

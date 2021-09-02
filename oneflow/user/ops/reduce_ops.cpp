@@ -20,13 +20,13 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
-  const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
+  const Shape& input_shape = ctx->InputShape("input_tensor", 0);
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
   CHECK_OR_RETURN(!reduce_axes.empty());
   const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
-  const Shape& reduce_shape = CreateReducedShape(*input_shape, reduce_axes_vec);
+  const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
   const bool keepdims = ctx->Attr<bool>("keepdims");
-  Shape* output_shape = ctx->Shape4ArgNameAndIndex("output_tensor", 0);
+  Shape* output_shape = ctx->OutputShape("output_tensor", 0);
   if (keepdims) {
     *output_shape = reduce_shape;
   } else {
@@ -36,7 +36,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("output_tensor", 0) = *ctx->Dtype4ArgNameAndIndex("input_tensor", 0);
+  *ctx->OutputDType("output_tensor", 0) = ctx->InputDType("input_tensor", 0);
   return Maybe<void>::Ok();
 }
 
@@ -72,6 +72,9 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
           .Build();
     }
   }
+  if (num_axes == 0) {
+    ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  }
   return Maybe<void>::Ok();
 }
 
@@ -93,7 +96,8 @@ REGISTER_REDUCE_USER_OP("reduce_sum", BinaryFuncSum)
 REGISTER_REDUCE_USER_OP("reduce_max", BinaryFuncMax)
 
 REGISTER_USER_OP_GRAD("reduce_sum")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("input_tensor", 0)) {
         const auto& axes = op.attr<std::vector<int32_t>>("axis");
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
@@ -107,9 +111,11 @@ REGISTER_USER_OP_GRAD("reduce_sum")
         op.BindGradTensorWithOpInput(reduce_sum_grad_op.output("y", 0), "input_tensor", 0);
         AddOp(reduce_sum_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
-void GenerateBackwardOpConf4ReduceMaxMin(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+Maybe<void> GenerateBackwardOpConf4ReduceMaxMin(const user_op::UserOpWrapper& op,
+                                                user_op::AddOpFn AddOp) {
   if (op.NeedGenGradTensor4OpInput("input_tensor", 0)) {
     const auto& axes = op.attr<std::vector<int32_t>>("axis");
 
@@ -179,6 +185,7 @@ void GenerateBackwardOpConf4ReduceMaxMin(const user_op::UserOpWrapper& op, user_
     AddOp(multiply_mask_op);
     op.BindGradTensorWithOpInput(multiply_mask_op.output("out", 0), "input_tensor", 0);
   }
+  return Maybe<void>::Ok();
 }
 
 REGISTER_USER_OP_GRAD("reduce_max").SetGenBackwardOpConfFn(GenerateBackwardOpConf4ReduceMaxMin);

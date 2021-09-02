@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("image_target_resize")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_target_resize")
     .Input("in")
     .Output("out")
     .Output("size")
@@ -43,14 +43,14 @@ REGISTER_CPU_ONLY_USER_OP("image_target_resize")
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(in_desc->shape().NumAxes() == 1 && in_desc->shape().At(0) >= 1);
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc->mut_shape() = in_desc->shape();
-      user_op::TensorDesc* size_desc = ctx->TensorDesc4ArgNameAndIndex("size", 0);
-      *size_desc->mut_shape() = Shape({in_desc->shape().elem_cnt(), 2});
-      user_op::TensorDesc* scale_desc = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
-      *scale_desc->mut_shape() = Shape({in_desc->shape().elem_cnt(), 2});
+      const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
+      CHECK_OR_RETURN(in_desc.shape().NumAxes() == 1 && in_desc.shape().At(0) >= 1);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+      *out_desc->mut_shape() = in_desc.shape();
+      user_op::TensorDesc* size_desc = ctx->OutputTensorDesc("size", 0);
+      *size_desc->mut_shape() = Shape({in_desc.shape().elem_cnt(), 2});
+      user_op::TensorDesc* scale_desc = ctx->OutputTensorDesc("scale", 0);
+      *scale_desc->mut_shape() = Shape({in_desc.shape().elem_cnt(), 2});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -58,13 +58,13 @@ REGISTER_CPU_ONLY_USER_OP("image_target_resize")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(in_desc->data_type() == DataType::kTensorBuffer);
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
+      CHECK_OR_RETURN(in_desc.data_type() == DataType::kTensorBuffer);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* size_desc = ctx->TensorDesc4ArgNameAndIndex("size", 0);
+      user_op::TensorDesc* size_desc = ctx->OutputTensorDesc("size", 0);
       *size_desc->mut_data_type() = DataType::kInt32;
-      user_op::TensorDesc* scale_desc = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
+      user_op::TensorDesc* scale_desc = ctx->OutputTensorDesc("scale", 0);
       *scale_desc->mut_data_type() = DataType::kFloat;
       return Maybe<void>::Ok();
     });

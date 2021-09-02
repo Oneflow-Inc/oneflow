@@ -21,7 +21,7 @@ namespace oneflow {
 namespace vm {
 
 void CpuAllocator::Allocate(char** mem_ptr, std::size_t size) {
-  *mem_ptr = reinterpret_cast<char*>(std::malloc(size));
+  *mem_ptr = reinterpret_cast<char*>(aligned_alloc(kHostAlignSize, size));
 }
 
 void CpuAllocator::Deallocate(char* mem_ptr, std::size_t size) { std::free(mem_ptr); }

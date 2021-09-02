@@ -17,45 +17,51 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_SBP_PARALLEL_H_
 
 #include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_infer_hint.h"
 
 namespace oneflow {
 
-bool operator==(const SbpParallel& lhs, const SbpParallel& rhs);
-bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs);
-bool operator==(const SbpSignature& lhs, const SbpSignature& rhs);
-bool operator!=(const SbpSignature& lhs, const SbpSignature& rhs);
+Maybe<Symbol<cfg::SbpParallel>> MakeSplitSbpParallel(int axis);
+Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel();
+Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel();
 
-bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs);
-bool operator!=(const ParallelDistribution& lhs, const ParallelDistribution& rhs);
-bool operator==(const ParallelDistributionSignature& lhs, const ParallelDistributionSignature& rhs);
-bool operator!=(const ParallelDistributionSignature& lhs, const ParallelDistributionSignature& rhs);
+inline bool operator!=(const cfg::SbpParallel& lhs, const cfg::SbpParallel& rhs) {
+  return !(lhs == rhs);
+}
 
-SbpParallel GetDualSbpParallel(const SbpParallel&);
+inline bool operator!=(const cfg::SbpSignature& lhs, const cfg::SbpSignature& rhs) {
+  return !(lhs == rhs);
+}
 
-bool IsSbpSignatureContaining(const SbpSignature& bigger, const SbpSignature& smaller);
+inline bool operator!=(const cfg::NdSbp& lhs, const cfg::NdSbp& rhs) { return !(lhs == rhs); }
 
-void FilterSbpSignatureList(const SbpSignatureList& sbp_sig_list, const SbpSignature& sbp_sig_conf,
-                            SbpSignatureList* filtered_sbp_sig_list);
+cfg::SbpParallel GetDualSbpParallel(const cfg::SbpParallel&);
+
+bool IsSbpSignatureContaining(const cfg::SbpSignature& bigger, const cfg::SbpSignature& smaller);
+
+void FilterSbpSignatureList(const cfg::SbpSignatureList& sbp_sig_list,
+                            const cfg::SbpSignature& sbp_sig_conf,
+                            cfg::SbpSignatureList* filtered_sbp_sig_list);
 
 void SortSbpSignatureListByCopyCost(
-    const SbpSignatureList& sbp_sig_list, const PbRpf<std::string>& ibns,
+    const cfg::SbpSignatureList& sbp_sig_list, const PbRpf<std::string>& ibns,
     const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
-    const std::function<int32_t(const SbpSignature&)>& OrderValue4SbpSig,
-    std::vector<const SbpSignature*>* sorted_sbp_signatures);
+    const std::function<int32_t(const cfg::SbpSignature&)>& OrderValue4SbpSig,
+    std::vector<const cfg::SbpSignature*>* sorted_sbp_signatures);
 
 bool IsValidSbpParallelString(const std::string& sbp_str);
-bool ParseSbpParallelFromString(const std::string& sbp_str, SbpParallel* sbp_parallel);
-std::string SbpParallelToString(const SbpParallel& sbp_parallel);
+bool ParseSbpParallelFromString(const std::string& sbp_str, cfg::SbpParallel* sbp_parallel);
+std::string SbpParallelToString(const cfg::SbpParallel& sbp_parallel);
 
-void SbpSignatureToParallelDistributionSignature(
-    const SbpSignature& sbp_signature,
-    ParallelDistributionSignature* parallel_distribution_signature);
-void ParallelDistributionSignatureToSbpSignature(
-    const ParallelDistributionSignature& parallel_distribution_signature,
-    SbpSignature* sbp_signature);
-void CheckSbpSignatureAndParallelDistributionEquals(
-    const SbpSignature& sbp_sig, const ParallelDistributionSignature& parallel_distribution_sig);
+void SbpSignatureToNdSbpSignature(const cfg::SbpSignature& sbp_signature,
+                                  cfg::NdSbpSignature* nd_sbp_signature);
+template<typename NdSbpSignatureT>
+void NdSbpSignatureToSbpSignature(const NdSbpSignatureT& nd_sbp_signature,
+                                  cfg::SbpSignature* sbp_signature);
+void CheckSbpSignatureAndNdSbpEquals(const cfg::SbpSignature& sbp_sig,
+                                     const cfg::NdSbpSignature& nd_sbp_sig);
+
 }  // namespace oneflow
 
 namespace std {

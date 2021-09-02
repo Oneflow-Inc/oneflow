@@ -44,15 +44,11 @@ namespace {
 struct GlobalProcessCtxScope {
   GlobalProcessCtxScope() {
     auto* ctx = Global<ProcessCtx>::New();
+    ctx->mutable_ctrl_addr()->Add();
     ctx->set_rank(0);
     ctx->set_node_size(1);
-    Global<NumProcessPerNode>::New();
-    Global<NumProcessPerNode>::Get()->set_value(1);
   }
-  ~GlobalProcessCtxScope() {
-    Global<NumProcessPerNode>::Delete();
-    Global<ProcessCtx>::Delete();
-  }
+  ~GlobalProcessCtxScope() { Global<ProcessCtx>::Delete(); }
 };
 
 TEST(SequentialInstruction, front_seq_compute) {
@@ -98,7 +94,7 @@ TEST(SequentialInstruction, front_seq_compute) {
     }
     bc.Decrease();
   });
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   bc.WaitUntilCntEqualZero();
   ASSERT_TRUE(is_666);
   ASSERT_TRUE(vm->Empty());

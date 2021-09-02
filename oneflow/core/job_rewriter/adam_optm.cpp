@@ -136,7 +136,8 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
     const bool has_state =
         CHECK_JUST(ctx->HasState<AdamBiasCorrectionLearningRateState>(job_pass_state_key));
     if (!has_state) {
-      ctx->ResetState(job_pass_state_key, std::make_unique<AdamBiasCorrectionLearningRateState>());
+      CHECK_JUST(ctx->ResetState(job_pass_state_key,
+                                 std::make_unique<AdamBiasCorrectionLearningRateState>()));
     }
     auto* state =
         CHECK_JUST(ctx->MutableState<AdamBiasCorrectionLearningRateState>(job_pass_state_key));

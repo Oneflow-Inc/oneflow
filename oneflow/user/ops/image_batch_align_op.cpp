@@ -27,12 +27,13 @@ bool PowerOfTwo(T x) {
 
 }  // namespace
 
-REGISTER_CPU_ONLY_USER_OP("image_batch_align")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_batch_align")
     .Input("in")
     .Output("out")
     .Attr<Shape>("shape")
     .Attr<DataType>("data_type")
     .Attr<int32_t>("alignment")
+    .Attr<bool>("dynamic_out")
     .SetCheckAttrFn([](const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       bool check_failed = false;
@@ -61,15 +62,16 @@ REGISTER_CPU_ONLY_USER_OP("image_batch_align")
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(in_desc->shape().NumAxes() == 1);
+      const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
+      CHECK_OR_RETURN(in_desc.shape().NumAxes() == 1);
       const Shape& shape_attr = ctx->Attr<Shape>("shape");
+      const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
       DimVector dim_vec(shape_attr.NumAxes() + 1);
-      dim_vec.at(0) = in_desc->shape().elem_cnt();
+      dim_vec.at(0) = in_desc.shape().elem_cnt();
       FOR_RANGE(int64_t, i, 0, shape_attr.NumAxes()) { dim_vec.at(i + 1) = shape_attr.At(i); }
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_shape() = Shape(dim_vec);
-      out_desc->set_is_dynamic(true);
+      out_desc->set_is_dynamic(dynamic_out);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -77,15 +79,16 @@ REGISTER_CPU_ONLY_USER_OP("image_batch_align")
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) {
+                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
-      CHECK(out_modifier != nullptr);
+      CHECK_OR_RETURN(out_modifier != nullptr);
       out_modifier->set_header_infered_before_compute(false);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(in_desc->data_type() == DataType::kTensorBuffer);
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
+      CHECK_OR_RETURN(in_desc.data_type() == DataType::kTensorBuffer);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_data_type() = ctx->Attr<DataType>("data_type");
       return Maybe<void>::Ok();
     });

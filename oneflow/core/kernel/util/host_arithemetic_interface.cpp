@@ -279,6 +279,7 @@ DIV_BY_SCALAR_PTR(int64_t);
 
 FILL(float);
 FILL(double);
+FILL(uint8_t);
 FILL(int8_t);
 FILL(int32_t);
 FILL(int64_t);

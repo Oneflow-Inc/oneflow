@@ -16,16 +16,28 @@ limitations under the License.
 #include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
 namespace vm {
 
 Maybe<int64_t> LogicalIdGenerator::NewSymbolId() {
+  if (JUST(GlobalMultiClientEnv())) {
+    // NOTE(chengcheng): in Multi-Client LogicalIdGenerator will degenerate directly to
+    //   PhysicalIdGenerator, because each rank will generate id ONLY from itself, NOT the master.
+    return IdUtil::NewPhysicalSymbolId(GlobalProcessCtx::Rank());
+  }
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   return IdUtil::NewLogicalSymbolId();
 }
 
 Maybe<int64_t> LogicalIdGenerator::NewObjectId() {
+  if (JUST(GlobalMultiClientEnv())) {
+    // NOTE(chengcheng): in Multi-Client LogicalIdGenerator will degenerate directly to
+    //   PhysicalIdGenerator, because each rank will generate id ONLY from itself, NOT the master.
+    return IdUtil::NewPhysicalObjectId(GlobalProcessCtx::Rank());
+  }
+
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   return IdUtil::NewLogicalObjectId();
 }

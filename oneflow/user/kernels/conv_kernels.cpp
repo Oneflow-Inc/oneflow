@@ -69,6 +69,7 @@ size_t CalcElemNumOfColBuf(const ShapeView& out_shape, const ShapeView& weight_s
                            const int32_t idx_offset) {
   int64_t col_buf_elem_cnt = 1;
   int64_t ndims = out_shape.NumAxes() - 2;
+
   for (size_t i = 0; i != ndims + 1; ++i) { col_buf_elem_cnt *= weight_shape.At(i + 1); }
   for (size_t i = 0; i != ndims; ++i) { col_buf_elem_cnt *= out_shape.At(idx_offset + i); }
   return col_buf_elem_cnt;
@@ -326,10 +327,10 @@ struct ConvOpKernelState final : public user_op::OpKernelState {
 };
 
 template<typename T>
-std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelInitContext* ctx,
-                                                                const std::string& in_name,
-                                                                const std::string& out_name,
-                                                                const std::string& weight_name) {
+std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelComputeContext* ctx,
+                                                              const std::string& in_name,
+                                                              const std::string& out_name,
+                                                              const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
   std::shared_ptr<ConvOpKernelState<T>> state(new ConvOpKernelState<T>());
@@ -378,7 +379,7 @@ std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelI
     }
   }
 
-  return std::move(state);
+  return state;
 }
 
 template<typename T>
@@ -394,13 +395,11 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const {
-    return CreateConvOpKernelState<T>(ctx, "in", "out", "weight");
-  }
-
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "in", "out", "weight");
+    CHECK_NOTNULL(conv_state.get());
+
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -408,9 +407,6 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
 
-    auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
-    conv_state->Update(in->shape(), out->shape());
-    CHECK_NOTNULL(conv_state);
     bool is_bias_mul_inited = false;
     for (int64_t i = 0; i < in->shape().At(0); ++i) {
       conv_state->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_state->in_5d_shape_),
@@ -433,9 +429,10 @@ class ConvCpuKernel final : public user_op::OpKernel {
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
       if (bias != nullptr) {
         int64_t num_of_col_buf = CalcElemNumOfColBuf(out->shape(), weight->shape(), idx_offset);
-        int64_t num_of_bias_mul = tmp_buffer->shape().elem_cnt() - num_of_col_buf;
+        int64_t num_of_bias_mul =
+            (tmp_buffer->shape().elem_cnt() - num_of_col_buf * sizeof(T)) / sizeof(T);
         CHECK_GT(num_of_bias_mul, 0);
-        T* bias_mul_dptr = col_buf_dptr + num_of_col_buf * sizeof(T);
+        T* bias_mul_dptr = col_buf_dptr + num_of_col_buf;
         if (!is_bias_mul_inited) {
           InitBiasMulBuf(bias_mul_dptr, num_of_bias_mul);
           is_bias_mul_inited = true;
@@ -463,15 +460,14 @@ class ConvCpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))      \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         size_t tmp_buffer_size = 0;                                                         \
-        const auto& out_shape = ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape();         \
-        const auto& weight_shape = ctx->TensorDesc4ArgNameAndIndex("weight", 0)->shape();   \
+        const auto& out_shape = ctx->OutputTensorDesc("out", 0)->shape();                   \
+        const auto& weight_shape = ctx->InputTensorDesc("weight", 0).shape();               \
                                                                                             \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));              \
         tmp_buffer_size +=                                                                  \
             CalcElemNumOfColBuf(out_shape, weight_shape, idx_offset) * sizeof(dtype);       \
-                                                                                            \
-        const auto* bias = ctx->TensorDesc4ArgNameAndIndex("bias", 0);                      \
-        if (bias != nullptr) {                                                              \
+        bool has_bias = ctx->has_input("bias", 0);                                          \
+        if (has_bias) {                                                                     \
           int64_t bias_mul_cnt = 1;                                                         \
           for (int i = 0; i < ndims; ++i) { bias_mul_cnt *= out_shape.At(idx_offset + i); } \
           tmp_buffer_size += bias_mul_cnt * sizeof(dtype);                                  \
@@ -495,20 +491,16 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const {
-    return CreateConvOpKernelState<T>(ctx, "dx", "dy", "filter");
-  }
-
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
-    CHECK_NOTNULL(conv_state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "dx", "dy", "filter");
+    CHECK_NOTNULL(conv_state.get());
+
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    conv_state->Update(dx->shape(), dy->shape());
+
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx->mut_dptr<T>(), 0,
                              dx->shape().elem_cnt() * sizeof(T));
 
@@ -550,8 +542,8 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
         size_t tmp_buffer_size = 0;                                                        \
-        const auto& out_diff_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();    \
-        const auto& weight_shape = ctx->TensorDesc4ArgNameAndIndex("filter", 0)->shape();  \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                \
+        const auto& weight_shape = ctx->InputTensorDesc("filter", 0).shape();              \
                                                                                            \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));             \
         tmp_buffer_size +=                                                                 \
@@ -571,21 +563,15 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const {
-    return CreateConvOpKernelState<T>(ctx, "x", "dy", "filter_diff");
-  }
-
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
-    CHECK_NOTNULL(conv_state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "x", "dy", "filter_diff");
+    CHECK_NOTNULL(conv_state.get());
 
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    conv_state->Update(x->shape(), dy->shape());
 
     Memset<DeviceType::kCPU>(ctx->device_ctx(), filter_diff->mut_dptr<T>(), 0,
                              filter_diff->shape().elem_cnt() * sizeof(T));
@@ -618,9 +604,8 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))          \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
         size_t tmp_buffer_size = 0;                                                             \
-        const auto& out_diff_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();         \
-        const auto& weight_diff_shape =                                                         \
-            ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0)->shape();                         \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                     \
+        const auto& weight_diff_shape = ctx->OutputTensorDesc("filter_diff", 0)->shape();       \
                                                                                                 \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));                  \
         tmp_buffer_size +=                                                                      \
@@ -646,7 +631,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* bias_diff = ctx->Tensor4ArgNameAndIndex("bias_diff", 0);
     user_op::Tensor* bias_mul_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    InitBiasMulBuf(bias_mul_buf->mut_dptr<T>(), bias_mul_buf->shape().elem_cnt());
+    InitBiasMulBuf(bias_mul_buf->mut_dptr<T>(), bias_mul_buf->shape().elem_cnt() / sizeof(T));
     Memset<DeviceType::kCPU>(ctx->device_ctx(), bias_diff->mut_dptr<T>(), 0,
                              bias_diff->shape().elem_cnt() * sizeof(T));
 
@@ -684,7 +669,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                      \
                        & (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))         \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                            \
-        const auto& out_diff_shape = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->shape();        \
+        const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                    \
         const int ndims = out_diff_shape.NumAxes() - 2;                                        \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));                 \
         int64_t bias_mul_cnt = 1;                                                              \

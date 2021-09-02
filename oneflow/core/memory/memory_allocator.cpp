@@ -29,16 +29,17 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
 #ifdef WITH_CUDA
-      if (Global<ResourceDesc, ForSession>::Get()->enable_numa_aware_cuda_malloc_host()) {
-        NumaAwareCudaMallocHost(mem_case.host_mem().cuda_pinned_mem().device_id(), &ptr, size);
-      } else {
-        OF_CUDA_CHECK(cudaMallocHost(&ptr, size));
-      }
+      // NOTE(chengcheng):
+      //   All cudaMallocHost MUST set the correct device id to avoid creating CUDA context
+      //   on other GPU which will occopy 500MiB device memory.
+      int64_t device_id = mem_case.host_mem().cuda_pinned_mem().device_id();
+      CudaCurrentDeviceGuard guard(device_id);
+      NumaAwareCudaMallocHost(device_id, &ptr, size);
 #else
       UNIMPLEMENTED();
 #endif
     } else {
-      ptr = malloc(size);
+      ptr = aligned_alloc(kHostAlignSize, size);
       CHECK_NOTNULL(ptr);
     }
   } else if (mem_case.has_device_cuda_mem()) {
@@ -78,7 +79,7 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
 }
 
 void* MemoryAllocatorImpl::AllocateUnPinnedHostMem(size_t size) {
-  void* ptr = malloc(size);
+  void* ptr = aligned_alloc(kHostAlignSize, size);
   CHECK_NOTNULL(ptr);
   return ptr;
 }

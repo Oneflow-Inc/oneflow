@@ -42,8 +42,9 @@ class SamePaddingKernel final : public user_op::OpKernel {
     for (int32_t i = 0; i < num_spatial_dims; ++i) {
       int32_t padding_small = 0;
       int32_t padding_large = 0;
-      CalcSamePadding(x->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                      strides.at(i), &padding_small, &padding_large);
+      CHECK_JUST(CalcSamePadding(x->shape().At(idx_offset + i), kernel_size.at(i),
+                                 dilation_rate.at(i), strides.at(i), &padding_small,
+                                 &padding_large));
       if (padding == "same_lower") {
         padding_before[idx_offset + i] = padding_large;
       } else if (padding == "same_upper") {
@@ -123,8 +124,9 @@ class SamePaddingGradKernel final : public user_op::OpKernel {
     for (int32_t i = 0; i < num_spatial_dims; ++i) {
       int32_t padding_small = 0;
       int32_t padding_large = 0;
-      CalcSamePadding(dx->shape().At(idx_offset + i), kernel_size.at(i), dilation_rate.at(i),
-                      strides.at(i), &padding_small, &padding_large);
+      CHECK_JUST(CalcSamePadding(dx->shape().At(idx_offset + i), kernel_size.at(i),
+                                 dilation_rate.at(i), strides.at(i), &padding_small,
+                                 &padding_large));
       if (padding == "same_lower") {
         padding_before[idx_offset + i] = padding_large;
       } else if (padding == "same_upper") {

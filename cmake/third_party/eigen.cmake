@@ -7,13 +7,16 @@ if(WITH_XLA)
   #set(EIGEN_URL "https://storage.googleapis.com/mirror.tensorflow.org/gitlab.com/libeigen/eigen/-/archive/386d809bde475c65b7940f290efe80e6a05878c4/eigen-386d809bde475c65b7940f290efe80e6a05878c4.tar.gz")
   set(EIGEN_URL "https://gitlab.com/libeigen/eigen/-/archive/386d809bde475c65b7940f290efe80e6a05878c4/eigen-386d809bde475c65b7940f290efe80e6a05878c4.tar.gz")
   set(EIGEN_MD5 67b12e85555e0ac97b4cf8bae7fd65ad)
-  else()
+else()
   set(EIGEN_URL https://github.com/Oneflow-Inc/eigen-git-mirror/archive/e9e95489a.tar.gz)
   set(EIGEN_MD5 a23cb70e12d1bf9b09cb28af51bc26ae)
 endif()
 use_mirror(VARIABLE EIGEN_URL URL ${EIGEN_URL})
 
-add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_USE_GPU)
+add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING)
+if(BUILD_CUDA)
+  add_definitions(-DEIGEN_USE_GPU)
+endif()
 if (NOT WITH_XLA)
 add_definitions(-DEIGEN_NO_MALLOC)
 endif()
@@ -28,6 +31,8 @@ ExternalProject_Add(eigen
     UPDATE_COMMAND ""
     INSTALL_DIR "${EIGEN_INSTALL_DIR}"
     CMAKE_CACHE_ARGS
+        -DCMAKE_C_COMPILER_LAUNCHER:STRING=${CMAKE_C_COMPILER_LAUNCHER}
+        -DCMAKE_CXX_COMPILER_LAUNCHER:STRING=${CMAKE_CXX_COMPILER_LAUNCHER}
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
         -DCMAKE_INSTALL_PREFIX:STRING=${EIGEN_INSTALL_DIR}

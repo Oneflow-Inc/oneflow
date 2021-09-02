@@ -30,7 +30,6 @@ class Compiler final {
   ~Compiler() = default;
 
   void Compile(Job*, Plan*, bool need_job_complete) const;
-  void GenNetTopo(Plan* plan) const;
 };
 
 }  // namespace oneflow

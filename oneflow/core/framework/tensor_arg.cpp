@@ -15,16 +15,11 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/tensor_arg.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
-
-TensorArg::TensorArg() : add2_op_(CHECK_JUST(op_expr_helper::AddNOp(2))) {}
 
 bool TensorArg::Empty() const { return !acc_tensor_; }
 
@@ -34,7 +29,7 @@ Maybe<void> TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_
   if (!acc_tensor_) {
     acc_tensor_ = partial_tensor;
   } else {
-    acc_tensor_ = JUST(OpInterpUtil::Dispatch<Tensor>(*add2_op_, {partial_tensor, acc_tensor_}));
+    acc_tensor_ = JUST(functional::Add(partial_tensor, acc_tensor_, /*inplace=*/true));
   }
   return Maybe<void>::Ok();
 }

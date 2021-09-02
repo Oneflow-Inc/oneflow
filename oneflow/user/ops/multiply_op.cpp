@@ -22,13 +22,13 @@ REGISTER_USER_OP("multiply")
     .Input("y")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(x->shape() == y->shape());
-      *out->mut_shape() = x->shape();
-      *out->mut_is_dynamic() = x->is_dynamic();
-      if (x->is_dynamic() || y->is_dynamic()) { *out->mut_is_dynamic() = true; }
+      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+      const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      CHECK_OR_RETURN(x.shape() == y.shape());
+      *out->mut_shape() = x.shape();
+      *out->mut_is_dynamic() = x.is_dynamic();
+      if (x.is_dynamic() || y.is_dynamic()) { *out->mut_is_dynamic() = true; }
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -49,16 +49,17 @@ REGISTER_USER_OP("multiply")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(x->data_type() == y->data_type());
-      *out->mut_data_type() = x->data_type();
+      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+      const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      CHECK_OR_RETURN(x.data_type() == y.data_type());
+      *out->mut_data_type() = x.data_type();
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("multiply")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapper x_grad_op =
             user_op::UserOpConfWrapperBuilder(op.op_name() + "_x_grad")
@@ -81,6 +82,7 @@ REGISTER_USER_OP_GRAD("multiply")
         op.BindGradTensorWithOpInput(y_grad_op.output("out", 0), "y", 0);
         AddOp(y_grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

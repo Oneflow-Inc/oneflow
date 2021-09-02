@@ -54,9 +54,6 @@ class TmpBufferManager final {
   int32_t* IndicesPtr() const { return indices_ptr_; }
   void* TempStoragePtr() const { return temp_storage_ptr_; }
 
-  int32_t RandomValueElemCnt() const { return random_value_elem_cnt_; }
-  int32_t SortedValueElemCnt() const { return sorted_value_elem_cnt_; }
-  int32_t IndicesElemCnt() const { return indices_elem_cnt_; }
   int32_t TempStorageBytes() const { return temp_storage_bytes_; }
 
  private:
@@ -92,6 +89,7 @@ class GenerateRandomBatchPermutationIndicesGPUKernel final : public user_op::OpK
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* random_generator =
         dynamic_cast<OpKernelStateWrapper<RandomGenerator<DeviceType::kGPU>>*>(state);
@@ -117,7 +115,7 @@ REGISTER_USER_KERNEL("generate_random_batch_permutation_indices")
     .SetCreateFn<GenerateRandomBatchPermutationIndicesGPUKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu")
     .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {
-      const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      const Shape* y_shape = ctx->OutputShape("y", 0);
       const int32_t batch_size = y_shape->At(0);
 
       const int32_t random_value_aligned_bytes = GetCudaAlignedSize(batch_size * sizeof(float));

@@ -20,18 +20,18 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input", 0);
-  user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-  *output_desc->mut_shape() = Shape({input_shape->elem_cnt(), input_shape->NumAxes()});
+  const Shape& input_shape = ctx->InputShape("input", 0);
+  user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
+  *output_desc->mut_shape() = Shape({input_shape.elem_cnt(), input_shape.NumAxes()});
   output_desc->set_is_dynamic(true);
-  user_op::TensorDesc* output_size_desc = ctx->TensorDesc4ArgNameAndIndex("output_size", 0);
+  user_op::TensorDesc* output_size_desc = ctx->OutputTensorDesc("output_size", 0);
   *output_size_desc->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-REGISTER_USER_OP("argwhere")
+REGISTER_NO_GRAD_USER_OP("argwhere")
     .Input("input")
     .Output("output")
     .Output("output_size")
@@ -39,11 +39,12 @@ REGISTER_USER_OP("argwhere")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType dtype = ctx->Attr<DataType>("dtype");
-      user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+      user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
       *output_desc->mut_data_type() = dtype;
-      user_op::TensorDesc* output_size_desc = ctx->TensorDesc4ArgNameAndIndex("output_size", 0);
+      user_op::TensorDesc* output_size_desc = ctx->OutputTensorDesc("output_size", 0);
       *output_size_desc->mut_data_type() = dtype;
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow

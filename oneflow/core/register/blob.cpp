@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr) {
-  Init(mem_case, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
+  Init(mem_case, blob_desc, header_ptr, header_ptr + blob_desc->AlignedByteSizeOfBlobHeader());
 }
 
 Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
@@ -66,7 +66,7 @@ void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 
 char* Blob::mut_contiguous_header_ptr() {
   // check header and body is continuous
-  CHECK_EQ(header_ptr() + blob_desc_->ByteSizeOfBlobHeader(), dptr<char>());
+  CHECK_EQ(header_ptr() + blob_desc_->AlignedByteSizeOfBlobHeader(), dptr<char>());
   return header_ptr_;
 }
 

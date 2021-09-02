@@ -19,10 +19,11 @@ limitations under the License.
 
 namespace oneflow {
 
-void OutputOp::InitFromOpConf() {
+Maybe<void> OutputOp::InitFromOpConf() {
   CHECK(op_conf().has_output_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out")->set_is_mutable(true);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> OutputOp::InferLogicalOutBlobDescs(
@@ -44,14 +45,18 @@ Maybe<void> OutputOp::InferOutBlobDescs(
   } else {
     JUST(InterfaceOpUtil::InferOutBlobDesc(op_conf().output_conf().blob_conf(), out_blob_desc,
                                            parallel_ctx, *JUST(GetOpParallelDesc())));
-    CHECK_OR_RETURN(*out_blob_desc == *in_blob_desc);
+    CHECK_OR_RETURN(out_blob_desc->shape() == in_blob_desc->shape());
+    CHECK_OR_RETURN(out_blob_desc->data_type() == in_blob_desc->data_type());
+    // NOTE(chengcheng):
+    //   blob.is_dynamic is weak in nn.Graph output tensor.
+    // CHECK_OR_RETURN(*out_blob_desc == *in_blob_desc);
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> OutputOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   JUST(InterfaceOpUtil::GetOutputLikeOpSbpSignature(op_conf().output_conf().blob_conf(),
@@ -59,21 +64,15 @@ Maybe<void> OutputOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> OutputOp::InferParallelDistributionSignature(
-    ParallelDistributionSignature* parallel_distribution_signature,
-    const ParallelDistributionSignature& parallel_distribution_constraints,
+Maybe<void> OutputOp::InferNdSbpSignature(
+    cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
-    std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
-        ParallelDistributionInferHint4Ibn) const {
+    std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
   const InterfaceBlobConf& blob_conf = op_conf().output_conf().blob_conf();
-  ParallelDistribution& in_parallel_distribution =
-      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["in"];
-  ParallelDistribution& out_parallel_distribution =
-      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
-  JUST(InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
-                                                              &in_parallel_distribution));
-  JUST(InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
-                                                              &out_parallel_distribution));
+  cfg::NdSbp& in_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["in"];
+  cfg::NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &in_nd_sbp));
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));
 
   return Maybe<void>::Ok();
 }

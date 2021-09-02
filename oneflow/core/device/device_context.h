@@ -33,11 +33,26 @@ class DeviceCtx {
   virtual ~DeviceCtx() = default;
 
 #ifdef WITH_CUDA
-  virtual const cudaStream_t& cuda_stream() const { UNIMPLEMENTED(); }
-  virtual const cublasHandle_t& cublas_pmh_handle() const { UNIMPLEMENTED(); }
-  virtual const cublasHandle_t& cublas_pmd_handle() const { UNIMPLEMENTED(); }
-  virtual const cublasHandle_t& cublas_tensor_op_math_handle() const { UNIMPLEMENTED(); }
-  virtual const cudnnHandle_t& cudnn_handle() const { UNIMPLEMENTED(); }
+  virtual cudaStream_t cuda_stream() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  virtual cublasHandle_t cublas_pmh_handle() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  virtual cublasHandle_t cublas_pmd_handle() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  virtual cublasHandle_t cublas_tensor_op_math_handle() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  virtual cudnnHandle_t cudnn_handle() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
 #endif
 
   virtual void SyncDevice() { UNIMPLEMENTED(); }

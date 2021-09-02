@@ -24,16 +24,16 @@ REGISTER_USER_OP("l2_normalize")
     .Attr<int32_t>("axis")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      Shape* square_x_sum_shape = ctx->Shape4ArgNameAndIndex("square_x_sum", 0);
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      Shape* y_shape = ctx->OutputShape("y", 0);
+      Shape* square_x_sum_shape = ctx->OutputShape("square_x_sum", 0);
       const int32_t axis = ctx->Attr<int32_t>("axis");
       const float epsilon = ctx->Attr<float>("epsilon");
       CHECK_GE_OR_RETURN(axis, 0);
-      CHECK_LT_OR_RETURN(axis, x_shape->NumAxes());
+      CHECK_LT_OR_RETURN(axis, x_shape.NumAxes());
       CHECK_GT_OR_RETURN(epsilon, 0);
-      *y_shape = *x_shape;
-      *square_x_sum_shape = *x_shape;
+      *y_shape = x_shape;
+      *square_x_sum_shape = x_shape;
       square_x_sum_shape->Set(axis, 1);
       return Maybe<void>::Ok();
     })
@@ -52,8 +52,8 @@ REGISTER_USER_OP("l2_normalize")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("square_x_sum", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      *ctx->OutputDType("square_x_sum", 0) = ctx->InputDType("x", 0);
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
@@ -65,24 +65,24 @@ REGISTER_USER_OP("l2_normalize_grad")
     .Attr<int32_t>("axis")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      const Shape* square_x_sum_shape = ctx->Shape4ArgNameAndIndex("square_x_sum", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      const Shape& y_shape = ctx->InputShape("y", 0);
+      const Shape& square_x_sum_shape = ctx->InputShape("square_x_sum", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
       const int32_t axis = ctx->Attr<int32_t>("axis");
       const float epsilon = ctx->Attr<float>("epsilon");
-      CHECK_EQ_OR_RETURN(*dy_shape, *y_shape);
+      CHECK_EQ_OR_RETURN(dy_shape, y_shape);
       CHECK_GE_OR_RETURN(axis, 0);
-      CHECK_LT_OR_RETURN(axis, dy_shape->NumAxes());
+      CHECK_LT_OR_RETURN(axis, dy_shape.NumAxes());
       CHECK_GT_OR_RETURN(epsilon, 0);
-      FOR_RANGE(int32_t, i, 0, dy_shape->NumAxes()) {
+      FOR_RANGE(int32_t, i, 0, dy_shape.NumAxes()) {
         if (i == axis) {
-          CHECK_EQ_OR_RETURN(square_x_sum_shape->At(i), 1);
+          CHECK_EQ_OR_RETURN(square_x_sum_shape.At(i), 1);
         } else {
-          CHECK_EQ_OR_RETURN(square_x_sum_shape->At(i), dy_shape->At(i));
+          CHECK_EQ_OR_RETURN(square_x_sum_shape.At(i), dy_shape.At(i));
         }
       }
-      *dx_shape = *dy_shape;
+      *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -101,15 +101,15 @@ REGISTER_USER_OP("l2_normalize_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("y", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("y", 0),
-                         *ctx->Dtype4ArgNameAndIndex("square_x_sum", 0));
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0));
+      CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("square_x_sum", 0));
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
       return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("l2_normalize")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -124,6 +124,7 @@ REGISTER_USER_OP_GRAD("l2_normalize")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

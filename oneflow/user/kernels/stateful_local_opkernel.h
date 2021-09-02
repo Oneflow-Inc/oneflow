@@ -17,11 +17,13 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_STATEFUL_LOCAL_OPKERNEL_H_
 
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
+#include "oneflow/core/framework/op_interpreter.h"
 
 namespace oneflow {
 
@@ -38,6 +40,8 @@ class LocalUserKernelRegContext;
 class LocalUserKernelCreateContext;
 class LocalUserKernelInitContext;
 class LocalUserOpInferContext;
+
+class ConsistentTensorInferResult;
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
@@ -98,6 +102,41 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
   const std::function<vm::EagerBlobObject*()> mut_eager_blob_object_;
 };
 
+class ConsistentTensorMetaTensorDescView final : public user_op::TensorDesc {
+ public:
+  ConsistentTensorMetaTensorDescView(
+      const std::function<Symbol<ConsistentTensorMeta>()>& consistent_tensor_meta)
+      : consistent_tensor_meta_(consistent_tensor_meta) {}
+
+  const Shape& shape() const override { return consistent_tensor_meta_()->shape(); }
+
+  Shape* mut_shape() override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  DataType data_type() const override { return consistent_tensor_meta_()->data_type(); }
+
+  DataType* mut_data_type() override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  bool is_dynamic() const override { return false; }
+
+  bool* mut_is_dynamic() override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  void set_is_dynamic(bool val) override { UNIMPLEMENTED(); }
+
+  Symbol<cfg::NdSbp> nd_sbp() { return consistent_tensor_meta_()->nd_sbp(); }
+
+ private:
+  const std::function<Symbol<ConsistentTensorMeta>()> consistent_tensor_meta_;
+};
+
 class ZeroCopyBaseContext {
  public:
   ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
@@ -110,10 +149,20 @@ class ZeroCopyBaseContext {
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
 
+  const ConsistentTensorMeta* ConsistentTensorMeta4ArgNameAndIndex(const std::string& arg_name,
+                                                                   const int32_t index) const;
+
+  const ConsistentTensorMetaTensorDescView* ConsistentTensorMetaView4ArgNameAndIndex(
+      const std::string& arg_name, const int32_t index) const;
+
+  Optional<Symbol<ParallelDesc>> parallel_desc() const;
+
   const ArgVec& inputs() const { return input_arg_tuple_->indexed_arg_name_and_index(); }
   const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
 
-  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs);
+  void Update(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result);
 
  private:
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
@@ -125,6 +174,12 @@ class ZeroCopyBaseContext {
   std::unique_ptr<EagerBlobObjectTensorView> tmp_buffer_view_;
   EagerBlobObjectListPtr input_tensors_;
   EagerBlobObjectListPtr output_tensors_;
+  std::shared_ptr<const ConsistentTensorInferResult> consistent_tensor_infer_result_;
+  std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
+      input_consistent_tensor_meta_views_;
+  std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
+      output_consistent_tensor_meta_views_;
+  ;
 };
 
 class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
@@ -140,7 +195,10 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
 
   DeviceType device_type() const { return device_type_; }
   const std::string& device_tag() const { return device_tag_; }
-  const JobDesc& job_desc() const { UNIMPLEMENTED(); }
+  const JobDesc& job_desc() const {
+    UNIMPLEMENTED();
+    return *(const JobDesc*)nullptr;
+  }
 
  private:
   const std::string device_tag_;
@@ -159,14 +217,44 @@ class LocalUserOpInferContext : public user_op::InferContext {
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                int32_t index) const override {
     UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
+                                             int32_t index) const override {
+    auto out =
+        const_cast<LocalUserOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
+    CHECK_NOTNULL(out);
+    return *out;
+  }
+  user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index);
   }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override;
+  const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<LocalUserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
+  }
+  Shape* OutputShape(const std::string& arg_name, int32_t index) override {
+    return Shape4ArgNameAndIndex(arg_name, index);
+  }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<LocalUserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  }
+  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+    return Dtype4ArgNameAndIndex(arg_name, index);
+  }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  }
+  bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<LocalUserOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
+  }
+  bool* OutputIsDynamic(const std::string& arg_name, int32_t index) override {
+    return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
@@ -178,20 +266,52 @@ class LocalUserOpInferContext : public user_op::InferContext {
     UNIMPLEMENTED();
     return nullptr;
   }
-  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); };
-  const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                 int32_t index) const override {
+  const ParallelContext& parallel_ctx() const override {
     UNIMPLEMENTED();
+    return *(const ParallelContext*)nullptr;
   }
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
-                                                                   int32_t index) const override {
+  const ParallelDesc& parallel_desc() const override {
     UNIMPLEMENTED();
+    return *(const ParallelDesc*)nullptr;
+  }
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const override {
+    UNIMPLEMENTED();
+    return *(const cfg::SbpParallel*)nullptr;
+  }
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
+    UNIMPLEMENTED();
+    return *(const cfg::NdSbp*)nullptr;
   }
 
   int64_t parallel_num() const override { return 1; }
 
-  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs);
+  void Update(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result);
+
+  const std::string& input(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().input(arg_name, index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const override {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const override {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const override { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
 
  private:
   user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -200,7 +320,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
     if (!tensor_desc) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
     return tensor_desc;
   }
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
+  const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
     return composed_attrs_->Attr4Name(attr_name);
@@ -232,14 +352,22 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); };
-  const JobDesc& job_desc() const override { UNIMPLEMENTED(); };
+  const ParallelContext& parallel_ctx() const override {
+    UNIMPLEMENTED();
+    return *(const ParallelContext*)nullptr;
+  }
+  const JobDesc& job_desc() const override {
+    UNIMPLEMENTED();
+    return *(const JobDesc*)nullptr;
+  }
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); };
   const ArgVec& outputs() const override { return base_ctx_.outputs(); };
 
-  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-              DeviceCtx* device_ctx);
+  void Update(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      DeviceCtx* device_ctx);
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
@@ -258,13 +386,12 @@ class StatefulLocalOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulLocalOpKernel);
   static Maybe<StatefulLocalOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
-                                          const std::shared_ptr<const Device>& device,
-                                          const AttrMap& base_attrs,
+                                          const Symbol<Device>& device, const AttrMap& base_attrs,
                                           const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~StatefulLocalOpKernel();
-  const std::shared_ptr<const Device>& device() const { return device_; }
+  const Symbol<Device>& device() const { return device_; }
   const std::shared_ptr<MemoryCase>& mem_case() const { return device_->mem_case(); }
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
@@ -279,25 +406,20 @@ class StatefulLocalOpKernel final {
     return output_tuple_indexes4mut2_obns_;
   }
 
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object() const {
-    return compute_local_dep_object_;
+  ComposedAttrMap* composed_attrs_for_scheduler_thread() const {
+    return composed_attrs_for_scheduler_thread_.get();
   }
 
-  Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs,
-                              const EagerBlobObjectListPtr& outputs,
-                              LocalUserOpInferContext* op_infer_ctx);
-  Maybe<void> InferDataType(const EagerBlobObjectListPtr& inputs,
-                            const EagerBlobObjectListPtr& outputs,
-                            LocalUserOpInferContext* op_infer_ctx);
-
-  void ResetDynamicOpAttrs(const AttrMap& attrs);
-
-  LocalUserOpInferContext* op_infer_ctx_for_thread_a() const {
-    return op_infer_ctx_for_thread_a_.get();
+  ComposedAttrMap* composed_attrs_for_main_thread() const {
+    return composed_attrs_for_main_thread_.get();
   }
 
-  LocalUserOpInferContext* op_infer_ctx_for_thread_b() const {
-    return op_infer_ctx_for_thread_b_.get();
+  LocalUserOpInferContext* op_infer_ctx_for_scheduler_thread() const {
+    return op_infer_ctx_for_scheduler_thread_.get();
+  }
+
+  LocalUserOpInferContext* op_infer_ctx_for_main_thread() const {
+    return op_infer_ctx_for_main_thread_.get();
   }
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
@@ -305,16 +427,19 @@ class StatefulLocalOpKernel final {
  private:
   friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
-  LocalUserKernelComputeContext* UpdateComputeContext(const EagerBlobObjectListPtr& inputs,
-                                                      const EagerBlobObjectListPtr& outputs,
-                                                      DeviceCtx* device_ctx);
+  LocalUserKernelComputeContext* UpdateComputeContext(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      DeviceCtx* device_ctx);
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  void TryInitOpKernelState(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
-                            const EagerBlobObjectListPtr& inputs,
-                            const EagerBlobObjectListPtr& outputs, user_op::OpKernelState** state);
+  void TryInitOpKernelState(
+      const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      user_op::OpKernelState** state);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 
@@ -324,19 +449,21 @@ class StatefulLocalOpKernel final {
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
 
-  Maybe<const user_op::OpKernel*> ChooseOpKernel(const EagerBlobObjectListPtr& inputs,
-                                                 const EagerBlobObjectListPtr& outputs);
+  Maybe<const user_op::OpKernel*> ChooseOpKernel(
+      const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const ConsistentTensorInferResult>& consistent_tensor_infer_result);
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
-  std::unique_ptr<ComposedAttrMap> composed_attrs_;
+  std::unique_ptr<ComposedAttrMap> composed_attrs_for_scheduler_thread_;
+  std::unique_ptr<ComposedAttrMap> composed_attrs_for_main_thread_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
-  std::shared_ptr<const Device> device_;
+  Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_thread_a_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_thread_b_;
+  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;
+  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_main_thread_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
@@ -352,7 +479,6 @@ class StatefulLocalOpKernel final {
   std::vector<int64_t> input_tuple_indexes4mut_ibns_;
   std::vector<int64_t> output_tuple_indexes4mut_obns_;
   std::vector<int64_t> output_tuple_indexes4mut2_obns_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace one

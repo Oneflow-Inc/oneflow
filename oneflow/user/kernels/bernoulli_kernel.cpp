@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/bernoulli_kernel.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
 #include "oneflow/user/kernels/random_seed_util.h"
+#include "oneflow/user/kernels/random_mask_generator.h"
 
 namespace oneflow {
 
@@ -27,13 +29,13 @@ class BernoulliKerenl final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    int64_t seed = GetOpKernelRandomSeed(ctx);
-    return std::make_shared<OpKernelStateWrapper<std::mt19937>>(seed);
+    const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
+    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    return std::make_shared<BernoulliKernelState>(generator);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* random_generator = dynamic_cast<OpKernelStateWrapper<std::mt19937>*>(state);
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_dptr = in_blob->dptr<T>();
@@ -41,11 +43,18 @@ class BernoulliKerenl final : public user_op::OpKernel {
     CHECK_EQ(GetDataType<T>(), in_blob->data_type());
     CHECK_EQ(GetDataType<K>(), out_blob->data_type());
     CHECK_EQ(in_blob->shape().elem_cnt(), out_blob->shape().elem_cnt());
+
+    auto* bernoulli_kernel_state = dynamic_cast<BernoulliKernelState*>(state);
+    CHECK_NOTNULL(bernoulli_kernel_state);
+    const auto& generator = bernoulli_kernel_state->generator();
+    CHECK_NOTNULL(generator);
+    const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+
     for (int32_t i = 0; i < out_blob->shape().elem_cnt(); ++i) {
       double prob = static_cast<double>(*(in_dptr + i));
       CHECK(prob >= 0.0 && prob <= 1.0);
       std::bernoulli_distribution dis(prob);
-      *(out_dptr + i) = dis(*random_generator->Mutable()) ? GetOneVal<K>() : GetZeroVal<K>();
+      *(out_dptr + i) = dis(cpu_generator->engine()) ? GetOneVal<K>() : GetZeroVal<K>();
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

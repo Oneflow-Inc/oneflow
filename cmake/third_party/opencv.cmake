@@ -16,11 +16,8 @@ else()
     set(OPENCV_BUILD_INCLUDE_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR})
     set(OPENCV_BUILD_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
     set(OPENCV_BUILD_3RDPARTY_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/${CMAKE_INSTALL_LIBDIR})
-    set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_highgui.a libopencv_imgcodecs.a libopencv_core.a)
+    set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
     set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
-    if (NOT APPLE)
-      set(OPENCV_3RDPARTY_LIBRARY_NAMES ${OPENCV_3RDPARTY_LIBRARY_NAMES} libittnotify.a)
-    endif()
 endif()
 
 foreach(LIBRARY_NAME ${OPENCV_LIBRARY_NAMES})
@@ -36,8 +33,20 @@ endforeach()
 
 if (THIRD_PARTY)
 
+if (CMAKE_C_COMPILER_LAUNCHER STREQUAL "ccache")
+  set(OPENCV_C_COMPILER_LAUNCHER_DEF "-DENABLE_CCACHE:BOOL=ON")
+else()
+  set(OPENCV_C_COMPILER_LAUNCHER_DEF "-DCMAKE_C_COMPILER_LAUNCHER:STRING=${CMAKE_C_COMPILER_LAUNCHER}")
+endif()
+
+if (CMAKE_CXX_COMPILER_LAUNCHER STREQUAL "ccache")
+  set(OPENCV_CXX_COMPILER_LAUNCHER_DEF "-DENABLE_CCACHE:BOOL=ON")
+else()
+  set(OPENCV_CXX_COMPILER_LAUNCHER_DEF "-DCMAKE_CXX_COMPILER_LAUNCHER:STRING=${CMAKE_CXX_COMPILER_LAUNCHER}")
+endif()
+
 ExternalProject_Add(opencv
-    DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
+    DEPENDS zlib libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
     URL ${OPENCV_URL}
     URL_MD5 59870e55385f5202c1aa178fe37ed2de
@@ -46,7 +55,11 @@ ExternalProject_Add(opencv
     BUILD_IN_SOURCE 0
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build
+    BUILD_BYPRODUCTS ${OPENCV_STATIC_LIBRARIES}
     CMAKE_CACHE_ARGS
+        ${OPENCV_C_COMPILER_LAUNCHER_DEF}
+        ${OPENCV_CXX_COMPILER_LAUNCHER_DEF}
+        -DCMAKE_POLICY_DEFAULT_CMP0074:STRING=NEW
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -DCMAKE_INSTALL_PREFIX:STRING=${OPENCV_INSTALL_DIR}
         -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
@@ -97,7 +110,8 @@ ExternalProject_Add(opencv
         -DBUILD_opencv_world:BOOL=OFF
         -DBUILD_opencv_apps:BOOL=OFF
         -DBUILD_opencv_js:BOOL=OFF
-        -DBUILD_ZLIB:BOOL=ON
+        -DBUILD_ZLIB:BOOL=OFF
+        -DZLIB_ROOT:PATH=${ZLIB_INSTALL}
         -DBUILD_TIFF:BOOL=ON
         -DBUILD_JASPER:BOOL=ON
         -DWITH_JPEG:BOOL=ON
@@ -108,7 +122,24 @@ ExternalProject_Add(opencv
         -DBUILD_OPENEXR:BOOL=ON
         -DBUILD_TBB:BOOL=ON
         -DBUILD_IPP_IW:BOOL=OFF
-        -DWITH_ITT:BOOL=ON
+        -DWITH_ITT:BOOL=OFF
+        -DBUILD_opencv_flann:BOOL=OFF
+        -DBUILD_opencv_ml:BOOL=OFF
+        -DBUILD_opencv_objdetect:BOOL=OFF
+        -DBUILD_opencv_photo:BOOL=OFF
+        -DBUILD_opencv_video:BOOL=OFF
+        -DBUILD_opencv_dnn:BOOL=OFF
+        -DBUILD_opencv_shape:BOOL=OFF
+        -DBUILD_opencv_videoio:BOOL=OFF
+        -DBUILD_opencv_highgui:BOOL=OFF
+        -DBUILD_opencv_superres:BOOL=OFF
+        -DBUILD_opencv_features2d:BOOL=OFF
+        -DBUILD_opencv_calib3d:BOOL=OFF
+        -DBUILD_opencv_stitching:BOOL=OFF
+        -DBUILD_opencv_videostab:BOOL=OFF
+        -DBUILD_opencv_imgproc:BOOL=ON
+        -DBUILD_opencv_imgcodecs:BOOL=ON
+        -DENABLE_CXX11:BOOL=ON
         # -DLIB_SUFFIX:STRING=64
 )
 

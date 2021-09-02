@@ -25,8 +25,8 @@ namespace oneflow {
 class GrpcCtrlClient final : public CtrlClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GrpcCtrlClient);
-  GrpcCtrlClient(const ProcessCtx& process_ctx);
-  ~GrpcCtrlClient();
+  explicit GrpcCtrlClient(const ProcessCtx& process_ctx);
+  ~GrpcCtrlClient() override;
 
   void Barrier(const std::string& barrier_name) override;
   void Barrier(const std::string& barrier_name, int32_t barrier_num) override;
@@ -47,16 +47,17 @@ class GrpcCtrlClient final : public CtrlClient {
   void PullKV(const std::string& k, std::string* v) override;
   void PullKV(const std::string& k, PbMessage* msg) override;
   void PullMasterKV(const std::string& k, PbMessage* msg) override;
-  void PushActEvent(const ActEvent&) override;
   void Clear() override;
   int32_t IncreaseCount(const std::string& k, int32_t v) override;
   void EraseCount(const std::string& k) override;
+  void StopHeartbeat();
 
  private:
   const ProcessCtx& process_ctx() const { return process_ctx_; }
   ProcessCtx process_ctx_;
   bool need_heartbeat_thread_stop_;
   std::mutex need_heartbeat_thread_stop_mtx_;
+  std::condition_variable need_heartbeat_thread_stop_cv_;
   std::thread heartbeat_thread_;
   RpcClient rpc_client_;
 };

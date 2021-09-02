@@ -115,7 +115,7 @@ void InitMemoryChains(Plan* plan,
         // for time shape in mem chain
         Shape regst_time_shape =
             Shape(regst_desc->regst_desc_type().data_regst_desc().time_shape());
-        if (mem_chain->time_shape.elem_cnt() == 0) {
+        if (!mem_chain->time_shape.is_initialized()) {
           mem_chain->time_shape = regst_time_shape;
         } else {
           CHECK(mem_chain->time_shape == regst_time_shape);

@@ -35,6 +35,7 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
   ~SoftmaxCrossEntropyKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
@@ -54,18 +55,18 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair)                           \
-  REGISTER_USER_KERNEL("softmax_cross_entropy")                                                    \
-      .SetCreateFn<SoftmaxCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                  \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair))       \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))        \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
-        const Shape* prediction_shape = ctx->Shape4ArgNameAndIndex("prediction", 0);               \
-        const int64_t num_classes = prediction_shape->At(prediction_shape->NumAxes() - 1);         \
-        const int64_t num_instances = prediction_shape->Count(0, prediction_shape->NumAxes() - 1); \
-        return SoftmaxKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>::                    \
-            GetComputeProbTempStorageSizeInBytes(num_instances, num_classes);                      \
+#define REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair)                         \
+  REGISTER_USER_KERNEL("softmax_cross_entropy")                                                  \
+      .SetCreateFn<SoftmaxCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>()     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                                \
+                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
+                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        const Shape& prediction_shape = ctx->InputShape("prediction", 0);                        \
+        const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
+        const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
+        return SoftmaxKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>::                  \
+            GetComputeProbTempStorageSizeInBytes(num_instances, num_classes);                    \
       });
 
 template<DeviceType device_type, typename T>
@@ -75,6 +76,7 @@ class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
   ~SoftmaxCrossEntropyGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);

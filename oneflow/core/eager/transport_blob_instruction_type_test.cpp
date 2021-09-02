@@ -68,6 +68,7 @@ struct ReceiveRequest {
 HashMap<uint64_t, SendRequest> token2send_request;
 HashMap<uint64_t, ReceiveRequest> token2recv_request;
 
+#ifdef __linux__
 class TestSendBlobInstructionType : public SendBlobInstructionType {
  public:
   TestSendBlobInstructionType() = default;
@@ -125,6 +126,7 @@ class TestReceiveBlobInstructionType : public ReceiveBlobInstructionType {
   }
 };
 COMMAND(vm::RegisterInstructionType<TestReceiveBlobInstructionType>("TestReceiveBlob"));
+#endif  // __linux__
 
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
@@ -249,31 +251,28 @@ class SendRecvUtil {
   std::string recv_instr_name_;
 };
 
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
-}
-
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
-
 }  // namespace
 
+#ifdef __linux__
 TEST(SendReceiveInstructionType, naive) {
-  InitNumProcessPerNode();
+#ifdef WITH_CUDA
   vm::TestResourceDescScope scope(1, 1, 2);
+#else
+  vm::TestResourceDescScope scope(0, 1, 2);
+#endif
   auto vm0 = MakeVM(0);
   int64_t src_blob_id = 0;
   {
     InstructionMsgList list;
     src_blob_id = MakeTestBlob(&list, "0:0");
-    vm0->Receive(&list);
+    CHECK_JUST(vm0->Receive(&list));
   }
   auto vm1 = MakeVM(1);
   int64_t dst_blob_id = 0;
   {
     InstructionMsgList list;
     dst_blob_id = MakeTestBlob(&list, "1:0");
-    vm1->Receive(&list);
+    CHECK_JUST(vm1->Receive(&list));
   }
   uint64_t header_token = 7777;
   uint64_t body_token = 8888;
@@ -282,13 +281,13 @@ TEST(SendReceiveInstructionType, naive) {
     InstructionMsgList list;
     send_recv_util.MakeTestInstructions(&list, header_token, body_token, "0:0", src_blob_id, "1:0",
                                         dst_blob_id);
-    vm0->Receive(&list);
+    CHECK_JUST(vm0->Receive(&list));
   }
   {
     InstructionMsgList list;
     send_recv_util.MakeTestInstructions(&list, header_token, body_token, "0:0", src_blob_id, "1:0",
                                         dst_blob_id);
-    vm1->Receive(&list);
+    CHECK_JUST(vm1->Receive(&list));
   }
   while (!(vm0->Empty() && vm1->Empty())) {
     vm0->Schedule();
@@ -300,8 +299,8 @@ TEST(SendReceiveInstructionType, naive) {
   ASSERT_TRUE(token2recv_request.find(header_token) != token2recv_request.end());
   ASSERT_TRUE(token2send_request.find(body_token) != token2send_request.end());
   ASSERT_TRUE(token2recv_request.find(body_token) != token2recv_request.end());
-  DestroyNumProcessPerNode();
 }
+#endif  // __linux__
 
 }  // namespace test
 }  // namespace vm
