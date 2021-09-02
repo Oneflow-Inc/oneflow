@@ -15,6 +15,8 @@ limitations under the License.
 """
 from oneflow.nn.modules.interpolate import interpolate
 from oneflow.nn.modules.norm import l2_normalize
+from oneflow.nn.modules.affine_grid import affine_grid
+from oneflow.nn.modules.grid_sample import grid_sample
 from oneflow._C import conv1d
 from oneflow._C import conv2d
 from oneflow._C import conv3d

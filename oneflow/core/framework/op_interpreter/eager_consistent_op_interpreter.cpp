@@ -30,7 +30,7 @@ limitations under the License.
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_consistent_id.h"
@@ -96,16 +96,17 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   }
   const auto& output_tensor_metas = result->output_tensor_metas();
   Optional<int64_t> parallel_id;
-  const auto& device = JUST(GetDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+  const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   for (int i = 0; i < outputs->size(); ++i) {
-    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(output_tensor_metas.at(i), device,
-                                                                  parallel_id, false, false));
+    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
+        output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }
   // Run instruction LocalCallOpKernel
-  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(result->op_device()));
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
-      << Error::Unimplemented() << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
+      << Error::UnimplementedError()
+      << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {

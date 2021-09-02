@@ -519,6 +519,26 @@
     "Tensor (Tensor dy, Tensor label, Tensor theta, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLossGrad"
   bind_python: False
 
+- name: "affine_grid"
+  signature:
+    "Tensor (Tensor theta, *, Shape size, Bool align_corners) => AffineGrid"
+  bind_python: True
+
+- name: "affine_grid_grad"
+  signature:
+    "Tensor (Tensor dgrid, *, Shape size, Bool align_corners) => AffineGridGrad"
+  bind_python: False
+
+- name: "grid_sample"
+  signature:
+    "Tensor (Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners) => GridSample"
+  bind_python: True
+
+- name: "grid_sample_grad"
+  signature:
+    "TensorTuple (Tensor doutput, Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners) => GridSampleGrad"
+  bind_python: False
+
 - name: "where"
   signature: [
     "Tensor (Tensor condition, Tensor x, Tensor y) => Where",
@@ -1030,6 +1050,10 @@
   signature: "Tensor (Tensor x) => ConsistentAllGather"
   bind_python: False
 
+- name: "consistent_s2s"
+  signature: "Tensor (Tensor x, SbpList out_sbp) => ConsistentS2S"
+  bind_python: False
+
 - name: "select_first"
   signature: "Tensor (TensorTuple inputs) => SelectFirst"
   bind_python: True
@@ -1153,4 +1177,12 @@
 
 - name: "fused_bias_add_dropout"
   signature: "Tensor (Tensor a, Tensor b, *, Float p=0.5, Int32 axis, Generator generator=None) => FusedBiasAddDropout"
+  bind_python: True
+
+- name: "send"
+  signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"
+  bind_python: True
+
+- name: "recv"
+  signature: "Tensor (Int64 src, Shape shape=None, DataType dtype=None, Device device=None, *, Tensor out=None) => Recv"
   bind_python: True

@@ -25,7 +25,7 @@ class CosineDecayLR(LrScheduler):
 
     .. math::
 
-        & cos\\_decay = 0.5*(1+cos(\\pi*\\frac{current\\_step}{decay_steps}))
+        & cos\\_decay = 0.5*(1+cos(\\pi*\\frac{current\\_step}{decay\\_steps}))
 
         & decay\\_factor = (1-\\alpha)*cos\\_decay+\\alpha
 
