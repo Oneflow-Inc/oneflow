@@ -236,7 +236,7 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
     def test_functional_hardsigmoid_with_random_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
-        y = torch.nn.functional.hardsigmoid(x, False)
+        y = torch.nn.functional.hardsigmoid(x, random_bool())
         return y
 
 
