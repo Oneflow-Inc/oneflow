@@ -17,9 +17,9 @@ limitations under the License.
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
-#include "oneflow/core/framework/op_interpreter/boxing/boxing_dividor_util.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
+#include "oneflow/core/boxing/boxing_dividor_util.h"
 
 namespace oneflow {
 

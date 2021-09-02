@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/op_interpreter/boxing/boxing_dividor_util.h"
+#include "oneflow/core/boxing/boxing_dividor_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/framework/instructions_builder.h"
