@@ -40,9 +40,11 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SingleClientSync() {
+Maybe<void> ClusterSync() {
+  Maybe<void> (*Run)(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) =
+      JUST(*Global<Maybe<bool>, MultiClient>::Get()) ? &PhysicalRun : &LogicalRun;
   BlockingCounter bc(1);
-  JUST(LogicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {
+  JUST(Run([&bc](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->ComputeGlobalFrontSeqBarrier());
     JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
     return Maybe<void>::Ok();
@@ -53,10 +55,9 @@ Maybe<void> SingleClientSync() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MultiClientSync() {
+Maybe<void> CurrentRankSync() {
   BlockingCounter bc(1);
   JUST(PhysicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->ComputeGlobalFrontSeqBarrier());
     JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
     return Maybe<void>::Ok();
   }));

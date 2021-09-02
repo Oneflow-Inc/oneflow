@@ -109,7 +109,7 @@ Maybe<Scope> NewScopeWithParallelConfAndCurScope(
     return Maybe<void>::Ok();
   }));
   // NOTE(chengcheng): need sync vm for get scope right now
-  JUST(vm::MultiClientSync());
+  JUST(vm::CurrentRankSync());
   CHECK_OR_RETURN(new_scope);
   return new_scope;
 }
