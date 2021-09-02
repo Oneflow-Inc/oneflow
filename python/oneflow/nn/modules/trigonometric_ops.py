@@ -77,8 +77,6 @@ def atan2_op_tensor(input, other):
     return Atan2()(input, other)
 
 
-
-
 if __name__ == "__main__":
     import doctest
 

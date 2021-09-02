@@ -19,6 +19,7 @@ import oneflow as flow
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _single
 
+
 def _rand_op_common_process(
     size, device=None, generator=None, placement=None, sbp=None
 ):

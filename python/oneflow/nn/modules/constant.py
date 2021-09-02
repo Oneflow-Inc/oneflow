@@ -257,7 +257,6 @@ def full_op(
     return Full(size, value, dtype, device, placement, sbp, requires_grad)()
 
 
-
 class NewOnes(Module):
     def __init__(
         self,

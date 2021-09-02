@@ -47,7 +47,7 @@ add_docstr(
         >>> input = flow.Tensor(arr, dtype=flow.float32)
         >>> flow.diag(input)
         tensor([1., 5., 9.], dtype=oneflow.float32)
-    """
+    """,
 )
 
 add_docstr(
@@ -77,7 +77,7 @@ add_docstr(
                 [1., 1., 0.],
                 [1., 1., 1.]], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -102,5 +102,5 @@ add_docstr(
                 [0., 1., 1.],
                 [0., 0., 1.]], dtype=oneflow.float32)
 
-    """
+    """,
 )

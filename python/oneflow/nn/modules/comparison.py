@@ -81,7 +81,6 @@ def ne_op(input, other):
     return flow._C.not_equal(input, other)
 
 
-
 @register_tensor_op("lt")
 def less_op(input, other):
     """Returns the truth value of :math:`input < other` element-wise.

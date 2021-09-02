@@ -240,8 +240,10 @@ def _rmul(self, other):
 def _add(self, other):
     return flow.add(self, other)
 
+
 def _add_inplace(self, other):
     return flow.add(self, other, inplace=True)
+
 
 def _iadd(self, other):
     return self.add_(other)
@@ -282,140 +284,186 @@ def _abs(self):
 def _exp(self):
     return flow.exp(self)
 
+
 def _acos(self):
     return flow.acos(self)
+
 
 def _acosh(self):
     return flow.acosh(self)
 
+
 def _arccosh(self):
     return flow.arccosh(self)
+
 
 def _atanh(self):
     return flow.atanh(self)
 
+
 def _arctanh(self):
     return flow.arctanh(self)
+
 
 def _sign(self):
     return flow.sign(self)
 
+
 def _sinh(self):
     return flow.sinh(self)
+
 
 def _tan(self):
     return flow.tan(self)
 
+
 def _gelu(self):
     return flow.gelu(self)
+
 
 def _mish(self):
     return flow.mish(self)
 
+
 def _sigmoid(self):
     return flow.sigmoid(self)
+
 
 def _tanh(self):
     return flow.tanh(self)
 
+
 def _silu(self):
     return flow.silu(self)
+
 
 def _selu(self):
     return flow.selu(self)
 
+
 def _softsign(self):
     return flow.softsign(self)
+
 
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
+
 def _diag(self, diagonal=0):
     return flow.diag(self, diagonal=diagonal)
+
 
 def _log1p(self):
     return flow.log1p(self)
 
+
 def _reciprocal(self):
     return flow.reciprocal(self)
+
 
 def _asin(self):
     return flow.asin(self)
 
+
 def _arcsin(self):
     return flow.arcsin(self)
+
 
 def _asinh(self):
     return flow.asinh(self)
 
+
 def _arcsinh(self):
     return flow.arcsinh(self)
+
 
 def _atan(self):
     return flow.atan(self)
 
+
 def _arctan(self):
-    return flow.arctan(self) 
+    return flow.arctan(self)
+
 
 def _ceil(self):
     return flow.ceil(self)
 
+
 def _clamp(self, min=None, max=None):
     return flow.clamp(self, min=min, max=max)
+
 
 def _clip(self, min=None, max=None):
     return flow.clip(self, min=min, max=max)
 
+
 def _cos(self):
     return flow.cos(self)
+
 
 def _cosh(self):
     return flow.cosh(self)
 
+
 def _erf(self):
     return flow.erf(self)
+
 
 def _erfc(self):
     return flow.erfc(self)
 
+
 def _expm1(self):
     return flow.expm1(self)
+
 
 def _fmod(self, other):
     return flow.fmod(self, other)
 
+
 def _log(self):
     return flow.log(self)
+
 
 def _minimum(self, y):
     return flow.minimum(self, y)
 
+
 def _maximum(self, y):
     return flow.maximum(self, y)
+
 
 def _rsqrt(self):
     return flow.rsqrt(self)
 
+
 def _sqrt(self):
     return flow.sqrt(self)
+
 
 def _square(self):
     return flow.square(self)
 
+
 def _matmul(self, other):
     return flow.matmul(self, other)
+
 
 def _round(self):
     return flow.round(self)
 
+
 def _softplus(self):
     return flow.softplus(self)
+
 
 def _tril(self, diagonal=0):
     return flow.tril(self, diagonal=diagonal)
 
+
 def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
+
 
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
@@ -648,6 +696,7 @@ def RegisterMethods():
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
+
 
 def register_tensor_op(op_name):
     def set_tensor_op(method):

@@ -41,5 +41,5 @@ add_docstr(
         >>> np.array_equal(output.numpy(), np_arr.astype(np.int8))
         True
 
-    """
+    """,
 )

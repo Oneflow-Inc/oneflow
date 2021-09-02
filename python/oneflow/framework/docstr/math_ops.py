@@ -36,7 +36,7 @@ add_docstr(
         >>> flow.abs(x)
         tensor([1., 2., 3., 4.], dtype=oneflow.float32)
     
-    """
+    """,
 )
 
 add_docstr(
@@ -75,7 +75,7 @@ add_docstr(
         >>> out.shape
         (2, 3)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -118,7 +118,7 @@ add_docstr(
         >>> out.shape 
         (2, 3)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -158,7 +158,7 @@ add_docstr(
         >>> out.shape 
         (2, 3)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -178,7 +178,7 @@ add_docstr(
         >>> out.numpy()
         array([[1.        , 0.5       , 0.33333334],
                [0.25      , 0.2       , 0.16666667]], dtype=float32)
-    """
+    """,
 )
 
 add_docstr(
@@ -217,7 +217,7 @@ add_docstr(
         >>> out.shape
         (2, 3)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -250,7 +250,7 @@ add_docstr(
         >>> output1
         tensor([[ 0.9273,  1.5708],
                 [-0.6435, -1.5708]], dtype=oneflow.float32)
-    """
+    """,
 )
 
 add_docstr(
@@ -285,7 +285,7 @@ add_docstr(
         tensor([[-0.8814,  0.0000, -0.3900],
                 [ 2.3124,  2.6441,  0.7327]], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -310,7 +310,7 @@ add_docstr(
         >>> output.shape
         flow.Size([3])
         
-    """
+    """,
 )
 
 add_docstr(
@@ -360,7 +360,7 @@ add_docstr(
                 [[11., 12., 13.],
                  [14., 15., 16.]]], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -381,7 +381,7 @@ add_docstr(
         >>> out
         tensor([0.8329, 0.9163, 1.3083], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -414,7 +414,7 @@ add_docstr(
         >>> y
         tensor([ 2.7183,  7.3891, 20.0855], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -440,7 +440,7 @@ add_docstr(
         >>> output = flow.acos(input)
         >>> output
         tensor([1.0472, 0.9273, 0.7954], dtype=oneflow.float32)
-    """
+    """,
 )
 
 add_docstr(
@@ -469,7 +469,7 @@ add_docstr(
         >>> out2 = flow.acosh(x2)
         >>> out2
         tensor([0.9624, 1.6094, 1.9827], device='cuda:0', dtype=oneflow.float32)
-    """
+    """,
 )
 
 add_docstr(
@@ -494,7 +494,7 @@ add_docstr(
         >>> output
         tensor([0.5493, 0.6931, 0.8673], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -523,7 +523,7 @@ add_docstr(
         >>> out2.numpy()
         array([-1., -1.,  1.], dtype=float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -554,7 +554,7 @@ add_docstr(
         >>> flow.sinh(x3).numpy()
         array([ 1.1752012,  0.       , -1.1752012], dtype=float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -579,7 +579,7 @@ add_docstr(
         >>> output
         tensor([-1.,  0.,  1.], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -661,7 +661,7 @@ add_docstr(
         >>> output
         tensor([ 0.2000,  0.6000, -0.5000, -0.3000], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -685,7 +685,7 @@ add_docstr(
         >>> input = flow.Tensor(arr, dtype=flow.float32)
         >>> output = flow.cos(input).numpy()
 
-    """
+    """,
 )
 
 add_docstr(
@@ -712,7 +712,7 @@ add_docstr(
         >>> output
         array([1.0133467, 1.7859949, 1.2535787, 1.2804903], dtype=float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -759,7 +759,7 @@ add_docstr(
                [ 1.        ,  1.        ,  0.74210095],
                [ 0.9953223 ,  0.9999779 ,  1.        ]], dtype=float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -794,7 +794,7 @@ add_docstr(
         tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
                 [1.5375e-12, 4.1838e-23, 2.5790e-01]], dtype=oneflow.float32)
         
-    """
+    """,
 )
 
 add_docstr(
@@ -850,7 +850,7 @@ add_docstr(
           [4.4241238e+05 1.2026032e+06 3.2690165e+06]]]
 
 
-    """
+    """,
 )
 
 add_docstr(
@@ -883,7 +883,7 @@ add_docstr(
         >>> flow.fmod(flow.tensor([1, 2, 3, 4., -5]), flow.tensor([4, 2, 1, 3., 1]))
         tensor([1., 0., 0., 1., -0.], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -908,7 +908,7 @@ add_docstr(
         >>> output = flow.log(input)
 
 
-    """
+    """,
 )
 
 add_docstr(
@@ -931,7 +931,7 @@ add_docstr(
         >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
         >>> flow.minimum(x, y)
         tensor([1., 0., 1.], dtype=oneflow.float32)
-    """
+    """,
 )
 
 add_docstr(
@@ -954,7 +954,7 @@ add_docstr(
         >>> y = flow.tensor((3, 0, 4), dtype=flow.float)
         >>> flow.maximum(x, y)
         tensor([3., 1., 4.], dtype=oneflow.float32)
-    """
+    """,
 )
 
 add_docstr(
@@ -995,7 +995,7 @@ add_docstr(
         >>> out
         tensor([  1.,   4.,  27., 256.], dtype=oneflow.float32)
         
-    """
+    """,
 )
 
 add_docstr(
@@ -1020,7 +1020,7 @@ add_docstr(
             >>> out = flow.rsqrt(a).numpy()
             >>> out
             array([1.        , 0.70710677, 0.57735026], dtype=float32)
-    """
+    """,
 )
 
 add_docstr(
@@ -1045,7 +1045,7 @@ add_docstr(
             >>> output = flow.sqrt(input).numpy()
             >>> output
             array([1.       , 1.4142135, 1.7320508], dtype=float32)
-        """
+        """,
 )
 
 
@@ -1071,7 +1071,7 @@ add_docstr(
             >>> output = flow.square(input).numpy()
             >>> output
             array([1., 4., 9.], dtype=float32)
-        """
+        """,
 )
 
 add_docstr(
@@ -1097,7 +1097,7 @@ add_docstr(
         >>> of_out.shape
         flow.Size([2, 5])
 
-    """
+    """,
 )
 
 add_docstr(
@@ -1122,5 +1122,5 @@ add_docstr(
         >>> out2.numpy()
         array([2., 8., 5., 7.], dtype=float32)
 
-    """
+    """,
 )

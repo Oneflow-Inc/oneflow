@@ -1,5 +1,20 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -117,7 +132,7 @@ from oneflow._C import triu
 
 from . import sbp
 import atexit
- 
+
 import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
 import oneflow.framework.register_python_callback
@@ -201,7 +216,6 @@ del atexit
 del oneflow
 
 import oneflow._C
-import oneflow.framework.docstr as docstr
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
@@ -346,3 +360,4 @@ import oneflow.utils.vision
 from oneflow.nn.modules.relu import relu_op as relu
 import oneflow.comm
 
+import oneflow.framework.docstr as docstr

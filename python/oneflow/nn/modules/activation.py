@@ -226,6 +226,7 @@ class Tanh(Module):
     def forward(self, input):
         return flow._C.tanh(input)
 
+
 class ELU(Module):
     """Applies the element-wise function:
 
@@ -347,7 +348,6 @@ class Sigmoid(Module):
 
     def forward(self, x):
         return flow._C.sigmoid(x)
-
 
 
 class Hardsigmoid(Module):
@@ -877,7 +877,6 @@ class SiLU(Module):
         return flow._C.silu(x)
 
 
-
 class SELU(Module):
     r"""Applies the element-wise function:
 
@@ -927,7 +926,6 @@ class SELU(Module):
         return flow._C.selu(x)
 
 
-
 class Softsign(Module):
     r"""The SoftSign activation.
 
@@ -962,7 +960,6 @@ class Softsign(Module):
 
     def forward(self, x):
         return flow._C.softsign(x)
-
 
 
 if __name__ == "__main__":

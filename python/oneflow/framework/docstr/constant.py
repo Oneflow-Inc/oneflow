@@ -36,7 +36,7 @@ add_docstr(
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 
-    """
+    """,
 )
 
 add_docstr(
@@ -59,5 +59,5 @@ add_docstr(
         >>> y
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
-    """
+    """,
 )

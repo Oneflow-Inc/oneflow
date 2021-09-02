@@ -71,7 +71,7 @@ def variance_op(input, dim=None, unbiased=True, keepdim=False):
 
 
 def sin_op(input):
-    
+
     return flow._C.sin(input, False)
 
 
@@ -94,7 +94,6 @@ def inplace_sin_op_tensor(input):
     
     """
     return flow._C.sin(input, True)
-
 
 
 @register_tensor_op("std")
@@ -156,7 +155,7 @@ def addmm(x, mat1, mat2, alpha=1, beta=1):
         raise ValueError("input matrixes shape can not be greater than 2")
     else:
         return flow.mul(x, beta) + flow.mul(flow._C.matmul(mat1, mat2), alpha)
-   
+
 
 def addmm_op(input, mat1, mat2, alpha=1, beta=1):
     """addmm(beta=1, input, alpha=1, mat1, mat2, out=None) -> Tensor
@@ -266,6 +265,7 @@ class Clamp(Module):
     def forward(self, x):
         return self._op(x)[0]
 
+
 class Topk(Module):
     def __init__(
         self, k, dim: int = None, largest: bool = True, sorted: bool = True
@@ -354,8 +354,6 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 
     """
     return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
-
-
 
 
 if __name__ == "__main__":
