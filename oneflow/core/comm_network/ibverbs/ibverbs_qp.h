@@ -57,15 +57,14 @@ struct WorkRequestId {
 
 class IBVerbsMessagePool final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MessagePool);
+  OF_DISALLOW_COPY_AND_MOVE(IBVerbsMessagePool);
   IBVerbsMessagePool() = delete;
   ~IBVerbsMessagePool() {
     FreeMr();
     FreeMemory();
   }
 
-  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd), num_of_message_(number_of_message) 
-  {
+  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd), num_of_message_(number_of_message) {
     RegisterMessagePool();
   }
 
@@ -75,7 +74,7 @@ class IBVerbsMessagePool final {
     size_t register_memory_size = actor_msg_size * (num_of_message_);
     char* addr = (char*)malloc(register_memory_size);
     ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
-        pd_, addr, RegisterMemorySize,
+        pd_, addr, register_memory_size,
         IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
     CHECK(mr);
     ibv_mr_buf_.push_front(mr);

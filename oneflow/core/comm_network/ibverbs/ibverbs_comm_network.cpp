@@ -142,7 +142,7 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   ibv_device_attr device_attr{};
   CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  message_pool_ = IBVerbsMessagePool(pd_, kDefaultMessagePoolSize);
+  message_pool_ = new  IBVerbsMessagePool(pd_, kDefaultMessagePoolSize);
   CHECK(cq_);
   ibv_port_attr port_attr{};
   const uint8_t port = user_port == 0 ? 1 : user_port;
