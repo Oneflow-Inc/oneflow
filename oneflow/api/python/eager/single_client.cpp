@@ -21,6 +21,6 @@ ONEFLOW_API_PYBIND11_MODULE("eager.single_client", m) {
   using namespace oneflow;
   namespace py = pybind11;
   m.def(
-      "Sync", []() { vm::SingleClientSync().GetOrThrow(); },
+      "Sync", []() { vm::ClusterSync().GetOrThrow(); },
       py::call_guard<py::gil_scoped_release>());
 }
