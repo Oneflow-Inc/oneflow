@@ -168,35 +168,41 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other) {
   }
 }
 
-Maybe<Tensor> MakeTensorFromOtherTensor(
-    const std::shared_ptr<Tensor>& other, const Optional<Symbol<DType>>& dtype,
-    const Optional<Symbol<Device>>& device, const Optional<Symbol<ParallelDesc>>& placement,
-    const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp_tuple, const bool& requires_grad) {
-  if (placement) {
-    if (!sbp_tuple) {
-      return Error::RuntimeError() << "Sbp tuple is expected while constructing consistent tensor.";
-    }
-  }
+Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
+                                        const Optional<Symbol<DType>>& dtype,
+                                        const Optional<Symbol<Device>>& device,
+                                        const bool& requires_grad) {
   std::shared_ptr<Tensor> tensor;
-  if (placement) {
-    tensor = JUST(functional::ToConsistent(other, JUST(placement.value()), *JUST(sbp_tuple.value()),
-                                           GetNoneSbpList()));
+  Symbol<Device> device_;
+  if (device) { device_ = JUST(device.value()); }
+  if (other->is_local()) {
+    if (!device) { device_ = JUST(other->device()); }
+    tensor = JUST(functional::Copy(other, device_->type(), device_->device_id()));
   } else {
-    Symbol<Device> device_;
-    if (device) { device_ = JUST(device.value()); }
-    if (other->is_local()) {
-      if (!device) { device_ = JUST(other->device()); }
-      tensor = JUST(functional::Copy(other, device_->type(), device_->device_id()));
-    } else {
-      tensor = JUST(functional::ConsistentToLocal(other));
-      if (!device) { device_ = JUST(Device::New("cpu")); }
-      tensor = JUST(functional::Copy(tensor, device_->type(), device_->device_id()));
-    }
+    tensor = JUST(functional::ConsistentToLocal(other));
+    if (!device) { device_ = JUST(Device::New("cpu")); }
+    tensor = JUST(functional::Copy(tensor, device_->type(), device_->device_id()));
   }
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype.value());
-    if (tensor->dtype() != dtype_) { return functional::Cast(tensor, dtype_); }
+    if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }
   }
+  tensor->set_requires_grad(requires_grad);
+  return tensor;
+}
+
+Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
+                                        const Optional<Symbol<DType>>& dtype,
+                                        const Symbol<ParallelDesc>& placement,
+                                        const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                        const bool& requires_grad) {
+  std::shared_ptr<Tensor> tensor =
+      JUST(functional::ToConsistent(other, placement, sbp_tuple, GetNoneSbpList()));
+  if (dtype) {
+    const Symbol<DType>& dtype_ = JUST(dtype.value());
+    if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }
+  }
+  tensor->set_requires_grad(requires_grad);
   return tensor;
 }
 

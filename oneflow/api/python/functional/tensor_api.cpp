@@ -41,8 +41,6 @@ class TensorWithDataFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
-                           const Optional<Symbol<ParallelDesc>>& placement,
-                           const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp_tuple,
                            const bool& requires_grad) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
@@ -60,26 +58,55 @@ class TensorWithDataFunctor {
       if (ret != 0) { return Error::RuntimeError(); }
 
       const auto& other = JUST(PyUnpackTensor(data));
-      return MakeTensorFromOtherTensor(other, dtype, device, placement, sbp_tuple, requires_grad);
-    }
-
-    // TODO(): Construct consistent tensor from sequence or numpy ndarray.
-    if (placement.has_value() || sbp_tuple.has_value()) {
-      return Error::RuntimeError()
-             << "Can not construct consistent tensor from sequence or numpy array currently.";
+      return MakeTensorFromOtherTensor(other, dtype, device, requires_grad);
     }
     // Make tensor from python sequence or numpy array.
     return MakeLocalTensorFromData(data, dtype, device, requires_grad);
   }
 };
 
+class ConsistentTensorWithDataFunctor {
+ public:
+  Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const bool& requires_grad) const {
+    // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
+    LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
+
+    if (PyTensorCheck(data)) {
+      // Throw warnings like pytorch.
+      auto ret = PyErr_WarnEx(
+          PyExc_UserWarning,
+          "To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() "
+          "or sourceTensor.clone().detach().requires_grad_(True), rather than "
+          "oneflow.tensor(sourceTensor).",
+          1);
+      if (ret != 0) { return Error::RuntimeError(); }
+
+      const auto& other = JUST(PyUnpackTensor(data));
+      return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple, requires_grad);
+    }
+    // TODO(): Construct consistent tensor from sequence or numpy ndarray.
+    return Error::RuntimeError()
+           << "Can not construct consistent tensor from sequence or numpy array currently.";
+  }
+};
+
 class TensorEmptyCtorFunctor {
  public:
-  Maybe<Tensor> operator()(const Optional<Symbol<Device>>& device,
-                           const Optional<Symbol<ParallelDesc>>& placement,
-                           const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp_tuple) const {
+  Maybe<Tensor> operator()(const Optional<Symbol<Device>>& device) const {
     Shape shape(DimVector{0});
-    return TensorWithShapeCtor(shape, device, placement, sbp_tuple);
+    return TensorWithShapeCtor(shape, device);
+  }
+};
+
+class ConsistentTensorEmptyCtorFunctor {
+ public:
+  Maybe<Tensor> operator()(const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    Shape shape(DimVector{0});
+    return ConsistentTensorWithShapeCtor(shape, placement, sbp_tuple);
   }
 };
 
@@ -94,14 +121,12 @@ class TensorWithOtherCtorFunctor {
 
 class TensorWithDataCtorFunctor {
  public:
-  Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<Device>>& device,
-                           const Optional<Symbol<ParallelDesc>>& placement,
-                           const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp_tuple) const {
+  Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<Device>>& device) const {
     // Treat the single long as shape.
     if (PyLong_Check(data)) {
       int64_t size = PyLong_AsLongLong(data);
       Shape shape(DimVector{size});
-      return TensorWithShapeCtor(shape, device, placement, sbp_tuple);
+      return TensorWithShapeCtor(shape, device);
     }
 
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
@@ -110,43 +135,62 @@ class TensorWithDataCtorFunctor {
     const auto& dtype = DType::Float();
     if (PyTensorCheck(data)) {
       const auto& other = JUST(PyUnpackTensor(data));
-      return MakeTensorFromOtherTensor(other, dtype, device, placement, sbp_tuple,
+      return MakeTensorFromOtherTensor(other, dtype, device,
                                        /*requires_grad=*/false);
-    }
-
-    // TODO(): Construct consistent tensor from sequence or numpy ndarray.
-    if (placement.has_value() || sbp_tuple.has_value()) {
-      return Error::RuntimeError()
-             << "Can not construct consistent tensor from sequence or numpy array currently.";
     }
     // Make tensor from python sequence or numpy array.
     return MakeLocalTensorFromData(data, dtype, device, /*requires_grad=*/false);
   }
 };
 
-class TensorWithShapeCtorFunctor {
+class ConsistentTensorWithDataCtorFunctor {
  public:
-  Maybe<Tensor> operator()(const Shape& shape, const Optional<Symbol<Device>>& device,
-                           const Optional<Symbol<ParallelDesc>>& placement,
-                           const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp_tuple) const {
+  Maybe<Tensor> operator()(PyObject* data, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    // Treat the single long as shape.
+    if (PyLong_Check(data)) {
+      int64_t size = PyLong_AsLongLong(data);
+      Shape shape(DimVector{size});
+      return ConsistentTensorWithShapeCtor(shape, placement, sbp_tuple);
+    }
+
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
-    if (placement) {
-      if (!sbp_tuple) {
-        return Error::RuntimeError()
-               << "Sbp tuple is expected while constructing consistent tensor.";
-      }
-      return functional::ConsistentEmpty(shape, DType::Float(), JUST(placement.value()),
-                                         *JUST(sbp_tuple.value()));
-    } else {
-      Symbol<Device> device_;
-      if (device) {
-        device_ = JUST(device.value());
-      } else {
-        device_ = JUST(Device::New("cpu"));
-      }
-      return functional::Empty(shape, DType::Float(), device_);
+
+    const auto& dtype = DType::Float();
+    if (PyTensorCheck(data)) {
+      const auto& other = JUST(PyUnpackTensor(data));
+      return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
+                                       /*requires_grad=*/false);
     }
+    // TODO(): Construct consistent tensor from sequence or numpy ndarray.
+    return Error::RuntimeError()
+           << "Can not construct consistent tensor from sequence or numpy array currently.";
+  }
+};
+
+class TensorWithShapeCtorFunctor {
+ public:
+  Maybe<Tensor> operator()(const Shape& shape, const Optional<Symbol<Device>>& device) const {
+    // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
+    LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
+    Symbol<Device> device_;
+    if (device) {
+      device_ = JUST(device.value());
+    } else {
+      device_ = JUST(Device::New("cpu"));
+    }
+    return functional::Empty(shape, DType::Float(), device_);
+  }
+};
+
+class ConsistentTensorWithShapeCtorFunctor {
+ public:
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+    // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
+    LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
+    return functional::ConsistentEmpty(shape, DType::Float(), placement, sbp_tuple);
   }
 };
 
@@ -154,10 +198,14 @@ class TensorWithShapeCtorFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorWithDataFunctor>("TensorWithData");
+  m.add_functor<impl::TensorWithDataFunctor>("ConsistentTensorWithData");
   m.add_functor<impl::TensorEmptyCtorFunctor>("TensorEmptyCtor");
+  m.add_functor<impl::TensorEmptyCtorFunctor>("ConsistentTensorEmptyCtor");
   m.add_functor<impl::TensorWithOtherCtorFunctor>("TensorWithOtherCtor");
   m.add_functor<impl::TensorWithDataCtorFunctor>("TensorWithDataCtor");
+  m.add_functor<impl::TensorWithDataCtorFunctor>("ConsistentTensorWithDataCtor");
   m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
+  m.add_functor<impl::TensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
 }
 
 }  // namespace functional

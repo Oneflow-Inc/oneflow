@@ -73,15 +73,21 @@ Maybe<void> RegisterTensorHook(const std::shared_ptr<Tensor>& self, const Autogr
 
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor);
 
-Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other);
-
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device, bool requires_grad);
 
-Maybe<Tensor> MakeTensorFromOtherTensor(
-    const std::shared_ptr<Tensor>& other, const Optional<Symbol<DType>>& dtype,
-    const Optional<Symbol<Device>>& device, const Optional<Symbol<ParallelDesc>>& placement,
-    const Optional<std::vector<Symbol<cfg::SbpParallel>>>& sbp_tuple, const bool& requires_grad);
+Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other);
+
+Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
+                                        const Optional<Symbol<DType>>& dtype,
+                                        const Optional<Symbol<Device>>& device,
+                                        const bool& requires_grad);
+
+Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
+                                        const Optional<Symbol<DType>>& dtype,
+                                        const Symbol<ParallelDesc>& placement,
+                                        const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                        const bool& requires_grad);
 
 }  // namespace one
 }  // namespace oneflow
