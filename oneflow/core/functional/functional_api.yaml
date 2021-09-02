@@ -557,6 +557,11 @@
     "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
   bind_python: False
 
+- name: "unsorted_batch_segment_sum"
+  signature:
+    "Tensor UnsortedBatchSegmentSum(Tensor x, Tensor segment_ids, Int32 num_segments)"
+  bind_python: False
+
 - name: "triu"
   signature: "Tensor Triu(Tensor x, Int64 diagonal=0)"
   bind_python: True
