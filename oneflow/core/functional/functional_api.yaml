@@ -548,6 +548,13 @@
   ]
   bind_python: true
 
+- name: "movedim"
+  signature: [
+    "Tensor (Tensor input, Int32 source, Int32 destination) => MovedimInt",
+    "Tensor (Tensor input, Int32List source, Int32List destination) => MovedimVec",
+  ]
+  bind_python: true
+
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
   bind_python: True

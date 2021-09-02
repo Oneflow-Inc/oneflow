@@ -269,6 +269,77 @@ class TransposeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MovedimVecFunctor {
+ public:
+  MovedimVecFunctor() = default;
+  Maybe<void> CheckNoRepeat(const std::vector<int32_t>& perm, std::vector<int32_t> &perm_out) const{  
+    std::vector<bool> is_used(perm.size(), false);
+    FOR_RANGE(size_t, i, 0, perm.size()) {
+      int32_t item = perm[i];
+      if(item<0){
+        item += perm.size();
+      }
+      CHECK_GE_OR_RETURN(item, 0);
+      CHECK_LT_OR_RETURN(item, perm.size());
+      CHECK_EQ_OR_RETURN(is_used[item], false);
+      is_used[perm[i]] = true;
+      perm_out[i] = item;
+    }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int32_t>& source,
+                           const std::vector<int32_t>& destination ) const {
+    int32_t indim = x->shape()->NumAxes();
+    int32_t dim = source.size();
+ 
+    CHECK_EQ_OR_RETURN(source.size(),destination.size());
+    std::vector<int32_t> source_nopeat(dim);
+    std::vector<int32_t> destination_nopeat(dim);
+
+    CheckNoRepeat(source,source_nopeat);
+    CheckNoRepeat(destination,destination_nopeat);
+
+    std::map<int,int> source_map;
+    std::map<int,int> destination_map;
+    std::vector<int32_t> perm(indim);
+    for(int32_t i=0; i< dim; i++){
+      source_map.insert(std::pair<int,int>(source_nopeat[i],0));
+      destination_map.insert(std::pair<int,int>(destination_nopeat[i],0));
+      perm[destination_nopeat[i]] = perm[source_nopeat[i]];
+    }
+    
+    std::vector<int> item_list;
+    std::vector<int> index_list;
+    for(int32_t i=0; i<indim; i++){
+      if(source_map.find(i)==source_map.end()){
+         item_list.push_back(i);
+      }
+      if(destination_map.find(i)==destination_map.end()){
+         index_list.push_back(i);
+      }
+    }
+
+    for(int32_t i=0; i<item_list.size();i++){
+      perm[index_list[i]] = item_list[i];
+    }
+    return Transpose(x, perm);
+  }
+};
+
+class MovedimIntFunctor {
+ public:
+  MovedimIntFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const int32_t& source,
+                           const int32_t& destination ) const {
+    std::vector<int32_t>s{source};
+    std::vector<int32_t>d{destination};
+    return MovedimVec(x,s,d);
+  }
+};
+
 class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
@@ -678,6 +749,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReduceProdFunctor>("ReduceProd");
   m.add_functor<impl::ReduceMeanFunctor>("ReduceMean");
   m.add_functor<impl::TransposeFunctor>("Transpose");
+  m.add_functor<impl::MovedimVecFunctor>("MovedimVec");
+  m.add_functor<impl::MovedimIntFunctor>("MovedimInt");
   m.add_functor<impl::ArangeFunctor>("Arange");
   m.add_functor<impl::Arange2Functor>("Arange2");
   m.add_functor<impl::ConsistentArangeFunctor>("ConsistentArange");
