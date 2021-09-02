@@ -19,7 +19,6 @@ import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow.framework.tensor_str as tensor_str_util
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
-from oneflow.support.blocking import BlockingInfoContext
 
 import numpy as np
 from typing import Union
@@ -47,9 +46,8 @@ def _tensor_numpy(eager_local_tensor):
         dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
 
-    with BlockingInfoContext() as ctx:
-        if ndarray.size != 0:
-            copy_to_numpy(ndarray)
+    if ndarray.size != 0:
+        copy_to_numpy(ndarray)
     return ndarray
 
 
@@ -160,6 +158,11 @@ def _eq(self, other):
 
 def _ne(self, other):
     return self.ne(other)
+
+
+def _contiguous(self):
+    # TODO: support stride mechanism
+    return self
 
 
 def _getstate(self):
@@ -644,6 +647,7 @@ def RegisterMethods():
     Tensor.softplus = _softplus
     Tensor.tril = _tril
     Tensor.triu = _triu
+    Tensor.contiguous = _contiguous
 
 def register_tensor_op(op_name):
     def set_tensor_op(method):
@@ -654,4 +658,34 @@ def register_tensor_op(op_name):
 
 
 def tensor(*args, **kwargs):
+    """Constructs a tensor with data, return a consistent tensor if placement and sbp are in kwargs,
+       otherwise return a local tensor. 
+       
+    Arguments:
+        data: Initial data for the tensor. Can be a list, tuple, NumPy ndarray, scalar or tensor.
+    Keyword Arguments:
+        dtype (oneflow.dtype, optional) – the desired data type of returned tensor.
+            Default: if None, infers data type from data.
+        device (oneflow.device, optional): the desired device of returned tensor. If placement
+            and sbp is None, uses the current cpu for the default tensor type.
+        placement (oneflow.placement, optional): the desired placement of returned tensor.
+        sbp (oneflow.sbp or tuple of oneflow.sbp, optional): the desired sbp of returned tensor.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False
+
+    Noted:
+        The Keyword Argument device is mutually exclusive with placement and sbp.
+        Consistent tensor only can be constructed from tensor.
+
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> x = flow.tensor([1,2,3])
+        >>> x
+        tensor([1, 2, 3], dtype=oneflow.int64)
+
+    """
     return flow._oneflow_internal.tensor(*args, **kwargs)
