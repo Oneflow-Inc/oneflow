@@ -208,7 +208,7 @@ def _test_train_graph(test_case, device):
                 self.pp_m.linear1.config.stage_id = 1
                 self.pp_m.relu1.config.stage_id = 1
                 # TODO(): support gradient accumulation
-                #self.config.set_gradient_accumulation_steps(2)
+                self.config.set_gradient_accumulation_steps(2)
                 self.add_optimizer(of_sgd)
 
             def build(self):
@@ -220,7 +220,6 @@ def _test_train_graph(test_case, device):
                 return out
 
         pp_g = PipelineGraph()
-        print(pp_g)
 
         def one_iter():
             pp_m.train()
