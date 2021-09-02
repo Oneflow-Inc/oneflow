@@ -35,6 +35,7 @@ class SelectFirst : public OpExprGradFunction<SelectFirstCaptureState> {
   Maybe<void> Capture(SelectFirstCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->inputs = inputs;
+    CHECK_OR_RETURN(ctx->inputs.at(0)->requires_grad());
     ctx->requires_grad.resize(inputs.size());
     for (int i = 0; i < ctx->requires_grad.size(); ++i) {
       ctx->requires_grad.at(i) = inputs.at(i)->requires_grad();
