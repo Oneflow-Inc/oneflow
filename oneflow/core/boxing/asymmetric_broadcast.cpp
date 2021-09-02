@@ -21,8 +21,8 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
 
