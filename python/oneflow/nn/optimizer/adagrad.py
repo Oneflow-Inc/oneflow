@@ -43,6 +43,51 @@ class Adagrad(Optimizer):
             weight_decay (float, optional): The weight decay. Defaults to 0.
             initial_accumulator_value (float, optional): The initial value of S. Defaults to 0.0.
             eps (float, optional): A small constant terms added to the denominator to improve numerical stability. Defaults to 1e-10.
+        
+        For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        adagrad = flow.optim.Adagrad(net.parameters(), lr=1e-3)
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            adagrad.step()
+            adagrad.zero_grad()
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        adagrad = flow.optim.Adagrad(
+            [
+                {
+                    "params": net.parameters(),
+                    "lr": learning_rate,
+                    "clip_grad_max_norm": 0.5,
+                    "clip_grad_norm_type": 2.0,
+                }
+            ],
+        )
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            adagrad.clip_grad()
+            adagrad.step()
+            adagrad.zero_grad()
+
+        If you want to use clip_grad, you can refer this example. 
+
+        For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`. 
+        
         """
 
     def __init__(
