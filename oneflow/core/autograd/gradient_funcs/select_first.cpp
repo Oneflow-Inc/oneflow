@@ -25,7 +25,7 @@ namespace one {
 
 struct SelectFirstCaptureState : public AutoGradCaptureState {
   TensorTuple inputs;
-  bool requires_grad;
+  std::vector<bool> requires_grad;
 };
 
 class SelectFirst : public OpExprGradFunction<SelectFirstCaptureState> {
@@ -35,6 +35,10 @@ class SelectFirst : public OpExprGradFunction<SelectFirstCaptureState> {
   Maybe<void> Capture(SelectFirstCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->inputs = inputs;
+    ctx->requires_grad.resize(inputs.size());
+    for (int i = 0; i < ctx->requires_grad.size(); ++i) {
+      ctx->requires_grad.at(i) = inputs.at(i)->requires_grad();
+    }
     return Maybe<void>::Ok();
   }
 
@@ -42,6 +46,7 @@ class SelectFirst : public OpExprGradFunction<SelectFirstCaptureState> {
                     TensorTuple* in_grads) const override {
     in_grads->at(0) = out_grads.at(0);
     for (int i = 1; i < ctx->inputs.size(); i++) {
+      if (!ctx->requires_grad.at(i)) { continue; }
       const auto& tensor = ctx->inputs.at(i);
       in_grads->at(i) = JUST(StaticZerosTensor::MakeTensor(
           tensor->shape(), tensor->dtype()->data_type(), JUST(tensor->device())));
