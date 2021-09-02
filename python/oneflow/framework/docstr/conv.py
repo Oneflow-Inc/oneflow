@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow._C.conv1d,
-    """
+    r"""
     conv1d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv1d.html?highlight=conv1d
@@ -56,7 +56,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.conv2d,
-    """
+    r"""
     conv2d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv2d.html?highlight=conv2d
@@ -84,7 +84,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.conv3d,
-    """
+    r"""
     conv3d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv3d.html?highlight=conv3d

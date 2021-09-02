@@ -48,7 +48,7 @@ add_docstr(
 
 add_docstr(
     oneflow.gelu,
-    """
+    r"""
     gelu(x: Tensor) -> Tensor 
 
     The equation is:
@@ -79,7 +79,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.softmax,
-    """
+    r"""
     softmax(x: Tensor) -> Tensor 
 
     Softmax is defined as:
@@ -92,7 +92,7 @@ add_docstr(
 )
 add_docstr(
     oneflow.softplus,
-    """
+    r"""
     softplus(x: Tensor) -> Tensor 
 
     Applies the element-wise function:
@@ -106,7 +106,7 @@ add_docstr(
 
 add_docstr(
     oneflow.tanh,
-    """
+    r"""
     tanh(x: Tensor) -> Tensor 
 
     The equation is:
@@ -120,7 +120,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.log_sigmoid,
-    """
+    r"""
     log_sigmoid(x: Tensor) -> Tensor 
 
     Applies the element-wise function:
@@ -150,7 +150,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.softsign,
-    """
+    r"""
     softsign(x: Tensor) -> Tensor 
 
     The formula is: 
@@ -295,7 +295,7 @@ add_docstr(
 )
 add_docstr(
     oneflow.sigmoid,
-    """
+    r"""
     sigmoid(input) -> Tensor
 
     Applies the element-wise function :math:`\text{Sigmoid}(x) = \frac{1}{1 + \exp(-x)}`
