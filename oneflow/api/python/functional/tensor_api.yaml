@@ -15,18 +15,20 @@
 - name: "tensor"
   signature: [
     "Tensor (PyObject* data, *, DataType dtype=None, Device device=None,
-             Placement placement=None, SbpList sbp=None,
              Bool requires_grad=False) => TensorWithData",
+    "Tensor (PyObject* data, *, DataType dtype=None, Placement placement,
+             SbpList sbp, Bool requires_grad=False) => ConsistentTensorWithData",
   ]
   bind_python: True
 
 - name: "_legacy_tensor_ctor"
   signature: [
-    "Tensor (*, Device device=None, Placement placement=None, SbpList sbp=None) => TensorEmptyCtor",
+    "Tensor (*, Device device=None) => TensorEmptyCtor",
+    "Tensor (*, Placement placement, SbpList sbp) => ConsistentTensorEmptyCtor",
     "Tensor (Tensor other) => TensorWithOtherCtor",
-    "Tensor (PyObject* data, *, Device device=None, Placement placement=None,
-             SbpList sbp=None) => TensorWithDataCtor",
-    "Tensor (Shape size, *, Device device=None, Placement placement=None,
-             SbpList sbp=None) => TensorWithShapeCtor",
+    "Tensor (PyObject* data, *, Device device=None) => TensorWithDataCtor",
+    "Tensor (PyObject* data, *, Placement placement, SbpList sbp) => ConsistentTensorWithDataCtor",
+    "Tensor (Shape size, *, Device device=None) => TensorWithShapeCtor",
+    "Tensor (Shape size, *, Placement placement, SbpList sbp) => ConsistentTensorWithShapeCtor",
   ]
   bind_python: True

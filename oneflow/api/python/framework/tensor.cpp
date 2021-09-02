@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
+#include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_method.h"
@@ -101,18 +102,7 @@ py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
 }
 
 std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
-  static py::object legacy_tensor_ctor = []() {
-    const char* module_name = "oneflow._oneflow_internal._C";
-    auto module = py::module_::import(module_name);
-    if (!module) { THROW(RuntimeError) << "Could not import module " << module_name; }
-    const char* attr_name = "_legacy_tensor_ctor";
-    if (!py::hasattr(module, attr_name)) {
-      THROW(RuntimeError) << "Could not get attribute " << attr_name << " from module "
-                          << module_name;
-    }
-    return module.attr(attr_name);
-  }();
-  return py::cast<std::shared_ptr<Tensor>>(legacy_tensor_ctor(*args, **kwargs));
+  return py::cast<std::shared_ptr<Tensor>>(functional::_legacy_tensor_ctor(args, kwargs));
 }
 
 void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
