@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <memory>
 #include "oneflow/core/common/cplusplus_14.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/user/kernels/view_copy_kernel.h"
@@ -113,6 +112,8 @@ struct copy_view_fn_map_type : std::unordered_map<std::pair<size_t, size_t>, cop
       return iter->second;
     } else {
       UNIMPLEMENTED();
+
+      return nullptr;
     }
   }
 };
