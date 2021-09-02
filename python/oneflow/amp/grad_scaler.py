@@ -48,9 +48,9 @@ class GradScaler(object):
 class StaticGradScaler(object):
     def __init__(self, scale_factor):
         if scale_factor <= 0.0:
-            raise ValueError("scale_factor must > 0.0")
+            raise ValueError("StaticGradScaler's scale_factor must > 0.0")
 
-        self.scale_factor = scale_factor
+        self._scale_factor = scale_factor
 
     def generate_conf_for_graph(self, train_conf):
-        train_conf.set_loss_scale_factor(self.scale_factor)
+        train_conf.set_loss_scale_factor(self._scale_factor)
