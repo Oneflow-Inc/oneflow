@@ -220,7 +220,7 @@ def get_loss(
 
 
 def test_train_loss_oneflow_pytorch(
-    test_case, model_path: str, module_name: str, device: str = "cuda",
+    test_case, model_path: str, module_name: str, device: str = "cuda", log_path: str = "./model_test_output/default",
 ):
     batch_size = 16
     image_nd = np.random.rand(batch_size, 3, 224, 224).astype(np.float32)  # change to (batch_size, 3, 299, 299) when testing inception_v3 model
@@ -237,14 +237,15 @@ def test_train_loss_oneflow_pytorch(
         )
 
     # save test report
-    with open("./model_test_report.txt", "a") as file:
-        file.write("")
-        file.write("Test Model: %s \n" % module_name)
-        file.write("| test info                    | pytorch   | oneflow   |\n")
-        file.write("| train avg time               | %.4f    | %.4f    |\n" % (pytorch_train_avg_time, of_train_avg_time))
-        file.write("| forward avg time             | %.4f    | %.4f    |\n" % (pytorch_for_avg_time, of_for_avg_time))
-        file.write("| backward avg time            | %.4f    | %.4f    |\n" % (pytorch_bp_avg_time, of_bp_avg_time))
-        file.write("| update parameters avg time   | %.4f    | %.4f    |\n\n" % (pytorch_update_avg_time, of_update_avg_time))
+    if log_path:
+        with open(log_path, "a") as file:
+            file.write("")
+            file.write("Test Model: %s \n" % module_name)
+            file.write("| test info                    | pytorch   | oneflow   |\n")
+            file.write("| train avg time               | %.4f    | %.4f    |\n" % (pytorch_train_avg_time, of_train_avg_time))
+            file.write("| forward avg time             | %.4f    | %.4f    |\n" % (pytorch_for_avg_time, of_for_avg_time))
+            file.write("| backward avg time            | %.4f    | %.4f    |\n" % (pytorch_bp_avg_time, of_bp_avg_time))
+            file.write("| update parameters avg time   | %.4f    | %.4f    |\n\n" % (pytorch_update_avg_time, of_update_avg_time))
 
     if verbose:
         indes = [i for i in range(len(oneflow_model_loss))]
