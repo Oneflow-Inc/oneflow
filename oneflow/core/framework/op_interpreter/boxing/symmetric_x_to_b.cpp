@@ -25,6 +25,21 @@ namespace oneflow {
 
 namespace {
 
+bool IsSplitSbpWithAxisNotEqualZero(const cfg::SbpParallel& sbp) {
+  return sbp.has_split_parallel() && sbp.split_parallel().axis() != 0;
+}
+
+Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbpWithAxisEqualZero(int64_t ndim) {
+  cfg::NdSbp split_nd_sbp;
+  for (int64_t i = 0; i < ndim; ++i) {
+    split_nd_sbp.mutable_sbp_parallel()->Add()->mutable_split_parallel()->set_axis(0);
+  }
+  return SymbolOf(split_nd_sbp);
+}
+
+auto* CachedGetAllSplitNdSbpWithAxisEqualZero =
+    DECORATE(&GetAllSplitNdSbpWithAxisEqualZero, ThreadLocal);
+
 Maybe<void> RawCheckSymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
@@ -52,6 +67,20 @@ Maybe<one::Tensor> SymmetricXToB(const std::shared_ptr<one::Tensor>& tensor, Sym
   if (EagerBoxingInterpreterUtil::IsSplitSbp(tensor_nd_sbp->sbp_parallel(0), 0)) {
     const auto& NcclSToBBoxingFunction = *JUST(GetBoxingFunction("nccl-s-to-b", in, out));
     return JUST(NcclSToBBoxingFunction(tensor, in, out));
+  }
+  if (IsSplitSbpWithAxisNotEqualZero(in->nd_sbp()->sbp_parallel(0))) {
+    Symbol<cfg::NdSbp> split_with_zero_axis_nd_sbp =
+        JUST(CachedGetAllSplitNdSbpWithAxisEqualZero(in->nd_sbp()->sbp_parallel_size()));
+    const auto& split_with_zero_axis_in_placed_nd_sbp =
+        JUST(PlacedNdSbp::New(split_with_zero_axis_nd_sbp, tensor_placement));
+    const auto& NcclSToSBoxingFunction =
+        *JUST(GetBoxingFunction("nccl-s-to-s", in, split_with_zero_axis_in_placed_nd_sbp));
+    const auto& tensor_with_s0_sbp =
+        JUST(NcclSToSBoxingFunction(tensor, in, split_with_zero_axis_in_placed_nd_sbp));
+    const auto& NcclSToBBoxingFunction =
+        *JUST(GetBoxingFunction("nccl-s-to-b", split_with_zero_axis_in_placed_nd_sbp, out));
+    return JUST(
+        NcclSToBBoxingFunction(tensor_with_s0_sbp, split_with_zero_axis_in_placed_nd_sbp, out));
   }
   UNIMPLEMENTED_THEN_RETURN();
 }

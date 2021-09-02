@@ -79,7 +79,14 @@ Maybe<one::Tensor> CudaCopy(const std::shared_ptr<one::Tensor>& tensor, Symbol<P
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
-  const auto& local_tensor = JUST(tensor->cur_rank_phy_tensor());
+  std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
+  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
+  if (!out_parallel_id->has_value()) {
+    std::string device_type = Device::Type4DeviceTag(tensor_placement->device_tag());
+    local_tensor = JUST(one::functional::Empty(
+        *JUST(GetPhysicalShape(*tensor->shape(), *tensor_nd_sbp, *tensor_placement, 0)),
+        tensor->dtype(), JUST(Device::New(device_type))));
+  }
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
                                                  *tensor->shape(), tensor->dtype()));
