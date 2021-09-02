@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_BOXING_DIVIDOR_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_BOXING_DIVIDOR_H_
+#ifndef ONEFLOW_CORE_BOXING_BOXING_DIVIDOR_H_
+#define ONEFLOW_CORE_BOXING_BOXING_DIVIDOR_H_
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
@@ -48,4 +48,4 @@ class BoxingDividor final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_BOXING_BOXING_DIVIDOR_H_
+#endif  // ONEFLOW_CORE_BOXING_BOXING_DIVIDOR_H_
