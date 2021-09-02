@@ -13,18 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-"""
-Copyright 2020 The OneFlow Authors. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
 
 import sys
 import collections
@@ -236,7 +224,6 @@ from oneflow.framework.generator import default_generator, manual_seed
 # from oneflow.framework.model import Model
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
-from oneflow.framework.tensor import tensor as tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow.nn.modules.activation import softmax_op as softmax
 from oneflow.nn.modules.pooling import (

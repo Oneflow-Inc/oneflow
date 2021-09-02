@@ -52,10 +52,10 @@ def _np_kldivloss_grad(input, target, np_log_target):
 def _test_kldivloss_forward(test_case, device, shape, reduction, log_target):
     x = np.random.randn(*shape)
     y = np.random.randn(*shape)
-    input = flow.Tensor(
+    input = flow.tensor(
         x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
-    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+    target = flow.tensor(y, dtype=flow.float32, device=flow.device(device))
     loss = flow.nn.KLDivLoss(reduction=reduction, log_target=log_target)
     loss = loss.to(device)
     of_out = loss(input, target)
@@ -66,10 +66,10 @@ def _test_kldivloss_forward(test_case, device, shape, reduction, log_target):
 def _test_kldivloss_backward(test_case, device, shape, reduction, log_target):
     x = np.random.randn(*shape)
     y = np.random.randn(*shape)
-    input = flow.Tensor(
+    input = flow.tensor(
         x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
-    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+    target = flow.tensor(y, dtype=flow.float32, device=flow.device(device))
     loss = flow.nn.KLDivLoss(reduction=reduction, log_target=log_target)
     loss = loss.to(device)
     of_out = loss(input, target)

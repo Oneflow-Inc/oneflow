@@ -25,7 +25,9 @@ import oneflow.unittest
 
 
 def _test_diag_forward(test_case, shape, diagonal, device):
-    input = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    input = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.diag(input, diagonal)
     np_out = np.diag(input.numpy(), diagonal)
     test_case.assertTrue(
@@ -39,8 +41,11 @@ def _test_diag_forward(test_case, shape, diagonal, device):
 
 
 def _test_diag_one_dim_backward(test_case, diagonal, device):
-    input = flow.Tensor(
-        np.random.randn(3), device=flow.device(device), requires_grad=True
+    input = flow.tensor(
+        np.random.randn(3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = flow.diag(input, diagonal).sum()
     of_out.backward()
@@ -48,8 +53,11 @@ def _test_diag_one_dim_backward(test_case, diagonal, device):
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
     )
-    input = flow.Tensor(
-        np.random.randn(3), device=flow.device(device), requires_grad=True
+    input = flow.tensor(
+        np.random.randn(3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = input.diag(diagonal=diagonal).sum()
     of_out.backward()
@@ -60,8 +68,11 @@ def _test_diag_one_dim_backward(test_case, diagonal, device):
 
 
 def _test_diag_other_dim_backward(test_case, diagonal, device):
-    input = flow.Tensor(
-        np.random.randn(3, 3), device=flow.device(device), requires_grad=True
+    input = flow.tensor(
+        np.random.randn(3, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = flow.diag(input, diagonal).sum()
     of_out.backward()
@@ -74,8 +85,11 @@ def _test_diag_other_dim_backward(test_case, diagonal, device):
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
     )
-    input = flow.Tensor(
-        np.random.randn(3, 3), device=flow.device(device), requires_grad=True
+    input = flow.tensor(
+        np.random.randn(3, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = input.diag(diagonal=diagonal).sum()
     of_out.backward()
@@ -91,8 +105,11 @@ def _test_diag_other_dim_backward(test_case, diagonal, device):
 
 
 def _test_diag_other_dim_non_square_backward(test_case, diagonal, device):
-    input = flow.Tensor(
-        np.random.randn(3, 4), device=flow.device(device), requires_grad=True
+    input = flow.tensor(
+        np.random.randn(3, 4),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = flow.diag(input, diagonal).sum()
     of_out.backward()
@@ -109,8 +126,11 @@ def _test_diag_other_dim_non_square_backward(test_case, diagonal, device):
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05, equal_nan=True)
     )
-    input = flow.Tensor(
-        np.random.randn(3, 4), device=flow.device(device), requires_grad=True
+    input = flow.tensor(
+        np.random.randn(3, 4),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = input.diag(diagonal=diagonal).sum()
     of_out.backward()

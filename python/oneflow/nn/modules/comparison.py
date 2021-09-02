@@ -38,8 +38,8 @@ def eq_op(input, other):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
-        >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
+        >>> other = flow.tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
 
         >>> y = flow.eq(input, other)
         >>> y
@@ -70,8 +70,8 @@ def ne_op(input, other):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
-        >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
+        >>> other = flow.tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
 
         >>> y = flow.ne(input, other)
         >>> y
@@ -99,8 +99,8 @@ def less_op(input, other):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
 
         >>> out = flow.lt(input1, input2)
         >>> out
@@ -128,8 +128,8 @@ def less_equal_op(input, other):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
 
         >>> out = flow.le(input1, input2)
         >>> out
@@ -160,8 +160,8 @@ def ne_op(input, other):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
-        >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
+        >>> input = flow.tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
+        >>> other = flow.tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
 
         >>> y = flow.ne(input, other)
         >>> y

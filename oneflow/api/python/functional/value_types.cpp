@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/functional/value_types.h"
+#include "oneflow/api/python/functional/value_types.h"
 
 #include "oneflow/core/common/hash_container.h"
 
@@ -62,6 +62,7 @@ HashMap<ValueType, std::string>* GetValueTypeNameMap() {
       {kPARALLEL_DESC, "placement"},
       {kSBP_PARALLEL, "sbp"},
       {kSBP_PARALLEL_LIST, "sbp list"},
+      {kPY_OBJECT, "python object"},
   };
   return &value_type_name_map;
 }
@@ -71,6 +72,15 @@ Maybe<const std::string&> ValueTypeName(ValueType type) {
   const auto& it = type_name_map->find(type);
   CHECK_OR_RETURN(it != type_name_map->end()) << "Value type " << type << " has no type name.";
   return it->second;
+}
+
+bool IsIntegralType(ValueType type) { return type >= kINT32 && type < kINTEGRAL_MASK; }
+bool IsIntegralListType(ValueType type) {
+  return type >= kINT32_LIST && type < kINTEGRAL_LIST_MASK;
+}
+bool IsFloatingType(ValueType type) { return type >= kFLOAT && type < kFLOATING_MASK; }
+bool IsFloatingListType(ValueType type) {
+  return type >= kFLOAT_LIST && type < kFLOATING_LIST_MASK;
 }
 
 }  // namespace functional

@@ -36,7 +36,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
         >>> np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
-        >>> input = flow.Tensor(np_arr, dtype=flow.float32)
+        >>> input = flow.tensor(np_arr, dtype=flow.float32)
         >>> output = flow.cast(input, flow.int8)
         >>> np.array_equal(output.numpy(), np_arr.astype(np.int8))
         True

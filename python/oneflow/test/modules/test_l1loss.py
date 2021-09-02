@@ -44,10 +44,10 @@ def _np_l1loss_grad(np_input, np_target):
 def _test_l1loss_impl(test_case, device, shape, reduction):
     x = np.random.randn(*shape).astype(np.float32)
     y = np.random.randn(*shape).astype(np.float32)
-    input = flow.Tensor(
+    input = flow.tensor(
         x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
-    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+    target = flow.tensor(y, dtype=flow.float32, device=flow.device(device))
     loss = flow.nn.L1Loss(reduction)
     loss = loss.to(device)
     of_out = loss(input, target)

@@ -45,11 +45,11 @@ def _test_bceloss_impl(test_case, device, reduction):
     x = np.array([[1.2, 0.2, -0.3], [0.7, 0.6, -2]]).astype(np.float32)
     y = np.array([[0, 1, 0], [1, 0, 1]]).astype(np.float32)
     w = np.array([[2, 2, 2], [2, 2, 2]]).astype(np.float32)
-    input = flow.Tensor(
+    input = flow.tensor(
         x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
-    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
-    weight = flow.Tensor(w, dtype=flow.float32, device=flow.device(device))
+    target = flow.tensor(y, dtype=flow.float32, device=flow.device(device))
+    weight = flow.tensor(w, dtype=flow.float32, device=flow.device(device))
     activation = flow.nn.Sigmoid()
     sigmoid_input = activation(input)
     loss = flow.nn.BCELoss(weight, reduction=reduction)
@@ -75,7 +75,7 @@ def _test_bceloss_impl(test_case, device, reduction):
             ]
         ).astype(np.float32)
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
-    input_none = input = flow.Tensor(
+    input_none = input = flow.tensor(
         np.array([[1.2, 0.2, -0.3], [0.7, 0.6, -2]]).astype(np.float32),
         dtype=flow.float32,
         requires_grad=True,
@@ -104,7 +104,7 @@ def _test_bceloss_impl(test_case, device, reduction):
     test_case.assertTrue(
         np.allclose(input_none.grad.numpy(), np_grad_none, 0.0001, 0.0001)
     )
-    input_none = input = flow.Tensor(
+    input_none = input = flow.tensor(
         np.array([[1.2, 0.2, -0.3], [0.7, 0.6, -2]]).astype(np.float32),
         dtype=flow.float32,
         requires_grad=True,

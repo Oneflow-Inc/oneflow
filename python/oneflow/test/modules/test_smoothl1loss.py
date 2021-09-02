@@ -68,13 +68,13 @@ def _np_smoothl1loss_grad(np_input, np_target, beta=1.0):
 def _test_smoothl1loss_impl(test_case, device, shape, data_type, reduction, beta):
     x = np.random.randn(*shape).astype(type_name_to_np_type[data_type])
     y = np.random.randn(*shape).astype(type_name_to_np_type[data_type])
-    input = flow.Tensor(
+    input = flow.tensor(
         x,
         dtype=type_name_to_flow_type[data_type],
         requires_grad=True,
         device=flow.device(device),
     )
-    target = flow.Tensor(
+    target = flow.tensor(
         y, dtype=type_name_to_flow_type[data_type], device=flow.device(device)
     )
     loss = flow.nn.SmoothL1Loss(reduction=reduction, beta=beta)
