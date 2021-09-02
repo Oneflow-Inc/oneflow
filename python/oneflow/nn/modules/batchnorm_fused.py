@@ -93,7 +93,7 @@ class _FusedBatchNorm(_FusedNormBase):
         # no device, however using `x.is_cuda` is not a good choice.
         if self.has_addend is False:
             if not x.is_cuda:
-                # TODO(zzk) add CPU version. 
+                # TODO(zzk) add CPU version.
                 raise NotImplementedError(
                     "Fused batchnorm version can be only used in GPU"
                 )
@@ -107,7 +107,7 @@ class _FusedBatchNorm(_FusedNormBase):
             is_training = True
         else:
             is_training = (self.running_mean is None) and (self.running_var is None)
-        return flow.F.normalization_add_relu(
+        return flow._C.normalization_add_relu(
             x,
             addend if self.has_addend else None,
             self.running_mean
