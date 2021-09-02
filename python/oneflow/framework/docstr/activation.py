@@ -309,7 +309,7 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> x = flow.tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
+        >>> x = flow.tensor(np.array([0.81733328, 0.43621480, 0.10351428]), dtype=flow.float32)
         >>> input = flow.tensor(x)
         >>> out = flow.sigmoid(input)
         >>> out

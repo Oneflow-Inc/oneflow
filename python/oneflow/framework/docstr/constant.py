@@ -31,7 +31,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x = flow.tensor(np.random.rand(5))
+        >>> x = flow.tensor(np.random.rand(5), dtype=flow.float32)
         >>> y = flow.ones_like(x)
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
@@ -54,7 +54,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x = flow.tensor(np.random.rand(5))
+        >>> x = flow.tensor(np.random.rand(5), dtype=flow.float32)
         >>> y = flow.zeros_like(x)
         >>> y
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
