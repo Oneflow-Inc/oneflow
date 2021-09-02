@@ -29,6 +29,80 @@ class WarmUpLR(WarmUpLrScheduler):
         last_step=-1,
         verbose=False,
     ):
+        r"""Increasing the learning rate with a small warmup factor until the number of epoch 
+        reaches the warmup_iters. You can assign an optimizer or a learning rate scheduler. 
+        Notice that the warmup can happen simultaneously with learning rate scheduler. 
+
+        When last_step = -1, it will set initial lr as lr. 
+
+        Args:
+            lrsch_or_optimizer ([type]): Learning rate scheduler or Optimizer
+            warmup_factor (float, optional): The warmup factor. Defaults to 1.0/3.
+            warmup_iters (int, optional): The number of warmup steps. Defaults to 5.
+            warmup_method (str, optional): The method of warmup, you can choose "linear" or "constant". 
+                In linear mode, the multiplication factor starts with warmup_factor in the first epoch and then inreases linearly to reach 1. Defaults to "linear".
+            last_step (int, optional): The index of the last step. Defaults to -1.
+            verbose (bool, optional): If True, it prints a message to stdout for each update step. Defaults to False.
+
+        Raises:
+            ValueError: The warmup method should be one of the "constant" and "linear" 
+
+        For example: 
+
+        Example 1: 
+
+        .. code:: python 
+
+            # lr = 0.0005    if epoch == 0
+            # lr = 0.0005    if epoch == 1
+            # lr = 0.0005    if epoch == 2
+            # lr = 0.0005    if epoch == 3
+            # lr = 0.0005    if epoch == 4
+            # lr = 0.001     if epoch >= 5
+            of_sgd = flow.optim.SGD(parameters, lr=0.001)
+            constant_warmup_lr = flow.optim.lr_scheduler.WarmUpLR(
+                of_sgd, warmup_factor=0.5, warmup_iters=5, warmup_method="constant"
+            )
+            ...
+
+        Example 2: 
+
+        .. code:: python 
+
+            # lr = 0.0005    if epoch == 0
+            # lr = 0.0006    if epoch == 1
+            # lr = 0.0007    if epoch == 2
+            # lr = 0.0008    if epoch == 3
+            # lr = 0.0009    if epoch == 4
+            # lr = 0.001    if epoch >= 5
+            of_sgd = flow.optim.SGD(parameters, lr=0.001)
+            constant_warmup_lr = flow.optim.lr_scheduler.WarmUpLR(
+                of_sgd, warmup_factor=0.5, warmup_iters=5, warmup_method="linear"
+            )
+            ...
+
+        Example 2: 
+
+        .. code:: python 
+
+            # lr = 0.0005    if epoch == 0
+            # lr = 0.00075   if epoch == 1
+            # Above is WarmUpLR, then we start CosineDecayLR
+            # lr = 0.000689  if epoch == 2
+            # lr = 0.000410  if epoch == 3
+            # ....
+            of_sgd = flow.optim.SGD(parameters, lr=0.001)
+            alpha = 0.1
+            decay_steps = 5
+            cosine_decay_lr = flow.optim.lr_scheduler.CosineDecayLR(
+                of_sgd, decay_steps=decay_steps, alpha=alpha
+            )
+            linear_warmup_cosine_lr = flow.optim.lr_scheduler.WarmUpLR(
+                cosine_decay_lr, warmup_factor=0.5, warmup_iters=2, warmup_method="linear"
+            )
+            ...
+        """
+
         if warmup_method not in ("constant", "linear"):
             raise ValueError(
                 "Only 'constant' or 'linear' warmup_method accepted, but "

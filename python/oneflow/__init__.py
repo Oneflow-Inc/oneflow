@@ -65,6 +65,7 @@ import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
 import oneflow.framework.register_python_callback
 
+
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
@@ -147,21 +148,6 @@ import oneflow.framework.docstr as docstr
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
-import oneflow.nn.modules.activation
-import oneflow.nn.modules.argwhere
-import oneflow.nn.modules.bmm
-import oneflow.nn.modules.constant
-import oneflow.nn.modules.diag
-import oneflow.nn.modules.flip
-import oneflow.nn.modules.floor
-import oneflow.nn.modules.in_top_k
-import oneflow.nn.modules.masked_select
-import oneflow.nn.modules.math_ops
-import oneflow.nn.modules.nonzero
-import oneflow.nn.modules.norm
-import oneflow.nn.modules.permute
-import oneflow.nn.modules.round
-
 
 from oneflow.nn.modules.trigonometric_ops import acos_op as acos
 from oneflow.nn.modules.trigonometric_ops import acosh_op as acosh
@@ -301,6 +287,7 @@ from oneflow.nn.modules.reduce_ops import prod_op as prod
 from oneflow.nn.modules.repeat import repeat_op as repeat
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
+from oneflow.nn.modules.permute import permute_op as permute
 from oneflow.nn.modules.round import round_op as round
 from oneflow.nn.modules.scatter import _scatter_nd_op as scatter_nd
 from oneflow.nn.modules.slice import slice_op as slice
@@ -316,6 +303,7 @@ from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
 )
+from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.tile import tile_op as tile
 from oneflow.nn.modules.to import to_op as to
@@ -347,11 +335,13 @@ from oneflow.ops.initializer_util import (
     zeros_initializer,
 )
 
+
 from . import (
     autograd,
     distributed,
     linalg,
     optim,
+    comm,
     boxing,
     backends,
     amp,
@@ -359,3 +349,4 @@ from . import (
 import oneflow.utils.data
 import oneflow.utils.vision
 from oneflow.nn.modules.relu import relu_op as relu
+import oneflow.comm

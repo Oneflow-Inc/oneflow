@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/actor/actor.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -86,9 +87,9 @@ void EsacActor::Act() {
   Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   CHECK(cur_regst);
   int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id_);
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = &in_bn_id;
-  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
+  CHECK_EQ(exec_kernel_vec().size(), 1);
+  *static_cast<int64_t*>(exec_kernel_vec().at(0).kernel_ctx->state()) = in_bn_id;
+  AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* {
     if (cur_processed_regst_desc_id_ != regst_desc_id) { return nullptr; }
     return cur_regst;
   });

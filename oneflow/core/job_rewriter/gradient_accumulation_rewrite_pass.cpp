@@ -108,7 +108,7 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
         return Maybe<void>::Ok();
       } else {
         LOG(ERROR) << "Gradient accumulation unsupported op : " << op_conf.DebugString();
-        return Error::Unimplemented();
+        return Error::UnimplementedError();
       }
     } else if (op_conf.has_return_conf()) {  // pack return
       const LogicalBlobId return_in_lbi = node->op().BnInOp2Lbi("in");

@@ -61,7 +61,7 @@ namespace std {
 template<>
 struct hash<oneflow::Range> {
   size_t operator()(const oneflow::Range& range) const {
-    return (range.begin() << 32) ^ range.end();
+    return oneflow::HashCombine(range.begin(), range.end());
   }
 };
 
