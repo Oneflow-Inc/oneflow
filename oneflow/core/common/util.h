@@ -136,8 +136,8 @@ void SortAndRemoveDuplication(std::vector<T>* vec) {
 }
 
 inline std::string NewUniqueId() {
-  static int64_t id = 0;
-  return std::to_string(id++);
+  static std::atomic<int64_t> counter(0);
+  return std::to_string(counter.fetch_add(1, std::memory_order_relaxed));
 }
 
 template<typename K, typename V>
