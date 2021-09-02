@@ -35,7 +35,7 @@ Maybe<one::Tensor> GetIdentity(const std::shared_ptr<one::Tensor>& tensor, Symbo
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
-  // reset sbp if parallel_num == 1 and reset ConsistentId
+  // reset sbp if parallel_num == 1 and reset transport_token
   const auto& local_tensor = JUST(tensor->cur_rank_phy_tensor());
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
