@@ -26,6 +26,8 @@ class InputWiseActor : public Actor {
   InputWiseActor() = default;
   ~InputWiseActor() = default;
 
+  using Actor::Init;
+
  protected:
   void Init(const TaskProto&);
   int64_t cur_processed_regst_desc_id() const { return cur_processed_regst_desc_id_; }
@@ -52,7 +54,6 @@ class InputWiseActor : public Actor {
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
 
-  virtual void SetKernelCtxOther(void** other) { *other = nullptr; }
   int64_t GetCurProcessedRegstDescId() const;
 
   RegstSlot consumed_rs_;

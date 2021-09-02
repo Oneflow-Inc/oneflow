@@ -60,8 +60,53 @@ class AdamW(Optimizer):
 
     .. _Adam\\: A Method for Stochastic Optimization:
         https://arxiv.org/abs/1412.6980
+
     .. _Decoupled Weight Decay Regularization:
         https://arxiv.org/abs/1711.05101
+
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        adamw = flow.optim.AdamW(net.parameters(), lr=1e-3)
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            adamw.step()
+            adamw.zero_grad()
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        adamw = flow.optim.AdamW(
+            [
+                {
+                    "params": net.parameters(),
+                    "lr": learning_rate,
+                    "clip_grad_max_norm": 0.5,
+                    "clip_grad_norm_type": 2.0,
+                }
+            ],
+        )
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            adamw.clip_grad()
+            adamw.step()
+            adamw.zero_grad()
+
+    If you want to use clip_grad, you can refer this example. 
+
+    For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`. 
 
     """
 
@@ -203,7 +248,11 @@ class AdamW(Optimizer):
         new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
-            lr = param_group["lr"]
+            lr = (
+                param_group["initial_lr"]
+                if "initial_lr" in param_group
+                else param_group["lr"]
+            )
             weight_decay = param_group["weight_decay"]
             beta1 = param_group["betas"][0]
             beta2 = param_group["betas"][1]

@@ -156,10 +156,7 @@ set(oneflow_third_party_dependencies
   protobuf
   gflags
   glog
-  googletest_copy_headers_to_destination
-  googletest_copy_libs_to_destination
-  googlemock_copy_headers_to_destination
-  googlemock_copy_libs_to_destination
+  googletest
   opencv_copy_headers_to_destination
   libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
@@ -207,14 +204,24 @@ if (NOT WITH_XLA)
 endif()
 
 if (BUILD_CUDA)
-  include(cub)
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+    if(CMAKE_CXX_STANDARD LESS 14)
+      add_definitions(-DTHRUST_IGNORE_DEPRECATED_CPP_DIALECT)
+      add_definitions(-DCUB_IGNORE_DEPRECATED_CPP11)
+    endif()
+    if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
+      add_definitions(-DCUB_IGNORE_DEPRECATED_COMPILER)
+    endif()
+  else()
+    include(cub)
+    list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
+  endif()
   include(nccl)
 
   list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
 
-  list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
   list(APPEND oneflow_third_party_dependencies nccl)
 
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS
@@ -262,3 +269,12 @@ endif()
 message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
+
+if (THIRD_PARTY)
+  add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
+  foreach(of_include_src_dir ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
+    copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" prepare_oneflow_third_party)
+  endforeach()
+else()
+  add_custom_target(prepare_oneflow_third_party ALL)
+endif()

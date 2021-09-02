@@ -40,53 +40,6 @@ Maybe<Shape> MakeShape(const py::tuple& py_shape) {
   return std::make_shared<Shape>(shape_dims);
 }
 
-std::string SerializePlacementSymbol2String(Symbol<ParallelDesc> placement) {
-  std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
-  std::vector<int64_t> sorted_node_ids;
-  HashMap<int64_t, std::vector<int64_t>> node_id2sorted_dev_phy_ids;
-  for (int64_t machine_id : placement->sorted_machine_ids()) {
-    int64_t node_id = GlobalProcessCtx::NodeId(machine_id);
-    if (!std::count(sorted_node_ids.begin(), sorted_node_ids.end(), node_id)) {
-      sorted_node_ids.push_back(node_id);
-    }
-    for (int64_t device_id : placement->sorted_dev_phy_ids(machine_id)) {
-      node_id2sorted_dev_phy_ids[node_id].push_back(device_id);
-    }
-  }
-  std::string machine_device_ids = "{";
-  int64_t node_idx = 0;
-  for (int64_t node_id : sorted_node_ids) {
-    std::string device_name = std::to_string(node_id) + " : [";
-    int64_t device_idx = 0;
-    for (int64_t device_id : node_id2sorted_dev_phy_ids.at(node_id)) {
-      device_name += std::to_string(device_id);
-      if (++device_idx != node_id2sorted_dev_phy_ids.at(node_id).size()) { device_name += ", "; }
-    }
-    device_name += "]";
-    if (++node_idx != sorted_node_ids.size()) { device_name += ", "; }
-    machine_device_ids += device_name;
-  }
-  machine_device_ids += "}";
-  std::string hierarchy = "(";
-  int32_t hierarchy_dim_idx = 0;
-  for (int64_t dim : placement->hierarchy()->dim_vec()) {
-    hierarchy += std::to_string(dim);
-    if (++hierarchy_dim_idx != placement->hierarchy()->dim_vec().size()) {
-      hierarchy += ", ";
-    } else if (placement->hierarchy()->dim_vec().size() == 1) {
-      hierarchy += ",";
-    }
-  }
-  hierarchy += ")";
-  std::string placement_str = "oneflow.placement(device_type=" + device_type
-                              + ", machine_device_ids=" + machine_device_ids
-                              + ", hierarchy=" + hierarchy + ")";
-  return placement_str;
-}
-
-auto* CachedSerializePlacementSymbol2String =
-    DECORATE(&SerializePlacementSymbol2String, ThreadLocal);
-
 struct PlacementSymbolExportUtil {
   static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
       int64_t symbol_id, const std::shared_ptr<cfg::ParallelConf>& symbol_conf) {
@@ -187,27 +140,26 @@ struct PlacementSymbolExportUtil {
     CHECK(type2device_tag.find(device_type) != type2device_tag.end())
         << "Invalid device_type: " << device_type << ", device_type must be \"cpu\" or \"cuda\".";
     std::string device_tag = type2device_tag.at(device_type);
-    int64_t world_size = GlobalProcessCtx::WorldSize();
-    int64_t device_num = 0;
-    {
-      if (device_tag == "gpu") {
-        device_num = Global<ResourceDesc, ForEnv>::Get()->GpuDeviceNum();
-        CHECK(device_num > 0) << "Can't build cuda placement because no gpu is found!";
-      } else {
-        device_num = Global<ResourceDesc, ForEnv>::Get()->CpuDeviceNum();
+    static thread_local HashMap<std::string, Symbol<ParallelDesc>> device_tag2placement;
+    auto iter = device_tag2placement.find(device_tag);
+    if (iter == device_tag2placement.end()) {
+      int64_t node_size = GlobalProcessCtx::NodeSize();
+      int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
+      std::vector<std::string> machine_device_ids;
+      for (int64_t node_id = 0; node_id < node_size; ++node_id) {
+        std::string device_name = std::to_string(node_id) + ":0-" + std::to_string(device_num - 1);
+        machine_device_ids.emplace_back(device_name);
       }
+      Symbol<ParallelDesc> placement =
+          SymbolOf(*PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
+              device_tag, machine_device_ids, std::shared_ptr<Shape>()));
+      iter = device_tag2placement.emplace(device_tag, placement).first;
     }
-    std::vector<std::string> machine_device_ids;
-    for (int64_t rank = 0; rank < world_size; ++rank) {
-      std::string device_name = std::to_string(rank) + ":0-" + std::to_string(device_num - 1);
-      machine_device_ids.emplace_back(device_name);
-    }
-    return SymbolOf(*PlacementSymbolExportUtil::ApiCreatePlacementSymbol(
-        device_tag, machine_device_ids, std::shared_ptr<Shape>()));
+    return iter->second;
   }
 
   static std::string PlacementSymbol2String(Symbol<ParallelDesc> placement) {
-    return CachedSerializePlacementSymbol2String(placement);
+    return *PlacementToString(placement).GetPtrOrThrow();
   }
 
   static Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,

@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 namespace one {
@@ -419,7 +420,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   if (op_reg_val->logical_tensor_desc_infer_fn) {
     opkernel->tensor_desc_infer_fn_ = op_reg_val->logical_tensor_desc_infer_fn;
   } else {
-    return Error::Unimplemented();
+    return Error::UnimplementedError();
   }
   opkernel->data_type_infer_fn_ = op_reg_val->data_type_infer_fn;
 

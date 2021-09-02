@@ -20,26 +20,27 @@ limitations under the License.
 
 namespace oneflow {
 
+Maybe<TransportToken> NewTensorConsistentId();
+
 namespace one {
 
 class TensorTuple;
 
-int64_t* MutThreadLocalRecursiveDepth();
+int64_t* MutThreadLocalConsistentIdDepth();
 Maybe<void> InitConsistentId(TensorTuple* outputs);
 
 template<typename... Args>
 struct NonRecursiveInitConsistentId;
 
-template<typename RetT, typename Arg0, typename Arg1, typename... Args>
-struct NonRecursiveInitConsistentId<RetT, Arg0, Arg1, TensorTuple*, Args...> {
-  static_assert(is_maybe<RetT>::value, "");
-  template<RetT (*func)(Arg0, Arg1, TensorTuple*, Args...)>
-  static RetT Call(Arg0 arg0, Arg1 arg1, TensorTuple* outputs, Args... args) {
-    auto* recursive_depth = MutThreadLocalRecursiveDepth();
+template<typename Arg0, typename Arg1, typename... Args>
+struct NonRecursiveInitConsistentId<Maybe<void>, Arg0, Arg1, TensorTuple*, Args...> {
+  template<Maybe<void> (*func)(Arg0, Arg1, TensorTuple*, Args...)>
+  static Maybe<void> Call(Arg0 arg0, Arg1 arg1, TensorTuple* outputs, Args... args) {
+    auto* recursive_depth = MutThreadLocalConsistentIdDepth();
     ++*recursive_depth;
-    RetT ret = func(arg0, arg1, outputs, args...);
+    Maybe<void> ret = func(arg0, arg1, outputs, args...);
     --*recursive_depth;
-    if (*recursive_depth == 0) { JUST(InitConsistentId(outputs)); }
+    if (*recursive_depth == 0 && ret.IsOk()) { JUST(InitConsistentId(outputs)); }
     return ret;
   }
 };

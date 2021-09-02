@@ -62,7 +62,7 @@ def where_op(condition, x=None, y=None):
     if x is None and y is None:
         return flow.nonzero(condition, as_tuple=True)
 
-    return flow.F.where(condition, x, y)
+    return flow._C.where(condition, x, y)
 
 
 if __name__ == "__main__":

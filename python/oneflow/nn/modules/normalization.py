@@ -115,7 +115,7 @@ class GroupNorm(Module):
             input, shape=[origin_shape[0], self.num_groups, -1]
         )
         mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
-        variance = flow.var(reshape_to_1d, dim=2, keepdim=True)
+        variance = flow.var(reshape_to_1d, dim=2, unbiased=False, keepdim=True)
         normalized = (reshape_to_1d - mean) / flow.sqrt(variance + self.eps)
         normalized = flow.reshape(
             normalized, shape=[origin_shape[0], self.num_channels, -1]
@@ -203,15 +203,15 @@ class LayerNorm(Module):
         array([[[[ 0.99997395, -0.99997395],
                  [-0.999947  ,  0.999947  ]],
         <BLANKLINE>
-                [[-0.9999596 ,  0.9999594 ],
+                [[-0.99995965,  0.9999595 ],
                  [ 0.999988  , -0.999988  ]]],
         <BLANKLINE>
         <BLANKLINE>
-               [[[-0.9998343 ,  0.9998341 ],
+               [[[-0.9998348 ,  0.99983466],
                  [ 0.9999914 , -0.9999914 ]],
         <BLANKLINE>
-                [[ 0.99997866, -0.99997866],
-                 [ 0.9999646 , -0.9999646 ]]]], dtype=float32)
+                [[ 0.9999785 , -0.9999785 ],
+                 [ 0.9999645 , -0.9999645 ]]]], dtype=float32)
 
     """
 
@@ -230,7 +230,7 @@ class LayerNorm(Module):
         if isinstance(normalized_shape, int):
             normalized_shape = (normalized_shape,)
         self.normalized_shape = tuple(normalized_shape)
-        self.epsilon = eps
+        self.eps = eps
         self.elementwise_affine = elementwise_affine
         if self.elementwise_affine:
             self.weight = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
@@ -259,8 +259,7 @@ class LayerNorm(Module):
                 if dim >= self.begin_norm_axis:
                     reduce_axis.append(dim)
             mean = x.mean(dim=reduce_axis, keepdim=True)
-            variance = x.var(dim=reduce_axis, keepdim=True)
-            axis = self.begin_norm_axis
+            variance = x.var(dim=reduce_axis, unbiased=False, keepdim=True)
             params_shape = x.shape[self.begin_params_axis :]
             weight = self.weight
             bias = self.bias
@@ -279,7 +278,7 @@ class LayerNorm(Module):
                 raise ValueError(
                     "shape of mean and variance should be 1D or has number of axes and x's"
                 )
-            variance += self.epsilon
+            variance += self.eps
             normalized = (x - mean) * variance.rsqrt()
             if self.weight is not None:
                 normalized = normalized * weight
@@ -295,20 +294,20 @@ class LayerNorm(Module):
             return affined
         else:
             if self.elementwise_affine:
-                res = flow.F.layer_norm_affine(
+                res = flow._C.layer_norm_affine(
                     x,
                     self.weight,
                     self.bias,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,
-                    epsilon=self.epsilon,
+                    epsilon=self.eps,
                 )
             else:
-                res = flow.F.layer_norm(
+                res = flow._C.layer_norm(
                     x,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,
-                    epsilon=self.epsilon,
+                    epsilon=self.eps,
                 )
             return res
 

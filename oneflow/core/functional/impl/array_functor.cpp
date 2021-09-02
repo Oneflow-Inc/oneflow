@@ -473,9 +473,9 @@ class DimScatterFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+                           const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
@@ -495,9 +495,9 @@ class DimScatterAddFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+                           const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
@@ -517,9 +517,9 @@ class DimScatterMulFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+                           const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
@@ -538,12 +538,11 @@ class DimScatterUpdateScalarFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& index, const float& src,
-                           const int32_t& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", src));
+    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -560,12 +559,11 @@ class DimScatterAddScalarFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& index, const float& src,
-                           const int32_t& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", src));
+    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -582,12 +580,11 @@ class DimScatterMulScalarFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& index, const float& src,
-                           const int32_t& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", src));
+    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -1216,6 +1213,19 @@ class UnsortedSegmentSumLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TrilFunctor {
+ public:
+  TrilFunctor() { op_ = CHECK_JUST(one::OpBuilder("tril").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class TriuFunctor {
  public:
   TriuFunctor() { op_ = CHECK_JUST(one::OpBuilder("triu").Input("in").Output("out").Build()); }
@@ -1313,6 +1323,9 @@ class TensorSetItemFunctor {
 
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &target_dims));
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
+    CHECK_EQ_OR_RETURN(tensor_indices.size(), 0)
+        << "Advanced indexing is not support for tensor setitem currently, please use basic "
+           "indexing instead.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
     if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
 
@@ -1413,9 +1426,9 @@ class ElementwiseMaximumGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class BroadcastDivGradFunctor {
+class DivGradFunctor {
  public:
-  BroadcastDivGradFunctor() {
+  DivGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_div_grad")
                          .Input("dz")
                          .Input("z")
@@ -1427,6 +1440,50 @@ class BroadcastDivGradFunctor {
                            const std::shared_ptr<one::Tensor>& z,
                            const std::shared_ptr<one::Tensor>& y) const {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, z, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BroadcastPowXGradFunctor {
+ public:
+  BroadcastPowXGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_pow_x_grad")
+                         .Input("dz")
+                         .Input("x")
+                         .Input("y")
+                         .Input("z")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& z) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BroadcastPowYGradFunctor {
+ public:
+  BroadcastPowYGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_pow_y_grad")
+                         .Input("dz")
+                         .Input("x")
+                         .Input("y")
+                         .Input("z")
+                         .Output("dy")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& z) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
   }
 
  private:
@@ -1585,6 +1642,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear3D");
   m.add_functor<impl::UpsampleTrilinear3DGradFunctor>("UpsampleTrilinear3DGrad");
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
+  m.add_functor<impl::TrilFunctor>("Tril");
   m.add_functor<impl::TriuFunctor>("Triu");
   m.add_functor<impl::DiagFunctor>("Diag");
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
@@ -1599,7 +1657,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CastLikeFunctor>("CastLike");
   m.add_functor<impl::ElementwiseMinimumGradFunctor>("ElementwiseMinGrad");
   m.add_functor<impl::ElementwiseMaximumGradFunctor>("ElementwiseMaxGrad");
-  m.add_functor<impl::BroadcastDivGradFunctor>("BroadcastDivGrad");
+  m.add_functor<impl::BroadcastPowXGradFunctor>("BroadcastPowXGrad");
+  m.add_functor<impl::BroadcastPowYGradFunctor>("BroadcastPowYGrad");
+  m.add_functor<impl::DivGradFunctor>("DivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");

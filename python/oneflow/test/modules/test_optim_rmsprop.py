@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import tempfile
 import unittest
 from collections import OrderedDict
 
@@ -36,6 +37,8 @@ def compare_with_numpy_rmsprop(
     eps,
     weight_decay,
     centered,
+    reload_state_step,
+    save_load_by_pickle,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -71,6 +74,18 @@ def compare_with_numpy_rmsprop(
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
+            if i == reload_state_step:
+                state_dict = rmsprop.state_dict()
+                rmsprop = flow.optim.RMSprop([x])
+                if save_load_by_pickle:
+                    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
+                        file_name = f.name
+                        import pickle
+
+                        pickle.dump(state_dict, f)
+                    with open(file_name, "rb") as f:
+                        state_dict = pickle.load(f)
+                rmsprop.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
@@ -99,7 +114,7 @@ def compare_with_numpy_rmsprop(
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
     test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=2e-3, atol=2e-3)
     )
 
 
@@ -116,6 +131,8 @@ def compare_with_numpy_rmsprop_clip_grad(
     centered,
     clip_grad_max_norm,
     clip_grad_norm_type,
+    reload_state_step,
+    save_load_by_pickle,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -154,6 +171,18 @@ def compare_with_numpy_rmsprop_clip_grad(
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
+            if i == reload_state_step:
+                state_dict = rmsprop.state_dict()
+                rmsprop = flow.optim.RMSprop([x])
+                if save_load_by_pickle:
+                    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
+                        file_name = f.name
+                        import pickle
+
+                        pickle.dump(state_dict, f)
+                    with open(file_name, "rb") as f:
+                        state_dict = pickle.load(f)
+                rmsprop.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
@@ -184,7 +213,7 @@ def compare_with_numpy_rmsprop_clip_grad(
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
     test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=2e-3, atol=2e-3)
     )
 
 
@@ -201,6 +230,8 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict["eps"] = [1e-08, 1e-05]
         arg_dict["weight_decay"] = [0.1, 0.99]
         arg_dict["centered"] = [False, True]
+        arg_dict["reload_state_step"] = [5]  # save and load optim state
+        arg_dict["save_load_by_pickle"] = [False, True]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_rmsprop(test_case, *arg)
 
@@ -217,6 +248,8 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict["centered"] = [False, True]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
+        arg_dict["reload_state_step"] = [5]  # save and load optim state
+        arg_dict["save_load_by_pickle"] = [False, True]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_rmsprop_clip_grad(test_case, *arg)
 

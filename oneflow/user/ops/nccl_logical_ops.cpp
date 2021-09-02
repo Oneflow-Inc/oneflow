@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/user/ops/comm_net_device_infer_util.h"
 
 namespace oneflow {
 
@@ -51,6 +52,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_reduce")
       }
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_reduce_scatter")
@@ -86,6 +88,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_reduce_scatter")
       }
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather")
@@ -122,6 +125,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather")
       }
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather_noncontinuous")
@@ -161,6 +165,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_all_gather_noncontinuous")
       }
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_s2s")
@@ -201,6 +206,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_s2s")
       }
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow
