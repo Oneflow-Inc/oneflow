@@ -80,11 +80,8 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
   const auto& rhs_boxing =
       JUST(BoxingExpr(JUST(OutFirstDeviceAndAllBroadcast()), JUST(OptionalBoxing("naive-1-to-1")),
                       JUST(OneToNBoxingExpr())));
-  const auto& core =
-      boxing_expr_with_inclusive_placement
-      | JUST(BoxingExpr(JUST(InFirstDeviceAndAllBroadcast()), lhs_boxing, rhs_boxing));
-
-  return core | JUST(OptionalCudaCopy(core));
+  return boxing_expr_with_inclusive_placement
+         | JUST(BoxingExpr(JUST(InFirstDeviceAndAllBroadcast()), lhs_boxing, rhs_boxing));
 }
 
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
@@ -97,8 +94,8 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
       | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()), JUST(BoxingExpr("nccl-s-to-b")),
                         JUST(BoxingExpr("naive-b-to-p"))))
       | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr())
-      | JUST(BoxingExpr("naive-1-to-1"));
-  return core | JUST(OptionalCudaCopy(core)) | JUST(GenericBoxingExpr());
+      | JUST(BoxingExpr("naive-1-to-1")) | JUST(GenericBoxingExpr());
+  return core | JUST(OptionalCudaCopy(core));
 }
 
 }  // namespace
