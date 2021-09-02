@@ -35,10 +35,10 @@ class ActorMsgMR final {
   ~ActorMsgMR() = default;
 
   char* addr() { return reinterpret_cast<char*>(msg_); }
-  uint32_t lkey() { return mr_->lkey; }
-  ActorMsg msg() { return *msg_; }
+  uint32_t lkey() const { return mr_->lkey; }
+  ActorMsg msg()  const { return *msg_; }
   void set_msg(const ActorMsg& val) { *msg_ = val; }
-  size_t size() { return size_; }
+  size_t size() const { return size_; }
 
  private:
   size_t size_;
@@ -55,25 +55,25 @@ struct WorkRequestId {
   ActorMsgMR* msg_mr;
 };
 
-class MessagePool final {
+class IBVerbsMessagePool final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MessagePool);
-  MessagePool() = delete;
-  ~MessagePool() {
+  IBVerbsMessagePool() = delete;
+  ~IBVerbsMessagePool() {
     FreeMr();
     FreeMemory();
   }
 
-  MessagePool(ibv_pd* pd, uint32_t number_of_message)
-      : pd_(pd), num_of_message_(number_of_message) {
+  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd), num_of_message_(number_of_message) 
+  {
     RegisterMessagePool();
   }
 
   void RegisterMessagePool() {
     ActorMsg msg;
-    size_t ActorMsgSize = sizeof(msg);
-    size_t RegisterMemorySize = ActorMsgSize * (num_of_message_);
-    char* addr = (char*)malloc(RegisterMemorySize);
+    size_t actor_msg_size = sizeof(msg);
+    size_t register_memory_size = actor_msg_size * (num_of_message_);
+    char* addr = (char*)malloc(register_memory_size);
     ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
         pd_, addr, RegisterMemorySize,
         IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
@@ -81,8 +81,8 @@ class MessagePool final {
     ibv_mr_buf_.push_front(mr);
     memory_buf_.push_front(addr);
     for (size_t i = 0; i < num_of_message_; i++) {
-      char* split_addr = addr + ActorMsgSize * i;
-      ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, ActorMsgSize);
+      char* split_addr = addr + actor_msg_size * i;
+      ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, actor_msg_size);
       message_buf_.push_front(msg_mr);
     }
   }
@@ -128,11 +128,6 @@ class MessagePool final {
     }
   }
 
-  ActorMsgMR * GetActorMsgMRFromMessagePool(){
-     ActorMsgMR* msg_mr = GetMessage();
-     return  msg_mr;
-  }
-
  private:
   ibv_pd* pd_;
   size_t num_of_message_;
@@ -149,7 +144,7 @@ class IBVerbsQP final {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
   IBVerbsQP() = delete;
   IBVerbsQP(ibv_context*, ibv_pd*, uint8_t port_num, ibv_cq* send_cq, ibv_cq* recv_cq,
-            MessagePool* message_pool);
+            IBVerbsMessagePool * message_pool);
   ~IBVerbsQP();
 
   uint32_t qp_num() const { return qp_->qp_num; }
@@ -181,7 +176,7 @@ class IBVerbsQP final {
   uint32_t num_outstanding_send_wr_;
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
-  MessagePool* message_pool_;
+  IBVerbsMessagePool* message_pool_;
 };
 
 }  // namespace oneflow
