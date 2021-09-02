@@ -29,6 +29,13 @@ Maybe<void> TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_
   if (!acc_tensor_) {
     acc_tensor_ = partial_tensor;
   } else {
+    // Should not inplace accumulate grad. For example,
+    // >>> z = x + y
+    // >>> p = x / z
+    // >>> p.sum().backward()
+    //
+    // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
+    // for dy if dx is shared with dz.
     acc_tensor_ = JUST(functional::Add(partial_tensor, acc_tensor_, /*inplace=*/false));
   }
   return Maybe<void>::Ok();
