@@ -31,7 +31,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x = flow.Tensor(np.random.rand(5))
+        >>> x = flow.tensor(np.random.rand(5))
         >>> y = flow.ones_like(x)
         >>> y
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)

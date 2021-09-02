@@ -46,7 +46,7 @@ add_docstr(
         ...        [1.0, 1.0, 1.0],
         ...    ]
         ... )
-        >>> x = flow.Tensor(arr)
+        >>> x = flow.tensor(arr)
         >>> y = flow.bernoulli(x)
         >>> y
         tensor([[1., 1., 1.],
