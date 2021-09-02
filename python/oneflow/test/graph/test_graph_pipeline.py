@@ -155,6 +155,7 @@ def _test_train_graph(test_case, device):
         return check_list
 
     def train_with_graph(iter_num=3):
+        D = "cuda"
         B = [flow.sbp.broadcast]
         P = flow.placement("cuda", {0: [0, 1]})
         P0 = flow.placement("cuda", {0: [0]})
@@ -173,7 +174,7 @@ def _test_train_graph(test_case, device):
             def __init__(self):
                 super().__init__()
                 self.train_data_loader = train_data_loader
-                self.linear0 = flow.nn.Linear(3, 8, False)
+                self.linear0 = flow.nn.Linear(224, 8, False)
                 self.linear1 = flow.nn.Linear(8, 7, False)
                 self.linear0.to_consistent(placement=P0, sbp=B)
                 self.linear1.to_consistent(placement=P1, sbp=B)
@@ -182,6 +183,8 @@ def _test_train_graph(test_case, device):
 
             def forward(self):
                 image, label = self.train_data_loader()
+                image = image.to(D)
+                label = label.to(D)
                 out0 = self.linear0(image)
                 out0 = out0.to_consistent(placement=P1, sbp=B)
                 out1 = self.linear1(out0)
