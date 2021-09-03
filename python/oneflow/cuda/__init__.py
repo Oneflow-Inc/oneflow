@@ -22,6 +22,7 @@ def is_available() -> bool:
     # be initialized
     return flow._oneflow_internal.CudaGetDeviceCount() > 0
 
+
 def device_count() -> int:
     r"""Returns the number of GPUs available.."""
     return flow._oneflow_internal.CudaGetDeviceCount()
