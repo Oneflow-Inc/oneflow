@@ -350,3 +350,4 @@ import oneflow.utils.data
 import oneflow.utils.vision
 from oneflow.nn.modules.relu import relu_op as relu
 import oneflow.comm
+import oneflow.cuda
