@@ -57,10 +57,10 @@ def repeat_op(input, *sizes):
         >>> out.shape
         flow.Size([1, 3, 2, 4])
     """
-    
-    if(input.ndim==0 and input.numel()==1):
+
+    if input.ndim == 0 and input.numel() == 1:
         input = input.unsqueeze(0)
-    
+
     if _input_args_is_int(sizes):
         sizes = _single(sizes)
     elif _input_args_is_tuple_int(sizes):
