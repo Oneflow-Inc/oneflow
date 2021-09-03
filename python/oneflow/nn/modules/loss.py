@@ -175,26 +175,17 @@ class CrossEntropyLoss(Module):
         self.reduction = reduction
 
     def forward(self, input, target):
-        assert len(input.shape) <= 4
+        assert len(input.shape) <= 5
         assert len(target.shape) == len(input.shape) - 1
-        input_shape_len = len(input.shape)
-        if input_shape_len == 3:
-            (b, c, h) = (input.shape[0], input.shape[1], input.shape[2])
-            input = flow._C.transpose(input, perm=(0, 2, 1))
-            input = flow.reshape(input, shape=[-1, input.shape[2]])
-            target = target.flatten()
-        elif input_shape_len == 4:
-            (b, c, h, w) = (
-                input.shape[0],
-                input.shape[1],
-                input.shape[2],
-                input.shape[3],
-            )
-            input = flow._C.transpose(input, perm=(0, 2, 3, 1))
-            input = flow.reshape(input, shape=[-1, input.shape[3]])
-            target = target.flatten()
-        elif input_shape_len >= 5:
-            raise NotImplemented
+        assert input.shape[0] == target.shape[0]
+        for i in range(2, len(input.shape)):
+            assert input.shape[i] == target.shape[i - 1]
+        input = flow._C.transpose(
+            input, perm=(0,) + tuple(range(2, len(input.shape))) + (1,)
+        )
+        input = flow.reshape(input, shape=[-1, input.shape[-1]])
+        target_shape = target.shape
+        target = target.flatten()
         out = flow._C.sparse_softmax_cross_entropy(
             input, target, depth=input.shape[len(input.shape) - 1]
         )
@@ -204,7 +195,7 @@ class CrossEntropyLoss(Module):
             ones = flow.ones(
                 condition.shape, dtype=condition.dtype, device=condition.device
             )
-            condition = ones.sub(condition).reshape(tuple(out.shape))
+            condition = flow.reshape(ones.sub(condition), tuple(out.shape))
             out = flow.where(condition, out, zeros)
             if self.reduction == "mean":
                 reduce_sum = out.sum()
@@ -215,9 +206,7 @@ class CrossEntropyLoss(Module):
         elif self.reduction == "sum":
             return out.sum()
         else:
-            if input_shape_len == 4:
-                out = out.reshape((b, h, w))
-            return out
+            return out.reshape(*target_shape)
 
 
 class BCELoss(Module):
@@ -415,50 +404,38 @@ class NLLLoss(Module):
         return res
 
     def forward(self, input, target):
-        assert len(input.shape) <= 4
+        assert len(input.shape) <= 5
         assert len(target.shape) == len(input.shape) - 1
+        assert input.shape[0] == target.shape[0]
+        for i in range(2, len(input.shape)):
+            assert input.shape[i] == target.shape[i - 1]
         input = input.negative()
-        if len(input.shape) == 2:
-            res = self.nllloss_1d(input, target)
-        elif len(input.shape) == 3:
-            (b, c, h) = (input.shape[0], input.shape[1], input.shape[2])
-            input = flow._C.transpose(input, perm=(0, 2, 1))
-            input = flow.reshape(input, shape=[-1, input.shape[2]])
-            target = target.flatten()
-            res = self.nllloss_1d(input, target)
-            res = res.reshape(b, h)
-        elif len(input.shape) == 4:
-            (b, c, h, w) = (
-                input.shape[0],
-                input.shape[1],
-                input.shape[2],
-                input.shape[3],
-            )
-            input = flow._C.transpose(input, perm=(0, 2, 3, 1))
-            input = input.reshape(-1, input.shape[3])
-            target = target.flatten()
-            res = self.nllloss_1d(input, target)
-            res = res.reshape(b, h, w)
-        else:
-            raise NotImplemented
+
+        input = flow._C.transpose(
+            input, perm=(0,) + tuple(range(2, len(input.shape))) + (1,)
+        )
+        input = flow.reshape(input, shape=[-1, input.shape[-1]])
+        target_shape = target.shape
+        target = target.flatten()
+        out = self.nllloss_1d(input, target)
         if self.ignore_index is not None:
-            zeros = flow.zeros(res.shape, dtype=res.dtype, device=res.device)
+            zeros = flow.zeros(out.shape, dtype=out.dtype, device=out.device)
             condition = flow.eq(target, self.ignore_index)
             ones = flow.ones(
                 condition.shape, dtype=condition.dtype, device=condition.device
             )
-            condition = flow.reshape(ones.sub(condition), tuple(res.shape))
-            res = flow.where(condition, res, zeros)
+            condition = flow.reshape(ones.sub(condition), tuple(out.shape))
+            out = flow.where(condition, out, zeros)
             if self.reduction == "mean":
-                res = res.sum()
+                out = out.sum()
                 reduce_count = condition.argwhere().shape[0]
-                res = flow.mul(res, 1.0 / reduce_count)
-        if self.reduction == "none":
-            return res
+                out = flow.mul(out, 1.0 / reduce_count)
+        if self.reduction == "mean":
+            return out.mean()
         elif self.reduction == "sum":
-            return res.sum()
+            return out.sum()
         else:
-            return res.mean()
+            return out.reshape(*target_shape)
 
 
 class KLDivLoss(Module):
