@@ -563,6 +563,11 @@
     "Tensor (Tensor x, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon) => LayerNorm"
   bind_python: True
 
+- name: "layer_norm_grad"
+  signature:
+    "Tensor (Tensor x, Tensor mean, Tensor inv_variance, Tensor dy, Int64 begin_norm_axis, Double epsilon) => LayerNormGrad"
+  bind_python: True
+
 - name: "avg_pool_2d"
   signature:
     "Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,

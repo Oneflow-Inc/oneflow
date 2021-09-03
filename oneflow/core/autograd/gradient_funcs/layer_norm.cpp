@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -60,7 +61,6 @@ class LayerNorm : public OpExprGradFunction<LayerNormCaptureState> {
  private:
   AttrMap base_attrs_;
   std::string op_name_;
-  std::shared_ptr<OpExpr> x_grad_op_;
 };
 
 Maybe<void> LayerNorm::Init(const OpExpr& op) {
@@ -68,8 +68,6 @@ Maybe<void> LayerNorm::Init(const OpExpr& op) {
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   op_name_ = fw_op_expr->op_name();
-  x_grad_op_ = JUST(op_expr_helper::LayerNormGradOp(/*begin_norm_axis=*/1, /*epsilon=*/1e-5,
-                                                    GradientOpName(op_name_)));
   return Maybe<void>::Ok();
 }
 
@@ -84,13 +82,16 @@ Maybe<void> LayerNorm::Capture(LayerNormCaptureState* ctx, const TensorTuple& in
 
   CHECK_EQ_OR_RETURN(inputs.size(), ctx->center + ctx->scale + 1);
   CHECK_EQ_OR_RETURN(outputs.size(), ctx->scale + 3);
-  ctx->has_beta_diff = ctx->center && inputs.at(1)->requires_grad();
-  const int gamma_index = ctx->center + 1;
-  ctx->has_gamma_diff = ctx->scale && inputs.at(gamma_index)->requires_grad();
+
+  ctx->has_gamma_diff = ctx->scale && inputs.at(1)->requires_grad();
+  const int beta_index = ctx->scale + 1;
+  ctx->has_beta_diff = ctx->center && inputs.at(beta_index)->requires_grad();
+
   ctx->has_normalized_diff = ctx->scale && inputs.at(0)->requires_grad();
   if (ctx->has_gamma_diff || ctx->has_normalized_diff) {
-    ctx->gamma_index = ctx->SaveTensorForBackward(inputs.at(gamma_index));
+    ctx->gamma_index = ctx->SaveTensorForBackward(inputs.at(1));  // save gamma.
   }
+
   if (ctx->has_gamma_diff) { ctx->normalized_index = ctx->SaveTensorForBackward(outputs.at(3)); }
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   if (ctx->x_requires_grad) {
@@ -115,34 +116,35 @@ Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* ctx, const TensorTuple
         begin_params_axis, ctx->has_beta_diff, ctx->has_gamma_diff, ctx->has_normalized_diff,
         GradientOpName(op_name_ + "_param")));
     TensorTuple inputs{dy};
+
     if (ctx->has_gamma_diff || ctx->has_normalized_diff) {
       inputs.push_back(saved_tensors.at(ctx->gamma_index));  // gamma
     }
     if (ctx->has_gamma_diff) {
       inputs.push_back(saved_tensors.at(ctx->normalized_index));  // normalized
     }
+
     const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(*param_grad_op, inputs));
-    
+
     if (ctx->has_gamma_diff) {
-      in_grads->at(1) = results->at(ctx->has_gamma_diff); // In nn functor, in[1] is gamma, and in op_expr_helper, the output[1] is gamma diff. 
-    }    
+      in_grads->at(1) =
+          results->at(ctx->has_gamma_diff);  // In nn functor, in[1] is gamma, and in
+                                             // op_expr_helper, the output[1] is gamma diff.
+    }
 
     if (ctx->has_beta_diff) {
-      in_grads->at(ctx->has_gamma_diff + 1) = results->at(0); // In nn functor, in[2] is beta, and in op_expr_helper, the output[0] is beta diff. 
-    }    
+      in_grads->at(ctx->has_gamma_diff + 1) = results->at(
+          0);  // In nn functor, in[2] is beta, and in op_expr_helper, the output[0] is beta diff.
+    }
 
     if (ctx->has_normalized_diff) { dy = results->at(ctx->has_beta_diff + ctx->has_gamma_diff); }
-
   }
   if (ctx->x_requires_grad) {
     const auto& x = saved_tensors.at(ctx->x_index);
     const auto& mean = saved_tensors.at(ctx->mean_index);
     const auto& inv_variance = saved_tensors.at(ctx->inv_variance_index);
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
-    JUST(attrs.SetAttr<double>("epsilon", ctx->epsilon));
     in_grads->at(0) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_op_, {x, mean, inv_variance, dy}, attrs));
+        JUST(functional::LayerNormGrad(x, mean, inv_variance, dy, begin_norm_axis, ctx->epsilon));
   }
   return Maybe<void>::Ok();
 }

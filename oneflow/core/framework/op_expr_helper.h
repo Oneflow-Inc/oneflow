@@ -120,10 +120,6 @@ Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& eps
 Maybe<one::UserOpExpr> BroadcastDivGradOp();
 Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name);
 
-Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon);
-Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon,
-                                       const std::string& name);
-
 Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
                                             const bool& has_beta_diff, const bool& has_gamma_diff,
                                             const bool& has_normalized_diff);

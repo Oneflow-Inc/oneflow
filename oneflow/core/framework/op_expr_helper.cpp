@@ -366,21 +366,6 @@ Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name) {
       .Build();
 }
 
-Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon) {
-  return LayerNormGradOp(begin_norm_axis, epsilon, UniqueOpName("layer_norm_grad"));
-}
-Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const double& epsilon,
-                                       const std::string& name) {
-  return one::OpBuilder("layer_norm_grad", name)
-      .Input("x")
-      .Input("mean")
-      .Input("inv_variance")
-      .Input("dy")
-      .Output("dx")
-      .Attr<int64_t>("begin_norm_axis", begin_norm_axis)
-      .Attr<double>("epsilon", epsilon)
-      .Build();
-}
 
 Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
                                             const bool& has_beta_diff, const bool& has_gamma_diff,
