@@ -888,7 +888,7 @@
 
 - name: "dropout"
   signature:
-    "Tensor (Tensor x, Float p=0.5, Generator generator=None, Bool is_training=False) => Dropout"
+    "Tensor (Tensor x, Float p=0.5, Generator generator=None, Bool is_training=True) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
