@@ -66,6 +66,22 @@ class CudaGraphContext {
   virtual void LaunchGraph(const CudaGraphExecutable* executable) = 0;
 };
 
+class GenericCudaGraphContext : public CudaGraphContext{
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GenericCudaGraphContext);
+  explicit GenericCudaGraphContext(cudaStream_t stream);
+  ~GenericCudaGraphContext() override;
+
+   void BeginGraphCapture() override;
+   void EndGraphCapture(CudaGraphExecutable* executable) override;
+   bool IsGraphCapturing() const override;
+   void LaunchGraph(const CudaGraphExecutable* executable) override ;
+
+ private:
+  cudaStream_t stream_;
+  bool is_graph_capturing_;
+};
+
 #endif  // WITH_CUDA_GRAPHS
 
 }  // namespace oneflow

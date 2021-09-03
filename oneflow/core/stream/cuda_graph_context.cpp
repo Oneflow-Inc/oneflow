@@ -53,6 +53,32 @@ void CudaGraphExecutable::Reset() {
   }
 }
 
+GenericCudaGraphContext::GenericCudaGraphContext(cudaStream_t stream) : stream_(stream), is_graph_capturing_(false) {
+}
+
+GenericCudaGraphContext::~GenericCudaGraphContext() {
+}
+
+void GenericCudaGraphContext::BeginGraphCapture() {
+  CHECK(!is_graph_capturing_);
+  is_graph_capturing_ = true;
+  OF_CUDA_CHECK(cudaStreamBeginCapture(stream_, cudaStreamCaptureModeThreadLocal));
+}
+
+void GenericCudaGraphContext::EndGraphCapture(CudaGraphExecutable* executable) {
+  cudaGraph_t graph = nullptr;
+  OF_CUDA_CHECK(cudaStreamEndCapture(cuda_stream_, &graph));
+  executable->Update(graph);
+  OF_CUDA_CHECK(cudaGraphDestroy(graph));
+  is_graph_capturing_ = false;
+}
+
+bool GenericCudaGraphContext::IsGraphCapturing() const { return is_graph_capturing_; }
+
+void GenericCudaGraphContext::LaunchGraph(const CudaGraphExecutable* executable) {
+  executable->Launch(stream_);
+}
+
 }  // namespace oneflow
 
 #endif

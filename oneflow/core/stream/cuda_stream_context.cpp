@@ -102,6 +102,9 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   std::shared_ptr<DeviceCtx> device_ctx_;
   bool is_graph_capturing_;
   std::unique_ptr<KernelObserver> kernel_observer_;
+#ifdef WITH_CUDA_GRAPHS
+  std::unique_ptr<GenericCudaGraphContext> cuda_graph_ctx_impl_;
+#endif // WITH_CUDA_GRAPHS
 };
 
 class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
@@ -190,6 +193,10 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id)
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
 
   device_ctx_.reset(new DeviceCtxImpl(this));
+
+#ifdef WITH_CUDA_GRAPHS
+  cuda_graph_ctx_impl_.reset(new GenericCudaGraphContext(cuda_stream_));
+#endif // WITH_CUDA_GRAPHS
 
   poller_thread_ = std::thread([this, stream_id]() {
     int dev_id = stream_id.device_id().device_index();
@@ -297,23 +304,19 @@ cudnnHandle_t CudaStreamContextImpl::cudnn_handle() const { return cudnn_handle_
 #ifdef WITH_CUDA_GRAPHS
 
 void CudaStreamContextImpl::BeginGraphCapture() {
-  CHECK(!is_graph_capturing_);
-  is_graph_capturing_ = true;
-  OF_CUDA_CHECK(cudaStreamBeginCapture(cuda_stream_, cudaStreamCaptureModeThreadLocal));
+  return cuda_graph_ctx_impl_->BeginGraphCapture();
 }
 
 void CudaStreamContextImpl::EndGraphCapture(CudaGraphExecutable* executable) {
-  cudaGraph_t graph = nullptr;
-  OF_CUDA_CHECK(cudaStreamEndCapture(cuda_stream_, &graph));
-  executable->Update(graph);
-  OF_CUDA_CHECK(cudaGraphDestroy(graph));
-  is_graph_capturing_ = false;
+  return cuda_graph_ctx_impl_->EndGraphCapture(executable);
 }
 
-bool CudaStreamContextImpl::IsGraphCapturing() const { return is_graph_capturing_; }
+bool CudaStreamContextImpl::IsGraphCapturing() const {
+  return cuda_graph_ctx_impl_->IsGraphCapturing();
+}
 
 void CudaStreamContextImpl::LaunchGraph(const CudaGraphExecutable* executable) {
-  executable->Launch(cuda_stream_);
+  return cuda_graph_ctx_impl_->LaunchGraph(executable);
 }
 
 #endif
