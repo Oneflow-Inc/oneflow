@@ -50,7 +50,7 @@ def permute_op(input, *dims):
             input.shape
         ), "Invalid dim0 {}, len(shape): {}".format(dim, len(input.shape))
         new_perm.append(dim)
-    return flow.F.transpose(input, perm=new_perm)
+    return flow._C.transpose(input, perm=new_perm)
 
 
 if __name__ == "__main__":
