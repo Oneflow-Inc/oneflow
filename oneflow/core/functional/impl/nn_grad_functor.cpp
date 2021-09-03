@@ -446,6 +446,32 @@ class NormalizationGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class LayerNormGradFunctor {
+ public:
+  LayerNormGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("layer_norm_grad")
+                         .Input("x")
+                         .Input("mean")
+                         .Input("inv_variance")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mean,
+                           const std::shared_ptr<one::Tensor>& inv_variance,
+                           const std::shared_ptr<one::Tensor>& dy, const int64_t& begin_norm_axis,
+                           const double& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
+    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mean, inv_variance, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -462,6 +488,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
+  m.add_functor<impl::LayerNormGradFunctor>("LayerNormGrad");
 };
 
 }  // namespace functional
