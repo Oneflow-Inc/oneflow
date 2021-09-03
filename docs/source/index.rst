@@ -22,6 +22,7 @@ OneFlow API Reference
     image
     optim
     utils
+    cuda
     distributed
 
 

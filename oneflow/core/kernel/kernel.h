@@ -52,7 +52,7 @@ class Kernel {
 
  protected:
   Kernel();
-  void InitBase(const JobDesc* job_desc, const KernelConf&);
+  void InitBase(const KernelConf&);
   virtual void VirtualKernelInit(KernelContext* ctx) {}
 
   virtual void ForwardHeader(KernelContext* ctx) const;

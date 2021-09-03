@@ -50,8 +50,6 @@ class UserKernel final : public Kernel {
 
   bool IsStateless() const override;
 
-  const JobDesc& job_desc() const { return *job_desc_; }
-
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<UserKernelComputeContext> ctx_;
@@ -61,7 +59,6 @@ class UserKernel final : public Kernel {
   std::unique_ptr<CudaGraphExecutable> cuda_graph_exec_;
   CudaGraphContext* cuda_graph_ctx_{};
 #endif  // WITH_CUDA_GRAPHS
-  const JobDesc* job_desc_{};
 };
 
 }  // namespace oneflow

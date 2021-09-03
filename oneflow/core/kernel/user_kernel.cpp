@@ -67,8 +67,7 @@ void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_d
 
 class UserKernelBaseContext {
  public:
-  UserKernelBaseContext(const KernelConf& kernel_conf, const JobDesc& job_desc)
-      : job_desc_(job_desc) {
+  explicit UserKernelBaseContext(const KernelConf& kernel_conf) {
     CHECK(kernel_conf.has_user_conf());
     CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
 
@@ -94,7 +93,6 @@ class UserKernelBaseContext {
   DeviceType device_type() const { return device_type_; }
   const std::string& device_tag() const { return device_tag_; }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
-  const JobDesc& job_desc() const { return job_desc_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -112,7 +110,6 @@ class UserKernelBaseContext {
   std::string device_tag_;
   ParallelContext parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
-  const JobDesc& job_desc_;
 };
 
 class KernelCreateContext final : public user_op::KernelCreateContext {
@@ -132,11 +129,10 @@ class KernelCreateContext final : public user_op::KernelCreateContext {
 
 class UserKernelInitContext final : public user_op::KernelInitContext {
  public:
-  explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
-                                 const JobDesc& job_desc)
+  explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
-        base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
+        base_ctx_(UserKernelBaseContext(kernel_conf)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     nd_sbp_signature_ = new cfg::NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
@@ -209,9 +205,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
 
 class UserKernelOpInferContext : public user_op::InferContext {
  public:
-  UserKernelOpInferContext(const KernelConf& kernel_conf, const JobDesc* job_desc)
+  explicit UserKernelOpInferContext(const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
-        job_desc_(job_desc),
         parallel_ctx_(kernel_conf.parallel_ctx()),
         nd_sbp_signature_(kernel_conf.op_attribute().nd_sbp_signature()),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
@@ -291,10 +286,6 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
-  const JobDesc* job_desc() const override {
-    CHECK_NOTNULL(job_desc_);
-    return job_desc_;
-  }
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; };
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
   const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
@@ -361,7 +352,6 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
 
   user_op::UserOpConfWrapper user_op_conf_;
-  const JobDesc* job_desc_;
   ArgVec inputs_;
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
@@ -375,12 +365,11 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
 class UserKernelInferContext final : public user_op::KernelInferContext {
  public:
-  explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
-                                  const JobDesc& job_desc)
+  explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
-        base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
-        op_infer_ctx_(kernel_conf, &job_desc) {
+        base_ctx_(UserKernelBaseContext(kernel_conf)),
+        op_infer_ctx_(kernel_conf) {
     auto InitArg2Blob = [this](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
@@ -490,11 +479,10 @@ BnTensorPair MakeBnTensorPair(const std::string& bn,
 
 class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
-  explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
-                                    const JobDesc& job_desc)
+  explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
-        base_ctx_(kernel_conf, job_desc) {
+        base_ctx_(kernel_conf) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (const auto& it : arg_map) {
         const std::string& arg_name = it.first;
@@ -552,7 +540,6 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
-  const JobDesc& job_desc() const override { return base_ctx_.job_desc(); }
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
@@ -573,9 +560,9 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
 class UserKernelRegContext final : public user_op::KernelRegContext {
  public:
-  explicit UserKernelRegContext(const KernelConf& kernel_conf, const JobDesc& job_desc)
+  explicit UserKernelRegContext(const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
-        base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)) {}
+        base_ctx_(UserKernelBaseContext(kernel_conf)) {}
   ~UserKernelRegContext() = default;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -603,15 +590,15 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
 UserKernel::~UserKernel() = default;
 
 void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
-  ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf(), job_desc()));
-  infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf(), job_desc()));
-  infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), job_desc()));
+  ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf()));
+  infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf()));
+  infer_cache_.reset(new user_op::OpKernelInferCache(kernel_conf(), this));
   {
     const std::string& op_type_name =
         kernel_conf().op_attribute().op_conf().user_conf().op_type_name();
     const user_op::OpKernelRegistryResult* kernel_reg_val =
         CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-            op_type_name, UserKernelRegContext(kernel_conf(), job_desc())));
+            op_type_name, UserKernelRegContext(kernel_conf())));
     CHECK_NOTNULL(kernel_reg_val);
     KernelCreateContext create_ctx(kernel_conf());
     kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
@@ -619,7 +606,7 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
 
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
-    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf());
     auto* provider = dynamic_cast<StreamContextProvider*>(device_ctx);
     if (provider) {
       cuda_graph_ctx_ = dynamic_cast<CudaGraphContext*>(provider->GetStreamContext());
@@ -640,7 +627,7 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
 }
 
 std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(DeviceCtx* device_ctx) {
-  UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
+  UserKernelInitContext init_ctx(device_ctx, kernel_conf());
   return kernel_->CreateOpKernelState(&init_ctx);
 }
 
@@ -685,7 +672,6 @@ bool UserKernel::IsCudaGraphSupported() const {
 }
 
 void UserKernel::VirtualKernelInit(KernelContext* ctx) {
-  job_desc_ = ctx->job_desc();
   InitUserKernel(ctx->device_ctx());
   CHECK(opkernel_state_.get() == nullptr);
   opkernel_state_ = CreateOpKernelState(ctx->device_ctx());
@@ -734,16 +720,15 @@ NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](con
   return true;
 });
 
-EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf)
-    : job_desc_(job_desc) {
-  InitBase(job_desc, kernel_conf);
+EagerKernel::EagerKernel(const KernelConf& kernel_conf) {
+  InitBase(kernel_conf);
   InitOpKernel(kernel_conf);
 }
 
 void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
   auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-      op_type_name, UserKernelRegContext(kernel_conf, *job_desc_)));
+      op_type_name, UserKernelRegContext(kernel_conf)));
   CHECK_NOTNULL(kernel_reg_val);
   KernelCreateContext create_ctx(kernel_conf);
   kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
@@ -751,7 +736,7 @@ void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf().all_blobs_are_static()) { return; }
-  UserKernelInferContext infer_ctx(nullptr, kernel_conf(), *job_desc_);
+  UserKernelInferContext infer_ctx(nullptr, kernel_conf());
   infer_ctx.UpdateArg2Tensor(BnInOp2Blob);
   auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.MutOpInferContext());
   if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
@@ -765,8 +750,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
-    CHECK_NOTNULL(job_desc_);
-    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), *job_desc_);
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf());
     new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
   }
 
@@ -776,7 +760,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   }
 
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
-  UserKernelComputeContext compute_ctx(device_ctx, kernel_conf(), *job_desc_);
+  UserKernelComputeContext compute_ctx(device_ctx, kernel_conf());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
   kernel_->Compute(&compute_ctx, new_opkernel_state.get());
   return new_opkernel_state;
