@@ -20,7 +20,7 @@ def is_available() -> bool:
     r"""Returns a bool indicating if CUDA is currently available."""
     # This function never throws and returns 0 if driver is missing or can't
     # be initialized
-    return flow._oneflow_internal.CudaGetDeviceCount() > 0
+    return device_count() > 0
 
 
 def device_count() -> int:
