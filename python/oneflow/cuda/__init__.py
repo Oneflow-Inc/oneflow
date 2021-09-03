@@ -13,3 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow as flow
+
+
+def is_available() -> bool:
+    r"""Returns a bool indicating if CUDA is currently available."""
+    # This function never throws and returns 0 if driver is missing or can't
+    # be initialized
+    return device_count() > 0
+
+
+def device_count() -> int:
+    r"""Returns the number of GPUs available.."""
+    return flow._oneflow_internal.CudaGetDeviceCount()
