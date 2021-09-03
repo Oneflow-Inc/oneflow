@@ -1206,7 +1206,7 @@ class GLU(Module):
         if self.dim < 0:
             self.dim += ndim
 
-        return flow.F.glu(x, self.dim)
+        return flow._C.glu(x, self.dim)
 
 
 def glu_op(input, dim=-1):
@@ -1230,9 +1230,10 @@ def glu_op(input, dim=-1):
     .. code-block:: python
     
         >>> import oneflow as flow
-        >>> import oneflow.nn as nn
         >>> x = flow.tensor([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=flow.float32)
-        >>> y = nn.functional.glu(x)
+        >>> dim = 1
+        >>> glu = flow.nn.GLU(dim)
+        >>> y = glu(x)
         >>> y
         tensor([[0.9526, 1.9640],
                 [4.9954, 5.9980]], dtype=oneflow.float32)

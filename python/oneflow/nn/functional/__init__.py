@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.modules.activation import glu_op as glu
 from oneflow.nn.modules.interpolate import interpolate
 from oneflow.nn.modules.norm import l2_normalize
 from oneflow.nn.modules.affine_grid import affine_grid
@@ -40,6 +39,7 @@ from oneflow._C import selu
 from oneflow._C import sigmoid
 from oneflow._C import prelu
 from oneflow._C import gelu
+from oneflow._C import glu
 from oneflow._C import log_sigmoid as logsigmoid
 from oneflow._C import log_sigmoid
 from oneflow._C import softsign

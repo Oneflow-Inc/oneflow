@@ -388,7 +388,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow.F.glu,
+    oneflow._C.glu,
     r"""
     glu(x: Tensor, dim: int) -> Tensor 
 

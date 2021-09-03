@@ -168,30 +168,30 @@ class GeluGradFunctor : public BinaryFunctor {
 class GluFunctor {
  public:
   GluFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dim) const {
-    int64_t nc = x->dim(dim);
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+    int64_t nc = input->dim(dim);
     CHECK_EQ_OR_RETURN(nc % 2, 0) << "Halving dimension must be even, but dimension " << dim
                                   << " is size " << nc;
     nc = nc / 2;
     std::vector<int64_t> split_sizes(2, nc);
-    auto split_x = JUST(SplitWithSize(x, split_sizes, dim));
+    auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
     auto sgmd_x1 = JUST(Sigmoid(split_x->at(1)));
     return Mul(split_x->at(0), sgmd_x1);
   }
 };
 
-class GluGradFunctor : public BinaryFunctor {
+class GluGradFunctor {
  public:
   GluGradFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& x, int64_t dim) const {
-    int64_t nc = x->dim(dim);
+                           const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+    int64_t nc = input->dim(dim);
     CHECK_EQ_OR_RETURN(nc % 2, 0) << "Halving dimension must be even, but dimension " << dim
                                   << " is size " << nc;
     nc = nc / 2;
     std::vector<int64_t> split_sizes(2, nc);
     TensorTuple inputs(2);
-    auto split_x = JUST(SplitWithSize(x, split_sizes, dim));
+    auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
     auto sgmd_x1 = JUST(Sigmoid(split_x->at(1)));
     auto sub_sgmd_x1 = JUST(ScalarSub2(1, sgmd_x1));
     auto sgmd_dx1 = JUST(Mul(sgmd_x1, sub_sgmd_x1));
