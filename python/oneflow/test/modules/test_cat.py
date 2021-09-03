@@ -26,28 +26,12 @@ from automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestDropout(flow.unittest.TestCase):
+class TestCat(flow.unittest.TestCase):
     @autotest()
-    def test_dropout(test_case):
+    def test_cat_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=random(), dim0=random()).to(device)
-        m = torch.nn.Dropout(p=0)
-        return m(x)
-
-    @autotest()
-    def test_dropout_p1(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=random(), dim0=random()).to(device)
-        m = torch.nn.Dropout(p=1.0)
-        return m(x)
-
-    @autotest()
-    def test_dropout_eval(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=random(), dim0=random()).to(device)
-        m = torch.nn.Dropout(p=1.0)
-        m.eval()
-        return m(x)
+        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        return torch.cat((x, x, x), random(0, 2).to(int))
 
 
 if __name__ == "__main__":

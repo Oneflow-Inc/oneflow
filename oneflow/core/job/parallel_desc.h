@@ -163,6 +163,13 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
 
 bool IsMirroredParallelContext(const ParallelContext& parallel_ctx);
 
+namespace private_details {
+
+Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc>, DeviceType);
+
+Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement);
+
+}  // namespace private_details
 }  // namespace oneflow
 
 namespace std {
