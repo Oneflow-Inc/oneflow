@@ -152,7 +152,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
     int64_t tmp_size = 0;
     const int64_t dtype_size = GetSizeOfDataType(in->data_type());
     int64_t data_size = in->shape().elem_cnt() * dtype_size;
-    // NOTE(chengcheng): in (transpose)-> pack_to_ptr (all2all)-> unpack_from_ptr (transpose)-> out
+    // NOTE: in (transpose)-> pack_to_ptr (all2all)-> unpack_from_ptr (transpose)-> out
     const char* pack_to_ptr = in->dptr<char>();
     char* unpack_from_ptr = out->mut_dptr<char>();
     if (tmp_buffer) { tmp_size = tmp_buffer->shape().elem_cnt(); }
