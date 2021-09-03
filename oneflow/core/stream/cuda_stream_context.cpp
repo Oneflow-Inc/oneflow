@@ -47,11 +47,11 @@ void SetAffinityByDevice(int64_t dev_id) {
 #ifdef WITH_CUDA_GRAPHS
 #define CUDA_STREAM_CONTEXT_IMPL_BASE \
  public                               \
-  CudaStreamContext, public CudaGraphContext
+  CudaStreamContext, public CudaGraphContext, public KernelObserverProvider
 #else
 #define CUDA_STREAM_CONTEXT_IMPL_BASE \
  public                               \
-  CUDAStreamContext
+  CUDAStreamContext, public KernelObserverProvider
 #endif
 
 class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
@@ -66,7 +66,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
   std::shared_ptr<DeviceCtx> device_ctx() override;
-  std::shared_ptr<KernelObserver> Observer() override;
+  KernelObserver* GetKernelObserver() override;
 
   cudaStream_t cuda_stream() const override;
   cublasHandle_t cublas_pmh_handle() const override;
@@ -130,20 +130,6 @@ class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
   CudaStreamContextImpl* stream_ctx_;
 };
 
-class CudaStreamKernelObserverManager final : public KernelObserverManager {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaStreamKernelObserverManager);
-  CudaStreamKernelObserverManager() {
-    if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
-      LOG(WARNING) << "Environment variable ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS has been set "
-                      "to a truthy "
-                      "value, it will impact performance";
-      kernel_observers_.emplace_back(new CudaCheckNumericsKernelObserver());
-    }
-  }
-  ~CudaStreamKernelObserverManager() override = default;
-};
-
 }  // namespace
 
 CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id)
@@ -195,7 +181,15 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id)
   OF_CUDNN_CHECK(cudnnSetStream(cudnn_handle_, cuda_stream_));
 
   device_ctx_.reset(new DeviceCtxImpl(this));
-  kernel_observer_.reset(new CudaStreamKernelObserverManager());
+
+  std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
+  if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
+    LOG(WARNING) << "Environment variable ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS has been set "
+                    "to a truthy "
+                    "value, it will impact performance";
+    kernel_observers.emplace_back(new CudaCheckNumericsKernelObserver());
+  }
+  kernel_observer_.reset(new KernelObserverManager(kernel_observers));
   poller_thread_ = std::thread([this, stream_id]() {
     int dev_id = stream_id.device_id().device_index();
     CudaCurrentDeviceGuard guard(dev_id);
@@ -285,7 +279,7 @@ Maybe<void> CudaStreamContextImpl::Sync() {
 
 std::shared_ptr<DeviceCtx> CudaStreamContextImpl::device_ctx() { return device_ctx_; }
 
-std::shared_ptr<KernelObserver> CudaStreamContextImpl::Observer() { return kernel_observer_; }
+KernelObserver* CudaStreamContextImpl::GetKernelObserver() { return kernel_observer_.get(); }
 
 cudaStream_t CudaStreamContextImpl::cuda_stream() const { return cuda_stream_; }
 

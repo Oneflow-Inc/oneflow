@@ -40,6 +40,15 @@ class KernelObserver {
   virtual void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {}
 };
 
+class KernelObserverProvider {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelObserverProvider);
+  KernelObserverProvider() = default;
+  virtual ~KernelObserverProvider() = default;
+
+  virtual KernelObserver* GetKernelObserver() = 0;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_OBSERVER_H_

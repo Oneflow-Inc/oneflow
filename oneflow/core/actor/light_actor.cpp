@@ -30,7 +30,6 @@ limitations under the License.
 #include "oneflow/core/stream/cuda_graph_context.h"
 #include "oneflow/core/kernel/user_kernel.h"
 #include "oneflow/core/stream/stream_context.h"
-#include "oneflow/core/kernel/kernel_context_observer.h"
 
 namespace oneflow {
 
@@ -210,7 +209,13 @@ class LightActor : public ActorBase, public KernelContext {
   OF_DISALLOW_COPY_AND_MOVE(LightActor);
   explicit LightActor(std::shared_ptr<DeviceCtx> device_ctx)
       : thread_(nullptr), device_ctx_(std::move(device_ctx)), job_desc_(nullptr) {
-    kernel_observer_.reset(new KernelContextObserver());
+    auto* provider = dynamic_cast<StreamContextProvider*>(device_ctx_.get());
+    if (provider != nullptr) {
+      kernel_observer_provider_ =
+          dynamic_cast<KernelObserverProvider*>(provider->GetStreamContext());
+    } else {
+      kernel_observer_provider_ = nullptr;
+    }
   }
   ~LightActor() override {
     if (exec_kernel) { kernel_info_[0]->kernel->DestroyState(kernel_info_[0]->state); }
@@ -524,7 +529,47 @@ class LightActor : public ActorBase, public KernelContext {
 
   const JobDesc* job_desc() const override { return job_desc_; }
 
-  std::shared_ptr<KernelObserver> Observer() override { return kernel_observer_; }
+  void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
+    if (kernel_observer_provider_ != nullptr) {
+      kernel_observer_provider_->GetKernelObserver()->WillForward(kernel_ctx, kernel);
+    }
+  }
+
+  void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    Global<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
+    if (kernel_observer_provider_ != nullptr) {
+      kernel_observer_provider_->GetKernelObserver()->DidForward(kernel_ctx, kernel);
+    }
+  }
+
+  void WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    Global<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
+    if (kernel_observer_provider_ != nullptr) {
+      kernel_observer_provider_->GetKernelObserver()->WillForwardHeader(kernel_ctx, kernel);
+    }
+  }
+
+  void DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    Global<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
+    if (kernel_observer_provider_ != nullptr) {
+      kernel_observer_provider_->GetKernelObserver()->DidForwardHeader(kernel_ctx, kernel);
+    }
+  }
+
+  void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    Global<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
+    if (kernel_observer_provider_ != nullptr) {
+      kernel_observer_provider_->GetKernelObserver()->WillForwardDataContent(kernel_ctx, kernel);
+    }
+  }
+
+  void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override {
+    Global<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
+    if (kernel_observer_provider_ != nullptr) {
+      kernel_observer_provider_->GetKernelObserver()->DidForwardDataContent(kernel_ctx, kernel);
+    }
+  }
 
   RegstIndex regst_desc_id_index_;
   StateContainer index2state_;
@@ -547,7 +592,7 @@ class LightActor : public ActorBase, public KernelContext {
   std::vector<ActorMsg> async_post_act_msgs_;
   std::unique_ptr<TaskProto> task_proto_;
   const JobDesc* job_desc_;
-  std::shared_ptr<KernelObserver> kernel_observer_;
+  KernelObserverProvider* kernel_observer_provider_;
 };
 
 std::shared_ptr<DeviceCtx> NewDefaultDeviceCtx(const TaskProto& task_proto,

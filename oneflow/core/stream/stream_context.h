@@ -36,7 +36,6 @@ class StreamContext {
   virtual Maybe<void> AddCallback(std::function<void()> callback) = 0;
   virtual Maybe<void> Sync() = 0;
   virtual std::shared_ptr<DeviceCtx> device_ctx() = 0;
-  virtual std::shared_ptr<KernelObserver> Observer() = 0;
 };
 
 class StreamContextProvider {

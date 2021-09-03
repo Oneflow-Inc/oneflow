@@ -20,10 +20,11 @@ limitations under the License.
 
 namespace oneflow {
 
-class KernelObserverManager : public KernelObserver {
+class KernelObserverManager final : public KernelObserver {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelObserverManager);
-  KernelObserverManager() = default;
+  explicit KernelObserverManager(std::vector<std::shared_ptr<KernelObserver>> kernel_observers)
+      : kernel_observers_(std::move(kernel_observers)) {}
   ~KernelObserverManager() override = default;
 
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
@@ -35,8 +36,8 @@ class KernelObserverManager : public KernelObserver {
   void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
   void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
 
- protected:
-  std::vector<std::unique_ptr<KernelObserver>> kernel_observers_;
+ private:
+  std::vector<std::shared_ptr<KernelObserver>> kernel_observers_;
 };
 
 }  // namespace oneflow
