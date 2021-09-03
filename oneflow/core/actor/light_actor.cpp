@@ -214,7 +214,7 @@ class LightActor : public ActorBase, public KernelContext {
         stream_kernel_observer_(nullptr) {
     auto* stream_context_provider = dynamic_cast<StreamContextProvider*>(device_ctx_.get());
     if (stream_context_provider != nullptr) {
-      kernel_observer_provider =
+      auto* kernel_observer_provider =
           dynamic_cast<KernelObserverProvider*>(stream_context_provider->GetStreamContext());
       if (kernel_observer_provider != nullptr) {
         stream_kernel_observer_ = kernel_observer_provider->GetKernelObserver();
