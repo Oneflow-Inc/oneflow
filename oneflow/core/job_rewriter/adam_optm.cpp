@@ -68,9 +68,9 @@ class BiasCorrectionFactorState final : public JobPassState {
   BiasCorrectionFactorState() {}
   ~BiasCorrectionFactorState() override = default;
 
-  std::string GetLbn(
-      float beta, std::string bias_correction_name, ParallelConf parallel_conf,
-      std::function<std::string(float beta_val, std::string op_name)> BiasCorrectionFactorStateOp) {
+  std::string GetLbn(float beta, std::string bias_correction_name, ParallelConf parallel_conf,
+                     const std::function<std::string(float beta_val, std::string op_name)>&
+                         BiasCorrectionFactorStateOp) {
     BiasCorrectionFactorCacheKey cache_key;
     cache_key.beta = beta;
     cache_key.parallel_conf = parallel_conf;
@@ -78,7 +78,7 @@ class BiasCorrectionFactorState final : public JobPassState {
     if (iter != key2lbn_.end()) {
       return iter->second;
     } else {
-      std::string lbn = BiasCorrectionFactorStateOp(beta, bias_correction_name);
+      std::string lbn = BiasCorrectionFactorStateOp(beta, std::move(bias_correction_name));
       key2lbn_.emplace(cache_key, lbn);
       return lbn;
     }
@@ -101,11 +101,11 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {m_var, v_var, max_v_var});
 
   user_op::UserOpConfWrapperBuilder adam_update_op_builder(var_op->op_name() + "_optimizer");
-  float beta1;
-  float beta2;
-  float epsilon;
-  bool do_bias_correction;
-  bool amsgrad;
+  float beta1 = 0.9;
+  float beta2 = 0.999;
+  float epsilon = 1e-8;
+  bool do_bias_correction = true;
+  bool amsgrad = false;
   if (optimizer_conf.has_adam_conf()) {
     const AdamModelUpdateConf& adam_conf = optimizer_conf.adam_conf();
     beta1 = adam_conf.beta1();
@@ -144,7 +144,8 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
     } else {
       bias_correction_parallel_conf = var_op_node.parallel_desc().parallel_conf();
     }
-    auto AddAdamBiasCorrectionFactorOp = [&](float beta_val, std::string op_name) -> std::string {
+    auto AddAdamBiasCorrectionFactorOp = [&](float beta_val,
+                                             const std::string& op_name) -> std::string {
       user_op::UserOpConfWrapperBuilder op_builder(var_op->op_name() + op_name);
       const auto adam_bias_correction_factor_op =
           op_builder.OpTypeName("adam_bias_correction_factor")
