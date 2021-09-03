@@ -148,13 +148,12 @@ class ConsistentRandFunctor {
 
     const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
 
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+      JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
     }
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {},
-        OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, uniform_kernel_state));
   }
 
  private:
