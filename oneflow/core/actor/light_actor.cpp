@@ -208,13 +208,17 @@ class LightActor : public ActorBase, public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LightActor);
   explicit LightActor(std::shared_ptr<DeviceCtx> device_ctx)
-      : thread_(nullptr), device_ctx_(std::move(device_ctx)), job_desc_(nullptr) {
-    auto* provider = dynamic_cast<StreamContextProvider*>(device_ctx_.get());
-    if (provider != nullptr) {
-      kernel_observer_provider_ =
-          dynamic_cast<KernelObserverProvider*>(provider->GetStreamContext());
-    } else {
-      kernel_observer_provider_ = nullptr;
+      : thread_(nullptr),
+        device_ctx_(std::move(device_ctx)),
+        job_desc_(nullptr),
+        stream_kernel_observer_(nullptr) {
+    auto* stream_context_provider = dynamic_cast<StreamContextProvider*>(device_ctx_.get());
+    if (stream_context_provider != nullptr) {
+      kernel_observer_provider =
+          dynamic_cast<KernelObserverProvider*>(stream_context_provider->GetStreamContext());
+      if (kernel_observer_provider != nullptr) {
+        stream_kernel_observer_ = kernel_observer_provider->GetKernelObserver();
+      }
     }
   }
   ~LightActor() override {
@@ -531,43 +535,43 @@ class LightActor : public ActorBase, public KernelContext {
 
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
     Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
-    if (kernel_observer_provider_ != nullptr) {
-      kernel_observer_provider_->GetKernelObserver()->WillForward(kernel_ctx, kernel);
+    if (stream_kernel_observer_ != nullptr) {
+      stream_kernel_observer_->WillForward(kernel_ctx, kernel);
     }
   }
 
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
     Global<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
-    if (kernel_observer_provider_ != nullptr) {
-      kernel_observer_provider_->GetKernelObserver()->DidForward(kernel_ctx, kernel);
+    if (stream_kernel_observer_ != nullptr) {
+      stream_kernel_observer_->DidForward(kernel_ctx, kernel);
     }
   }
 
   void WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override {
     Global<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
-    if (kernel_observer_provider_ != nullptr) {
-      kernel_observer_provider_->GetKernelObserver()->WillForwardHeader(kernel_ctx, kernel);
+    if (stream_kernel_observer_ != nullptr) {
+      stream_kernel_observer_->WillForwardHeader(kernel_ctx, kernel);
     }
   }
 
   void DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override {
     Global<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
-    if (kernel_observer_provider_ != nullptr) {
-      kernel_observer_provider_->GetKernelObserver()->DidForwardHeader(kernel_ctx, kernel);
+    if (stream_kernel_observer_ != nullptr) {
+      stream_kernel_observer_->DidForwardHeader(kernel_ctx, kernel);
     }
   }
 
   void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override {
     Global<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
-    if (kernel_observer_provider_ != nullptr) {
-      kernel_observer_provider_->GetKernelObserver()->WillForwardDataContent(kernel_ctx, kernel);
+    if (stream_kernel_observer_ != nullptr) {
+      stream_kernel_observer_->WillForwardDataContent(kernel_ctx, kernel);
     }
   }
 
   void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override {
     Global<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
-    if (kernel_observer_provider_ != nullptr) {
-      kernel_observer_provider_->GetKernelObserver()->DidForwardDataContent(kernel_ctx, kernel);
+    if (stream_kernel_observer_ != nullptr) {
+      stream_kernel_observer_->DidForwardDataContent(kernel_ctx, kernel);
     }
   }
 
@@ -592,7 +596,7 @@ class LightActor : public ActorBase, public KernelContext {
   std::vector<ActorMsg> async_post_act_msgs_;
   std::unique_ptr<TaskProto> task_proto_;
   const JobDesc* job_desc_;
-  KernelObserverProvider* kernel_observer_provider_;
+  KernelObserver* stream_kernel_observer_;
 };
 
 std::shared_ptr<DeviceCtx> NewDefaultDeviceCtx(const TaskProto& task_proto,

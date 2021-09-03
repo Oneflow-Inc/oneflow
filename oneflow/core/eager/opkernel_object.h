@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
-#include "oneflow/core/stream/stream_context.h"
 
 namespace oneflow {
 
@@ -84,15 +83,7 @@ class SystemOpKernelContext : public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SystemOpKernelContext);
   SystemOpKernelContext(const JobDesc* job_desc, DeviceCtx* device_ctx)
-      : job_desc_(job_desc), device_ctx_(device_ctx) {
-    auto* provider = dynamic_cast<StreamContextProvider*>(device_ctx);
-    if (provider != nullptr) {
-      kernel_observer_provider_ =
-          dynamic_cast<KernelObserverProvider*>(provider->GetStreamContext());
-    } else {
-      kernel_observer_provider_ = nullptr;
-    }
-  }
+      : job_desc_(job_desc), device_ctx_(device_ctx) {}
   ~SystemOpKernelContext() = default;
 
   DeviceCtx* device_ctx() const override { return device_ctx_; }
@@ -114,20 +105,10 @@ class SystemOpKernelContext : public KernelContext {
     bn_in_op2blob_fn_ = std::move(fn);
   }
 
-  void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
-  void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
-
-  void WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override;
-  void DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override;
-
-  void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
-  void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
-
  private:
   const JobDesc* job_desc_;
   DeviceCtx* device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
-  KernelObserverProvider* kernel_observer_provider_;
 };
 
 class SystemOpKernelObject : public vm::Object {

@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_device_descriptor.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/kernel/kernel_observer_manager.h"
+#include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cuda_check_numerics_kernel_observer.h"
 
 #ifdef WITH_CUDA
@@ -101,7 +101,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   StreamId stream_id_;
   std::shared_ptr<DeviceCtx> device_ctx_;
   bool is_graph_capturing_;
-  std::shared_ptr<KernelObserver> kernel_observer_;
+  std::unique_ptr<KernelObserver> kernel_observer_;
 };
 
 class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
@@ -180,8 +180,6 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id)
   }
   OF_CUDNN_CHECK(cudnnSetStream(cudnn_handle_, cuda_stream_));
 
-  device_ctx_.reset(new DeviceCtxImpl(this));
-
   std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
   if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
     LOG(WARNING) << "Environment variable ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS has been set "
@@ -189,7 +187,10 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id)
                     "value, it will impact performance";
     kernel_observers.emplace_back(new CudaCheckNumericsKernelObserver());
   }
-  kernel_observer_.reset(new KernelObserverManager(kernel_observers));
+  kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
+
+  device_ctx_.reset(new DeviceCtxImpl(this));
+
   poller_thread_ = std::thread([this, stream_id]() {
     int dev_id = stream_id.device_id().device_index();
     CudaCurrentDeviceGuard guard(dev_id);

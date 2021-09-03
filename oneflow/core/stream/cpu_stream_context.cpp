@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/vm/cpu_allocator.h"
-#include "oneflow/core/kernel/kernel_observer_manager.h"
+#include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/cpu_check_numerics_kernel_observer.h"
 
 namespace oneflow {
@@ -42,7 +42,7 @@ class CpuStreamContext : public StreamContext, public KernelObserverProvider {
 
  private:
   std::shared_ptr<DeviceCtx> device_ctx_;
-  std::shared_ptr<KernelObserver> kernel_observer_;
+  std::unique_ptr<KernelObserver> kernel_observer_;
 };
 
 namespace {
@@ -71,12 +71,12 @@ class DeviceCtxImpl final : public DeviceCtx, public StreamContextProvider {
 }  // namespace
 
 CpuStreamContext::CpuStreamContext() {
-  device_ctx_.reset(new DeviceCtxImpl(this));
   std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
   if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
     kernel_observers.emplace_back(new CpuCheckNumericsKernelObserver());
   }
-  kernel_observer_.reset(new KernelObserverManager(kernel_observers));
+  kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
+  device_ctx_.reset(new DeviceCtxImpl(this));
 };
 
 CpuStreamContext::~CpuStreamContext() = default;

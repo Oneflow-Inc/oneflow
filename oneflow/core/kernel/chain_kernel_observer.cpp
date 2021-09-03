@@ -13,37 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/kernel_observer_manager.h"
+#include "oneflow/core/kernel/chain_kernel_observer.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
-void KernelObserverManager::WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {
+void ChainKernelObserver::WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) { observer->WillForward(kernel_ctx, kernel); }
 }
 
-void KernelObserverManager::DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {
+void ChainKernelObserver::DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) { observer->DidForward(kernel_ctx, kernel); }
 }
 
-void KernelObserverManager::WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
+void ChainKernelObserver::WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) {
     observer->WillForwardHeader(kernel_ctx, kernel);
   }
 }
 
-void KernelObserverManager::DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
+void ChainKernelObserver::DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) { observer->DidForwardHeader(kernel_ctx, kernel); }
 }
 
-void KernelObserverManager::WillForwardDataContent(KernelContext* kernel_ctx,
-                                                   const Kernel* kernel) {
+void ChainKernelObserver::WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) {
     observer->WillForwardDataContent(kernel_ctx, kernel);
   }
 }
 
-void KernelObserverManager::DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
+void ChainKernelObserver::DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
   for (const auto& observer : kernel_observers_) {
     observer->DidForwardDataContent(kernel_ctx, kernel);
   }

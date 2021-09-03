@@ -85,48 +85,5 @@ void SystemOpKernelObject::ResetKernel(
   kernel_ = ConstructKernel(kernel_conf, kernel_ctx_.get());
 }
 
-void SystemOpKernelContext::WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
-  if (kernel_observer_provider_ != nullptr) {
-    kernel_observer_provider_->GetKernelObserver()->WillForward(kernel_ctx, kernel);
-  }
-}
-
-void SystemOpKernelContext::DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
-  if (kernel_observer_provider_ != nullptr) {
-    kernel_observer_provider_->GetKernelObserver()->DidForward(kernel_ctx, kernel);
-  }
-}
-
-void SystemOpKernelContext::WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
-  if (kernel_observer_provider_ != nullptr) {
-    kernel_observer_provider_->GetKernelObserver()->WillForwardHeader(kernel_ctx, kernel);
-  }
-}
-
-void SystemOpKernelContext::DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
-  if (kernel_observer_provider_ != nullptr) {
-    kernel_observer_provider_->GetKernelObserver()->DidForwardHeader(kernel_ctx, kernel);
-  }
-}
-
-void SystemOpKernelContext::WillForwardDataContent(KernelContext* kernel_ctx,
-                                                   const Kernel* kernel) {
-  Global<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
-  if (kernel_observer_provider_ != nullptr) {
-    kernel_observer_provider_->GetKernelObserver()->WillForwardDataContent(kernel_ctx, kernel);
-  }
-}
-
-void SystemOpKernelContext::DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
-  if (kernel_observer_provider_ != nullptr) {
-    kernel_observer_provider_->GetKernelObserver()->DidForwardDataContent(kernel_ctx, kernel);
-  }
-}
-
 }  // namespace vm
 }  // namespace oneflow

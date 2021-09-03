@@ -75,11 +75,13 @@ bool HasNotFiniteGpu(DeviceCtx* device_ctx, const Blob* blob, bool* has_not_fini
 }  // namespace
 
 CudaCheckNumericsKernelObserver::CudaCheckNumericsKernelObserver() {
+  OF_CUDA_CHECK(cudaGetDevice(&device_id_));
   OF_CUDA_CHECK(cudaMallocHost(&has_not_finite_host_, sizeof(bool)));
   OF_CUDA_CHECK(cudaMalloc(&has_not_finite_device_, sizeof(bool)));
 }
 
 CudaCheckNumericsKernelObserver::~CudaCheckNumericsKernelObserver() {
+  CudaCurrentDeviceGuard guard(device_id_);
   OF_CUDA_CHECK(cudaFreeHost(has_not_finite_host_));
   OF_CUDA_CHECK(cudaFree(has_not_finite_device_));
 }

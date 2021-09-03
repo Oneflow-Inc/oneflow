@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_KERNEL_CUDA_CHECK_NUMERICS_KERNEL_OBSERVER_H_
 #define ONEFLOW_CORE_KERNEL_CUDA_CHECK_NUMERICS_KERNEL_OBSERVER_H_
 
+#ifdef WITH_CUDA
+
 #include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
@@ -31,8 +33,11 @@ class CudaCheckNumericsKernelObserver final : public KernelObserver {
  private:
   bool* has_not_finite_host_;
   bool* has_not_finite_device_;
+  int device_id_;
 };
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA
 
 #endif  // ONEFLOW_CORE_KERNEL_CUDA_CHECK_NUMERICS_KERNEL_OBSERVER_H_

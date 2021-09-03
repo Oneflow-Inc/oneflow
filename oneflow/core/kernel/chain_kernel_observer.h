@@ -13,19 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_KERNEL_OBSERVER_MANAGER_H_
-#define ONEFLOW_CORE_KERNEL_KERNEL_OBSERVER_MANAGER_H_
+#ifndef ONEFLOW_CORE_KERNEL_CHAIN_KERNEL_OBSERVER_H_
+#define ONEFLOW_CORE_KERNEL_CHAIN_KERNEL_OBSERVER_H_
 
 #include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
-class KernelObserverManager final : public KernelObserver {
+class ChainKernelObserver final : public KernelObserver {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelObserverManager);
-  explicit KernelObserverManager(std::vector<std::shared_ptr<KernelObserver>> kernel_observers)
+  OF_DISALLOW_COPY_AND_MOVE(ChainKernelObserver);
+  explicit ChainKernelObserver(std::vector<std::shared_ptr<KernelObserver>> kernel_observers)
       : kernel_observers_(std::move(kernel_observers)) {}
-  ~KernelObserverManager() override = default;
+  ~ChainKernelObserver() override = default;
 
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
@@ -42,4 +42,4 @@ class KernelObserverManager final : public KernelObserver {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_KERNEL_OBSERVER_MANAGER_H_
+#endif  // ONEFLOW_CORE_KERNEL_CHAIN_KERNEL_OBSERVER_H_
