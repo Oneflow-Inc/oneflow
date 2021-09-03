@@ -59,7 +59,7 @@ def clip_grad_norm_(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x1 = flow.Tensor(np.array([[2, 3, 4], [1.5, 2.6, 3.7]]).astype(np.float32), requires_grad=True)
+        >>> x1 = flow.tensor(np.array([[2, 3, 4], [1.5, 2.6, 3.7]]).astype(np.float32), requires_grad=True)
         >>> m1 = flow.nn.ReLU()
         >>> out1 = m1(x1)
         >>> out1 = out1.sum()
@@ -70,7 +70,7 @@ def clip_grad_norm_(
         >>> x1.grad
         tensor([[0.1000, 0.1000, 0.1000],
                 [0.1000, 0.1000, 0.1000]], dtype=oneflow.float32)
-        >>> x2 = flow.Tensor(np.array([[-2, -3, -4], [2.5, 0, 3.2]]).astype(np.float32), requires_grad=True)
+        >>> x2 = flow.tensor(np.array([[-2, -3, -4], [2.5, 0, 3.2]]).astype(np.float32), requires_grad=True)
         >>> out2 = flow.atan(x2)
         >>> out2 = out2.sum()
         >>> out2.backward()

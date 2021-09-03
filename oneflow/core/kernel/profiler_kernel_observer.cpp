@@ -19,18 +19,14 @@ limitations under the License.
 
 namespace oneflow {
 
-void ProfilerKernelObserver::WillForwardDataContent(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  OF_PROFILER_ONLY_CODE(
-      profiler::TraceKernelForwardDataContentStart(kernel, kernel_ctx, BnInOp2Blob));
+void ProfilerKernelObserver::WillForwardDataContent(const KernelContext* kernel_ctx,
+                                                    const Kernel* kernel) {
+  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentStart(kernel_ctx, kernel));
 }
 
-void ProfilerKernelObserver::DidForwardDataContent(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  OF_PROFILER_ONLY_CODE(
-      profiler::TraceKernelForwardDataContentEnd(kernel, kernel_ctx, BnInOp2Blob));
+void ProfilerKernelObserver::DidForwardDataContent(const KernelContext* kernel_ctx,
+                                                   const Kernel* kernel) {
+  OF_PROFILER_ONLY_CODE(profiler::TraceKernelForwardDataContentEnd(kernel_ctx, kernel));
 }
 
 }  // namespace oneflow
