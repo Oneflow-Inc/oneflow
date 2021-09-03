@@ -17,9 +17,9 @@ limitations under the License.
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_mgr.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
-#include "oneflow/core/framework/op_interpreter/boxing/boxing_dividor_util.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
+#include "oneflow/core/boxing/boxing_dividor_util.h"
 
 namespace oneflow {
 
@@ -91,6 +91,7 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
       | JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("nccl-p-to-s"))
       | JUST(BoxingExpr("nccl-b-to-s")) | JUST(BoxingExpr("nccl-s-to-b"))
       | JUST(BoxingExpr("nccl-s-to-s")) | JUST(BoxingExpr("naive-b-to-p"))
+      | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
       | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()), JUST(BoxingExpr("nccl-s-to-b")),
                         JUST(BoxingExpr("naive-b-to-p"))))
       | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr())
@@ -108,7 +109,6 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
                                                    Symbol<ParallelDesc> out_parallel_desc) {
   const auto& in = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
   const auto& out = JUST(PlacedNdSbp::New(out_nd_sbp, out_parallel_desc));
-
   const auto& main_boxing_expr = JUST(MainBoxingExpr());
   if (TRY(main_boxing_expr->Check(in, out)).IsOk()) {
     const auto& boxing_func = JUST(main_boxing_expr->GetBoxingFunction(in, out));
