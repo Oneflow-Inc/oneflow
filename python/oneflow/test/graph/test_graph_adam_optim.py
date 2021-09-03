@@ -81,8 +81,11 @@ def compare_with_numpy_adam(
     adam_graph = CustomAdamGraph()
 
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
-            random_grad_seq[i], requires_grad=False, device=flow.device(device)
+        mask_tensor = flow.tensor(
+            random_grad_seq[i],
+            dtype=flow.float32,
+            requires_grad=False,
+            device=flow.device(device),
         )
         adam_x = adam_graph(mask_tensor)
 
@@ -146,7 +149,7 @@ def compare_with_numpy_adam_clip_grad(
         def __init__(self):
             super().__init__()
             self.para0 = flow.nn.Parameter(
-                flow.Tensor(init_value, device=flow.device(device))
+                flow.tensor(init_value, device=flow.device(device))
             )
 
         def forward(self, mask):
@@ -186,7 +189,7 @@ def compare_with_numpy_adam_clip_grad(
     adam_graph = CustomAdamGraph()
 
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
+        mask_tensor = flow.tensor(
             random_grad_seq[i], requires_grad=False, device=flow.device(device)
         )
         adam_x = adam_graph(mask_tensor)

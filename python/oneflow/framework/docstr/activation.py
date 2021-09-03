@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow._C.prelu,
-    r"""
+    """
     prelu(x: Tensor, alpha: Tensor) -> Tensor  
 
     Applies the element-wise function:
@@ -33,8 +33,8 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> x = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
-        >>> alpha = flow.nn.Parameter(flow.Tensor(1).fill_(0.25))
+        >>> x = flow.tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
+        >>> alpha = flow.nn.Parameter(flow.tensor([1], dtype=flow.float32).fill_(0.25))
         >>> print(flow._C.prelu(x, alpha).numpy())
         [[[[ 1.  -0.5]
            [ 3.   4. ]]]]
@@ -47,7 +47,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.gelu,
+    oneflow.gelu,
     r"""
     gelu(x: Tensor) -> Tensor 
 
@@ -64,9 +64,9 @@ add_docstr(
         >>> import oneflow as flow
         
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        >>> input = flow.Tensor(x)
+        >>> input = flow.tensor(x)
 
-        >>> out = flow._C.gelu(input)
+        >>> out = flow.gelu(input)
         >>> out
         tensor([-0.1543,  0.0000,  0.3457], dtype=oneflow.float32)
 
@@ -91,7 +91,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.softplus,
+    oneflow.softplus,
     r"""
     softplus(x: Tensor) -> Tensor 
 
@@ -105,7 +105,7 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow._C.tanh,
+    oneflow.tanh,
     r"""
     tanh(x: Tensor) -> Tensor 
 
@@ -137,7 +137,7 @@ add_docstr(
         >>> import oneflow as flow
         
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        >>> input = flow.Tensor(x)     
+        >>> input = flow.tensor(x)     
           
         >>> out = flow._C.log_sigmoid(input)
         >>> out
@@ -167,7 +167,7 @@ add_docstr(
         >>> import oneflow as flow
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
-        >>> input = flow.Tensor(x) 
+        >>> input = flow.tensor(x) 
         >>> out = flow._C.softsign(input)
         >>> out
         tensor([0.5000, 0.6667, 0.7500], dtype=oneflow.float32)
@@ -179,8 +179,8 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.silu,
-    r"""
+    oneflow.silu,
+    """
     silu(x: Tensor) -> Tensor
 
     The formula is: 
@@ -197,8 +197,8 @@ add_docstr(
         >>> import oneflow as flow
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
-        >>> input = flow.Tensor(x)       
-        >>> out = flow._C.silu(input)
+        >>> input = flow.tensor(x)       
+        >>> out = flow.silu(input)
         >>> out
         tensor([0.7311, 1.7616, 2.8577], dtype=oneflow.float32)
 
@@ -209,8 +209,8 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.mish,
-    r""" 
+    oneflow.mish,
+    """ 
     mish(x: Tensor) -> Tensor 
 
     Applies the element-wise function:
@@ -227,9 +227,9 @@ add_docstr(
         >>> import oneflow as flow
         
         >>> x = np.array([1, 2, 3]).astype(np.float32)
-        >>> input = flow.Tensor(x)       
+        >>> input = flow.tensor(x)       
 
-        >>> out = flow._C.mish(input)
+        >>> out = flow.mish(input)
         >>> out
         tensor([0.8651, 1.9440, 2.9865], dtype=oneflow.float32)
 
@@ -241,7 +241,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.relu,
-    r"""
+    """
     relu(x: Tensor, inplace: bool =False) -> Tensor
 
     Applies the rectified linear unit function element-wise. See
@@ -255,7 +255,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.hardsigmoid,
-    r"""
+    """
     hardsigmoid(x: Tensor)-> Tensor
 
     Applies the element-wise function
@@ -273,7 +273,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.hardswish,
-    r"""
+    """
     hardswish(x: Tensor)-> Tensor
 
     Applies the hardswish function, element-wise, as described in the paper:
@@ -294,7 +294,7 @@ add_docstr(
     """,
 )
 add_docstr(
-    oneflow._C.sigmoid,
+    oneflow.sigmoid,
     r"""
     sigmoid(input) -> Tensor
 
@@ -309,9 +309,9 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
-        >>> input = flow.Tensor(x)
-        >>> out = flow.nn.functional.sigmoid(input)
+        >>> x = flow.tensor(np.array([0.81733328, 0.43621480, 0.10351428]), dtype=flow.float32)
+        >>> input = flow.tensor(x)
+        >>> out = flow.sigmoid(input)
         >>> out
         tensor([0.6937, 0.6074, 0.5259], dtype=oneflow.float32)
 
@@ -320,7 +320,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.hardtanh,
-    r"""
+    """
     hardtanh(input, min_val=-1., max_val=1.) -> Tensor
 
     Applies the HardTanh function element-wise. See :class:`~oneflow.nn.Hardtanh` for more
@@ -330,7 +330,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.leaky_relu,
-    r"""
+    """
     leaky_relu(x: Tensor,  alpha :Float) -> Tensor
 
     Applies element-wise,
@@ -342,7 +342,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.elu,
-    r"""
+    """
     elu(x: Tensor, alpha :Float) -> Tensor
 
     Applies element-wise,
@@ -358,15 +358,15 @@ add_docstr(
         >>> import oneflow as flow
 
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        >>> input = flow.Tensor(x)
+        >>> input = flow.tensor(x)
         >>> out = flow.nn.functional.elu(input, alpha=1.0)
         >>> out
         tensor([-0.3935,  0.0000,  0.5000], dtype=oneflow.float32)
     """,
 )
 add_docstr(
-    oneflow._C.selu,
-    r"""
+    oneflow.selu,
+    """
     selu(x: Tensor) -> Tensor
 
     Applies element-wise function :math:`\text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`, with :math:`\alpha=1.6732632423543772848170429916717` and  :math:`scale=1.0507009873554804934193349852946`.
@@ -381,8 +381,8 @@ add_docstr(
         >>> import oneflow as flow
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
-        >>> input = flow.Tensor(x)
-        >>> out = flow.nn.functional.selu(input)
+        >>> input = flow.tensor(x)
+        >>> out = flow.selu(input)
         >>> out
         tensor([1.0507, 2.1014, 3.1521], dtype=oneflow.float32)
     """,

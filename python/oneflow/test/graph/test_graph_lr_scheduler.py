@@ -34,7 +34,7 @@ def _test_linear_graph_train_with_lr_sch(
 
         opt, lr_sch = get_opt_and_lr_sch(linear.parameters())
 
-        x = flow.Tensor(
+        x = flow.tensor(
             [
                 [-0.94630778, -0.83378579, -0.87060891],
                 [2.0289922, -0.28708987, -2.18369248],
@@ -45,6 +45,7 @@ def _test_linear_graph_train_with_lr_sch(
                 [-0.22556897, 0.74798368, 0.90416439],
                 [0.48339456, -2.32742195, -0.59321527],
             ],
+            dtype=flow.float32,
             device=device,
             requires_grad=False,
         )
@@ -74,7 +75,7 @@ def _test_linear_graph_train_with_lr_sch(
 
         opt, lr_sch = get_opt_and_lr_sch(linear.parameters())
 
-        x = flow.Tensor(
+        x = flow.tensor(
             [
                 [-0.94630778, -0.83378579, -0.87060891],
                 [2.0289922, -0.28708987, -2.18369248],
@@ -85,6 +86,7 @@ def _test_linear_graph_train_with_lr_sch(
                 [-0.22556897, 0.74798368, 0.90416439],
                 [0.48339456, -2.32742195, -0.59321527],
             ],
+            dtype=flow.float32,
             device=device,
             requires_grad=False,
         )

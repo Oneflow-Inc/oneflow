@@ -257,52 +257,6 @@ def full_op(
     return Full(size, value, dtype, device, placement, sbp, requires_grad)()
 
 
-def zeros_like_op(other):
-    """
-    Returns a tensor filled with the scalar value 0, with the same size as input.
-    flow.zeros_like(input) is equivalent to flow.zeros(input.shape, dtype=input.dtype)
-
-    Args:
-        other(Tensor): The size of input will determine size of the output tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x = flow.Tensor(np.random.rand(5))
-        >>> y = flow.zeros_like(x)
-        >>> y
-        tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
-
-    """
-    return flow._C.zeros_like(other)
-
-
-def ones_like_op(other):
-    """
-    Returns a tensor filled with the scalar value 1, with the same size as input.
-    flow.ones_like(input) is equivalent to flow.ones(input.shape, dtype=input.dtype)
-
-    Args:
-        other(Tensor): The size of input will determine size of the output tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x = flow.Tensor(np.random.rand(5))
-        >>> y = flow.ones_like(x)
-        >>> y
-        tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
-
-    """
-    return flow._C.ones_like(other)
-
-
 class NewOnes(Module):
     def __init__(
         self,

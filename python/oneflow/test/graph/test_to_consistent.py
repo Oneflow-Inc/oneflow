@@ -201,8 +201,8 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_fwd_P2B")
 
-        local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
-        local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
         z = flow._C.matmul(
             flow.cat([local_x, local_x], dim=1),
@@ -237,8 +237,8 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_bwd_P2B")
 
-        local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
-        local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
         z = flow._C.matmul(
             local_y, flow.cat([local_x, local_x], dim=0), transpose_b=True,
@@ -282,8 +282,8 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_multi_graph")
 
-        local_x = flow.Tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
-        local_y = flow.Tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
+        local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
         placement = flow.placement("cuda", {0: [0, 1]})
         x1 = local_x.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
@@ -350,7 +350,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
     # @unittest.skipIf(True, "")
     def test_free_tensor_to_consistent(test_case):
-        local_x = flow.Tensor(x, device="cpu")
+        local_x = flow.tensor(x, device="cpu")
         placement = flow.placement("cuda", {0: [0, 1]})
         c_x = local_x.to_consistent(placement, flow.sbp.split(0))
 
