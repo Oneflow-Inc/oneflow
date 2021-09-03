@@ -110,20 +110,26 @@ def get_loss(
         print("start pytorch training loop on %s model...." % module_name)
         start_t = time.time()
         for i in range(bp_iters):
+            torch.cuda.synchronize()
             s_t = time.time()
             logits = pytorch_model(image_gpu)
             loss = corss_entropy(logits, label)
+            torch.cuda.synchronize()
             for_time += time.time() - s_t
 
+            torch.cuda.synchronize()
             s_t = time.time()
             loss.backward()
+            torch.cuda.synchronize()
             bp_time += time.time() - s_t
 
             model_loss.append(loss.detach().cpu().numpy())
 
+            torch.cuda.synchronize()
             s_t = time.time()
             torch_sgd.step()
             torch_sgd.zero_grad()
+            torch.cuda.synchronize()
             update_time += time.time() - s_t
 
         end_t = time.time()
