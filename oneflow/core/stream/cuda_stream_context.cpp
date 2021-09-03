@@ -51,7 +51,7 @@ void SetAffinityByDevice(int64_t dev_id) {
 #else
 #define CUDA_STREAM_CONTEXT_IMPL_BASE \
  public                               \
-  CUDAStreamContext, public KernelObserverProvider
+  CudaStreamContext, public KernelObserverProvider
 #endif
 
 class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
