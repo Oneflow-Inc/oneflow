@@ -19,7 +19,7 @@ from typing import Iterator, Optional, Set, Union
 
 import oneflow._oneflow_internal
 import oneflow.framework.graph_build_util as graph_build_util
-from oneflow.framework.distribute import get_rank
+from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
 from oneflow.nn.parameter import Parameter
@@ -389,22 +389,33 @@ class Block(object):
 
 
 class BlockConfig(object):
+    r"""Configurations on Block in nn.Graph.
+    """
+
     def __init__(self):
         self._stage_id = None
         self._activation_checkpointing = None
 
     @property
     def stage_id(self):
+        r"""Get stage id of Block in pipeline parallelism.
+        """
         return self._stage_id
 
     @stage_id.setter
     def stage_id(self, value: int = None):
+        r"""Set stage id of Block in pipeline parallelism.
+        """
         self._stage_id = value
 
     @property
     def activation_checkpointing(self):
+        r"""Get whether do activation checkpointing in this Block.
+        """
         return self._activation_checkpointing
 
     @activation_checkpointing.setter
     def activation_checkpointing(self, value: bool = False):
+        r"""Set whether do activation checkpointing in this Block.
+        """
         self._activation_checkpointing = value

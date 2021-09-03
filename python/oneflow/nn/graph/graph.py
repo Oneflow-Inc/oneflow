@@ -17,18 +17,19 @@ from collections import OrderedDict
 from functools import partial
 from typing import Dict
 
+import oneflow
 import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
-from oneflow.framework.distribute import get_rank
+from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType
 from oneflow.nn.graph.config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-from oneflow.amp import GradScaler
+from oneflow.amp import GradScaler, StaticGradScaler
 from oneflow.nn.graph.util import add_indent, sys_exc_error_msg, list_to_func_return
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
@@ -36,9 +37,62 @@ from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 
 
 class Graph(object):
+    r"""Base class for training or evaluating a neural network in graph mode.
+
+    To use graph mode for model training or evaluation in OneFlow, you should:
+
+    1. Define your customized graph as a subclass of ``nn.Graph``.
+    2. Add ``super().__init__()`` in your subclass's ``__init__()``.
+    3. Add modules to your graph as regular attributes.
+    4. Define computation logical in ``build()`` method.
+    5. Instantiate your graph then call it.
+
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+
+        >>> class LinearGraph(flow.nn.Graph):
+        ...    def __init__(self):
+        ...        super().__init__()
+        ...        # Add a module to the graph.
+        ...        self.linear = flow.nn.Linear(3, 8, False)
+        ...    def build(self, x):
+        ...        # Use the module to build the computation logic of the graph.
+        ...        return self.linear(x)
+
+        # Instantiate the graph
+        >>> linear_graph = LinearGraph()
+        >>> x = flow.randn(4, 3)
+
+        # First call on graph will run graph's build() method to
+        # trace a computatioin graph. Then the computation graph will be
+        # optimized and executed for the first time.
+        >>> linear_graph(x).shape
+        flow.Size([4, 8])
+
+        # Later call on graph will execute the computation graph directly.
+        >>> linear_graph(x).shape
+        flow.Size([4, 8])
+
+    Note that Graph cannot be nested at the moment.
+    """
     _child_init_cnt = dict()
 
     def __init__(self):
+        """
+        Initializes internal Graph states. It MUST be called in ``__init__`` method of subclass.
+
+        .. code-block:: python
+        
+            >>> import oneflow as flow
+            >>> class SubclassGraph(flow.nn.Graph):
+            ...     def __init__(self):
+            ...         super().__init__() # MUST be called
+            ...         # Then define the graph attributes
+            ...     def build(self):
+            ...         pass   
+                    
+        """
         self._generate_name()
         self.config = GraphConfig()
         self._blocks = OrderedDict()
@@ -50,50 +104,105 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
+        self._outputs_buffer_size = 2
+        self._cur_index_of_ouputs_buffer = 0
+
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
         session.TryInit()
         session.AddCGraph(self._c_nn_graph)
 
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def training(self):
-        return self.config.training
-
-    @property
-    def _config_proto(self):
-        return self.config.proto
-
-    @property
-    def _optimization_conf_proto(self):
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-        return session.resource
-
-    @property
-    def _graph_proto(self):
-        return self._job_proto
-
-    def debug(self, mode: bool = True) -> None:
-        if get_rank() != 0:
-            return
-        else:
-            print("Note that nn.Graph.debug() only print debug info on rank 0.")
-        self._debug = mode
-        for name, block in self._blocks.items():
-            assert block.type == BlockType.MODULE
-            block.debug(mode)
-
     def build(self, *args):
+        r"""The ``build()`` method must be overridden to define neural network
+        computaion logic.
+
+        The ``build()`` method of nn.Graph is very similar to the ``forward()``
+        method of nn.Module. It is used to describe the computatioin logical of
+        a neural network.
+
+        When a graph object being called for the first time, the ``build()``
+        method will be called implicitly to build the computatioin graph.
+
+        Make sure to call modules's ``train()`` or ``eval()`` method before the
+        first call of your graph to make the module executing the right
+        training or evaluation logic if needed.
+
+        .. code-block:: python
+        
+            >>> import oneflow as flow
+            >>> class MyGraph(flow.nn.Graph):
+            ...     def __init__(self):
+            ...         super().__init__()
+            ...         self.linear = flow.nn.Linear(3, 8, False)
+            ...     def build(self, x):
+            ...         return self.linear(x)
+
+            >>> linear_graph = MyGraph()
+            >>> x = flow.randn(4, 3)
+            >>> y = linear_graph(x) # The build() method is called implicitly
+
+        Note that ``build()`` method's inputs and outputs only accept positional
+        arguements at the moment, each argument must be one of these types:
+
+        * ``Tensor``
+        * ``list`` of ``Tensor``
+        * ``None``
+
+        """
         raise NotImplementedError()
 
     def add_optimizer(
         self, optim: Optimizer, *, lr_sch: LrScheduler = None,
     ):
+        r"""Add an optimizer, an learning rate scheduler to the graph.
+
+        To do training with nn.Graph, you should do 2 more things: 
+        
+        1. Add at least one optimier(learning rate schedulers are optional) with ``add_optimizer()`` method.
+        2. Call loss tensor's ``backward()`` method in ``build()`` method.
+        
+        Note that the computaion graph will automatically execute these methods:
+        
+        * optimizer's ``clip_grad()`` if a optimizer is set to do grad cliping.
+        * optimizer's ``step()``.
+        * optimizer's ``zero_grad()``.
+        * learn rate scheduler's ``step()``.
+
+        Also note that only scalar tensor are allowed to call ``backward()``
+        in ``nn.Graph.build()`` for the moment. So you may call ``Tensor.sum()``
+        or ``Tensor.mean()`` to make the loss tensor a scalar tensor.
+
+        .. code-block:: python
+            
+            >>> import oneflow as flow
+            >>> loss_fn = flow.nn.MSELoss(reduction="sum")
+            >>> model = flow.nn.Sequential(flow.nn.Linear(3, 1), flow.nn.Flatten(0, 1))
+            >>> optimizer = flow.optim.SGD(model.parameters(), lr=1e-6)
+            >>> class LinearTrainGraph(flow.nn.Graph):
+            ...     def __init__(self):
+            ...         super().__init__()
+            ...         self.model = model
+            ...         self.loss_fn = loss_fn
+            ...         # Add an optimizer
+            ...         self.add_optimizer(optimizer)
+            ...     def build(self, x, y):
+            ...         y_pred = self.model(x)
+            ...         loss = self.loss_fn(y_pred, y)
+            ...         # Call loss tensor's backward(), loss tensor must be a scalar tensor
+            ...         loss.backward()
+            ...         return loss
+
+            >>> linear_graph = LinearTrainGraph()
+            >>> x = flow.randn(10, 3)
+            >>> y = flow.randn(10)
+            >>> for t in range(3):
+            ...     loss = linear_graph(x, y)
+
+        Args:
+            optim (oneflow.optim.Optimizer): The optimizer.
+            lr_sch : The learning rate scheduler, see oneflow.optim.lr_scheduler.
+        """
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
         assert isinstance(
@@ -109,8 +218,127 @@ class Graph(object):
         self._opts.append(opt_dict)
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
-        assert isinstance(grad_scaler, GradScaler)
+        r"""Set the GradScaler for gradient and loss scaling.
+        """
+        assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
+
+    def __call__(self, *args):
+        r"""Call nn.Graph subclass instance to run your customized graph.
+
+        Call your customized graph after the instantiation:
+
+        .. code-block:: python
+
+            g = CustomGraph()
+            out_tensors = g(input_tensors)
+        
+        The inputs of ``__call__`` method must match the inputs of ``build()``
+        method. And the ``__call__`` method will return outputs matching the
+        outputs of ``build()`` method.
+
+        Note that the first call takes longer than later calls, because nn.Graph
+        will do the computaion graph generation and optimization at the first call.
+
+        Donot override this function.
+        """
+        if not self._is_compiled:
+            self._compile(*args)
+
+        return self._run(*args)
+
+    @property
+    def name(self):
+        r"""Name auto-generated for this graph.
+        """
+        return self._name
+
+    @property
+    def training(self):
+        r"""In traninig mode if the graph has an optimizer.
+        """
+        return self.config.training
+
+    def debug(self, mode: bool = True) -> None:
+        r"""Open or close debug mode of the graph.
+
+        If in debug mode, logs of computation graph building will be
+        printed on rank 0.
+
+        .. code-block:: python
+
+            g = CustomGraph()
+
+            # Open debug mode
+            g.debug()
+
+            out_tensors = g(input_tensors)  # Will print log for debug at the first call
+
+        """
+        if get_rank() != 0:
+            return
+        self._debug = mode
+        for name, block in self._blocks.items():
+            assert block.type == BlockType.MODULE
+            block.debug(mode)
+
+    def __repr__(self):
+        r"""For printing the graph structure.
+
+        The graph structure can be printed after graph instantiation.
+
+        After the first call of graph, inputs and outputs will be added to
+        the graph structure.
+
+        .. code-block:: python
+
+            g = CustomGraph()
+            print(g)
+
+            out_tensors = g(input_tensors)
+            print(g) # Inputs and Outputs infos are added
+
+        """
+        child_lines = []
+        if len(self._args_repr) > 0:
+            for in_str in self._args_repr:
+                input_str = add_indent(in_str, 2)
+                child_lines.append(input_str)
+
+        if len(self._blocks) > 0:
+            for n, m in self._blocks.items():
+                mod_str = repr(m)
+                mod_str = add_indent(mod_str, 2)
+                child_lines.append(mod_str)
+
+        if len(self._outs_repr) > 0:
+            for out_str in self._outs_repr:
+                output_str = add_indent(out_str, 2)
+                child_lines.append(output_str)
+
+        main_str = self._shallow_repr() + ": ("
+        if len(child_lines) > 0:
+            main_str += "\n  " + "\n  ".join(child_lines) + "\n"
+        main_str += ")"
+        return main_str
+
+    def _shallow_repr(self):
+        shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
+        return shallow_repr
+
+    @property
+    def _config_proto(self):
+        return self.config.proto
+
+    @property
+    def _optimization_conf_proto(self):
+        session = session_ctx.GetDefaultSession()
+        assert type(session) is MultiClientSession
+        return session.resource
+
+    @property
+    def _graph_proto(self):
+        return self._job_proto
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -195,7 +423,11 @@ class Graph(object):
     def _build_forward_graph(self, *args):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
+
+        # Get config form GraphConfig
+        self._outputs_buffer_size = self.config._outputs_buffer_size
         self._generate_config_proto()
+
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             arg_op_names, lazy_args, self._args_repr = self._build_io(
@@ -220,7 +452,27 @@ class Graph(object):
             self._outputs_tensor_tuple = convert_to_tensor_tuple(
                 self._flatten_io("output", *self._eager_outputs)
             )
-            self._eager_outputs = list_to_func_return(self._eager_outputs)
+            self._eager_outputs_buffer = [
+                self._eager_outputs,
+            ]
+            self._outputs_tensor_tuple_buffer = [
+                self._outputs_tensor_tuple,
+            ]
+
+            # Make outputs buffer
+            if self._outputs_buffer_size >= 2:
+                for i in range(self._outputs_buffer_size - 1):
+                    outputs_buffer_item = self._zero_like_io(
+                        "output", *self._eager_outputs
+                    )
+                    self._eager_outputs_buffer.append(outputs_buffer_item)
+                    outputs_tensor_tuple_buffer_item = convert_to_tensor_tuple(
+                        self._flatten_io("output", *outputs_buffer_item)
+                    )
+                    self._outputs_tensor_tuple_buffer.append(
+                        outputs_tensor_tuple_buffer_item
+                    )
+            self._check_outputs_buffer()
 
             # Register input/output/variable to _c_nn_graph
             self._c_nn_graph.register_input_op_names(arg_op_names)
@@ -232,18 +484,48 @@ class Graph(object):
             # Save job proto for debug
             self._job_proto = c_api_util.GetCurrentJob()
 
-        return self._eager_outputs
+        return list_to_func_return(self._eager_outputs_buffer[0])
+
+    def _check_outputs_buffer(self):
+        has_len = len(self._outputs_tensor_tuple_buffer)
+        assert (
+            has_len == self._outputs_buffer_size
+        ), f"nn.Graph's outputs buffer size {has_len} donot match the set value {self._outputs_buffer_size}."
+        # Check there is not duplicated outputs buffer tensor.
+        out_id_dic = dict()
+
+        def check_id_and_add(t, name):
+            if t is not None:
+                tid = id(t)
+                assert (
+                    tid not in out_id_dic
+                ), f"nn.Graph's outputs buffer add buffer tensor tid {tid} has conflict, new item name {name}, old item name {out_id_dic[tid]}."
+                out_id_dic[tid] = name
+
+        for b_idx, buffer in enumerate(self._outputs_tensor_tuple_buffer):
+            for i_idx, item in enumerate(buffer):
+                check_id_and_add(
+                    item, "graph_ouputs_buffer_" + str(b_idx) + "_" + str(i_idx)
+                )
 
     def _run(self, *args):
         try:
             flattened_eager_args = self._flatten_io("input", *args)
+            outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
+                self._cur_index_of_ouputs_buffer
+            ]
+            eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
             # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
-                self._outputs_tensor_tuple,
+                outputs_tensor_tuple,
                 self._states_tensor_tuple,
                 self._c_nn_graph,
             )
+            # Update outputs buffer reading index
+            self._cur_index_of_ouputs_buffer += 1
+            if self._cur_index_of_ouputs_buffer >= self._outputs_buffer_size:
+                self._cur_index_of_ouputs_buffer = 0
         except:
             print(
                 "[ERROR]"
@@ -252,13 +534,10 @@ class Graph(object):
                 + sys_exc_error_msg()
             )
             raise
-        return self._eager_outputs
 
-    def __call__(self, *args):
-        if not self._is_compiled:
-            self._compile(*args)
-
-        return self._run(*args)
+        # Copy outputs from buffer
+        eager_outputs = self._copy_io("output", *eager_outputs)
+        return list_to_func_return(eager_outputs)
 
     def _build_io(self, io_type, build_func, *args):
         assert io_type in ("input", "output")
@@ -307,6 +586,51 @@ class Graph(object):
 
         return op_names, build_args, args_repr
 
+    def _mapping_io(self, io_type, func, *args):
+        assert io_type in ("input", "output")
+        io_type_upper = io_type.upper()
+        mapped_args = []
+
+        def mapping_tensor_or_none(tensor):
+            assert tensor is None or (isinstance(tensor, Tensor))
+            if isinstance(tensor, Tensor):
+                mapped_arg = func(tensor)
+            else:
+                mapped_arg = None
+            return mapped_arg
+
+        for idx, arg in enumerate(args):
+            if isinstance(arg, Tensor) or arg is None:
+                mapped_args.append(mapping_tensor_or_none(arg))
+            elif isinstance(arg, (TensorTuple, list)):
+                if isinstance(arg, TensorTuple):
+                    seq_args = TensorTuple()
+                else:
+                    seq_args = list()
+                for i in range(len(arg)):
+                    seq_args.append(mapping_tensor_or_none(arg[i]))
+                mapped_args.append(seq_args)
+            else:
+                self._io_item_check(arg, None, io_type, idx)
+
+        return mapped_args
+
+    def _zero_like_io(self, io_type, *args):
+        def func(tensor):
+            with oneflow._oneflow_internal.lazy_mode.guard(False):
+                build_arg = oneflow.zeros_like(tensor)
+                return build_arg
+
+        return self._mapping_io(io_type, func, *args)
+
+    def _copy_io(self, io_type, *args):
+        def func(tensor):
+            with oneflow._oneflow_internal.lazy_mode.guard(False):
+                build_arg = tensor.to(copy=True)
+                return build_arg
+
+        return self._mapping_io(io_type, func, *args)
+
     def _flatten_io(self, io_type, *args):
         assert isinstance(args, tuple)
         flattened_args = []
@@ -342,7 +666,7 @@ class Graph(object):
             )
             print(repr_str)
             raise NotImplementedError(
-                "nn.Graph.build()'s input/output only support types: Tensor/TensorTuple/list(Tensor)/None."
+                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
 
     def _io_item_check_and_gen(self, item, expect_type, io_type, idx, second_idx=None):
@@ -389,7 +713,7 @@ class Graph(object):
             )
             print(repr_str)
             raise NotImplementedError(
-                "nn.Graph.build()'s input/output only support types: Tensor/TensorTuple/list(Tensor)/None."
+                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
 
     def _build_states(self):
@@ -416,15 +740,42 @@ class Graph(object):
         return state_op_names, state_tensor_tuple
 
     def _add_block(self, name: str, module: Module = None) -> None:
-        r"""Adds a module to the current graph as a block.
-
-        The block can be accessed as an attribute using the given name.
+        r"""Adds module to the graph as a block so that the module will
+        be called in nn.Graph.build.
 
         Args:
-            name (string): name of the child block. The child block can be
-                accessed from this graph using the given name
+            name (str): name of the child block. The child block can be accessed from this graph using the given name.
             module (Module): child module to be added to the graph.
+            
+        Just assign nn.Module in nn.Graph, _add_block will be called to add the
+        module as a Block:
+
+        .. code-block:: python
+
+            >>> import oneflow as flow
+            >>> class LinearGraph(flow.nn.Graph):
+            ...     def __init__(self):
+            ...         super().__init__()
+            ...         # add a nn.Module as a block to graph.
+            ...         self.linear = flow.nn.Linear(3, 8, False)
+            ...     def build(self, x):
+            ...         # call the nn.Module block.
+            ...         return self.linear(x)
+
+
+        The block can be accessed as an attribute using the given name.
+            >>> g = LinearGraph()
+            >>> print(repr(g.linear))
+            (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
+              (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, requires_grad=True)): ()
+            )
         """
+        if "_name" not in self.__dict__:
+            raise AttributeError(
+                "Base class nn.Graph has not been initialized, "
+                "please call super().__init__() in subclass of nn.Graph "
+                "before assigning any attribute."
+            )
         if not isinstance(module, Module) and module is not None:
             raise TypeError("{} is not a Module subclass".format(type(module)))
         elif not isinstance(name, str):
@@ -460,30 +811,8 @@ class Graph(object):
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
 
-    def __repr__(self):
-        child_lines = []
-        if len(self._args_repr) > 0:
-            for in_str in self._args_repr:
-                input_str = add_indent(in_str, 2)
-                child_lines.append(input_str)
 
-        if len(self._blocks) > 0:
-            for n, m in self._blocks.items():
-                mod_str = repr(m)
-                mod_str = add_indent(mod_str, 2)
-                child_lines.append(mod_str)
+if __name__ == "__main__":
+    import doctest
 
-        if len(self._outs_repr) > 0:
-            for out_str in self._outs_repr:
-                output_str = add_indent(out_str, 2)
-                child_lines.append(output_str)
-
-        main_str = self._shallow_repr() + ": ("
-        if len(child_lines) > 0:
-            main_str += "\n  " + "\n  ".join(child_lines) + "\n"
-        main_str += ")"
-        return main_str
-
-    def _shallow_repr(self):
-        shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
-        return shallow_repr
+    doctest.testmod(raise_on_error=True)
