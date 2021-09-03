@@ -126,7 +126,7 @@ def get_args(callable, *args, **kwargs):
             new_pytorch_args.append(x)
     for key, value in pytorch_kwargs.items():
         if type(value) is torch_original.Tensor:
-            new_pytorch_kwargs[key] = f"Tensor({get_tensor_shape(x)})"
+            new_pytorch_kwargs[key] = f"Tensor({get_tensor_shape(value)})"
         else:
             new_pytorch_kwargs[key] = value
 
