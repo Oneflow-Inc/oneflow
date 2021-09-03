@@ -18,6 +18,22 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+// For bias correction compute in CPU.
+template<typename T>
+T Fastpow(T a, int64_t b) {
+  T ans = static_cast<T>(1);
+  while (b) {
+    if (b & 1) { ans *= a; }
+    a *= a;
+    b >>= 1;
+  }
+  return ans;
+}
+
+}  // namespace
+
 template<typename T, typename G>
 struct SGDUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,

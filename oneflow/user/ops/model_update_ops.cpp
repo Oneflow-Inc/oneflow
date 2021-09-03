@@ -634,8 +634,6 @@ REGISTER_NO_GRAD_USER_OP("adam_bias_correction_factor")
     .Attr<float>("beta", 0.9)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("train_step", 0);
-      // *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("train_step", 0); // todo: whether
-      // the check is needed?
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

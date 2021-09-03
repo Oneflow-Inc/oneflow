@@ -496,16 +496,14 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     const float* bias_correction1_ptr = nullptr;
     if (ctx->has_input("bias_correction1", 0)) {
       const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
-      // CHECK_EQ(bias_correction1->shape().elem_cnt(), 1); // todo(zzk): In eager it need
-      // consistent tensor. if use ones_like, it will not equal to 1.
+      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);
       bias_correction1_ptr = bias_correction1->dptr<float>();
     }
 
     const float* bias_correction2_ptr = nullptr;
     if (ctx->has_input("bias_correction2", 0)) {
       const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
-      // CHECK_EQ(bias_correction2->shape().elem_cnt(), 1); // todo(zzk): In eager it need
-      // consistent tensor. if use ones_like, it will not equal to 1.
+      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }
 

@@ -178,7 +178,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .Attr<float>("epsilon", epsilon)
         .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
         .Attr<bool>("amsgrad", amsgrad)
-        .Attr<bool>("do_bias_correction", do_bias_correction)
+        .Attr<bool>("do_bias_correction", true)
         .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   } else {
     adam_update_op_builder.OpTypeName("adam_update")
@@ -193,7 +193,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .Attr<float>("epsilon", epsilon)
         .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
         .Attr<bool>("amsgrad", amsgrad)
-        .Attr<bool>("do_bias_correction", do_bias_correction)
+        .Attr<bool>("do_bias_correction", false)
         .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   }
   SetDynamicLossScaleSkipIf(ctx, &adam_update_op_builder);
