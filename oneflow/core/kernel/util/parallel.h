@@ -52,6 +52,7 @@ inline void lazy_init_num_threads() {
     oneflow::init_num_threads();
     init = true;
   }
+  printf("\nparallel.h >>>>>>>>>>>> lazy_init_num_threads() >>> init: %d", init);
 }
 
 }  // namespace internal

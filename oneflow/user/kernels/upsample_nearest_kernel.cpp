@@ -60,6 +60,7 @@ static void UpsampleNearest2DForward(const int64_t elem_cnt, const T* in_dptr,
   oneflow::parallel_for(0, elem_cnt, 0, [&](int64_t start, int64_t end) {
     for (int64_t index = start; index < end; ++index) {
       // for (int64_t index = 0; index < elem_cnt; ++index) {
+      printf("\nupsample_nearest_kernel.cpp >>> UpsampleNearest2DForward()");
       int64_t n, c, h, w;
       out_helper.OffsetToNdIndex(index, n, c, h, w);
       const int64_t in_h = GetNearestInputIndex(h, scale_h, in_height);

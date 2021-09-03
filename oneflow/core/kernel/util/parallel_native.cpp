@@ -97,29 +97,36 @@ const int CONSUMED = -2;
 std::atomic<int> num_intraop_threads{NOT_SET};
 
 int _num_pool_threads(int nthreads) {
+  printf("\nparallel_native.cpp >>> _num_pool_threads() >>> input nthreads %d", nthreads);
   if (nthreads == NOT_SET) {
     nthreads = intraop_default_num_threads();
   } else {
     CHECK_GT(nthreads, 0);
   }
   // minus one because of the master thread
+  printf("\nparallel_native.cpp >>> _num_pool_threads() >>> return nthreads %d", nthreads);
   return nthreads - 1;
 }
 
 oneflow::internal::TaskThreadPoolBase& _get_intraop_pool() {
+  printf("\nparallel_native.cpp >>> oneflow::internal::TaskThreadPoolBase& >>>  _get_intraop_pool()");
   static std::shared_ptr<oneflow::internal::TaskThreadPoolBase> pool =
       oneflow::internal::ThreadPoolRegistry()->Create(
           "OneFlow",
           /* device_id */ 0,
           /* pool_size */ _num_pool_threads(num_intraop_threads.exchange(CONSUMED)),
           /* create_new */ true);  // create a separate thread pool for intra-op
+  
+  printf("\nparallel_native.cpp >>> oneflow::internal::TaskThreadPoolBase& >>>  _get_intraop_pool() >> create success!");
   return *pool;
 }
 
 // Run lambda function `fn` over `task_id` in [0, `range`) with threadpool.
 // `fn` will be called with params: (thread_pool_task_id, task_id).
 void _run_with_pool(const std::function<void(int, size_t)>& fn, size_t range) {
+  printf("\nparallel_native.cpp >>>>>>>>> _run_with_pool() >>> range:%zu", range);
   for (size_t i = 1; i < range; ++i) {
+    printf("\nparallel_native.cpp >>>>>>>>> _run_with_pool() >>> i:%zu", i);
     _get_intraop_pool().run([fn, i]() { fn((int)i, i); });
   }
   // Run the first task on the current thread directly.
@@ -145,7 +152,7 @@ namespace internal {
 void _parallel_run(const int64_t begin, const int64_t end, const int64_t grain_size,
                    const std::function<void(int64_t, int64_t, size_t)>& f) {
   oneflow::internal::lazy_init_num_threads();
-  printf("\n================_parallel_run================\n");
+  printf("\n===============parallel_native.cpp >>> _parallel_run()================");
   // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
   size_t num_tasks, chunk_size;
   std::tie(num_tasks, chunk_size) = internal::calc_num_tasks_and_chunk_size(begin, end, grain_size);
@@ -159,11 +166,15 @@ void _parallel_run(const int64_t begin, const int64_t end, const int64_t grain_s
     std::condition_variable cv;
   } state;
 
+  printf("\nparallel_native.cpp >>>>>>>>> task\n");
+
   auto task = [f, &state, begin, end, chunk_size](int /* unused */, size_t task_id) {
     int64_t local_start = begin + task_id * chunk_size;
+    printf("\nparallel_native.cpp >>>>>>>>> ParallelRegionGuard() >>> local_start:%ld; task_id:%zu \n", local_start, task_id);
     if (local_start < end) {
       int64_t local_end = std::min(end, (int64_t)(chunk_size + local_start));
       try {
+        printf("\nparallel_native.cpp >>>>>>>>> ParallelRegionGuard() >>> tyr() ");
         ParallelRegionGuard guard(task_id);
         f(local_start, local_end, task_id);
       } catch (...) {
@@ -175,7 +186,9 @@ void _parallel_run(const int64_t begin, const int64_t end, const int64_t grain_s
       if (--state.remaining == 0) { state.cv.notify_one(); }
     }
   };
+  printf("\nparallel_native.cpp >>>>>>>>> state.remaining = num_tasks >>> num_tasks: %zu", num_tasks);
   state.remaining = num_tasks;
+  printf("\nparallel_native.cpp >>>>>>>>> _run_with_pool(task, num_tasks);");
   _run_with_pool(task, num_tasks);
 
   // Wait for all tasks to finish.
@@ -195,7 +208,7 @@ void init_num_threads() {
 }
 
 void set_num_threads(int nthreads) {
-  printf("\n=======================parallel_native.cpp >>> set_num_threads() >>> %d\n", nthreads);
+  printf("\nparallel_native.cpp >>>>>>>>>  set_num_threads() >>> %d\n", nthreads);
   // TORCH_CHECK(nthreads > 0, "Expected positive number of threads");
   int no_value = NOT_SET;
   if (!num_intraop_threads.compare_exchange_strong(no_value, nthreads)) {
@@ -217,11 +230,10 @@ void set_num_threads(int nthreads) {
 }
 
 int get_num_threads() {
-  printf("\n=======================parallel_native.cpp >>> get_num_threads()\n");
   // not initializing pool unnecessarily,
   // because pool cannot be resized after initialization
   int nthreads = num_intraop_threads.load();
-  printf("\nnthreads >>> %d", nthreads);
+  printf("\nparallel_native.cpp >>>>>>>>>  get_num_threads() >>> nthreads:%d", nthreads);
   if (nthreads > 0) {
     return nthreads;
   } else if (nthreads == NOT_SET) {

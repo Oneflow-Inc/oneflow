@@ -23,7 +23,7 @@ limitations under the License.
 
 // NB: This Registry works poorly when you have other namespaces.
 // Make all macro invocations from inside the at namespace.
-
+#include<iostream>
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -122,10 +122,14 @@ class Registry {
   inline bool Has(const SrcType& key) { return (registry_.count(key) != 0); }
 
   ObjectPtrType Create(const SrcType& key, Args... args) {
+    printf("\registry.h >>> ObjectPtrType Create(const SrcType& key, Args... args)");
+    std::cout << "\nSrcType: >>>> " << key << std::endl;
+    std::cout << "\nregistry_.count(key): >>>> " << registry_.count(key) << std::endl;
     if (registry_.count(key) == 0) {
       // Returns nullptr if the key is not registered.
       return nullptr;
     }
+    printf("\registry.h >>> ObjectPtrType Create(const SrcType& key, Args... args) >>> success!");
     return registry_[key](args...);
   }
 
