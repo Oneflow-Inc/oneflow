@@ -169,6 +169,19 @@ def _test_train_graph(test_case, device):
             placement=P0,
             sbp=B,
         )
+        class Stage1Module(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear1 = flow.nn.Linear(8, 7, False)
+                self.relu1 = flow.nn.ReLU()
+                self.linear1.to_consistent(placement=P1, sbp=B)
+                flow.nn.init.constant_(self.linear1.weight, 2.3)
+            
+            def forward(self, out0):
+                out0 = out0.to_consistent(placement=P1, sbp=out0.sbp)
+                out1 = self.linear1(out0)
+                #out1 = self.relu1(out1)
+                return out1
 
         class PipelineModule(flow.nn.Module):
             def __init__(self):
@@ -176,12 +189,9 @@ def _test_train_graph(test_case, device):
                 self.train_data_loader = train_data_loader
                 self.linear0 = flow.nn.Linear(224, 8, False)
                 self.relu0 = flow.nn.ReLU()
-                self.linear1 = flow.nn.Linear(8, 7, False)
-                self.relu1 = flow.nn.ReLU()
                 self.linear0.to_consistent(placement=P0, sbp=B)
-                self.linear1.to_consistent(placement=P1, sbp=B)
                 flow.nn.init.ones_(self.linear0.weight)
-                flow.nn.init.constant_(self.linear1.weight, 2.3)
+                self.stage1_m = Stage1Module()
 
             def forward(self):
                 image, label = self.train_data_loader()
@@ -189,9 +199,7 @@ def _test_train_graph(test_case, device):
                 label = label.to(D)
                 out0 = self.linear0(image)
                 #out0 = self.relu0(out0)
-                out0 = out0.to_consistent(placement=P1, sbp=B)
-                out1 = self.linear1(out0)
-                #out1 = self.relu1(out1)
+                out1 = self.stage1_m(out0)
                 return out1
 
         pp_m = PipelineModule()
@@ -205,10 +213,9 @@ def _test_train_graph(test_case, device):
                 self.pp_m.train_data_loader.config.stage_id =0
                 self.pp_m.linear0.config.stage_id = 0
                 self.pp_m.relu0.config.stage_id = 0
-                self.pp_m.linear1.config.stage_id = 1
-                self.pp_m.relu1.config.stage_id = 1
+                self.pp_m.stage1_m.config.stage_id = 1
                 # TODO(): support gradient accumulation
-                self.config.set_gradient_accumulation_steps(2)
+                #self.config.set_gradient_accumulation_steps(2)
                 self.add_optimizer(of_sgd)
 
             def build(self):
@@ -217,6 +224,7 @@ def _test_train_graph(test_case, device):
                 # TODO(): support partial placement of scalar tensor numpy()
                 #out = out.to_consistent(placement=P, sbp=B)
                 out.backward()
+                print("out meta:", out._meta_repr())
                 return out
 
         pp_g = PipelineGraph()
@@ -228,7 +236,7 @@ def _test_train_graph(test_case, device):
             of_graph_out = of_graph_out.to_local()
             of_graph_out_np = of_graph_out.numpy()
             print("rank: ", rank, " pipeline graph out: ", of_graph_out_np)
-            return of_graph_out_np, pp_m.linear1.weight.to_local().numpy()
+            return of_graph_out_np, pp_m.stage1_m.linear1.weight.to_local().numpy()
 
         check_list = []
         for i in range(iter_num):
