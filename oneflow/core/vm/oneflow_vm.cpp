@@ -99,7 +99,6 @@ OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
     worker_threads_.push_back(std::move(thread));
     return Maybe<void>::Ok();
   }));
-  exiting_ = false;
   schedule_thread_ = std::thread(&OneflowVM::Loop, this, SchedulerInitializer);
 }
 
@@ -114,28 +113,43 @@ void MakeCtrlSeqInstructions(vm::InstructionMsgList* list,
   list->EmplaceBack(std::move(instruction));
 }
 
-void ControlSync(vm::VirtualMachine* vm) {
+}  // namespace
+
+void OneflowVM::ControlSync() {
   BlockingCounter bc(1);
   vm::InstructionMsgList list;
   MakeCtrlSeqInstructions(&list, [&] { bc.Decrease(); });
-  CHECK_JUST(vm->Receive(&list));
+  CHECK_JUST(Receive(&list));
   bc.WaitUntilCntEqualZero();
 }
 
-}  // namespace
-
 OneflowVM::~OneflowVM() {
-  ControlSync(mut_vm());
-  exiting_ = true;
+  ControlSync();
+  notifier_.Close();
   schedule_thread_.join();
   CHECK(!vm_);
+}
+
+Maybe<void> OneflowVM::Receive(vm::InstructionMsgList* instr_list) {
+  JUST(vm_->Receive(instr_list));
+  notifier_.Notify();
+  return Maybe<void>::Ok();
 }
 
 void OneflowVM::Loop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
-  while (!exiting_) { vm->Schedule(); }
-  while (!mut_vm()->Empty()) { vm->Schedule(); }
+  while (notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
+    // Using ThreadUnsafeEmpty to avoid acquiring mutex lock.
+    // It's safe to use ThreadUnsafeEmpty here. notifier_.notified_cnt_ will be greater than zero
+    // when inconsistency between vm->pending_msg_list.list_head_.list_head_.container_ and
+    // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending instructions will
+    // get handled in the next iteration.
+    //  OneflowVM::Receive may be less effiencient if the thread safe version `vm->Empty()` used
+    //  here, because OneflowVM::Loop is more likely to get the mutex lock.
+    while (!vm->ThreadUnsafeEmpty()) { vm->Schedule(); }
+  }
+  while (!vm->Empty()) { vm->Schedule(); }
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     thread_ctx->mut_pending_instruction_list()->Close();
     return Maybe<void>::Ok();

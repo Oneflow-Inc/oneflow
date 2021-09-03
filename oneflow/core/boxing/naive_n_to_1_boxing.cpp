@@ -16,8 +16,8 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
 

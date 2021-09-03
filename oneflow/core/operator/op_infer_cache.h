@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 
 struct OpInferCacheKey final {
-  const JobDesc* job_desc;
+  const void* scope;
   Symbol<OperatorConf> op_conf_sym;
   Symbol<DTypeSignature> dtype_signature_sym;
   std::vector<Symbol<Shape>> ibn_idx2shape_sym;
@@ -36,7 +36,7 @@ struct OpInferCacheValue final {
 };
 
 inline bool operator==(const OpInferCacheKey& lhs, const OpInferCacheKey& rhs) {
-  return lhs.job_desc == rhs.job_desc && lhs.op_conf_sym == rhs.op_conf_sym
+  return lhs.scope == rhs.scope && lhs.op_conf_sym == rhs.op_conf_sym
          && lhs.dtype_signature_sym == rhs.dtype_signature_sym
          && lhs.ibn_idx2shape_sym == rhs.ibn_idx2shape_sym;
 }
@@ -57,7 +57,7 @@ struct hash<oneflow::OpInferCacheKey> final {
     for (const auto& shape_sym : op_infer_cache_key.ibn_idx2shape_sym) {
       ibn_idx2shape_sym_hash_value ^= std::hash<Symbol<Shape>>()(shape_sym);
     }
-    return std::hash<const JobDesc*>()(op_infer_cache_key.job_desc)
+    return std::hash<const void*>()(op_infer_cache_key.scope)
            ^ std::hash<Symbol<OperatorConf>>()(op_infer_cache_key.op_conf_sym)
            ^ ibn_idx2shape_sym_hash_value
            ^ std::hash<Symbol<DTypeSignature>>()(op_infer_cache_key.dtype_signature_sym);

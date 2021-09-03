@@ -48,7 +48,6 @@ class XrtLaunchKernel : public Kernel {
   virtual ~XrtLaunchKernel() {}
 
  private:
-  void VirtualKernelInit(KernelContext* ctx) override;
   void ForwardDataContent(KernelContext* ctx) const override;
 
   xrt::Executable* BuildExecutable(const std::vector<xrt::Parameter>& entry_params,
@@ -67,10 +66,8 @@ class XrtLaunchKernel : public Kernel {
   bool IsStateless() const override { return false; }
 
  private:
-  const JobDesc& job_desc() const;
   mutable BlobDescGetter<device_type> desc_getter_;
   mutable std::shared_ptr<xrt::CompilationCache> compilation_cache_;
-  const JobDesc* job_desc_;
 };
 
 }  // namespace oneflow

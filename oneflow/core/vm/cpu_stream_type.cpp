@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/object_msg/flat_msg_view.h"
-#include "oneflow/core/vm/async_cpu_stream_type.h"
+#include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
@@ -25,28 +25,27 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void AsyncCpuStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                       Stream* stream) const {
+void CpuStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
   device_ctx->reset(new CpuDeviceCtx());
 }
 
-void AsyncCpuStreamType::InitInstructionStatus(const Stream& stream,
-                                               InstructionStatusBuffer* status_buffer) const {
+void CpuStreamType::InitInstructionStatus(const Stream& stream,
+                                          InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
 }
 
-void AsyncCpuStreamType::DeleteInstructionStatus(const Stream& stream,
-                                                 InstructionStatusBuffer* status_buffer) const {
+void CpuStreamType::DeleteInstructionStatus(const Stream& stream,
+                                            InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
-bool AsyncCpuStreamType::QueryInstructionStatusDone(
-    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
+bool CpuStreamType::QueryInstructionStatusDone(const Stream& stream,
+                                               const InstructionStatusBuffer& status_buffer) const {
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void AsyncCpuStreamType::Compute(Instruction* instruction) const {
+void CpuStreamType::Compute(Instruction* instruction) const {
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
@@ -56,12 +55,12 @@ void AsyncCpuStreamType::Compute(Instruction* instruction) const {
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }
 
-ObjectMsgPtr<StreamDesc> AsyncCpuStreamType::MakeStreamDesc(const Resource& resource,
-                                                            int64_t this_machine_id) const {
+ObjectMsgPtr<StreamDesc> CpuStreamType::MakeStreamDesc(const Resource& resource,
+                                                       int64_t this_machine_id) const {
   if (!resource.has_cpu_device_num()) { return ObjectMsgPtr<StreamDesc>(); }
   std::size_t device_num = resource.cpu_device_num();
   auto ret = ObjectMsgPtr<StreamDesc>::New();
-  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<AsyncCpuStreamType>());
+  ret->mutable_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CpuStreamType>());
   ret->set_num_machines(1);
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);

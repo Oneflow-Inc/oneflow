@@ -239,4 +239,22 @@ Maybe<int64_t> GetCurrentRankIndex(const std::vector<int64_t>& rank_heap) {
                                                                                      token, ctx);
 }
 
+/*static*/ Maybe<void> TransportUtil::ReceiveDataFromRank(int64_t rank, const TransportToken& token,
+                                                          AsyncTransportCtx* ctx) {
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    return DoEach(rank);
+  };
+  return AccessToOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(ForEachRank,
+                                                                                     token, ctx);
+}
+
+/*static*/ Maybe<void> TransportUtil::SendDataToRank(int64_t rank, const TransportToken& token,
+                                                     AsyncTransportCtx* ctx) {
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    return DoEach(rank);
+  };
+  return AccessToOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(ForEachRank,
+                                                                                     token, ctx);
+}
+
 }  // namespace oneflow

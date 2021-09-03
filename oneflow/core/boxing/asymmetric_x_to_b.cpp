@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/placement_sbp_util.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/common/decorator.h"
 
 namespace oneflow {
@@ -26,7 +26,8 @@ Maybe<void> RawCheckAsymmetricXToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> o
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
-  CHECK_OR_RETURN(out->placement()->Bigger(*in->placement()));
+  CHECK_OR_RETURN(out->placement()->Bigger(*in->placement())
+                  || in->placement()->Bigger(*out->placement()));
   CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kGPU);
   return Maybe<void>::Ok();
 }

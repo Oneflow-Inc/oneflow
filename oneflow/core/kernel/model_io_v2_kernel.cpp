@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/persistence/snapshot.h"
 
