@@ -248,6 +248,9 @@ def test_train_loss_oneflow_pytorch(
             file.write("| update parameters avg time   | %.4f    | %.4f    |\n\n" % (pytorch_update_avg_time, of_update_avg_time))
 
     if verbose:
+        if not os.path.exists("./loss_compare"):
+            os.mkdir("./loss_compare")
+
         indes = [i for i in range(len(oneflow_model_loss))]
 
         plt.plot(indes, oneflow_model_loss, label="oneflow " + module_name)
@@ -262,8 +265,9 @@ def test_train_loss_oneflow_pytorch(
         plt.legend()
 
         # Display a figure.
-        plt.savefig("./loss_compare.png")
+        plt.savefig("./loss_compare" + "/" + module_name + "_loss_compare.png")
         plt.show()
+        plt.close() # 防止将所有数据画到一张图上
 
     test_case.assertTrue(
         np.allclose(cos_sim(oneflow_model_loss, pytorch_model_loss), 1.0, 1e-1, 1e-1)
