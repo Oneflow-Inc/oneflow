@@ -356,10 +356,6 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
     UNIMPLEMENTED();
     return *(const ParallelContext*)nullptr;
   }
-  const JobDesc& job_desc() const override {
-    UNIMPLEMENTED();
-    return *(const JobDesc*)nullptr;
-  }
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); };
   const ArgVec& outputs() const override { return base_ctx_.outputs(); };
