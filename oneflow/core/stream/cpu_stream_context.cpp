@@ -77,7 +77,7 @@ CpuStreamContext::CpuStreamContext() {
   }
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
   device_ctx_.reset(new DeviceCtxImpl(this));
-};
+}
 
 CpuStreamContext::~CpuStreamContext() = default;
 
