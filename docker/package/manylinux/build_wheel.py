@@ -193,6 +193,7 @@ def build_third_party(
         cp -r {oneflow_src_dir}/python {oneflow_python_dir}
         cd {oneflow_python_dir}
         git init
+        git clean -nXd
         git clean -fXd
         cd -
         """
@@ -307,7 +308,7 @@ export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
     else:
         bash_cmd += f"""
 cd {oneflow_python_dir}
-git clean -nXd -e \!oneflow/include -e \!oneflow/include/**
+git clean -fXd -e \!oneflow/include -e \!oneflow/include/**
 cd -
 {cmake_cmd}
 cmake --build . -j `nproc`

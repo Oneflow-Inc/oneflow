@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import tempfile
 import unittest
 from collections import OrderedDict
 
@@ -35,6 +36,8 @@ def compare_with_numpy_adam(
     weight_decay,
     eps,
     do_bias_correction,
+    reload_state_step,
+    save_load_by_pickle,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -67,6 +70,18 @@ def compare_with_numpy_adam(
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
+            if i == reload_state_step:
+                state_dict = adam.state_dict()
+                adam = flow.optim.Adam([x])
+                if save_load_by_pickle:
+                    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
+                        file_name = f.name
+                        import pickle
+
+                        pickle.dump(state_dict, f)
+                    with open(file_name, "rb") as f:
+                        state_dict = pickle.load(f)
+                adam.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
@@ -116,6 +131,8 @@ def compare_with_numpy_adam_clip_grad(
     do_bias_correction,
     clip_grad_max_norm,
     clip_grad_norm_type,
+    reload_state_step,
+    save_load_by_pickle,
 ):
     random_grad_seq = []
     for _ in range(train_iters):
@@ -151,6 +168,18 @@ def compare_with_numpy_adam_clip_grad(
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
+            if i == reload_state_step:
+                state_dict = adam.state_dict()
+                adam = flow.optim.Adam([x])
+                if save_load_by_pickle:
+                    with tempfile.NamedTemporaryFile("wb", delete=False) as f:
+                        file_name = f.name
+                        import pickle
+
+                        pickle.dump(state_dict, f)
+                    with open(file_name, "rb") as f:
+                        state_dict = pickle.load(f)
+                adam.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
@@ -203,6 +232,8 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["weight_decay"] = [0.0, 0.1]
         arg_dict["eps"] = [1e-08, 1e-07]
         arg_dict["do_bias_correction"] = [True, False]
+        arg_dict["reload_state_step"] = [5]  # save and load optim state
+        arg_dict["save_load_by_pickle"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
@@ -219,6 +250,8 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["do_bias_correction"] = [True, False]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
+        arg_dict["reload_state_step"] = [5]  # save and load optim state
+        arg_dict["save_load_by_pickle"] = [False, True]
 
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam_clip_grad(test_case, *arg)
