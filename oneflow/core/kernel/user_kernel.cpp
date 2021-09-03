@@ -205,7 +205,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
 
 class UserKernelOpInferContext : public user_op::InferContext {
  public:
-  UserKernelOpInferContext(const KernelConf& kernel_conf)
+  explicit UserKernelOpInferContext(const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         parallel_ctx_(kernel_conf.parallel_ctx()),
         nd_sbp_signature_(kernel_conf.op_attribute().nd_sbp_signature()),
