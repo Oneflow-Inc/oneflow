@@ -57,7 +57,8 @@ void OpKernelInferCache::UpdateCacheKey(KernelInferContext* ctx) {
 }
 
 void OpKernelInferCache::UpdateCacheValue(KernelInferContext* ctx) {
-  if (cached_key2value_.size() >= max_size_) { Reset(); }
+  // TODO: make max size configurable
+  if (cached_key2value_.size() >= kReleaseInIndependentThreadThreshold) { Reset(); }
   auto* cache_value = new OpInferCacheValue();
   cache_value->obn_idx2shape_sym.resize(ctx->outputs().size());
   FOR_RANGE(int, i, 0, ctx->outputs().size()) {

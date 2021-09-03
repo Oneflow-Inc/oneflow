@@ -47,7 +47,6 @@ class OpKernelInferCache final {
   KeyType cache_key_;
   HashMap cached_key2value_;
   KeyStorage key_storage_;
-  size_t max_size_;
 };
 
 }  // namespace user_op
