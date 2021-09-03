@@ -1380,7 +1380,7 @@ class TestTensor(flow.unittest.TestCase):
     @autotest()
     def test_tensor_diag_other_dim(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=2,dim0=random(), dim1=random()).to(device)
+        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return x.diag()
 
 

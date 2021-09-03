@@ -30,15 +30,8 @@ class TestCat(flow.unittest.TestCase):
     @autotest()
     def test_cat_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
-            ndim=2, 
-            dim0=random(), 
-            dim1=random()
-            ).to(device)
-        return torch.cat(
-            (x, x, x),
-            random(0,2).to(int)
-        )
+        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        return torch.cat((x, x, x), random(0, 2).to(int))
 
 
 if __name__ == "__main__":
