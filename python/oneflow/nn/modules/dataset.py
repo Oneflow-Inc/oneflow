@@ -23,6 +23,7 @@ from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
+import oneflow.framework.id_util as id_util
 
 
 def mirrored_gen_random_seed(seed=None):
@@ -34,7 +35,7 @@ def mirrored_gen_random_seed(seed=None):
     return (seed, has_seed)
 
 
-class OfrecordReader(Module):
+class OFRecordReader(Module):
     def __init__(
         self,
         ofrecord_dir: str,
@@ -68,14 +69,16 @@ class OfrecordReader(Module):
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(sbp, flow.sbp.sbp):
                 nd_sbp.append(sbp._ToAttrStr())
+                sbp = (sbp,)
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
                     nd_sbp.append(elem._ToAttrStr())
             assert len(nd_sbp) == len(placement.hierarchy)
-            print("cclog: ", nd_sbp)
         else:
             assert sbp is None, "sbp: %s" % sbp
+
+        self.sbp = sbp
 
         (seed, has_seed) = mirrored_gen_random_seed(random_seed)
         self._op = (
@@ -97,13 +100,13 @@ class OfrecordReader(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = self._op.apply(self.placement, self.attrs)[0]
+            res = self._op.apply(self.placement, self.sbp, self.attrs)[0]
         else:
             res = self._op.apply(self.device, self.attrs)[0]
         return res
 
 
-class OfrecordRawDecoder(Module):
+class OFRecordRawDecoder(Module):
     def __init__(
         self,
         blob_name: str,
@@ -162,6 +165,7 @@ class CoinFlip(Module):
             assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
             if isinstance(sbp, flow.sbp.sbp):
                 nd_sbp.append(sbp._ToAttrStr())
+                sbp = (sbp,)
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
@@ -169,6 +173,8 @@ class CoinFlip(Module):
             assert len(nd_sbp) == len(placement.hierarchy)
         else:
             assert sbp is None, "sbp: %s" % sbp
+
+        self.sbp = sbp
 
         (seed, has_seed) = mirrored_gen_random_seed(random_seed)
 
@@ -186,7 +192,7 @@ class CoinFlip(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = self._op.apply(self.placement, self.attrs)[0]
+            res = self._op.apply(self.placement, self.sbp, self.attrs)[0]
         else:
             res = self._op.apply(self.device, self.attrs)[0]
         return res
@@ -271,7 +277,7 @@ class CropMirrorNormalize(Module):
         )
 
     def forward(self, input, mirror=None):
-        if mirror != None:
+        if mirror is not None:
             if input.dtype is flow.uint8:
                 res = self._op_uint8_with_mirror(input, mirror)[0]
             elif input.dtype is flow.tensor_buffer:
@@ -341,6 +347,67 @@ class OFRecordImageDecoder(Module):
 
     def forward(self, input):
         res = self._op(input)[0]
+        return res
+
+
+class OFRecordImageGpuDecoderRandomCropResize(Module):
+    def __init__(
+        self,
+        target_width: int,
+        target_height: int,
+        num_attempts: Optional[int] = None,
+        seed: Optional[int] = None,
+        random_area: Optional[Sequence[float]] = None,
+        random_aspect_ratio: Optional[Sequence[float]] = None,
+        num_workers: Optional[int] = None,
+        warmup_size: Optional[int] = None,
+        max_num_pixels: Optional[int] = None,
+    ):
+        super().__init__()
+        gpu_decoder_conf = (
+            flow._oneflow_internal.oneflow.core.operator.op_conf.ImageDecoderRandomCropResizeOpConf()
+        )
+        gpu_decoder_conf.set_in("error_input_need_to_be_replaced")
+        gpu_decoder_conf.set_out("out")
+        gpu_decoder_conf.set_target_width(target_width)
+        gpu_decoder_conf.set_target_height(target_height)
+        if num_attempts is not None:
+            gpu_decoder_conf.set_num_attempts(num_attempts)
+        if seed is not None:
+            gpu_decoder_conf.set_seed(seed)
+        if random_area is not None:
+            assert len(random_area) == 2
+            gpu_decoder_conf.set_random_area_min(random_area[0])
+            gpu_decoder_conf.set_random_area_max(random_area[1])
+        if random_aspect_ratio is not None:
+            assert len(random_aspect_ratio) == 2
+            gpu_decoder_conf.set_random_aspect_ratio_min(random_aspect_ratio[0])
+            gpu_decoder_conf.set_random_aspect_ratio_max(random_aspect_ratio[1])
+        if num_workers is not None:
+            gpu_decoder_conf.set_num_workers(num_workers)
+        if warmup_size is not None:
+            gpu_decoder_conf.set_warmup_size(warmup_size)
+        if max_num_pixels is not None:
+            gpu_decoder_conf.set_max_num_pixels(max_num_pixels)
+
+        self._op = flow._oneflow_internal.one.ImageDecoderRandomCropResizeOpExpr(
+            id_util.UniqueStr("ImageGpuDecoder"), gpu_decoder_conf, ["in"], ["out"]
+        )
+        self.attrs = flow._oneflow_internal.MutableCfgAttrMap()
+
+    def forward(self, input):
+        if not input.is_lazy:
+            print(
+                "ERROR! oneflow.nn.OFRecordImageGpuDecoderRandomCropResize module ",
+                "NOT support run as eager module, please use it in nn.Graph.",
+            )
+            raise NotImplementedError
+        res = self._op.apply([input], self.attrs)[0]
+        if not res.is_cuda:
+            print(
+                "WARNING! oneflow.nn.OFRecordImageGpuDecoderRandomCropResize ONLY support ",
+                "CUDA runtime version >= 10.2, so now it degenerates into CPU decode version.",
+            )
         return res
 
 
@@ -519,7 +586,7 @@ def raw_decoder(
         print(
             "WARNING: auto_zero_padding has been deprecated, Please use truncate instead.\n            "
         )
-    return OfrecordRawDecoder(
+    return OFRecordRawDecoder(
         blob_name,
         shape,
         dtype,
@@ -540,7 +607,7 @@ def get_ofrecord_handle(
     shuffle_after_epoch: bool = False,
     name: Optional[str] = None,
 ):
-    return OfrecordReader(
+    return OFRecordReader(
         ofrecord_dir,
         batch_size,
         data_part_num,
@@ -608,7 +675,7 @@ class ImageFlip(Module):
         self.flip_code = flip_code
 
     def forward(self, images):
-        return flow.F.image_flip(images, flip_code=self.flip_code)
+        return flow._C.image_flip(images, flip_code=self.flip_code)
 
 
 class ImageDecode(Module):
@@ -679,6 +746,7 @@ class COCOReader(Module):
                     nd_sbp.append(sbp_item._ToAttrStr())
             elif isinstance(sbp, flow.sbp.sbp):
                 nd_sbp.append(sbp._ToAttrStr())
+                sbp = (sbp,)
             else:
                 raise ValueError(f"invalid param sbp: {sbp}")
 
@@ -686,6 +754,7 @@ class COCOReader(Module):
                 raise ValueError(
                     "dimensions of sbp and dimensions of hierarchy of placement don't equal"
                 )
+        self.sbp = sbp
 
         self._op = (
             flow.builtin_op("COCOReader")
@@ -718,7 +787,7 @@ class COCOReader(Module):
             outputs = self._op.apply(self.device, self.attrs)
         else:
             # consistent apply
-            outputs = self._op.apply(self.placement, self.attrs)
+            outputs = self._op.apply(self.placement, self.sbp, self.attrs)
 
         # COCOReader has multiple output, so it return a TensorTuple
         # convert TensorTuple to tuple of Tensor
@@ -753,11 +822,11 @@ class OFRecordBytesDecoder(Module):
     for characters,depending on the downstream task.
 
     Args:
-        blob_name: The name of the target feature in OFRecored.
+        blob_name: The name of the target feature in OFRecord.
 
         name: The name for this component in the graph.
 
-        input: the Tensor which might be provided by an OfrecordReader.
+        input: the Tensor which might be provided by an OFRecordReader.
 
     Returns:
 
@@ -772,7 +841,7 @@ class OFRecordBytesDecoder(Module):
 
         >>> def example():
         ...      batch_size = 16
-        ...      record_reader = flow.nn.OfrecordReader(
+        ...      record_reader = flow.nn.OFRecordReader(
         ...         "dataset/",
         ...         batch_size=batch_size,
         ...         part_name_suffix_length=5,
@@ -843,6 +912,7 @@ class GPTIndexedBinDataReader(Module):
                     nd_sbp.append(sbp_item._ToAttrStr())
             elif isinstance(sbp, flow.sbp.sbp):
                 nd_sbp.append(sbp._ToAttrStr())
+                sbp = (sbp,)
             else:
                 raise ValueError(f"invalid param sbp: {sbp}")
 
@@ -850,6 +920,7 @@ class GPTIndexedBinDataReader(Module):
                 raise ValueError(
                     "dimensions of sbp and dimensions of hierarchy of placement don't equal"
                 )
+        self.sbp = sbp
 
         if random_seed is None:
             random_seed = random.randrange(sys.maxsize)
@@ -889,7 +960,7 @@ class GPTIndexedBinDataReader(Module):
         if self.placement is None:
             output = self.op_.apply(self.device, self.attrs)[0]
         else:
-            output = self.op_.apply(self.placement, self.attrs)[0]
+            output = self.op_.apply(self.placement, self.sbp, self.attrs)[0]
         return output
 
 

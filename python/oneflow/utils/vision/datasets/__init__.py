@@ -15,5 +15,21 @@ limitations under the License.
 """
 from .mnist import MNIST, FashionMNIST
 from .cifar import CIFAR10, CIFAR100
+from .coco import CocoCaptions, CocoDetection
+from .imagenet import ImageNet
+from .voc import VOCDetection, VOCSegmentation
+from .folder import DatasetFolder, ImageFolder
 
-__all__ = ["MNIST", "FashionMNIST", "CIFAR10", "CIFAR100"]
+__all__ = [
+    "MNIST",
+    "FashionMNIST",
+    "CIFAR10",
+    "CIFAR100",
+    "CocoCaptions",
+    "CocoDetection",
+    "ImageNet",
+    "VOCDetection",
+    "VOCSegmentation",
+    "DatasetFolder",
+    "ImageFolder",
+]

@@ -865,7 +865,7 @@ class TestDeconv2d(flow.unittest.TestCase):
             _test_deconv_group_large_out_channel,
             _test_deconv_group_large_in_channel,
         ]
-        arg_dict["device"] = ["cuda", "cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

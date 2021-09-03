@@ -62,7 +62,7 @@ class NoArgNoRetMockNNGraph : public NNGraphIf {
 };
 
 TEST(RunLazyJobInstructionType, simple) {
-  vm::TestResourceDescScope resource_scope(0, 1);
+  vm::TestResourceDescScope resource_scope(1, 1);
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"RunLazyJob"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
@@ -96,7 +96,7 @@ TEST(RunLazyJobInstructionType, simple) {
     CHECK_JUST(instructions_builder.RunLazyJob(empty_list, empty_list, empty_list, nn_graph));
   }
   ASSERT_EQ(list.size(), 2);
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   auto* vm_ptr = vm.Mutable();
   std::thread scheduler_thread([vm_ptr]() {
     while (!vm_ptr->Empty()) {
@@ -113,7 +113,7 @@ TEST(RunLazyJobInstructionType, simple) {
 }
 
 TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
-  vm::TestResourceDescScope resource_scope(0, 1);
+  vm::TestResourceDescScope resource_scope(1, 1);
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"RunLazyJob"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
@@ -185,7 +185,7 @@ TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
     }
   }
   ASSERT_EQ(list.size(), num_job0_instance + num_job1_instance);
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   ASSERT_EQ(vm->pending_msg_list().size(), num_job0_instance + num_job1_instance);
   auto* vm_ptr = vm.Mutable();
   std::thread scheduler_thread([vm_ptr]() {

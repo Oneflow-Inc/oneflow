@@ -124,10 +124,9 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
 
 namespace {
 
-Maybe<void> GetInputParallelDistribution(user_op::InferParallelDistributionFnContext* ctx,
-                                         const user_op::OpArg& in_arg,
-                                         cfg::ParallelDistribution* distribution) {
-  *distribution = ctx->ParallelDistributionHint4InputArgNameAndIndex(in_arg.name(), in_arg.index());
+Maybe<void> GetInputNdSbp(user_op::InferNdSbpFnContext* ctx, const user_op::OpArg& in_arg,
+                          cfg::NdSbp* distribution) {
+  *distribution = ctx->NdSbpHint4InputArgNameAndIndex(in_arg.name(), in_arg.index());
   const auto& constraints = ctx->nd_sbp_constraints();
   if (constraints.bn_in_op2nd_sbp_size() != 0) {
     const auto it =
@@ -149,24 +148,23 @@ Maybe<void> ApplySbpParallel(const cfg::SbpParallel& sbp, const int64_t parallel
 
 }  // namespace
 
-Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
-    user_op::InferParallelDistributionFnContext* ctx, const Shape& logical_in_shape,
-    const Shape& logical_out_shape) {
+Maybe<void> ReshapeUserOpUtil::InferNdSbp(user_op::InferNdSbpFnContext* ctx,
+                                          const Shape& logical_in_shape,
+                                          const Shape& logical_out_shape) {
   const std::string& op_type_name = ctx->user_op_conf().op_type_name();
   CHECK_OR_RETURN(op_type_name == "reshape" || op_type_name == "reshape_like");
   const bool is_reshape_like = (op_type_name == "reshape_like");
   std::vector<user_op::OpArg> in_args({{"in", 0}});
   if (is_reshape_like) { in_args.push_back(user_op::OpArg("like", 0)); }
-  HashMap<std::string, cfg::ParallelDistribution> ibn2nd_sbp;
+  HashMap<std::string, cfg::NdSbp> ibn2nd_sbp;
   ibn2nd_sbp.reserve(in_args.size());
   for (const auto& arg : in_args) {
-    cfg::ParallelDistribution* in_distribution =
-        ctx->ParallelDistribution4ArgNameAndIndex(arg.name(), arg.index());
-    JUST(GetInputParallelDistribution(ctx, arg, in_distribution));
+    cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex(arg.name(), arg.index());
+    JUST(GetInputNdSbp(ctx, arg, in_distribution));
     CHECK_OR_RETURN(
         ibn2nd_sbp.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution).second);
   }
-  cfg::ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
 
   Shape in_shape = logical_in_shape;
   Shape out_shape = logical_out_shape;

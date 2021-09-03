@@ -15,7 +15,9 @@ limitations under the License.
 */
 #include <algorithm>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 
@@ -109,6 +111,72 @@ TEST(ParallelDesc, discrete_2n8d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 8);
+}
+
+TEST(GetBroadcastGroup, naive_1n1d) {
+  GlobaProcessCtxScope scope(1, 1);
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
+  parallel_conf.add_device_name("0:0");
+  const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+  const auto& map = CHECK_JUST(GetBroadcastGroup(parallel_desc, parallel_desc));
+  ASSERT_EQ(map->size(), 1);
+  ASSERT_EQ(map->begin()->first, 0);
+  ASSERT_TRUE(map->begin()->second == parallel_desc);
+}
+
+TEST(GetBroadcastGroup, naive_1n4d) {
+  GlobaProcessCtxScope scope(1, 4);
+  ParallelConf src_parallel_conf;
+  src_parallel_conf.set_device_tag("cpu");
+  src_parallel_conf.add_device_name("0:0");
+  const auto& src_parallel_desc = SymbolOf(ParallelDesc(src_parallel_conf));
+  ParallelConf dst_parallel_conf;
+  dst_parallel_conf.set_device_tag("cpu");
+  dst_parallel_conf.add_device_name("0:0-3");
+  const auto& dst_parallel_desc = SymbolOf(ParallelDesc(dst_parallel_conf));
+  const auto& map = CHECK_JUST(GetBroadcastGroup(src_parallel_desc, dst_parallel_desc));
+  ASSERT_EQ(map->size(), 4);
+  for (int i = 0; i < 4; ++i) {
+    const auto& iter = map->find(i);
+    ASSERT_TRUE(iter != map->end());
+    ASSERT_TRUE(iter->second == dst_parallel_desc);
+  }
+}
+
+TEST(GetBroadcastGroup, naive_2n8d) {
+  GlobaProcessCtxScope scope(2, 8);
+  ParallelConf src_parallel_conf;
+  src_parallel_conf.set_device_tag("cpu");
+  src_parallel_conf.add_device_name("0:0");
+  src_parallel_conf.add_device_name("1:0");
+  const auto& src_parallel_desc = SymbolOf(ParallelDesc(src_parallel_conf));
+  ParallelConf dst_parallel_conf;
+  dst_parallel_conf.set_device_tag("cpu");
+  dst_parallel_conf.add_device_name("0:0-3");
+  dst_parallel_conf.add_device_name("1:0-3");
+  const auto& dst_parallel_desc = SymbolOf(ParallelDesc(dst_parallel_conf));
+  const auto& map = CHECK_JUST(GetBroadcastGroup(src_parallel_desc, dst_parallel_desc));
+  ASSERT_EQ(map->size(), 8);
+
+  ParallelConf first_node_parallel_conf;
+  first_node_parallel_conf.set_device_tag("cpu");
+  first_node_parallel_conf.add_device_name("0:0-3");
+  const auto& first_node_parallel_desc = SymbolOf(ParallelDesc(first_node_parallel_conf));
+  for (int i = 0; i < 4; ++i) {
+    const auto& iter = map->find(i);
+    ASSERT_TRUE(iter != map->end());
+    ASSERT_TRUE(iter->second == first_node_parallel_desc);
+  }
+  ParallelConf second_node_parallel_conf;
+  second_node_parallel_conf.set_device_tag("cpu");
+  second_node_parallel_conf.add_device_name("1:0-3");
+  const auto& second_node_parallel_desc = SymbolOf(ParallelDesc(second_node_parallel_conf));
+  for (int i = 4; i < 8; ++i) {
+    const auto& iter = map->find(i);
+    ASSERT_TRUE(iter != map->end());
+    ASSERT_TRUE(iter->second == second_node_parallel_desc);
+  }
 }
 
 }  // namespace test

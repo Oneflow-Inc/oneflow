@@ -26,15 +26,10 @@ class NaiveActor : public Actor {
   NaiveActor() = default;
   ~NaiveActor() override = default;
 
-  void VirtualActorInit(const TaskProto&) override {
-    OF_SET_MSG_HANDLER(&NaiveActor::HandlerNormal);
-  }
+  void VirtualActorInit(const TaskProto&) override;
 
  protected:
   void Act() override;
-
- private:
-  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
 }  // namespace oneflow

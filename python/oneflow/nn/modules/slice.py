@@ -28,9 +28,9 @@ def slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
         input: A `Tensor`.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
@@ -41,20 +41,20 @@ def slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
         flow.Size([3, 3, 2])
     """
     (start, stop, step) = check_slice_tup_list(slice_tup_list, input.shape)
-    return flow.F.slice(input, start, stop, step)
+    return flow._C.slice(input, start, stop, step)
 
 
 def slice_update_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
-    """Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
+    """Update a slice of tensor `x`. Like `x[start:stop:step] = update`.
 
     Args:
         x: A `Tensor`, whose slice will be updated.
         update: A `Tensor`, indicate the update content.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
@@ -65,29 +65,29 @@ def slice_update_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]
         array([1., 2., 3., 4., 1.], dtype=float32)
     """
     (start, stop, step) = GetSliceAttrs(slice_tup_list, input.shape)
-    return flow.F.slice_update(input, update, start, stop, step)
+    return flow._C.slice_update(input, update, start, stop, step)
 
 
 def logical_slice_assign_op(
     input, update, slice_tup_list: Sequence[Tuple[int, int, int]]
 ):
-    """Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`. 
+    """Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`.
 
     Args:
         x: A `Tensor`, whose slice will be updated.
         update: A `Tensor`, indicate the update content.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
-        >>> y = flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
+        >>> y = flow.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
         >>> input
         tensor([1., 2., 3., 4., 1.], dtype=oneflow.float32)
 
@@ -96,7 +96,7 @@ def logical_slice_assign_op(
     (start, stop, step) = GetSliceAttrs(slice_tup_list, input.shape)
     if update.dtype != input.dtype:
         update = update.to(dtype=xinput.dtype)
-    return flow.F.logical_slice_assign(input, update, start, stop, step)
+    return flow._C.logical_slice_assign(input, update, start, stop, step)
 
 
 if __name__ == "__main__":

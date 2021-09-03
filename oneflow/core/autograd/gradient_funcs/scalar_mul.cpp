@@ -20,12 +20,12 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct ScalarMulInterpState : public OpExprInterpState {
+struct ScalarMulCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   functional::Scalar operand;
 };
 
-class ScalarMul : public OpExprGradFunction<ScalarMulInterpState> {
+class ScalarMul : public OpExprGradFunction<ScalarMulCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -34,7 +34,7 @@ class ScalarMul : public OpExprGradFunction<ScalarMulInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(ScalarMulInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(ScalarMulCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -49,7 +49,7 @@ class ScalarMul : public OpExprGradFunction<ScalarMulInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const ScalarMulInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const ScalarMulCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);

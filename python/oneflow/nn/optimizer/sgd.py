@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
-import math
 from typing import Callable, Dict, Iterator, List, Union
 
 import oneflow as flow
@@ -50,6 +49,50 @@ class SGD(Optimizer):
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
 
+    For example: 
+
+    Example 1: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        sgd = flow.optim.SGD(net.parameters(), lr=1e-3)
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            sgd.step()
+            sgd.zero_grad()
+
+    Example 2: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        sgd = flow.optim.SGD(
+            [
+                {
+                    "params": net.parameters(),
+                    "lr": learning_rate,
+                    "clip_grad_max_norm": 0.5,
+                    "clip_grad_norm_type": 2.0,
+                }
+            ],
+        )
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            sgd.clip_grad()
+            sgd.step()
+            sgd.zero_grad()
+
+    If you want to use clip_grad, you can refer this example. 
+
+    For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`. 
+
     """
 
     def __init__(
@@ -59,18 +102,15 @@ class SGD(Optimizer):
         momentum: float = 0.0,
         weight_decay: float = 0.0,
     ):
-        super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
         assert weight_decay >= 0.0, f"Invalid weight_decay: {weight_decay}"
-        self._default_options["lr"] = lr
-        self._default_options["momentum"] = momentum
-        self._default_options["weight_decay"] = weight_decay
-        if isinstance(parameters, collections.abc.Iterator):
-            self.param_groups.append(ParamGroup(parameters, self._default_options))
-        else:
-            for param in parameters:
-                self.param_groups.append(ParamGroup(param, self._default_options))
+        options = dict()
+        options["lr"] = lr
+        options["momentum"] = momentum
+        options["weight_decay"] = weight_decay
+        super().__init__(parameters, options)
+
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
@@ -123,12 +163,16 @@ class SGD(Optimizer):
             return loss
 
     def generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = []
         for param_group in self.param_groups:
             optimizer_conf = train_conf.mutable_optimizer_conf().Add()
-            lr = param_group["lr"]
+            lr = (
+                param_group["initial_lr"]
+                if "initial_lr" in param_group
+                else param_group["lr"]
+            )
             beta = param_group["momentum"]
             l2 = param_group["weight_decay"]
-            # TODO(): optimizer_conf need to have loss_scale_factor field to support multi scale factor
 
             optimizer_conf.set_base_learning_rate(lr)
             if beta == 0:
@@ -136,7 +180,12 @@ class SGD(Optimizer):
             else:
                 optimizer_conf.mutable_momentum_conf().set_beta(beta)
 
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
                 if param.requires_grad:
                     optimizer_conf.add_variable_op_names(vars_conf[param].name)
+
+            new_opt_confs.append(optimizer_conf)
+        return new_opt_confs

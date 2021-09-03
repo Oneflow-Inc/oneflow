@@ -1,18 +1,59 @@
 include(python)
+include(CheckCXXCompilerFlag)
 
 function(oneflow_add_executable)
-  if (BUILD_CUDA)
-    cuda_add_executable(${ARGV})
-  else()
-    add_executable(${ARGV})
-  endif()
+  add_executable(${ARGV})
 endfunction()
 
 function(oneflow_add_library)
-  if (BUILD_CUDA)
-    cuda_add_library(${ARGV})
-  else()
-    add_library(${ARGV})
+  add_library(${ARGV})
+endfunction()
+
+function(target_try_compile_option target flag)
+  # We cannot check for -Wno-foo as this won't throw a warning so we must check for the -Wfoo option directly
+  # http://stackoverflow.com/questions/38785168/cc1plus-unrecognized-command-line-option-warning-on-any-other-warning
+  string(REGEX REPLACE "^-Wno-" "-W" checkedFlag ${flag})
+  string(REGEX REPLACE "[-=]" "_" varName CXX_FLAG${checkedFlag})
+  # Avoid double checks. A compiler will not magically support a flag it did not before
+  if(NOT DEFINED ${varName}_SUPPORTED)
+    check_cxx_compiler_flag(${checkedFlag} ${varName}_SUPPORTED)
+  endif()
+  if (${varName}_SUPPORTED)
+    target_compile_options(${target} PRIVATE ${flag})
+  endif ()
+endfunction()
+
+function(target_try_compile_options target)
+  foreach(flag ${ARGN})
+    target_try_compile_option(${target} ${flag})
+  endforeach()
+endfunction()
+
+function(target_treat_warnings_as_errors target)
+  if (TREAT_WARNINGS_AS_ERRORS)
+    target_compile_options(${target} PRIVATE -Werror)
+
+    # TODO: remove it while fixing all deprecated call
+    target_try_compile_options(${target} -Wno-error=deprecated-declarations)
+
+    # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
+    target_try_compile_options(${target}
+      -Wno-error=unused-const-variable
+      -Wno-error=unused-variable
+      -Wno-error=unused-local-typedefs
+      -Wno-error=unused-private-field
+      -Wno-error=unused-lambda-capture
+    )
+
+    target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
+
+    # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
+    target_try_compile_options(${target} -Wno-mismatched-tags)
+
+    # disable for pointer operations of intrusive linked lists
+    target_try_compile_options(${target} -Wno-error=array-bounds)
+
+    target_try_compile_options(${target} -Wno-error=comment)
   endif()
 endfunction()
 
@@ -170,7 +211,11 @@ add_custom_target(of_format
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/oneflow --fix --quiet
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_py_format.py --source_dir ${CMAKE_CURRENT_SOURCE_DIR} --fix
   )
-
+# clang tidy
+add_custom_target(of_tidy
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py --build_dir ${CMAKE_BINARY_DIR}
+  DEPENDS of_git_version oneflow_deps of_cfgobj of_functional_obj
+  )
 # generate version
 set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
 set(OF_GIT_VERSION_FILE ${OF_GIT_VERSION_DIR}/version.cpp)
@@ -211,7 +256,7 @@ add_dependencies(of_protoobj make_pyproto_dir protobuf)
 include(cfg)
 GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS CFG_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
-add_dependencies(of_cfgobj of_protoobj generate_cfg)
+add_dependencies(of_cfgobj of_protoobj)
 if (BUILD_SHARED_LIBS)
   target_link_libraries(of_protoobj protobuf_imported)
   target_link_libraries(of_cfgobj protobuf_imported)
@@ -225,7 +270,9 @@ endif()
 include(functional)
 GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
     FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
-list(APPEND of_all_obj_cc ${FUNCTIONAL_GENERATED_SRCS})
+oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
+add_dependencies(of_functional_obj of_cfgobj)
+add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
 set(PYBIND11_SRCS ${CFG_PYBIND11_SRCS} ${FUNCTIONAL_PYBIND11_SRCS})
 
@@ -234,54 +281,34 @@ include_directories(${PROJECT_BINARY_DIR})
 
 if(BUILD_CUDA)
   oneflow_add_library(of_cudaobj ${of_cuda_src})
-  add_dependencies(of_cudaobj of_protoobj of_cfgobj prepare_oneflow_third_party)
+  add_dependencies(of_cudaobj of_protoobj of_cfgobj of_functional_obj)
   target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
   set(ONEFLOW_CUDA_LIBS of_cudaobj)
 
-  target_compile_options(of_cudaobj PRIVATE -Werror=return-type)
+  target_compile_options(of_cudaobj PRIVATE -Xcompiler -Werror=return-type)
+  # remove THRUST_IGNORE_CUB_VERSION_CHECK if starting using bundled cub
+  target_compile_definitions(of_cudaobj PRIVATE THRUST_IGNORE_CUB_VERSION_CHECK)
 endif()
 
 # cc obj lib
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
-add_dependencies(of_ccobj prepare_oneflow_third_party generate_functional)
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
+add_dependencies(of_ccobj of_functional_obj)
 add_dependencies(of_ccobj of_git_version)
 if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
-
-if (BUILD_SHARED_LIBS)
-  target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)
+if (USE_CLANG_TIDY)
+  add_dependencies(of_ccobj of_tidy)
 endif()
+
+target_link_libraries(of_ccobj of_protoobj of_cfgobj of_functional_obj ${ONEFLOW_CUDA_LIBS} glog_imported)
 
 target_compile_options(of_ccobj PRIVATE -Werror=return-type)
-
-if (TREAT_WARNINGS_AS_ERRORS)
-  target_compile_options(of_ccobj PRIVATE -Werror)
-
-  # TODO: remove it while fixing all deprecated call
-  target_compile_options(of_ccobj PRIVATE -Wno-error=deprecated-declarations)
-
-  # disable unused-* for different compile mode (maybe unused in cpu.cmake, but used in cuda.cmake)
-  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-const-variable)
-  target_compile_options(of_ccobj PRIVATE -Wno-error=unused-variable)
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(of_ccobj PRIVATE -Wno-error=unused-private-field)
-    target_compile_options(of_ccobj PRIVATE -Wno-error=unused-local-typedef)
-    target_compile_options(of_ccobj PRIVATE -Wno-error=unused-lambda-capture)
-    target_compile_options(of_ccobj PRIVATE -Wno-error=instantiation-after-specialization)
-  endif()
-
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
-    target_compile_options(of_ccobj PRIVATE -Wno-error=mismatched-tags)
-
-    # TODO: remove it while `oneflow/user/kernels/upsample_kernel.h:141:9: error: implicit conversion from 'double' to 'int' changes value from -0.75 to 0 [-Wliteral-conversion]` is fixed
-    target_compile_options(of_ccobj PRIVATE -Wno-error=literal-conversion)
-  endif()
-endif()
+target_treat_warnings_as_errors(of_ccobj)
+target_compile_options(of_ccobj PRIVATE -DGOOGLE_LOGGING)
 
 # py ext lib
 add_library(of_pyext_obj ${of_pyext_obj_cc})
@@ -292,23 +319,27 @@ if(BUILD_SHARED_LIBS AND APPLE)
 endif()
 add_dependencies(of_pyext_obj of_ccobj)
 target_compile_options(of_pyext_obj PRIVATE -Werror=return-type)
+target_treat_warnings_as_errors(of_pyext_obj)
 
 if(APPLE)
-  set(of_libs -Wl,-force_load ${ONEFLOW_CUDA_LIBS} of_ccobj of_protoobj of_cfgobj)
+  set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj of_functional_obj)
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive ${ONEFLOW_CUDA_LIBS} of_ccobj of_protoobj of_cfgobj -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs -Wl,--whole-archive ${ONEFLOW_CUDA_LIBS} of_ccobj of_protoobj of_cfgobj of_functional_obj -Wl,--no-whole-archive -ldl -lrt)
 elseif(WIN32)
-  set(of_libs of_ccobj of_protoobj of_cfgobj)
+  set(of_libs of_ccobj of_protoobj of_cfgobj of_functional_obj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
 endif()
 
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
-add_dependencies(oneflow_internal of_cfgobj generate_py_cfg)
+add_dependencies(oneflow_internal of_cfgobj of_functional_obj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+
+target_compile_options(oneflow_internal PRIVATE -Werror=return-type)
+target_treat_warnings_as_errors(oneflow_internal)
 
 set(gen_pip_args "")
 if (BUILD_CUDA)
@@ -331,20 +362,6 @@ add_dependencies(of_pyscript_copy of_protoobj)
 
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
-# get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-# foreach(dir ${include_dirs})
-#   message("-I'${dir}' ")
-# endforeach()
-
-# build main
-set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
-foreach(cc ${of_main_cc})
-  get_filename_component(main_name ${cc} NAME_WE)
-  oneflow_add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-  set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-endforeach()
-
 # build test
 if(BUILD_TESTING)
   if (of_all_test_cc)
@@ -353,25 +370,14 @@ if(BUILD_TESTING)
     set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     add_test(NAME oneflow_test COMMAND oneflow_testexe)
   endif()
-  if (of_separate_test_cc)
-    foreach(cc ${of_separate_test_cc})
-      get_filename_component(test_name ${cc} NAME_WE)
-      string(CONCAT test_exe_name ${test_name} exe)
-      oneflow_add_executable(${test_exe_name} ${cc})
-      target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-    endforeach()
-  endif()
 endif()
 
 # build include
-set(ONEFLOW_INCLUDE_DIR "${ONEFLOW_PYTHON_DIR}/oneflow/include")
-add_custom_target(of_include_copy
-  COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
+add_custom_target(of_include_copy)
 add_dependencies(of_include_copy oneflow_internal)
-foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
-  set(oneflow_all_include_file)
-  file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
-  copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+
+foreach(of_include_src_dir ${CFG_INCLUDE_DIR})
+  copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
 
 set(DEVICE_REG_HEADERS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/device_register_*.h")
@@ -410,4 +416,4 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 add_custom_target(oneflow_py ALL)
-add_dependencies(oneflow_py of_include_copy)
+add_dependencies(oneflow_py of_include_copy of_pyscript_copy)

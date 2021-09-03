@@ -71,7 +71,7 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
                                  bool retain_graph, bool create_graph) {
   if (create_graph) { retain_graph = true; }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensor(
+  JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensorIf(
       outputs, *gradients, retain_graph, create_graph));
   return std::make_shared<one::TensorTuple>(0);
 }
@@ -86,7 +86,7 @@ Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorT
       [](const std::shared_ptr<one::Tensor>& tensor) { return tensor->requires_grad(); }))
       << "All input tensors `.requires_grad` should be true";
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
-  return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGrad(
+  return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGradIf(
       outputs, inputs, *gradients, retain_graph, create_graph);
 }
 

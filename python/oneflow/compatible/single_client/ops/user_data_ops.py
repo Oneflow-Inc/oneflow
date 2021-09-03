@@ -686,9 +686,9 @@ def CropMirrorNormalize(
     if name is None:
         name = id_util.UniqueStr("CropMirrorNormalize_")
     op_type_name = ""
-    if input_blob.dtype is flow.tensor_buffer:
+    if input_blob.dtype == flow.tensor_buffer:
         op_type_name = "crop_mirror_normalize_from_tensorbuffer"
-    elif input_blob.dtype is flow.uint8:
+    elif input_blob.dtype == flow.uint8:
         op_type_name = "crop_mirror_normalize_from_uint8"
     else:
         print(

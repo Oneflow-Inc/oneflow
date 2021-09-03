@@ -17,7 +17,7 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.F.pad,
+    oneflow._C.pad,
     r"""
     pad(input: Tensor, pad: List[int], mode: str = "constant", value: Scalar = 0) -> Tensor
 
@@ -37,7 +37,7 @@ add_docstr(
 
         >>> pad = [2, 2, 1, 1]
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> output = flow.F.pad(input, pad, mode = "replicate")
+        >>> output = flow._C.pad(input, pad, mode = "replicate")
         >>> output.shape
         flow.Size([1, 2, 5, 7])
         >>> output
@@ -53,14 +53,12 @@ add_docstr(
                   [15., 15., 15., 16., 17., 17., 17.],
                   [15., 15., 15., 16., 17., 17., 17.]]]], dtype=oneflow.float32)
 
-    See :class:`oneflow.nn.ConstantPad2d`, :class:`ooneflow.nn.ReflectionPad2d`, and
-        :class:`ooneflow.nn.ReplicationPad2d` for concrete examples on how each of the
-        padding modes works.
+    See :class:`oneflow.nn.ConstantPad2d`, :class:`oneflow.nn.ReflectionPad2d`, and :class:`oneflow.nn.ReplicationPad2d` for concrete examples on how each of the padding modes works.
         
     """,
 )
 add_docstr(
-    oneflow.F.upsample,
+    oneflow._C.upsample,
     r"""
     upsample(x: Tensor, height_scale: Float, width_scale: Float, align_corners: Bool, interpolation: str, data_format: str = "channels_first") -> Tensor
   
@@ -75,6 +73,9 @@ add_docstr(
 
     Args:
         height_scale (float):
+            multiplier for spatial size. Has to match input size if it is a tuple.
+        
+        width_scale (float):
             multiplier for spatial size. Has to match input size if it is a tuple.
 
         align_corners (bool): if ``True``, the corner pixels of the input
@@ -106,7 +107,7 @@ add_docstr(
         >>> import oneflow as flow
 
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)  
-        >>> output = flow.F.upsample(input, height_scale=2.0, width_scale=2.0, align_corners=False, interpolation="nearest")
+        >>> output = flow._C.upsample(input, height_scale=2.0, width_scale=2.0, align_corners=False, interpolation="nearest")
     
         >>> output
         tensor([[[[1., 1., 2., 2.],

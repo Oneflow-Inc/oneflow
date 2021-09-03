@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
@@ -96,19 +97,18 @@ class ParallelDesc final {
   Maybe<int64_t> MachineId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
-  Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Optional<int64_t>* parallel_id) const;
+  Maybe<Symbol<Device>> GetTensorDevice4CurrentProcessCtx(Optional<int64_t>* parallel_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
   // this api is exported to python as Containing
   bool Bigger(const ParallelDesc& rhs) const;
   bool ContainingMachineId(int64_t machine_id) const;
 
   std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf() const { return cfg_parallel_conf_; }
-
   bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
 
  private:
   friend Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf);
-  ParallelDesc() : symbol_id_(Error::SymbolIdUninitialized()) {}
+  ParallelDesc() : symbol_id_(Error::SymbolIdUninitializedError()) {}
   ParallelDesc(int64_t symbol_id) : symbol_id_(symbol_id) {}
   void ClearUp();
   Maybe<void> SetMachineIdAndDeviceIdsByParsingDeviceName(const std::string& device_name,
@@ -136,11 +136,16 @@ class ParallelDesc final {
   bool containing_current_rank_;
 };
 
-Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
-                                                  Optional<int64_t>* parallel_id);
+Maybe<Symbol<Device>> GetTensorDevice4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc,
+                                                        Optional<int64_t>* parallel_id);
 
-std::shared_ptr<ParallelContext> GetParallelContext4CurrentProcessCtx(
+extern Maybe<Optional<int64_t>> (*GetParallelId4CurrentProcessCtx)(
     Symbol<ParallelDesc> parallel_desc);
+extern Maybe<const ParallelContext> (*GetParallelContext4CurrentProcessCtx)(
+    Symbol<ParallelDesc> parallel_desc);
+extern Maybe<Symbol<ParallelDesc>> (*ReplaceDeviceType)(Symbol<ParallelDesc>, DeviceType);
+extern Maybe<std::string> (*PlacementToString)(Symbol<ParallelDesc> placement);
+extern Maybe<Symbol<Device>> (*GetTensorDevice)(Symbol<ParallelDesc> parallel_desc);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
@@ -158,6 +163,13 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
 
 bool IsMirroredParallelContext(const ParallelContext& parallel_ctx);
 
+namespace private_details {
+
+Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc>, DeviceType);
+
+Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement);
+
+}  // namespace private_details
 }  // namespace oneflow
 
 namespace std {

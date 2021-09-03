@@ -25,7 +25,6 @@ from oneflow._oneflow_internal.oneflow.core.framework import (
 import oneflow.core.job.scope_pb2 as scope_pb2_util
 import oneflow.framework.attr_util as attr_util
 import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.placement_util as placement_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor

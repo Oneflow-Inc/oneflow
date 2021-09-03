@@ -70,8 +70,10 @@ void GpuDumpVersionInfo() {
     int nccl_version;
     ncclResult_t result = ncclGetVersion(&nccl_version);
     if (result == ncclSuccess) {
-      int nccl_version_major = nccl_version / 1000;
-      int nccl_version_minor = (nccl_version % 1000) / 100;
+      int nccl_version_major =
+          (nccl_version >= 20900) ? (nccl_version / 10000) : (nccl_version / 1000);
+      int nccl_version_minor =
+          (nccl_version >= 20900) ? (nccl_version % 10000) / 100 : (nccl_version % 1000) / 100;
       int nccl_version_patch = (nccl_version % 100);
       LOG(INFO) << "NCCL version: " << nccl_version_major << "." << nccl_version_minor << "."
                 << nccl_version_patch;

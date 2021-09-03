@@ -87,7 +87,7 @@ void CollectiveBoxingExecutorBackend::GroupRequests(
 
 class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBackend {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingExecutorBackend)
+  OF_DISALLOW_COPY_AND_MOVE(NcclCollectiveBoxingExecutorBackend);
   NcclCollectiveBoxingExecutorBackend();
   ~NcclCollectiveBoxingExecutorBackend() override;
 
@@ -135,6 +135,13 @@ class NcclCollectiveBoxingExecutorBackend : public CollectiveBoxingExecutorBacke
 NcclCollectiveBoxingExecutorBackend::NcclCollectiveBoxingExecutorBackend()
     : collective_boxing_conf_(Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf()),
       shutdown_(false) {
+  int nccl_version;
+  OF_NCCL_CHECK(ncclGetVersion(&nccl_version));
+  if (nccl_version == 21003) {
+    LOG(WARNING) << "Current nccl version is 2.10.3, in this version, ncclGroup() with mixed "
+                    "datatype/element/collective could induce crash or corruption, so we will not "
+                    "fuse any request.";
+  }
   OF_CUDA_CHECK(cudaGetDeviceCount(&num_devices_));
   callback_executor_pool_.reset(new ThreadPool(num_devices_));
   CHECK_GT(collective_boxing_conf_.nccl_num_streams(), 0);
@@ -226,9 +233,13 @@ void NcclCollectiveBoxingExecutorBackend::GroupRequests(
       return false;
     }
   };
+  int nccl_version;
+  OF_NCCL_CHECK(ncclGetVersion(&nccl_version));
   auto CanFuse = [&](const RequestDesc* lhs, const RequestDesc* rhs) -> bool {
     const bool enable_mixed_fusion = (!collective_boxing_conf_.nccl_fusion_all_reduce_use_buffer())
                                      && collective_boxing_conf_.nccl_enable_mixed_fusion();
+    // Workaround for https://github.com/NVIDIA/nccl/issues/560
+    if (nccl_version == 21003) { return false; }
     if (lhs->device_set() != rhs->device_set()) { return false; }
     if (!IsOpFusionEnabled(lhs) || !IsOpFusionEnabled(rhs)) { return false; }
     if (lhs->op_desc().op_type() != rhs->op_desc().op_type() && (!enable_mixed_fusion)) {

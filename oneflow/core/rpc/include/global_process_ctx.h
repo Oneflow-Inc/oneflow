@@ -25,6 +25,7 @@ struct GlobalProcessCtx {
   static int64_t Rank();
   static int64_t LocalRank();
   static int64_t LocalRank(int64_t rank);
+  static int64_t NodeId(int64_t process_id);
   static int64_t NodeSize();
   static int64_t ThisNodeId();
   static int64_t NumOfProcessPerNode();

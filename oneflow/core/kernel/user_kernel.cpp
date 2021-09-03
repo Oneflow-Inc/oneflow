@@ -24,9 +24,29 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_helper.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/operator/operator.h"
+
+#ifdef WITH_CUDA_GRAPHS
+
+#include "oneflow/core/device/cuda_device_context.h"
+
+#endif  // WITH_CUDA_GRAPHS
 
 namespace oneflow {
+
+namespace {
+
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns,
+                    const std::function<Blob*(const std::string& bn)>& BnInOp2Blob) {
+  for (const auto& bn : bns) {
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob && !blob->IsBodyEmpty()) { return false; }
+  }
+  return true;
+}
+
+}  // namespace
 
 using Arg2Tensor =
     HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::BlobTensorView>>;
@@ -118,8 +138,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
-    nd_sbp_signature_ =
-        new cfg::ParallelDistributionSignature(kernel_conf.op_attribute().nd_sbp_signature());
+    nd_sbp_signature_ = new cfg::NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = new cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
@@ -158,8 +177,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
     return it->second;
   }
 
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const override {
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
     const auto& bn2nd_sbp = nd_sbp_signature_->bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
@@ -185,7 +204,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const cfg::SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
-  const cfg::ParallelDistributionSignature* nd_sbp_signature_;
+  const cfg::NdSbpSignature* nd_sbp_signature_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
@@ -287,8 +306,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
     CHECK(it != bn2sbp.end());
     return it->second;
   }
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const override {
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
     const auto& bn2nd_sbp = nd_sbp_signature_.bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
@@ -347,7 +366,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
   cfg::SbpSignature sbp_signature_;
-  cfg::ParallelDistributionSignature nd_sbp_signature_;
+  cfg::NdSbpSignature nd_sbp_signature_;
   ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;
@@ -475,7 +494,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
                                     const JobDesc& job_desc)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
-        base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
+        base_ctx_(kernel_conf, job_desc) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (const auto& it : arg_map) {
         const std::string& arg_name = it.first;
@@ -504,17 +523,31 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
-  void UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  bool UpdateTensorWithCorrBlob(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+    bool updated = false;
     for (auto& pair : arg2bn_tensor_pair_) {
       std::unique_ptr<user_op::BlobTensorView>* arg_tensor_ptr = &pair.second.tensor;
       Blob* blob = BnInOp2Blob(pair.second.bn);
-      if (blob == nullptr) { continue; }
-      if (*arg_tensor_ptr) {
-        arg_tensor_ptr->get()->Reset(blob);
+      if (blob == nullptr) {
+        if (*arg_tensor_ptr) {
+          arg_tensor_ptr->reset(nullptr);
+          updated = true;
+        }
       } else {
-        arg_tensor_ptr->reset(new user_op::BlobTensorView(blob));
+        if (*arg_tensor_ptr) {
+          if (arg_tensor_ptr->get()->blob() != blob) {
+            arg_tensor_ptr->get()->Reset(blob);
+            updated = true;
+          } else {
+            if (blob->blob_desc().is_dynamic()) { updated = true; }
+          }
+        } else {
+          arg_tensor_ptr->reset(new user_op::BlobTensorView(blob));
+          updated = true;
+        }
       }
     }
+    return updated;
   }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -567,6 +600,8 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   UserKernelBaseContext base_ctx_;
 };
 
+UserKernel::~UserKernel() = default;
+
 void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
   ctx_.reset(new UserKernelComputeContext(device_ctx, kernel_conf(), job_desc()));
   infer_ctx_.reset(new UserKernelInferContext(device_ctx, kernel_conf(), job_desc()));
@@ -581,6 +616,24 @@ void UserKernel::InitUserKernel(DeviceCtx* device_ctx) {
     KernelCreateContext create_ctx(kernel_conf());
     kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
   }
+
+#ifdef WITH_CUDA_GRAPHS
+  if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
+    CudaDeviceCtx* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(device_ctx);
+    const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
+    if (cuda_device_ctx != nullptr) {
+      if (cuda_graph_support != nullptr && cuda_graph_support->IsCudaGraphSupported(&init_ctx)) {
+        cuda_graph_ctx_.reset(new CudaGraphContext(cuda_device_ctx->cuda_stream()));
+        LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
+                  << op_conf().user_conf().op_type_name() << ")";
+      } else {
+        LOG(INFO) << "CUDA Graphs not supported: " << op_conf().name() << " ("
+                  << op_conf().user_conf().op_type_name() << ")";
+      }
+    }
+  }
+#endif  // WITH_CUDA_GRAPHS
 }
 
 std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(DeviceCtx* device_ctx) {
@@ -594,23 +647,54 @@ const std::shared_ptr<user_op::OpKernelState>& UserKernel::GetOpKernelState() co
 
 void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                    user_op::OpKernelState* opkernel_state) const {
-  ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+  const bool updated = ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+
+#ifdef WITH_CUDA_GRAPHS
+  bool capturing = false;
+  if (cuda_graph_ctx_) {
+    if (!cuda_graph_ctx_->IsCapturing()) {
+      if (cuda_graph_ctx_->IsCaptured() && (!updated)) {
+        cuda_graph_ctx_->Launch();
+        return;
+      }
+      capturing = true;
+      cuda_graph_ctx_->BeginCapture();
+    }
+  }
+#endif  // WITH_CUDA_GRAPHS
+
   kernel_->Compute(ctx_.get(), opkernel_state);
+
+#ifdef WITH_CUDA_GRAPHS
+  if (cuda_graph_ctx_ && capturing) {
+    cuda_graph_ctx_->EndCapture();
+    cuda_graph_ctx_->Launch();
+  }
+#endif  // WITH_CUDA_GRAPHS
 }
 
-void UserKernel::VirtualKernelInit(DeviceCtx* device_ctx) {
-  InitUserKernel(device_ctx);
+bool UserKernel::IsCudaGraphSupported() const {
+#ifdef WITH_CUDA_GRAPHS
+  return cuda_graph_ctx_.get() != nullptr;
+#else
+  return false;
+#endif  // WITH_CUDA_GRAPHS
+}
+
+void UserKernel::VirtualKernelInit(KernelContext* ctx) {
+  job_desc_ = ctx->job_desc();
+  InitUserKernel(ctx->device_ctx());
   CHECK(opkernel_state_.get() == nullptr);
-  opkernel_state_ = CreateOpKernelState(device_ctx);
+  opkernel_state_ = CreateOpKernelState(ctx->device_ctx());
 }
 
-void UserKernel::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void UserKernel::ForwardDataContent(const KernelContext* ctx) const {
+  const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   ForwardUserKernel(BnInOp2Blob, opkernel_state_.get());
 }
 
-void UserKernel::ForwardShape(const KernelCtx& ctx,
-                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void UserKernel::ForwardShape(const KernelContext* ctx) const {
+  const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   infer_ctx_->UpdateArg2Tensor(BnInOp2Blob);
   infer_cache_->UpdateCacheKey(infer_ctx_.get());
   if (!infer_cache_->IsCacheHit()) {
@@ -647,7 +731,8 @@ NEW_REGISTER_KERNEL(OperatorConf::kUserConf, UserKernel).SetIsMatchedPred([](con
   return true;
 });
 
-EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf) {
+EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf)
+    : job_desc_(job_desc) {
   InitBase(job_desc, kernel_conf);
   InitOpKernel(kernel_conf);
 }
@@ -655,15 +740,15 @@ EagerKernel::EagerKernel(const JobDesc* job_desc, const KernelConf& kernel_conf)
 void EagerKernel::InitOpKernel(const KernelConf& kernel_conf) {
   const std::string& op_type_name = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
   auto kernel_reg_val = CHECK_JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(
-      op_type_name, UserKernelRegContext(kernel_conf, job_desc())));
+      op_type_name, UserKernelRegContext(kernel_conf, *job_desc_)));
   CHECK_NOTNULL(kernel_reg_val);
   KernelCreateContext create_ctx(kernel_conf);
   kernel_.reset(kernel_reg_val->create_fn(&create_ctx));
 }
 
 void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (!kernel_conf().need_do_shape()) { return; }
-  UserKernelInferContext infer_ctx(nullptr, kernel_conf(), job_desc());
+  if (kernel_conf().all_blobs_are_static()) { return; }
+  UserKernelInferContext infer_ctx(nullptr, kernel_conf(), *job_desc_);
   infer_ctx.UpdateArg2Tensor(BnInOp2Blob);
   auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.MutOpInferContext());
   if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
@@ -677,8 +762,8 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
-    CHECK_NOTNULL(&job_desc());
-    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), job_desc());
+    CHECK_NOTNULL(job_desc_);
+    UserKernelInitContext init_ctx(device_ctx, kernel_conf(), *job_desc_);
     new_opkernel_state = kernel_->CreateOpKernelState(&init_ctx);
   }
 
@@ -688,7 +773,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   }
 
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
-  UserKernelComputeContext compute_ctx(device_ctx, kernel_conf(), job_desc());
+  UserKernelComputeContext compute_ctx(device_ctx, kernel_conf(), *job_desc_);
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
   kernel_->Compute(&compute_ctx, new_opkernel_state.get());
   return new_opkernel_state;

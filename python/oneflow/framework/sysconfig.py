@@ -73,3 +73,7 @@ def has_rpc_backend_local() -> bool:
 
 def cmake_build_type() -> str:
     return oneflow._oneflow_internal.flags.cmake_build_type()
+
+
+def with_rdma() -> bool:
+    return oneflow._oneflow_internal.flags.with_rdma()

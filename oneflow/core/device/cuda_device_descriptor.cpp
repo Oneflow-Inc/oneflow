@@ -19,6 +19,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include <cuda_runtime.h>
+#include <cuda.h>
 #include <json.hpp>
 
 namespace oneflow {
@@ -92,7 +93,8 @@ std::shared_ptr<const CudaDeviceDescriptor> CudaDeviceDescriptor::Query(int32_t 
   desc->impl_->memory_clock_rate_khz = prop.memoryClockRate;
   desc->impl_->memory_bus_width_bit = prop.memoryBusWidth;
   char pci_bus_id_buf[sizeof("00000000:00:00.0")];
-  if (cudaDeviceGetPCIBusId(pci_bus_id_buf, sizeof(pci_bus_id_buf), ordinal) == cudaSuccess) {
+  if (CUDA_VERSION >= 11000
+      && cudaDeviceGetPCIBusId(pci_bus_id_buf, sizeof(pci_bus_id_buf), ordinal) == cudaSuccess) {
     for (int i = 0; i < sizeof(pci_bus_id_buf) - 1; ++i) {
       pci_bus_id_buf[i] = static_cast<char>(std::tolower(pci_bus_id_buf[i]));
     }

@@ -46,8 +46,13 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Actor : ("
                                       + std::to_string(thrd_id) + ")");
     OF_CUDA_CHECK(cudaSetDevice(dev_id));
-
     ctx_.g_cuda_stream.reset(new CudaStreamHandle(&cb_event_chan_));
+    // TODO(liujuncheng): force creation
+    ctx_.g_cuda_stream->cuda_stream();
+    ctx_.g_cuda_stream->cublas_pmh_handle();
+    ctx_.g_cuda_stream->cublas_pmd_handle();
+    ctx_.g_cuda_stream->cublas_tensor_op_math_handle();
+    ctx_.g_cuda_stream->cudnn_handle();
     ctx_.cb_event_chan = &cb_event_chan_;
     PollMsgChannel(ctx_);
   });

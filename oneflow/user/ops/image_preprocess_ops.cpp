@@ -177,15 +177,13 @@ REGISTER_NO_GRAD_CPU_ONLY_USER_OP("coin_flip")
       }
       return Maybe<void>::Ok();
     })
-    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
-                                        -> Maybe<void> {
+    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
       const Shape& hierarchy = ctx->parallel_hierarchy();
-      cfg::ParallelDistribution* output_dist = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      cfg::NdSbp* output_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
       // the input may be produced by tick which should be broadcast parallel dist
-      std::vector<cfg::ParallelDistribution*> inputs_dist;
+      std::vector<cfg::NdSbp*> inputs_dist;
       for (const auto& arg_pair : ctx->inputs()) {
-        inputs_dist.emplace_back(
-            ctx->ParallelDistribution4ArgNameAndIndex(arg_pair.first, arg_pair.second));
+        inputs_dist.emplace_back(ctx->NdSbp4ArgNameAndIndex(arg_pair.first, arg_pair.second));
       }
       const auto& dist_conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
       if (dist_conf.size() == 0) {

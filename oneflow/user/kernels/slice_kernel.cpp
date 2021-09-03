@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -176,7 +177,7 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
 }  // namespace
 
 template<DeviceType device_type, typename T>
-class SliceKernel final : public user_op::OpKernel {
+class SliceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SliceKernel() = default;
   ~SliceKernel() = default;
@@ -193,7 +194,7 @@ class SliceKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, typename T>
-class SliceGradKernel final : public user_op::OpKernel {
+class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   SliceGradKernel() = default;
   ~SliceGradKernel() = default;

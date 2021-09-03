@@ -31,11 +31,11 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->parallel_num(), &builder);
 }
 
-Maybe<void> InferParallelDistributionFn(user_op::InferParallelDistributionFnContext* ctx) {
+Maybe<void> InferNdSbpFn(user_op::InferNdSbpFnContext* ctx) {
   const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& shape = ctx->user_op_conf().attr<Shape>("shape");
   const auto& out_shape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
-  return ReshapeUserOpUtil::InferParallelDistribution(ctx, in_shape, *out_shape);
+  return ReshapeUserOpUtil::InferNdSbp(ctx, in_shape, *out_shape);
 }
 
 Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
@@ -65,7 +65,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
   *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
   *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
-  const auto& nd_sbp = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   *out_shape = *JUST(GetPhysicalShape(shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
   return Maybe<void>::Ok();
@@ -83,7 +83,7 @@ REGISTER_USER_OP("reshape")
     .SetLogicalTensorDescInferFn(LogicalTensorDescInferFn)
     .SetPhysicalTensorDescInferFn(TensorDescInferFn)
     .SetGetSbpFn(GetSbpFn)
-    .SetParallelDistributionInferFn(InferParallelDistributionFn)
+    .SetNdSbpInferFn(InferNdSbpFn)
     .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

@@ -44,18 +44,6 @@ int64_t IDMgr::ThrdId4ActorId(int64_t actor_id) const {
   return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(actor_id).stream_id());
 }
 
-int64_t IDMgr::GlobalWorkStreamId4TaskId(int64_t task_id) const {
-  return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(task_id).stream_id());
-}
-
-int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
-  return GlobalWorkStreamId4TaskId(actor_id);
-}
-
-int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
-  return SerializeStreamIdToInt64(DeserializeTaskIdFromInt64(task_id).stream_id());
-}
-
 int64_t IDMgr::PickCpuThrdIdEvenly(int64_t machine_id) {
   DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kCPU,
                      DeviceId::kCPUDeviceIndex};

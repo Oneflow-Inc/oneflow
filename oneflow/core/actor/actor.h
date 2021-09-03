@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_ACTOR_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_ACTOR_H_
 
+#include "oneflow/core/actor/actor_base.h"
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
@@ -29,21 +30,21 @@ limitations under the License.
 
 namespace oneflow {
 
-class Actor {
+class Actor : public ActorBase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
-  virtual ~Actor() = default;
+  virtual ~Actor();
 
   const JobDesc& job_desc() const { return *job_desc_; }
 
-  void Init(const JobDesc* job_desc, const TaskProto&, const ThreadCtx&);
+  void Init(const JobDesc* job_desc, const TaskProto&, const ThreadCtx&) override;
 
   // 1: success, and actor finish
   // 0: success, and actor not finish
-  int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
+  int ProcessMsg(const ActorMsg& msg) override { return (this->*msg_handler_)(msg); }
 
   int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
-  int64_t thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
+  int64_t thrd_id() const { return thrd_id_; }
   int64_t actor_id() const { return actor_id_; }
   int64_t job_id() const { return job_id_; }
 
@@ -57,6 +58,7 @@ class Actor {
   struct ExecKernel {
     std::unique_ptr<const Kernel> kernel;
     HashMap<std::string, BlobInfo> bn_in_op2blob_info;
+    std::unique_ptr<KernelContext> kernel_ctx;
   };
   using MsgHandler = int (Actor::*)(const ActorMsg&);
   enum class RegstNameType { kNaive = 0, kCustomized };
@@ -72,7 +74,6 @@ class Actor {
   const std::vector<int64_t>& Name2RegstDescIds(const std::string& name) const;
   virtual void InitDeviceCtx(const ThreadCtx&);
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
-  KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
   void ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)>) const;
 
@@ -97,8 +98,8 @@ class Actor {
 
   // Async Do on device_ctx_
   void AsyncDo(std::function<void()> func) { device_ctx_->AddCallBack(func); }
-  void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
-  void AsyncLaunchKernel(const KernelCtx&);
+  void AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4RegstDescId);
+  void AsyncLaunchKernel();
 
   // Util For Derived Actor to Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
@@ -195,7 +196,7 @@ class Actor {
 
   const JobDesc* job_desc_;
   int64_t actor_id_;
-  int64_t global_work_stream_id_;
+  int64_t thrd_id_;
   int64_t job_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
@@ -227,10 +228,6 @@ class Actor {
   bool is_kernel_launch_synchronized_;
   std::vector<int64_t> tmp_regst_desc_id_vec_;
 };
-
-std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
-
-#define REGISTER_ACTOR(task_type, ActorType) REGISTER_CLASS(int32_t, task_type, Actor, ActorType)
 
 }  // namespace oneflow
 

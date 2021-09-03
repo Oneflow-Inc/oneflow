@@ -66,8 +66,8 @@ def _test_clip_grad_norm_impl(test_case, shape, device, max_norm, norm_type):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestAcosh(flow.unittest.TestCase):
-    def test_acosh(test_case):
+class TestClipGrad(flow.unittest.TestCase):
+    def test_clip_grad(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]

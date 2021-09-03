@@ -236,7 +236,12 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
             .op_conf();
     if (!op_conf.has_variable_conf()) { return false; }
     const std::string& var_name = op_conf.name();
-    if (variable_op_names.find(var_name) == variable_op_names.end()) { return false; }
+    if (variable_op_names.find(var_name) == variable_op_names.end()) {
+      LOG(WARNING) << " Oh no! Cannot find variable_op_name: " << var_name
+                   << " in nn.Graph Compiler bind EagerTensor with VariableOp. "
+                   << " \n But each variable need bind with eager tensor for init.";
+      return false;
+    }
     *name = var_name;
     return true;
   };
@@ -866,6 +871,36 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     CHECK_GT(collected, 0);
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
+  }
+}
+
+void PlanUtil::GenRegisterHint(Plan* plan) {
+  HashSet<int64_t> multi_regst_regst_desc_ids;
+  for (const TaskProto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.register_num() != 1) {
+        multi_regst_regst_desc_ids.emplace(pair.second.regst_desc_id());
+      }
+    }
+  }
+  for (TaskProto& task : *(plan->mutable_task())) {
+    bool all_register_num_eq_one = true;
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.register_num() != 1) {
+        all_register_num_eq_one = false;
+        break;
+      }
+    }
+    for (const auto& pair : task.consumed_regst_desc_id()) {
+      if (!all_register_num_eq_one) { break; }
+      for (auto regst_desc_id : pair.second.regst_desc_id()) {
+        if (multi_regst_regst_desc_ids.count(regst_desc_id) > 0) {
+          all_register_num_eq_one = false;
+          break;
+        }
+      }
+    }
+    task.set_all_register_num_eq_one_hint(all_register_num_eq_one);
   }
 }
 

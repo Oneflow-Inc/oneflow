@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_SESSION_SESSION_API_H_
 
 #include "oneflow/api/python/session/session.h"
+#include "oneflow/core/framework/nn_graph.h"
 
 inline bool IsSessionInited() { return oneflow::IsSessionInited().GetOrThrow(); }
 
@@ -40,6 +41,11 @@ inline void CreateMultiClientSessionContext() {
 
 inline void InitMultiClientSessionContext(const std::string& config_proto_str) {
   return oneflow::InitMultiClientSessionContext(config_proto_str).GetOrThrow();
+}
+
+inline void MultiClientSessionContextAddCGraph(
+    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+  return oneflow::MultiClientSessionContextAddCGraph(c_graph_ptr).GetOrThrow();
 }
 
 inline void TryDestroyMultiClientSessionContext() {

@@ -72,7 +72,7 @@ void NcclInitCollectiveNode(CollectiveBoxingGenericTaskNode* node,
   auto* stream_index_generator = dynamic_cast<CudaStreamIndexGenerator*>(
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
   CHECK_NOTNULL(stream_index_generator);
-  auto stream_index = stream_index_generator->GenerateNcclStreamIndex();
+  auto stream_index = stream_index_generator->GenerateNamedStreamIndex("NCCL");
   const int64_t thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
   node->Init(machine_id, thrd_id, lbi, op_conf);
 }

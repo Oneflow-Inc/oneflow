@@ -56,10 +56,10 @@ def masked_fill_op(input, mask, value):
 
     """
 
-    in_shape = tuple(input.shape)
-    value_like_x = flow.Tensor(*in_shape, device=input.device)
-    value_like_x.fill_(value)
-    return flow.F.where(mask, value_like_x, input)
+    orig_type = input.dtype
+    return flow._C.where(mask, float(value), input.to(dtype=flow.float64)).to(
+        dtype=orig_type
+    )
 
 
 if __name__ == "__main__":

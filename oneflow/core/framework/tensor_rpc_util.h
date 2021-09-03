@@ -19,41 +19,62 @@ limitations under the License.
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/decorator.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
-struct FlatTensorConsistency;
+namespace private_details {
 
-class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
- public:
-  CheckConsistencyAsyncTransportCtx(
-      const TransportToken& transport_token, Symbol<one::ConsistentTensorMeta> tensor_meta,
-      const Optional<Symbol<cfg::ParallelDistribution>>& consumer_nd_sbp_constraint,
-      const TransportToken& tensor_transport_token)
-      : AsyncTransportCtx(transport_token),
-        tensor_meta_(tensor_meta),
-        consumer_nd_sbp_constraint_(consumer_nd_sbp_constraint),
-        tensor_transport_token_(tensor_transport_token) {}
+class CheckConsistencyAsyncTransportCtx;
 
-  ~CheckConsistencyAsyncTransportCtx() override;
-
-  Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                           std::function<void()>* Callback) override;
-
-  Maybe<void> PrepareRecvBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                           std::function<void()>* Callback) override;
-
-  Maybe<void> Check() const;
-
- private:
-  Symbol<one::ConsistentTensorMeta> tensor_meta_;
-  Optional<Symbol<cfg::ParallelDistribution>> consumer_nd_sbp_constraint_;
-  TransportToken tensor_transport_token_;
-  std::shared_ptr<FlatTensorConsistency> flat_tensor_consistency_;
-};
+int64_t* MutThreadLocalTensorMetaCheckDepth();
 
 Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
     const one::Tensor& tensor);
+
+Maybe<void> BuzyWaitAndCheck(std::shared_ptr<CheckConsistencyAsyncTransportCtx>& ctx);
+
+Maybe<void> RunCallback(const std::shared_ptr<one::Tensor>& tensor,
+                        const std::function<Maybe<void>()>& Callback);
+
+}  // namespace private_details
+
+inline bool IsConsistentTensorMetaCheckDisabled() {
+  return *private_details::MutThreadLocalTensorMetaCheckDepth() > 1;
+}
+
+template<typename... Args>
+struct CheckConsistentTensorMeta;
+
+template<typename RetT, typename... Args>
+struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args...> {
+  static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
+  template<RetT (*func)(const std::shared_ptr<one::Tensor>&, Args...)>
+  static RetT Call(const std::shared_ptr<one::Tensor>& tensor, Args... args) {
+    std::shared_ptr<private_details::CheckConsistencyAsyncTransportCtx> ctx;
+    int64_t* depth = private_details::MutThreadLocalTensorMetaCheckDepth();
+    if (*depth == 0) { ctx = JUST(private_details::LaunchTensorMetaConsistencyCheck(*tensor)); }
+    ++*depth;
+    RetT ret = func(tensor, args...);
+    --*depth;
+    // Always synchronize consistent tensor meta even if `func` failed.
+    if (*depth == 0) { JUST(private_details::BuzyWaitAndCheck(ctx)); }
+    return ret;
+  }
+};
+
+struct DisableCheckConsistentTensorMetaScope final {
+  DisableCheckConsistentTensorMetaScope() {
+    ++*private_details::MutThreadLocalTensorMetaCheckDepth();
+  }
+  ~DisableCheckConsistentTensorMetaScope() {
+    --*private_details::MutThreadLocalTensorMetaCheckDepth();
+  }
+};
+
+static constexpr auto* WithConsistencyChecked =
+    DECORATE(&private_details::RunCallback, CheckConsistentTensorMeta);
 
 }  // namespace oneflow
 

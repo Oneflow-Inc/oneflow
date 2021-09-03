@@ -340,11 +340,6 @@ void TaskNode::UpdateTaskId() {
   task_id_ = SerializeTaskIdToInt64(task_id);
 }
 
-int64_t TaskNode::GlobalWorkStreamId() const {
-  CHECK_NE(task_id_, -1);
-  return Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id_);
-}
-
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {
   if (consumed_regsts_.find(name) != consumed_regsts_.end()) {
     for (auto& regst : consumed_regsts_[name]) { regst->DeleteConsumer(this); }

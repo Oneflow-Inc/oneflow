@@ -146,13 +146,13 @@ class CrossEntropyLoss(Module):
         >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
         >>> out = flow.nn.CrossEntropyLoss(reduction="none")(input, target)
         >>> out
-        tensor([0.802 , 1.1167, 0.3583], dtype=oneflow.float32)
+        tensor([0.8020, 1.1167, 0.3583], dtype=oneflow.float32)
         >>> out_sum = flow.nn.CrossEntropyLoss(reduction="sum")(input, target)
         >>> out_sum
         tensor(2.2769, dtype=oneflow.float32)
         >>> out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
         >>> out_mean
-        tensor(0.759, dtype=oneflow.float32)
+        tensor(0.7590, dtype=oneflow.float32)
 
     """
 
@@ -180,8 +180,8 @@ class CrossEntropyLoss(Module):
         input_shape_len = len(input.shape)
         if input_shape_len == 3:
             (b, c, h) = (input.shape[0], input.shape[1], input.shape[2])
-            input = flow.F.transpose(input, perm=(0, 2, 1))
-            input = input.reshape(shape=[-1, input.shape[2]])
+            input = flow._C.transpose(input, perm=(0, 2, 1))
+            input = flow.reshape(input, shape=[-1, input.shape[2]])
             target = target.flatten()
         elif input_shape_len == 4:
             (b, c, h, w) = (
@@ -190,12 +190,12 @@ class CrossEntropyLoss(Module):
                 input.shape[2],
                 input.shape[3],
             )
-            input = flow.F.transpose(input, perm=(0, 2, 3, 1))
-            input = input.reshape(shape=[-1, input.shape[3]])
+            input = flow._C.transpose(input, perm=(0, 2, 3, 1))
+            input = flow.reshape(input, shape=[-1, input.shape[3]])
             target = target.flatten()
         elif input_shape_len >= 5:
             raise NotImplemented
-        out = flow.F.sparse_softmax_cross_entropy(
+        out = flow._C.sparse_softmax_cross_entropy(
             input, target, depth=input.shape[len(input.shape) - 1]
         )
         if self.ignore_index is not None:
@@ -268,7 +268,7 @@ class BCELoss(Module):
         >>> out = m(sigmoid_input, target)
         >>> out
         tensor([[2.9266, 1.1963, 1.1087],
-                [0.8064, 2.075 , 4.2539]], dtype=oneflow.float32)
+                [0.8064, 2.0750, 4.2539]], dtype=oneflow.float32)
         >>> m_sum = flow.nn.BCELoss(weight, reduction="sum")
         >>> out = m_sum(sigmoid_input, target)
         >>> out
@@ -409,9 +409,9 @@ class NLLLoss(Module):
         self.reduction = reduction
 
     def nllloss_1d(self, input, target):
-        target = flow.F.reshape(target, shape=(target.shape[0], 1))
-        res = flow.F.dim_gather(input, target, dim=1)
-        res = flow.F.squeeze(res, dim=[1])
+        target = flow._C.reshape(target, shape=(target.shape[0], 1))
+        res = flow._C.dim_gather(input, target, dim=1)
+        res = flow._C.squeeze(res, dim=[1])
         return res
 
     def forward(self, input, target):
@@ -422,11 +422,11 @@ class NLLLoss(Module):
             res = self.nllloss_1d(input, target)
         elif len(input.shape) == 3:
             (b, c, h) = (input.shape[0], input.shape[1], input.shape[2])
-            input = flow.F.transpose(input, perm=(0, 2, 1))
-            input = input.reshape(shape=[-1, input.shape[2]])
+            input = flow._C.transpose(input, perm=(0, 2, 1))
+            input = flow.reshape(input, shape=[-1, input.shape[2]])
             target = target.flatten()
             res = self.nllloss_1d(input, target)
-            res = res.reshape((b, h))
+            res = res.reshape(b, h)
         elif len(input.shape) == 4:
             (b, c, h, w) = (
                 input.shape[0],
@@ -434,11 +434,11 @@ class NLLLoss(Module):
                 input.shape[2],
                 input.shape[3],
             )
-            input = flow.F.transpose(input, perm=(0, 2, 3, 1))
-            input = input.reshape(shape=[-1, input.shape[3]])
+            input = flow._C.transpose(input, perm=(0, 2, 3, 1))
+            input = input.reshape(-1, input.shape[3])
             target = target.flatten()
             res = self.nllloss_1d(input, target)
-            res = res.reshape((b, h, w))
+            res = res.reshape(b, h, w)
         else:
             raise NotImplemented
         if self.ignore_index is not None:
@@ -447,7 +447,7 @@ class NLLLoss(Module):
             ones = flow.ones(
                 condition.shape, dtype=condition.dtype, device=condition.device
             )
-            condition = ones.sub(condition).reshape(tuple(res.shape))
+            condition = flow.reshape(ones.sub(condition), tuple(res.shape))
             res = flow.where(condition, res, zeros)
             if self.reduction == "mean":
                 res = res.sum()
@@ -536,7 +536,7 @@ class KLDivLoss(Module):
         >>> m = flow.nn.KLDivLoss(reduction="none", log_target=False)
         >>> out = m(input, target)
         >>> out
-        tensor([ 1.3514,  0.    , -0.0836], dtype=oneflow.float32)
+        tensor([ 1.3514,  0.0000, -0.0836], dtype=oneflow.float32)
         >>> m = flow.nn.KLDivLoss(reduction="mean", log_target=False)
         >>> out = m(input, target)
         >>> out
@@ -714,7 +714,7 @@ class MarginRankingLoss(Module):
         >>> m = flow.nn.MarginRankingLoss(margin = 0.3, reduction="sum")
         >>> out = m(x1, x2, target)
         >>> out
-        tensor(8.2, dtype=oneflow.float32)
+        tensor(8.2000, dtype=oneflow.float32)
 
         >>> m = flow.nn.MarginRankingLoss(margin = 10, reduction="mean")
         >>> out = m(x1, x2, target)
@@ -931,8 +931,8 @@ class BCEWithLogitsLoss(Module):
 
     Args:
         weight (Tensor, optional): The manual rescaling weight to the loss. Default: ``None``
-        size_average (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
-        reduce (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
+        size_average (bool, optional): Deprecated (see :attr:`reduction`). Default: ``True``
+        reduce (bool, optional): Deprecated (see :attr:`reduction`). Default: ``True``
         reduction (str, optional): The reduce type, it can be one of ``"none"``, ``"mean"``, ``"sum"``.
             ``'none'``: no reduction will be applied, ``'mean'``: the sum of the output will be divided
             by the number of elements in the output, ``'sum'``: the output will be summed. Default: ``"mean"``
@@ -958,8 +958,8 @@ class BCEWithLogitsLoss(Module):
         >>> out = m(input, target)
         >>> out
         tensor([[2.9266, 1.5552, 1.1087],
-                [0.9676, 2.075 , 5.9554],
-                [0.9676, 2.075 , 5.9554]], dtype=oneflow.float32)
+                [0.9676, 2.0750, 5.9554],
+                [0.9676, 2.0750, 5.9554]], dtype=oneflow.float32)
 
         >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="mean")
         >>> out = m(input, target)
@@ -1005,7 +1005,7 @@ class BCEWithLogitsLoss(Module):
         _neg_input = flow.negative(input)
         _max_val = flow.clip(_neg_input, 0)
         _neg_max_val = flow.negative(_max_val)
-        if self.pos_weight:
+        if self.pos_weight is not None:
             _log_weight = (self.pos_weight - 1) * target + 1
             _loss = (1 - target) * input + _log_weight * (
                 flow.log(flow.exp(_neg_max_val) + flow.exp(_neg_input - _max_val))
@@ -1114,17 +1114,17 @@ class SmoothL1Loss(Module):
         >>> m = flow.nn.SmoothL1Loss(reduction="none")
         >>> out = m(x, y)
         >>> out
-        tensor([0.02 , 0.125, 1.7  , 0.005, 0.18 ], dtype=oneflow.float32)
+        tensor([0.0200, 0.1250, 1.7000, 0.0050, 0.1800], dtype=oneflow.float32)
 
         >>> m = flow.nn.SmoothL1Loss(reduction="mean")
         >>> out = m(x, y)
         >>> out
-        tensor(0.406, dtype=oneflow.float32)
+        tensor(0.4060, dtype=oneflow.float32)
 
         >>> m = flow.nn.SmoothL1Loss(reduction="sum")
         >>> out = m(x, y)
         >>> out
-        tensor(2.03, dtype=oneflow.float32)
+        tensor(2.0300, dtype=oneflow.float32)
     """
 
     def __init__(
@@ -1160,6 +1160,55 @@ class SmoothL1Loss(Module):
             return flow.sum(loss)
         elif self.reduction == "mean":
             return flow.mean(loss)
+
+
+class CombinedMarginLoss(Module):
+    """The operation implements "margin_softmax" in InsightFace:
+    https://github.com/deepinsight/insightface/blob/master/recognition/arcface_mxnet/train.py
+    The implementation of margin_softmax in InsightFace is composed of multiple operators.
+    We fuse them for speed up.
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+        label (oneflow.Tensor): label with integer data type
+        m1 (float): loss m1 parameter
+        m2 (float): loss m2 parameter
+        m3 (float): loss m3 parameter
+
+    Returns:
+        oneflow.Tensor: A Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> np_x = np.array([[-0.7027179, 0.0230609], [-0.02721931, -0.16056311], [-0.4565852, -0.64471215]])
+        >>> np_label = np.array([0, 1, 1])
+        >>> x = flow.Tensor(np_x, dtype=flow.float32)
+        >>> label = flow.Tensor(np_label, dtype=flow.int32)
+        >>> loss_func = flow.nn.CombinedMarginLoss(0.3, 0.5, 0.4)
+        >>> out = loss_func(x, label)
+        >>> out
+        tensor([[-0.0423,  0.0231],
+                [-0.0272,  0.1237],
+                [-0.4566, -0.0204]], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, m1: float = 1.0, m2: float = 0.0, m3: float = 0.0) -> None:
+        super().__init__()
+        self.m1 = m1
+        self.m2 = m2
+        self.m3 = m3
+
+    def forward(self, x, label):
+        depth = x.shape[1]
+        (y, _) = flow._C.combined_margin_loss(
+            x, label, m1=self.m1, m2=self.m2, m3=self.m3, depth=depth
+        )
+        return y
 
 
 if __name__ == "__main__":

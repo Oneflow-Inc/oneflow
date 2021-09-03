@@ -13,11 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNEL_RANDOM_MASK_GENERATOR_H_
-#define ONEFLOW_USER_KERNEL_RANDOM_MASK_GENERATOR_H_
+#ifndef ONEFLOW_USER_KERNELS_RANDOM_MASK_LIKE_KERNEL_H_
+#define ONEFLOW_USER_KERNELS_RANDOM_MASK_LIKE_KERNEL_H_
 
 #include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -35,7 +36,7 @@ class RandomMaskLikeKernelState : public user_op::OpKernelState {
 namespace {
 
 template<DeviceType device_type>
-class RandomMaskLikeKernel final : public user_op::OpKernel {
+class RandomMaskLikeKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   RandomMaskLikeKernel() = default;
   ~RandomMaskLikeKernel() = default;
@@ -44,6 +45,8 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    // TODO(liujuncheng): force creation
+    RandomMaskGenerator<device_type> gen(generator);
     return std::make_shared<RandomMaskLikeKernelState>(generator);
   }
 
@@ -66,4 +69,4 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
 }  // namespace
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNEL_RANDOM_MASK_GENERATOR_H_
+#endif  // ONEFLOW_USER_KERNELS_RANDOM_MASK_LIKE_KERNEL_H_

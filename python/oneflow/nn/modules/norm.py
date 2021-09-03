@@ -241,18 +241,18 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
         tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)
-        >>> b = a.reshape((3, 3))
+        >>> b = a.reshape(3, 3)
         >>> b
         tensor([[-4., -3., -2.],
                 [-1.,  0.,  1.],
                 [ 2.,  3.,  4.]], dtype=oneflow.float32)
 
         >>> LA.norm(a)
-        tensor(7.746, dtype=oneflow.float32)
+        tensor(7.7460, dtype=oneflow.float32)
         >>> LA.norm(b)
-        tensor(7.746, dtype=oneflow.float32)
+        tensor(7.7460, dtype=oneflow.float32)
         >>> LA.norm(b, 'fro')
-        tensor(7.746, dtype=oneflow.float32)
+        tensor(7.7460, dtype=oneflow.float32)
         >>> LA.norm(a, float('inf'))
         tensor(4., dtype=oneflow.float32)
         >>> LA.norm(b, float('inf'))
@@ -271,11 +271,11 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         >>> LA.norm(b, -1)
         tensor(6., dtype=oneflow.float32)
         >>> LA.norm(a, 2)
-        tensor(7.746, dtype=oneflow.float32)
+        tensor(7.7460, dtype=oneflow.float32)
         >>> LA.norm(a, -2)
         tensor(0., dtype=oneflow.float32)
         >>> LA.norm(a, 3)
-        tensor(5.848, dtype=oneflow.float32)
+        tensor(5.8480, dtype=oneflow.float32)
         >>> LA.norm(a, -3)
         tensor(0., dtype=oneflow.float32)
 
@@ -284,7 +284,7 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
         >>> c = flow.tensor([[1., 2., 3.],
         ...                   [-1, 1, 4]])
         >>> LA.norm(c, dim=0)
-        tensor([1.4142, 2.2361, 5.    ], dtype=oneflow.float32)
+        tensor([1.4142, 2.2361, 5.0000], dtype=oneflow.float32)
         >>> LA.norm(c, dim=1, keepdim = True)
         tensor([[3.7417],
                 [4.2426]], dtype=oneflow.float32)
@@ -293,9 +293,9 @@ def norm_op(input, ord=None, dim=None, keepdim=False):
 
     Using the :attr:`dim` argument to compute matrix norms::
 
-        >>> m = flow.tensor(np.arange(8, dtype=np.float32)).reshape((2, 2, 2))
+        >>> m = flow.tensor(np.arange(8, dtype=np.float32)).reshape(2, 2, 2)
         >>> LA.norm(m, dim=(1,2))
-        tensor([ 3.7417, 11.225 ], dtype=oneflow.float32)
+        tensor([ 3.7417, 11.2250], dtype=oneflow.float32)
     """
     return Norm(ord, dim, keepdim)(input)
 
@@ -360,7 +360,7 @@ def vector_norm_tensor_op(input, ord=2, dim=None, keepdim=False):
         >>> a = flow.tensor(np.arange(9, dtype=np.float32) - 4)
         >>> a
         tensor([-4., -3., -2., -1.,  0.,  1.,  2.,  3.,  4.], dtype=oneflow.float32)
-        >>> b = a.reshape((3, 3))
+        >>> b = a.reshape(3, 3)
         >>> b
         tensor([[-4., -3., -2.],
                 [-1.,  0.,  1.],
@@ -419,7 +419,7 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
         >>> import oneflow as flow
         >>> from oneflow import linalg as LA
         >>> import numpy as np
-        >>> a = flow.tensor(np.arange(9, dtype=np.float32)).reshape((3,3))
+        >>> a = flow.tensor(np.arange(9, dtype=np.float32)).reshape(3,3)
         >>> a
         tensor([[0., 1., 2.],
                 [3., 4., 5.],
@@ -440,9 +440,45 @@ def matrix_norm_tensor_op(input, ord="fro", dim=(-2, -1), keepdim=False):
         >>> LA.matrix_norm(b)
         tensor([14.2829, 14.2829], dtype=oneflow.float32)
         >>> LA.matrix_norm(b, dim=(0, 2))
-        tensor([ 3.1623, 10.    , 17.2627], dtype=oneflow.float32)
+        tensor([ 3.1623, 10.0000, 17.2627], dtype=oneflow.float32)
     """
     return Matrix_Norm(ord, dim, keepdim)(input)
+
+
+def l2_normalize(input, dim=0, epsilon=1e-12):
+    """Use L2 norm to normalizes along dimension `dim`
+
+    The equation is:
+
+    .. math::
+        out = \\frac{x}{max(\\sqrt{\\Sigma{x^2}}, \\epsilon)}
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+        dim (int): The axis on which to apply L2 normalization. Defaults to 0.
+        epsilon (float, optional): The epsilon value is used to avoid division by zero. Defaults to 1e-12.
+
+    Returns:
+        oneflow.Tensor: The normalized Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([[1, 2], [3, 4]], dtype=flow.float32)
+        >>> out = flow.nn.functional.l2_normalize(x, 0)
+        >>> out
+        tensor([[0.3162, 0.4472],
+                [0.9487, 0.8944]], dtype=oneflow.float32)
+        >>> out = flow.nn.functional.l2_normalize(x, 1)
+        >>> out
+        tensor([[0.4472, 0.8944],
+                [0.6000, 0.8000]], dtype=oneflow.float32)
+
+    """
+    y, _ = flow._C.l2_normalize(input, dim, epsilon)
+    return y
 
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@ limitations under the License.
 #include <memory>
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 
@@ -36,6 +37,9 @@ class RankGroup final {
   static Maybe<Symbol<RankGroup>> New(const std::set<int64_t>& ranks);
   static Maybe<Symbol<RankGroup>> New(Symbol<ParallelDesc> parallel_desc);
   static Maybe<Symbol<RankGroup>> DefaultRankGroup();
+
+  static Maybe<Symbol<ParallelDesc>> GetDefaultParallelDesc(DeviceType device_type,
+                                                            Symbol<RankGroup> rank_group);
 
   bool operator==(const RankGroup& that) const { return this->ranks_ == that.ranks_; }
   bool operator!=(const RankGroup& that) const { return !(*this == that); }
@@ -53,6 +57,7 @@ class RankGroup final {
  private:
   RankGroup() = default;
   Maybe<void> Init(const std::set<int64_t>& ranks);
+  static Maybe<Symbol<RankGroup>> RawNew(Symbol<ParallelDesc> parallel_desc);
 
   std::set<int64_t> ranks_;
   std::unordered_map<int64_t, int64_t> rank2next_rank_in_ring_;
