@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
-from itertools import chain
 import warnings
 from copy import deepcopy
+from itertools import chain
 from typing import Any, Callable, Dict, Union
 
 from oneflow.framework.tensor import Tensor
@@ -108,13 +108,13 @@ class Optimizer(object):
         }
 
         def cast(param, value):
-            r"""Make a deep copy of value, casting all tensors to device of param."""
+            r"""Make a deep copy of value, casting all tensors to device or placement of param."""
             if isinstance(value, Tensor):
                 if value.is_local:
                     value = value.to(param.device)
                 else:
                     value = value.to_consistent(
-                        placement=value.placement, sbp=value.sbp
+                        placement=param.placement, sbp=param.sbp
                     )
                 return value
             elif isinstance(value, dict):
