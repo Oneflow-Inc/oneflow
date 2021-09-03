@@ -563,15 +563,14 @@ if os.environ.get("FX_PATCH_GETITEM") == "1":
     # once that is fixed we can make this the default behavior.
     _wrapped_methods_to_patch.append((oneflow.Tensor, "__getitem__"))
 
-# oneflow_funcs = ['topk', 'sum']
-internal_oneflow_funcs = ['FunctionConfig', 'Generator', 'INVALID_SPLIT_AXIS', 'MultiClientSession', 'Tensor', 
-                         'builtin_op', 'distributed', 'default_generator', 'docstr', 'eager', 'enable_eager_execution',
-                         'env', 'framework', ]
+# internal_oneflow_funcs = ['FunctionConfig', 'Generator', 'INVALID_SPLIT_AXIS', 'MultiClientSession', 'Tensor', 
+#                          'builtin_op', 'distributed', 'default_generator', 'docstr', 'eager', 'enable_eager_execution',
+#                          'env', 'framework', ]
 
-oneflow_funcs = dir(oneflow)
-for funcs_name in oneflow_funcs:
-    if not funcs_name.startswith('_') and funcs_name not in internal_oneflow_funcs:
-        _wrapped_methods_to_patch.append((oneflow, funcs_name))
+# oneflow_funcs = dir(oneflow)
+# for funcs_name in oneflow_funcs:
+#     if not funcs_name.startswith('_') and funcs_name not in internal_oneflow_funcs:
+#         _wrapped_methods_to_patch.append((oneflow, funcs_name))
 
 
 def _find_proxy(*objects_to_search):
@@ -783,6 +782,8 @@ def wrap(fn_or_name : Union[str, Callable]):
     # semantics would be slightly different, but would add support `from x import wrapped_function`
     _wrapped_fns_to_patch.append((f.f_globals, fn_name))
     return fn_or_name
+
+
 
 
 def symbolic_trace(root : Union[oneflow.nn.Module, Callable], concrete_args: Optional[Dict[str, Any]] = None,

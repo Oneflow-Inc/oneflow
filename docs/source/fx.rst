@@ -137,9 +137,90 @@ FX, we can now explore how we would edit a :class:`Graph`.
 Graph Manipulation
 ^^^^^^^^^^^^^^^^^^
 
+Direct Graph Manipulation
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
 One approach to building this new :class:`Graph` is to directly manipulate your old
 one. To aid in this, we can simply take the :class:`Graph` we obtain from symbolic
 tracing and modify it. For example, let’s say we desire to replace
 :func:`oneflow.add` calls with :func:`oneflow.mul` calls.
+
+
+::
+
+    import oneflow as flow
+
+    # Sample module
+    class M(flow.nn.Module):
+        def forward(self, x, y):
+            return flow.add(x, y)
+
+    def transform(m: flow.nn.Module,
+                    tracer_class : type = flow.fx.Tracer) -> flow.nn.Module:
+        graph : flow.fx.Graph = tracer_class().trace(m)
+        # FX represents its Graph as an ordered list of
+        # nodes, so we can iterate through them.
+        for node in graph.nodes:
+            # Checks if we're calling a 
+            #  (i.e:
+            # flow.add)
+            if node.op == 'call_method':
+                # The target attribute is the method
+                # that call_method calls.
+                if node.target == flow.add:
+                    node.target = flow.mul
+
+        graph.lint() # Does some checks to make sure the
+                        # Graph is well-formed.
+
+        return flow.fx.GraphModule(m, graph)
+
+We can also do more involved :class:`Graph` rewrites, such as
+deleting or appending nodes. To aid in these transformations,
+FX has utility functions for transforming the graph that can
+be found in the :class:`Graph` documentation. An
+example of using these APIs to append a :func:`torch.relu` call
+can be found below.
+
+::
+
+    # Specifies the insertion point. Any nodes added to the
+    # Graph within this scope will be inserted after `node`
+    with traced.graph.inserting_after(node):
+        # Insert a new `call_method` node calling `torch.relu`
+        new_node = traced.graph.call_method(
+            torch.relu, args=(node,))
+
+        # We want all places that used the value of `node` to
+        # now use that value after the `relu` call we've added.
+        # We use the `replace_all_uses_with` API to do this.
+        node.replace_all_uses_with(new_node)
+
+For simple transformations that only consist of substitutions, you can also
+make use of the `subgraph rewriter. <https://github.com/pytorch/pytorch/blob/master/torch/fx/subgraph_rewriter.py>`__
+
+Subgraph Rewriting With replace_pattern()
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+FX also provides another level of automation on top of direct graph manipulation.
+The :func:`replace_pattern` API is essentially a "find/replace" tool for editing
+:class:`Graph`\s. It allows you to specify a ``pattern`` and ``replacement`` function
+and it will trace through those functions, find instances of the group of operations
+in the ``pattern`` graph, and replace those instances with copies of the ``replacement``
+graph. This can help to greatly automate tedious graph manipulation code, which can
+get unwieldy as the transformations get more complex.
+
+
+Graph Manipulation Examples
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-  `Replace one
+   op <https://github.com/pytorch/examples/blob/master/fx/replace_op.py>`__
+-  `Conv/Batch Norm
+   fusion <https://github.com/pytorch/pytorch/blob/40cbf342d3c000712da92cfafeaca651b3e0bd3e/torch/fx/experimental/optimization.py#L50>`__
+-  `replace_pattern: Basic usage <https://github.com/pytorch/examples/blob/master/fx/subgraph_rewriter_basic_use.py>`__
+-  `Quantization <https://pytorch.org/docs/master/quantization.html#prototype-fx-graph-mode-quantization>`__
+-  `Invert Transformation <https://github.com/pytorch/examples/blob/master/fx/invert.py>`__
+
 
 
