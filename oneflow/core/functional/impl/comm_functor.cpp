@@ -178,7 +178,6 @@ class ConsistentAllReduceFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
