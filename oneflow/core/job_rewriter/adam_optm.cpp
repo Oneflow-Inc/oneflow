@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 struct BiasCorrectionFactorCacheKey {
-  float beta;
+  float beta = 1.0;
   ParallelConf parallel_conf;
 };
 
