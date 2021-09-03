@@ -116,7 +116,7 @@ class Adam(Optimizer):
         eps: float = 1e-08,
         weight_decay: float = 0,
         amsgrad: bool = False,
-        do_bias_correction=True,
+        do_bias_correction: bool = True,
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
@@ -172,12 +172,13 @@ class Adam(Optimizer):
 
             for param_group in self.param_groups:
                 if param_group["do_bias_correction"]:
-                    param_group["bias_correction1"] = float(
-                        1.0 - math.pow(param_group["betas"][0], self._state["step"] + 1)
+                    param_group["bias_correction1"] = 1.0 - math.pow(
+                        param_group["betas"][0], self._state["step"] + 1
                     )
-                    param_group["bias_correction2"] = float(
-                        1.0 - math.pow(param_group["betas"][1], self._state["step"] + 1)
+                    param_group["bias_correction2"] = 1.0 - math.pow(
+                        param_group["betas"][1], self._state["step"] + 1
                     )
+
                 kwargs = {
                     "learning_rate_val": param_group["lr"],
                     "bias_correction1_val": param_group["bias_correction1"],
