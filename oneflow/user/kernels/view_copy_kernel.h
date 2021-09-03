@@ -25,18 +25,12 @@ namespace oneflow {
 
 class ViewCopyUtilParam {
  protected:
-  ViewCopyUtilParam(const DeviceCtx* ctx, const ShapeView& in_shape, size_t dsize,
+  ViewCopyUtilParam(const DeviceCtx* ctx, const ShapeView& in_shape,
                     const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
-      : ctx(ctx),
-        in_shape(in_shape),
-        dsize(dsize),
-        in_stride(in_stride),
-        in_dptr(in_dptr),
-        out_dptr(out_dptr) {}
+      : ctx(ctx), in_shape(in_shape), in_stride(in_stride), in_dptr(in_dptr), out_dptr(out_dptr) {}
 
   const DeviceCtx* ctx;
   const ShapeView& in_shape;
-  size_t dsize;
   const std::vector<int64_t>& in_stride;
   const char* in_dptr;
   char* out_dptr;
@@ -45,10 +39,10 @@ class ViewCopyUtilParam {
 class ViewCopyUtilAttach;
 
 class ViewCopyUtilBase : public ViewCopyUtilParam {
- protected:
-  ViewCopyUtilBase(const DeviceCtx* ctx, const ShapeView& in_shape, size_t dsize,
+ public:
+  ViewCopyUtilBase(const DeviceCtx* ctx, const ShapeView& in_shape,
                    const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
-      : ViewCopyUtilParam(ctx, in_shape, dsize, in_stride, in_dptr, out_dptr),
+      : ViewCopyUtilParam(ctx, in_shape, in_stride, in_dptr, out_dptr),
         contiguous_block_size(1),
         contiguous_dim(in_shape.NumAxes() - 1),
         out_stride(in_shape.NumAxes()),
@@ -64,6 +58,7 @@ class ViewCopyUtilBase : public ViewCopyUtilParam {
     }
   }
 
+ protected:
   int64_t init_out_stride() {
     int64_t sum = 1;
     for (int64_t i = out_stride.size() - 1; i != -1; --i) {
@@ -102,15 +97,22 @@ class ViewCopyUtilBase : public ViewCopyUtilParam {
   int64_t out_offset;
 };
 
-template<DeviceType>
+template<DeviceType, typename>
 struct ViewCopyUtil : ViewCopyUtilBase {
-  ViewCopyUtil(const DeviceCtx* ctx, const ShapeView& in_shape, size_t dsize,
-               const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
-      : ViewCopyUtilBase(ctx, in_shape, dsize, in_stride, in_dptr, out_dptr) {}
+  using ViewCopyUtilBase::ViewCopyUtilBase;
 
   void operator()();
 };
 
 }  // namespace oneflow
+
+#define VIEW_COPY_TYPES         \
+  OF_PP_MAKE_TUPLE_SEQ(float)   \
+  OF_PP_MAKE_TUPLE_SEQ(double)  \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t) \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t)  \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t)
+#define VIEW_COPY_GPU_SPECIAL_TYPE OF_PP_MAKE_TUPLE_SEQ(float16)
 
 #endif  // ONEFLOW_USER_KERNELS_VIEW_COPY_KERNEL_H_

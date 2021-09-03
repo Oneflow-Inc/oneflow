@@ -20,25 +20,32 @@ limitations under the License.
 
 namespace oneflow {
 
-template<>
-void ViewCopyUtil<DeviceType::kCPU>::operator()() {
-  if (contiguous_dim == -1) {
-    std::memcpy(out_dptr, in_dptr, contiguous_block_size * dsize);
-  } else {
-    init_index();
-    init_out_stride();
+template<typename T>
+struct ViewCopyUtil<DeviceType::kCPU, T> : ViewCopyUtilBase {
+  using ViewCopyUtilBase::ViewCopyUtilBase;
 
-    while (true) {
-      std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
-                  contiguous_block_size * dsize);
+  static constexpr size_t dsize = sizeof(T);
 
-      if (next_index()) break;
+  void operator()() {
+    if (contiguous_dim == -1) {
+      std::memcpy(out_dptr, in_dptr, contiguous_block_size * dsize);
+    } else {
+      init_index();
+      init_out_stride();
+
+      while (true) {
+        std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
+                    contiguous_block_size * dsize);
+
+        if (next_index()) break;
+      }
     }
   }
-}
+};
 
 namespace {
 
+template<DeviceType device_type, typename T>
 class ViewCopyKernel final : public user_op::OpKernel {
  public:
   ViewCopyKernel() = default;
@@ -57,25 +64,34 @@ class ViewCopyKernel final : public user_op::OpKernel {
     const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
     int64_t storage_offset = ctx->Attr<int64_t>("storage_offset");
 
-    const size_t dsize = GetSizeOfDataType(in_data_type);
-    const char* in_dptr = static_cast<const char*>(in->raw_dptr()) + storage_offset * dsize;
+    const char* in_dptr = static_cast<const char*>(in->raw_dptr()) + storage_offset * sizeof(T);
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
 
-    if (in->mem_case().has_host_mem() && out->mem_case().has_host_mem()) {
-      ViewCopyUtil<kCPU>(ctx->device_ctx(), in_shape, dsize, in_stride, in_dptr, out_dptr)();
-    } else {
-#ifdef WITH_CUDA
-      ViewCopyUtil<kGPU>(ctx->device_ctx(), in_shape, dsize, in_stride, in_dptr, out_dptr)();
-#else
-      UNIMPLEMENTED();
-#endif  // WITH_CUDA
-    }
+    ViewCopyUtil<device_type, T>(ctx->device_ctx(), in_shape, in_stride, in_dptr, out_dptr)();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("view_copy").SetCreateFn<ViewCopyKernel>().SetIsMatchedHob(user_op::HobTrue());
+#define REGISTER_VIEW_COPY_KERNEL(device_type, T)               \
+  REGISTER_USER_KERNEL("view_copy")                             \
+      .SetCreateFn<ViewCopyKernel<device_type, T>>()            \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type) \
+                       & (user_op::HobDataType("in", 0) == GetDataType<T>::value));
+
+#define REGISTER_VIEW_COPY_CPU_KERNEL(T) REGISTER_VIEW_COPY_KERNEL(DeviceType::kCPU, T)
+#define REGISTER_VIEW_COPY_GPU_KERNEL(T) REGISTER_VIEW_COPY_KERNEL(DeviceType::kGPU, T)
+
+#define REGISTER_VIEW_COPY_KERNEL_FOR_CPU_TYPES \
+  OF_PP_FOR_EACH_TUPLE(REGISTER_VIEW_COPY_CPU_KERNEL, VIEW_COPY_TYPES)
+
+#define REGISTER_VIEW_COPY_KERNEL_FOR_GPU_TYPES \
+  OF_PP_FOR_EACH_TUPLE(REGISTER_VIEW_COPY_GPU_KERNEL, VIEW_COPY_TYPES VIEW_COPY_GPU_SPECIAL_TYPE)
+
+REGISTER_VIEW_COPY_KERNEL_FOR_CPU_TYPES
+#ifdef WITH_CUDA
+REGISTER_VIEW_COPY_KERNEL_FOR_GPU_TYPES
+#endif
 
 }  // namespace
 }  // namespace oneflow

@@ -13,44 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <type_traits>
 #include "oneflow/core/common/cplusplus_14.h"
 #include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/graph/task_node.h"
 #include "oneflow/user/kernels/view_copy_kernel.h"
 
 namespace oneflow {
 
 namespace {
-
-template<size_t N>
-struct uint_type;
-
-template<>
-struct uint_type<1> {
-  using type = uint8_t;
-};
-
-template<>
-struct uint_type<2> {
-  using type = uint16_t;
-};
-
-template<>
-struct uint_type<4> {
-  using type = uint32_t;
-};
-
-template<>
-struct uint_type<8> {
-  using type = uint64_t;
-};
-
-template<>
-struct uint_type<16> {
-  using type = ulonglong2;
-};
-
-template<size_t N>
-using uint_t = typename uint_type<N>::type;
 
 template<size_t n>
 struct StrideParam {
@@ -75,9 +46,9 @@ struct StrideParam {
   }
 };
 
-template<size_t dsize, size_t ndim>
+template<typename T, size_t ndim>
 __global__ void copy_view(int64_t count, StrideParam<ndim> in_stride, StrideParam<ndim> out_stride,
-                          const uint_t<dsize>* in_dptr, uint_t<dsize>* out_dptr) {
+                          const T* in_dptr, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP_T(int64_t, out_offset, count) {
     int64_t in_offset = out_stride.compute_offset(out_offset, in_stride);
 
@@ -85,32 +56,32 @@ __global__ void copy_view(int64_t count, StrideParam<ndim> in_stride, StridePara
   }
 }
 
-template<size_t dsize, size_t ndim>
+template<typename T, size_t ndim>
 void copy_view_wrapper(const DeviceCtx* ctx, int64_t count, const std::vector<int64_t>& in_stride,
                        const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
   StrideParam<ndim> param_in_stride(in_stride.data()), param_out_stride(out_stride.data());
 
-  auto out_dptr_typed = reinterpret_cast<uint_t<dsize>*>(out_dptr);
-  auto in_dptr_typed = reinterpret_cast<const uint_t<dsize>*>(in_dptr);
+  auto out_dptr_typed = reinterpret_cast<T*>(out_dptr);
+  auto in_dptr_typed = reinterpret_cast<const T*>(in_dptr);
 
-  copy_view<dsize, ndim>
+  copy_view<T, ndim>
       <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           count, param_in_stride, param_out_stride, in_dptr_typed, out_dptr_typed);
 }
 
-using copy_view_type = decltype(copy_view_wrapper<1, 1>)*;
+template<typename T>
+using copy_view_type = typename std::remove_reference<decltype(copy_view_wrapper<T, 1>)>::type*;
 
-template<size_t... n>
-struct copy_view_fn_map_type : std::unordered_map<std::pair<size_t, size_t>, copy_view_type> {
-  using base_type = std::unordered_map<std::pair<size_t, size_t>, copy_view_type>;
+template<typename T, size_t... n>
+struct copy_view_fn_map_type : std::unordered_map<size_t, copy_view_type<T>> {
+  using base_type = std::unordered_map<size_t, copy_view_type<T>>;
 
-  copy_view_fn_map_type()
-      : base_type{{{1 << (n % 5), 1 + n / 5}, copy_view_wrapper<1 << (n % 5), 1 + n / 5>}...} {}
+  copy_view_fn_map_type() : base_type{{n + 1, copy_view_wrapper<T, n + 1>}...} {}
 
-  copy_view_type call(size_t dsize, size_t ndim) {
-    auto iter = find(std::make_pair(dsize, ndim));
+  copy_view_type<T> call(size_t ndim) {
+    auto iter = base_type::find(ndim);
 
-    if (iter != end()) {
+    if (iter != base_type::end()) {
       return iter->second;
     } else {
       UNIMPLEMENTED();
@@ -120,27 +91,44 @@ struct copy_view_fn_map_type : std::unordered_map<std::pair<size_t, size_t>, cop
   }
 };
 
-template<size_t... I>
-copy_view_fn_map_type<I...> create_copy_view_fn_map(std::index_sequence<I...>) {
+template<typename T, size_t... I>
+copy_view_fn_map_type<T, I...> create_copy_view_fn_map(std::index_sequence<I...>) {
   return {};
 }
 
-auto copy_view_fn_map = create_copy_view_fn_map(std::make_index_sequence<100>{});
-
+template<typename T>
+using copy_view_fn_map_t =
+    decltype(create_copy_view_fn_map<T>(std::make_index_sequence<SHAPE_MAX_AXIS_SIZE>{}));
 }  // namespace
 
-template<>
-void ViewCopyUtil<kGPU>::operator()() {
-  if (contiguous_dim == -1) {
-    OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, contiguous_block_size * dsize,
-                                  cudaMemcpyDeviceToDevice, ctx->cuda_stream()));
-  } else {
-    const int64_t count = init_out_stride();
+template<typename T>
+struct ViewCopyUtil<DeviceType::kGPU, T> : ViewCopyUtilBase {
+  using ViewCopyUtilBase::ViewCopyUtilBase;
 
-    const int ndim = in_shape.NumAxes();
+  static constexpr size_t dsize = sizeof(T);
 
-    copy_view_fn_map.call(dsize, ndim)(ctx, count, in_stride, out_stride, in_dptr, out_dptr);
+  static copy_view_fn_map_t<T> copy_view_fn_map;
+
+  void operator()() {
+    if (contiguous_dim == -1) {
+      OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, contiguous_block_size * dsize,
+                                    cudaMemcpyDeviceToDevice, ctx->cuda_stream()));
+    } else {
+      const int64_t count = init_out_stride();
+
+      const int ndim = in_shape.NumAxes();
+
+      copy_view_fn_map.call(ndim)(ctx, count, in_stride, out_stride, in_dptr, out_dptr);
+    }
   }
-}
+};
+
+template<typename T>
+copy_view_fn_map_t<T> ViewCopyUtil<DeviceType::kGPU, T>::copy_view_fn_map;
+
+#define INSTANTIATE_VIEW_COPY_UTILS_FOR_GPU(T) template struct ViewCopyUtil<DeviceType::kGPU, T>;
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_VIEW_COPY_UTILS_FOR_GPU,
+                     VIEW_COPY_TYPES VIEW_COPY_GPU_SPECIAL_TYPE)
 
 }  // namespace oneflow
