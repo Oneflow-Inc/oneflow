@@ -27,11 +27,8 @@ namespace {
 class KernelContextImpl : public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelContextImpl);
-  explicit KernelContextImpl(const JobDesc* job_desc, DeviceCtx* device_ctx)
-      : job_desc_(job_desc),
-        device_ctx_(device_ctx),
-        state_(nullptr),
-        stream_kernel_observer_(nullptr) {
+  explicit KernelContextImpl(DeviceCtx* device_ctx)
+      : device_ctx_(device_ctx), state_(nullptr), stream_kernel_observer_(nullptr) {
     auto* stream_context_provider = dynamic_cast<StreamContextProvider*>(device_ctx);
     if (stream_context_provider != nullptr) {
       auto* kernel_observer_provider =
@@ -54,8 +51,6 @@ class KernelContextImpl : public KernelContext {
     state_ = state;
   }
 
-  const JobDesc* job_desc() const override { return job_desc_; }
-
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
 
@@ -70,7 +65,6 @@ class KernelContextImpl : public KernelContext {
   }
 
  private:
-  const JobDesc* job_desc_;
   DeviceCtx* device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
   void* state_;
@@ -148,7 +142,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto, StreamCon
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel_ctx.reset(new KernelContextImpl(job_desc, device_ctx_.get()));
+    ek.kernel_ctx.reset(new KernelContextImpl(device_ctx_.get()));
     ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
     exec_kernel_vec_.push_back(std::move(ek));
   }

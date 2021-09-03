@@ -33,7 +33,6 @@ class KernelContext : public KernelObserver {
   virtual Blob* BnInOp2Blob(const std::string& bn) const = 0;
   virtual void* state() const = 0;
   virtual void set_state(void* state) = 0;
-  virtual const JobDesc* job_desc() const = 0;
 };
 
 }  // namespace oneflow

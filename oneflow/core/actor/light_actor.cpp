@@ -208,10 +208,7 @@ class LightActor : public ActorBase, public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LightActor);
   explicit LightActor(std::shared_ptr<DeviceCtx> device_ctx)
-      : thread_(nullptr),
-        device_ctx_(std::move(device_ctx)),
-        job_desc_(nullptr),
-        stream_kernel_observer_(nullptr) {
+      : thread_(nullptr), device_ctx_(std::move(device_ctx)), stream_kernel_observer_(nullptr) {
     auto* stream_context_provider = dynamic_cast<StreamContextProvider*>(device_ctx_.get());
     if (stream_context_provider != nullptr) {
       auto* kernel_observer_provider =
@@ -227,7 +224,6 @@ class LightActor : public ActorBase, public KernelContext {
 
   void Init(const JobDesc* job_desc, const TaskProto& task_proto,
             StreamContext* stream_ctx) override {
-    job_desc_ = job_desc;
     task_proto_.reset(new TaskProto(task_proto));
     CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
     if (exec_kernel) {
@@ -531,8 +527,6 @@ class LightActor : public ActorBase, public KernelContext {
     kernel_info_[0]->state = state;
   }
 
-  const JobDesc* job_desc() const override { return job_desc_; }
-
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
     Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {
@@ -595,7 +589,6 @@ class LightActor : public ActorBase, public KernelContext {
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   std::unique_ptr<TaskProto> task_proto_;
-  const JobDesc* job_desc_;
   KernelObserver* stream_kernel_observer_;
 };
 
