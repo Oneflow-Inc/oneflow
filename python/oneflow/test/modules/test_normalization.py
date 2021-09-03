@@ -137,16 +137,28 @@ class TestLayerNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5, auto_backward=False, rtol=1e-3, atol=1e-3)
+    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_layernorm_with_random_data(test_case):
-        channel = random(1, 6).to(int)
-        height = random(1, 6).to(int)
-        width = random(1, 6).to(int)
+        # channel = random(1, 6).to(int)
+        # height = random(1, 6).to(int)
+        # width = random(1, 6).to(int)
+
+        channel = constant(3).to(int)
+        height = constant(4).to(int)
+        width = constant(5).to(int)
+
+        # m = torch.nn.LayerNorm(
+        #     normalized_shape=random(1, 6).to(int),
+        #     eps=random().to(float) | nothing(),
+        #     elementwise_affine=random().to(bool),
+        # )
+
         m = torch.nn.LayerNorm(
-            normalized_shape=random(1, 6).to(int),
+            normalized_shape=constant((3, 4, 5)),
             eps=random().to(float) | nothing(),
-            elementwise_affine=random().to(bool),
+            elementwise_affine=constant(True),
         )
+
         m.train(random())
         device = random_device()
         m.to(device)
