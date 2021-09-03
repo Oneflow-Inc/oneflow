@@ -20,6 +20,7 @@ from collections import OrderedDict
 import numpy as np
 from test_util import GenArgList
 
+from automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
@@ -84,6 +85,14 @@ class TestAutograd(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=10, auto_backward=True, rtol=1e-3, atol=1e-3)
+    def test_accumulate_grad(test_case):
+        device = random_device()
+        ndim = random(1, 4).to(int)
+        x = random_pytorch_tensor(ndim=ndim, requires_grad=True).to(device)
+        y = random_pytorch_tensor(ndim=ndim, requires_grad=True).to(device)
+        return x / (x + y)
 
 
 if __name__ == "__main__":
