@@ -228,7 +228,7 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
   total_memory_bytes_ -= total_free_bytes;
 
   if (total_free_bytes > 0) {
-    LOG(WARNING) << "CudaAllocator try deallocate free block for garbage collection. "
+    LOG(INFO) << "CudaAllocator try deallocate free block for garbage collection. "
                  << " deallocate free bytes : " << total_free_bytes;
     cudaSetDevice(device_id_);
     for (char* ptr : free_block_ptrs) {
