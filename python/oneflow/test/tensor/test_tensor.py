@@ -57,6 +57,20 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(np.int32, tensor.numpy().dtype)
 
     @flow.unittest.skip_unless_1n1d()
+    def test_inplace_copy_from_contiguous_numpy(test_case):
+        np_arr = np.arange(6).reshape(3, 2)
+        tensor = flow.zeros(3, 2).to(flow.int64)
+        tensor.copy_(np_arr)
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_inplace_copy_from_non_contiguous_numpy(test_case):
+        np_arr = np.arange(6).reshape(2, 3).transpose(1, 0)
+        tensor = flow.zeros(3, 2).to(flow.int64)
+        tensor.copy_(np_arr)
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+
+    @flow.unittest.skip_unless_1n1d()
     def test_construct_from_numpy_or_list(test_case):
         shape = (2, 3, 4, 5)
         np_arr = np.random.rand(*shape).astype(np.float32)
@@ -1354,6 +1368,20 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         return x.round()
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_tensor_diag_one_dim(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=1, dim0=random()).to(device)
+        return x.diag()
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_tensor_diag_other_dim(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        return x.diag()
 
 
 if __name__ == "__main__":

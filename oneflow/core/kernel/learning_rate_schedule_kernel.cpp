@@ -20,21 +20,20 @@ limitations under the License.
 
 namespace oneflow {
 
-class LearningRateScheduleKernel final : public KernelIf<DeviceType::kCPU> {
+class LearningRateScheduleKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LearningRateScheduleKernel);
   LearningRateScheduleKernel() = default;
   ~LearningRateScheduleKernel() override = default;
 
  private:
-  void VirtualKernelInit() override {
+  void VirtualKernelInit(KernelContext* ctx) override {
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
   }
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
 
   std::unique_ptr<TeePersistentLogStream> log_stream_;
 };
@@ -199,17 +198,16 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
 
 }  // namespace
 
-void LearningRateScheduleKernel::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void LearningRateScheduleKernel::ForwardDataContent(const KernelContext* ctx) const {
   const LearningRateScheduleOpConf& conf = this->op_conf().learning_rate_schedule_conf();
-  const int64_t train_step = *BnInOp2Blob("train_step")->dptr<int64_t>();
+  const int64_t train_step = *ctx->BnInOp2Blob("train_step")->dptr<int64_t>();
   float learning_rate = conf.learning_rate();
   if (TriggerWarmup(conf, learning_rate, train_step)) {
     learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, train_step);
   } else if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
-  *BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
+  *ctx->BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     (*log_stream_) << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";

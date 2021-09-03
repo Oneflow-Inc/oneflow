@@ -459,6 +459,44 @@ class CombinedMarginLossFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class AffineGridFunctor {
+ public:
+  AffineGridFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("affine_grid").Input("theta").Output("grid").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& theta, const Shape& size,
+                           const bool& align_corners) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("size", size));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {theta}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class GridSampleFunctor {
+ public:
+  GridSampleFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("grid_sample").Input("input").Input("grid").Output("output").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& grid,
+                           const std::string& interpolation_mode, const std::string& padding_mode,
+                           const bool& align_corners) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("interpolation_mode", interpolation_mode));
+    JUST(attrs.SetAttr<std::string>("padding_mode", padding_mode));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, grid}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class NormalizationFunctor {
  public:
   NormalizationFunctor() {
@@ -591,7 +629,10 @@ class DropoutFunctor {
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                           const Optional<one::Generator>& generator) const {
+                           const Optional<one::Generator>& generator,
+                           const bool& is_training) const {
+    if (!is_training || p == 0.0) return x;
+
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
 
@@ -998,6 +1039,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
+  m.add_functor<impl::AffineGridFunctor>("AffineGrid");
+  m.add_functor<impl::GridSampleFunctor>("GridSample");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");

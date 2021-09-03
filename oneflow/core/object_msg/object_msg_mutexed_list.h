@@ -104,8 +104,15 @@ class TrivialObjectMsgMutexedList {
  public:
   using value_type = typename LinkField::struct_type;
 
-  std::size_t size() const { return list_head_.size(); }
-  bool empty() const { return list_head_.empty(); }
+  std::size_t thread_unsafe_size() const { return list_head_.size(); }
+  std::size_t size() const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return list_head_.size();
+  }
+  bool empty() const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return list_head_.empty();
+  }
 
   void __Init__() {
     list_head_.__Init__();
@@ -139,11 +146,14 @@ class TrivialObjectMsgMutexedList {
     list_head_.MoveToDstBack(dst);
   }
 
-  void Clear() { list_head_.Clear(); }
+  void Clear() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    list_head_.Clear();
+  }
 
  private:
   TrivialObjectMsgList<kDisableSelfLoopLink, LinkField> list_head_;
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
 };
 
 template<typename LinkField>

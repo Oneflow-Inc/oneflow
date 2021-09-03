@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/user/ops/comm_net_device_infer_util.h"
 
 namespace oneflow {
 
@@ -51,6 +52,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_reduce")
 
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim1_all_reduce")
@@ -86,6 +88,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim1_all_reduce")
 
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_gather")
@@ -123,6 +126,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_gather")
 
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
@@ -163,6 +167,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
 
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all2all")
@@ -204,6 +209,7 @@ REGISTER_NO_GRAD_USER_OP("_nccl_logical_2D_same_dim0_all2all")
 
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow

@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ccl/ccl.h"
+#include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
 
 namespace oneflow {
 namespace ccl {
@@ -78,6 +80,95 @@ Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t 
   JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
   return Maybe<void>::Ok();
 }
+
+#ifdef WITH_CUDA
+std::pair<ncclComm_t, int64_t> RawGetNcclCommAndPeerNcclRank(int64_t peer_process_id) {
+  std::set<std::pair<int64_t, int64_t>> device_set;
+  const int64_t& rank = GlobalProcessCtx::Rank();
+  const int64_t peer_nccl_rank = (peer_process_id > rank) ? 1 : 0;
+  device_set.emplace(rank, GlobalProcessCtx::LocalRank());
+  device_set.emplace(peer_process_id, GlobalProcessCtx::LocalRank(peer_process_id));
+  return {CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set),
+          peer_nccl_rank};
+}
+auto* GetNcclCommAndPeerNcclRank = DECORATE(&RawGetNcclCommAndPeerNcclRank, ThreadLocal);
+#endif
+
+template<>
+Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
+                                   DeviceCtx* ctx) {
+  CHECK_OR_RETURN(IsPODDataType(dtype));
+  size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
+  TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
+  NaiveAsyncTransportCtx transport_ctx(
+      transport_token,
+      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+        *buffer = const_cast<void*>(in);
+        *size = buffer_size;
+        *Cb = [] {};
+        return Maybe<void>::Ok();
+      },
+      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+        UNIMPLEMENTED_THEN_RETURN();
+      });
+  JUST(TransportUtil::SendDataToRank(dst, transport_token, &transport_ctx));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
+  return Maybe<void>::Ok();
+}
+
+#ifdef WITH_CUDA
+template<>
+Maybe<void> Send<DeviceType::kGPU>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
+                                   DeviceCtx* ctx) {
+#if NCCL_VERSION_CODE >= 2700
+  CHECK_OR_RETURN(IsPODDataType(dtype));
+  const auto& comm_and_peer_rank = GetNcclCommAndPeerNcclRank(dst);
+  OF_NCCL_CHECK_OR_RETURN(ncclSend(in, elem_cnt, GetNcclDataType(dtype), comm_and_peer_rank.second,
+                                   comm_and_peer_rank.first, ctx->cuda_stream()));
+  return Maybe<void>::Ok();
+#else
+  UNIMPLEMENTED_THEN_RETURN() << "GPU send is only supported when nccl version >= 2.7"
+#endif
+}
+#endif
+
+template<>
+Maybe<void> Recv<DeviceType::kCPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
+                                   DeviceCtx* ctx) {
+  CHECK_OR_RETURN(IsPODDataType(dtype));
+  size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
+  TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
+  NaiveAsyncTransportCtx transport_ctx(
+      transport_token,
+      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+        UNIMPLEMENTED_THEN_RETURN();
+      },
+      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+        *buffer = out;
+        *size = buffer_size;
+        *Cb = [] {};
+        return Maybe<void>::Ok();
+      });
+  JUST(TransportUtil::ReceiveDataFromRank(src, transport_token, &transport_ctx));
+  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
+  return Maybe<void>::Ok();
+}
+
+#ifdef WITH_CUDA
+template<>
+Maybe<void> Recv<DeviceType::kGPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
+                                   DeviceCtx* ctx) {
+#if NCCL_VERSION_CODE >= 2700
+  CHECK_OR_RETURN(IsPODDataType(dtype));
+  const auto& comm_and_peer_rank = GetNcclCommAndPeerNcclRank(src);
+  OF_NCCL_CHECK_OR_RETURN(ncclRecv(out, elem_cnt, GetNcclDataType(dtype), comm_and_peer_rank.second,
+                                   comm_and_peer_rank.first, ctx->cuda_stream()));
+  return Maybe<void>::Ok();
+#else
+  UNIMPLEMENTED_THEN_RETURN() << "GPU recv is only supported when nccl version >= 2.7"
+#endif
+}
+#endif
 
 }  // namespace ccl
 }  // namespace oneflow
