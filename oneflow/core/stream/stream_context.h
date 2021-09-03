@@ -22,7 +22,6 @@ limitations under the License.
 namespace oneflow {
 
 class DeviceCtx;
-class KernelObserver;
 
 class StreamContext {
  public:
