@@ -15,13 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/kernel/case_kernel.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
 class CaseActor final : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CaseActor);
-  CaseActor() = default;
+  CaseActor() : case_status_(nullptr) {}
   ~CaseActor() override = default;
 
  protected:
@@ -53,14 +54,15 @@ class CaseActor final : public Actor {
   int64_t GetCurSelectId() const;
 
   HashMap<int64_t, int64_t> out_bn_id2regst_desc_id_;
-  int64_t consumed_regst_desc_id_;
+  int64_t consumed_regst_desc_id_{};
   RegstSlot consumed_rs_;
   HashMap<int64_t, RegstSlot> regst_desc_id2produced_rs_;
-  CaseStatus case_status_;
+  CaseStatus* case_status_;
 };
 
 void CaseActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_EQ(1, exec_kernel_vec().size());
+  case_status_ = static_cast<CaseStatus*>(exec_kernel_vec().at(0).kernel_ctx->state());
   const int32_t output_bns_size =
       task_proto.exec_sequence().exec_node().Get(0).kernel_conf().op_attribute().output_bns_size();
   FOR_RANGE(int64_t, i, 0, output_bns_size) {
@@ -101,12 +103,10 @@ void CaseActor::TakeOverProducedRegst(const PbMap<std::string, RegstDescProto>& 
 // second called: output cur_selected_id
 void CaseActor::Act() {
   Regst* const consumed_regst = consumed_rs_.Front(consumed_regst_desc_id_);
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  case_status_.cur_selected_id = GetCurSelectId();
-  case_status_.cmd =
-      (case_status_.cur_selected_id == -1 ? kCaseCmdHandleInput : kCaseCmdHandleOutput);
-  kernel_ctx.other = &case_status_;
-  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
+  case_status_->cur_selected_id = GetCurSelectId();
+  case_status_->cmd =
+      (case_status_->cur_selected_id == -1 ? kCaseCmdHandleInput : kCaseCmdHandleOutput);
+  AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* {
     if (consumed_regst_desc_id_ == regst_desc_id) { return consumed_regst; }
     return regst_desc_id2produced_rs_.at(regst_desc_id).Front(regst_desc_id);
   });
@@ -122,7 +122,7 @@ bool CaseActor::IsCustomizedReadReady() const { return IsInputOrOutputReady(); }
 bool CaseActor::IsCustomizedWriteReady() const { return IsInputOrOutputReady(); }
 
 bool CaseActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
-  return ReceiveEordMsg(consumed_regst_desc_id_) && case_status_.select_id2request_cnt.size() == 0;
+  return ReceiveEordMsg(consumed_regst_desc_id_) && case_status_->select_id2request_cnt.size() == 0;
 }
 
 bool CaseActor::IsInputOrOutputReady() const {
@@ -131,7 +131,7 @@ bool CaseActor::IsInputOrOutputReady() const {
 }
 
 int64_t CaseActor::GetCurSelectId() const {
-  for (const auto& pair : case_status_.select_id2request_cnt) {
+  for (const auto& pair : case_status_->select_id2request_cnt) {
     CHECK_GT(pair.second, 0);
     const int64_t regst_desc_id = out_bn_id2regst_desc_id_.at(pair.first);
     if (regst_desc_id2produced_rs_.at(regst_desc_id).IsCurSlotReady()) { return pair.first; }
@@ -144,7 +144,7 @@ void CaseActor::ForEachCurCustomizedReadableRegst(std::function<void(const Regst
 }
 
 void CaseActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
-  if (case_status_.cmd != kCaseCmdHandleInput) { return; }
+  if (case_status_->cmd != kCaseCmdHandleInput) { return; }
   Regst* const cur_regst = consumed_rs_.Front(consumed_regst_desc_id_);
   CHECK_NOTNULL(cur_regst);
   AsyncSendRegstMsgToProducer(cur_regst);
@@ -156,8 +156,8 @@ void CaseActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
 }
 
 void CaseActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
-  if (case_status_.cmd != kCaseCmdHandleOutput) { return; }
-  const int64_t regst_desc_id = out_bn_id2regst_desc_id_.at(case_status_.cur_selected_id);
+  if (case_status_->cmd != kCaseCmdHandleOutput) { return; }
+  const int64_t regst_desc_id = out_bn_id2regst_desc_id_.at(case_status_->cur_selected_id);
   Regst* const regst = regst_desc_id2produced_rs_.at(regst_desc_id).Front(regst_desc_id);
   CHECK_GT(HandleRegstToConsumer(regst), 0);
   regst_desc_id2produced_rs_.at(regst_desc_id).PopFrontRegsts({regst_desc_id});
