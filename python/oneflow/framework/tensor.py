@@ -194,14 +194,6 @@ def is_nonzero(input):
         True
         >>> flow.is_nonzero(flow.tensor([3]))
         True
-        >>> flow.is_nonzero(flow.tensor([1, 3, 5]))
-        Traceback (most recent call last):
-        ...
-        RuntimeError: bool value of Tensor with more than one value is ambiguous
-        >>> flow.is_nonzero(flow.tensor([]))
-        Traceback (most recent call last):
-        ...
-        RuntimeError: bool value of Tensor with no values is ambiguous
 
     """
     shape = input.shape
