@@ -204,6 +204,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
+    PlanUtil::PlanMemoryLog(&plan_, name_);
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();

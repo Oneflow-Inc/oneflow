@@ -229,7 +229,7 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
 
   if (total_free_bytes > 0) {
     LOG(INFO) << "CudaAllocator try deallocate free block for garbage collection. "
-                 << " deallocate free bytes : " << total_free_bytes;
+              << " deallocate free bytes : " << total_free_bytes;
     cudaSetDevice(device_id_);
     for (char* ptr : free_block_ptrs) {
       auto it = mem_ptr2block_.find(ptr);
