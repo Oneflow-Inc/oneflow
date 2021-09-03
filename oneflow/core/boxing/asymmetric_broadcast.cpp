@@ -21,8 +21,8 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter.h"
-#include "oneflow/core/framework/op_interpreter/boxing/eager_boxing_interpreter_util.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter.h"
+#include "oneflow/core/boxing/eager_boxing_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
 
@@ -35,8 +35,8 @@ Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdS
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(in->nd_sbp()));
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllBroadcastNdSbp(out->nd_sbp()));
-  CHECK_OR_RETURN(out->placement()->Bigger(*in->placement()))
-      << "The output placement must contain the input placement";
+  CHECK_OR_RETURN(out->placement()->Bigger(*in->placement())
+                  || in->placement()->Bigger(*out->placement()));
   return Maybe<void>::Ok();
 }
 
@@ -87,7 +87,7 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in_placement);
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
-  {
+  if (out->placement()->Bigger(*in->placement())) {
     const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_placement));
     if (out_parallel_id->has_value()) {
       const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_placement));
@@ -107,8 +107,8 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
     }
   }
   return one::functional::LocalToConsistent(local_tensor, out_placement,
-                                            *JUST(GetSbpList(out->nd_sbp())),
-                                            *local_tensor->shape(), local_tensor->dtype());
+                                            *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+                                            tensor->dtype());
 }
 
 COMMAND(RegisterBoxingFunction("asymmetric-broadcast", CheckAsymmetricBroadcast,
