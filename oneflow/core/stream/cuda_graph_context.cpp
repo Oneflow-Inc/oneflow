@@ -53,11 +53,10 @@ void CudaGraphExecutable::Reset() {
   }
 }
 
-GenericCudaGraphContext::GenericCudaGraphContext(cudaStream_t stream) : stream_(stream), is_graph_capturing_(false) {
-}
+GenericCudaGraphContext::GenericCudaGraphContext(cudaStream_t stream)
+    : stream_(stream), is_graph_capturing_(false) {}
 
-GenericCudaGraphContext::~GenericCudaGraphContext() {
-}
+GenericCudaGraphContext::~GenericCudaGraphContext() {}
 
 void GenericCudaGraphContext::BeginGraphCapture() {
   CHECK(!is_graph_capturing_);
@@ -67,7 +66,7 @@ void GenericCudaGraphContext::BeginGraphCapture() {
 
 void GenericCudaGraphContext::EndGraphCapture(CudaGraphExecutable* executable) {
   cudaGraph_t graph = nullptr;
-  OF_CUDA_CHECK(cudaStreamEndCapture(cuda_stream_, &graph));
+  OF_CUDA_CHECK(cudaStreamEndCapture(stream_, &graph));
   executable->Update(graph);
   OF_CUDA_CHECK(cudaGraphDestroy(graph));
   is_graph_capturing_ = false;

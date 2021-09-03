@@ -104,7 +104,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   std::unique_ptr<KernelObserver> kernel_observer_;
 #ifdef WITH_CUDA_GRAPHS
   std::unique_ptr<GenericCudaGraphContext> cuda_graph_ctx_impl_;
-#endif // WITH_CUDA_GRAPHS
+#endif  // WITH_CUDA_GRAPHS
 };
 
 class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
@@ -196,7 +196,7 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id)
 
 #ifdef WITH_CUDA_GRAPHS
   cuda_graph_ctx_impl_.reset(new GenericCudaGraphContext(cuda_stream_));
-#endif // WITH_CUDA_GRAPHS
+#endif  // WITH_CUDA_GRAPHS
 
   poller_thread_ = std::thread([this, stream_id]() {
     int dev_id = stream_id.device_id().device_index();
