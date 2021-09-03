@@ -122,11 +122,17 @@ Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* ctx, const TensorTuple
       inputs.push_back(saved_tensors.at(ctx->normalized_index));  // normalized
     }
     const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(*param_grad_op, inputs));
-    if (ctx->has_beta_diff) { in_grads->at(1) = results->at(0); }
+    
     if (ctx->has_gamma_diff) {
-      in_grads->at(ctx->has_beta_diff + 1) = results->at(ctx->has_beta_diff);
-    }
+      in_grads->at(1) = results->at(ctx->has_gamma_diff); // In nn functor, in[1] is gamma, and in op_expr_helper, the output[1] is gamma diff. 
+    }    
+
+    if (ctx->has_beta_diff) {
+      in_grads->at(ctx->has_gamma_diff + 1) = results->at(0); // In nn functor, in[2] is beta, and in op_expr_helper, the output[0] is beta diff. 
+    }    
+
     if (ctx->has_normalized_diff) { dy = results->at(ctx->has_beta_diff + ctx->has_gamma_diff); }
+
   }
   if (ctx->x_requires_grad) {
     const auto& x = saved_tensors.at(ctx->x_index);
