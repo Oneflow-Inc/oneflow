@@ -1377,6 +1377,20 @@ class TestTensor(flow.unittest.TestCase):
         x = random_pytorch_tensor().to(device)
         return x.round()
 
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_tensor_diag_one_dim(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=1, dim0=random()).to(device)
+        return x.diag()
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_tensor_diag_other_dim(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        return x.diag()
+
 
 if __name__ == "__main__":
     unittest.main()
