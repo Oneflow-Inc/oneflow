@@ -23,12 +23,16 @@ DTRTensorPool::DTRTensorPool() {
     start_time_ = std::chrono::steady_clock::now();
 }
 
-vm::DTREagerBlobObject* DTRTensorPool::find_best_tensor() {
+Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     double min_cost = -1;
     vm::DTREagerBlobObject* best(nullptr);
+    int tensor_id = 0;
+    std::cout << candidates_.size() << std::endl;
     for (auto tensor : candidates_) {
-        if (static_cast<bool>(tensor->compute_path()) && !tensor->is_pinned()) {
-            double cur_cost = tensor->neighbor_cost();
+        tensor_id++;
+        std::cout << static_cast<bool>(tensor->compute_op()) << " " << (!tensor->is_pinned()) << std::endl;
+        if (static_cast<bool>(tensor->compute_op()) && !tensor->is_pinned()) {
+            auto cur_cost = JUST(tensor->cost());
             if (min_cost < 0 || min_cost > cur_cost) {
                 best = tensor;
                 min_cost = cur_cost;
@@ -39,7 +43,7 @@ vm::DTREagerBlobObject* DTRTensorPool::find_best_tensor() {
 }
 
 Maybe<void> DTRTensorPool::find_best_tensor_and_evict() {
-    auto* best = find_best_tensor();
+    auto* best = JUST(find_best_tensor());
     CHECK_NOTNULL_OR_RETURN(best);
     JUST(best->evict());
     return Maybe<void>::Ok();

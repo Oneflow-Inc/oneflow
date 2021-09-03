@@ -17,7 +17,10 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_ENV_ENV_H_
 
 #include <string>
+#include <cuda_runtime_api.h>
+#include <cuda.h>
 #include <google/protobuf/text_format.h>
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/cluster.h"
@@ -48,8 +51,13 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
 inline Maybe<void> EnableDTRStrategy(bool enable_dtr, double thres) {
   CHECK_NOTNULL_OR_RETURN((Global<bool, EnableDTR>::Get()));
   CHECK_NOTNULL_OR_RETURN((Global<double, DTRMemoryThreshold>::Get()));
+  CHECK_NOTNULL_OR_RETURN((Global<size_t, DTRRemainMemory>::Get()));
   *Global<bool, EnableDTR>::Get() = enable_dtr;
   *Global<double, DTRMemoryThreshold>::Get() = thres;
+  size_t free_bytes = -1;
+  size_t total_bytes = -1;
+  OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
+  *Global<size_t, DTRRemainMemory>::Get() = (1 - thres) * free_bytes;
   return Maybe<void>::Ok();
 }
 

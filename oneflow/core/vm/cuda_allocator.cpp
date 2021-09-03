@@ -173,7 +173,14 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   size_t total_bytes = -1;
   OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
   const size_t remain_bytes = 50 * 1048576;
-  const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
+  // const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
+  const size_t dtr_remain_bytes = oneflow::GetDTRRemainMemory();
+  size_t available_bytes = -1;
+  if (free_bytes > (remain_bytes + dtr_remain_bytes)) {
+    available_bytes = free_bytes - remain_bytes - dtr_remain_bytes;  // remain at least 50MiB memory
+  } else {
+    return false;
+  }
 
   // growth double total memory bytes if could
   // if (total_memory_bytes_ > 0) {
@@ -280,15 +287,24 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     }
   }
 
-  // test DTRMemoryThreshold
+  // // test DTRMemoryThreshold
   // double test_thres = oneflow::GetDTRMemoryThreshold();
   // std::cout << test_thres << std::endl;
+
+  // // test DTRRemainMemory
+  // size_t r_memory = oneflow::GetDTRRemainMemory();
+  // std::cout << r_memory << std::endl;
 
   if (piece == nullptr && oneflow::DTREnabled()) {
     int it = 0;   // evict iteration times
     while (piece == nullptr && it < 50) {
       CHECK_JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict());
-      if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
+      piece = FindPiece(aligned_size);
+      if (piece == nullptr) {
+        if (AllocateBlockToExtendTotalMem(aligned_size)) {
+          piece = FindPiece(aligned_size);
+          }
+      }
       if (piece == nullptr) {
         if (DeallocateFreeBlockForGarbageCollection() && AllocateBlockToExtendTotalMem(aligned_size)) {
           piece = FindPiece(aligned_size);

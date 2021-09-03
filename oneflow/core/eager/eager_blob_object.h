@@ -20,10 +20,13 @@ limitations under the License.
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/memory/memory_allocator.h"
+#include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 
 namespace oneflow {
 
 namespace vm {
+
+class LocalCallOpKernelPhyInstrOperand;
 
 class TensorBuffer {
  public:
@@ -114,9 +117,9 @@ class DTREagerBlobObject final : public EagerBlobObject {
         compute_time_ = 0;
         last_access_time_ = 0;
         pinned_ = 0;
-        compute_path_ = nullptr;
+        compute_op_ = nullptr;
         node_ = nullptr;
-        user_paths_ = std::vector<vm::Instruction*>();
+        user_ops_ = std::vector<std::shared_ptr<LocalCallOpKernelPhyInstrOperand>>();
       }
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
@@ -124,9 +127,9 @@ class DTREagerBlobObject final : public EagerBlobObject {
                     compute_time_ = 0;
                     last_access_time_ = 0;
                     pinned_ = 0;
-                    compute_path_ = nullptr;
+                    compute_op_ = nullptr;
                     node_ = nullptr;
-                    user_paths_ = std::vector<vm::Instruction*>();
+                    user_ops_ = std::vector<std::shared_ptr<LocalCallOpKernelPhyInstrOperand>>();
                   }
   ~DTREagerBlobObject() override {
     non_pod_initer_.reset();
@@ -134,14 +137,13 @@ class DTREagerBlobObject final : public EagerBlobObject {
     blob_.reset();
   }
 
-  Maybe<void> InitBlobAttrs(vm::Instruction* instruction);
+  Maybe<void> InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
 
   // Getters and Setters
   const std::size_t memory() const { return blob_body_bytes_; }
   const double compute_time() const { return compute_time_; }
   const double last_access_time() const { return last_access_time_; }
-  vm::Instruction* compute_path() const { return compute_path_; }
-  std::vector<vm::Instruction*> user_paths() const { return user_paths_; }
+  std::shared_ptr<LocalCallOpKernelPhyInstrOperand> compute_op() const { return compute_op_; }
   void set_compute_time(double val) {
     if (val > 0) {
       compute_time_ = val;
@@ -155,25 +157,25 @@ class DTREagerBlobObject final : public EagerBlobObject {
   // DTR Strategy
   bool is_in_memory();
   bool is_pinned() { return (pinned_ > 0); }
-  void pin() { pinned_++; }
-  void unpin() { pinned_--; }
+  void pin() { pinned_++; std::cout << "pinned" << std::endl; }
+  void unpin() { pinned_--; std::cout << "unpinned" << std::endl; }
   void update_access_time();
-  void update_user_paths(vm::Instruction* instruction);
+  void update_user_ops(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
   Maybe<void> evict() {
     evict_flag_ = true;
-    // DeallocateBlobDataPtr();
+    DeallocateBlobDataPtr();
     return Maybe<void>::Ok();
     }
   Maybe<bool> execute() {
     evict_flag_ = false;
     return false;   // return false to enter find_best_and_evict()
   }
-  double parent_cost();
-  double child_cost();
-  double neighbor_cost();
+  Maybe<double> parent_cost();
+  Maybe<double> child_cost();
+  Maybe<double> neighbor_cost();
 
   // TODO: variable cost functions in terms of different heuristics
-  double cost() { return compute_time_ / blob_body_bytes_ / last_access_time_; }
+  Maybe<double> cost();
 
   std::shared_ptr<DisjNode> node_;
 
@@ -182,8 +184,8 @@ class DTREagerBlobObject final : public EagerBlobObject {
   double compute_time_;
   double last_access_time_;
   size_t pinned_;
-  vm::Instruction* compute_path_;
-  std::vector<vm::Instruction*> user_paths_;
+  std::shared_ptr<LocalCallOpKernelPhyInstrOperand> compute_op_;
+  std::vector<std::shared_ptr<LocalCallOpKernelPhyInstrOperand>> user_ops_;
 };
 
 }  // namespace vm

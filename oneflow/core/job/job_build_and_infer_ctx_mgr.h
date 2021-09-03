@@ -82,6 +82,7 @@ class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
 bool EagerExecutionEnabled();
 bool DTREnabled();
 double GetDTRMemoryThreshold();
+size_t GetDTRRemainMemory();
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr();
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name);

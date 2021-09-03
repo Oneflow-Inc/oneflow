@@ -97,7 +97,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DTREagerBlobObject::InitBlobAttrs(vm::Instruction* instruction) {
+Maybe<void> DTREagerBlobObject::InitBlobAttrs(std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
   // reset DTREageBlobObject properties
   compute_time_ = 0;
   pinned_ = 0;
@@ -106,8 +106,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(vm::Instruction* instruction) {
   update_access_time();
   // last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
 
-  CHECK_OR_RETURN(static_cast<bool>(instruction));
-  compute_path_ = instruction;
+  compute_op_ = operand;
 
   return Maybe<void>::Ok();
 }
@@ -116,8 +115,8 @@ void DTREagerBlobObject::update_access_time() {
   last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
 }
 
-void DTREagerBlobObject::update_user_paths(vm::Instruction* instruction) {
-  user_paths_.emplace_back(instruction);
+void DTREagerBlobObject::update_user_ops(std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
+  user_ops_.emplace_back(operand);
 }
 
 bool DTREagerBlobObject::is_in_memory() {
@@ -125,45 +124,55 @@ bool DTREagerBlobObject::is_in_memory() {
   // return (tensor_buffer_.get()->blob_dptr() != nullptr);
 }
 
-double DTREagerBlobObject::parent_cost() {
+Maybe<double> DTREagerBlobObject::parent_cost() {
   double cost = 0;
 
-  // auto* operand = JUST(vm::LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(compute_path_));
-
-  // while (operand->inputs()->size() > 0) {
-  //   cost += JUST(operand->ForEachDTRInputTensor([&](vm::DTREagerBlobObject* dtr_blob_object) -> double {
-  //     if (!dtr_blob_object->is_in_memory()) {
-  //       return dtr_blob_object->compute_time() + dtr_object_object->parent_cost();
-  //     } else {
-  //       return 0;
-  //     }
-  //   }));
-  // }
+  auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(compute_op_.get());
+  CHECK_NOTNULL_OR_RETURN(ptr);
+  for (const auto& input : *ptr->inputs()) {
+    CHECK_OR_RETURN(static_cast<bool>(input.get()));
+    auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
+    CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+    if (!dtr_blob_object->is_in_memory()) {
+      auto com_time = dtr_blob_object->compute_time();
+      auto p_cost = JUST(dtr_blob_object->parent_cost());
+      cost = cost + com_time + p_cost;
+    }
+  }
 
   return cost;
 }
 
-double DTREagerBlobObject::child_cost() {
+Maybe<double> DTREagerBlobObject::child_cost() {
   double cost = 0;
 
-  // for (auto* instruction : user_paths()) {
-  //   auto* operand = JUST(vm::LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction));
-  //   while (operand->outputs()->size() > 0) {
-  //     cost += JUST(operand->ForEachDTROutputTensor([&](vm::DTREagerBlobObject* dtr_blob_object) -> double {
-  //       if (!dtr_blob_object->is_in_memory()) {
-  //         return dtr_blob_object->compute_time() + dtr_object_object->child_cost();
-  //       } else {
-  //         return 0;
-  //       }
-  //     }));
-  //   }
-  // }
+  for (auto operand: user_ops_) {
+    auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
+    CHECK_NOTNULL_OR_RETURN(ptr);
+    for (const auto& input : *ptr->outputs()) {
+      CHECK_OR_RETURN(static_cast<bool>(input.get()));
+      auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(input.get());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
+      if (!dtr_blob_object->is_in_memory()) {
+        auto com_time = dtr_blob_object->compute_time();
+        auto c_cost = JUST(dtr_blob_object->child_cost());
+        cost = cost + com_time + c_cost;
+      }
+    }
+  }
 
   return cost;
 }
 
-double DTREagerBlobObject::neighbor_cost() {
-  return parent_cost() + child_cost() + compute_time_;
+Maybe<double> DTREagerBlobObject::neighbor_cost() {
+  auto p_cost = JUST(parent_cost());
+  auto c_cost = JUST(child_cost());
+  return p_cost + c_cost + compute_time_;
+}
+
+Maybe<double> DTREagerBlobObject::cost() {
+  auto n_cost = JUST(neighbor_cost());
+  return n_cost / blob_body_bytes_ / last_access_time_; 
 }
 
 }  // namespace vm
