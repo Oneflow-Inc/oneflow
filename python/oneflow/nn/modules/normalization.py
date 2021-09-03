@@ -268,9 +268,12 @@ class LayerNorm(Module):
                 nd_params_shape[self.begin_norm_axis] = params_shape[0]
                 mean = flow.reshape(mean, shape=nd_params_shape)
                 variance = flow.reshape(variance, nd_params_shape)
-                if self.weight and params_shape[0] == self.weight.nelement():
+                if (
+                    self.weight is not None
+                    and params_shape[0] == self.weight.nelement()
+                ):
                     weight = flow.reshape(self.weight, shape=nd_params_shape)
-                if self.bias and params_shape[0] == self.bias.nelement():
+                if self.bias is not None and params_shape[0] == self.bias.nelement():
                     bias = flow.reshape(self.bias, shape=nd_params_shape)
             elif len(mean.shape) == len(x.shape):
                 pass
@@ -284,14 +287,7 @@ class LayerNorm(Module):
                 normalized = normalized * weight
             if self.bias is not None:
                 normalized = normalized + bias
-            affined = normalized
-            nd_params_shape = [1] * (len(x.shape) - len(params_shape)) + list(
-                params_shape
-            )
-            if self.elementwise_affine:
-                affined = affined * self.weight
-                affined = affined + self.bias
-            return affined
+            return normalized
         else:
             if self.elementwise_affine:
                 res = flow._C.layer_norm_affine(
