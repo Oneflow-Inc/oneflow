@@ -48,7 +48,7 @@ void OpKernelObject::NewPartialInitializedKernel(
     const ParallelDesc* parallel_desc) {
   KernelConf kernel_conf;
   op.GenKernelConf(BlobDesc4BnInOp, parallel_ctx, &kernel_conf);
-  kernel_.reset(new EagerKernel(job_desc_.get(), kernel_conf));
+  kernel_.reset(new EagerKernel(kernel_conf));
 }
 
 Maybe<void> SystemOpKernelObject::ResetKernel(
