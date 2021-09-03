@@ -106,5 +106,4 @@ class TestActivations(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     if flow.sysconfig.get_cuda_version() >= 11000:
-        print("v:", flow.sysconfig.get_cuda_version())
         unittest.main()
