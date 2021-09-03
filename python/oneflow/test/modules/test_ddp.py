@@ -38,7 +38,7 @@ class TestDDP(flow.unittest.TestCase):
             def forward(self, x):
                 return x * self.w
 
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == 0:
             x = flow.Tensor([1, 1])
         elif rank == 1:
@@ -66,11 +66,11 @@ class TestDDP(flow.unittest.TestCase):
 
             def forward(self, x):
                 x = x * self.w
-                if flow.framework.distribute.get_rank() == 0:
+                if flow.env.get_rank() == 0:
                     x = x * self.used_only_in_rank0
                 return x
 
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == 0:
             x = flow.Tensor([1])
         elif rank == 1:
@@ -101,7 +101,7 @@ class TestDDP(flow.unittest.TestCase):
                 self.w3 = flow.nn.Parameter(flow.Tensor([3]))
 
             def forward(self, x):
-                if flow.framework.distribute.get_rank() == 0:
+                if flow.env.get_rank() == 0:
                     x *= self.w1
                     x *= self.w2
                     x *= self.w3
@@ -111,7 +111,7 @@ class TestDDP(flow.unittest.TestCase):
                     x *= self.w1
                 return x
 
-        rank = flow.framework.distribute.get_rank()
+        rank = flow.env.get_rank()
         if rank == 0:
             x = flow.Tensor([1])
         elif rank == 1:
@@ -128,6 +128,49 @@ class TestDDP(flow.unittest.TestCase):
         test_case.assertTrue(np_allclose_with_shape(m.w1.grad.numpy(), np.array([9])))
         test_case.assertTrue(np_allclose_with_shape(m.w2.grad.numpy(), np.array([4.5])))
         test_case.assertTrue(np_allclose_with_shape(m.w3.grad.numpy(), np.array([3])))
+
+    def test_broadcast_buffer(test_case):
+        rank = flow.env.get_rank()
+
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.register_buffer("buf", flow.tensor([1, 2]) * (rank + 1))
+
+            def forward(self, x):
+                res = self.buf + x
+                self.buf.copy_(x)
+                return res
+
+        x = flow.tensor([2, 3]) * (rank + 1)
+        x = x.to("cuda")
+
+        m = CustomModule()
+        m = m.to("cuda")
+        m = ddp(m)
+
+        y1 = m(x)
+        y2 = m(x)
+
+        m = CustomModule()
+        m = m.to("cuda")
+        m = ddp(m, broadcast_buffers=False)
+
+        y3 = m(x)
+        y4 = m(x)
+
+        if rank == 0:
+            test_case.assertTrue(np_allclose_with_shape(y1.numpy(), np.array([3, 5])))
+            test_case.assertTrue(np_allclose_with_shape(y2.numpy(), np.array([4, 6])))
+            test_case.assertTrue(np_allclose_with_shape(y3.numpy(), np.array([3, 5])))
+            test_case.assertTrue(np_allclose_with_shape(y4.numpy(), np.array([4, 6])))
+        elif rank == 1:
+            test_case.assertTrue(np_allclose_with_shape(y1.numpy(), np.array([5, 8])))
+            test_case.assertTrue(np_allclose_with_shape(y2.numpy(), np.array([6, 9])))
+            test_case.assertTrue(np_allclose_with_shape(y3.numpy(), np.array([6, 10])))
+            test_case.assertTrue(np_allclose_with_shape(y4.numpy(), np.array([8, 12])))
+        else:
+            raise ValueError()
 
 
 if __name__ == "__main__":

@@ -180,7 +180,7 @@ class CrossEntropyLoss(Module):
         input_shape_len = len(input.shape)
         if input_shape_len == 3:
             (b, c, h) = (input.shape[0], input.shape[1], input.shape[2])
-            input = flow.F.transpose(input, perm=(0, 2, 1))
+            input = flow._C.transpose(input, perm=(0, 2, 1))
             input = flow.reshape(input, shape=[-1, input.shape[2]])
             target = target.flatten()
         elif input_shape_len == 4:
@@ -190,12 +190,12 @@ class CrossEntropyLoss(Module):
                 input.shape[2],
                 input.shape[3],
             )
-            input = flow.F.transpose(input, perm=(0, 2, 3, 1))
+            input = flow._C.transpose(input, perm=(0, 2, 3, 1))
             input = flow.reshape(input, shape=[-1, input.shape[3]])
             target = target.flatten()
         elif input_shape_len >= 5:
             raise NotImplemented
-        out = flow.F.sparse_softmax_cross_entropy(
+        out = flow._C.sparse_softmax_cross_entropy(
             input, target, depth=input.shape[len(input.shape) - 1]
         )
         if self.ignore_index is not None:
@@ -409,9 +409,9 @@ class NLLLoss(Module):
         self.reduction = reduction
 
     def nllloss_1d(self, input, target):
-        target = flow.F.reshape(target, shape=(target.shape[0], 1))
-        res = flow.F.dim_gather(input, target, dim=1)
-        res = flow.F.squeeze(res, dim=[1])
+        target = flow._C.reshape(target, shape=(target.shape[0], 1))
+        res = flow._C.dim_gather(input, target, dim=1)
+        res = flow._C.squeeze(res, dim=[1])
         return res
 
     def forward(self, input, target):
@@ -422,7 +422,7 @@ class NLLLoss(Module):
             res = self.nllloss_1d(input, target)
         elif len(input.shape) == 3:
             (b, c, h) = (input.shape[0], input.shape[1], input.shape[2])
-            input = flow.F.transpose(input, perm=(0, 2, 1))
+            input = flow._C.transpose(input, perm=(0, 2, 1))
             input = flow.reshape(input, shape=[-1, input.shape[2]])
             target = target.flatten()
             res = self.nllloss_1d(input, target)
@@ -434,7 +434,7 @@ class NLLLoss(Module):
                 input.shape[2],
                 input.shape[3],
             )
-            input = flow.F.transpose(input, perm=(0, 2, 3, 1))
+            input = flow._C.transpose(input, perm=(0, 2, 3, 1))
             input = input.reshape(-1, input.shape[3])
             target = target.flatten()
             res = self.nllloss_1d(input, target)
@@ -931,8 +931,8 @@ class BCEWithLogitsLoss(Module):
 
     Args:
         weight (Tensor, optional): The manual rescaling weight to the loss. Default: ``None``
-        size_average (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
-        reduce (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
+        size_average (bool, optional): Deprecated (see :attr:`reduction`). Default: ``True``
+        reduce (bool, optional): Deprecated (see :attr:`reduction`). Default: ``True``
         reduction (str, optional): The reduce type, it can be one of ``"none"``, ``"mean"``, ``"sum"``.
             ``'none'``: no reduction will be applied, ``'mean'``: the sum of the output will be divided
             by the number of elements in the output, ``'sum'``: the output will be summed. Default: ``"mean"``
@@ -1160,6 +1160,55 @@ class SmoothL1Loss(Module):
             return flow.sum(loss)
         elif self.reduction == "mean":
             return flow.mean(loss)
+
+
+class CombinedMarginLoss(Module):
+    """The operation implements "margin_softmax" in InsightFace:
+    https://github.com/deepinsight/insightface/blob/master/recognition/arcface_mxnet/train.py
+    The implementation of margin_softmax in InsightFace is composed of multiple operators.
+    We fuse them for speed up.
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+        label (oneflow.Tensor): label with integer data type
+        m1 (float): loss m1 parameter
+        m2 (float): loss m2 parameter
+        m3 (float): loss m3 parameter
+
+    Returns:
+        oneflow.Tensor: A Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> np_x = np.array([[-0.7027179, 0.0230609], [-0.02721931, -0.16056311], [-0.4565852, -0.64471215]])
+        >>> np_label = np.array([0, 1, 1])
+        >>> x = flow.Tensor(np_x, dtype=flow.float32)
+        >>> label = flow.Tensor(np_label, dtype=flow.int32)
+        >>> loss_func = flow.nn.CombinedMarginLoss(0.3, 0.5, 0.4)
+        >>> out = loss_func(x, label)
+        >>> out
+        tensor([[-0.0423,  0.0231],
+                [-0.0272,  0.1237],
+                [-0.4566, -0.0204]], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, m1: float = 1.0, m2: float = 0.0, m3: float = 0.0) -> None:
+        super().__init__()
+        self.m1 = m1
+        self.m2 = m2
+        self.m3 = m3
+
+    def forward(self, x, label):
+        depth = x.shape[1]
+        (y, _) = flow._C.combined_margin_loss(
+            x, label, m1=self.m1, m2=self.m2, m3=self.m3, depth=depth
+        )
+        return y
 
 
 if __name__ == "__main__":

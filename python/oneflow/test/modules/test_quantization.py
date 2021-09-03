@@ -121,7 +121,7 @@ def _check_quantize(
         )
         out_np = quant_per_layer_cambricon(input_flatten, quantization_bit, scale_np[0])
     rmse = np.sqrt(np.mean((out_of - out_np) ** 2))
-    assert rmse <= 1.0, "quantization op has bug!"
+    assert rmse <= 2.0, "quantization op has bug!"
 
 
 def _run_test_quantize(

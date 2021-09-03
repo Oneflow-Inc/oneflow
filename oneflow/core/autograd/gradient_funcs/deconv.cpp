@@ -23,17 +23,17 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct DeConvolutionNdInterpState : public OpExprInterpState {
+struct DeConvolutionNdCaptureState : public AutoGradCaptureState {
   bool weight_requires_grad = false;
   bool activation_requires_grad = false;
 };
 
-class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdInterpState> {
+class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(DeConvolutionNdInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(DeConvolutionNdCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const DeConvolutionNdInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const DeConvolutionNdCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -71,7 +71,7 @@ Maybe<void> DeConvolutionNd::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* ctx, const TensorTuple& inputs,
                                      const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->activation_requires_grad = inputs.at(0)->requires_grad();
   ctx->weight_requires_grad = inputs.at(1)->requires_grad();
@@ -84,7 +84,7 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdInterpState* ctx, const Tens
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdInterpState* ctx,
+Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
                                    const TensorTuple& out_grads, TensorTuple* in_grads) const {
   in_grads->resize(2);
   if (ctx->activation_requires_grad) {

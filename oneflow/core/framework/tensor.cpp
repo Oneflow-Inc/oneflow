@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -32,8 +34,8 @@ namespace one {
 
 Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
-  return std::dynamic_pointer_cast<MirroredTensor>(
-      JUST(functional::Constant(*shape_, functional::Scalar(0), dtype_, device_)));
+  return std::dynamic_pointer_cast<MirroredTensor>(JUST(functional::Constant(
+      *shape_, functional::Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
 }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
@@ -50,17 +52,6 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
         std::make_shared<EagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<MirroredTensor>(impl);
   }
-}
-
-/* static */ Maybe<MirroredTensor> MirroredTensor::MakeEagerTensor(
-    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object, const Symbol<Device>& device,
-    const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf) {
-  const auto& blob_desc = eager_blob_object->blob_desc();
-  const auto& tensor_meta =
-      std::make_shared<MirroredTensorMeta>(blob_desc.shape_ptr(), blob_desc.data_type(), device);
-  auto* tensor_impl = new EagerMirroredTensorImpl(tensor_meta, requires_grad, is_leaf);
-  JUST(tensor_impl->InitEagerBlobObjectAndTensorStorage(eager_blob_object, tensor_storage));
-  return std::make_shared<MirroredTensor>(std::shared_ptr<MirroredTensorImpl>(tensor_impl));
 }
 
 bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
@@ -81,6 +72,16 @@ Maybe<Tensor> MirroredTensor::clone() const {
   std::shared_ptr<MirroredTensor> input =
       std::const_pointer_cast<MirroredTensor>(shared_from_this());
   return JUST(functional::Copy(input, device_type, device_id));
+}
+
+Maybe<Tensor> ConsistentTensor::clone() const {
+  const auto& local_tensor = JUST(cur_rank_phy_tensor());
+  const auto& device_type = JUST(local_tensor->device())->type();
+  int64_t device_id = JUST(local_tensor->device())->device_id();
+  const auto& cloned_local_tensor = JUST(functional::Copy(local_tensor, device_type, device_id));
+  DisableCheckConsistentTensorMetaScope disable_meta_check{};
+  return functional::LocalToConsistent(cloned_local_tensor, JUST(parallel_desc()),
+                                       *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype());
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,

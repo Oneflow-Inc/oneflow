@@ -34,14 +34,12 @@ class __PrinterOptions(object):
 PRINT_OPTS = __PrinterOptions()
 
 
-def _convert_to_local_tensor(self):
-    # consistent to local
-    if self.is_consistent:
-        placement = flow.placement("cpu", {0: [0]})
-        sbp = flow.sbp.broadcast
-        # TODO: delete `to("cuda")` after supporting cpu data broadcast
-        self = self.to("cuda").to_consistent(placement, sbp).to_local()
-    return self
+def _try_convert_to_local_tensor(tensor):
+    if tensor.is_consistent:
+        tensor = tensor.to_consistent(
+            placement=tensor.placement, sbp=flow.sbp.broadcast
+        ).to_local()
+    return tensor
 
 
 class _Formatter(object):
@@ -51,6 +49,7 @@ class _Formatter(object):
         self.sci_mode = False
         self.max_width = 1
         self.random_sample_num = 50
+        tensor = _try_convert_to_local_tensor(tensor)
 
         with flow.no_grad():
             tensor_view = tensor.reshape(-1)
@@ -136,7 +135,7 @@ class _Formatter(object):
 
 
 def _scalar_str(self, formatter1):
-    return formatter1.format(self.tolist())
+    return formatter1.format(_try_convert_to_local_tensor(self).tolist())
 
 
 def _vector_str(self, indent, summarize, formatter1):
@@ -151,13 +150,20 @@ def _vector_str(self, indent, summarize, formatter1):
         return formatter1.format(val)
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
+        left_values = _try_convert_to_local_tensor(
+            self[: PRINT_OPTS.edgeitems]
+        ).tolist()
+        right_values = _try_convert_to_local_tensor(
+            self[-PRINT_OPTS.edgeitems :]
+        ).tolist()
         data = (
-            [_val_formatter(val) for val in self[: PRINT_OPTS.edgeitems].tolist()]
+            [_val_formatter(val) for val in left_values]
             + [" ..."]
-            + [_val_formatter(val) for val in self[-PRINT_OPTS.edgeitems :].tolist()]
+            + [_val_formatter(val) for val in right_values]
         )
     else:
-        data = [_val_formatter(val) for val in self.tolist()]
+        values = _try_convert_to_local_tensor(self).tolist()
+        data = [_val_formatter(val) for val in values]
 
     data_lines = [
         data[i : i + elements_per_line] for i in range(0, len(data), elements_per_line)
@@ -202,8 +208,19 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
+    # TODO: not support flow.sbp.split(x) but flow.sbp.split(0).
+    def _cannot_print(sbp):
+        return (
+            sbp != flow.sbp.partial_sum
+            and sbp != flow.sbp.broadcast
+            and sbp != flow.sbp.split(0)
+        )
+
+    # TODO: delete it when boxing on "CPU" and s1->b on "GPU" are ready
     if self.is_consistent:
-        return "[...]"
+        self = self.to("cuda")
+        if all(_cannot_print(sbp) for sbp in self.sbp):
+            return "[...]"
 
     with flow.no_grad():
         formatter = _Formatter(get_summarized_data(self) if summarize else self)
@@ -225,20 +242,15 @@ def _add_suffixes(tensor_str, suffixes, indent):
     return "".join(tensor_strs)
 
 
-def cat_data(inp):
-    return flow.cat((inp[: PRINT_OPTS.edgeitems], inp[-PRINT_OPTS.edgeitems :]))
-
-
 def get_summarized_data(self):
-    # TODO: supports consistent slice and delete this assert
-    assert self.is_local
-
     dim = self.dim()
     if dim == 0:
         return self
     if dim == 1:
         if self.size(0) > 2 * PRINT_OPTS.edgeitems:
-            return cat_data(self)
+            return flow.cat(
+                (self[: PRINT_OPTS.edgeitems], self[-PRINT_OPTS.edgeitems :])
+            )
         else:
             return self
     if self.size(0) > 2 * PRINT_OPTS.edgeitems:
@@ -251,40 +263,40 @@ def get_summarized_data(self):
         return flow.stack([get_summarized_data(x) for x in self])
 
 
-def _gen_tensor_str_template(inp, is_meta):
-    is_meta = is_meta or inp.is_lazy
+def _gen_tensor_str_template(tensor, is_meta):
+    is_meta = is_meta or tensor.is_lazy
     prefix = "tensor("
     indent = len(prefix)
     suffixes = []
 
-    # Inp is local or consistent
-    if inp.is_consistent:
-        suffixes.append(f"placement={str(inp.placement)}")
-        suffixes.append(f"sbp={str(inp.sbp)}")
-    elif inp.device.type == "cuda":
-        suffixes.append("device='" + str(inp.device) + "'")
-    elif inp.device.type != "cpu":
-        raise RuntimeError("unknow device type")
-    if inp.is_lazy:
+    # tensor is local or consistent
+    if tensor.is_consistent:
+        suffixes.append(f"placement={str(tensor.placement)}")
+        suffixes.append(f"sbp={str(tensor.sbp)}")
+    elif tensor.device.type == "cuda" or tensor.device.type == "gpu":
+        suffixes.append("device='" + str(tensor.device) + "'")
+    elif tensor.device.type != "cpu":
+        raise RunTimeError("unknow device type")
+    if tensor.is_lazy:
         suffixes.append("is_lazy='True'")
 
-    # Inp is empty, meta or normal
-    if inp.numel() == 0:
+    # tensor is empty, meta or normal
+    if tensor.numel() == 0:
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
-        if inp.dim() != 1:
-            suffixes.append("size=" + str(tuple(inp.shape)))
+        if tensor.dim() != 1:
+            suffixes.append("size=" + str(tuple(tensor.shape)))
         tensor_str = "[]"
     elif is_meta:
         tensor_str = "..."
-        suffixes.append("size=" + str(tuple(inp.shape)))
+        suffixes.append("size=" + str(tuple(tensor.shape)))
     else:
-        tensor_str = _tensor_str(inp, indent)
+        tensor_str = _tensor_str(tensor, indent)
 
-    suffixes.append("dtype=" + str(inp.dtype))
-    if inp.grad_fn is not None:
-        name = inp.grad_fn.name()
+    suffixes.append("dtype=" + str(tensor.dtype))
+    if tensor.grad_fn is not None:
+        name = tensor.grad_fn.name()
         suffixes.append("grad_fn=<{}>".format(name))
-    elif inp.requires_grad:
+    elif tensor.requires_grad:
         suffixes.append("requires_grad=True")
 
     return _add_suffixes(prefix + tensor_str, suffixes, indent)

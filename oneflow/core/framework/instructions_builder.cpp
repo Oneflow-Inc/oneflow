@@ -36,7 +36,7 @@ limitations under the License.
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/vm/soft_sync_stream_phy_instr_operand.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instruction_replay.h"
@@ -908,8 +908,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
-      JUST(eager_blob_object->compute_local_dep_object());
+  LocalDepObject* compute_local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object);
   *instruction->mut_parallel_desc() = parallel_desc;
@@ -918,7 +917,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 }
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(
-    const std::shared_ptr<VmLocalDepObject> compute_local_dep_object, const std::string& modifier,
+    LocalDepObject* compute_local_dep_object, const std::string& modifier,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".SoftSyncStream");
@@ -933,12 +932,15 @@ namespace {
 
 const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
     const std::shared_ptr<one::MirroredTensor> tensor) {
-  return CHECK_JUST(tensor->device())->parallel_desc_ptr();
+  const auto& device = CHECK_JUST(tensor->device());
+  const auto& placement = CHECK_JUST(Placement4Device(device));
+  return placement.shared_from_symbol();
 }
 
 const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
     const one::EagerMirroredTensorImpl* tensor) {
-  return tensor->device()->parallel_desc_ptr();
+  const auto& placement = CHECK_JUST(Placement4Device(tensor->device()));
+  return placement.shared_from_symbol();
 }
 
 }  // namespace
@@ -975,8 +977,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   std::string instr_name = parallel_desc->device_tag() + ".AccessBlobByCallback";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
-  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
-      JUST(tensor->compute_local_dep_object());
+  LocalDepObject* compute_local_dep_object = JUST(tensor->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object, callback, modifier);
   *instruction->mut_parallel_desc() = parallel_desc;

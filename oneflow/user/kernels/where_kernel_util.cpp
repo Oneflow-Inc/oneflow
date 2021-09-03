@@ -23,6 +23,20 @@ struct WhereKernelUtil<DeviceType::kCPU, T, CondT> {
                     const T* rhs, T* out) {
     FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = static_cast<bool>(cond[i]) ? lhs[i] : rhs[i]; }
   }
+  static void WhereXScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond,
+                           const T x_scalar, const T* rhs, T* out) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = static_cast<bool>(cond[i]) ? x_scalar : rhs[i]; }
+  }
+  static void WhereYScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
+                           const T y_scalar, T* out) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = static_cast<bool>(cond[i]) ? lhs[i] : y_scalar; }
+  }
+  static void WhereXYScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond,
+                            const T x_scalar, const T y_scalar, T* out) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      out[i] = static_cast<bool>(cond[i]) ? x_scalar : y_scalar;
+    }
+  }
 };
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_WHERE_FUNCTOR, (DeviceType::kCPU),

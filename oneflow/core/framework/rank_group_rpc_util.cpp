@@ -22,14 +22,14 @@ limitations under the License.
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/thread/consistent_unique_id.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
 Maybe<NaiveAsyncTransportCtx> CheckTransportToken(Symbol<RankGroup> rank_group) {
   const auto& transport_token =
-      JUST(TransportToken::AcquireCtrlTransportToken(kRankGroupCtrlCmdCheckRankGroupConsistency));
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckRankGroupConsistency));
   const auto& PrepareBuffer = [](void** buffer, std::size_t* size,
                                  std::function<void()>* Callback) -> Maybe<void> {
     const auto& placeholder = std::make_shared<uint32_t>();
@@ -48,7 +48,7 @@ Maybe<NaiveAsyncTransportCtx> CheckTransportToken(Symbol<RankGroup> rank_group) 
 Maybe<int64_t> GetCurrentRankGroupLevel() {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& root_rank_group = JUST(RankGroupScope::RootRankGroup());
-  CHECK_OR_RETURN(rank_group == root_rank_group) << Error::Unimplemented();
+  CHECK_OR_RETURN(rank_group == root_rank_group) << Error::UnimplementedError();
   return static_cast<int64_t>(0);
 }
 

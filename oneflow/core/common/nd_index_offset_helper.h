@@ -36,7 +36,7 @@ class NdIndexOffsetHelper {
 
   OF_DEVICE_FUNC explicit NdIndexOffsetHelper(const T* dims, int n) { InitStrides(dims, n); }
 
-  OF_DEVICE_FUNC ~NdIndexOffsetHelper() = default;
+  ~NdIndexOffsetHelper() = default;
 
   OF_DEVICE_FUNC T NdIndexToOffset(const T* index) const {
     T offset = 0;

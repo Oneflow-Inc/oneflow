@@ -18,7 +18,9 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 namespace one {
@@ -241,8 +243,10 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   packed_indices = JUST(Transpose(packed_indices, permute));
 
   if (transposed_input->is_consistent()) {
-    // TODO(hjchen2): Cast local indices to consistent.
-    UNIMPLEMENTED_THEN_RETURN() << "Not support consistent mode.";
+    const auto& placement = JUST(transposed_input->parallel_desc());
+    const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+    packed_indices =
+        JUST(ToConsistent(packed_indices, placement, {broadcast_sbp}, GetNoneSbpList()));
   }
   Symbol<Device> device = JUST(transposed_input->device());
   if (JUST(packed_indices->device()) != device) {

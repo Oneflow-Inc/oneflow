@@ -17,49 +17,77 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
 
-def _tensor_to(input, device=None, dtype=None, copy=False):
-    ret = input
+def _tensor_to(input, device, dtype, copy=False):
+    assert input.is_local
 
-    if device is None:
-        assert input.is_local, "input tensor must be local when param device is None"
-        device = input.device
-
-    if dtype is None:
-        dtype = input.dtype
-
+    device = device or input.device
     assert isinstance(device, flow.device), f"Invalid device param: {device}"
+    dtype = dtype or input.dtype
+    assert isinstance(dtype, flow.dtype), f"Invalid dtype param: {dtype}"
 
-    if (device != input.device) or copy:
-        ret = flow.F.copy(ret, device_type=device.type, device_id=device.index)
+    ret = input
+    copy_happened = False
+    if device != ret.device:
+        ret = flow._C.copy(ret, device_type=device.type, device_id=device.index)
+        copy_happened = True
 
-    if (dtype != input.dtype) or copy:
-        ret = flow.F.cast(ret, dtype=dtype)
+    if dtype != ret.dtype:
+        ret = flow._C.cast(ret, dtype=dtype)
+        copy_happened = True
+
+    if copy and not copy_happened:
+        ret = flow._C.copy(ret, device_type=ret.device.type, device_id=ret.device.index)
 
     return ret
 
 
-def _consistent_tensor_to(input, device):
+def _consistent_tensor_to(input, device_type, dtype, copy=False):
     assert input.is_consistent
-    assert isinstance(device, str)
+    # TODO(zwx): support lazy check_meta_consistency
+    # input.check_meta_consistency()
 
-    # the same device as input
-    if device == input.placement.device_type:
-        return input
+    device_type = device_type or input.placement.device_type
+    assert isinstance(device_type, str)
+
+    dtype = dtype or input.dtype
+    assert isinstance(dtype, flow.dtype)
+
+    if device_type == input.placement.device_type and dtype == input.dtype:
+        return input if not copy else input.clone()
 
     if input.is_lazy:
-        return flow.F.copy(input, device_type=device, device_id=0)
+        return _lazy_consistent_tensor_to(input, device_type, dtype)
     else:
-        # NOTE(zwx): Use the way that input.to_local() -> to(out_device) -> out.to_consistent()
-        # before eager consistent interpreter for F.copy is ready
-        out_placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
-            input.placement, device
-        )
-        sbp = input.sbp
-        device = flow.device(device)
+        return _eager_consistent_tensor_to(input, device_type, dtype)
 
-        local_input = input.to_local()
-        local_output = _tensor_to(local_input, device, None, False)
-        return local_output.to_consistent(out_placement, sbp)
+
+def _lazy_consistent_tensor_to(input, device_type, dtype):
+    ret = input
+
+    if dtype != ret.dtype:
+        ret = flow._C.cast(ret, dtype=dtype)
+
+    if device_type != ret.placement.device_type:
+        ret = flow._C.copy(ret, device_type=device_type, device_id=0)
+
+    return ret
+
+
+def _eager_consistent_tensor_to(input, device_type, dtype):
+    input.check_meta_consistency()
+
+    if device_type == input.placement.device_type and dtype != input.dtype:
+        return flow._C.cast(input, dtype=dtype)
+
+    device = flow.device(device_type)
+    placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
+        input.placement, device_type
+    )
+    sbp = input.sbp
+
+    local_input = input.to_local()
+    local_output = _tensor_to(local_input, device, dtype, False)
+    return local_output.to_consistent(placement=placement, sbp=sbp)
 
 
 def _safe_get(list, index, default):
@@ -149,22 +177,14 @@ def to_op(input, *args, **kwargs):
         raise TypeError("Invalid copy param received: {copy}")
 
     if input.is_consistent:
-        if device not in ("cuda", "cpu"):
+        if device is not None and device not in ("cuda", "cpu"):
             raise TypeError(
                 "A consistent tensor can only call to() with device_str_without_id, "
                 'e.g. to("cuda") or to("cpu"), '
                 f"but device param {device} has been received."
             )
 
-        if dtype is not None:
-            raise TypeError(
-                "Can not call to() for a consistent tensor with dtype param"
-            )
-
-        if not input.is_lazy:
-            input.check_meta_consistency()
-
-        return _consistent_tensor_to(input, device)
+        return _consistent_tensor_to(input, device, dtype, copy=copy)
     else:
         if isinstance(device, str):
             device = flow.device(device)

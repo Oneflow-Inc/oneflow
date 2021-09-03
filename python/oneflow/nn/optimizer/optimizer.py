@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections
+from itertools import chain
 import warnings
 from copy import deepcopy
 from typing import Any, Callable, Dict, Union
 
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
+from oneflow.nn.utils.clip_grad import clip_grad_norm_
 
 
 class ParamGroup(object):
@@ -34,12 +36,23 @@ class ParamGroup(object):
         for key in self._options:
             if key in parameters:
                 self._options[key] = parameters[key]
+        self._enable_clip_grad = False
+        if "clip_grad_max_norm" in parameters and "clip_grad_norm_type" in parameters:
+            self._enable_clip_grad = True
+            self._options["clip_grad_max_norm"] = parameters["clip_grad_max_norm"]
+            self._options["clip_grad_norm_type"] = parameters["clip_grad_norm_type"]
 
     def __getitem__(self, key):
         return self._options[key]
 
     def __setitem__(self, key, value):
         self._options[key] = value
+
+    def __contains__(self, key):
+        return self._options.__contains__(key)
+
+    def items(self):
+        return self.__dict__.items()
 
     @property
     def options(self):
@@ -63,13 +76,143 @@ class Optimizer(object):
         raise NotImplementedError()
 
     def load_state_dict(self, state_dict) -> None:
-        raise NotImplementedError()
+        r"""
+        Load the state of the optimizer which is created by `state_dict` function.
+
+        It almost copied from: https://pytorch.org/docs/stable/_modules/torch/optim/optimizer.html#Optimizer.load_state_dict
+        """
+
+        # Validate the state_dict
+        groups = self.param_groups
+        saved_groups = state_dict["param_groups"]
+
+        if len(groups) != len(saved_groups):
+            raise ValueError(
+                "loaded state dict has a different number of parameter groups"
+            )
+        param_lens = (len(g._parameters) for g in groups)
+        saved_lens = (len(g["params"]) for g in saved_groups)
+        if any(p_len != s_len for p_len, s_len in zip(param_lens, saved_lens)):
+            raise ValueError(
+                "loaded state dict contains a parameter group "
+                "that doesn't match the size of optimizer's group"
+            )
+
+        # Update the state
+        id_map = {
+            old_id: p
+            for old_id, p in zip(
+                chain.from_iterable((g["params"] for g in saved_groups)),
+                chain.from_iterable((g._parameters for g in groups)),
+            )
+        }
+
+        def cast(param, value):
+            r"""Make a deep copy of value, casting all tensors to device of param."""
+            if isinstance(value, Tensor):
+                if value.is_local:
+                    value = value.to(param.device)
+                else:
+                    value = value.to_consistent(
+                        placement=value.placement, sbp=value.sbp
+                    )
+                return value
+            elif isinstance(value, dict):
+                return {k: cast(param, v) for k, v in value.items()}
+            elif isinstance(value, collections.Iterable):
+                return type(value)(cast(param, v) for v in value)
+            else:
+                return value
+
+        # Copy state assigned to params (and cast tensors to appropriate types).
+        # State that is not assigned to params is copied as is (needed for
+        # backward compatibility).
+        state = dict()
+        for k, v in state_dict["state"].items():
+            if k in id_map:
+                param = id_map[k]
+                state[param] = cast(param, v)
+            else:
+                state[k] = v
+        self._state = state
+
+        # Update parameter groups, setting their 'params' value
+        def update_group(group, new_group):
+            group._options = deepcopy(new_group["_options"])
+            group._enable_clip_grad = new_group["_enable_clip_grad"]
+            return group
+
+        param_groups = [update_group(g, ng) for g, ng in zip(groups, saved_groups)]
+        self.param_groups = param_groups
 
     def state_dict(self):
-        raise NotImplementedError()
+        r"""
+        Returns the state of the optimizer as a :class:`dict`.
+
+        It contains two entries:
+
+        * state - a dict holding current optimization state. Its content
+          differs between optimizer classes.
+        * param_group - a dict containing all parameter groups.
+
+        It almost copied from: https://pytorch.org/docs/stable/_modules/torch/optim/optimizer.html#Optimizer.state_dict
+        """
+
+        # Save order indices instead of Tensors
+        param_mappings = {}
+        start_index = 0
+
+        def pack_group(group):
+            nonlocal start_index
+            packed = {k: v for k, v in group.items() if k != "_parameters"}
+            param_mappings.update(
+                {
+                    id(p): i
+                    for i, p in enumerate(group._parameters, start_index)
+                    if id(p) not in param_mappings
+                }
+            )
+            packed["params"] = [param_mappings[id(p)] for p in group._parameters]
+            start_index += len(packed["params"])
+            return packed
+
+        param_groups = [pack_group(g) for g in self.param_groups]
+        # Remap state to use order indices as keys
+        packed_state = {
+            (param_mappings[id(k)] if isinstance(k, Tensor) else k): v
+            for k, v in self._state.items()
+        }
+        return {
+            "state": packed_state,
+            "param_groups": param_groups,
+        }
 
     def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
         raise NotImplementedError()
+
+    def clip_grad(self):
+        r"""Clips gradient norm of an iterable of parameters. 
+        The norm is computed over all gradients together, as if they were concatenated into a single vector.
+        
+        You can set the max_norm and norm_type. 
+
+        For more details, you can refer to the documentation of each optimizer(like Adam, SGD and so on). 
+
+        You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
+        
+        """
+        for param_group in self.param_groups:
+            if param_group._enable_clip_grad:
+                clip_grad_norm_(
+                    param_group.parameters,
+                    param_group["clip_grad_max_norm"],
+                    param_group["clip_grad_norm_type"],
+                    True,
+                )
+            else:
+                warnings.warn(
+                    "To enable clip_grad, passing the `clip_grad_max_norm` and `clip_grad_norm_type` parameters when instantializing the Optimizer."
+                )
 
     def zero_grad(self, set_to_none: bool = False):
         """Sets the gradients of all optimized torch.Tensor s to zero.
@@ -136,3 +279,17 @@ class Optimizer(object):
             raise TypeError(
                 f"params argument given to the optimizer should be an iterable of Tensors or dicts, but got {type(parameters)}"
             )
+
+    def _generate_grad_clip_conf_for_optim_conf(self, param_group, optimizer_conf):
+        if param_group._enable_clip_grad:
+            if (
+                param_group["clip_grad_max_norm"] == 1.0
+                and param_group["clip_grad_norm_type"] == 2.0
+            ):
+                optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm().set_clip_norm(
+                    param_group["clip_grad_max_norm"]
+                )
+            else:
+                warnings.warn(
+                    "For now, nn.Graph only support clip grad with `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`."
+                )

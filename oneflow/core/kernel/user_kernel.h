@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/device/cuda_graph_context.h"
 
 namespace oneflow {
 
@@ -39,25 +40,27 @@ class UserKernel final : public Kernel {
   const std::shared_ptr<user_op::OpKernelState>& GetOpKernelState() const;
   void ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                          user_op::OpKernelState* opkernel_state) const;
+  bool IsCudaGraphSupported() const;
 
  private:
-  void VirtualKernelInit(DeviceCtx* device_ctx) override;
+  void VirtualKernelInit(KernelContext* ctx) override;
 
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
-  void ForwardShape(const KernelCtx& ctx,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardShape(const KernelContext* ctx) const override;
 
   bool IsStateless() const override;
+
+  const JobDesc& job_desc() const { return *job_desc_; }
 
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;
   std::unique_ptr<UserKernelComputeContext> ctx_;
   std::unique_ptr<UserKernelInferContext> infer_ctx_;
   std::unique_ptr<user_op::OpKernelInferCache> infer_cache_;
-  class CudaGraphContext;
+#ifdef WITH_CUDA_GRAPHS
   std::unique_ptr<CudaGraphContext> cuda_graph_ctx_;
+#endif  // WITH_CUDA_GRAPHS
+  const JobDesc* job_desc_;
 };
 
 }  // namespace oneflow

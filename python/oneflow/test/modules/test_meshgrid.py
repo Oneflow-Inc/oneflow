@@ -22,6 +22,7 @@ from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from automated_test_util import *
 
 
 def _test_meshgrid_forawd(test_case, device):
@@ -37,7 +38,7 @@ def _test_meshgrid_forawd(test_case, device):
     test_case.assertTrue(np.allclose(of_y.numpy(), np_y, 0.0001, 0.0001))
 
 
-def _test_meshgrid_forawd_scalr(test_case, device):
+def _test_meshgrid_forawd_scalar(test_case, device):
     input1 = flow.Tensor(np.array(1.0), dtype=flow.float32, device=flow.device(device))
     input2 = flow.Tensor(np.array(2.0), dtype=flow.float32, device=flow.device(device))
     (np_x, np_y) = np.meshgrid(input1.numpy(), input2.numpy(), indexing="ij")
@@ -66,17 +67,25 @@ def _test_meshgrid_forawd_3tensor(test_case, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestMeshGrid(flow.unittest.TestCase):
+class TestMeshGridModule(flow.unittest.TestCase):
     def test_meshgrid(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_meshgrid_forawd,
-            _test_meshgrid_forawd_scalr,
+            _test_meshgrid_forawd_scalar,
             _test_meshgrid_forawd_3tensor,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(auto_backward=False)
+    def test_meshgrid_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=1, dim0=3, requires_grad=False).to(device)
+        y = random_pytorch_tensor(ndim=1, dim0=3, requires_grad=False).to(device)
+        res = torch.meshgrid(x, y)
+        return res[0], res[1]
 
 
 if __name__ == "__main__":

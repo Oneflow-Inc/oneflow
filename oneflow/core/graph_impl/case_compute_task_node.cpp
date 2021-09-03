@@ -28,13 +28,6 @@ class CaseCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kCase; }
-  CudaWorkType GetCudaWorkType() const override {
-#ifdef WITH_CUDA
-    return CudaWorkType::kCompute;
-#else
-    UNIMPLEMENTED();
-#endif
-  }
 
  private:
   void BuildExecGphAndRegst() override;

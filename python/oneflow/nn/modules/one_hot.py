@@ -19,7 +19,7 @@ import oneflow as flow
 
 def one_hot(
     input,
-    num_classes=-1,
+    num_classes: int = -1,
     on_value: Union[int, float] = 1,
     off_value: Union[int, float] = 0,
 ):
@@ -34,14 +34,14 @@ def one_hot(
         num_classes (int): The length of onehot Tensor.
         on_value (Union[int, float], optional): The fill value when `x[i] == i`. Defaults to 1.
         off_value (Union[int, float], optional): The fill value when `x[i] != i`. Defaults to 0.
-         
+
     Note:
 
         The data type of input blob should be `int32` or `int64`.
 
     Returns:
         oneflow.Tensor.
-    
+
     For example:
 
     .. code-block:: python
@@ -56,18 +56,22 @@ def one_hot(
                 [0, 0, 0, 1, 0],
                 [0, 1, 0, 0, 0],
                 [0, 0, 1, 0, 0]], dtype=oneflow.int64)
-                                                 
+
     """
     if input.is_consistent:
         raise ValueError(
             "A consistent tensor can not be applied to onehot, and use tensor.to_local() to convert it to local tensor first."
         )
-    if input.is_lazy:
-        raise NotImplementedError
-    else:
-        if num_classes == -1:
-            num_classes = (flow.max(input) + 1).numpy()
-    return flow.F.one_hot(input, num_classes, on_value, off_value)
+
+    if num_classes == -1:
+        if input.is_lazy:
+            raise ValueError(
+                "The parameter num_classes must be specified when one_hot using in nn.Graph."
+            )
+
+        num_classes = input.max().numpy().item() + 1
+
+    return flow._C.one_hot(input, num_classes, on_value, off_value)
 
 
 if __name__ == "__main__":
