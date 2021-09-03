@@ -170,7 +170,7 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
   for (int i = 0; i < input_meta_datas_.size(); ++i) {
     if (input_grads.at(i)) {
       CHECK_NOTNULL_OR_RETURN(input_meta_datas_.at(i))
-          << op_name_
+          << op_type_name_
           << " calculate grad for tensor which requires_grad is False. Please submit an issue in "
              "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
              "possiable";
