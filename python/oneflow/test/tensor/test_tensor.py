@@ -893,7 +893,7 @@ class TestTensor(flow.unittest.TestCase):
         np_arr = np.random.rand(3, 2, 5, 7)
         np_out = 1 / np.sqrt(np_arr)
         x = flow.Tensor(np_arr)
-        of_out = flow.rsqrt(input=x)
+        of_out = flow.rsqrt(x)
         test_case.assertTrue(
             np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
         )
