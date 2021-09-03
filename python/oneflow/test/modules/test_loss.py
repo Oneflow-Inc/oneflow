@@ -149,12 +149,12 @@ def test_bce_loss(dim=int, with_logits: bool = False):
     x, target, weight, device = generate_necessity_for_bce_loss(dim)
 
     m = torch.nn.BCELoss(
-        # weight=oneof(weight,nothing()),
+        weight=oneof(weight, nothing()),
         reduction=oneof("none", "sum", "mean", nothing()),
     )
     if with_logits:
         m = torch.nn.BCEWithLogitsLoss(
-            # weight=oneof(weight,nothing()),
+            weight=oneof(weight, nothing()),
             reduction=oneof("none", "sum", "mean", nothing()),
         )
     m.train(random())
