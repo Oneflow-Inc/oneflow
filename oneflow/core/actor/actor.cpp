@@ -28,7 +28,19 @@ class KernelContextImpl : public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelContextImpl);
   explicit KernelContextImpl(const JobDesc* job_desc, DeviceCtx* device_ctx)
-      : job_desc_(job_desc), device_ctx_(device_ctx), state_(nullptr) {}
+      : job_desc_(job_desc),
+        device_ctx_(device_ctx),
+        state_(nullptr),
+        stream_kernel_observer_(nullptr) {
+    auto* stream_context_provider = dynamic_cast<StreamContextProvider*>(device_ctx);
+    if (stream_context_provider != nullptr) {
+      auto* kernel_observer_provider =
+          dynamic_cast<KernelObserverProvider*>(stream_context_provider->GetStreamContext());
+      if (kernel_observer_provider != nullptr) {
+        stream_kernel_observer_ = kernel_observer_provider->GetKernelObserver();
+      }
+    }
+  }
   ~KernelContextImpl() = default;
 
   DeviceCtx* device_ctx() const override { return device_ctx_; }
@@ -44,6 +56,15 @@ class KernelContextImpl : public KernelContext {
 
   const JobDesc* job_desc() const override { return job_desc_; }
 
+  void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
+
+  void WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override;
+
+  void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
+
   void UpdateBnInOp2BlobFn(std::function<Blob*(const std::string&)> fn) {
     bn_in_op2blob_fn_ = std::move(fn);
   }
@@ -53,7 +74,50 @@ class KernelContextImpl : public KernelContext {
   DeviceCtx* device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
   void* state_;
+  KernelObserver* stream_kernel_observer_;
 };
+
+void KernelContextImpl::WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->WillForward(kernel_ctx, kernel);
+  }
+}
+
+void KernelContextImpl::DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->DidForward(kernel_ctx, kernel);
+  }
+}
+
+void KernelContextImpl::WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->WillForwardHeader(kernel_ctx, kernel);
+  }
+}
+
+void KernelContextImpl::DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->DidForwardHeader(kernel_ctx, kernel);
+  }
+}
+
+void KernelContextImpl::WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->WillForwardDataContent(kernel_ctx, kernel);
+  }
+}
+
+void KernelContextImpl::DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
+  Global<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
+  if (stream_kernel_observer_ != nullptr) {
+    stream_kernel_observer_->DidForwardDataContent(kernel_ctx, kernel);
+  }
+}
 
 void CheckInplaceRegstDescId(const TaskProto& task_proto) {
   HashSet<int64_t> consumed_regst_desc_ids;

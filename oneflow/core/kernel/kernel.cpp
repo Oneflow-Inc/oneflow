@@ -50,22 +50,22 @@ void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {
 void Kernel::DestroyState(void* state) const { CHECK(state == nullptr); }
 
 void Kernel::Launch(KernelContext* ctx) const {
-  Global<KernelObserver>::Get()->WillForward(ctx, this);
+  ctx->WillForward(ctx, this);
   Forward(ctx);
-  Global<KernelObserver>::Get()->DidForward(ctx, this);
+  ctx->DidForward(ctx, this);
 }
 
 void Kernel::Forward(KernelContext* ctx) const {
-  Global<KernelObserver>::Get()->WillForwardHeader(ctx, this);
+  ctx->WillForwardHeader(ctx, this);
   ForwardHeader(ctx);
-  Global<KernelObserver>::Get()->DidForwardHeader(ctx, this);
+  ctx->DidForwardHeader(ctx, this);
   if ((!kernel_conf_.all_blobs_are_static()) && IsAllBlobEmpty(op_attribute().output_bns(), ctx)
       && IsStateless()) {
     return;
   }
-  Global<KernelObserver>::Get()->WillForwardDataContent(ctx, this);
+  ctx->WillForwardDataContent(ctx, this);
   ForwardDataContent(ctx);
-  Global<KernelObserver>::Get()->DidForwardDataContent(ctx, this);
+  ctx->DidForwardDataContent(ctx, this);
 }
 
 void Kernel::ForwardHeader(KernelContext* ctx) const {

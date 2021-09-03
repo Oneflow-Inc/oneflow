@@ -19,12 +19,14 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/vm/cpu_allocator.h"
+#include "oneflow/core/kernel/chain_kernel_observer.h"
+#include "oneflow/core/kernel/cpu_check_numerics_kernel_observer.h"
 
 namespace oneflow {
 
 class CpuStreamContext;
 
-class CpuStreamContext : public StreamContext {
+class CpuStreamContext : public StreamContext, public KernelObserverProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStreamContext);
   explicit CpuStreamContext();
@@ -36,9 +38,11 @@ class CpuStreamContext : public StreamContext {
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
   std::shared_ptr<DeviceCtx> device_ctx() override;
+  KernelObserver* GetKernelObserver() override;
 
  private:
   std::shared_ptr<DeviceCtx> device_ctx_;
+  std::unique_ptr<KernelObserver> kernel_observer_;
 };
 
 namespace {
@@ -62,11 +66,18 @@ class DeviceCtxImpl final : public DeviceCtx, public StreamContextProvider {
 
  private:
   CpuStreamContext* stream_ctx_;
-};  // namespace oneflow
+};
 
 }  // namespace
 
-CpuStreamContext::CpuStreamContext() { device_ctx_.reset(new DeviceCtxImpl(this)); };
+CpuStreamContext::CpuStreamContext() {
+  std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
+  if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
+    kernel_observers.emplace_back(new CpuCheckNumericsKernelObserver());
+  }
+  kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
+  device_ctx_.reset(new DeviceCtxImpl(this));
+};
 
 CpuStreamContext::~CpuStreamContext() = default;
 
@@ -82,6 +93,8 @@ Maybe<void> CpuStreamContext::AddCallback(std::function<void()> callback) {
 Maybe<void> CpuStreamContext::Sync() { return Maybe<void>::Ok(); }
 
 std::shared_ptr<DeviceCtx> CpuStreamContext::device_ctx() { return device_ctx_; }
+
+KernelObserver* CpuStreamContext::GetKernelObserver() { return kernel_observer_.get(); }
 
 REGISTER_STREAM_CONTEXT_CREATOR_WITH_STREAM_ID(DeviceType::kCPU,
                                                ([](const StreamId& stream_id) -> StreamContext* {

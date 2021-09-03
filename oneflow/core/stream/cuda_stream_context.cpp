@@ -23,6 +23,8 @@ limitations under the License.
 #include "oneflow/core/device/cuda_device_descriptor.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/kernel/chain_kernel_observer.h"
+#include "oneflow/core/kernel/cuda_check_numerics_kernel_observer.h"
 
 #ifdef WITH_CUDA
 
@@ -45,11 +47,11 @@ void SetAffinityByDevice(int64_t dev_id) {
 #ifdef WITH_CUDA_GRAPHS
 #define CUDA_STREAM_CONTEXT_IMPL_BASE \
  public                               \
-  CudaStreamContext, public CudaGraphContext
+  CudaStreamContext, public CudaGraphContext, public KernelObserverProvider
 #else
 #define CUDA_STREAM_CONTEXT_IMPL_BASE \
  public                               \
-  CUDAStreamContext
+  CUDAStreamContext, public KernelObserverProvider
 #endif
 
 class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
@@ -64,6 +66,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
   std::shared_ptr<DeviceCtx> device_ctx() override;
+  KernelObserver* GetKernelObserver() override;
 
   cudaStream_t cuda_stream() const override;
   cublasHandle_t cublas_pmh_handle() const override;
@@ -98,6 +101,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   StreamId stream_id_;
   std::shared_ptr<DeviceCtx> device_ctx_;
   bool is_graph_capturing_;
+  std::unique_ptr<KernelObserver> kernel_observer_;
 };
 
 class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
@@ -175,6 +179,15 @@ CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id)
     cudaGetLastError();
   }
   OF_CUDNN_CHECK(cudnnSetStream(cudnn_handle_, cuda_stream_));
+
+  std::vector<std::shared_ptr<KernelObserver>> kernel_observers;
+  if (ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS", false)) {
+    LOG(WARNING) << "Environment variable ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS has been set "
+                    "to a truthy "
+                    "value, it will impact performance";
+    kernel_observers.emplace_back(new CudaCheckNumericsKernelObserver());
+  }
+  kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
 
   device_ctx_.reset(new DeviceCtxImpl(this));
 
@@ -266,6 +279,8 @@ Maybe<void> CudaStreamContextImpl::Sync() {
 }
 
 std::shared_ptr<DeviceCtx> CudaStreamContextImpl::device_ctx() { return device_ctx_; }
+
+KernelObserver* CudaStreamContextImpl::GetKernelObserver() { return kernel_observer_.get(); }
 
 cudaStream_t CudaStreamContextImpl::cuda_stream() const { return cuda_stream_; }
 

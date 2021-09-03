@@ -13,29 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
-#define ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
+#ifndef ONEFLOW_CORE_KERNEL_CPU_CHECK_NUMERICS_KERNEL_OBSERVER_H_
+#define ONEFLOW_CORE_KERNEL_CPU_CHECK_NUMERICS_KERNEL_OBSERVER_H_
 
-#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
-class Blob;
-class JobDesc;
-class KernelContext : public KernelObserver {
+class CpuCheckNumericsKernelObserver final : public KernelObserver {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelContext);
-  KernelContext() = default;
-  virtual ~KernelContext() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CpuCheckNumericsKernelObserver);
+  CpuCheckNumericsKernelObserver() = default;
+  ~CpuCheckNumericsKernelObserver() override = default;
 
-  virtual DeviceCtx* device_ctx() const = 0;
-  virtual Blob* BnInOp2Blob(const std::string& bn) const = 0;
-  virtual void* state() const = 0;
-  virtual void set_state(void* state) = 0;
-  virtual const JobDesc* job_desc() const = 0;
+  void DidForwardDataContent(KernelContext* ctx, const Kernel* kernel) override;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
+#endif  // ONEFLOW_CORE_KERNEL_CPU_CHECK_NUMERICS_KERNEL_OBSERVER_H_
