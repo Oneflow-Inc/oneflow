@@ -248,7 +248,7 @@ def test_train_loss_oneflow_pytorch(
     test_case, model_path: str, module_name: str, device: str = "cuda", log_path: str = "./model_test_output/default",
 ):
     batch_size = 16
-    image_nd = np.random.rand(batch_size, 3, 224, 224).astype(np.float32)  # change to (batch_size, 3, 299, 299) when testing inception_v3 model
+    image_nd = np.random.rand(batch_size, 3, 299, 299).astype(np.float32)  # change to (batch_size, 3, 299, 299) when testing inception_v3 model
     label_nd = np.array([e for e in range(batch_size)], dtype=np.int32)
     oneflow_model_loss = []
     pytorch_model_loss = []
