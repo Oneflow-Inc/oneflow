@@ -52,7 +52,7 @@ const cfg::NdSbp& OpNode::NdSbp4Lbi(const LogicalBlobId& lbi) const {
   return it->second;
 }
 
-OpNode::OpNode(const std::shared_ptr<const ParallelDesc>& parallel_desc,
+OpNode::OpNode(const Symbol<ParallelDesc>& parallel_desc,
                const OperatorConf& op_conf)
     : parallel_desc_(parallel_desc),
       op_(CHECK_JUST(ConstructOp(op_conf, parallel_desc->device_type()))),
@@ -189,16 +189,15 @@ void OpGraph::CheckIsDAG() const {
 
 namespace {
 
-std::function<std::shared_ptr<const ParallelDesc>(const std::string&)>
+std::function<Symbol<ParallelDesc>(const std::string&)>
 MakeGetterParallelDesc4OpName(const Job& job) {
   const Placement& placement = job.placement();
   auto op_name2parallel_desc =
-      std::make_shared<HashMap<std::string, std::shared_ptr<const ParallelDesc>>>();
+      std::make_shared<HashMap<std::string, Symbol<ParallelDesc>>>();
   op_name2parallel_desc->reserve(job.net().op_size());
   for (const auto& placement_group : placement.placement_group()) {
     const ParallelConf& parallel_conf = placement_group.parallel_conf();
-    std::shared_ptr<const ParallelDesc> parallel_desc =
-        std::make_shared<const ParallelDesc>(parallel_conf);
+    Symbol<ParallelDesc> parallel_desc = ParallelDesc(parallel_conf);
     for (const std::string& op_name : placement_group.op_set().op_name()) {
       CHECK(op_name2parallel_desc->emplace(op_name, parallel_desc).second)
           << "op_name: " << op_name;

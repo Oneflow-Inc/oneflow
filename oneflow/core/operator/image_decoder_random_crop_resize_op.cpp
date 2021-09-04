@@ -114,8 +114,8 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
   }
 
   Maybe<void> InferBlobParallelDesc() override {
-    HashMap<std::string, std::shared_ptr<const ParallelDesc>> bn2parallel_desc;
-    const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(GetOpParallelDesc());
+    HashMap<std::string, Symbol<ParallelDesc>> bn2parallel_desc;
+    const Symbol<ParallelDesc> op_parallel_desc = *JUST(GetOpParallelDesc());
     bn2parallel_desc["out"] = op_parallel_desc;
     if (device_type() == DeviceType::kCPU) {
       bn2parallel_desc["in"] = op_parallel_desc;
@@ -123,14 +123,15 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
       std::shared_ptr<ParallelDesc> in_parallel_desc =
           std::make_shared<ParallelDesc>(*op_parallel_desc);
       in_parallel_desc->set_device_type(DeviceType::kCPU);
-      bn2parallel_desc["in"] = in_parallel_desc;
+
+      bn2parallel_desc["in"] = SymbolOf(ParallelDesc(*in_parallel_desc));
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
     JUST(FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
       auto it = bn2parallel_desc.find(bn);
       CHECK_OR_RETURN(it != bn2parallel_desc.end());
-      return it->second;
+      return *(it->second);
     }));
     return Maybe<void>::Ok();
   }

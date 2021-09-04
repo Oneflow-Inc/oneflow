@@ -329,7 +329,7 @@ Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruc
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
   JUST(opkernel_obj->ResetOpAndKernel(*op_node_signature, &parallel_ctx, BlobDesc4BnInOp,
-                                      instruction->parallel_desc().get()));
+                                      instruction->parallel_desc().shared_from_symbol().get()));
   JUST(CheckBlobParallel(instruction, args, op_node_signature));
   JUST(ForEachOutputBnAndBlobObject(
       instruction, args, [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
@@ -366,7 +366,7 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
   JUST(instruction->parallel_desc()->GetParallelContext(
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
   JUST(opkernel_obj->ResetKernel(*op_node_signature, &parallel_ctx, BlobDesc4BnInOp,
-                                 instruction->parallel_desc().get()));
+                                 instruction->parallel_desc().shared_from_symbol().get()));
   JUST(CheckBlobParallel(instruction, args, op_node_signature));
   JUST(ForEachOutputBnAndBlobObject(
       instruction, args, [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {

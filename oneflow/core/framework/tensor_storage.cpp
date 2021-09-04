@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-TensorStorage::TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc)
+TensorStorage::TensorStorage(const Symbol<ParallelDesc>& parallel_desc)
     : buffer_(std::make_shared<vm::TensorBuffer>()) {}
 
 TensorStorage::TensorStorage(const std::shared_ptr<vm::TensorBuffer>& tensor_buffer)

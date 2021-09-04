@@ -31,7 +31,7 @@ class OpGraph;
 class OpNode final : public Node<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
-  explicit OpNode(const std::shared_ptr<const ParallelDesc>& parallel_desc,
+  explicit OpNode(const Symbol<ParallelDesc>& parallel_desc,
                   const OperatorConf& op_conf);
   ~OpNode() = default;
 
@@ -65,7 +65,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void InitLbi2SourceNode();
   void InitLbi2NdSbp();
 
-  std::shared_ptr<const ParallelDesc> parallel_desc_;
+  Symbol<ParallelDesc> parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   HashMap<LogicalBlobId, OpNode*> lbi2source_node_;

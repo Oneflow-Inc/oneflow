@@ -82,7 +82,7 @@ class Operator {
   const PbRpf<std::string>& input_output_bns() const;
 
   Maybe<void> FillOpParallelDesc(const ParallelDesc& parallel_desc);
-  Maybe<void> FillOpParallelDesc(std::shared_ptr<const ParallelDesc> parallel_desc);
+  Maybe<void> FillOpParallelDesc(Symbol<ParallelDesc> parallel_desc);
   Maybe<const ParallelDesc> GetOpParallelDesc() const;
 
   Maybe<void> InferParallelSignatureIf();
@@ -287,8 +287,8 @@ class Operator {
   }
 
   std::shared_ptr<const OperatorConf> op_conf_;
-  std::shared_ptr<const ParallelDesc> op_parallel_desc_;
-  std::unique_ptr<HashMap<std::string, std::shared_ptr<const ParallelDesc>>> bn2parallel_desc_;
+  Symbol<ParallelDesc> op_parallel_desc_;
+  std::unique_ptr<HashMap<std::string, Symbol<ParallelDesc>>> bn2parallel_desc_;
   std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>> input_index2logical_blob_desc_;
   std::unique_ptr<std::vector<std::shared_ptr<const BlobDesc>>> output_index2logical_blob_desc_;
   std::unique_ptr<std::vector<std::shared_ptr<const Shape>>> input_index2time_shape_;

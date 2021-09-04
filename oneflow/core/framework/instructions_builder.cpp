@@ -669,7 +669,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const one::OpExprInterpContext& ctx,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    const Symbol<ParallelDesc>& parallel_desc_sym,
     const std::string& instr_type_name) {
   return LocalCallOpKernel(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr,
                            ctx, parallel_desc_sym, instr_type_name);
@@ -681,7 +681,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    const Symbol<ParallelDesc>& parallel_desc_sym,
     const std::string& instr_type_name) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
@@ -905,7 +905,7 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+    const Symbol<ParallelDesc>& parallel_desc) {
   std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   LocalDepObject* compute_local_dep_object = JUST(eager_blob_object->compute_local_dep_object());
@@ -918,7 +918,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(
     LocalDepObject* compute_local_dep_object, const std::string& modifier,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+    const Symbol<ParallelDesc>& parallel_desc) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".SoftSyncStream");
   *instruction->mutable_phy_instr_operand() =
@@ -930,17 +930,17 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
 
 namespace {
 
-const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
+const Symbol<ParallelDesc>& GetParallelDesc(
     const std::shared_ptr<one::MirroredTensor> tensor) {
   const auto& device = CHECK_JUST(tensor->device());
   const auto& placement = CHECK_JUST(Placement4Device(device));
-  return placement.shared_from_symbol();
+  return placement;
 }
 
-const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
+const Symbol<ParallelDesc>& GetParallelDesc(
     const one::EagerMirroredTensorImpl* tensor) {
   const auto& placement = CHECK_JUST(Placement4Device(tensor->device()));
-  return placement.shared_from_symbol();
+  return placement;
 }
 
 }  // namespace

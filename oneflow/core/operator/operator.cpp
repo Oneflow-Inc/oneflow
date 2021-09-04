@@ -117,16 +117,16 @@ Maybe<const ParallelDesc> Operator::GetParallelDesc4BnInOp(const std::string& bn
   CHECK_OR_RETURN(bn2parallel_desc_);
   auto it = bn2parallel_desc_->find(bn);
   CHECK_OR_RETURN(it != bn2parallel_desc_->end());
-  return it->second;
+  return *(it->second);
 }
 
 Maybe<void> Operator::FillBlobParallelDesc(
     const std::function<Maybe<const ParallelDesc>(const std::string&)>& ParallelDesc4Bn) {
   CHECK_OR_RETURN(!bn2parallel_desc_);
-  bn2parallel_desc_.reset(new HashMap<std::string, std::shared_ptr<const ParallelDesc>>);
+  bn2parallel_desc_.reset(new HashMap<std::string, Symbol<ParallelDesc>>);
   for (const auto& bn : input_output_bns()) {
     auto blob_parallel_desc = JUST(ParallelDesc4Bn(bn));
-    CHECK(bn2parallel_desc_->emplace(bn, blob_parallel_desc).second);
+    CHECK(bn2parallel_desc_->emplace(bn, SymbolOf(*blob_parallel_desc)).second);
   }
   return Maybe<void>::Ok();
 }
@@ -138,10 +138,10 @@ Maybe<void> Operator::InferBlobParallelDesc() {
 }
 
 Maybe<void> Operator::FillOpParallelDesc(const ParallelDesc& parallel_desc) {
-  return FillOpParallelDesc(std::make_shared<const ParallelDesc>(parallel_desc));
+  return FillOpParallelDesc(parallel_desc);
 }
 
-Maybe<void> Operator::FillOpParallelDesc(std::shared_ptr<const ParallelDesc> parallel_desc) {
+Maybe<void> Operator::FillOpParallelDesc(Symbol<ParallelDesc> parallel_desc) {
   CHECK_OR_RETURN(!op_parallel_desc_);
   op_parallel_desc_ = std::move(parallel_desc);
   return Maybe<void>::Ok();
@@ -149,7 +149,7 @@ Maybe<void> Operator::FillOpParallelDesc(std::shared_ptr<const ParallelDesc> par
 
 Maybe<const ParallelDesc> Operator::GetOpParallelDesc() const {
   CHECK_OR_RETURN(op_parallel_desc_);
-  return op_parallel_desc_;
+  return *op_parallel_desc_;
 }
 
 namespace {

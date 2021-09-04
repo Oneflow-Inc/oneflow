@@ -366,11 +366,11 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
                                                         TensorTuple* outputs,
                                                         const OpExprInterpContext& ctx) {
   bool is_local;
-  std::shared_ptr<const ParallelDesc> parallel_desc;
+  Symbol<ParallelDesc> parallel_desc;
   if (ctx.parallel_desc.has_value()) {
     // NOTE(chengcheng): consistent
     CHECK_OR_RETURN(!ctx.device.has_value());
-    parallel_desc = JUST(ctx.parallel_desc.value()).shared_from_symbol();
+    parallel_desc = JUST(ctx.parallel_desc.value());
     is_local = false;
   } else {
     // NOTE(chengcheng): local
@@ -378,12 +378,12 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     if (ctx.device.has_value()) {
       const auto& device = JUST(ctx.device.value());
       const auto& placement = JUST(Placement4Device(device));
-      parallel_desc = placement.shared_from_symbol();
+      parallel_desc = placement;
     } else {
       // NOTE(chengcheng): if functor NOT set device, using cpu device default.
       const auto& device = JUST(Device::New("cpu"));
       const auto& placement = JUST(Placement4Device(device));
-      parallel_desc = placement.shared_from_symbol();
+      parallel_desc = placement;
     }
     is_local = true;
   }
@@ -559,8 +559,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
   const std::string device_tag = GetDeviceTagOfTensor(inputs.at(0));
   const bool is_local = inputs.at(0)->is_local();
-  const std::shared_ptr<const ParallelDesc> parallel_desc =
-      JUST(GetParallelDescOfTensor(inputs.at(0)));
+  const Symbol<ParallelDesc> parallel_desc =
+      *JUST(GetParallelDescOfTensor(inputs.at(0)));
 
   op_conf->set_device_tag(device_tag);
   auto infer_ctx = JUST(GetCurInferCtx());

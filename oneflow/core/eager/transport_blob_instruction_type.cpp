@@ -71,10 +71,10 @@ Maybe<void> SendBlobInstructionType::Send(vm::Instruction* instruction) const {
     // `ref_cnt` is safe to be captured before `Callback` finished.
     Callback = [ref_cnt] { CHECK_GE(--*ref_cnt, 0); };
   }
-  const auto* src_parallel_desc = instruction->parallel_desc().get();
+  const auto src_parallel_desc = instruction->parallel_desc();
   int64_t parallel_id = 0;
   {
-    CHECK_NOTNULL_OR_RETURN(src_parallel_desc) << Error::RwMutexedObjectNotFoundError();
+    CHECK_OR_RETURN(bool(src_parallel_desc)) << Error::RwMutexedObjectNotFoundError();
     CHECK_EQ_OR_RETURN(src_parallel_desc->parallel_num(), args->body_token_size());
     int64_t machine_id = instruction->stream().machine_id();
     int64_t device_id = instruction->stream().device_id();
@@ -123,7 +123,7 @@ Maybe<void> ReceiveBlobInstructionType::Receive(vm::Instruction* instruction) co
     // `ref_cnt` is safe to be captured before `Callback` finished.
     Callback = [ref_cnt] { CHECK_GE(--*ref_cnt, 0); };
   }
-  const auto* dst_parallel_desc = instruction->parallel_desc().get();
+  const auto* dst_parallel_desc = instruction->parallel_desc().shared_from_symbol().get();
   int64_t parallel_id = 0;
   {
     CHECK_NOTNULL_OR_RETURN(dst_parallel_desc) << Error::RwMutexedObjectNotFoundError();

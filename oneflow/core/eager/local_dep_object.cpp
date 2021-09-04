@@ -27,7 +27,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> LocalDepObject::Init(const Device& device) {
-  const auto& parallel_desc = JUST(Device::GetPlacement(device)).shared_from_symbol();
+  const auto& parallel_desc = JUST(Device::GetPlacement(device));
   vm::ObjectId object_id = vm::IdUtil::NewPhysicalValueObjectId(GlobalProcessCtx::Rank());
   int64_t global_device_id = 0;
   {
@@ -44,7 +44,7 @@ Maybe<void> LocalDepObject::Init(const Device& device) {
     }
   }
   mutable_logical_object()->__Init__(object_id,
-                                     std::const_pointer_cast<ParallelDesc>(parallel_desc));
+                                     parallel_desc);
   mutable_mirrored_object()->__Init__(mutable_logical_object(), global_device_id);
   return Maybe<void>::Ok();
 }

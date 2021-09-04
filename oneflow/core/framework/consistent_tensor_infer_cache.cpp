@@ -254,6 +254,8 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
   JUST(CheckInputParallelDescIdentical(infer_args));
   JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
   std::vector<OpArgMutConsistentTensorMeta> output_mut_metas(user_op_expr.output_size());
+
+
   {
     // Infer OpArgMutConsistentTensorMeta.
     const auto& input_metas = infer_args.input_consistent_tensor_metas();
@@ -263,7 +265,7 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
   const auto& op = JUST(MakeOp(user_op_expr, infer_args.attrs(), parallel_desc->device_tag()));
-  JUST(op->FillOpParallelDesc(parallel_desc.shared_from_symbol()));
+  JUST(op->FillOpParallelDesc(parallel_desc));
   {
     // Infer parallel distribution.
     cfg::NdSbpSignature nd_sbp_constraints;

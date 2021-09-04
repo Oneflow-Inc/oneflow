@@ -84,7 +84,7 @@ Maybe<void> CheckPhysicalBlobDesc(
     const std::function<Maybe<const BlobDesc>(const std::string&)>& GetLogicalBlobDesc,
     const cfg::NdSbpSignature* nd_sbp_signature, const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& GetPhysicalBlobDesc) {
-  const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(op.GetOpParallelDesc());
+  const Symbol<ParallelDesc> op_parallel_desc = *JUST(op.GetOpParallelDesc());
   for (const auto& bn : bns) {
     const BlobDesc* physical_blob_desc = GetPhysicalBlobDesc(bn);
     if (physical_blob_desc == nullptr) {

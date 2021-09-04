@@ -83,17 +83,17 @@ Maybe<void> DistributeCloneOp::InferOutBlobDescs(
 }
 
 Maybe<void> DistributeCloneOp::InferBlobParallelDesc() {
-  HashMap<std::string, std::shared_ptr<const ParallelDesc>> bn2parallel_desc;
-  const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(GetOpParallelDesc());
+  HashMap<std::string, Symbol<ParallelDesc>> bn2parallel_desc;
+  const Symbol<ParallelDesc> op_parallel_desc = *JUST(GetOpParallelDesc());
   bn2parallel_desc["in"] = op_parallel_desc;
   FOR_RANGE(int, i, 0, output_bns().size()) {
     bn2parallel_desc[output_bns().Get(i)] =
-        std::make_shared<const ParallelDesc>(op_parallel_desc->GetParallelIdOnlyParallelConf(i));
+        SymbolOf(ParallelDesc(op_parallel_desc->GetParallelIdOnlyParallelConf(i)));
   }
   JUST(FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
     auto it = bn2parallel_desc.find(bn);
     CHECK_OR_RETURN(it != bn2parallel_desc.end());
-    return it->second;
+    return *(it->second);
   }));
   return Maybe<void>::Ok();
 }

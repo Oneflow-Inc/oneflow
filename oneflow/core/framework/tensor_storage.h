@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <memory>
 #include <functional>
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
@@ -33,7 +34,7 @@ namespace one {
 
 class TensorStorage final {
  public:
-  explicit TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  explicit TensorStorage(const Symbol<ParallelDesc>& parallel_desc);
   explicit TensorStorage(const std::shared_ptr<vm::TensorBuffer>& tensor_buffer);
   ~TensorStorage();
 
