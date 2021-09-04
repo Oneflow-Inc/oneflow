@@ -103,7 +103,7 @@ class BroadcastFunctor {
     CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kGPU : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
-    return one::Broadcast(x, parallel_desc, inplace);
+    return one::Broadcast(x, parallel_desc, inplace, true);
   }
 };
 

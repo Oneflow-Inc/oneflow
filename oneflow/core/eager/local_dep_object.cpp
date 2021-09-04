@@ -85,4 +85,20 @@ Maybe<LocalDepObject*> GetLocalDepObject4Device(const Device& device) {
   return JUST(GetObj(device))->Mutable();
 }
 
+Maybe<LocalDepObject*> FindOrCreateComputeLocalDepObject(const Device& device) {
+  static std::mutex mutex;
+  static HashMap<Device, ObjectMsgPtr<LocalDepObject>> device2dep_object;
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    const auto& iter = device2dep_object.find(device);
+    if (iter != device2dep_object.end()) { return iter->second.Mutable(); }
+  }
+  auto dep_object = ObjectMsgPtr<LocalDepObject>::New();
+  JUST(dep_object.Mutable()->Init(device));
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    return device2dep_object.emplace(device, dep_object).first->second.Mutable();
+  }
+}
+
 }  // namespace oneflow

@@ -54,8 +54,9 @@ Maybe<void> Device::Init() {
     transport_local_dep_object_ = JUST(GetLocalDepObject4Device(Device(device_transport_tag, 0)));
   }
   const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
-  schedule_local_dep_object_ =
-      JUST(GetLocalDepObject4Device(Device(schedule_device_type, device_id_)));
+  schedule_local_dep_object_ =  JUST(FindOrCreateComputeLocalDepObject(*this));
+      // JUST(GetLocalDepObject4Device(Device(schedule_device_type, device_id_)));
+      // JUST(GetLocalDepObject4Device(*this));
   return Maybe<void>::Ok();
 }
 
@@ -104,8 +105,10 @@ Maybe<const Optional<std::string>&> Device::GetSharedTransportDeviceType() const
       {"cuda_h2d", Optional<std::string>()},
       {"cuda_d2h", Optional<std::string>()},
       {"comm_net", Optional<std::string>()},
-      {"sync_launched_nccl", Optional<std::string>("async_launched_nccl")},
-      {"async_launched_nccl", Optional<std::string>("async_launched_nccl")},
+      {"sync_launched_nccl", Optional<std::string>()},
+      {"async_launched_nccl", Optional<std::string>()},
+      // {"sync_launched_nccl", Optional<std::string>("async_launched_nccl")},
+      // {"async_launched_nccl", Optional<std::string>("async_launched_nccl")},
   };
   return MapAt(type2type_for_shared_local_dep_object, type());
 }
@@ -151,6 +154,7 @@ Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
       {"comm_net", GetInstructionHighWaterMark()},
       {"sync_launched_nccl", GetInstructionHighWaterMark()},
       {"async_launched_nccl", GetInstructionHighWaterMark()},
+      // {"async_launched_nccl", kDoubleBufferPoolSize},
   };
   return MapAt(type2pool_size, type());
 }

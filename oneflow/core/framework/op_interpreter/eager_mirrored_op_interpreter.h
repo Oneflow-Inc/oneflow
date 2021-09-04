@@ -27,7 +27,7 @@ class Tensor;
 
 Maybe<void> RunEmptyOp(TensorTuple* outputs);
 Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, Symbol<ParallelDesc> parallel_desc,
-                        bool inplace);
+                        bool inplace, bool async);
 
 }  // namespace one
 }  // namespace oneflow

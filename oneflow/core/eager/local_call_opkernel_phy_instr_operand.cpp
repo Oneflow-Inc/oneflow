@@ -39,8 +39,13 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     DoEach(nullptr, CHECK_JUST(opt_transport_dep_object.value())->mut_mirrored_object());
   }
   auto* device_schedule_dep_object = device->mut_schedule_local_dep_object();
+  // std::cout << "device type: " << device->type() << std::endl;
+  // DoEach(nullptr, device_schedule_dep_object->mut_mirrored_object());
   if (device->type() == "async_launched_nccl") {
+    // std::cout << "device: " << device.shared_from_symbol().get() << std::endl;
+    // std::cout << "nccl dep: " << device_schedule_dep_object << std::endl;
     // Sequantialize nccl instructions to avoid deadlock
+    // std::cout << "ok" << std::endl;
     DoEach(nullptr, device_schedule_dep_object->mut_mirrored_object());
   } else {
     // Sequantialize instructions to avoid explosive memory allocation of source ops

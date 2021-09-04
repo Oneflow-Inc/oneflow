@@ -48,11 +48,12 @@ REGISTER_USER_OP("eager_nccl_broadcast")
     .Output("out")
     .Attr<std::string>("parallel_conf")
     .Attr<int64_t>("root", 0)
+    .Attr<bool>("async_launch", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
+    .SetDeviceInferFn(DeviceInferFn<&IsAsyncLaunched>)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))

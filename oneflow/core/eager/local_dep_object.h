@@ -33,7 +33,7 @@ OBJECT_MSG_BEGIN(LocalDepObject);
   // methods
   OF_PUBLIC static Maybe<ObjectMsgPtr<LocalDepObject>> New(const Device& device);
 
-  OF_PRIVATE Maybe<void> Init(const Device& device);
+  OF_PUBLIC Maybe<void> Init(const Device& device);
 
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(vm::LogicalObject, logical_object);
@@ -44,6 +44,8 @@ OBJECT_MSG_BEGIN(LocalDepObject);
   OBJECT_MSG_DEFINE_LIST_LINK(zombie_link);
 OBJECT_MSG_END(LocalDepObject);
 // clang-format on
+
+Maybe<LocalDepObject*> FindOrCreateComputeLocalDepObject(const Device& device);
 
 Maybe<LocalDepObject*> GetLocalDepObjectFromDevicePool(Symbol<Device> device);
 Maybe<LocalDepObject*> GetLocalDepObject4Device(const Device& device);
