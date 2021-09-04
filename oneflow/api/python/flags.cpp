@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/api/python/of_api_registry.h"
+#ifdef WITH_CUDA
+#include <cuda.h>
+#endif
 
 namespace oneflow {
 
@@ -23,6 +26,14 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
     return true;
 #else
     return false;
+#endif  // WITH_CUDA
+  });
+
+  m.def("cuda_version", []() {
+#ifdef WITH_CUDA
+    return CUDA_VERSION;
+#else
+    return 0;
 #endif  // WITH_CUDA
   });
 
