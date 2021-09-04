@@ -19,7 +19,7 @@ log_save = os.getenv("ONEFLOW_TEST_LOG_SAVE") is not None
 if log_save:
     # default config
     LOG_PATH = "./model_test_results"
-    TAG = "new_test"
+    TAG = "googlenet"
 
     if not os.path.exists(LOG_PATH):
         os.mkdir(LOG_PATH)
@@ -186,16 +186,16 @@ class TestApiCompatiblity(flow.unittest.TestCase):
         )
 
     # mobilenetv3 test
-    # def test_mobilenet_v3_large_compatiblity(test_case):
-    #     test_train_loss_oneflow_pytorch(
-    #         test_case, "pytorch_mobilenetv3.py", "mobilenet_v3_large", "cuda"
-    #     )
-    # def test_mobilenet_v3_small_compatiblity(test_case):
-    #     test_train_loss_oneflow_pytorch(
-    #         test_case, "pytorch_mobilenetv3.py", "mobilenet_v3_small", "cuda"
-    #     )
+    def test_mobilenet_v3_large_compatiblity(test_case):
+        test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_mobilenetv3.py", "mobilenet_v3_large", "cuda", RESULT_PATH
+        )
+    def test_mobilenet_v3_small_compatiblity(test_case):
+        test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_mobilenetv3.py", "mobilenet_v3_small", "cuda", RESULT_PATH
+        )
 
-    # # googlenet test
+    # googlenet test
     # def test_googlenet_compatiblity(test_case):
     #     test_train_loss_oneflow_pytorch(
     #         test_case, "pytorch_googlenet.py", "googlenet", "cuda"
