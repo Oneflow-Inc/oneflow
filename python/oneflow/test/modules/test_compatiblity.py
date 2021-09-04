@@ -19,7 +19,7 @@ log_save = os.getenv("ONEFLOW_TEST_LOG_SAVE") is not None
 if log_save:
     # default config
     LOG_PATH = "./model_test_results"
-    TAG = "all_test"
+    TAG = "new_test"
 
     if not os.path.exists(LOG_PATH):
         os.mkdir(LOG_PATH)

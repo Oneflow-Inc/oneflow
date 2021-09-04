@@ -55,6 +55,11 @@ def import_file(source):
         spec.loader.exec_module(mod)
         return mod
 
+def sync(x, test_pytorch):
+    if test_pytorch:
+        x.cpu()
+    else:
+        x.numpy()
 
 def get_loss(
     image_nd,
@@ -68,7 +73,8 @@ def get_loss(
     model_loss = []
     learning_rate = 0.01
     mom = 0.9
-    bp_iters = 100
+    warmup_iters = 5
+    bp_iters = 95
 
     for_time = 0.0
     bp_time = 0.0
@@ -108,8 +114,13 @@ def get_loss(
         label = torch.tensor(label_nd, dtype=torch.long).to(device)
 
         print("start pytorch training loop on %s model...." % module_name)
-        start_t = time.time()
-        for i in range(bp_iters):
+        for i in range(warmup_iters + bp_iters):
+            if i == warmup_iters:
+                start_t = time.time()
+                for_time = 0.0
+                bp_time = 0.0
+                update_time = 0.0
+
             torch.cuda.synchronize()
             s_t = time.time()
             logits = pytorch_model(image_gpu)
@@ -132,17 +143,18 @@ def get_loss(
             torch.cuda.synchronize()
             update_time += time.time() - s_t
 
+            sync(logits, test_pytorch)
         end_t = time.time()
 
         if verbose:
             print(
                 "pytorch traning loop avg time : {}".format(
-                    (end_t - start_t) / bp_iters
+                   ((end_t - start_t) ) / bp_iters
                 )
             )
-            print("forward avg time : {}".format(for_time / bp_iters))
-            print("backward avg time : {}".format(bp_time / bp_iters))
-            print("update parameters avg time : {}".format(update_time / bp_iters))
+            print("forward avg time : {}".format((for_time ) / bp_iters))
+            print("backward avg time : {}".format((bp_time ) / bp_iters))
+            print("update parameters avg time : {}".format((update_time ) / bp_iters))
     else:
         with open(model_path) as f:
             buf = f.read()
@@ -188,8 +200,14 @@ def get_loss(
         )
 
         print("start oneflow training loop on %s model...." % module_name)
-        start_t = time.time()
-        for i in range(bp_iters):
+
+        for i in range(warmup_iters + bp_iters):
+            if i == warmup_iters:
+                start_t = time.time()
+                for_time = 0.0
+                bp_time = 0.0
+                update_time = 0.0
+
             s_t = time.time()
             logits = oneflow_model(image_gpu)
             loss = corss_entropy(logits, label)
@@ -206,22 +224,23 @@ def get_loss(
             of_sgd.zero_grad()
             update_time += time.time() - s_t
 
+            sync(logits, test_pytorch)
         end_t = time.time()
 
         if verbose:
             print(
                 "oneflow traning loop avg time : {}".format(
-                    (end_t - start_t) / bp_iters
+                    ((end_t - start_t) ) / bp_iters
                 )
             )
-            print("forward avg time : {}".format(for_time / bp_iters))
-            print("backward avg time : {}".format(bp_time / bp_iters))
-            print("update parameters avg time : {}".format(update_time / bp_iters))
+            print("forward avg time : {}".format((for_time ) / bp_iters))
+            print("backward avg time : {}".format((bp_time ) / bp_iters))
+            print("update parameters avg time : {}".format((update_time ) / bp_iters))
 
-    training_loop_avg_time = (end_t - start_t) / bp_iters
-    forward_avg_time = for_time / bp_iters
-    backward_avg_time = bp_time / bp_iters
-    update_parameters_avg_time = update_time / bp_iters
+    training_loop_avg_time = (end_t - start_t)  / bp_iters
+    forward_avg_time = (for_time ) / bp_iters
+    backward_avg_time = (bp_time ) / bp_iters
+    update_parameters_avg_time = (update_time ) / bp_iters
     return model_loss, training_loop_avg_time, forward_avg_time, backward_avg_time, update_parameters_avg_time
 
 
