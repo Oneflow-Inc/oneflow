@@ -559,8 +559,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
   const std::string device_tag = GetDeviceTagOfTensor(inputs.at(0));
   const bool is_local = inputs.at(0)->is_local();
-  const Symbol<ParallelDesc> parallel_desc =
-      *JUST(GetParallelDescOfTensor(inputs.at(0)));
+  const Symbol<ParallelDesc> parallel_desc = *JUST(GetParallelDescOfTensor(inputs.at(0)));
 
   op_conf->set_device_tag(device_tag);
   auto infer_ctx = JUST(GetCurInferCtx());

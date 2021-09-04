@@ -668,8 +668,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-    const one::OpExprInterpContext& ctx,
-    const Symbol<ParallelDesc>& parallel_desc_sym,
+    const one::OpExprInterpContext& ctx, const Symbol<ParallelDesc>& parallel_desc_sym,
     const std::string& instr_type_name) {
   return LocalCallOpKernel(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr,
                            ctx, parallel_desc_sym, instr_type_name);
@@ -680,8 +679,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-    const one::OpExprInterpContext& ctx,
-    const Symbol<ParallelDesc>& parallel_desc_sym,
+    const one::OpExprInterpContext& ctx, const Symbol<ParallelDesc>& parallel_desc_sym,
     const std::string& instr_type_name) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
@@ -916,9 +914,9 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::SoftSyncStream(
-    LocalDepObject* compute_local_dep_object, const std::string& modifier,
-    const Symbol<ParallelDesc>& parallel_desc) {
+Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_dep_object,
+                                                const std::string& modifier,
+                                                const Symbol<ParallelDesc>& parallel_desc) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".SoftSyncStream");
   *instruction->mutable_phy_instr_operand() =
@@ -930,15 +928,13 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
 
 namespace {
 
-const Symbol<ParallelDesc>& GetParallelDesc(
-    const std::shared_ptr<one::MirroredTensor> tensor) {
+const Symbol<ParallelDesc>& GetParallelDesc(const std::shared_ptr<one::MirroredTensor> tensor) {
   const auto& device = CHECK_JUST(tensor->device());
   const auto& placement = CHECK_JUST(Placement4Device(device));
   return placement;
 }
 
-const Symbol<ParallelDesc>& GetParallelDesc(
-    const one::EagerMirroredTensorImpl* tensor) {
+const Symbol<ParallelDesc>& GetParallelDesc(const one::EagerMirroredTensorImpl* tensor) {
   const auto& placement = CHECK_JUST(Placement4Device(tensor->device()));
   return placement;
 }

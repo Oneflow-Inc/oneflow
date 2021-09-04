@@ -134,8 +134,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      result, ctx, parallel_desc,
-                                      instr_type_name);
+                                      result, ctx, parallel_desc, instr_type_name);
   }));
   return Maybe<void>::Ok();
 }

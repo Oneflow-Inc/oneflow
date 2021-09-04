@@ -31,8 +31,7 @@ class OpGraph;
 class OpNode final : public Node<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
-  explicit OpNode(const Symbol<ParallelDesc>& parallel_desc,
-                  const OperatorConf& op_conf);
+  explicit OpNode(const Symbol<ParallelDesc>& parallel_desc, const OperatorConf& op_conf);
   ~OpNode() = default;
 
   // Getters

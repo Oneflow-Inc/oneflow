@@ -42,8 +42,8 @@ const StreamTypeId& Stream::stream_type_id() const {
   return thread_ctx().stream_rt_desc().stream_type_id();
 }
 
-ObjectMsgPtr<Instruction> Stream::NewInstruction(
-    InstructionMsg* instr_msg, const Symbol<ParallelDesc>& parallel_desc) {
+ObjectMsgPtr<Instruction> Stream::NewInstruction(InstructionMsg* instr_msg,
+                                                 const Symbol<ParallelDesc>& parallel_desc) {
   if (free_instruction_list().empty()) {
     return ObjectMsgPtr<Instruction>::NewFrom(mut_allocator(), instr_msg, this, parallel_desc);
   }

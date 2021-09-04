@@ -52,8 +52,7 @@ const cfg::NdSbp& OpNode::NdSbp4Lbi(const LogicalBlobId& lbi) const {
   return it->second;
 }
 
-OpNode::OpNode(const Symbol<ParallelDesc>& parallel_desc,
-               const OperatorConf& op_conf)
+OpNode::OpNode(const Symbol<ParallelDesc>& parallel_desc, const OperatorConf& op_conf)
     : parallel_desc_(parallel_desc),
       op_(CHECK_JUST(ConstructOp(op_conf, parallel_desc->device_type()))),
       ibns_(op_->input_bns().begin(), op_->input_bns().end()) {
@@ -189,11 +188,10 @@ void OpGraph::CheckIsDAG() const {
 
 namespace {
 
-std::function<Symbol<ParallelDesc>(const std::string&)>
-MakeGetterParallelDesc4OpName(const Job& job) {
+std::function<Symbol<ParallelDesc>(const std::string&)> MakeGetterParallelDesc4OpName(
+    const Job& job) {
   const Placement& placement = job.placement();
-  auto op_name2parallel_desc =
-      std::make_shared<HashMap<std::string, Symbol<ParallelDesc>>>();
+  auto op_name2parallel_desc = std::make_shared<HashMap<std::string, Symbol<ParallelDesc>>>();
   op_name2parallel_desc->reserve(job.net().op_size());
   for (const auto& placement_group : placement.placement_group()) {
     const ParallelConf& parallel_conf = placement_group.parallel_conf();

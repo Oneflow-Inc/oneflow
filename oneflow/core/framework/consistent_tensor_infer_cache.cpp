@@ -255,7 +255,6 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
   JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
   std::vector<OpArgMutConsistentTensorMeta> output_mut_metas(user_op_expr.output_size());
 
-
   {
     // Infer OpArgMutConsistentTensorMeta.
     const auto& input_metas = infer_args.input_consistent_tensor_metas();
