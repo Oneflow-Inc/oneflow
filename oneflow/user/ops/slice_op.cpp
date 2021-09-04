@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/slice_util.h"
 
 namespace oneflow {
@@ -38,10 +39,17 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
   // slice a 1-dim tensor will return a 0-dim or 1-dim tensor
-  if (x_shape.NumAxes() == 1) {
-    const int64_t start = start_vec.at(0);
-    const int64_t stop = stop_vec.at(0);
+  if (x_shape.NumAxes() == 1 && !LazyMode::is_enabled()) {
+    const int64_t dim_size = x_shape.At(0);
+    int64_t start = start_vec.at(0);
+    int64_t stop = stop_vec.at(0);
     const int64_t step = step_vec.at(0);
+    if (dim_size == 0 || start == stop) {
+      *ctx->OutputShape("y", 0) = Shape({0});
+      return Maybe<void>::Ok();
+    }
+    start = RegulateSliceStart(start, dim_size);
+    stop = RegulateSliceStop(stop, dim_size);
     const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
     const int64_t len = diff / step + 1;
     CHECK_GE_OR_RETURN(len, 1);

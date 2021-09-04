@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/actor/light_actor.h"
 #include "oneflow/core/stream/stream_context.h"
@@ -49,6 +50,7 @@ void Thread::AddTask(const TaskProto& task) {
 }
 
 void Thread::PollMsgChannel() {
+  auto lazy_mode_enabled_guard = LazyMode::Guard(/* is_enabled */ true);
   while (true) {
     if (local_msg_queue_.empty()) {
       CHECK_EQ(msg_channel_.ReceiveMany(&local_msg_queue_), kChannelStatusSuccess);
