@@ -350,7 +350,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
     # @unittest.skipIf(True, "")
     def test_free_tensor_to_consistent(test_case):
-        local_x = flow.tensor(x, device="cpu")
+        local_x = flow.tensor(x, dtype=flow.float32, device="cpu")
         placement = flow.placement("cuda", {0: [0, 1]})
         c_x = local_x.to_consistent(placement, flow.sbp.split(0))
 

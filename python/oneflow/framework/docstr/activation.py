@@ -309,9 +309,9 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> x = flow.tensor(np.array([0.81733328, 0.43621480, 0.10351428]), dtype=flow.float32)
-        >>> input = flow.tensor(x)
-        >>> out = flow.sigmoid(input)
+        >>> x = flow.tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
+        >>> input = flow.tensor(x, dtype=flow.float32)
+        >>> out = flow.nn.functional.sigmoid(input)
         >>> out
         tensor([0.6937, 0.6074, 0.5259], dtype=oneflow.float32)
 
@@ -382,7 +382,7 @@ add_docstr(
 
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.tensor(x)
-        >>> out = flow.selu(input)
+        >>> out = flow.nn.functional.selu(input)
         >>> out
         tensor([1.0507, 2.1014, 3.1521], dtype=oneflow.float32)
     """,

@@ -826,10 +826,9 @@ add_docstr(
         tensor([ 1.7183,  6.3891, 19.0855], dtype=oneflow.float32)
 
 
-        >>> x = flow.tensor(np.array([[2, 4, 6],[7, 8, 9]]).astype(np.float32))
-        >>> y = x.expm1()
-        >>> y.shape
-        flow.Size([2, 3])
+        >>> x = np.array([1.4309,  1.2706, -0.8562,  0.9796])
+        >>> x = flow.Tensor(x)
+        >>> y = flow._C.cos(x)
         >>> y
         tensor([[6.3891e+00, 5.3598e+01, 4.0243e+02],
                 [1.0956e+03, 2.9800e+03, 8.1021e+03]], dtype=oneflow.float32)
