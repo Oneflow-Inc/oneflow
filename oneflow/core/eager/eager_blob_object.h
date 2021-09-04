@@ -164,15 +164,13 @@ class DTREagerBlobObject final : public EagerBlobObject {
   Maybe<void> evict() {
     evict_flag_ = true;
     DeallocateBlobDataPtr();
+    CHECK_NE_OR_RETURN(is_in_memory(), true);
     return Maybe<void>::Ok();
     }
-  Maybe<bool> execute() {
-    evict_flag_ = false;
-    return false;   // return false to enter find_best_and_evict()
-  }
   Maybe<double> parent_cost();
   Maybe<double> child_cost();
   Maybe<double> neighbor_cost();
+  size_t input_size();
 
   // TODO: variable cost functions in terms of different heuristics
   Maybe<double> cost();

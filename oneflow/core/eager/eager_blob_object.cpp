@@ -120,8 +120,8 @@ void DTREagerBlobObject::update_user_ops(std::shared_ptr<vm::LocalCallOpKernelPh
 }
 
 bool DTREagerBlobObject::is_in_memory() {
-  return !evict_flag_;
-  // return (tensor_buffer_.get()->blob_dptr() != nullptr);
+  // return !evict_flag_;
+  return (tensor_buffer_.get()->blob_dptr() != nullptr);
 }
 
 Maybe<double> DTREagerBlobObject::parent_cost() {
@@ -173,6 +173,11 @@ Maybe<double> DTREagerBlobObject::neighbor_cost() {
 Maybe<double> DTREagerBlobObject::cost() {
   auto n_cost = JUST(neighbor_cost());
   return n_cost / blob_body_bytes_ / last_access_time_; 
+}
+
+size_t DTREagerBlobObject::input_size() {
+  auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(compute_op_.get());
+  return ptr->inputs()->size();
 }
 
 }  // namespace vm

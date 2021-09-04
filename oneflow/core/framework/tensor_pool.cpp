@@ -31,7 +31,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     for (auto tensor : candidates_) {
         tensor_id++;
         std::cout << static_cast<bool>(tensor->compute_op()) << " " << (!tensor->is_pinned()) << std::endl;
-        if (static_cast<bool>(tensor->compute_op()) && !tensor->is_pinned()) {
+        if (static_cast<bool>(tensor->compute_op()) && !tensor->is_pinned() && (tensor->input_size()>0)) {
             auto cur_cost = JUST(tensor->cost());
             if (min_cost < 0 || min_cost > cur_cost) {
                 best = tensor;
@@ -49,9 +49,11 @@ Maybe<void> DTRTensorPool::find_best_tensor_and_evict() {
     return Maybe<void>::Ok();
 }
 
-Maybe<void> DTRTensorPool::insert(vm::DTREagerBlobObject* blob_object) {
+Maybe<void> DTRTensorPool::insert(vm::DTREagerBlobObject* blob_object, size_t thres) {
     CHECK_NOTNULL_OR_RETURN(blob_object);
-    candidates_.insert(blob_object);
+    if ((blob_object->input_size() > 0) && (blob_object->memory() > thres)) {
+        candidates_.insert(blob_object);
+    }
     return Maybe<void>::Ok();
 }
 
@@ -68,6 +70,15 @@ double DTRTensorPool::duration() {
     // // time in milli
     // std::chrono::duration<double ,std::milli> time_span = t2 - start_time_;
     return time_span.count();
+}
+
+void DTRTensorPool::display() {
+    std::cout << "Info of current tensor pool:" << std::endl;
+    std::cout << "Number of candidates: " << candidates_.size() << std::endl;
+    size_t id = 0;
+    for (const auto& candidate : candidates_) {
+        std::cout << "id " << id++ << ", is_in_memory: " << candidate->is_in_memory() << ", input size: " << candidate->input_size() << std::endl;
+    }
 }
 
 }   // namespace one

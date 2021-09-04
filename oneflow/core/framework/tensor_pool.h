@@ -28,7 +28,7 @@ namespace one {
 struct DTRTensorPool {
     DTRTensorPool();
 
-    Maybe<void> insert(vm::DTREagerBlobObject* blob_object);
+    Maybe<void> insert(vm::DTREagerBlobObject* blob_object, size_t thres=0);
     Maybe<void> evict(vm::DTREagerBlobObject* blob_object);
 
     Maybe<vm::DTREagerBlobObject*> find_best_tensor();
@@ -36,6 +36,7 @@ struct DTRTensorPool {
     // do not need Maybe
     const std::chrono::steady_clock::time_point start_time() { return start_time_; }
     double duration();
+    void display();
 
     // TODO: Implementation of disjoint-set data structure
 
