@@ -7,6 +7,7 @@ oneflow
     :members: adaptive_avg_pool1d, 
             adaptive_avg_pool2d, 
             adaptive_avg_pool3d, 
+            abs, 
             acos, 
             add, 
             acosh, 
