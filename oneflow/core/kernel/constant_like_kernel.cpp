@@ -28,7 +28,7 @@ class ConstantLikeKernel final : public Kernel {
  private:
   mutable bool is_init_;
 
-  void ForwardDataContent(const KernelContext* ctx) const override {
+  void ForwardDataContent(KernelContext* ctx) const override {
     if (is_init_) { return; }
     Blob* out_blob = ctx->BnInOp2Blob("out");
     T value = static_cast<T>(0);
