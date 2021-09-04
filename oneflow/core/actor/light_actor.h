@@ -20,8 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-std::unique_ptr<ActorBase> TryNewLightActor(const TaskProto& task_proto,
-                                            const ThreadCtx& thread_ctx);
+std::unique_ptr<ActorBase> TryNewLightActor(const TaskProto& task_proto, StreamContext* stream_ctx);
 
 }  // namespace oneflow
 

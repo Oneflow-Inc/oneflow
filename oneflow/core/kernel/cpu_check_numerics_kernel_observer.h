@@ -13,31 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_THREAD_GPU_THREAD_H_
-#define ONEFLOW_CORE_THREAD_GPU_THREAD_H_
+#ifndef ONEFLOW_CORE_KERNEL_CPU_CHECK_NUMERICS_KERNEL_OBSERVER_H_
+#define ONEFLOW_CORE_KERNEL_CPU_CHECK_NUMERICS_KERNEL_OBSERVER_H_
 
-#include "oneflow/core/thread/thread.h"
+#include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
-
-class GpuThread final : public Thread {
+class CpuCheckNumericsKernelObserver final : public KernelObserver {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GpuThread);
-  GpuThread() = delete;
-  ~GpuThread();
+  OF_DISALLOW_COPY_AND_MOVE(CpuCheckNumericsKernelObserver);
+  CpuCheckNumericsKernelObserver() = default;
+  ~CpuCheckNumericsKernelObserver() override = default;
 
-  GpuThread(int64_t thrd_id, int64_t dev_id);
-
- private:
-  Channel<CudaCBEvent> cb_event_chan_;
-  std::thread cb_event_poller_;
-  ThreadCtx ctx_;
+  void DidForwardDataContent(KernelContext* ctx, const Kernel* kernel) override;
 };
-
-#endif
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_GPU_THREAD_H_
+#endif  // ONEFLOW_CORE_KERNEL_CPU_CHECK_NUMERICS_KERNEL_OBSERVER_H_
