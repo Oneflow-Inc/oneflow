@@ -204,8 +204,11 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
             return np.array(np_hsigmoid_out)
 
         def test_hardsigmoid_inplace_impl(test_case, shape, device):
-            x = flow.Tensor(
-                np.random.randn(*shape), device=flow.device(device), requires_grad=True
+            x = flow.tensor(
+                np.random.randn(*shape),
+                dtype=flow.float32,
+                device=flow.device(device),
+                requires_grad=True,
             )
             x_inplace = x + 1
             np_out = np_hardsigmoid(x_inplace.numpy())

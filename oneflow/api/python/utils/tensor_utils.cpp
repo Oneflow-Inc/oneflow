@@ -164,8 +164,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other) {
     std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
     std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
-    return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple,
-                                    grad_sbp_tuple);
+    return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple);
   }
 }
 
