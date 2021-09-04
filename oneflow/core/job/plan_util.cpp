@@ -526,6 +526,40 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
   }
 }
 
+void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
+  HashMap<std::pair<int64_t, int64_t>, int64_t> rank_device2size;
+  auto AddMemSizeByRankDeviceIds = [&](int64_t rank_id, int64_t device_id, int64_t mem_size) {
+    auto key = std::make_pair(rank_id, device_id);
+    auto it = rank_device2size.find(key);
+    if (it == rank_device2size.end()) { it = rank_device2size.emplace(key, 0).first; }
+    it->second += mem_size;
+  };
+
+  for (const ChunkProto& chunk : plan->block_chunk_list().chunk()) {
+    if (chunk.mem_case().has_device_cuda_mem()) {
+      AddMemSizeByRankDeviceIds(chunk.machine_id(), chunk.mem_case().device_cuda_mem().device_id(),
+                                chunk.mem_size());
+    }
+  }
+
+  for (const MemBlockProto& mem_block : plan->block_chunk_list().mem_block()) {
+    if (mem_block.has_chunk_id() || mem_block.has_chunk_offset()) { continue; }
+    if (mem_block.mem_case().has_device_cuda_mem()) {
+      AddMemSizeByRankDeviceIds(mem_block.machine_id(),
+                                mem_block.mem_case().device_cuda_mem().device_id(),
+                                mem_block.mem_size());
+    }
+  }
+
+  for (auto pair : rank_device2size) {
+    int64_t rank_id = pair.first.first;
+    int64_t device_id = pair.first.second;
+    double mem_size = pair.second * 1.0 / 1000000.0;
+    LOG(INFO) << " Plan: " << plan_name << " needs to allocate [ " << mem_size
+              << " MiB ] device memory in Rank: " << rank_id << " , Device: " << device_id << "\n";
+  }
+}
+
 const oneflow::OpAttribute& PlanUtil::GetOpAttribute(const Plan* plan, int64_t job_id,
                                                      const oneflow::KernelConf& kernel_conf) {
   if (kernel_conf.has_op_attribute()) {

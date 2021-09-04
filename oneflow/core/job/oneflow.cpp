@@ -1188,6 +1188,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   LinkMainPlan(&plan, std::move(main_plan), identity_tick_op_names);
   PlanUtil::CleanUselessMemBlockAndCheckValid(&plan);
   DumpCtrlRegstInfoToPlan(&plan);
+  PlanUtil::PlanMemoryLog(&plan, "merged_plan");
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("merged_plan")->Write(plan);
     PlanUtil::ToDotFile(plan, "/dot/merged_plan.dot");
