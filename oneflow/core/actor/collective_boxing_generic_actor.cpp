@@ -25,7 +25,7 @@ class CollectiveBoxingGenericActor : public NaiveActor {
   ~CollectiveBoxingGenericActor() override = default;
 
  private:
-  void InitDeviceCtx(const ThreadCtx& thread_ctx) override {
+  void InitDeviceCtx(StreamContext* stream_ctx) override {
     mut_device_ctx().reset(new CollectiveBoxingDeviceCtx());
   }
 };

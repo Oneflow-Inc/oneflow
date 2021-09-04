@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,32 +12,17 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_THREAD_GPU_THREAD_H_
-#define ONEFLOW_CORE_THREAD_GPU_THREAD_H_
+"""
+import oneflow as flow
 
-#include "oneflow/core/thread/thread.h"
 
-namespace oneflow {
+def is_available() -> bool:
+    r"""Returns a bool indicating if CUDA is currently available."""
+    # This function never throws and returns 0 if driver is missing or can't
+    # be initialized
+    return device_count() > 0
 
-#ifdef WITH_CUDA
 
-class GpuThread final : public Thread {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(GpuThread);
-  GpuThread() = delete;
-  ~GpuThread();
-
-  GpuThread(int64_t thrd_id, int64_t dev_id);
-
- private:
-  Channel<CudaCBEvent> cb_event_chan_;
-  std::thread cb_event_poller_;
-  ThreadCtx ctx_;
-};
-
-#endif
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_THREAD_GPU_THREAD_H_
+def device_count() -> int:
+    r"""Returns the number of GPUs available.."""
+    return flow._oneflow_internal.CudaGetDeviceCount()
