@@ -26,17 +26,17 @@ class IdentityKernel final : public Kernel {
   ~IdentityKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  void ForwardHeader(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void IdentityKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void IdentityKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   ctx->BnInOp2Blob("out")->CopyValidDataContentFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type>
-void IdentityKernel<device_type>::ForwardHeader(const KernelContext* ctx) const {
+void IdentityKernel<device_type>::ForwardHeader(KernelContext* ctx) const {
   ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
 }
 

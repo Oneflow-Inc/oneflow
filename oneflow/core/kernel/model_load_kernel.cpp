@@ -44,8 +44,8 @@ class ModelLoadKernel final : public Kernel {
   ~ModelLoadKernel() override = default;
 
  private:
-  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
-  void ForwardDataContent(const KernelContext* ctx) const override {
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(KernelContext* ctx) const override {
     const ModelLoadOpConf& conf = this->op_conf().model_load_conf();
     const Blob* path_blob = ctx->BnInOp2Blob("path");
     const std::string path(path_blob->dptr<char>(), path_blob->shape_view().elem_cnt());
