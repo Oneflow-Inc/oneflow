@@ -48,8 +48,15 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   }
   if (autograd_meta->acc_grad()) {
     DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
+    // Should not inplace accumulate grad. For example,
+    // >>> z = x + y
+    // >>> p = x / z
+    // >>> p.sum().backward()
+    //
+    // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
+    // for dy if dx is shared with dz.
     const auto& output =
-        JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*inplace=*/true));
+        JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*inplace=*/false));
     JUST(autograd_meta->set_acc_grad(output));
   } else {
     JUST(autograd_meta->set_acc_grad(current_grad));

@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,25 +12,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_THREAD_CPU_THREAD_H_
-#define ONEFLOW_CORE_THREAD_CPU_THREAD_H_
+"""
 
-#include "oneflow/core/thread/thread.h"
+import unittest
+from collections import OrderedDict
 
-namespace oneflow {
+import numpy as np
+from test_util import GenArgList
 
-class CpuThread final : public Thread {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuThread);
-  CpuThread() = delete;
-  ~CpuThread() = default;
+import oneflow as flow
+import oneflow.unittest
+from automated_test_util import *
 
-  CpuThread(int64_t thrd_id);
 
- private:
-};
+@flow.unittest.skip_unless_1n1d()
+class TestCat(flow.unittest.TestCase):
+    @autotest()
+    def test_cat_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        return torch.cat((x, x, x), random(0, 2).to(int))
 
-}  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_CPU_THREAD_H_
+if __name__ == "__main__":
+    unittest.main()

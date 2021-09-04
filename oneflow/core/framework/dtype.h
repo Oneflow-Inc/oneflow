@@ -34,7 +34,8 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(Int64)           \
   OF_PP_MAKE_TUPLE_SEQ(UInt8)           \
   OF_PP_MAKE_TUPLE_SEQ(OFRecord)        \
-  OF_PP_MAKE_TUPLE_SEQ(TensorBuffer)
+  OF_PP_MAKE_TUPLE_SEQ(TensorBuffer)    \
+  OF_PP_MAKE_TUPLE_SEQ(BFloat16)
 
 class DType final {
  public:
