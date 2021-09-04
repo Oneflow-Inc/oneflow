@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/runtime_blob_shape_infer_helper.h"
 #include "oneflow/core/kernel/kernel_observer.h"
-#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -36,15 +35,15 @@ Kernel::Kernel() = default;
 
 Kernel::~Kernel() = default;
 
-void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
+void Kernel::InitBase(const KernelConf& kernel_conf) {
   if (shape_infer_helper_) { return; }
   kernel_conf_ = kernel_conf;
   shape_infer_helper_.reset(
-      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), job_desc));
+      new RuntimeBlobShapeInferHelper(this->op_conf(), this->kernel_conf(), this));
 }
 
 void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {
-  InitBase(ctx->job_desc(), kernel_conf);
+  InitBase(kernel_conf);
   VirtualKernelInit(ctx);
 }
 

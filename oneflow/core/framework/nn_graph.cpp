@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -71,7 +72,7 @@ Maybe<void> NNGraph::RegisterOutputOpNames(const std::vector<std::string>& outpu
 Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     const std::vector<std::string>& variable_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
-  JUST(vm::MultiClientSync());
+  JUST(vm::CurrentRankSync());
   CHECK_EQ_OR_RETURN(variable_op_names.size(), variable_tensors.size());
   CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
@@ -94,7 +95,7 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
 }
 
 Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
-  JUST(vm::MultiClientSync());
+  JUST(vm::CurrentRankSync());
   const auto& free_eager_tensors =
       Global<MultiClientSessionContext>::Get()->GetFreeEagerTensorNamePairByGraphName(name_);
   for (const auto& pair : free_eager_tensors) {
@@ -116,7 +117,7 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
 }
 
 Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
-  JUST(vm::MultiClientSync());
+  JUST(vm::CurrentRankSync());
   // NOTE(chengcheng): New EagerTensor need set LazyMode false.
   auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
   OpGraph op_graph(job_);
@@ -149,7 +150,7 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
       }
       std::shared_ptr<one::Tensor> tensor = JUST(one::functional::ConsistentConstant(
           blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
-      JUST(vm::MultiClientSync());
+      JUST(vm::CurrentRankSync());
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       Blob* var_blob = JUST(local_var->eager_blob_object())->mut_blob();
       CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
@@ -237,10 +238,10 @@ void NNGraph::NewRuntimeBuffers() {
   buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), concurrency_width);
   buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), concurrency_width);
   for (const std::string& input_op_name : input_op_names_) {
-    buffer_mgr->NewBuffer(GetInputBufferName(name_, input_op_name), 2);
+    buffer_mgr->NewBuffer(GetInputBufferName(name_, input_op_name), concurrency_width);
   }
   for (const std::string& output_op_name : output_op_names_) {
-    buffer_mgr->NewBuffer(GetOutputBufferName(name_, output_op_name), 2);
+    buffer_mgr->NewBuffer(GetOutputBufferName(name_, output_op_name), concurrency_width);
   }
 }
 

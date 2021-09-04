@@ -488,8 +488,8 @@ class Hardsigmoid(Module):
 
     def forward(self, x):
         if self.inplace:
-            warnings.warn("Hardsigmoid module do not support inplace now")
-        return flow._C.hardsigmoid(x)
+            return flow._C.hardsigmoid(x, True)
+        return flow._C.hardsigmoid(x, False)
 
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""

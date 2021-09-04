@@ -250,7 +250,7 @@
   bind_python: True
 
 - name: "hardsigmoid"
-  signature: "Tensor (Tensor x) => HardSigmoid"
+  signature: "Tensor (Tensor input, Bool inplace=False, *) => HardSigmoid"
   bind_python: True
 
 - name: "hardsigmoid_grad"
@@ -888,7 +888,7 @@
 
 - name: "dropout"
   signature:
-    "Tensor (Tensor x, Float p=0.5, Generator generator=None) => Dropout"
+    "Tensor (Tensor x, Float p=0.5, Generator generator=None, Bool is_training=True) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -1125,6 +1125,10 @@
 
 - name: "split"
   signature: "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split"
+  bind_python: True
+
+- name: "split_like"
+  signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
   
 - name: "split_with_size"
