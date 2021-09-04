@@ -91,7 +91,7 @@ class NewObjectInstructionType final : public InstructionType {
     FOR_RANGE(int, i, 0, view->logical_object_id_size()) {
       int64_t logical_object_id = GetLogicalObjectId(view->logical_object_id(i));
       auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
-                                                                 logical_object_id, parallel_desc);
+                                                                 logical_object_id, SymbolOf(*parallel_desc));
       CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
       auto* global_device_id2mirrored_object =
           logical_object->mut_global_device_id2mirrored_object();
@@ -150,7 +150,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
     CHECK(static_cast<bool>(parallel_desc));
     int64_t new_object = GetLogicalObjectId(args->new_object());
     auto logical_object = ObjectMsgPtr<LogicalObject>::NewFrom(vm->mut_vm_thread_only_allocator(),
-                                                               new_object, parallel_desc);
+                                                               new_object, SymbolOf(*parallel_desc));
     CHECK(vm->mut_id2logical_object()->Insert(logical_object.Mutable()).second);
     auto* global_device_id2mirrored_object = logical_object->mut_global_device_id2mirrored_object();
     ForEachMachineIdAndDeviceIdInRange(

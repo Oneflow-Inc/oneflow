@@ -141,7 +141,7 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
     const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
-      ObjectMsgPtr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
+      ObjectMsgPtr<Instruction> instr = stream->NewInstruction(instr_msg, SymbolOf(*parallel_desc));
       if (stream_type_id.interpret_type() == kInfer) {
         // do nothing
       } else if (stream_type_id.interpret_type() == kCompute) {
