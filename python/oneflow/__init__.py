@@ -39,6 +39,7 @@ locals()["long"] = oneflow._oneflow_internal.int64
 locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
+locals()["bfloat16"] = oneflow._oneflow_internal.bfloat16
 from oneflow.version import __version__
 
 _DEPRECATED = set()

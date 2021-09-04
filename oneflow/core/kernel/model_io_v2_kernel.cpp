@@ -236,8 +236,8 @@ class ModelInitV2Kernel final : public Kernel {
           *hierarchy, nd_sbp, logical_blob_shape, parallel_ctx.parallel_id()));
     }
   }
-  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
-  void ForwardDataContent(const KernelContext* ctx) const override {
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(KernelContext* ctx) const override {
     const ModelInitV2OpConf& conf = this->op_conf().model_init_v2_conf();
 
     FOR_RANGE(int64_t, i, 0, conf.variable_op_name_size()) {
@@ -296,8 +296,8 @@ class ModelLoadV2Kernel final : public Kernel {
                                         this->kernel_conf().parallel_ctx().parallel_id()));
     }
   }
-  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
-  void ForwardDataContent(const KernelContext* ctx) const override {
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(KernelContext* ctx) const override {
     const ModelLoadV2OpConf& conf = this->op_conf().model_load_v2_conf();
     const Blob* path = ctx->BnInOp2Blob("path");
     const std::string snapshot_path = SyncReadStringFromBlob<device_type>(ctx->device_ctx(), path);
@@ -374,8 +374,8 @@ class ModelSaveV2Kernel final : public Kernel {
     }
   }
 
-  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
-  void ForwardDataContent(const KernelContext* ctx) const override {
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(KernelContext* ctx) const override {
     const ModelSaveV2OpConf& conf = this->op_conf().model_save_v2_conf();
     const Blob* path_blob = ctx->BnInOp2Blob("path");
     const std::string snapshot_path =
