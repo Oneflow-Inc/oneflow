@@ -28,12 +28,12 @@ class OutputKernel final : public Kernel {
   ~OutputKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  void ForwardHeader(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void OutputKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void OutputKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     CHECK(this->op_conf().output_conf().has_job_name());
     const auto& job_name = this->op_conf().output_conf().job_name();
@@ -53,7 +53,7 @@ void OutputKernel<device_type>::ForwardDataContent(const KernelContext* ctx) con
 }
 
 template<DeviceType device_type>
-void OutputKernel<device_type>::ForwardHeader(const KernelContext* ctx) const {
+void OutputKernel<device_type>::ForwardHeader(KernelContext* ctx) const {
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
     // Do nothing.
   } else {
