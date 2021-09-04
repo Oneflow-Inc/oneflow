@@ -30,11 +30,11 @@ class CallbackNotifyKernel final : public Kernel {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<typename T>
-void CallbackNotifyKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
+void CallbackNotifyKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   std::string buffer_name;
   if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {

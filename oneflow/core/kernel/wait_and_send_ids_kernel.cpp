@@ -32,7 +32,7 @@ void WaitAndSendIdsKernel<T>::DestroyState(void* state) const {
 }
 
 template<typename T>
-void WaitAndSendIdsKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
+void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   CHECK(ctx->state());
   auto* status = static_cast<WaitAndSendIdsStatus*>(ctx->state());
   const auto& conf = this->op_conf().wait_and_send_ids_conf();

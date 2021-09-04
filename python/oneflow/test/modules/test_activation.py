@@ -187,6 +187,44 @@ class TestSoftmax(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestHardsigmoidModule(flow.unittest.TestCase):
+    def test_hardsigmoid_inplace(test_case):
+        def np_hardsigmoid(input):
+            input_shape = input.shape
+            input = input.flatten()
+            elem_cnt = input.size
+            _zero = np.zeros_like(input)
+            for i in range(elem_cnt):
+                if input[i] >= 3:
+                    _zero[i] = 1
+                elif input[i] <= -3:
+                    _zero[i] = 0
+                else:
+                    _zero[i] = input[i] / 6 + 0.5
+            np_hsigmoid_out = np.reshape(_zero, newshape=input_shape)
+            return np.array(np_hsigmoid_out)
+
+        def test_hardsigmoid_inplace_impl(test_case, shape, device):
+            x = flow.tensor(
+                np.random.randn(*shape),
+                dtype=flow.float32,
+                device=flow.device(device),
+                requires_grad=True,
+            )
+            x_inplace = x + 1
+            np_out = np_hardsigmoid(x_inplace.numpy())
+
+            id_old = id(x_inplace)
+            y_inplace = flow.nn.functional.hardsigmoid(x_inplace, inplace=True)
+
+            test_case.assertEqual(id_old, id(y_inplace))
+            test_case.assertTrue(np.allclose(y_inplace.numpy(), np_out, 1e-5, 1e-5))
+
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            test_hardsigmoid_inplace_impl(test_case, *arg)
+
     @autotest()
     def test_hardsigmoid_module_with_random_data(test_case):
         m = torch.nn.Hardsigmoid()
@@ -195,6 +233,13 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         m.to(device)
         x = random_pytorch_tensor().to(device)
         y = m(x)
+        return y
+
+    @autotest()
+    def test_functional_hardsigmoid_with_random_data(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        y = torch.nn.functional.hardsigmoid(x, random_bool())
         return y
 
 

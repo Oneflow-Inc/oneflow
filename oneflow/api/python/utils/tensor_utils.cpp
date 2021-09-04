@@ -163,8 +163,8 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other) {
     const Symbol<cfg::NdSbp>& nd_sbp = JUST(other->nd_sbp());
     std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
-    return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple,
-                                    GetNoneSbpList());
+    std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
+    return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple);
   }
 }
 
@@ -196,8 +196,9 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Symbol<ParallelDesc>& placement,
                                         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
                                         const bool& requires_grad) {
+  std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
   std::shared_ptr<Tensor> tensor =
-      JUST(functional::ToConsistent(other, placement, sbp_tuple, GetNoneSbpList()));
+      JUST(functional::ToConsistent(other, placement, sbp_tuple, grad_sbp_tuple));
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype.value());
     if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }

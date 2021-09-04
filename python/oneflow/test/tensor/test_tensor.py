@@ -140,7 +140,7 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_consistent_tensor_init_methods(test_case):
         test_case._test_tensor_init_methods(
-            lambda *args, **kwargs: flow.tensor(
+            lambda *args, **kwargs: flow.Tensor(
                 *args,
                 **kwargs,
                 sbp=flow.sbp.broadcast,
@@ -1376,6 +1376,20 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_pytorch_tensor().to(device)
         return x.round()
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_tensor_diag_one_dim(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=1, dim0=random()).to(device)
+        return x.diag()
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_tensor_diag_other_dim(test_case):
+        device = random_device()
+        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        return x.diag()
 
 
 if __name__ == "__main__":
