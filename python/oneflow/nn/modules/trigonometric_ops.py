@@ -156,7 +156,7 @@ def acos_op(input):
         >>> import numpy as np
 
         >>> arr = np.array([0.5, 0.6, 0.7])
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> output = flow.acos(input)
         >>> output
         tensor([1.0472, 0.9273, 0.7954], dtype=oneflow.float32)

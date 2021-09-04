@@ -45,7 +45,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> input=flow.Tensor(np.array([0, 3, 1, 2]).astype(np.int32), dtype=flow.int64)
+        >>> input=flow.tensor(np.array([0, 3, 1, 2]).astype(np.int32), dtype=flow.int64)
         >>> out = flow._C.one_hot(input, num_classes=5)
         >>> out
         tensor([[1, 0, 0, 0, 0],

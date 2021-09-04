@@ -56,11 +56,11 @@ def _test_fused_scale_tril(
     y = _np_tril(x, diagonal, fill_value, scale)
     x_grad = _np_tril(y_grad, diagonal, 0, scale)
 
-    flow_x = flow.Tensor(
+    flow_x = flow.tensor(
         x, device=flow.device(device_type), dtype=dtype, requires_grad=True
     )
     flow_y = flow._C.fused_scale_tril(flow_x, diagonal, fill_value, scale)
-    flow_y_grad = flow.Tensor(y_grad, device=flow.device(device_type), dtype=dtype)
+    flow_y_grad = flow.tensor(y_grad, device=flow.device(device_type), dtype=dtype)
     flow_y.backward(flow_y_grad)
 
     flow_y_np = flow_y.numpy()

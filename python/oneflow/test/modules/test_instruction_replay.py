@@ -26,8 +26,12 @@ import oneflow.unittest
 
 
 def _test_instruction_replay_impl(test_case, device, shape):
-    x = flow.Tensor(np.random.rand(*shape), device=flow.device(device))
-    y = flow.Tensor(np.random.rand(*shape), device=flow.device(device))
+    x = flow.tensor(
+        np.random.rand(*shape), dtype=flow.float32, device=flow.device(device)
+    )
+    y = flow.tensor(
+        np.random.rand(*shape), dtype=flow.float32, device=flow.device(device)
+    )
     oneflow._oneflow_internal.debug.start_recording_instructions()
     z = x + y
     oneflow._oneflow_internal.debug.end_recording_instructions()

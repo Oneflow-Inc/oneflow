@@ -79,7 +79,7 @@ class PReLU(Module):
         >>> import oneflow as flow
         
         >>> m = flow.nn.PReLU()
-        >>> input = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
+        >>> input = flow.tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
         >>> print(m(input).numpy())
         [[[[ 1.  -0.5]
            [ 3.   4. ]]]]
@@ -488,8 +488,8 @@ class Hardsigmoid(Module):
 
     def forward(self, x):
         if self.inplace:
-            warnings.warn("Hardsigmoid module do not support inplace now")
-        return flow._C.hardsigmoid(x)
+            return flow._C.hardsigmoid(x, True)
+        return flow._C.hardsigmoid(x, False)
 
     def extra_repr(self):
         inplace_str = "inplace=True" if self.inplace else ""

@@ -44,7 +44,7 @@ def diag_op(input, diagonal=0):
         ...     ]
         ... )
 
-        >>> input = flow.Tensor(arr, dtype=flow.float32)
+        >>> input = flow.tensor(arr, dtype=flow.float32)
         >>> flow.diag(input)
         tensor([1., 5., 9.], dtype=oneflow.float32)
     """

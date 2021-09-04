@@ -36,6 +36,7 @@ def compare_with_numpy_adam(
     weight_decay,
     eps,
     do_bias_correction,
+    amsgrad,
     reload_state_step,
     save_load_by_pickle,
 ):
@@ -57,11 +58,15 @@ def compare_with_numpy_adam(
                 }
             ],
             do_bias_correction=do_bias_correction,
+            amsgrad=amsgrad,
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.Tensor(
-                grad, requires_grad=False, device=flow.device(device)
+            grad_tensor = flow.tensor(
+                grad,
+                dtype=flow.float32,
+                requires_grad=False,
+                device=flow.device(device),
             )
             loss = flow.sum(x * grad_tensor)
             loss.backward()
@@ -72,7 +77,9 @@ def compare_with_numpy_adam(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.Adam([x])
+                adam = flow.optim.Adam(
+                    [{"params": [x],}], do_bias_correction=do_bias_correction,
+                )
                 if save_load_by_pickle:
                     with tempfile.NamedTemporaryFile("wb", delete=False) as f:
                         file_name = f.name
@@ -88,28 +95,35 @@ def compare_with_numpy_adam(
         x = init_value
         vt = np.zeros_like(x)
         st = np.zeros_like(x)
+        max_st = np.zeros_like(x)
         beta1 = betas[0]
         beta2 = betas[1]
 
-        def train_one_iter(iter, grad):
+        def np_train_one_iter(step, grad):
             grad = grad + weight_decay * x
 
+            bias_correction1 = 1.0
+            bias_correction2 = 1.0
+
             if do_bias_correction:
-                lr = (
-                    learning_rate
-                    * np.sqrt(1 - beta2 ** (iter + 1))
-                    / (1 - beta1 ** (iter + 1))
-                )
-            else:
-                lr = learning_rate
+                bias_correction1 = 1.0 - np.power(beta1, step)
+                bias_correction2 = 1.0 - np.power(beta2, step)
 
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
-            param = x - lr * (v / (np.sqrt(s) + eps))
-            return (param, v, s)
+            max_s = np.zeros_like(x)
 
-        for i in range(train_iters):
-            (x, vt, st) = train_one_iter(i, random_grad_seq[i])
+            if amsgrad:
+                max_s = np.maximum(s, max_st)
+                denom = np.sqrt(max_s) / np.sqrt(bias_correction2) + eps
+            else:
+                denom = np.sqrt(s) / np.sqrt(bias_correction2) + eps
+
+            param = x - ((learning_rate / bias_correction1) * v / denom)
+            return (param, v, s, max_s)
+
+        for i in range(1, train_iters + 1):
+            (x, vt, st, max_st) = np_train_one_iter(i, random_grad_seq[i - 1])
         return x
 
     oneflow_res = train_by_oneflow().numpy()
@@ -129,6 +143,7 @@ def compare_with_numpy_adam_clip_grad(
     weight_decay,
     eps,
     do_bias_correction,
+    amsgrad,
     clip_grad_max_norm,
     clip_grad_norm_type,
     reload_state_step,
@@ -154,11 +169,15 @@ def compare_with_numpy_adam_clip_grad(
                 }
             ],
             do_bias_correction=do_bias_correction,
+            amsgrad=amsgrad,
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.Tensor(
-                grad, requires_grad=False, device=flow.device(device)
+            grad_tensor = flow.tensor(
+                grad,
+                dtype=flow.float32,
+                requires_grad=False,
+                device=flow.device(device),
             )
             loss = flow.sum(x * grad_tensor)
             loss.backward()
@@ -170,7 +189,9 @@ def compare_with_numpy_adam_clip_grad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.Adam([x])
+                adam = flow.optim.Adam(
+                    [{"params": [x],}], do_bias_correction=do_bias_correction,
+                )
                 if save_load_by_pickle:
                     with tempfile.NamedTemporaryFile("wb", delete=False) as f:
                         file_name = f.name
@@ -186,31 +207,38 @@ def compare_with_numpy_adam_clip_grad(
         x = init_value
         vt = np.zeros_like(x)
         st = np.zeros_like(x)
+        max_st = np.zeros_like(x)
         beta1 = betas[0]
         beta2 = betas[1]
 
-        def train_one_iter(iter, grad):
+        def train_one_iter(step, grad):
             total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
             grad = grad + weight_decay * x
 
+            bias_correction1 = 1.0
+            bias_correction2 = 1.0
+
             if do_bias_correction:
-                lr = (
-                    learning_rate
-                    * np.sqrt(1 - beta2 ** (iter + 1))
-                    / (1 - beta1 ** (iter + 1))
-                )
-            else:
-                lr = learning_rate
+                bias_correction1 = 1.0 - np.power(beta1, step)
+                bias_correction2 = 1.0 - np.power(beta2, step)
 
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
-            param = x - lr * (v / (np.sqrt(s) + eps))
-            return (param, v, s)
+            max_s = np.zeros_like(x)
 
-        for i in range(train_iters):
-            (x, vt, st) = train_one_iter(i, random_grad_seq[i])
+            if amsgrad:
+                max_s = np.maximum(s, max_st)
+                denom = np.sqrt(max_s) / np.sqrt(bias_correction2) + eps
+            else:
+                denom = np.sqrt(s) / np.sqrt(bias_correction2) + eps
+
+            param = x - ((learning_rate / bias_correction1) * v / denom)
+            return (param, v, s, max_s)
+
+        for i in range(1, train_iters + 1):
+            (x, vt, st, max_st) = train_one_iter(i, random_grad_seq[i - 1])
         return x
 
     oneflow_res = train_by_oneflow().numpy()
@@ -224,14 +252,15 @@ def compare_with_numpy_adam_clip_grad(
 class TestAdam(flow.unittest.TestCase):
     def test_adam(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cuda", "cpu"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["learning_rate"] = [1, 1e-3]
         arg_dict["train_iters"] = [10]
-        arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
-        arg_dict["weight_decay"] = [0.0, 0.1]
-        arg_dict["eps"] = [1e-08, 1e-07]
+        arg_dict["betas"] = [(0.99, 0.9)]
+        arg_dict["weight_decay"] = [0.9, 0.000]
+        arg_dict["eps"] = [1e-08]
         arg_dict["do_bias_correction"] = [True, False]
+        arg_dict["amsgrad"] = [True, False]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
 
@@ -242,12 +271,13 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["learning_rate"] = [1, 1e-3]
+        arg_dict["learning_rate"] = [1e-3]
         arg_dict["train_iters"] = [10]
-        arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
-        arg_dict["weight_decay"] = [0.0, 0.1]
-        arg_dict["eps"] = [1e-08, 1e-07]
+        arg_dict["betas"] = [(0.99, 0.9)]
+        arg_dict["weight_decay"] = [0.1, 0.000]
+        arg_dict["eps"] = [1e-08]
         arg_dict["do_bias_correction"] = [True, False]
+        arg_dict["amsgrad"] = [True, False]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]  # save and load optim state

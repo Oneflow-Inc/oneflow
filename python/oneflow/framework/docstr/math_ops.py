@@ -68,7 +68,7 @@ add_docstr(
         >>> import numpy as np
 
         >>> x = np.array([1.4309,  1.2706, -0.8562,  0.9796])
-        >>> x = flow.Tensor(x, dtype=flow.float32)
+        >>> x = flow.Tensor(x)
         >>> y = flow._C.cos(x)
         >>> y
         tensor([0.1394, 0.2957, 0.6553, 0.5574], dtype=oneflow.float32)
