@@ -145,6 +145,7 @@ del atexit
 del oneflow
 
 import oneflow._C
+from oneflow._C import tensor
 import oneflow.framework.docstr as docstr
 
 from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
@@ -178,7 +179,6 @@ from oneflow.framework.generator import default_generator, manual_seed
 # from oneflow.framework.model import Model
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
-from oneflow.framework.tensor import tensor as tensor
 from oneflow.framework.tensor import is_nonzero
 
 from oneflow.nn.modules.abs import abs_op as abs

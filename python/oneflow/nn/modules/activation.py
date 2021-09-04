@@ -79,7 +79,7 @@ class PReLU(Module):
         >>> import oneflow as flow
         
         >>> m = flow.nn.PReLU()
-        >>> input = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
+        >>> input = flow.tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
         >>> print(m(input).numpy())
         [[[[ 1.  -0.5]
            [ 3.   4. ]]]]

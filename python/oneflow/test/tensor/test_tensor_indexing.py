@@ -24,7 +24,7 @@ import oneflow.unittest
 
 
 def test_basic_slice(test_case, numpy_x):
-    x = flow.Tensor(numpy_x)
+    x = flow.tensor(numpy_x)
 
     test_case.assertTrue(np.array_equal(numpy_x[1], x[1].numpy()))
     test_case.assertTrue(np.array_equal(numpy_x[-2], x[-2].numpy()))
@@ -65,7 +65,7 @@ def test_basic_slice(test_case, numpy_x):
 
 
 def test_advanced_indexing(test_case, numpy_x):
-    x = flow.Tensor(numpy_x)
+    x = flow.tensor(numpy_x)
 
     test_case.assertTrue(np.array_equal(numpy_x[[0, 1]], x[[0, 1]].numpy()))
     test_case.assertTrue(
@@ -94,23 +94,19 @@ def test_advanced_indexing(test_case, numpy_x):
     test_case.assertTrue(
         np.array_equal(
             numpy_x[np.array([0, 1]), np.array([1, 0])],
-            x[flow.Tensor([0, 1]).long(), flow.Tensor([1, 0]).long()].numpy(),
+            x[flow.tensor([0, 1]), flow.tensor([1, 0])].numpy(),
         )
     )
     test_case.assertTrue(
         np.array_equal(
             numpy_x[:, np.array([[0, 1], [1, 1]]), np.array([[1, 0], [1, 1]])],
-            x[
-                :,
-                flow.Tensor([[0, 1], [1, 1]]).long(),
-                flow.Tensor([[1, 0], [1, 1]]).long(),
-            ].numpy(),
+            x[:, flow.tensor([[0, 1], [1, 1]]), flow.tensor([[1, 0], [1, 1]]),].numpy(),
         )
     )
 
 
 def test_combining_indexing(test_case, numpy_x):
-    x = flow.Tensor(numpy_x)
+    x = flow.tensor(numpy_x)
 
     test_case.assertTrue(
         np.array_equal(numpy_x[[0, 1], 1:2, [1, 0]], x[[0, 1], 1:2, [1, 0]].numpy())
@@ -129,33 +125,33 @@ def test_combining_indexing(test_case, numpy_x):
 @flow.unittest.skip_unless_1n1d()
 class TestTensorIndexing(flow.unittest.TestCase):
     def test_basic_slice(test_case):
-        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5])
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
         test_basic_slice(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6])
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
         test_basic_slice(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10])
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_basic_slice(test_case, numpy_x)
 
     def test_advanced_indexing(test_case):
-        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5])
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
         test_advanced_indexing(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6])
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
         test_advanced_indexing(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10])
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_advanced_indexing(test_case, numpy_x)
 
     def test_combining_indexing(test_case):
-        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5])
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
         test_combining_indexing(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6])
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
         test_combining_indexing(test_case, numpy_x)
 
-        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10])
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_combining_indexing(test_case, numpy_x)
 
 
