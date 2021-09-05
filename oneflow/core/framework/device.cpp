@@ -148,9 +148,9 @@ Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
       {"cuda", GetInstructionHighWaterMark()},
       {"cuda_h2d", kDoubleBufferPoolSize},
       {"cuda_d2h", kDoubleBufferPoolSize},
-      {"comm_net", GetInstructionHighWaterMark()},
-      {"sync_launched_nccl", GetInstructionHighWaterMark()},
-      {"async_launched_nccl", GetInstructionHighWaterMark()},
+      {"comm_net", kDoubleBufferPoolSize},
+      {"sync_launched_nccl", kDoubleBufferPoolSize},
+      {"async_launched_nccl", kDoubleBufferPoolSize},
   };
   return MapAt(type2pool_size, type());
 }
