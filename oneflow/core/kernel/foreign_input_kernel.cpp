@@ -26,13 +26,13 @@ class ForeignInputKernel final : public Kernel {
   ForeignInputKernel() = default;
   ~ForeignInputKernel() = default;
 
-  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
-void ForeignInputKernel::ForwardDataContent(const KernelContext* ctx) const {
+void ForeignInputKernel::ForwardDataContent(KernelContext* ctx) const {
   const auto& buffer_name = op_conf().foreign_input_conf().ofblob_buffer_name();
   std::shared_ptr<JobInstance> foreign_job_instance;
   BufferStatus buffer_status = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get()

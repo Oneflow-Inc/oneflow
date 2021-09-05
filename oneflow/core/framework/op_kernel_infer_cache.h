@@ -34,7 +34,7 @@ class OpKernelInferCache final {
   using KeyStorage = std::list<std::unique_ptr<KeyType>>;
   static constexpr size_t kReleaseInIndependentThreadThreshold = 4096;
 
-  OpKernelInferCache(const KernelConf& kernel_conf, const JobDesc& job_desc);
+  OpKernelInferCache(const KernelConf& kernel_conf, const void* scope);
   ~OpKernelInferCache() = default;
 
   bool IsCacheHit() const;
@@ -47,7 +47,6 @@ class OpKernelInferCache final {
   KeyType cache_key_;
   HashMap cached_key2value_;
   KeyStorage key_storage_;
-  size_t max_size_;
 };
 
 }  // namespace user_op

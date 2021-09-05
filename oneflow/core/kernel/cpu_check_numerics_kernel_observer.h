@@ -13,24 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_THREAD_CPU_THREAD_H_
-#define ONEFLOW_CORE_THREAD_CPU_THREAD_H_
+#ifndef ONEFLOW_CORE_KERNEL_CPU_CHECK_NUMERICS_KERNEL_OBSERVER_H_
+#define ONEFLOW_CORE_KERNEL_CPU_CHECK_NUMERICS_KERNEL_OBSERVER_H_
 
-#include "oneflow/core/thread/thread.h"
+#include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
-class CpuThread final : public Thread {
+class CpuCheckNumericsKernelObserver final : public KernelObserver {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuThread);
-  CpuThread() = delete;
-  ~CpuThread() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CpuCheckNumericsKernelObserver);
+  CpuCheckNumericsKernelObserver() = default;
+  ~CpuCheckNumericsKernelObserver() override = default;
 
-  CpuThread(int64_t thrd_id);
-
- private:
+  void DidForwardDataContent(KernelContext* ctx, const Kernel* kernel) override;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_CPU_THREAD_H_
+#endif  // ONEFLOW_CORE_KERNEL_CPU_CHECK_NUMERICS_KERNEL_OBSERVER_H_

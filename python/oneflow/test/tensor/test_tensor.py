@@ -48,11 +48,11 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_copy_to_and_from_numpy(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
-        tensor = flow.Tensor(np_arr, dtype=flow.float32)
+        tensor = flow.tensor(np_arr, dtype=flow.float32)
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
         test_case.assertEqual(np.float32, tensor.numpy().dtype)
         np_arr = np.array([4, 6], dtype=np.int32)
-        tensor = flow.Tensor(np_arr, dtype=flow.int32)
+        tensor = flow.tensor(np_arr, dtype=flow.int32)
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
         test_case.assertEqual(np.int32, tensor.numpy().dtype)
 
@@ -74,16 +74,16 @@ class TestTensor(flow.unittest.TestCase):
     def test_construct_from_numpy_or_list(test_case):
         shape = (2, 3, 4, 5)
         np_arr = np.random.rand(*shape).astype(np.float32)
-        tensor = flow.Tensor(np_arr)
+        tensor = flow.tensor(np_arr)
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
         np_int_arr = np.random.randint(-100, high=100, size=shape, dtype=np.int32)
-        tensor = flow.Tensor(np_int_arr, dtype=flow.int32)
+        tensor = flow.tensor(np_int_arr, dtype=flow.int32)
         test_case.assertEqual(tensor.dtype, flow.int32)
         test_case.assertTrue(np_arr.flags["C_CONTIGUOUS"])
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_int_arr))
         np_arr = np.random.random((1, 256, 256, 3)).astype(np.float32)
         np_arr = np_arr.transpose(0, 3, 1, 2)
-        tensor = flow.Tensor(np_arr)
+        tensor = flow.tensor(np_arr)
         test_case.assertFalse(np_arr.flags["C_CONTIGUOUS"])
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
 
@@ -91,8 +91,8 @@ class TestTensor(flow.unittest.TestCase):
     def test_construct_from_another_tensor(test_case):
         shape = (2, 3, 4, 5)
         np_arr = np.random.rand(*shape).astype(np.float32)
-        tensor = flow.Tensor(np_arr)
-        output = flow.Tensor(tensor)
+        tensor = flow.tensor(np_arr)
+        output = flow.tensor(tensor)
         test_case.assertEqual(output.dtype, flow.float32)
         test_case.assertTrue(np.array_equal(output.numpy(), np_arr))
 
@@ -116,7 +116,7 @@ class TestTensor(flow.unittest.TestCase):
         z.requires_grad_()
         flow.nn.init.xavier_normal_(z)
         flow.nn.init.xavier_uniform_(z)
-        x = tensor_creator(*shape, dtype=flow.int32)
+        x = tensor_creator(*shape).to(dtype=flow.int32)
         np_ones = np.ones(x.shape, dtype=np.int32)
         np_zeros = np.zeros(x.shape, dtype=np.int32)
         random_fill_val = -51
@@ -206,7 +206,8 @@ class TestTensor(flow.unittest.TestCase):
     def test_tensor_autograd_related_methods(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(*shape)
-        y = flow.Tensor(*shape, requires_grad=True)
+        y = flow.Tensor(*shape)
+        y.requires_grad = True
         x.fill_(1.0)
         y.fill_(2.0)
         z = x + y
@@ -221,7 +222,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(m.is_leaf)
         test_case.assertFalse(m.requires_grad)
         m.requires_grad = True
-        v = flow.Tensor(*shape, requires_grad=True)
+        v = flow.Tensor(*shape)
+        v.requires_grad = True
         z.retain_grad()
         w = v + z
         grad = flow.Tensor(*shape)
@@ -242,14 +244,16 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_register_hook(test_case):
         shape = (2, 3)
-        x = flow.Tensor(*shape, requires_grad=True)
+        x = flow.Tensor(*shape)
+        x.requires_grad = True
         x.register_hook(lambda grad: grad * 2 + 1)
         y = x.sum() + (x * 2).sum()
         y.backward()
         test_case.assertTrue(
             np.allclose(x.grad.numpy(), np.ones(shape) * 7, atol=1e-4, rtol=1e-4)
         )
-        x = flow.Tensor(*shape, requires_grad=True)
+        x = flow.Tensor(*shape)
+        x.requires_grad = True
         new_grad = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         x.register_hook(lambda _: new_grad)
         y = x.sum() + (x * 2).sum()
@@ -261,8 +265,9 @@ class TestTensor(flow.unittest.TestCase):
             nonlocal grad_nonlocal
             grad_nonlocal = grad
 
-        x = flow.Tensor(*shape, requires_grad=True)
-        new_grad = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        x = flow.Tensor(*shape)
+        x.requires_grad = True
+        new_grad = flow.tensor([[1, 2, 3], [4, 5, 6]], dtype=flow.float32)
         x.register_hook(assign_nonlocal_variable_and_return_none)
         y = x.sum() + (x * 2).sum()
         y.backward()
@@ -330,7 +335,8 @@ class TestTensor(flow.unittest.TestCase):
         gpu_input_str = str(gpu_input)
         test_case.assertTrue("device=" in gpu_input_str)
         test_case.assertTrue("cuda:0" in gpu_input_str)
-        requires_grad_input = flow.Tensor(*shape, requires_grad=True)
+        requires_grad_input = flow.Tensor(*shape)
+        requires_grad_input.requires_grad = True
         requires_grad_input_str = str(requires_grad_input)
         test_case.assertTrue("requires_grad=" in requires_grad_input_str)
 
@@ -438,7 +444,7 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_sum(test_case):
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
+        input = flow.tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
         of_out = input.sum(dim=(2, 1))
         np_out = np.sum(input.numpy(), axis=(2, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
@@ -554,7 +560,7 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_mean(test_case):
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
+        input = flow.tensor(np.random.randn(2, 3), dtype=flow.float32)
         of_out = input.mean(dim=0)
         np_out = np.mean(input.numpy(), axis=0)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
@@ -687,7 +693,7 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_slice(test_case):
         x = np.random.randn(2, 3, 4, 5).astype(np.float32)
-        input = flow.Tensor(x)
+        input = flow.tensor(x)
         test_case.assertTrue(np.allclose(input[0].numpy(), x[0], 1e-05, 1e-05))
         test_case.assertTrue(np.allclose(input[1].numpy(), x[1], 1e-05, 1e-05))
         test_case.assertTrue(np.allclose(input[0, :].numpy(), x[0, :], 1e-05, 1e-05))
@@ -698,7 +704,7 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_logical_slice_assign(test_case):
         x = np.random.randn(2, 3, 4, 5).astype(np.float32)
-        input = flow.Tensor(x)
+        input = flow.tensor(x)
         input[:, 0] = 3.1415926
         x[:, 0] = 3.1415926
         test_case.assertTrue(np.allclose(input.numpy(), x, 1e-05, 1e-05))
@@ -715,7 +721,7 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_zeros_(test_case):
         shape = (2, 3)
-        x = flow.Tensor(np.random.randn(*shape), dtype=flow.float32)
+        x = flow.tensor(np.random.randn(*shape), dtype=flow.float32)
         x.zeros_()
         test_case.assertTrue(np.array_equal(x.numpy(), np.zeros(shape)))
 
@@ -764,7 +770,7 @@ class TestTensor(flow.unittest.TestCase):
         x = np.array(
             [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         ).astype(np.float32)
-        input = flow.Tensor(x)
+        input = flow.tensor(x)
         of_shape = input.reshape(2, 2, 2, -1).numpy().shape
         np_shape = (2, 2, 2, 2)
         test_case.assertTrue(np.array_equal(of_shape, np_shape))
@@ -811,12 +817,12 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_where(test_case):
-        x = flow.Tensor(
+        x = flow.tensor(
             np.array([[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
             dtype=flow.float32,
         )
-        y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
-        condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
+        y = flow.tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
+        condition = flow.tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
         of_out = condition.where(x, y)
         np_out = np.array([[1.0, 0.3139], [0.3898, 1.0], [0.0478, 1.0]])
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
@@ -825,8 +831,8 @@ class TestTensor(flow.unittest.TestCase):
     def test_tensor_equal(test_case):
         arr1 = np.random.randint(1, 10, size=(2, 3, 4, 5))
         arr2 = np.random.randint(1, 10, size=(2, 3, 4, 5))
-        input = flow.Tensor(arr1, dtype=flow.float32)
-        other = flow.Tensor(arr2, dtype=flow.float32)
+        input = flow.tensor(arr1, dtype=flow.float32)
+        other = flow.tensor(arr2, dtype=flow.float32)
         of_out = input.eq(other)
         np_out = np.equal(arr1, arr2)
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
@@ -834,7 +840,7 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_detach(test_case):
         shape = (2, 3, 4, 5)
-        x = flow.Tensor(np.random.randn(*shape), dtype=flow.float32, requires_grad=True)
+        x = flow.tensor(np.random.randn(*shape), dtype=flow.float32, requires_grad=True)
         test_case.assertTrue(np.allclose(x.detach().numpy(), x.numpy(), 0.0001, 0.0001))
         test_case.assertEqual(x.detach().requires_grad, False)
         y = x * 2
@@ -845,7 +851,7 @@ class TestTensor(flow.unittest.TestCase):
     def _test_cast_tensor_function(test_case):
         shape = (2, 3, 4, 5)
         np_arr = np.random.randn(*shape).astype(np.float32)
-        input = flow.Tensor(np_arr, dtype=flow.float32)
+        input = flow.tensor(np_arr, dtype=flow.float32)
         output = input.cast(flow.int8)
         np_out = np_arr.astype(np.int8)
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
@@ -859,7 +865,7 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_cos_tensor_function(test_case):
         arr = np.random.randn(2, 3, 4, 5)
-        input = flow.Tensor(arr, dtype=flow.float32)
+        input = flow.tensor(arr, dtype=flow.float32)
         np_out = np.cos(arr)
         of_out = input.cos()
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
@@ -887,7 +893,7 @@ class TestTensor(flow.unittest.TestCase):
         np_arr = np.random.rand(3, 2, 5, 7)
         np_out = 1 / np.sqrt(np_arr)
         x = flow.Tensor(np_arr)
-        of_out = flow.rsqrt(input=x)
+        of_out = flow.rsqrt(x)
         test_case.assertTrue(
             np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05, equal_nan=True)
         )
@@ -1024,7 +1030,7 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_norm_tensor_function(test_case):
-        input = flow.Tensor(
+        input = flow.tensor(
             np.array([[-4.0, -3.0, -2.0], [-1.0, 0.0, 1.0], [2.0, 3.0, 4.0]]),
             dtype=flow.float32,
         )
@@ -1129,7 +1135,8 @@ class TestTensor(flow.unittest.TestCase):
     )
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_fmod(test_case):
-        x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)), requires_grad=True)
+        x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)))
+        x.requires_grad = True
         y = np.random.uniform(-10, 10)
         of_out = x.fmod(y)
         np_out = np.sign(x.numpy()) * np.abs(np.fmod(x.numpy(), y))
@@ -1146,7 +1153,8 @@ class TestTensor(flow.unittest.TestCase):
     )
     @flow.unittest.skip_unless_1n1d()
     def test_magic_fmod(test_case):
-        x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)), requires_grad=True)
+        x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)))
+        x.requires_grad = True
         y = np.random.uniform(-10, 10)
         of_out = x % y
         np_out = np.sign(x.numpy()) * np.abs(np.fmod(x.numpy(), y))
@@ -1168,7 +1176,7 @@ class TestTensor(flow.unittest.TestCase):
             return [y, y_grad]
 
         np_input = np.random.randn(2, 4, 5, 6)
-        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.mish()
         (np_out, np_grad) = np_mish(np_input)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
@@ -1186,7 +1194,7 @@ class TestTensor(flow.unittest.TestCase):
         diagonal_list = [2, -1]
         for diagonal in diagonal_list:
             np_input = np.random.randn(2, 4, 6)
-            of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+            of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
             of_out = of_input.triu(diagonal)
             (np_out, np_grad) = np_triu(np_input, diagonal)
             test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
@@ -1199,11 +1207,11 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_grad_assignment(test_case):
         np_input = np.random.randn(2, 4, 5, 6)
-        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_output = 2 * of_input
         of_output = of_output.sum()
         of_output.backward()
-        new_grad = flow.Tensor(
+        new_grad = flow.tensor(
             np.full(np_input.shape, np.random.randn(1)), dtype=flow.float32
         )
         of_input.grad = new_grad
@@ -1216,14 +1224,14 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_grad_assignment_sum(test_case):
         np_input = np.random.randn(1, 5, 7, 3)
-        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_output = of_input.sum()
         of_output.backward()
         rand_init = np.random.randn(1)
         rand_scale = np.random.randn(1)
-        new_grad = flow.Tensor(np.full(np_input.shape, rand_init), dtype=flow.float32)
+        new_grad = flow.tensor(np.full(np_input.shape, rand_init), dtype=flow.float32)
         of_input.grad = new_grad
-        of_output = flow.Tensor(rand_scale, dtype=flow.float32) * of_input
+        of_output = flow.tensor(rand_scale, dtype=flow.float32) * of_input
         of_output = of_output.sum()
         of_output.backward()
         test_case.assertTrue(
@@ -1255,7 +1263,7 @@ class TestTensor(flow.unittest.TestCase):
             return [y, y_grad]
 
         np_input = np.random.randn(2, 4, 5, 6,)
-        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.mish()
 
         np_out, np_grad = np_mish(np_input)
@@ -1274,7 +1282,7 @@ class TestTensor(flow.unittest.TestCase):
             return [y, y_grad]
 
         np_input = np.random.randn(2, 4, 5, 6,)
-        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.silu()
 
         np_out, np_grad = np_silu(np_input)
@@ -1295,7 +1303,7 @@ class TestTensor(flow.unittest.TestCase):
             return [y, y_grad]
 
         np_input = np.random.randn(2, 4, 5, 6,)
-        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.selu()
 
         np_out, np_grad = np_selu(np_input)
@@ -1314,7 +1322,7 @@ class TestTensor(flow.unittest.TestCase):
             return [y, y_grad]
 
         np_input = np.random.randn(2, 4, 5, 6,)
-        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.softsign()
 
         np_out, np_grad = np_softsign(np_input)

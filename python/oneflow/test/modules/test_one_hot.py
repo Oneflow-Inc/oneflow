@@ -25,7 +25,7 @@ import oneflow as flow
 
 def _test_onehot(test_case, device, num_classes, size, on_value, off_value):
     x = np.random.randint(9, size=size)
-    input = flow.Tensor(x, device=flow.device(device), dtype=flow.int64)
+    input = flow.tensor(x, device=flow.device(device), dtype=flow.int64)
     output = flow.nn.functional.one_hot(input, num_classes, on_value, off_value)
     if num_classes == -1:
         np_outtmp = np.eye(np.max(x) + 1)[x]

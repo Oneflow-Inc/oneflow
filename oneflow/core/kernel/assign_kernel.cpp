@@ -26,11 +26,11 @@ class AssignKernel final : public Kernel {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void AssignKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void AssignKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   ctx->BnInOp2Blob("ref")->CopyValidDataContentFrom(ctx->device_ctx(), ctx->BnInOp2Blob("value"));
 }
 

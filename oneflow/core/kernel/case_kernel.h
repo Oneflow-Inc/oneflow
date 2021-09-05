@@ -45,7 +45,7 @@ class CaseKernel final : public Kernel {
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
   void DestroyState(void* state) const override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow

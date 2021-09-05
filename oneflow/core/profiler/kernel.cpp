@@ -44,7 +44,7 @@ thread_local cudaEvent_t cuda_memory_bandwidth_profile_end_event = nullptr;
 
 }  // namespace
 
-void TraceKernelForwardDataContentStart(const KernelContext* kernel_ctx, const Kernel* kernel) {
+void TraceKernelForwardDataContentStart(KernelContext* kernel_ctx, const Kernel* kernel) {
 #if defined(WITH_CUDA)
   if (profile_cuda_memory_bandwidth) {
     CHECK(cuda_memory_bandwidth_profile_start_event == nullptr);
@@ -61,7 +61,7 @@ void TraceKernelForwardDataContentStart(const KernelContext* kernel_ctx, const K
 #endif  // WITH_CUDA
 }
 
-void TraceKernelForwardDataContentEnd(const KernelContext* kernel_ctx, const Kernel* kernel) {
+void TraceKernelForwardDataContentEnd(KernelContext* kernel_ctx, const Kernel* kernel) {
 #if defined(WITH_CUDA)
   if (profile_kernel_forward_range) { OF_PROFILER_RANGE_POP(); }
   // The memory bandwidth profiler only works in lazy mode.
