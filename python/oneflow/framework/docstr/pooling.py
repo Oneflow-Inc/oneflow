@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow._C.adaptive_avg_pool1d,
-    r"""
+    """
     adaptive_avg_pool1d(input, output_size) -> Tensor
 
     Applies a 1D adaptive average pooling over an input signal composed of
@@ -46,7 +46,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.adaptive_avg_pool2d,
-    r"""
+    """
     adaptive_avg_pool2d(input, output_size) -> Tensor
 
     Applies a 2D adaptive average pooling over an input signal composed of several input planes.
@@ -72,7 +72,7 @@ add_docstr(
 
 add_docstr(
     oneflow._C.adaptive_avg_pool3d,
-    r"""
+    """
     adaptive_avg_pool3d(input, output_size) -> Tensor
 
     Applies a 3D adaptive average pooling over an input signal composed of several input planes.
