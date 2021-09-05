@@ -35,8 +35,8 @@ def bmm_op(input, mat2):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input1 = flow.Tensor(np.random.randn(10, 3, 4), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.random.randn(10, 4, 5), dtype=flow.float32)
+        >>> input1 = flow.Tensor(np.random.randn(10, 3, 4))
+        >>> input2 = flow.Tensor(np.random.randn(10, 4, 5))
         >>> of_out = flow.bmm(input1, input2)
         >>> of_out.shape
         flow.Size([10, 3, 5])

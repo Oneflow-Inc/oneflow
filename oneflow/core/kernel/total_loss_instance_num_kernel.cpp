@@ -25,11 +25,11 @@ class TotalLossInstanceNumKernel final : public Kernel {
   ~TotalLossInstanceNumKernel() override = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<typename T>
-void TotalLossInstanceNumKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
+void TotalLossInstanceNumKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   const auto& input_bns = this->op_attribute().input_bns();
   T first_val = ctx->BnInOp2Blob(input_bns.Get(0))->template dptr<T>()[0];
   for (const std::string& ibn : input_bns) {

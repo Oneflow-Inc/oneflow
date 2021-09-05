@@ -16,9 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/user_op_conf_trait.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -38,20 +37,13 @@ class Concat : public OpExprGradFunction<ConcatCaptureState> {
                     TensorTuple* in_grads) const override;
 
  private:
-  std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 Maybe<void> Concat::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  const std::string& op_name = fw_op_expr->op_name();
-  op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
-  int32_t input_num = JUST(op_trait_->input_size("in"));
-  int64_t axis = 0;
-  grad_op_ = JUST(op_expr_helper::SplitLikeOp(input_num, axis, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -71,12 +63,9 @@ Maybe<void> Concat::Apply(const ConcatCaptureState* ctx, const TensorTuple& out_
                           TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(ctx->input_num);
-  TensorTuple inputs(ctx->input_num + 1);
-  inputs[0] = out_grads.at(0);
-  for (int i = 0; i < ctx->input_num; ++i) { inputs[i + 1] = ctx->SavedTensors().at(i); }
-  MutableAttrMap concat_attrs;
-  JUST(concat_attrs.SetAttr<int64_t>("axis", ctx->axis));
-  const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(*grad_op_, inputs, concat_attrs));
+  TensorTuple like(ctx->input_num);
+  for (int i = 0; i < ctx->input_num; ++i) { like[i] = ctx->SavedTensors().at(i); }
+  const auto& results = JUST(functional::SplitLike(out_grads.at(0), like, ctx->axis));
   CHECK_EQ_OR_RETURN(results->size(), ctx->input_num);
 
   for (int i = 0; i < ctx->input_num; ++i)

@@ -88,11 +88,11 @@ class MovingAverageMinMaxObserver(Module):
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
         
-        >>> input_tensor = flow.Tensor(
+        >>> input_tensor = flow.tensor(
         ...    weight, dtype=flow.float32
         ... )
 
-        >>> current_train_step_tensor = flow.Tensor(
+        >>> current_train_step_tensor = flow.tensor(
         ...   np.zeros((1,)).astype(np.float32),
         ...    dtype=flow.int64,
         ... )
