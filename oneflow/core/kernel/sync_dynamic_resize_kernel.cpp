@@ -54,7 +54,7 @@ class SyncDynamicResizeGPUKernel final : public Kernel {
  private:
   bool IsKernelLaunchSynchronized() const override { return false; }
 
-  void ForwardDataContent(const KernelContext* ctx) const override {
+  void ForwardDataContent(KernelContext* ctx) const override {
     const SyncDynamicResizeOpConf& conf = this->op_conf().sync_dynamic_resize_conf();
     CHECK_EQ(conf.axis(), 0);
     std::shared_ptr<CudaHostMem> cuda_host_mem_ptr;
@@ -121,7 +121,7 @@ class SyncDynamicResizeCPUKernel final : public Kernel {
 
  private:
   bool IsKernelLaunchSynchronized() const override { return false; }
-  void ForwardDataContent(const KernelContext* ctx) const override {
+  void ForwardDataContent(KernelContext* ctx) const override {
     const SyncDynamicResizeOpConf& conf = this->op_conf().sync_dynamic_resize_conf();
     CHECK_EQ(conf.axis(), 0);
     const Blob* in = ctx->BnInOp2Blob("in");

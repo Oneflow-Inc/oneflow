@@ -20,7 +20,6 @@ limitations under the License.
 #include <type_traits>
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/functional/value_types.h"
 
 namespace oneflow {
 namespace one {
@@ -32,14 +31,14 @@ class Scalar {
 
   template<typename T, typename std::enable_if<
                            std::is_integral<T>::value && std::is_signed<T>::value, int>::type = 0>
-  Scalar(const T& value) : value_type_(ValueTypeOf<T>()), value_{.s = value}, active_tag_(HAS_S) {}
+  Scalar(const T& value) : value_{.s = value}, active_tag_(HAS_S) {}
 
   template<typename T, typename std::enable_if<
                            std::is_integral<T>::value && std::is_unsigned<T>::value, int>::type = 0>
-  Scalar(const T& value) : value_type_(ValueTypeOf<T>()), value_{.u = value}, active_tag_(HAS_U) {}
+  Scalar(const T& value) : value_{.u = value}, active_tag_(HAS_U) {}
 
   template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
-  Scalar(const T& value) : value_type_(ValueTypeOf<T>()), value_{.d = value}, active_tag_(HAS_D) {}
+  Scalar(const T& value) : value_{.d = value}, active_tag_(HAS_D) {}
 
   template<typename T, typename std::enable_if<!std::is_same<T, Scalar>::value, int>::type = 0>
   Scalar& operator=(const T& value) {
@@ -48,13 +47,10 @@ class Scalar {
   }
 
   Scalar& operator=(const Scalar& other) {
-    value_type_ = other.value_type_;
     value_ = other.value_;
     active_tag_ = other.active_tag_;
     return *this;
   }
-
-  const ValueType& type() const { return value_type_; }
 
   template<typename T, typename std::enable_if<std::is_scalar<T>::value, int>::type = 0>
   Maybe<T> As() const {
@@ -82,7 +78,6 @@ class Scalar {
   Scalar& operator/=(const Scalar& other);
 
  private:
-  ValueType value_type_;
   union Value {
     int64_t s;
     uint64_t u;

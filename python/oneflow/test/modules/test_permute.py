@@ -25,7 +25,7 @@ import oneflow.unittest
 
 
 def _test_permute_impl(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.random.randn(2, 6, 5, 3),
         dtype=flow.float32,
         device=flow.device(device),

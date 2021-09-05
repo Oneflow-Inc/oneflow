@@ -25,7 +25,7 @@ import oneflow.unittest
 
 
 def _test_upsample2d(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -48,7 +48,7 @@ def _test_upsample2d(test_case, device):
 
 
 def _test_upsample2d_bilinear(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -71,7 +71,7 @@ def _test_upsample2d_bilinear(test_case, device):
 
 
 def _test_upsample2d_bilinear_aligncorner(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -94,7 +94,7 @@ def _test_upsample2d_bilinear_aligncorner(test_case, device):
 
 
 def _test_UpsamplingNearest2d(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -117,7 +117,7 @@ def _test_UpsamplingNearest2d(test_case, device):
 
 
 def _test_UpsamplingBilinear2d(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -140,7 +140,7 @@ def _test_UpsamplingBilinear2d(test_case, device):
 
 
 def _test_upsample2d_4dim(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 37).reshape((2, 2, 3, 3)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -191,7 +191,7 @@ def _test_upsample2d_4dim(test_case, device):
 
 
 def _test_upsample2d_bilinear_4dim(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 37).reshape((2, 2, 3, 3)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -242,7 +242,7 @@ def _test_upsample2d_bilinear_4dim(test_case, device):
 
 
 def _test_upsample2d_backward(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         dtype=flow.float32,
         device=flow.device(device),
@@ -257,7 +257,7 @@ def _test_upsample2d_backward(test_case, device):
 
 
 def _test_upsample2d_bilinear_aligncorner_backward(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -272,7 +272,7 @@ def _test_upsample2d_bilinear_aligncorner_backward(test_case, device):
 
 
 def _test_interpolate_nearest_float_scale(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 10).reshape((1, 1, 3, 3)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -300,7 +300,7 @@ def _test_interpolate_nearest_float_scale(test_case, device):
 
 
 def _test_interpolate_bilinear_float_scale(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 5, dtype=np.int32).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -314,7 +314,7 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
     of_out.backward()
     np_grad = np.array([[[[0.25, 0.25], [0.25, 0.25]]]])
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 10, dtype=np.int32).reshape((1, 1, 3, 3)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -328,7 +328,7 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
     of_out.backward()
     np_grad = np.array([[[[0.25, 0.25, 0.0], [0.25, 0.25, 0.0], [0.0, 0.0, 0.0]]]])
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 11, dtype=np.int32).reshape((1, 1, 5, 2)),
         device=flow.device(device),
         dtype=flow.float32,
@@ -358,7 +358,7 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
 
 
 def _test_upsample_bilinear_align_corners(test_case, device):
-    input = flow.Tensor(
+    input = flow.tensor(
         np.arange(1, 5, dtype=np.int32).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
