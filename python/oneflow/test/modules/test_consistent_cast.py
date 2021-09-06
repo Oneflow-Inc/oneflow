@@ -528,7 +528,7 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
 
         cuda_device = flow.device("cuda")
         cuda_tensor = flow.tensor(np_arr, device=cuda_device, dtype=flow.float32)
-        cuda_placement = flow.placement("cuda", {0: range(2)})
+        cuda_placement = flow.placement("cuda", {0: [1, 3]})
         cuda_split0_tensor = cuda_tensor.to_consistent(
             cuda_placement, flow.sbp.split(0)
         )
@@ -538,7 +538,7 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
 
         cpu_device = flow.device("cpu")
         cpu_tensor = flow.tensor(np_arr, device=cpu_device, dtype=flow.float32)
-        cpu_placement = flow.placement("cpu", {0: range(2)})
+        cpu_placement = flow.placement("cpu", {0: [1, 3]})
         cpu_split0_tensor = cpu_tensor.to_consistent(cpu_placement, flow.sbp.split(0))
         cpu_split1_tensor = cpu_split0_tensor.to_consistent(
             cpu_placement, flow.sbp.split(1)
