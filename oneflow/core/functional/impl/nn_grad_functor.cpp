@@ -517,6 +517,23 @@ class LayerNormAffineParamGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BroadcastMatmulGradBFunctor {
+ public:
+  BroadcastMatmulGradBFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_matmul_grad_b").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, double alpha) const {
+    MutableAttrMap attr;
+    JUST(attr.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attr);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -533,9 +550,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
+<<<<<<< HEAD
   m.add_functor<impl::LayerNormGradFunctor>("LayerNormGrad");
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");
+=======
+  m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
+>>>>>>> master
 };
 
 }  // namespace functional

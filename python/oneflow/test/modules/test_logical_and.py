@@ -27,8 +27,8 @@ from automated_test_util import *
 def _test_logical_and(test_case, shape, dtype, device):
     np_input = np.random.randint(3, size=shape)
     np_other = np.random.randint(3, size=shape)
-    input = flow.Tensor(np_input, dtype=dtype, device=flow.device(device))
-    other = flow.Tensor(np_other, dtype=dtype, device=flow.device(device))
+    input = flow.tensor(np_input, dtype=dtype, device=flow.device(device))
+    other = flow.tensor(np_other, dtype=dtype, device=flow.device(device))
     of_out = flow.logical_and(input, other)
     np_out = np.logical_and(np_input, np_other)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
@@ -37,8 +37,8 @@ def _test_logical_and(test_case, shape, dtype, device):
 def _test_tensor_logical_and(test_case, shape, dtype, device):
     np_input = np.random.randint(3, size=shape)
     np_other = np.random.randint(3, size=shape)
-    input = flow.Tensor(np_input, dtype=dtype, device=flow.device(device))
-    other = flow.Tensor(np_other, dtype=dtype, device=flow.device(device))
+    input = flow.tensor(np_input, dtype=dtype, device=flow.device(device))
+    other = flow.tensor(np_other, dtype=dtype, device=flow.device(device))
     of_out = input.logical_and(other)
     np_out = np.logical_and(np_input, np_other)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))

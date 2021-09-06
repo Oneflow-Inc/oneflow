@@ -30,7 +30,7 @@ class EsacKernel final : public Kernel {
  private:
   void DestroyState(void* state) const override;
   void VirtualKernelInit(KernelContext* ctx) override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow
