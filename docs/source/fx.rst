@@ -13,7 +13,9 @@ an **intermediate representation**, and **Python code generation**. A
 demonstration of these components in action:
 
 ::
+
     import oneflow
+    
     # Simple module for demonstration
     
     class MyModule(oneflow.nn.Module):
@@ -246,7 +248,7 @@ tracing and modify it. For example, let’s say we desire to replace
 
     import oneflow as flow
 
-# Sample module
+    # Sample module
     class M(flow.nn.Module):
         def forward(self, x, y):
             return flow.add(x, y)

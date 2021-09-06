@@ -18,6 +18,7 @@ import oneflow.nn as nn
 import linecache
 from typing import Type, Dict, List, Any, Union, Optional, Set
 from .graph import Graph, _is_from_flow, _custom_builtins, PythonCode
+from ._compatibility import compatibility
 import copy
 import itertools
 import sys
@@ -127,10 +128,10 @@ def _addindent(s_, numSpaces):
     s = first + "\n" + s
     return s
 
-
+@compatibility(is_backward_compatible=True)
 class GraphModule(oneflow.nn.Module):
     """
-    GraphModule is an nn.Module generated from an fx.Graph. Graphmodule has a
+    GraphModule is an nn.Module generated from an fx.Graph. GraphModule has a
     ``graph`` attribute, as well as ``code`` and ``forward`` attributes generated
     from that ``graph``.
 
@@ -154,6 +155,7 @@ class GraphModule(oneflow.nn.Module):
 
         return super().__new__(GraphModuleImpl)
 
+    @compatibility(is_backward_compatible=True)
     def __init__(
         self,
         root: Union[oneflow.nn.Module, Dict[str, Any]],
@@ -249,6 +251,7 @@ class GraphModule(oneflow.nn.Module):
         g.owning_module = self
         self.recompile()
 
+    @compatibility(is_backward_compatible=False)
     def to_folder(self, folder: Union[str, os.PathLike], module_name: str = "FxModule"):
         """Dumps out module to ``folder`` with ``module_name`` so that it can be
         imported with ``from <folder> import <module_name>``
@@ -326,6 +329,7 @@ class {module_name}(oneflow.nn.Module):
                 f"saved as pickled files instead: {blobified_modules}"
             )
 
+    @compatibility(is_backward_compatible=True)
     def add_submodule(self, target: str, m: oneflow.nn.Module) -> bool:
         """
         Adds the given submodule to ``self``.
@@ -340,12 +344,12 @@ class {module_name}(oneflow.nn.Module):
             m: The submodule itself; the actual object we want to
                 install in the current Module
 
-        Return:
+        Returns:
             bool: Whether or not the submodule could be inserted. For
-                this method to return True, each object in the chain
-                denoted by ``target`` must either a) not exist yet,
-                or b) reference an ``nn.Module`` (not a parameter or
-                other attribute)
+            this method to return True, each object in the chain
+            denoted by ``target`` must either a) not exist yet,
+            or b) reference an ``nn.Module`` (not a parameter or
+            other attribute)
 
         """
         *prefix, field = target.split(".")
@@ -367,6 +371,50 @@ class {module_name}(oneflow.nn.Module):
         mod.add_module(field, m)
         return True
 
+    @compatibility(is_backward_compatible=True)
+    def delete_submodule(self, target: str) -> bool:
+        """
+        Deletes the given submodule from ``self``.
+
+        The module will not be deleted if ``target`` is not a valid
+        target.
+
+        Args:
+            target: The fully-qualified string name of the new submodule
+                (See example in ``nn.Module.get_submodule`` for how to
+                specify a fully-qualified string.)
+
+        Returns:
+            bool: Whether or not the target string referenced a
+            submodule we want to delete. A return value of ``False``
+            means that the ``target`` was not a valid reference to
+            a submodule.
+        """
+        atoms = target.split(".")
+        path, target_submod = atoms[:-1], atoms[-1]
+        mod: oneflow.nn.Module = self
+
+        # Get the parent module
+        for item in path:
+
+            if not hasattr(mod, item):
+                return False
+
+            mod = getattr(mod, item)
+
+            if not isinstance(mod, oneflow.nn.Module):
+                return False
+
+        if not hasattr(mod, target_submod):
+            return False
+
+        if not isinstance(getattr(mod, target_submod), oneflow.nn.Module):
+            return False
+
+        delattr(mod, target_submod)
+        return True
+
+    @compatibility(is_backward_compatible=True)
     def delete_all_unused_submodules(self) -> None:
         """
         Deletes all unused submodules from ``self``.
@@ -422,6 +470,7 @@ class {module_name}(oneflow.nn.Module):
             )
         return self._code
 
+    @compatibility(is_backward_compatible=True)
     def recompile(self) -> PythonCode:
         """
         Recompile this GraphModule from its ``graph`` attribute. This should be
@@ -440,9 +489,9 @@ class {module_name}(oneflow.nn.Module):
         # Determine whether this class explicitly defines a __call__ implementation
         # to wrap. If it does, save it in order to have wrapped_call invoke it.
         # If it does not, wrapped_call can use a dynamic call to super() instead.
-        # In most cases, super().__call__ should be torch.nn.Module.__call__.
+        # In most cases, super().__call__ should be oneflow.nn.Module.__call__.
         # We do not want to hold a reference to Module.__call__ here; doing so will
-        # bypass patching of torch.nn.Module.__call__ done while symbolic tracing.
+        # bypass patching of oneflow.nn.Module.__call__ done while symbolic tracing.
         cls_call = cls.__call__ if "__call__" in vars(cls) else None
 
         # Previously, if an error occurred when valid
@@ -496,3 +545,5 @@ class {module_name}(oneflow.nn.Module):
         cls.__call__ = wrapped_call
 
         return python_code
+
+    

@@ -468,9 +468,7 @@ class Tracer(TracerBase):
                         or type(x) in base_types
                         and type(x) != oneflow.Tensor
                     ):
-                        oneflow._assert(
-                            out == x, f"{name} has been specialized to have value {x}"
-                        )
+                        print(f"{name} has been specialized to have value {x}")
                     else:
                         warnings.warn(
                             "Was not able to add assertion to guarantee correct inputs to "
@@ -668,14 +666,6 @@ _wrapped_fns_to_patch: List[Tuple[dict, str]] = []
 # this currently only works for Tensor.* methods that aren't traced properly
 _wrapped_methods_to_patch: List[Tuple[type, str]] = []
 
-# TODO(BBuf) confirm it in oneflow
-if os.environ.get("FX_PATCH_GETITEM") == "1":
-    # This change is needed to trace models like PositionalEmbedding from BERT:
-    # https://github.com/pytorch/benchmark/blob/master/torchbenchmark/models/BERT_pytorch/bert_pytorch/model/embedding/position.py
-    # but causes issues in quantization documented here:
-    # https://github.com/pytorch/pytorch/issues/50710
-    # once that is fixed we can make this the default behavior.
-    _wrapped_methods_to_patch.append((oneflow.Tensor, "__getitem__"))
 
 internal_oneflow_funcs = [
     "FunctionConfig",
@@ -698,6 +688,8 @@ for funcs_name in oneflow_funcs:
     if not funcs_name.startswith("_") and funcs_name not in internal_oneflow_funcs:
         _wrapped_methods_to_patch.append((oneflow, funcs_name))
 
+# TODO(BBuf) fix bug
+_wrapped_methods_to_patch.append((oneflow.Tensor, "__getitem__"))
 
 def _find_proxy(*objects_to_search):
     """
@@ -957,7 +949,9 @@ def symbolic_trace(
     FX can typically not trace through this due to the presence of control
     oneflow. However, we can use `concrete_args` to specialize on the value of
     `b` to trace through this.
-
+    
+    ::
+    
         f = fx.symbolic_trace(f, concrete_args={'b': False})
         assert f(3, False)  == 6
 
@@ -978,10 +972,10 @@ def symbolic_trace(
 
 
     Args:
-        root (Union[torch.nn.Module, Callable]): Module or function to be traced and converted
+        root (Union[oneflow.nn.Module, Callable]): Module or function to be traced and converted
             into a Graph representation.
         concrete_args (Optional[Dict[str, any]]): Inputs to be partially specialized
-        enable_cpatching: Enables C-level patching of functions (captures things like `torch.randn`)
+        enable_cpatching: Enables C-level patching of functions (captures things like `oneflow.randn`)
 
     Returns:
         GraphModule: a Module created from the recorded operations from ``root``.
