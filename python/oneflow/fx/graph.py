@@ -288,20 +288,21 @@ class Graph:
 
     .. code-block:: python
 
-        import torch
-        import torch.fx
+        import oneflow
+        import oneflow.fx
 
-        class MyModule(torch.nn.Module):
+        class MyModule(oneflow.nn.Module):
             def __init__(self):
                 super().__init__()
-                self.param = torch.nn.Parameter(torch.rand(3, 4))
-                self.linear = torch.nn.Linear(4, 5)
+                self.param = oneflow.nn.Parameter(oneflow.rand(3, 4))
+                self.linear = oneflow.nn.Linear(4, 5)
 
             def forward(self, x):
-                return torch.topk(torch.sum(self.linear(x + self.linear.weight).relu(), dim=-1), 3)
+                return oneflow.topk(oneflow.sum(self.linear(x + self.linear.weight).relu(), dim=-1), 3)
 
         m = MyModule()
-        gm = torch.fx.symbolic_trace(m)
+        gm = oneflow.fx.symbolic_trace(m)
+
 
     Will produce the following Graph::
 
@@ -309,14 +310,15 @@ class Graph:
 
     .. code-block:: text
 
-        graph(x):
-            %linear_weight : [#users=1] = self.linear.weight
-            %add_1 : [#users=1] = call_function[target=operator.add](args = (%x, %linear_weight), kwargs = {})
-            %linear_1 : [#users=1] = call_module[target=linear](args = (%add_1,), kwargs = {})
-            %relu_1 : [#users=1] = call_method[target=relu](args = (%linear_1,), kwargs = {})
-            %sum_1 : [#users=1] = call_function[target=torch.sum](args = (%relu_1,), kwargs = {dim: -1})
-            %topk_1 : [#users=1] = call_function[target=torch.topk](args = (%sum_1, 3), kwargs = {})
-            return topk_1
+        graph():
+            %x : [#users=1] = placeholder[target=x]
+            %linear_weight : [#users=1] = get_attr[target=linear.weight]
+            %add : [#users=1] = call_function[target=operator.add](args = (%x, %linear_weight), kwargs = {})
+            %linear : [#users=1] = call_module[target=linear](args = (%add,), kwargs = {})
+            %relu : [#users=1] = call_method[target=relu](args = (%linear,), kwargs = {})
+            %sum_1 : [#users=1] = call_method[target=sum](args = (%relu,), kwargs = {dim: -1})
+            %topk : [#users=1] = call_method[target=topk](args = (%sum_1, 3), kwargs = {})
+            return topk
 
     For the semantics of operations represented in the ``Graph``, please see :class:`Node`.
     """
@@ -733,11 +735,12 @@ class Graph:
         """
         Insert a ``call_function`` ``Node`` into the ``Graph``. A ``call_function`` node
         represents a call to a Python callable, specified by ``the_function``. ``the_function``
-        can be
+        can be any OneFlow operator, Python function, or member of the ``builtins`` or ``operator``
+        namespaces.
 
         Args:
 
-            the_function (Callable[..., Any]): The function to be called. Can be any PyTorch
+            the_function (Callable[..., Any]): The function to be called. Can be any OneFlow
                 operator, Python function, or member of the ``builtins`` or ``operator``
                 namespaces.
 
