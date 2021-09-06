@@ -16,6 +16,7 @@ limitations under the License.
 from .node import Node, Argument, Target, map_arg, _type_repr, _get_qualified_name
 import oneflow.fx.utils._pytree as pytree
 from . import _pytree as fx_pytree
+from ._compatibility import compatibility
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -467,18 +468,7 @@ class Graph:
         self._len += 1
         return n
 
-    def flatten_inps(self, *args):
-        flat_args, args_spec = pytree.tree_flatten(args)
-        return flat_args
-
-    def unflatten_outs(self, out):
-        if self._pytree_info is None:
-            return out
-        if not isinstance(out, list):
-            out = [out]
-        assert self._pytree_info.out_spec is not None
-        return pytree.tree_unflatten(out, self._pytree_info.out_spec)
-
+    @compatibility(is_backward_compatible=True)
     def erase_node(self, to_erase: Node) -> None:
         """
         Erases a ``Node`` from the ``Graph``. Throws an exception if
@@ -507,6 +497,7 @@ class Graph:
         assert isinstance(new_kwargs, dict)
         to_erase.kwargs = new_kwargs
 
+    @compatibility(is_backward_compatible=True)
     def inserting_before(self, n: Optional[Node] = None):
         """Set the point at which create_node and companion methods will insert into the graph.
         When used within a 'with' statement, this will temporary set the insert point and
@@ -529,6 +520,7 @@ class Graph:
         assert n.graph == self, "Node to insert before is not in graph."
         return _InsertPoint(self, n.prepend)
 
+    @compatibility(is_backward_compatible=True)
     def inserting_after(self, n: Optional[Node] = None):
         """Set the point at which create_node and companion methods will insert into the graph.
         When used within a 'with' statement, this will temporary set the insert point and
@@ -551,7 +543,7 @@ class Graph:
         assert n.graph == self, "Node to insert after is not in graph."
         return _InsertPoint(self, n.append)
 
-    # sugar for create_node when you know the op
+    @compatibility(is_backward_compatible=True)
     def placeholder(self, name: str, type_expr: Optional[Any] = None) -> Node:
         """
         Insert a ``placeholder`` node into the Graph. A ``placeholder`` represents
@@ -573,6 +565,7 @@ class Graph:
         """
         return self.create_node("placeholder", name, type_expr=type_expr)
 
+    @compatibility(is_backward_compatible=True)
     def get_attr(self, qualified_name: str, type_expr: Optional[Any] = None) -> Node:
         """
         Insert a ``get_attr`` node into the Graph. A ``get_attr`` ``Node`` represents the
@@ -638,6 +631,7 @@ class Graph:
             )
         return self.create_node("get_attr", qualified_name, type_expr=type_expr)
 
+    @compatibility(is_backward_compatible=True)
     def call_module(
         self,
         module_name: str,
@@ -687,6 +681,7 @@ class Graph:
             "call_module", module_name, args, kwargs, type_expr=type_expr
         )
 
+    @compatibility(is_backward_compatible=True)
     def call_method(
         self,
         method_name: str,
@@ -725,6 +720,7 @@ class Graph:
             "call_method", method_name, args, kwargs, type_expr=type_expr
         )
 
+    @compatibility(is_backward_compatible=True)
     def call_function(
         self,
         the_function: Callable[..., Any],
@@ -765,6 +761,7 @@ class Graph:
             "call_function", the_function, args, kwargs, type_expr=type_expr
         )
 
+    @compatibility(is_backward_compatible=True)
     def node_copy(
         self, node: Node, arg_transform: Callable[[Node], "Argument"] = lambda x: x
     ) -> Node:
@@ -799,6 +796,7 @@ class Graph:
         result_node.meta = copy.copy(node.meta)
         return result_node
 
+    @compatibility(is_backward_compatible=True)
     def output(self, result: "Argument", type_expr: Optional[Any] = None):
         """
         Insert an ``output`` ``Node`` into the ``Graph``. An ``output`` node represents
@@ -832,6 +830,7 @@ class Graph:
         op = _snake_case(op)
         return op
 
+    @compatibility(is_backward_compatible=True)
     def python_code(self, root_module: str) -> PythonCode:
         """
         Turn this ``Graph`` into valid Python code.
@@ -1126,6 +1125,7 @@ def forward({', '.join(orig_args)}){maybe_return_annotation[0]}:
                 s += "\n    " + node_str
         return s
 
+    @compatibility(is_backward_compatible=True)
     def print_tabular(self):
         """
         Prints the intermediate representation of the graph in tabular
@@ -1144,6 +1144,7 @@ def forward({', '.join(orig_args)}){maybe_return_annotation[0]}:
             tabulate(node_specs, headers=["opcode", "name", "target", "args", "kwargs"])
         )
 
+    @compatibility(is_backward_compatible=True)
     def lint(self):
         """
         Runs various checks on this Graph to make sure it is well-formed. In
@@ -1227,6 +1228,7 @@ def forward({', '.join(orig_args)}){maybe_return_annotation[0]}:
                         else:
                             m_itr = new_m_itr
 
+    @compatibility(is_backward_compatible=True)
     def eliminate_dead_code(self):
         """
         Remove all dead code from the graph, based on each node's number of
