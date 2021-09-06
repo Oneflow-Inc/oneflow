@@ -125,3 +125,5 @@ from oneflow.nn import utils
 from . import functional
 
 from . import parallel
+
+from oneflow.nn.modules.rnn import RNN, LSTM, GRU
