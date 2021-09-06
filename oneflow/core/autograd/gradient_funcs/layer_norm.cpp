@@ -21,24 +21,22 @@ namespace oneflow {
 namespace one {
 
 struct LayerNormCaptureState : public AutoGradCaptureState {
-  bool center;
-  bool scale;
+  bool center = true;
+  bool scale = true;
 
-  int64_t begin_norm_axis;
-  int64_t begin_params_axis;
+  int64_t begin_norm_axis = 1;
+  int64_t begin_params_axis = 1;
 
-  double epsilon;
+  double epsilon = 1e-5;
 
-  bool x_requires_grad;
-  bool has_beta_diff;
-  bool has_gamma_diff;
-  bool has_normalized_diff;
+  bool x_requires_grad = true;
+  bool has_affine = true;
 
-  size_t gamma_index;
-  size_t normalized_index;
-  size_t x_index;
-  size_t mean_index;
-  size_t inv_variance_index;
+  size_t gamma_index = 0;
+  size_t normalized_index = 1;
+  size_t x_index = 2;
+  size_t mean_index = 3;
+  size_t inv_variance_index = 4;
 };
 
 // y, mean, inv_variance, [normalized] =
@@ -79,16 +77,17 @@ Maybe<void> LayerNorm::Capture(LayerNormCaptureState* ctx, const TensorTuple& in
   CHECK_EQ_OR_RETURN(inputs.size(), ctx->center + ctx->scale + 1);
   CHECK_EQ_OR_RETURN(outputs.size(), ctx->scale + 3);
 
-  ctx->has_gamma_diff = ctx->scale && inputs.at(1)->requires_grad();
-  const int beta_index = ctx->scale + 1;
-  ctx->has_beta_diff = ctx->center && inputs.at(beta_index)->requires_grad();
+  bool has_normalized_diff = ctx->scale && inputs.at(0)->requires_grad();
+  bool has_gamma_diff = ctx->scale && inputs.at(1)->requires_grad();
+  bool has_beta_diff = ctx->center && inputs.at(2)->requires_grad();
 
-  ctx->has_normalized_diff = ctx->scale && inputs.at(0)->requires_grad();
-  if (ctx->has_gamma_diff || ctx->has_normalized_diff) {
+  ctx->has_affine = has_normalized_diff && has_gamma_diff && has_beta_diff;
+
+  if (ctx->has_affine) {
     ctx->gamma_index = ctx->SaveTensorForBackward(inputs.at(1));  // save gamma.
+    ctx->normalized_index = ctx->SaveTensorForBackward(outputs.at(3));
   }
 
-  if (ctx->has_gamma_diff) { ctx->normalized_index = ctx->SaveTensorForBackward(outputs.at(3)); }
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   if (ctx->x_requires_grad) {
     ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
@@ -109,10 +108,10 @@ Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* ctx, const TensorTuple
   if (begin_norm_axis < 0) { begin_norm_axis += dy->shape()->NumAxes(); }
 
   std::shared_ptr<Tensor> gamma = saved_tensors.at(ctx->gamma_index);
-  if (!ctx->has_normalized_diff && !ctx->has_gamma_diff && !ctx->has_beta_diff) {
+  if (!ctx->has_affine) {
     // Use LayerNormParamGrad(Tensor dy, Tensor gamma, Int64 begin_params_axis, Double epsilon).
     dy = JUST(functional::LayerNormParamGrad(dy, begin_params_axis, ctx->epsilon));
-  } else if (ctx->has_normalized_diff && ctx->has_gamma_diff && ctx->has_beta_diff) {
+  } else {
     // Use LayerNormAffineParamGrad(Tensor dy, Tensor gamma, Tensor normalized, Int64
     // begin_params_axis, Double epsilon).
     std::shared_ptr<Tensor> normalized = saved_tensors.at(ctx->normalized_index);
@@ -121,8 +120,6 @@ Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* ctx, const TensorTuple
     in_grads->at(1) = results->at(0);  // For gamma.
     in_grads->at(2) = results->at(1);  // For beta.
     dy = results->at(2);
-  } else {
-    UNIMPLEMENTED();
   }
 
   if (ctx->x_requires_grad) {

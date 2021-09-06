@@ -258,7 +258,6 @@ class LayerNorm(Module):
             for dim in range(len(x.shape)):
                 if dim >= self.begin_norm_axis:
                     reduce_axis.append(dim)
-            print("reduce_axis: ", reduce_axis)
             mean = x.mean(dim=reduce_axis, keepdim=True)
             variance = x.var(dim=reduce_axis, unbiased=False, keepdim=True)
             params_shape = x.shape[self.begin_params_axis :]

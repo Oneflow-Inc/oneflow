@@ -366,7 +366,6 @@ Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name) {
       .Build();
 }
 
-
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size) {
   return ConcatOp(n, axis, max_dim_size, UniqueOpName("concat"));
 }
