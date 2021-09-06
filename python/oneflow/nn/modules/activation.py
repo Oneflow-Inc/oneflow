@@ -1209,40 +1209,6 @@ class GLU(Module):
         return flow._C.glu(x, self.dim)
 
 
-def glu_op(input, dim=-1):
-    r"""The gated linear unit.
-
-    Args:
-        x (Tensor, float): input tensor. 
-        dim (int, optional): dimension on which to split the input. Default: -1
-
-    The formula is: 
-    
-    .. math::  
-
-        GLU(x) = GLU(a, b) = a \otimes sigmoid(b)
-
-    .. note::
-        where x is split in half along dim to form a and b, \otimes is the element-wise product between matrices.
-
-    For example:
-    
-    .. code-block:: python
-    
-        >>> import oneflow as flow
-        >>> x = flow.tensor([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=flow.float32)
-        >>> dim = 1
-        >>> glu = flow.nn.GLU(dim)
-        >>> y = glu(x)
-        >>> y
-        tensor([[0.9526, 1.9640],
-                [4.9954, 5.9980]], dtype=oneflow.float32)
-    
-    """
-
-    return GLU(dim)(input)
-
-
 if __name__ == "__main__":
     import doctest
 
