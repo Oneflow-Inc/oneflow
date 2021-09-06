@@ -770,8 +770,8 @@ class Graph:
         the graph of node to the graph of self. Example::
 
             # Copying all the nodes in `g` into `new_graph`
-            g : torch.fx.Graph = ...
-            new_graph = torch.fx.graph()
+            g : oneflow.fx.Graph = ...
+            new_graph = oneflow.fx.graph()
             value_remap = {}
             for node in g.nodes:
                 value_remap[node] = new_graph.node_copy(node, lambda n : value_remap[n])
@@ -1149,6 +1149,7 @@ def forward({', '.join(orig_args)}){maybe_return_annotation[0]}:
         """
         Runs various checks on this Graph to make sure it is well-formed. In
         particular:
+        
         - Checks Nodes have correct ownership (owned by this graph)
         - Checks Nodes appear in topological order
         - If this Graph has an owning GraphModule, checks that targets
