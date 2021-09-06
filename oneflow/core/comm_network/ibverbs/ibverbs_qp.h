@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/actor/actor_message.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/platform/include/ibv.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
@@ -28,22 +29,24 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_mr* mr, char* addr, size_t actor_msg_size) : actor_msg_size_(actor_msg_size) {
-    msg_ = reinterpret_cast<ActorMsg*>(addr);
+  ActorMsgMR(ibv_mr* mr, char* addr, size_t actor_msg_size) {
+    CHECK(actor_msg_size >= sizeof(ActorMsg));
+    actor_msg_size_ = actor_msg_size;
+    message_ = reinterpret_cast<ActorMsg*>(addr);
     mr_ = mr;
   }
   ~ActorMsgMR() = default;
 
-  void* addr() { return reinterpret_cast<void*>(msg_); }
+  void* addr() { return reinterpret_cast<void*>(message_); }
   uint32_t lkey() const { return mr_->lkey; }
-  ActorMsg msg()  const { return *msg_; }
-  void set_msg(const ActorMsg& val) { *msg_ = val; }
+  ActorMsg msg() const { return *message_; }
+  void set_msg(const ActorMsg& val) { *message_ = val; }
   size_t actor_msg_size() const { return actor_msg_size_; }
 
  private:
   size_t actor_msg_size_;
   ibv_mr* mr_;
-  ActorMsg* msg_;
+  ActorMsg* message_;
 };
 
 class IBVerbsQP;
@@ -64,7 +67,8 @@ class IBVerbsMessagePool final {
     FreeMemory();
   }
 
-  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd), num_of_message_(number_of_message) {}
+  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message)
+      : pd_(pd), num_of_message_(number_of_message) {}
 
   void RegisterMessagePool() {
     size_t actor_msg_size = sizeof(ActorMsg);
@@ -104,9 +108,7 @@ class IBVerbsMessagePool final {
     message_buf_.push_front(msg_mr);
   }
 
-  bool IsEmpty() {
-    return message_buf_.empty() == true;
-  }
+  bool IsEmpty() { return message_buf_.empty() == true; }
 
  private:
   void FreeMr() {
@@ -118,7 +120,7 @@ class IBVerbsMessagePool final {
   }
 
   void FreeMemory() {
-    while(memory_buf_.empty() == false) {
+    while (memory_buf_.empty() == false) {
       free(memory_buf_.front());
       memory_buf_.pop_front();
     }
@@ -139,13 +141,13 @@ class IBVerbsQP final {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
   IBVerbsQP() = delete;
   IBVerbsQP(ibv_context*, ibv_pd*, uint8_t port_num, ibv_cq* send_cq, ibv_cq* recv_cq,
-            IBVerbsMessagePool * message_pool);
+            IBVerbsMessagePool* message_pool);
   ~IBVerbsQP();
 
   uint32_t qp_num() const { return qp_->qp_num; }
   void Connect(const IBVerbsConnectionInfo& peer_info);
   void PostAllRecvRequest();
- 
+
   void PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);
   void PostSendRequest(const ActorMsg& msg);

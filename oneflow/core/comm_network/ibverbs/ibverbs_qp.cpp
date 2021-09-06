@@ -127,11 +127,9 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
            0);
 }
 
-void IBVerbsQP::PostAllRecvRequest() { 
-  if (message_pool_->IsEmpty()) {
-    message_pool_->RegisterMessagePool();
-  }
-  while(message_pool_->IsEmpty() == false) {
+void IBVerbsQP::PostAllRecvRequest() {
+  message_pool_->RegisterMessagePool();
+  while (message_pool_->IsEmpty() == false) {
     ActorMsgMR* msg_mr = message_pool_->GetMessage();
     PostRecvRequest(msg_mr);
   }
@@ -209,7 +207,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
 }
 
 void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
-  message_pool_->PutMessage(wr_id->msg_mr); 
+  message_pool_->PutMessage(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
   PostPendingSendWR();
 }
