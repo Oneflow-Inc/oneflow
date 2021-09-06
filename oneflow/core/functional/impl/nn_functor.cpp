@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/random_generator.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -356,6 +357,50 @@ class AdaptiveAvgPool3DFunctor : public AdaptivePoolNDFunctor {
   }
 };
 
+class NllFunctor {
+ public:
+  NllFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("nll").Input("input").Input("target").Output("out").Build());
+    op_weight_ = CHECK_JUST(one::OpBuilder("nll")
+                                .Input("input")
+                                .Input("target")
+                                .Input("weight")
+                                .Output("out")
+                                .Output("total_weight")
+                                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight, const int64_t& ignore_index,
+                           const Optional<std::string>& reduction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+    const auto dispathch = [&]() -> Maybe<Tensor> {
+      const auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs));
+      if (reduction) {
+        const auto reduction_v = JUST(reduction.value());
+        if (*reduction_v == "mean") {
+          return functional::ReduceMean(res, {0}, false);
+        } else if (*reduction_v == "sum") {
+          return functional::ReduceSum(res, {0}, false);
+        } else {
+          UNIMPLEMENTED_THEN_RETURN();
+        }
+      }
+      return res;
+    };
+    const auto dispathch_with_weight = [&]() -> Maybe<Tensor> {
+      return OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight.value())},
+                                            attrs);
+    };
+    return weight ? dispathch_with_weight() : dispathch();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+};
+
 class SparseSoftmaxCrossEntropyFunctor {
  public:
   SparseSoftmaxCrossEntropyFunctor() {
@@ -365,16 +410,24 @@ class SparseSoftmaxCrossEntropyFunctor {
                          .Output("out")
                          .Output("prob")
                          .Build());
+    op_mul_ = CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
-                           const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
+                           const std::shared_ptr<one::Tensor>& label,
+                           const Optional<one::Tensor>& weight, const int64_t& depth) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("depth", depth));
+    if (weight) {
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_mul_, {JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs)),
+                     JUST(weight.value())});
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_mul_;
 };
 
 class SoftmaxCrossEntropyFunctor {
@@ -1031,6 +1084,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
+  m.add_functor<impl::NllFunctor>("Nll");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");

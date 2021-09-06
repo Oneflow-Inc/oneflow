@@ -488,8 +488,12 @@
              Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "nll"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction=None) => Nll"
+  bind_python: True
+
 - name: "sparse_softmax_cross_entropy"
-  signature: "Tensor (Tensor logits, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropy"
+  signature: "Tensor (Tensor logits, Tensor label, Tensor weight=None, Int64 depth) => SparseSoftmaxCrossEntropy"
   bind_python: True
 
 - name: "softmax_cross_entropy"
