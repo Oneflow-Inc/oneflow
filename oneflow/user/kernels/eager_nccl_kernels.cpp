@@ -212,15 +212,26 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
       for (const auto& pair : *p2p_pairs) {
         int64_t src = pair.first;
         int64_t dst = pair.second;
+
         if (GlobalProcessCtx::Rank() == src) {
+          Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
+          int64_t device_id = GlobalProcessCtx::LocalRank(dst);
+          int64_t parallel_id =
+              CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(dst, device_id));
+
           CHECK_JUST(Send(reinterpret_cast<const void*>(reinterpret_cast<const char*>(pack_to_ptr)
-                                                        + dst * chunk_size),
+                                                        + parallel_id * chunk_size),
                           elem_per_chunk, in->data_type(), dst, ctx->device_ctx()));
         }
         if (GlobalProcessCtx::Rank() == dst) {
-          CHECK_JUST(Recv(
-              reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + src * chunk_size),
-              elem_per_chunk, out->data_type(), src, ctx->device_ctx()));
+          Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
+          int64_t device_id = GlobalProcessCtx::LocalRank(src);
+          int64_t parallel_id =
+              CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(src, device_id));
+
+          CHECK_JUST(Recv(reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr)
+                                                  + parallel_id * chunk_size),
+                          elem_per_chunk, out->data_type(), src, ctx->device_ctx()));
         }
       }
     }
