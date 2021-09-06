@@ -698,7 +698,6 @@ for funcs_name in oneflow_funcs:
     if not funcs_name.startswith("_") and funcs_name not in internal_oneflow_funcs:
         _wrapped_methods_to_patch.append((oneflow, funcs_name))
 
-
 def _find_proxy(*objects_to_search):
     """
     Recursively search a data structure for a Proxy() and return it,

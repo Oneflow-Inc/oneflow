@@ -240,30 +240,42 @@ tracing and modify it. For example, let’s say we desire to replace
 
     import oneflow as flow
 
-    # Sample module
+# Sample module
     class M(flow.nn.Module):
         def forward(self, x, y):
             return flow.add(x, y)
 
     def transform(m: flow.nn.Module,
-                    tracer_class : type = flow.fx.Tracer) -> flow.nn.Module:
+                    tracer_class : type = flow.fx.Tracer) -> flow.fx.GraphModule:
         graph : flow.fx.Graph = tracer_class().trace(m)
         # FX represents its Graph as an ordered list of
         # nodes, so we can iterate through them.
         for node in graph.nodes:
-            # Checks if we're calling a 
+            # Checks if we're calling a method
             #  (i.e:
             # flow.add)
             if node.op == 'call_method':
                 # The target attribute is the method
                 # that call_method calls.
-                if node.target == flow.add:
-                    node.target = flow.mul
+                if hasattr(flow, 'add'):
+                    node.target = 'mul'
 
         graph.lint() # Does some checks to make sure the
                         # Graph is well-formed.
 
         return flow.fx.GraphModule(m, graph)
+
+    m = M()
+    new_m = transform(m)
+    print(new_m.graph)
+    """
+    graph():
+    %x : [#users=1] = placeholder[target=x]
+    %y : [#users=1] = placeholder[target=y]
+    %add : [#users=1] = call_method[target=mul](args = (%x, %y), kwargs = {})
+    return add
+    """
+
 
 We can also do more involved :class:`Graph` rewrites, such as
 deleting or appending nodes. To aid in these transformations,
@@ -287,7 +299,7 @@ can be found below.
         node.replace_all_uses_with(new_node)
 
 For simple transformations that only consist of substitutions, you can also
-make use of the `subgraph rewriter. <https://github.com/pytorch/pytorch/blob/master/torch/fx/subgraph_rewriter.py>`__
+make use of the `subgraph rewriter. <https://github.com/Oneflow-Inc/oneflow/tree/master/python/oneflow/fx/subgraph_rewriter.py>`__
 
 Subgraph Rewriting With replace_pattern()
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -304,13 +316,104 @@ get unwieldy as the transformations get more complex.
 Graph Manipulation Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  `Replace one
-   op <https://github.com/pytorch/examples/blob/master/fx/replace_op.py>`__
--  `Conv/Batch Norm
-   fusion <https://github.com/pytorch/pytorch/blob/40cbf342d3c000712da92cfafeaca651b3e0bd3e/torch/fx/experimental/optimization.py#L50>`__
--  `replace_pattern: Basic usage <https://github.com/pytorch/examples/blob/master/fx/subgraph_rewriter_basic_use.py>`__
--  `Quantization <https://pytorch.org/docs/master/quantization.html#prototype-fx-graph-mode-quantization>`__
--  `Invert Transformation <https://github.com/pytorch/examples/blob/master/fx/invert.py>`__
+#TODO(BBuf) add examples
+
+
+The Interpreter Pattern
+^^^^^^^^^^^^^^^^^^^^^^^
+
+A useful code organizational pattern in FX is to loop over all the :class:`Node`\s
+in a :class:`Graph` and execute them. This can be used for several things including
+runtime analysis of values flowing through the graph or transformation of the code
+via retracing with :class:`Proxy`\s. For example, suppose we want to run a
+:class:`GraphModule` and record the :class:`oneflow.Tensor` shape and dtype
+properties on the nodes as we see them at runtime. That might look like:
+
+::
+
+    import oneflow as flow
+    from oneflow.fx.node import Node
+
+    from typing import Dict
+
+    class ShapeProp:
+        """
+        Shape propagation. This class takes a `GraphModule`.
+        Then, its `propagate` method executes the `GraphModule`
+        node-by-node with the given arguments. As each operation
+        executes, the ShapeProp class stores away the shape and
+        element type for the output values of each operation on
+        the `shape` and `dtype` attributes of the operation's
+        `Node`.
+        """
+        def __init__(self, mod):
+            self.mod = mod
+            self.graph = mod.graph
+            self.modules = dict(self.mod.named_modules())
+
+        def propagate(self, *args):
+            args_iter = iter(args)
+            env : Dict[str, Node] = {}
+
+            def load_arg(a):
+                return flow.fx.graph.map_arg(a, lambda n: env[n.name])
+
+            def fetch_attr(target : str):
+                target_atoms = target.split('.')
+                attr_itr = self.mod
+                for i, atom in enumerate(target_atoms):
+                    if not hasattr(attr_itr, atom):
+                        raise RuntimeError(f"Node referenced nonexistant target {'.'.join(target_atoms[:i])}")
+                    attr_itr = getattr(attr_itr, atom)
+                return attr_itr
+
+            for node in self.graph.nodes:
+                if node.op == 'placeholder':
+                    result = next(args_iter)
+                elif node.op == 'get_attr':
+                    result = fetch_attr(node.target)
+                elif node.op == 'call_function':
+                    result = node.target(*load_arg(node.args), **load_arg(node.kwargs))
+                elif node.op == 'call_method':
+                    self_obj, *args = load_arg(node.args)
+                    kwargs = load_arg(node.kwargs)
+                    result = getattr(self_obj, node.target)(*args, **kwargs)
+                elif node.op == 'call_module':
+                    result = self.modules[node.target](*load_arg(node.args), **load_arg(node.kwargs))
+
+                # This is the only code specific to shape propagation.
+                # you can delete this `if` branch and this becomes
+                # a generic GraphModule interpreter.
+                if isinstance(result, flow.Tensor):
+                    node.shape = result.shape
+                    node.dtype = result.dtype
+
+                env[node.name] = result
+
+            return load_arg(self.graph.result)
+
+
+As you can see, a full interpreter for FX is not that complicated
+but it can be very useful. To ease using this pattern, we provide
+the :class:`Interpreter` class, which encompasses the above logic
+in a way that certain aspects of the interpreter's execution can
+be overridden via method overrides.
+
+In addition to executing operations, we can also generate a new
+`Graph` by feeding :class:`Proxy` values through an interpreter.
+Similarly, we provide the :class:`Transformer` class to encompass
+this pattern. :class:`Transformer` behaves similarly to
+:class:`Interpreter`, but instead of calling the ``run`` method to
+get a concrete output value from the Module, you would call the
+:meth:`Transformer.transform` method to return a new
+:class:`GraphModule` which was subject to any transformation rules
+you installed as overridden methods.
+
+
+Examples of the Interpreter Pattern
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#TODO(BBuf) add examples
 
 
 
