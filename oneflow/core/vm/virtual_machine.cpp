@@ -157,7 +157,7 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
 
 Maybe<const ParallelDesc> VirtualMachine::GetInstructionParallelDesc(
     const InstructionMsg& instr_msg) {
-  static const Symbol<ParallelDesc> empty_ptr;
+  static const std::shared_ptr<const ParallelDesc> empty_ptr;
   if (instr_msg.parallel_desc()) { return *(instr_msg.parallel_desc()); }
   if (!instr_msg.has_parallel_desc_symbol_id()) { return *(empty_ptr); }
   int64_t symbol_id = instr_msg.parallel_desc_symbol_id();

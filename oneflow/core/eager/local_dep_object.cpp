@@ -27,7 +27,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> LocalDepObject::Init(const Device& device) {
-  const auto& parallel_desc = JUST(Device::GetPlacement(device));
+  const auto parallel_desc = JUST(Device::GetPlacement(device));
   vm::ObjectId object_id = vm::IdUtil::NewPhysicalValueObjectId(GlobalProcessCtx::Rank());
   int64_t global_device_id = 0;
   {
