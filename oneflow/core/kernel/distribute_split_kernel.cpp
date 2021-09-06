@@ -34,24 +34,24 @@ class DistributeSplitKernel final : public Kernel {
   ~DistributeSplitKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  void ForwardShape(const KernelContext* ctx) const override;
-  Blob* GetOutBlob(const KernelContext* ctx) const;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardShape(KernelContext* ctx) const override;
+  Blob* GetOutBlob(KernelContext* ctx) const;
 };
 
 template<DeviceType device_type>
-void DistributeSplitKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void DistributeSplitKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   CheckSizeAndCopyBlob(ctx->device_ctx(), GetOutBlob(ctx), ctx->BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type>
-void DistributeSplitKernel<device_type>::ForwardShape(const KernelContext* ctx) const {
+void DistributeSplitKernel<device_type>::ForwardShape(KernelContext* ctx) const {
   Blob* out_blob = GetOutBlob(ctx);
   out_blob->mut_shape_view()->set_shape(ctx->BnInOp2Blob("in")->shape());
 }
 
 template<DeviceType device_type>
-Blob* DistributeSplitKernel<device_type>::GetOutBlob(const KernelContext* ctx) const {
+Blob* DistributeSplitKernel<device_type>::GetOutBlob(KernelContext* ctx) const {
   Blob* out_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().output_bns().size()) {
     Blob* cur_blob = ctx->BnInOp2Blob(this->op_attribute().output_bns().Get(i));

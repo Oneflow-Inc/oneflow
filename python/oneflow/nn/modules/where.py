@@ -45,12 +45,12 @@ def where_op(condition, x=None, y=None):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> x = flow.Tensor(
+        >>> x = flow.tensor(
         ...    np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
         ...    dtype=flow.float32,
         ... )
-        >>> y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
-        >>> condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
+        >>> y = flow.tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
+        >>> condition = flow.tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
         >>> out = condition.where(x, y)
         >>> out #doctest: +ELLIPSIS
         tensor([[1.0000, 0.3139],
