@@ -198,13 +198,13 @@ class TestApiCompatiblity(flow.unittest.TestCase):
     # googlenet test
     def test_googlenet_compatiblity(test_case):
         test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_googlenet.py", "googlenet", "cuda"
+            test_case, "pytorch_googlenet.py", "googlenet", "cuda", RESULT_PATH
         )
 
     # inceptionv3 test
     def test_inceptionv3_compatiblity(test_case):
         test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_inceptionv3.py", "inception_v3", "cuda"
+            test_case, "pytorch_inceptionv3.py", "inception_v3", "cuda", RESULT_PATH
         )
 
 
