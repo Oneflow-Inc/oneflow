@@ -64,7 +64,10 @@ std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(const std::string& nam
   return vec.front();
 }
 
-const StreamId& TaskNode::stream_id() const { return new_task_id_->stream_id(); }
+const StreamId& TaskNode::stream_id() const {
+  CHECK(new_task_id_);
+  return new_task_id_->stream_id();
+}
 
 DeviceType TaskNode::device_type() const { return stream_id().device_id().device_type(); }
 
