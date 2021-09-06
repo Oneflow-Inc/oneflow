@@ -32,7 +32,7 @@ struct CopyTensor<DeviceType::kCPU, T, U> {
 template<typename T, typename U>
 struct CopyTensor<DeviceType::kGPU, T, U> {
   static void Call(DeviceCtx* ctx, const int64_t n, const T* src, U* dst) {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
     CopyElemOnGpu(ctx, src, dst, n);
 #else
     UNIMPLEMENTED();

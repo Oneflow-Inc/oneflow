@@ -36,7 +36,7 @@ bool HasJobPass(const std::string& pass_name) {
 
 const JobPass& JobPass4Name(const std::string& pass_name) {
   const auto& iter = PassName2JobPass()->find(pass_name);
-  CHECK(iter != PassName2JobPass()->end());
+  CHECK(iter != PassName2JobPass()->end()) << pass_name;
   return *iter->second;
 }
 
