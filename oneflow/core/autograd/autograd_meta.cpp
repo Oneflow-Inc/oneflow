@@ -45,7 +45,7 @@ Maybe<const std::vector<Symbol<cfg::SbpParallel>>&> GetSbpTuple(Symbol<cfg::NdSb
 Maybe<Tensor> TensorInfo::zeros() const {
   if (device_.has_value()) {
     const auto& device = JUST(device_);
-    return functional::Constant(*shape_.get(), 0, dtype_, Optional<Symbol<Device>>(device));
+    return functional::Constant(*shape_.get(), 0, dtype_, MakeOptional(device));
   } else {
     const auto& parallel_desc = JUST(parallel_desc_);
     const auto& nd_sbp = JUST(nd_sbp_);
