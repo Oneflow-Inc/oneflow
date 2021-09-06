@@ -80,34 +80,38 @@ def is_user_op(node):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestConvertDependency(flow.unittest.TestCase):
-    #     def test_get_params(test_case):
-    #         class ConvModel(flow.nn.Module):
-    #             def __init__(self):
-    #                 super(ConvModel, self).__init__()
-    #                 self.conv = flow.nn.Conv2d(3, 64, kernel_size=11, bias=False)
-
-    #             def forward(self, x):
-    #                 x = self.conv(x)
-    #                 return x
-
-    #         model = ConvModel().state_dict()
-    #         for layer_name in model:
-    #             layer = model[layer_name]
-    #             layer_path = getattr(layer, "file_path", None)
-    #             test_case.assertEqual(layer_path, "m.conv.1.weight/out")
-    #             break
+    def test_get_params(test_case):
+        class ConvModel(flow.nn.Module):
+            def __init__(self):
+                super(ConvModel, self).__init__()
+                self.conv = flow.nn.Conv2d(3, 64, kernel_size=11, bias=False)
+            
+            def forward(self, x):
+                x = self.conv(x)
+                return x
+        
+        model = ConvModel().state_dict()
+        for layer_name in model:
+            layer = model[layer_name]
+            layer_path = getattr(layer, "file_path", None)
+            test_case.assertEqual(layer_path, "m.conv.1.weight/out")
+            break
 
     def test_infos_of_nodes(test_case):
         alexnet_module = alexnet()
         alexnet_graph = Graph(alexnet_module)
+        if not alexnet_graph._is_compiled:
+            alexnet_graph._compile(flow.rand(1, 3, 224, 224))
         graph_str = repr(alexnet_graph)
+        if not alexnet_graph._is_compiled:
+            alexnet_graph._compile(flow.rand(shape_input))
 
         size_where = 2
         if "cuda" in graph_str:
             size_where = 3
 
         p_size = re.compile(r"size=\(.*?\)", re.S)
-        p_type = re.compile(r"dtype=.*?,", re.S)
+        p_type = re.compile(r"dtype=.*?\)", re.S)
         types = ["INPUT", "PARAMETER", "BUFFER", "OUTPUT"]
         num_nodes = {}
 
@@ -123,7 +127,7 @@ class TestConvertDependency(flow.unittest.TestCase):
                 test_case.assertEqual(type_strs != [], True)
 
                 size_attr = size_strs[0].replace("size=", "")
-                type_attr = type_strs[0].replace("dtype=", "")
+                type_attr = type_strs[0].replace("dtype=", "").replace(")", "")
                 if size_attr[-2] == ",":
                     size_attr = size_attr.replace(",", "")
                 if type_attr[-1] == ",":
@@ -152,9 +156,7 @@ class TestConvertDependency(flow.unittest.TestCase):
                 .split(", "),
             )
         )
-        if not graph._is_compiled:
-            _ = graph._compile(flow.rand(shape_input))
-        graph_proto = graph._graph_proto
+        graph_proto = alexnet_graph._graph_proto
 
         nodes = {}
         for op in graph_proto.net.op:
@@ -171,8 +173,8 @@ class TestConvertDependency(flow.unittest.TestCase):
                 op_attrs.append(op_attr)
 
         test_case.assertEqual(op_names[0], "conv2d")
-        test_case.assertEqual(op_names[1], "relu")
-        test_case.assertEqual(op_names[2], "maxpool_2d")
+        test_case.assertEqual(op_names[1], "bias_add")
+        test_case.assertEqual(op_names[2], "relu")
 
         kernel_size = op_attrs[0].get("kernel_size", None)
         strides = op_attrs[0].get("strides", None)
