@@ -154,7 +154,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
     // NOTE: in (transpose)-> pack_to_ptr (all2all)-> unpack_from_ptr (transpose)-> out
     const char* pack_to_ptr = in->dptr<char>();
     char* unpack_from_ptr = out->mut_dptr<char>();
-    int64_t tmp_size = tmp_size = tmp_buffer->shape().elem_cnt();
+    int64_t tmp_size = tmp_buffer->shape().elem_cnt();
     CHECK(tmp_size == data_size * 2);
 
     CHECK_EQ(in->data_type(), out->data_type());
