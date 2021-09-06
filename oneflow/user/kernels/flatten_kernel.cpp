@@ -29,7 +29,7 @@ namespace oneflow {
       });
 
 REGISTER_FLATTEN_KERNEL(DeviceType::kCPU)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 REGISTER_FLATTEN_KERNEL(DeviceType::kGPU)
 #endif
 

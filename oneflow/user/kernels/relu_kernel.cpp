@@ -49,11 +49,16 @@ class ReluKernel final : public user_op::OpKernel {
 
 REGISTER_RELU_KERNEL(DeviceType::kCPU, float)
 REGISTER_RELU_KERNEL(DeviceType::kCPU, double)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA)
 REGISTER_RELU_KERNEL(DeviceType::kGPU, float)
 REGISTER_RELU_KERNEL(DeviceType::kGPU, double)
 REGISTER_RELU_KERNEL(DeviceType::kGPU, float16)
 #endif
+
+// #if defined(WITH_HIP)
+// REGISTER_RELU_KERNEL(DeviceType::kGPU, float)
+// REGISTER_RELU_KERNEL(DeviceType::kGPU, double)
+// #endif
 
 template<DeviceType device_type, typename T>
 class ReluGradKernel final : public user_op::OpKernel {
@@ -86,11 +91,16 @@ class ReluGradKernel final : public user_op::OpKernel {
 
 REGISTER_RELU_GRAD_KERNEL(DeviceType::kCPU, float)
 REGISTER_RELU_GRAD_KERNEL(DeviceType::kCPU, double)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA)
 REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, float)
 REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, double)
 REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, float16)
 #endif
+
+// #if defined(WITH_HIP)
+// REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, float)
+// REGISTER_RELU_GRAD_KERNEL(DeviceType::kGPU, double)
+// #endif
 
 }  // namespace
 
