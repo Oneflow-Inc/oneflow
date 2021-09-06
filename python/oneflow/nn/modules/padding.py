@@ -125,7 +125,7 @@ class ReflectionPad2d(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)), dtype=flow.float32)
+        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> m = flow.nn.ReflectionPad2d((2, 2, 1, 1))
         >>> out = m(input)
         >>> out

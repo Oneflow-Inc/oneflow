@@ -28,7 +28,9 @@ def _test_view(test_case, device):
     x = np.array(
         [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
     ).astype(np.float32)
-    input = flow.Tensor(x, device=flow.device(device), requires_grad=True)
+    input = flow.tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     of_out = input.view(2, 2, 2, -1)
     of_shape = of_out.numpy().shape
     np_shape = (2, 2, 2, 2)
@@ -50,7 +52,9 @@ def _test_view_flow_size(test_case, device):
     x = np.array(
         [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
     ).astype(np.float32)
-    input = flow.Tensor(x, device=flow.device(device), requires_grad=True)
+    input = flow.tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     shape = flow.Size([2, 2, 2, -1])
     of_out = input.view(shape)
     np_shape = (2, 2, 2, 2)
