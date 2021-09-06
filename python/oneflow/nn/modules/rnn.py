@@ -107,8 +107,8 @@ class RNN(Module):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> rnn = flow.nn.RNN(10, 20, 2)
-        >>> input = flow.Tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
-        >>> h0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
+        >>> input = flow.tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
+        >>> h0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> output, hn = rnn(input, h0)
         >>> print(output.size(), hn.size())
         flow.Size([5, 3, 20]) flow.Size([2, 3, 20])
@@ -278,6 +278,7 @@ class GRU(Module):
     Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
 
     For each element in the input sequence, each layer computes the following
+    
     function:
 
     .. math::
@@ -369,8 +370,8 @@ class GRU(Module):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> rnn = flow.nn.GRU(10, 20, 2)
-        >>> input = flow.Tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
-        >>> h0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
+        >>> input = flow.tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
+        >>> h0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> output, hn = rnn(input, h0)
         >>> print(output.size(), hn.size())
         flow.Size([5, 3, 20]) flow.Size([2, 3, 20])
@@ -546,6 +547,7 @@ class LSTM(nn.Module):
     Applies a multi-layer long short-term memory (LSTM) RNN to an input sequence.
 
     For each element in the input sequence, each layer computes the following
+    
     function:
 
     .. math::
@@ -660,9 +662,9 @@ class LSTM(nn.Module):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> rnn = flow.nn.LSTM(10, 20, 2)
-        >>> input = flow.Tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
-        >>> h0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
-        >>> c0 = flow.Tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
+        >>> input = flow.tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
+        >>> h0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
+        >>> c0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> output, (hn, cn) = rnn(input, (h0, c0))
         >>> print(output.size(), hn.size(), cn.size())
         flow.Size([5, 3, 20]) flow.Size([2, 3, 20]) flow.Size([2, 3, 20])
