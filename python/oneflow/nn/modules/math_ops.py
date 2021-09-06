@@ -1169,6 +1169,159 @@ def inplace_abs_op_tensor(input):
     return flow._C.abs(input, True)
 
 
+@register_tensor_op("acos_")
+def inplace_acos_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.acos`
+
+    """
+    return flow._C.acos(input, True)
+
+
+@register_tensor_op("acosh_")
+def inplace_acosh_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.acosh`
+
+    """
+    return flow._C.acosh(input, True)
+
+
+@register_tensor_op("asin_")
+def inplace_asin_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.asin`
+
+    """
+    return flow._C.asin(input, True)
+
+
+@register_tensor_op("asinh_")
+def inplace_asinh_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.asinh`
+
+    """
+    return flow._C.asinh(input, True)
+
+
+@register_tensor_op("atan_")
+def inplace_atan_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.atan`
+
+    """
+    return flow._C.atan(input, True)
+
+
+@register_tensor_op("cos_")
+def inplace_cos_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.cos`
+
+    """
+    return flow._C.cos(input, True)
+
+
+@register_tensor_op("cosh_")
+def inplace_cosh_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.cosh`
+
+    """
+    return flow._C.cosh(input, True)
+
+
+@register_tensor_op("ceil_")
+def inplace_ceil_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.ceil`
+
+    """
+    return flow._C.ceil(input, True)
+
+
+@register_tensor_op("erf_")
+def inplace_erf_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.erf`
+
+    """
+    return flow._C.erf(input, True)
+
+
+@register_tensor_op("erfc_")
+def inplace_erfc_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.erfc`
+
+    """
+    return flow._C.erfc(input, True)
+
+
+@register_tensor_op("exp_")
+def inplace_exp_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.exp`
+
+    """
+    return flow._C.exp(input, True)
+
+
+@register_tensor_op("expm1_")
+def inplace_expm1_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.expm1`
+
+    """
+    return flow._C.expm1(input, True)
+
+
+@register_tensor_op("sqrt_")
+def inplace_sqrt_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.sqrt`
+
+    """
+    return flow._C.sqrt(input, True)
+
+
+@register_tensor_op("square_")
+def inplace_square_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.square`
+
+    """
+    return flow._C.square(input, True)
+
+
+@register_tensor_op("sinh_")
+def inplace_sinh_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.sinh`
+
+    """
+    return flow._C.sinh(input, True)
+
+
+@register_tensor_op("tan_")
+def inplace_tan_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.tan`
+
+    """
+    return flow._C.tan(input, True)
+
+
+@register_tensor_op("tanh_")
+def inplace_tanh_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.tanh`
+
+    """
+    return flow._C.tanh(input, True)
+
+
 if __name__ == "__main__":
     import doctest
 

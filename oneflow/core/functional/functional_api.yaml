@@ -175,11 +175,11 @@
   bind_python: True
 
 - name: "cos"
-  signature: "Tensor (Tensor x) => Cos"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Cos"
   bind_python: True
 
 - name: "cosh"
-  signature: "Tensor (Tensor x) => Cosh"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Cosh"
   bind_python: True
 
 - name: "fmod"
@@ -194,7 +194,7 @@
   bind_python: True
 
 - name: "sqrt"
-  signature: "Tensor (Tensor x) => Sqrt"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Sqrt"
   bind_python: True
 
 - name: "rsqrt"
@@ -202,7 +202,7 @@
   bind_python: True
 
 - name: "square"
-  signature: "Tensor (Tensor x) => Square"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Square"
   bind_python: True
 
 - name: "relu"
@@ -222,11 +222,11 @@
   bind_python: False
 
 - name: "tan"
-  signature: "Tensor (Tensor x) => Tan"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Tan"
   bind_python: True
 
 - name: "tanh"
-  signature: "Tensor (Tensor x) => Tanh"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Tanh"
   bind_python: True
 
 - name: "elu"
@@ -449,7 +449,7 @@
   bind_python: True
 
 - name: "exp"
-  signature: "Tensor (Tensor x) => Exp"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Exp"
   bind_python: True
 
 - name: "gather"
@@ -784,43 +784,43 @@
   bind_python: True
 
 - name: "acos"
-  signature: "Tensor (Tensor x) => Acos"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Acos"
   bind_python: True
 
 - name: "acosh"
-  signature: "Tensor (Tensor x) => Acosh"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Acosh"
   bind_python: True
 
 - name: "asin"
-  signature: "Tensor (Tensor x) => Asin"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Asin"
   bind_python: True
 
 - name: "asinh"
-  signature: "Tensor (Tensor x) => Asinh"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Asinh"
   bind_python: True
 
 - name: "atan"
-  signature: "Tensor (Tensor x) => Atan"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Atan"
   bind_python: True
 
 - name: "atanh"
-  signature: "Tensor (Tensor x) => Atanh"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Atanh"
   bind_python: True
 
 - name: "ceil"
-  signature: "Tensor (Tensor x) => Ceil"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Ceil"
   bind_python: True
 
 - name: "erf"
-  signature: "Tensor (Tensor x) => Erf"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Erf"
   bind_python: True
 
 - name: "erfc"
-  signature: "Tensor (Tensor x) => Erfc"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Erfc"
   bind_python: True
 
 - name: "expm1"
-  signature: "Tensor (Tensor x) => Expm1"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Expm1"
   bind_python: True
 
 - name: "floor"
@@ -852,7 +852,7 @@
   bind_python: True
 
 - name: "sinh"
-  signature: "Tensor (Tensor x) => Sinh"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Sinh"
   bind_python: True
 
 - name: "softplus"
