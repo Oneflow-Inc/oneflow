@@ -473,9 +473,6 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
     const int64_t train_step_val = ctx->Attr<int32_t>("train_step_val");
     const int64_t* train_step_ptr = nullptr;
 
-    printf("weight decay is: %f \n", weight_decay);
-    printf("l2 decay is: %f \n", l2);
-
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();
