@@ -143,14 +143,10 @@ Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
 Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
   static const size_t kDoubleBufferPoolSize = 2;
   static const HashMap<std::string, size_t> type2pool_size{
-      {"cpu", GetInstructionHighWaterMark()},
-      {"gpu", GetInstructionHighWaterMark()},
-      {"cuda", GetInstructionHighWaterMark()},
-      {"cuda_h2d", kDoubleBufferPoolSize},
-      {"cuda_d2h", kDoubleBufferPoolSize},
-      {"comm_net", kDoubleBufferPoolSize},
-      {"sync_launched_nccl", kDoubleBufferPoolSize},
-      {"async_launched_nccl", kDoubleBufferPoolSize},
+      {"cpu", GetInstructionHighWaterMark()},        {"gpu", GetInstructionHighWaterMark()},
+      {"cuda", GetInstructionHighWaterMark()},       {"cuda_h2d", kDoubleBufferPoolSize},
+      {"cuda_d2h", kDoubleBufferPoolSize},           {"comm_net", kDoubleBufferPoolSize},
+      {"sync_launched_nccl", kDoubleBufferPoolSize}, {"async_launched_nccl", kDoubleBufferPoolSize},
   };
   return MapAt(type2pool_size, type());
 }
