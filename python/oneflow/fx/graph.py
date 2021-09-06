@@ -556,8 +556,7 @@ class Graph:
 
             type_expr (Optional[Any]): an optional type annotation representing the
                 Python type the output of this node will have. This is needed in some
-                cases for proper code generation (e.g. when the function is used
-                subsequently in TorchScript compilation).
+                cases for proper code generation.
 
         .. note::
             The same insertion point and type expression rules apply for this method
@@ -767,7 +766,9 @@ class Graph:
     ) -> Node:
         """
         Copy a node from one graph into another. ``arg_transform`` needs to transform arguments from
-        the graph of node to the graph of self. Example::
+        the graph of node to the graph of self. 
+        
+        Example::
 
             # Copying all the nodes in `g` into `new_graph`
             g : oneflow.fx.Graph = ...
@@ -843,7 +844,9 @@ class Graph:
         Returns:
 
             A PythonCode object, consisting of two fields:
+
                 src: the Python source code representing the object
+
                 globals: a dictionary of global names in `src` -> the objects that they reference.
         """
         # NOTE: [Graph Namespaces]
@@ -911,8 +914,8 @@ class Graph:
             """
             if (
                 _is_from_flow(obj) and obj != oneflow.device
-            ):  # to support registering torch.device
-                # HACK: workaround for how torch custom ops are registered. We
+            ):  # to support registering oneflow.device
+                # HACK: workaround for how oneflow custom ops are registered. We
                 # can't import them like normal modules so they must retain their
                 # fully qualified name.
                 return _get_qualified_name(obj)
@@ -937,7 +940,7 @@ class Graph:
 
             typename = _type_repr(o)
 
-            # This is a generic type, e.g. typing.List[torch.Tensor]
+            # This is a generic type, e.g. typing.List[oneflow.Tensor]
             if hasattr(o, "__origin__"):
                 origin_type = _origin_type_map.get(o.__origin__, o.__origin__)
                 origin_typename = add_global(_type_repr(origin_type), origin_type)
@@ -1149,11 +1152,10 @@ def forward({', '.join(orig_args)}){maybe_return_annotation[0]}:
         """
         Runs various checks on this Graph to make sure it is well-formed. In
         particular:
-        
+
         - Checks Nodes have correct ownership (owned by this graph)
         - Checks Nodes appear in topological order
-        - If this Graph has an owning GraphModule, checks that targets
-        exist in that GraphModule
+        - If this Graph has an owning GraphModule, checks that targets exist in that GraphModule
         """
 
         # Check topo order
