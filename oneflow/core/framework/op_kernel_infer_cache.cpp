@@ -21,10 +21,10 @@ namespace oneflow {
 
 namespace user_op {
 
-OpKernelInferCache::OpKernelInferCache(const KernelConf& kernel_conf, const JobDesc& job_desc) {
+OpKernelInferCache::OpKernelInferCache(const KernelConf& kernel_conf, const void* scope) {
   const OperatorConf& op_conf = kernel_conf.op_attribute().op_conf();
   std::shared_ptr<Operator> op = CHECK_JUST(ConstructOp(op_conf));
-  cache_key_.job_desc = &job_desc;
+  cache_key_.scope = scope;
   cache_key_.op_conf_sym = op->GetOpConfWithoutOpNameAndLbn();
   cache_key_.ibn_idx2shape_sym.resize(op->input_bns().size());
   cache_key_.dtype_signature_sym = SymbolOf(kernel_conf.dtype_signature());
@@ -57,7 +57,8 @@ void OpKernelInferCache::UpdateCacheKey(KernelInferContext* ctx) {
 }
 
 void OpKernelInferCache::UpdateCacheValue(KernelInferContext* ctx) {
-  if (cached_key2value_.size() >= max_size_) { Reset(); }
+  // TODO: make max size configurable
+  if (cached_key2value_.size() >= kReleaseInIndependentThreadThreshold) { Reset(); }
   auto* cache_value = new OpInferCacheValue();
   cache_value->obn_idx2shape_sym.resize(ctx->outputs().size());
   FOR_RANGE(int, i, 0, ctx->outputs().size()) {

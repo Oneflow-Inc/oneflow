@@ -183,8 +183,8 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph* op_graph) {
 }
 
 std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function& function,
-                                        const DeviceType& device_type, const JobDesc& job_desc) {
-  return graph_builder::BuildGraph(function, device_type, job_desc);
+                                        const DeviceType& device_type) {
+  return graph_builder::BuildGraph(function, device_type);
 }
 
 void InitXrtConfigurations(const XrtConfig& config) {
