@@ -48,10 +48,12 @@ class Interpreter:
         method equivalents). We could subclass Interpreter like so::
 
             class NegSigmSwapInterpreter(Interpreter):
+                
                 def call_function(self, target : Target,
                                   args : Tuple, kwargs : Dict) -> Any:
                     if target == oneflow.sigmoid:
                         return oneflow.neg(*args, **kwargs)
+                    
                     return super().call_function(n)
 
                 def call_method(self, target : Target,
@@ -215,6 +217,7 @@ class Interpreter:
         Execute a ``call_function`` node and return the result.
 
         #TODO(BBuf) try to match oneflow
+
         Args:
             target (Target): The call target for this node. See
                 `Node <https://pytorch.org/docs/master/fx.html#torch.fx.Node>`__ for
@@ -237,6 +240,7 @@ class Interpreter:
         Execute a ``call_method`` node and return the result.
         
         #TODO(BBuf) try to match oneflow
+        
         Args:
             target (Target): The call target for this node. See
                 `Node <https://pytorch.org/docs/master/fx.html#torch.fx.Node>`__ for
@@ -375,6 +379,7 @@ class Transformer(Interpreter):
         method equivalents). We could subclass ``Transformer`` like so::
 
             class NegSigmSwapXformer(Transformer):
+
                 def call_function(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
                     if target == oneflow.sigmoid:
                         return oneflow.neg(*args, **kwargs)

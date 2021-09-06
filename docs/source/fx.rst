@@ -15,6 +15,7 @@ demonstration of these components in action:
 ::
     import oneflow
     # Simple module for demonstration
+    
     class MyModule(oneflow.nn.Module):
         def __init__(self):
             super().__init__()
@@ -32,7 +33,9 @@ demonstration of these components in action:
 
     # High-level intermediate representation (IR) - Graph representation
     print(symbolic_traced.graph)
+    
     """
+    
     graph():
         %x : [#users=1] = placeholder[target=x]
         %param : [#users=1] = get_attr[target=param]
@@ -40,17 +43,20 @@ demonstration of these components in action:
         %linear : [#users=1] = call_module[target=linear](args = (%add,), kwargs = {})
         %clamp : [#users=1] = call_method[target=clamp](args = (%linear,), kwargs = {min: 0.0, max: 1.0})
         return clamp
+
     """
 
     # Code generation - valid Python code
     print(symbolic_traced.code)
     """
+
     def forward(self, x):
         param = self.param
         add = x + param;  x = param = None
         linear = self.linear(add);  add = None
         clamp = linear.clamp(min = 0.0, max = 1.0);  linear = None
         return clamp
+
     """
 
 The **symbolic tracer** performs "symbolic execution" of the Python
@@ -247,16 +253,23 @@ tracing and modify it. For example, let’s say we desire to replace
 
     def transform(m: flow.nn.Module,
                     tracer_class : type = flow.fx.Tracer) -> flow.fx.GraphModule:
+        
         graph : flow.fx.Graph = tracer_class().trace(m)
+
         # FX represents its Graph as an ordered list of
         # nodes, so we can iterate through them.
+
         for node in graph.nodes:
+            
             # Checks if we're calling a method
             #  (i.e:
             # flow.add)
+            
             if node.op == 'call_method':
+                
                 # The target attribute is the method
                 # that call_method calls.
+                
                 if hasattr(flow, 'add'):
                     node.target = 'mul'
 
@@ -416,4 +429,38 @@ Examples of the Interpreter Pattern
 #TODO(BBuf) add examples
 
 
+
+API Reference
+-------------
+
+.. autofunction:: oneflow.fx.symbolic_trace
+
+.. autofunction:: oneflow.fx.wrap
+
+.. autoclass:: oneflow.fx.GraphModule
+  :members:
+
+  .. automethod:: __init__
+
+.. autoclass:: oneflow.fx.Graph
+  :members:
+
+  .. automethod:: __init__
+
+.. autoclass:: oneflow.fx.Node
+  :members:
+
+.. autoclass:: oneflow.fx.Tracer
+  :members:
+  :inherited-members:
+
+.. autoclass:: oneflow.fx.Proxy
+
+.. autoclass:: oneflow.fx.Interpreter
+  :members:
+
+.. autoclass:: oneflow.fx.Transformer
+  :members:
+
+.. autofunction:: oneflow.fx.replace_pattern
 
