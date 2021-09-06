@@ -49,9 +49,9 @@ std::shared_ptr<internal::TaskThreadPoolBase> create_oneflow_threadpool(
     int pool_size,
     bool create_new) {
   // For now, the only accepted device id is 0
-  // TORCH_CHECK(device_id == 0);
+  CHECK_EQ(device_id, 0);
   // Create new thread pool
-  // TORCH_CHECK(create_new);
+  // CHECK(create_new);
   return std::make_shared<internal::ThreadPool>(pool_size);
 }
 
@@ -61,10 +61,10 @@ std::shared_ptr<internal::TaskThreadPoolBase> create_oneflow_threadpool(
 ONEFLOW_REGISTER_CREATOR(internal::ThreadPoolRegistry, OneFlow, create_oneflow_threadpool);
 
 void set_num_interop_threads(int nthreads) {
-  // TORCH_CHECK(nthreads > 0, "Expected positive number of threads");
+  CHECK_GT(nthreads, 0) << "Expected positive number of threads";
 
   int no_value = NOT_SET;
-  // TORCH_CHECK(num_interop_threads.compare_exchange_strong(no_value, nthreads),
+  // CHECK(num_interop_threads.compare_exchange_strong(no_value, nthreads),
   //     "Error: cannot set number of interop threads after parallel work "
   //     "has started or set_num_interop_threads called");
 }
