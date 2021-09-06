@@ -253,7 +253,8 @@ class GraphModule(oneflow.nn.Module):
 
     @compatibility(is_backward_compatible=False)
     def to_folder(self, folder: Union[str, os.PathLike], module_name: str = "FxModule"):
-        """Dumps out module to ``folder`` with ``module_name`` so that it can be
+        """
+        Dumps out module to ``folder`` with ``module_name`` so that it can be
         imported with ``from <folder> import <module_name>``
 
         Args:
