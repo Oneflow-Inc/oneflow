@@ -81,7 +81,12 @@ struct DtypeAllReduce<T, kSum> {
     for (int64_t i = 0, part_id = JUST(parallel_id.value()); i < parallel_num - 1;
          ++i, part_id = RingDecrease(part_id, parallel_num)) {
       int64_t send_part_id = part_id;
-      const T* send_ptr = &(i == 0 ? in : out)[bs.At(send_part_id).begin()];
+      const T* send_ptr = nullptr;
+      if (i == 0) {
+        send_ptr = &in[bs.At(send_part_id).begin()];
+      } else {
+        send_ptr = &out[bs.At(send_part_id).begin()];
+      }
       size_t send_size = bs.At(send_part_id).size();
       int64_t recv_part_id = RingDecrease(part_id, parallel_num);
       T* recv_ptr = recv_buffer.data();
@@ -90,13 +95,13 @@ struct DtypeAllReduce<T, kSum> {
           transport_token,
           [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
             *buffer = const_cast<T*>(send_ptr);
-            *size = send_size;
+            *size = send_size * sizeof(T);
             *Cb = [] {};
             return Maybe<void>::Ok();
           },
           [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
             *buffer = recv_ptr;
-            *size = recv_size;
+            *size = recv_size * sizeof(T);
             *Cb = [] {};
             return Maybe<void>::Ok();
           });
@@ -107,7 +112,7 @@ struct DtypeAllReduce<T, kSum> {
         JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
       }
       JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
-      const T* cur_in = &(i == 0 ? in : out)[bs.At(recv_part_id).begin()];
+      const T* cur_in = &in[bs.At(recv_part_id).begin()];
       T* cur_out = &out[bs.At(recv_part_id).begin()];
       if (recv_size > 0) { VecAdd(recv_size, cur_out, cur_in, recv_ptr); }
     }
@@ -123,13 +128,13 @@ struct DtypeAllReduce<T, kSum> {
           transport_token,
           [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
             *buffer = const_cast<T*>(send_ptr);
-            *size = send_size;
+            *size = send_size * sizeof(T);
             *Cb = [] {};
             return Maybe<void>::Ok();
           },
           [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
             *buffer = recv_ptr;
-            *size = recv_size;
+            *size = recv_size * sizeof(T);
             *Cb = [] {};
             return Maybe<void>::Ok();
           });

@@ -446,6 +446,23 @@ class TestConsistentCast(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n4d()
+    def test_cpu_p2b_with_random_data(test_case):
+        np_arr = np.random.randint(1, 10, [2,3,4])
+        tensor = flow.tensor(np_arr, dtype=flow.float32)
+        cpu_tensor = tensor.to_consistent(
+            placement=flow.placement("cpu", {0: range(4)}), sbp=flow.sbp.partial_sum
+        )
+        cpu_tensor = cpu_tensor.to_consistent(sbp=flow.sbp.broadcast)
+        tensor = tensor.to("cuda")
+        cuda_tensor = tensor.to_consistent(
+            placement=flow.placement("cuda", {0: range(4)}), sbp=flow.sbp.partial_sum
+        )
+        cuda_tensor = cuda_tensor.to_consistent(sbp=flow.sbp.broadcast)
+        test_case.assertTrue(
+            np.allclose(cpu_tensor.to_local().numpy(), cuda_tensor.to_local().numpy())
+        )
+
+    @flow.unittest.skip_unless_1n4d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_consistent_with_wrong_device(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
