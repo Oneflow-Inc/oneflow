@@ -456,6 +456,9 @@ def _tril(self, diagonal=0):
 def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
+def _sin(self):
+    return flow.sin(self)
+
 
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
@@ -688,6 +691,7 @@ def RegisterMethods():
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
+    Tensor.sin = _sin
 
 
 def register_tensor_op(op_name):

@@ -25,10 +25,11 @@ namespace one {
 namespace functional {
 
 namespace impl {
-#define INPLACEABLE_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin", Sin)
+#define INPLACEABLE_UNARY_FUNC_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ("sin", Sin) \
+  OF_PP_MAKE_TUPLE_SEQ("abs", Abs)
 
 #define UNARY_FUNC_SEQ                                       \
-  OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
   OF_PP_MAKE_TUPLE_SEQ("acos", Acos)                         \
   OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)                       \
   OF_PP_MAKE_TUPLE_SEQ("asin", Asin)                         \

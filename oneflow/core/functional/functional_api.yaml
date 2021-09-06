@@ -780,7 +780,7 @@
   bind_python: False
 
 - name: "abs"
-  signature: "Tensor (Tensor x) => Abs"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Abs"
   bind_python: True
 
 - name: "acos"

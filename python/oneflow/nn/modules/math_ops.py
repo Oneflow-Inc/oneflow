@@ -342,24 +342,6 @@ def arcsinh_op_tensor(input):
     """
     return flow._C.asinh(input)
 
-
-def sin_op(input):
-
-    return flow._C.sin(input, False)
-
-
-@register_tensor_op("sin")
-def sin_op_tensor(input):
-    """
-
-    sin() -> Tensor
-
-    See :func:`oneflow.sin`
-    
-    """
-    return flow._C.sin(input, False)
-
-
 @register_tensor_op("sin_")
 def inplace_sin_op_tensor(input):
     """
@@ -367,6 +349,15 @@ def inplace_sin_op_tensor(input):
     
     """
     return flow._C.sin(input, True)
+
+
+@register_tensor_op("abs_")
+def inplace_abs_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.abs`
+    
+    """
+    return flow._C.abs(input, True)
 
 
 @register_tensor_op("cos")
