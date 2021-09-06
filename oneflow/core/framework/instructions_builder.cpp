@@ -928,14 +928,14 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(LocalDepObject* compute_local_de
 
 namespace {
 
-const Symbol<ParallelDesc>& GetParallelDesc(const std::shared_ptr<one::MirroredTensor> tensor) {
+Symbol<ParallelDesc> GetParallelDesc(const std::shared_ptr<one::MirroredTensor> tensor) {
   const auto& device = CHECK_JUST(tensor->device());
-  const auto& placement = CHECK_JUST(Placement4Device(device));
+  const auto placement = CHECK_JUST(Placement4Device(device));
   return placement;
 }
 
-const Symbol<ParallelDesc>& GetParallelDesc(const one::EagerMirroredTensorImpl* tensor) {
-  const auto& placement = CHECK_JUST(Placement4Device(tensor->device()));
+Symbol<ParallelDesc> GetParallelDesc(const one::EagerMirroredTensorImpl* tensor) {
+  const auto placement = CHECK_JUST(Placement4Device(tensor->device()));
   return placement;
 }
 

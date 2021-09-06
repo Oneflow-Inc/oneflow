@@ -138,7 +138,7 @@ Maybe<void> Operator::InferBlobParallelDesc() {
 }
 
 Maybe<void> Operator::FillOpParallelDesc(const ParallelDesc& parallel_desc) {
-  return FillOpParallelDesc(parallel_desc);
+  return FillOpParallelDesc(SymbolOf(ParallelDesc(parallel_desc)));
 }
 
 Maybe<void> Operator::FillOpParallelDesc(Symbol<ParallelDesc> parallel_desc) {
