@@ -91,7 +91,7 @@ void ReentrantLockKernel<T>::DestroyState(void* state) const {
 }
 
 template<typename T>
-void ReentrantLockKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
+void ReentrantLockKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   auto* const status = static_cast<ReentrantLockStatus*>(ctx->state());
   if (status->cur_ibn() == "start") {
     T lock_id = *ctx->BnInOp2Blob("start")->dptr<T>();

@@ -203,11 +203,26 @@ class GluGradFunctor {
   }
 };
 
-class HardSigmoidFunctor : public UnaryFunctor {
+class HardSigmoidFunctor {
  public:
   HardSigmoidFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("hardsigmoid").Input("in").Output("out").Build());
   }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, bool inplace) const {
+    if (inplace) {
+      JUST(CheckInplaceValid(input));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = input;
+      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), AttrMap{}));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class HardSigmoidGradFunctor : public BinaryFunctor {

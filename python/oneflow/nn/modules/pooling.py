@@ -101,7 +101,7 @@ class MaxPool1d(Module):
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        y, indice = flow._C.maxpool_1d(
+        y, indice = flow._C.max_pool1d(
             x,
             data_format=self.channel_pos,
             padding=self.padding,
@@ -208,7 +208,7 @@ class MaxPool2d(Module):
         self.padding = _pair(padding)
 
     def forward(self, x):
-        y, indice = flow._C.maxpool_2d(
+        y, indice = flow._C.max_pool2d(
             x,
             data_format=self.channel_pos,
             padding=self.padding,
@@ -322,7 +322,7 @@ class MaxPool3d(Module):
         self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        y, indice = flow._C.maxpool_3d(
+        y, indice = flow._C.max_pool3d(
             x,
             data_format=self.channel_pos,
             padding=self.padding,
@@ -375,9 +375,9 @@ class AvgPool1d(Module):
         import oneflow as flow 
         import numpy as np
 
-        of_avgpool1d = flow.nn.AvgPool1d(kernel_size=3, padding=1, stride=1)
-        x = flow.Tensor(np.random.randn(1, 4, 4))
-        y = of_avgpool1d(x)
+        m = flow.nn.AvgPool1d(kernel_size=3, padding=1, stride=1)
+        x = flow.tensor(np.random.randn(1, 4, 4))
+        y = m(x)
         y.shape 
         flow.Size([1, 4, 4])
 
@@ -403,7 +403,7 @@ class AvgPool1d(Module):
         self.padding = _single(padding)
 
     def forward(self, x):
-        return flow._C.avgpool_1d(
+        return flow._C.avg_pool1d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -446,9 +446,9 @@ class AvgPool2d(Module):
         import oneflow as flow 
         import numpy as np 
 
-        of_avgpool2d = flow.nn.AvgPool2d(kernel_size=3, padding=1, stride=1)
-        x = flow.Tensor(np.random.randn(1, 4, 4, 4))
-        y = of_avgpool2d(x)   
+        m = flow.nn.AvgPool2d(kernel_size=3, padding=1, stride=1)
+        x = flow.tensor(np.random.randn(1, 4, 4, 4))
+        y = m(x)   
         y.shape
         flow.Size([1, 4, 4, 4])
 
@@ -476,7 +476,7 @@ class AvgPool2d(Module):
         self.padding = _pair(padding)
 
     def forward(self, x):
-        return flow._C.avgpool_2d(
+        return flow._C.avg_pool2d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,
@@ -540,7 +540,7 @@ class AvgPool3d(Module):
         import numpy as np
         
         m = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1))
-        x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
+        x = flow.tensor(np.random.randn(9, 7, 11, 32, 20))
         y = m(x)
         y.shape
         flow.Size([9, 7, 10, 31, 19])
@@ -569,7 +569,7 @@ class AvgPool3d(Module):
         self.padding = _triple(padding)
 
     def forward(self, x):
-        return flow._C.avgpool_3d(
+        return flow._C.avg_pool3d(
             x,
             kernel_size=self.kernel_size,
             stride=self.stride,

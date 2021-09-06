@@ -32,12 +32,11 @@ class CollectiveBoxingGenericKernel final : public Kernel {
 
  private:
   bool IsKernelLaunchSynchronized() const override { return false; }
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void CollectiveBoxingGenericKernel<device_type>::ForwardDataContent(
-    const KernelContext* ctx) const {
+void CollectiveBoxingGenericKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   RuntimeRequestInfo request;
   const RankDesc& rank_desc = this->op_conf().collective_boxing_generic_conf().rank_desc();
   const DataType data_type = rank_desc.op_desc().data_type();
