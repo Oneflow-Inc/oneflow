@@ -36,6 +36,7 @@ def _test_randperm_with_generator(test_case, N, device, dtype):
 
 
 def _test_randperm_backward(test_case, N, device, dtype):
+    dtype = flow.int32  # fix dtype here as reduce_sum doesn't support all dtypes yet
     x = flow.randperm(N, device=device, dtype=dtype)
     x.requires_grad = True
     y = x.sum()
@@ -61,7 +62,14 @@ class Testrandperm(flow.unittest.TestCase):
         ]
         arg_dict["N"] = [i for i in range(10, 100, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["dtype"] = [flow.int32, flow.int64, flow.float32, flow.float64]
+        arg_dict["dtype"] = [
+            flow.uint8,
+            flow.int8,
+            flow.int32,
+            flow.int64,
+            flow.float32,
+            flow.float64,
+        ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

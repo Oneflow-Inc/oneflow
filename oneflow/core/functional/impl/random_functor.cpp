@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -260,11 +261,14 @@ class RandIntFunctor {
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kInt64;
+    bool need_cast = false;
+    Symbol<DType> cast_dtype;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
-
-      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+      cast_dtype = JUST(dtype.value());
+      dtype_val = cast_dtype->data_type();
+      if (!IsIntegralDataType(dtype_val)) {
+        dtype_val = DataType::kInt64;
+        need_cast = true;
       }
     }
 
@@ -283,14 +287,18 @@ class RandIntFunctor {
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
+    std::shared_ptr<one::Tensor> result;
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device.value());
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {}, OpExprInterpContext(attrs, device_symbol, uniform_kernel_state));
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(
+          *op_, {}, OpExprInterpContext(attrs, device_symbol, uniform_kernel_state)));
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {},
-                                            OpExprInterpContext(attrs, uniform_kernel_state));
+      result = JUST(OpInterpUtil::Dispatch<Tensor>(
+          *op_, {}, OpExprInterpContext(attrs, uniform_kernel_state)));
     }
+
+    if (need_cast) { return functional::Cast(result, cast_dtype); }
+    return result;
   }
 
  private:
@@ -306,11 +314,14 @@ class ConsistentRandIntFunctor {
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator) const {
     DataType dtype_val = DataType::kInt64;
+    bool need_cast = false;
+    Symbol<DType> cast_dtype;
     if (dtype.has_value()) {
-      dtype_val = JUST(dtype.value())->data_type();
-
-      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+      cast_dtype = JUST(dtype.value());
+      dtype_val = cast_dtype->data_type();
+      if (!(IsIntegralDataType(dtype_val) || dtype_val == DataType::kUInt8)) {
+        dtype_val = DataType::kInt64;
+        need_cast = true;
       }
     }
 
@@ -341,8 +352,14 @@ class ConsistentRandIntFunctor {
     }
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
 
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, uniform_kernel_state));
+    const auto& result = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, uniform_kernel_state)));
+
+    if (need_cast) {
+      return functional::ToConsistent(JUST(functional::Cast(result, cast_dtype)), placement,
+                                      sbp_tuple, GetNoneSbpList());
+    }
+    return result;
   }
 
  private:

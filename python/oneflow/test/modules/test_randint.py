@@ -41,10 +41,17 @@ def _test_0d_rand(test_case, device, shape, low, high):
 
 
 def _test_different_dtype(test_case, device, shape, low, high):
-    y1 = flow.randint(low, high, shape, dtype=flow.float32, device=flow.device(device))
-    y2 = flow.randint(low, high, shape, dtype=flow.float64, device=flow.device(device))
-    test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
-    test_case.assertTrue(shape == y1.shape)
+    for dtype in [
+        flow.uint8,
+        flow.int8,
+        flow.int32,
+        flow.int64,
+        flow.float32,
+        flow.float64,
+    ]:
+        y = flow.randint(low, high, shape, dtype=dtype, device=flow.device(device))
+        test_case.assertTrue(y.dtype == dtype)
+        test_case.assertTrue(y.shape == shape)
 
 
 def _test_backward(test_case, device, shape, low, high):
@@ -91,6 +98,22 @@ class TestRandint(flow.unittest.TestCase):
         x = flow.randint(0, 16, (10, 1), placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
+
+    def test_consistent_different_types(test_case):
+        for dtype in [
+            flow.uint8,
+            flow.int8,
+            flow.int32,
+            flow.int64,
+            flow.float32,
+            flow.float64,
+        ]:
+            placement = flow.placement("cpu", {0: [0]})
+            sbp = (flow.sbp.broadcast,)
+            x = flow.randint(0, 16, (10, 1), placement=placement, sbp=sbp, dtype=dtype)
+            test_case.assertEqual(x.dtype, dtype)
+            test_case.assertEqual(x.sbp, sbp)
+            test_case.assertEqual(x.placement, placement)
 
     def test_randint(test_case):
         arg_dict = OrderedDict()

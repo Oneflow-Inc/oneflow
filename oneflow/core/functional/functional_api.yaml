@@ -285,7 +285,7 @@
   signature:
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
              Tensor gamma, Tensor beta, Int32 axis=1, Float epsilon=1e-5,
-             Float momentum=0.9, Bool is_training=False) => Normalization"
+             Float momentum=0.9, Bool training=False) => Normalization"
   bind_python: True
 
 - name: "normalization_grad"
@@ -888,7 +888,7 @@
 
 - name: "dropout"
   signature:
-    "Tensor (Tensor x, Float p=0.5, Generator generator=None, Bool is_training=True) => Dropout"
+    "Tensor (Tensor x, Float p=0.5, Generator generator=None, Bool training=True) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -1076,38 +1076,27 @@
 
 - name: "rand"
   signature: [
-    "Tensor (Shape shape, *, DataType dtype=None, Device device=None,
+    "Tensor (Shape size, *, DataType dtype=None, Device device=None,
              Generator generator=None) => Rand",
-  ]
-  bind_python: True
-
-- name: "consistent_rand"
-  signature: [
-    "Tensor (Shape shape, *, Placement placement, SbpList sbp, DataType dtype=None,
+    "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
              Generator generator=None) => ConsistentRand",
   ]
   bind_python: True
 
 - name: "randn"
   signature: [
-    "Tensor (Shape shape, *, DataType dtype=None, Device device=None, 
+    "Tensor (Shape size, *, DataType dtype=None, Device device=None, 
              Generator generator=None) => RandN",
-  ]
-  bind_python: True
-
-- name: "consistent_randn"
-  signature: [
-    "Tensor (Shape shape, *, Placement placement, SbpList sbp, DataType dtype=None,
+    "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
              Generator generator=None) => ConsistentRandN",
   ]
   bind_python: True
 
 - name: "randint"
-  signature: "Tensor (Int64 low, Int64 high, Shape shape, DataType dtype=None, Device device=None, Generator generator=None)=> RandInt"
-  bind_python: True
-
-- name: "consistent_randint"
-  signature: "Tensor (Int64 low, Int64 high, Shape shape, Placement placement, SbpList sbp_tuple, DataType dtype=None, Generator generator=None)=> ConsistentRandInt"
+  signature: [
+    "Tensor (Int64 low, Int64 high, Shape size, Placement placement, SbpList sbp_tuple, DataType dtype=None, Generator generator=None)=> ConsistentRandInt",
+    "Tensor (Int64 low, Int64 high, Shape size, DataType dtype=None, Device device=None, Generator generator=None)=> RandInt",
+  ]
   bind_python: True
 
 - name: "unfold"

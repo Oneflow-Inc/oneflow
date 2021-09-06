@@ -30,6 +30,7 @@ __device__ T GenUniform(curandState* state, const T low, const T high);
   }
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_GENUNIFORM, INT_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INITIATE_GENUNIFORM, UNSIGNED_INT_DATA_TYPE_SEQ)
 
 template<>
 __device__ float GenUniform<float>(curandState* state, const float low, const float high) {
@@ -72,5 +73,6 @@ void UniformDistribution<DeviceType::kGPU, T>::operator()(
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
 OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_DISTRIBUTION, INT_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_UNIFORM_DISTRIBUTION, UNSIGNED_INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
