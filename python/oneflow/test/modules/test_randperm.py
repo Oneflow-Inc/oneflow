@@ -53,6 +53,29 @@ def _test_randperm_randomness(test_case, N, device, dtype):
 
 @flow.unittest.skip_unless_1n1d()
 class Testrandperm(flow.unittest.TestCase):
+    def test_consistent_naive(test_case):
+        placement = flow.placement("cpu", {0: [0]})
+        sbp = (flow.sbp.broadcast,)
+        x = flow.randperm(10, placement=placement, sbp=sbp)
+        test_case.assertEqual(x.sbp, sbp)
+        test_case.assertEqual(x.placement, placement)
+
+    def test_consistent_different_types(test_case):
+        for dtype in [
+            flow.uint8,
+            flow.int8,
+            flow.int32,
+            flow.int64,
+            flow.float32,
+            flow.float64,
+        ]:
+            placement = flow.placement("cpu", {0: [0]})
+            sbp = (flow.sbp.broadcast,)
+            x = flow.randperm(10, placement=placement, sbp=sbp, dtype=dtype)
+            test_case.assertEqual(x.dtype, dtype)
+            test_case.assertEqual(x.sbp, sbp)
+            test_case.assertEqual(x.placement, placement)
+
     def test_randperm(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_functions"] = [

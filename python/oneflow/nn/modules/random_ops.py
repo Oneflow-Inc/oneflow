@@ -419,7 +419,7 @@ class RandPerm(Module):
 
     def forward(self, out=None):
         if self.placement is not None:
-            res = flow._C.consistent_randperm(
+            res = flow._C.randperm(
                 self.n, placement=self.placement, sbp=self.sbp, generator=self.generator
             )
         else:
