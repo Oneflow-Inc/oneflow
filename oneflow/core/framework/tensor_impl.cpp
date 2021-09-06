@@ -207,7 +207,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {
-    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id.value()));
+    return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, JUST(parallel_id));
   } else {
     return std::make_shared<Shape>(DimVector(logical_shape.NumAxes(), 0));
   }
@@ -235,7 +235,8 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
     cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
   } else {
     const auto& dtype_symbol = JUST(DType::Get(dtype));
-    const auto& empty = JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device));
+    const auto& empty =
+        JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, MakeOptional(device)));
     cur_rank_phy_tensor = JUST(empty->AsMirroredTensor());
     cur_rank_phy_tensor->set_requires_grad(requires_grad);
     cur_rank_phy_tensor->set_is_leaf(is_leaf);

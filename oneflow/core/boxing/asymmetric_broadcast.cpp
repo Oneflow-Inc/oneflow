@@ -94,7 +94,7 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
       if (!in_parallel_id->has_value()) {
         std::string device_type = Device::Type4DeviceTag(in_placement->device_tag());
         local_tensor = JUST(one::functional::Empty(*tensor->shape(), tensor->dtype(),
-                                                   JUST(Device::New(device_type))));
+                                                   MakeOptional(JUST(Device::New(device_type)))));
       }
       const auto& broadcast_group = JUST(GetBroadcastGroup(in_placement, out_placement));
 

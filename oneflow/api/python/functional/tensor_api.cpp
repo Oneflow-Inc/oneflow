@@ -135,11 +135,11 @@ class TensorWithDataCtorFunctor {
     const auto& dtype = DType::Float();
     if (PyTensorCheck(data)) {
       const auto& other = JUST(PyUnpackTensor(data));
-      return MakeTensorFromOtherTensor(other, dtype, device,
+      return MakeTensorFromOtherTensor(other, MakeOptional(dtype), device,
                                        /*requires_grad=*/false);
     }
     // Make tensor from python sequence or numpy array.
-    return MakeLocalTensorFromData(data, dtype, device, /*requires_grad=*/false);
+    return MakeLocalTensorFromData(data, MakeOptional(dtype), device, /*requires_grad=*/false);
   }
 };
 
@@ -160,7 +160,7 @@ class ConsistentTensorWithDataCtorFunctor {
     const auto& dtype = DType::Float();
     if (PyTensorCheck(data)) {
       const auto& other = JUST(PyUnpackTensor(data));
-      return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
+      return MakeTensorFromOtherTensor(other, MakeOptional(dtype), placement, sbp_tuple,
                                        /*requires_grad=*/false);
     }
     // TODO(): Construct consistent tensor from sequence or numpy ndarray.
@@ -176,11 +176,11 @@ class TensorWithShapeCtorFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     Symbol<Device> device_;
     if (device) {
-      device_ = JUST(device.value());
+      device_ = JUST(device);
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, DType::Float(), device_);
+    return functional::Empty(shape, DType::Float(), MakeOptional(device_));
   }
 };
 
