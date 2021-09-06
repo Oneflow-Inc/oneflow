@@ -112,9 +112,6 @@ def _format_arg(arg) -> str:
 
 class Node:
     """
-    
-    The documentation is referenced from: https://pytorch.org/docs/stable/_modules/torch/fx/node.html#Node
-
     ``Node`` is the data structure that represents individual operations within
     a ``Graph``. For the most part, Nodes represent callsites to various entities,
     such as operators, methods, and Modules (some exceptions include nodes that
@@ -246,7 +243,7 @@ class Node:
     def append(self, x: "Node") -> None:
         """
         Insert x after this node in the list of nodes in the graph.
-        Equvalent to ``self.next.prepend(x)``
+        Equvalent to ``self._next.prepend(x)``
 
         Args:
             x (Node): The node to put after this node. Must be a member of the same graph.
