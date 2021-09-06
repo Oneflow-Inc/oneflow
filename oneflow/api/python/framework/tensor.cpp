@@ -194,6 +194,31 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const std::shared_ptr<one::Tensor>& tensor) {
              return CheckMetaConsistency(tensor).GetOrThrow();
            })
+      .def("_shallow_copy",
+           [](const std::shared_ptr<Tensor>& tensor, py::kwargs args) -> std::shared_ptr<Tensor> {
+             if (auto mt = std::dynamic_pointer_cast<MirroredTensor>(tensor)) {
+               auto shape = args.contains("shape")
+                                ? std::make_shared<Shape>(py::cast<Shape>(args["shape"]))
+                                : nullptr;
+
+               std::shared_ptr<Stride> stride = nullptr;
+               if (args.contains("stride")) {
+                 auto st = py::cast<py::tuple>(args["stride"]);
+
+                 stride = std::make_shared<Stride>(Stride{StrideVector(st.size())});
+                 for (int i = 0; i < st.size(); ++i) { stride->Set(i, py::cast<int64_t>(st[i])); }
+               }
+
+               auto offset = args.contains("offset") ? py::cast<int64_t>(args["offset"]) : -1;
+
+               auto dtype =
+                   args.contains("dtype") ? py::cast<DataType>(args["dtype"]) : kInvalidDataType;
+
+               return ShallowCopy(mt, shape, stride, offset, dtype).GetPtrOrThrow();
+             } else {
+               throw std::runtime_error("mirrored tensor is expected");
+             }
+           })
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)

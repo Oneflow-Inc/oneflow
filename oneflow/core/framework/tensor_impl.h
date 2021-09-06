@@ -206,8 +206,13 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   EagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
                           bool requires_grad, bool is_leaf);
   EagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
-                          const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad,
+                          const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
                           bool is_leaf);
+
+  EagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+                          const std::shared_ptr<TensorStorage>& tensor_storage,
+                          const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                          bool requires_grad, bool is_leaf);
   ~EagerMirroredTensorImpl() override;
 
   // Getters

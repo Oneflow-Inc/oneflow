@@ -81,8 +81,16 @@ EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
-    std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf)
+    const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf)
     : MirroredTensorImpl(tensor_meta, requires_grad, is_leaf), tensor_storage_(tensor_storage) {}
+
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(
+    const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+    const std::shared_ptr<TensorStorage>& tensor_storage,
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object, bool requires_grad, bool is_leaf)
+    : MirroredTensorImpl(tensor_meta, requires_grad, is_leaf),
+      tensor_storage_(tensor_storage),
+      eager_blob_object_(eager_blob_object) {}
 
 Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
@@ -160,6 +168,12 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
       device_(device),
       stride_(std::make_shared<const Stride>(*shape)),
       storage_offset_(0) {}
+
+MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                                       Symbol<Device> device,
+                                       const std::shared_ptr<const Stride>& stride,
+                                       int64_t storage_offset)
+    : TensorMeta(shape, dtype), device_(device), stride_(stride), storage_offset_(storage_offset) {}
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.

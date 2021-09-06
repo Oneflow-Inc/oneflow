@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
@@ -860,6 +861,25 @@ class CopyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ViewCopyFunctor {
+ public:
+  ViewCopyFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("view_copy").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("storage_offset", JUST(x->storage_offset())));
+
+    const auto& stride = JUST(x->stride())->StrideVec();
+    JUST(attrs.SetAttr<std::vector<int64_t>>("stride", {stride.begin(), stride.end()}));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FlipFunctor {
  public:
   FlipFunctor() { op_ = CHECK_JUST(one::OpBuilder("flip").Input("x").Output("y").Build()); }
@@ -1652,6 +1672,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::CopyFunctor>("Copy");
+  m.add_functor<impl::ViewCopyFunctor>("ViewCopy");
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::FlipGradFunctor>("FlipGrad");
   m.add_functor<impl::UpsampleFunctor>("Upsample");
