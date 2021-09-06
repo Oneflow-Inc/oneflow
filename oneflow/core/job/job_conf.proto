@@ -34,13 +34,16 @@ message AdamModelUpdateConf {
   optional float beta1 = 1 [default = 0.9];
   optional float beta2 = 2 [default = 0.999];
   optional float epsilon = 3 [default = 1e-8];
-  optional bool do_bias_correction = 4 [default = false];
+  optional bool do_bias_correction = 4 [default = true];
+  optional bool amsgrad = 5 [default = false];
 }
 
 message LazyAdamModelUpdateConf {
   optional float beta1 = 1 [default = 0.9];
   optional float beta2 = 2 [default = 0.999];
   optional float epsilon = 3 [default = 1e-8];
+  optional bool do_bias_correction = 4 [default = true];
+  optional bool amsgrad = 5 [default = false];
 }
 
 message LambModelUpdateConf {
@@ -169,7 +172,7 @@ message IndexedSlicesOptimizerConf {
 message ParallelBlobConf {
   required BlobDescProto logical_blob_desc_conf = 1;
   required ParallelConf parallel_conf = 2;
-  required ParallelDistribution nd_sbp = 3;
+  required NdSbp nd_sbp = 3;
 }
 
 message JobInputDef {

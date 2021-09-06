@@ -30,6 +30,7 @@ import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_proto_cfg
 import oneflow._oneflow_internal.oneflow.core.job.sbp_parallel as sbp_parallel_cfg
 import oneflow._oneflow_internal.oneflow.core.operator.interface_blob_conf as interface_blob_conf_proto_cfg
 import oneflow.core.job.job_conf_pb2 as job_conf_proto
+import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_proto
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.framework.c_api_util as c_api_util
@@ -37,10 +38,8 @@ import oneflow.framework.compile_context as compile_ctx
 import oneflow.framework.dtype as dtype_util
 import oneflow.framework.input_blob_def as input_blob_util
 import oneflow.framework.job_instance as job_instance_util
-import oneflow.framework.placement_util as placement_util
 import oneflow.framework.runtime_mode as runtime_mode
 import oneflow.framework.scope_util as scope_util
-import oneflow.framework.session_util as session_util
 
 
 def _is_int(val):
@@ -163,7 +162,7 @@ class InferenceSession(object):
             flow.env.init()
         if not oneflow._oneflow_internal.IsSessionInited():
             self._make_config_proto()
-            session_util._TryCompleteConfigProto(self.config_proto_)
+            # session_util._TryCompleteConfigProto(self.config_proto_)
             c_api_util.InitLazyGlobalSession(self.config_proto_)
         self.status_ = self.SessionStatus.OPEN
 
@@ -196,7 +195,11 @@ class InferenceSession(object):
 
     def _make_config_proto(self):
         if self.config_proto_ is None:
-            self.config_proto_ = session_util._GetDefaultConfigProto()
+            config_proto = job_set_util.ConfigProto()
+            config_proto.resource.SetInParent()
+            config_proto.session_id = 0
+            self.config_proto_ = config_proto
+            # self.config_proto_ = session_util._GetDefaultConfigProto()
         if self.option_.device_tag == "gpu":
             self.config_proto_.resource.gpu_device_num = self.option_.device_num
         elif self.option_.device_tag == "cpu":
@@ -244,11 +247,12 @@ class InferenceSession(object):
             self.set_job_batch_size(job_name, batch_size)
         job_conf = self._get_job_conf(job_name)
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
-        tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(
-            self.config_proto_.resource
-        )
+        # NOTE(chengcheng): placement_util is unavailable.
+        # tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(
+        #     self.config_proto_.resource
+        # )
         scope = scope_util.MakeInitialScope(
-            job_conf, *tag_and_dev_ids, None, self.is_mirrored_
+            job_conf, "cpu", ["0:0"], None, self.is_mirrored_
         )
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
             with scope_util.ScopeContext(scope):

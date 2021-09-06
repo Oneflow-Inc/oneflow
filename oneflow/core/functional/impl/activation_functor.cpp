@@ -164,11 +164,26 @@ class GeluGradFunctor : public BinaryFunctor {
   }
 };
 
-class HardSigmoidFunctor : public UnaryFunctor {
+class HardSigmoidFunctor {
  public:
   HardSigmoidFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("hardsigmoid").Input("in").Output("out").Build());
   }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, bool inplace) const {
+    if (inplace) {
+      JUST(CheckInplaceValid(input));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = input;
+      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), AttrMap{}));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class HardSigmoidGradFunctor : public BinaryFunctor {
@@ -184,6 +199,19 @@ class SoftmaxFunctor : public UnaryFunctor {
   SoftmaxFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("softmax").Input("in").Output("out").Build());
   }
+};
+
+class LogSoftmaxFunctor : public UnaryFunctor {
+ public:
+  LogSoftmaxFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("logsoftmax").Input("in").Output("out").Output("prob").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class HardSwishFunctor : public UnaryFunctor {
@@ -297,6 +325,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");
+  m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");

@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct NormalizationGradInterpState : public OpExprInterpState {
+struct NormalizationGradCaptureState : public AutoGradCaptureState {
   int32_t axis;
   float epsilon;
   bool track_running_stats;
@@ -39,7 +39,7 @@ struct NormalizationGradInterpState : public OpExprInterpState {
 // inference:
 // y = normalization(x, moving_mean, moving_variance, gamma, beta, axis=1, epsilon=0.01,
 // momentum=0.9)
-class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState> {
+class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -48,8 +48,14 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(NormalizationGradInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(NormalizationGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
+    // input_size may be 3 or 5, as inputs may be
+    // (x, gamma, beta) or (x, moving_mean, moving_variance, gamma, beta)
+    // ref to track_running_stats false/true
+    // output_size may be 1 or 3, as outputs may be
+    // (x, ) or (x, mean, inv_variance)
+    // ref to is_training false/true
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     std::shared_ptr<Tensor> gamma, beta;
     if (inputs.size() == 3) {
@@ -81,7 +87,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const NormalizationGradInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const NormalizationGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);      // x
     const auto& gamma = ctx->SavedTensors().at(1);  // gamma
@@ -102,19 +108,34 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     const auto& results = JUST(functional::NormalizationGrad(y_grad, x, mean, inv_variance, gamma,
                                                              ctx->epsilon, ctx->axis));
     CHECK_EQ_OR_RETURN(results->size(), 3);
-    // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and beta.
-    in_grads->resize(5);
-    if (ctx->gamma_requires_grad) {
-      in_grads->at(3) = results->at(1);  // gamma_diff;
+
+    if (ctx->track_running_stats) {
+      // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and
+      // beta.
+      in_grads->resize(5);
+      if (ctx->gamma_requires_grad) {
+        in_grads->at(3) = results->at(1);  // gamma_diff;
+      }
+      if (ctx->beta_requires_grad) {
+        in_grads->at(4) = results->at(2);  // beta_diff
+      }
+    } else {
+      // The normalization op has 3 inputs which are x, gamma and beta.
+      in_grads->resize(3);
+      if (ctx->gamma_requires_grad) {
+        in_grads->at(1) = results->at(1);  // gamma_diff;
+      }
+      if (ctx->beta_requires_grad) {
+        in_grads->at(2) = results->at(2);  // beta_diff
+      }
     }
-    if (ctx->beta_requires_grad) {
-      in_grads->at(4) = results->at(2);  // beta_diff
-    }
+
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     if (ctx->is_training) {
       in_grads->at(0) = results->at(0);
       return Maybe<void>::Ok();
     }
+
     DimVector dim_vec;
     for (int i = 0; i < x->shape()->NumAxes(); ++i) {
       if (i != ctx->axis) {
@@ -128,13 +149,12 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     const auto& reshaped_inv_variance = JUST(functional::Reshape(inv_variance, shape));
 
     std::shared_ptr<Tensor> y_grad_fp32 = y_grad;
-    bool is_fp16 = y_grad->dtype() == DataType::kFloat16;
-    if (is_fp16) { y_grad_fp32 = JUST(functional::Cast(y_grad, DataType::kFloat)); }
-    const auto& dy_mul_gamma = JUST(functional::BroadcastMul(reshaped_gamma, y_grad_fp32));
-    const auto& dy_mul_inv_var =
-        JUST(functional::BroadcastMul(dy_mul_gamma, reshaped_inv_variance));
+    bool is_fp16 = y_grad->dtype()->data_type() == DataType::kFloat16;
+    if (is_fp16) { y_grad_fp32 = JUST(functional::Cast(y_grad, DType::Float())); }
+    const auto& dy_mul_gamma = JUST(functional::Mul(reshaped_gamma, y_grad_fp32));
+    const auto& dy_mul_inv_var = JUST(functional::Mul(dy_mul_gamma, reshaped_inv_variance));
     if (is_fp16) {
-      in_grads->at(0) = JUST(functional::Cast(dy_mul_inv_var, DataType::kFloat16));
+      in_grads->at(0) = JUST(functional::Cast(dy_mul_inv_var, DType::Float16()));
     } else {
       in_grads->at(0) = dy_mul_inv_var;
     }

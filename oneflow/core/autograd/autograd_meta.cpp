@@ -29,11 +29,8 @@ TensorInfo::TensorInfo(const Tensor& tensor) : shape_(tensor.shape()), dtype_(te
   if (TRY(tensor.nd_sbp()).IsOk()) { nd_sbp_ = CHECK_JUST(tensor.nd_sbp()); }
 }
 
-Maybe<const std::vector<Symbol<cfg::SbpParallel>>&> GetSbpTuple(
-    Symbol<cfg::ParallelDistribution> nd_sbp) {
-  static thread_local HashMap<Symbol<cfg::ParallelDistribution>,
-                              std::vector<Symbol<cfg::SbpParallel>>>
-      map;
+Maybe<const std::vector<Symbol<cfg::SbpParallel>>&> GetSbpTuple(Symbol<cfg::NdSbp> nd_sbp) {
+  static thread_local HashMap<Symbol<cfg::NdSbp>, std::vector<Symbol<cfg::SbpParallel>>> map;
   auto iter = map.find(nd_sbp);
   if (iter == map.end()) {
     std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;

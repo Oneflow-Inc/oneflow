@@ -28,14 +28,16 @@ def unpack_indices(dual_object):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPooling(flow.unittest.TestCase):
-    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4)
+    @autotest(n=100, auto_backward=False)
     def test_maxpool1d_with_random_data(test_case):
+        return_indices = random().to(bool).value()
         m = torch.nn.MaxPool1d(
             kernel_size=random(4, 6).to(_size_1_t),
             stride=random(1, 3).to(_size_1_t) | nothing(),
             padding=random(1, 3).to(_size_1_t) | nothing(),
             dilation=random(2, 4).to(_size_1_t) | nothing(),
-            ceil_mode=random() | nothing(),
+            ceil_mode=random(),
+            return_indices=return_indices,
         )
         m.train(random())
         device = random_device()
@@ -43,16 +45,21 @@ class TestMaxPooling(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim2=random(20, 22)).to(device)
         y = m(x)
 
-        return y
+        if return_indices:
+            return unpack_indices(y)
+        else:
+            return y, y.sum().backward()
 
-    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4)
+    @autotest(n=100, auto_backward=False)
     def test_maxpool2d_with_random_data(test_case):
+        return_indices = random().to(bool).value()
         m = torch.nn.MaxPool2d(
             kernel_size=random(4, 6).to(_size_2_t),
             stride=random(1, 3).to(_size_2_t) | nothing(),
             padding=random(1, 3).to(_size_2_t) | nothing(),
             dilation=random(2, 4).to(_size_2_t) | nothing(),
-            ceil_mode=random() | nothing(),
+            ceil_mode=random(),
+            return_indices=return_indices,
         )
         m.train(random())
         device = random_device()
@@ -62,16 +69,21 @@ class TestMaxPooling(flow.unittest.TestCase):
         )
         y = m(x)
 
-        return y
+        if return_indices:
+            return unpack_indices(y)
+        else:
+            return y, y.sum().backward()
 
-    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4)
+    @autotest(n=100, auto_backward=False)
     def test_maxpool3d_with_random_data(test_case):
+        return_indices = random().to(bool).value()
         m = torch.nn.MaxPool3d(
             kernel_size=random(4, 6).to(_size_3_t),
             stride=random(1, 3).to(_size_3_t) | nothing(),
             padding=random(1, 3).to(_size_3_t) | nothing(),
             dilation=random(2, 4).to(_size_3_t) | nothing(),
-            ceil_mode=random() | nothing(),
+            ceil_mode=random(),
+            return_indices=return_indices,
         )
         m.train(random())
         device = random_device()
@@ -81,7 +93,10 @@ class TestMaxPooling(flow.unittest.TestCase):
         ).to(device)
         y = m(x)
 
-        return y
+        if return_indices:
+            return unpack_indices(y)
+        else:
+            return y, y.sum().backward()
 
 
 if __name__ == "__main__":

@@ -71,14 +71,15 @@ Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
       {DataType::kUInt8, DTypeMeta("oneflow.uint8", false, false, false)},
       {DataType::kOFRecord, DTypeMeta("oneflow.of_record", false, false, false)},
       {DataType::kTensorBuffer, DTypeMeta("oneflow.tensor_buffer", false, false, false)},
+      {DataType::kBFloat16, DTypeMeta("oneflow.bfloat16", true, true, false)},
   };
   return MapAt(data_type2dtype_meta, data_type);
 };
 
 }  // namespace
 
-Maybe<const std::shared_ptr<const DType>&> DType::Get(DataType data_type) {
-  static HashMap<DataType, std::shared_ptr<const DType>> data_type2dtype{
+Maybe<const Symbol<DType>&> DType::Get(DataType data_type) {
+  static HashMap<DataType, const Symbol<DType>> data_type2dtype{
 #define MAKE_ENTRY(data_type) {OF_PP_CAT(DataType::k, data_type), data_type()},
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, DTYPE_SEQ)
 #undef MAKE_ENTRY
@@ -105,10 +106,10 @@ bool DType::is_floating_point() const {
 
 const std::string& DType::name() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).name(); }
 
-#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)                                                   \
-  const std::shared_ptr<const DType>& DType::data_type() {                                         \
-    static const std::shared_ptr<const DType> dtype(new DType(OF_PP_CAT(DataType::k, data_type))); \
-    return dtype;                                                                                  \
+#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)                                   \
+  const Symbol<DType>& DType::data_type() {                                        \
+    static const auto& dtype = SymbolOf(DType(OF_PP_CAT(DataType::k, data_type))); \
+    return dtype;                                                                  \
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 #undef DEFINE_GET_DATA_TYPE_FUNCTION

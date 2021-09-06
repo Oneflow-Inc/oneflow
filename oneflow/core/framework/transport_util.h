@@ -108,12 +108,12 @@ class RankGroup;
 
 struct TransportUtil final {
   static int64_t TimeoutSeconds() { return 60 * 5; }
+  static int64_t BlockingWarningIntervalSeconds() { return 5; }
 
   static Maybe<void> WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx, int64_t seconds);
 
   static Maybe<void> SendToNextRankInRing(Symbol<RankGroup> rank_group, const TransportToken& token,
                                           AsyncTransportCtx* ctx);
-
   static Maybe<void> ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group,
                                                const TransportToken& token, AsyncTransportCtx* ctx);
 
@@ -122,11 +122,24 @@ struct TransportUtil final {
 
   static Maybe<void> CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
                                               const TransportToken& token, AsyncTransportCtx* ctx);
+
+  static Maybe<void> BroadcastToOtherRanks(Symbol<RankGroup> src_rank_group,
+                                           Symbol<RankGroup> dst_rank_group,
+                                           const TransportToken& token, AsyncTransportCtx* ctx);
+
+  static Maybe<void> CollectFromOtherRanks(Symbol<RankGroup> src_rank_group,
+                                           Symbol<RankGroup> dst_rank_group,
+                                           const TransportToken& token, AsyncTransportCtx* ctx);
+
   static Maybe<void> SendDataToChildrenInHeap(const std::vector<int64_t>& rank_heap,
                                               const TransportToken& token, AsyncTransportCtx* ctx);
   static Maybe<void> ReceiveDataFromParentInHeap(const std::vector<int64_t>& rank_heap,
                                                  const TransportToken& token,
                                                  AsyncTransportCtx* ctx);
+  static Maybe<void> ReceiveDataFromRank(int64_t rank, const TransportToken& token,
+                                         AsyncTransportCtx* ctx);
+  static Maybe<void> SendDataToRank(int64_t rank, const TransportToken& token,
+                                    AsyncTransportCtx* ctx);
 };
 
 }  // namespace oneflow

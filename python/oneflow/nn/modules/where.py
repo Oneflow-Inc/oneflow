@@ -45,73 +45,24 @@ def where_op(condition, x=None, y=None):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> x = flow.Tensor(
+        >>> x = flow.tensor(
         ...    np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
         ...    dtype=flow.float32,
         ... )
-        >>> y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
-        >>> condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
+        >>> y = flow.tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
+        >>> condition = flow.tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
         >>> out = condition.where(x, y)
         >>> out #doctest: +ELLIPSIS
-        tensor([[1.    , 0.3139],
+        tensor([[1.0000, 0.3139],
                 ...
-                [0.0478, 1.    ]], dtype=oneflow.float32)
+                [0.0478, 1.0000]], dtype=oneflow.float32)
 
     """
 
-    if x == None and y == None:
+    if x is None and y is None:
         return flow.nonzero(condition, as_tuple=True)
 
-    assert condition.dtype == flow.int32 or condition.dtype == flow.int8
-    if isinstance(x, int) or isinstance(x, float):
-        x = flow.Tensor(
-            [float(x)], dtype=flow.float32, device=flow.device(condition.device.type),
-        )
-    if isinstance(y, int) or isinstance(y, float):
-        y = flow.Tensor(
-            [float(y)], dtype=flow.float32, device=flow.device(condition.device.type),
-        )
-    assert (
-        condition.device.type == x.device.type
-        and condition.device.type == y.device.type
-    )
-    assert len(condition.shape) == len(x.shape) and len(condition.shape) == len(
-        y.shape
-    ), f"The dim of where module's inputs can not match, please check!"
-    broadcast_cond = condition
-    broadcast_x = x
-    broadcast_y = y
-    broadcast_like_shape = []
-    broadcast_condition_axes = []
-    broadcast_x_axes = []
-    broadcast_y_axes = []
-    for i in range(len(x.shape)):
-        max_dim = max(x.shape[i], max(y.shape[i], condition.shape[i]))
-        broadcast_like_shape.append(max_dim)
-        if max_dim != condition.shape[i]:
-            broadcast_condition_axes.append(i)
-        if max_dim != x.shape[i]:
-            broadcast_x_axes.append(i)
-        if max_dim != y.shape[i]:
-            broadcast_y_axes.append(i)
-    broadcast_like_tensor = flow.zeros(tuple(broadcast_like_shape), dtype=flow.float32)
-    broadcast_like_tensor = broadcast_like_tensor.to(x.device.type)
-    broadcast_like_tensor.requires_grad = x.requires_grad or y.requires_grad
-    if len(broadcast_condition_axes) != 0:
-        condition = flow.cast(condition, flow.float32)
-        broadcast_cond = flow.broadcast_like(
-            condition, broadcast_like_tensor, tuple(broadcast_condition_axes)
-        )
-        broadcast_cond = flow.cast(broadcast_cond, flow.int32)
-    if len(broadcast_x_axes) != 0:
-        broadcast_x = flow.broadcast_like(
-            x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes)
-        )
-    if len(broadcast_y_axes) != 0:
-        broadcast_y = flow.broadcast_like(
-            y, broadcast_like_tensor, broadcast_axes=tuple(broadcast_y_axes)
-        )
-    return flow.F.where(broadcast_cond, broadcast_x, broadcast_y)
+    return flow._C.where(condition, x, y)
 
 
 if __name__ == "__main__":

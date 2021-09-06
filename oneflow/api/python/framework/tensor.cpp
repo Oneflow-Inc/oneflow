@@ -18,28 +18,22 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 
+#include "oneflow/api/python/framework/throw.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
-#include "oneflow/api/python/framework/device.h"
-#include "oneflow/core/autograd/autograd_mode.h"
-#include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/tensor_buffer.h"
-#include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/api/python/utils/tensor_utils.h"
+#include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_method.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/py_distribute.h"
-#include "oneflow/core/functional/value_types.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/autograd/autograd_meta.h"
-#include "oneflow/core/functional/functional.h"
-#include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/common/decorator.h"
 
 namespace py = pybind11;
 
@@ -49,55 +43,12 @@ namespace one {
 
 namespace {
 
-const DType* GetTensorDType(const Tensor& tensor) {
-  return DType::Get(tensor.dtype()).GetOrThrow().get();
-}
-
-Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
-  const auto& tensor = JUST(t->AsMirroredTensor());
-  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        tensor,
-        [](uint64_t of_blob_ptr) {
-          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          of_blob->AsyncAutoMemset(0);
-        },
-        "mut"));
-    return Maybe<void>::Ok();
-  }));
-  return Maybe<void>::Ok();
+const Symbol<DType>* GetTensorDType(const Tensor& tensor) {
+  return &CHECK_JUST(DType::Get(tensor.dtype()->data_type()));
 }
 
 void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
   return EagerMirroredTensorZeros(tensor).GetOrThrow();
-}
-
-template<typename T>
-Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<Tensor>& t,
-                                              py::array_t<T> array,
-                                              void (*Copy)(uint64_t, py::array_t<T>),
-                                              const std::string& modifier) {
-  auto tensor = JUST(t->AsMirroredTensor());
-  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
-  std::atomic<bool> synced(false);
-
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        tensor,
-        [&array, &synced, &Copy](uint64_t ofblob_ptr) {
-          Copy(ofblob_ptr, array);
-          synced = true;
-        },
-        modifier));
-    return Maybe<void>::Ok();
-  }));
-
-  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
-                                                                    while (!synced) {}
-  });
-
-  return Maybe<void>::Ok();
 }
 
 template<typename T>
@@ -112,71 +63,12 @@ void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<Tensor>& tensor, py::a
       .GetOrThrow();
 }
 
-template<typename T>
-Maybe<void> CopyMirroredTensorFromUntypedArray(const std::shared_ptr<Tensor>& tensor,
-                                               py::object array) {
-  return CopyBetweenMirroredTensorAndNumpy(tensor, array.cast<py::array_t<T>>(),
-                                           OfBlob_CopyFromBuffer, "mut");
-}
-
-#define MAKE_SWITCH_ENTRY(func_name, dtype) func_name<dtype>
-DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyMirroredTensorFromUntypedArray, MAKE_SWITCH_ENTRY,
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ));
-
-Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype) {
-  using namespace oneflow;
-  static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
-#define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
-  {type_proto, std::make_shared<std::string>("_copy_to_numpy_" #type_cpp)},
-      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
-#undef DATA_TYPE_FUNC_NAME_PAIR
-  };
-  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
-}
-
 const std::string& ApiGetCopyMirroredTensorToNumpyFuncName(const Tensor& tensor) {
-  return *GetCopyMirroredTensorToNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
-}
-
-Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype) {
-  using namespace oneflow;
-  static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
-#define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
-  {type_proto, std::make_shared<std::string>("_copy_from_numpy_" #type_cpp)},
-      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
-#undef DATA_TYPE_FUNC_NAME_PAIR
-  };
-  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
+  return *GetCopyMirroredTensorToNumpyFuncName(tensor.dtype()->data_type()).GetPtrOrThrow();
 }
 
 const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tensor) {
-  return *GetCopyMirroredTensorFromNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
-}
-
-Maybe<Tensor> MakeLocalTensorByNumpy(py::object array, const DType* desired_dtype,
-                                     const Symbol<Device>& device, bool requires_grad) {
-  // Executing any numpy c api before _import_array() results in segfault
-  if (PyArray_API == nullptr) { _import_array(); }
-  auto* np_arr_pyobject = PyArray_FromAny(array.ptr(), nullptr, 0, 0, NPY_ARRAY_DEFAULT, nullptr);
-  CHECK_NOTNULL_OR_RETURN(np_arr_pyobject) << "input data cannot convert to a numpy array";
-  // transfer the ownership to np_arr_raii so that the ref count
-  // can be decreased automatically when function exits either normally or abnormally
-  auto np_arr_raii = py::reinterpret_steal<py::array>(np_arr_pyobject);
-  auto* np_arr = reinterpret_cast<PyArrayObject*>(np_arr_pyobject);
-  bool init_from_numpy = py::isinstance<py::array>(array);
-  const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
-  const Shape shape = Shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
-  DataType flow_dtype = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
-  std::shared_ptr<Tensor> tensor = JUST(functional::Empty(shape, flow_dtype, device));
-  JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(flow_dtype), tensor, np_arr_raii));
-  if (flow_dtype == DataType::kDouble && !init_from_numpy && desired_dtype == nullptr) {
-    desired_dtype = DType::Float().get();
-  }
-  if (desired_dtype != nullptr) {
-    tensor = JUST(functional::Cast(tensor, desired_dtype->data_type()));
-  }
-  tensor->set_requires_grad(requires_grad);
-  return tensor;
+  return *GetCopyMirroredTensorFromNumpyFuncName(tensor.dtype()->data_type()).GetPtrOrThrow();
 }
 
 Symbol<Device> TensorGetDevice(const Tensor& tensor) { return tensor.device().GetOrThrow(); }
@@ -185,200 +77,38 @@ Symbol<ParallelDesc> TensorGetParallelDesc(const Tensor& tensor) {
   return tensor.parallel_desc().GetOrThrow();
 }
 
-Maybe<std::tuple<std::vector<Shape>, std::vector<const DType*>>>
-MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
-  const auto& tensor = JUST(t->AsMirroredTensor());
-  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
-  std::vector<Shape> shapes;
-  std::vector<const DType*> dtypes;
-  std::atomic<bool> synced(false);
-
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(
-        tensor, [&synced](uint64_t of_blob_ptr) { synced = true; }, "const"));
-    return Maybe<void>::Ok();
-  }));
-
-  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
-    while (!synced) {}
-  });
-
-  const Blob& blob = JUST(tensor->eager_blob_object())->blob();
-  const Shape& blob_shape = blob.static_shape();
-  const auto* tensor_buffer_ptr = blob.dptr<TensorBuffer>();
-  for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
-    const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
-    shapes.push_back(tensor_buffer->shape());
-    dtypes.push_back(DType::Get(tensor_buffer->data_type()).GetOrThrow().get());
-  }
-  return std::make_tuple(shapes, dtypes);
-}
-
-std::tuple<std::vector<Shape>, std::vector<const DType*>> GetTensorBufferShapesAndDTypes(
+std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>> GetTensorBufferShapesAndDTypes(
     const std::shared_ptr<Tensor>& tensor) {
   return MaybeGetTensorBufferShapesAndDTypes(tensor).GetOrThrow();
 }
 
-Maybe<void> RegisterTensorHook(const std::shared_ptr<Tensor>& self,
-                               const AutogradMeta::Hook& hook) {
-  if (!self->grad_fn_node()) { JUST(AddAccumulateFunctionNode(self)); }
-  self->mut_autograd_meta()->add_hook(hook);
-  return Maybe<void>::Ok();
-}
 void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook) {
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
-Maybe<void> CheckConsistentTensorMeta(const one::Tensor& tensor, int64_t seconds) {
-  const auto& ctx = JUST(LaunchTensorMetaConsistencyCheck(tensor));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
-  JUST(ctx->Check());
+Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
+  CHECK_OR_RETURN(tensor->is_consistent());
   return Maybe<void>::Ok();
 }
 
+auto* CheckMetaConsistency = DECORATE(&TouchConsistentTensor, CheckConsistentTensorMeta);
+
 bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return IsContiguous(tensor).GetOrThrow();
-}
-
-Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
-  const auto& nd_sbp = JUST(tensor.nd_sbp());
-  const auto& tuple = std::make_shared<py::tuple>(nd_sbp->sbp_parallel_size());
-  for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
-    (*tuple)[i] = SymbolOf(nd_sbp->sbp_parallel(i));
-  }
-  return tuple;
 }
 
 py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
   return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
 }
 
-// Supports such constructors:
-// 1. shape             -> LocalTensor
-// 2. shape             -> ConsistentTensor
-// 3. LocalTensor       -> LocalTensor
-// 4. LocalTensor       -> ConsistentTensor
-// 5. ConsistentTensor  -> LocalTensor
-// 6. ConsistentTensor  -> ConsistentTensor
-// 7. ndarray           -> LocalTensor
-// 8. ndarray           -> ConsistentTensor  // TODO
-Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, const DType* desired_dtype,
-                        bool treat_single_int_as_size) {
-  // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
-  //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
-  //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
-  auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
-  Symbol<Device> device;
-  Symbol<ParallelDesc> placement;
-  std::vector<Symbol<cfg::SbpParallel>> sbp_tuple;
-  if (kwargs.contains("device")) {
-    CHECK_OR_RETURN(!kwargs.contains("placement"));
-    const auto& device_kwarg = kwargs["device"];
-    CHECK_OR_RETURN(py::isinstance<Symbol<Device>>(device_kwarg)
-                    || py::isinstance<py::str>(device_kwarg));
-
-    if (py::isinstance<py::str>(device_kwarg)) {
-      device = DeviceExportUtil::New(py::cast<std::string>(device_kwarg));
-    } else {
-      device = py::cast<Symbol<Device>>(device_kwarg);
-    }
-  } else if (kwargs.contains("placement")) {
-    // Get placement
-    const auto& placement_kwarg = kwargs["placement"];
-    CHECK_OR_RETURN(py::isinstance<Symbol<ParallelDesc>>(placement_kwarg));
-    placement = py::cast<Symbol<ParallelDesc>>(placement_kwarg);
-    // Get SBP
-    const auto& sbp_kwarg = kwargs["sbp"];
-    if (py::isinstance<Symbol<cfg::SbpParallel>>(sbp_kwarg)) {
-      sbp_tuple.push_back(py::cast<Symbol<cfg::SbpParallel>>(sbp_kwarg));
-    } else {
-      sbp_tuple = py::cast<std::vector<Symbol<cfg::SbpParallel>>>(sbp_kwarg);
-    }
-    CHECK_OR_RETURN(sbp_tuple.size() == placement->hierarchy()->NumAxes());
-  }
-
-  desired_dtype = kwargs.contains("dtype") ? kwargs["dtype"].cast<const DType*>() : desired_dtype;
-
-  bool requires_grad = false;
-  if (kwargs.contains("requires_grad")) { requires_grad = kwargs["requires_grad"].cast<bool>(); }
-
-  // Constructs from Tensor or ndarray
-  if (args.size() == 1) {
-    const auto& arg = args[0];
-    // Constructs from Tensor
-    if (py::isinstance<Tensor>(arg)) {
-      std::shared_ptr<Tensor> other_tensor = py::cast<std::shared_ptr<Tensor>>(arg);
-      std::shared_ptr<Tensor> tensor;
-      if (other_tensor->is_local()) {
-        if (placement) {
-          // LocalTensor -> ConsistentTensor
-          tensor =
-              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple, Optional<Shape>()));
-        } else {
-          // LocalTensor -> LocalTensor
-          if (!device) { device = JUST(Device::New("cpu")); }
-          tensor = JUST(functional::Copy(other_tensor, device->type(), device->device_id()));
-        }
-      } else {
-        if (placement) {
-          // ConsistentTensor -> ConsistentTensor
-          tensor =
-              JUST(functional::ToConsistent(other_tensor, placement, sbp_tuple, Optional<Shape>()));
-        } else {
-          // ConsistentTensor -> LocalTensor
-          tensor = JUST(functional::ConsistentToLocal(other_tensor));
-          if (device && (*device != *JUST(tensor->device()))) {
-            tensor = JUST(functional::Copy(tensor, JUST(device->of_type()), device->device_id()));
-          }
-        }
-      }
-      if (desired_dtype != nullptr && desired_dtype->data_type() != tensor->dtype()) {
-        tensor = JUST(functional::Cast(tensor, desired_dtype->data_type()));
-      }
-      return tensor;
-    } else {
-      // Constructs from ndarray
-      if (!treat_single_int_as_size || !py::isinstance<py::int_>(arg)) {
-        // TODO: ConsistentTensor supports in constructing from ndarray
-        CHECK_OR_RETURN(!placement)
-            << "ConsistentTensor don't support in constucting from ndarray now";
-        // ndarray -> LocalTensor
-        if (!device) { device = JUST(Device::New("cpu")); }
-        return MakeLocalTensorByNumpy(arg, desired_dtype, device, requires_grad);
-      }
-    }
-  }
-  DimVector dim_vector;
-  for (const auto& arg : args) {
-    try {
-      dim_vector.push_back(py::cast<int64_t>(arg));
-    } catch (const py::cast_error& e) {
-      return Error::ValueError("invalid arg: " + py::str(arg).cast<std::string>());
-    }
-  }
-  const Shape shape = Shape(dim_vector);
-  CHECK_NOTNULL_OR_RETURN(desired_dtype);
-  std::shared_ptr<Tensor> tensor;
-  if (placement) {
-    // Shape -> ConsistentTensor
-    tensor =
-        JUST(functional::ConsistentEmpty(shape, desired_dtype->data_type(), placement, sbp_tuple));
-  } else {
-    // Shape -> LocalTensor
-    if (!device) { device = JUST(Device::New("cpu")); }
-    tensor = JUST(functional::Empty(shape, desired_dtype->data_type(), device));
-  }
-  tensor->set_requires_grad(requires_grad);
-  return tensor;
-}
-
 std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
-  return NewTensor(args, kwargs, DType::Float().get(), true).GetPtrOrThrow();
+  return py::cast<std::shared_ptr<Tensor>>(functional::_legacy_tensor_ctor(args, kwargs));
 }
 
 void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
   if (tensor.is_leaf()) {
     tensor.set_requires_grad(requires_grad);
+    if (!requires_grad) { tensor.set_grad_fn_node(nullptr); }
   } else {
     throw std::runtime_error("You can only change requires_grad flags of leaf tensors.");
   }
@@ -394,9 +124,6 @@ std::shared_ptr<Parameter> ApiNewParameter(const std::shared_ptr<Tensor>& data,
 using namespace pybind11::literals;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("tensor", [](py::args args, py::kwargs kwargs) -> std::shared_ptr<Tensor> {
-    return NewTensor(args, kwargs, nullptr, false).GetPtrOrThrow();
-  });
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init(&ApiNewTensor))
       // Properties of pytorch
@@ -464,12 +191,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              return static_cast<uint64_t>(tensor.transport_token().GetOrThrow());
            })
       .def("check_meta_consistency",
-           [](const one::Tensor& tensor) {
-             return CheckConsistentTensorMeta(tensor, 60 * 5).GetOrThrow();
-           })
-      .def("check_meta_consistency",
-           [](const one::Tensor& tensor, int64_t seconds) {
-             return CheckConsistentTensorMeta(tensor, seconds).GetOrThrow();
+           [](const std::shared_ptr<one::Tensor>& tensor) {
+             return CheckMetaConsistency(tensor).GetOrThrow();
            })
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \

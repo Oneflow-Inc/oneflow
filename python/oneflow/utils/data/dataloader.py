@@ -163,9 +163,7 @@ class DataLoader(Generic[T_co]):
 
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
-                 cannot be an unpicklable object, e.g., a lambda function. See
-                 :ref:`multiprocessing-best-practices` on more details related
-                 to multiprocessing in OneFlow.
+                 cannot be an unpicklable object, e.g., a lambda function.
 
     .. warning:: ``len(dataloader)`` heuristic is based on the length of the sampler used.
                  When :attr:`dataset` is an :class:`~flow.utils.data.IterableDataset`,
@@ -181,12 +179,6 @@ class DataLoader(Generic[T_co]):
                  dropped when :attr:`drop_last` is set. Unfortunately, OneFlow can not detect such
                  cases in general.
 
-                 See `Dataset Types`_ for more details on these two types of datasets and how
-                 :class:`~flow.utils.data.IterableDataset` interacts with
-                 `Multi-process data loading`_.
-
-    .. warning:: See :ref:`reproducibility`, and :ref:`dataloader-workers-random-seed`, and
-                 :ref:`data-loading-randomness` notes for random seed related questions.
     """
     dataset: Dataset[T_co]
     batch_size: Optional[int]
@@ -460,7 +452,7 @@ class _BaseDataLoaderIter(object):
         self._timeout = loader.timeout
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
-        self._base_seed = flow.Tensor([0], dtype=flow.int64).uniform_().numpy().item()
+        self._base_seed = flow.tensor([0], dtype=flow.int64).uniform_().numpy().item()
         # TODO: flow.empty()
         # self._base_seed = flow.empty((), dtype=flow.int64).random_(generator=loader.generator).item()
         self._persistent_workers = loader.persistent_workers

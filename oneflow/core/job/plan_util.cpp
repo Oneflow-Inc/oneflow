@@ -236,7 +236,12 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
             .op_conf();
     if (!op_conf.has_variable_conf()) { return false; }
     const std::string& var_name = op_conf.name();
-    if (variable_op_names.find(var_name) == variable_op_names.end()) { return false; }
+    if (variable_op_names.find(var_name) == variable_op_names.end()) {
+      LOG(WARNING) << " Oh no! Cannot find variable_op_name: " << var_name
+                   << " in nn.Graph Compiler bind EagerTensor with VariableOp. "
+                   << " \n But each variable need bind with eager tensor for init.";
+      return false;
+    }
     *name = var_name;
     return true;
   };
@@ -866,6 +871,70 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     CHECK_GT(collected, 0);
     all_visited.insert(visited.begin(), visited.end());
     ++dependency_depth;
+  }
+}
+
+void PlanUtil::GenRegisterHint(Plan* plan) {
+  HashSet<int64_t> multi_regst_regst_desc_ids;
+  for (const TaskProto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.register_num() != 1) {
+        multi_regst_regst_desc_ids.emplace(pair.second.regst_desc_id());
+      }
+    }
+  }
+  for (TaskProto& task : *(plan->mutable_task())) {
+    bool all_register_num_eq_one = true;
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (pair.second.register_num() != 1) {
+        all_register_num_eq_one = false;
+        break;
+      }
+    }
+    for (const auto& pair : task.consumed_regst_desc_id()) {
+      if (!all_register_num_eq_one) { break; }
+      for (auto regst_desc_id : pair.second.regst_desc_id()) {
+        if (multi_regst_regst_desc_ids.count(regst_desc_id) > 0) {
+          all_register_num_eq_one = false;
+          break;
+        }
+      }
+    }
+    task.set_all_register_num_eq_one_hint(all_register_num_eq_one);
+  }
+}
+
+void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
+  HashMap<std::pair<int64_t, int64_t>, int64_t> rank_device2size;
+  auto AddMemSizeByRankDeviceIds = [&](int64_t rank_id, int64_t device_id, int64_t mem_size) {
+    auto key = std::make_pair(rank_id, device_id);
+    auto it = rank_device2size.find(key);
+    if (it == rank_device2size.end()) { it = rank_device2size.emplace(key, 0).first; }
+    it->second += mem_size;
+  };
+
+  for (const ChunkProto& chunk : plan->block_chunk_list().chunk()) {
+    if (chunk.mem_case().has_device_cuda_mem()) {
+      AddMemSizeByRankDeviceIds(chunk.machine_id(), chunk.mem_case().device_cuda_mem().device_id(),
+                                chunk.mem_size());
+    }
+  }
+
+  for (const MemBlockProto& mem_block : plan->block_chunk_list().mem_block()) {
+    if (mem_block.has_chunk_id() || mem_block.has_chunk_offset()) { continue; }
+    if (mem_block.mem_case().has_device_cuda_mem()) {
+      AddMemSizeByRankDeviceIds(mem_block.machine_id(),
+                                mem_block.mem_case().device_cuda_mem().device_id(),
+                                mem_block.mem_size());
+    }
+  }
+
+  for (auto pair : rank_device2size) {
+    int64_t rank_id = pair.first.first;
+    int64_t device_id = pair.first.second;
+    double mem_size = pair.second * 1.0 / 1000000.0;
+    LOG(INFO) << " Plan: " << plan_name << " needs to allocate [ " << mem_size
+              << " MiB ] device memory in Rank: " << rank_id << " , Device: " << device_id << "\n";
   }
 }
 

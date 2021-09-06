@@ -49,8 +49,8 @@ jobs:
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON
-          cmake --build . -j$(nproc) --target of_git_version oneflow_deps generate_functional of_cfgobj generate_py_cfg
-      - name: Run Maybe-related checks by clang-tidy
+          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj of_functional_tensor_obj
+      - name: Run clang-tidy for all translation units
         # use clang as compiler for correct compiler flags
         run: |
           cd build
@@ -62,7 +62,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -p build -quiet
+          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy-489012f-x86_64.AppImage -p build -quiet -allow-enabling-alpha-checkers -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" "^(?!$(pwd)/build)"
 
   hosted:
     name: CPU-only

@@ -33,6 +33,7 @@ FLAT_MSG_BEGIN(FlatShape);
   OF_PUBLIC Maybe<void> Init(const Shape& shape);
   OF_PUBLIC Maybe<void> Check(const Shape& shape) const;
   OF_PUBLIC Maybe<Shape> ToShape() const;
+  OF_PUBLIC Maybe<void> ToShape(Shape* shape) const;
   OF_PUBLIC int64_t At(int i) const { return dim(i); }
   OF_PUBLIC int64_t NumAxes() const { return dim_size(); }
 

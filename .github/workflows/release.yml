@@ -114,6 +114,7 @@ jobs:
               extra_flags+=" --package_name=${{ matrix.package_name }}"
           fi
           extra_flags+=" --extra_oneflow_cmake_args=-DBUILD_PROFILER=OFF"
+          extra_flags+=" --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF"
           echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
           echo "python_version=${python_version}" >> $GITHUB_ENV
           echo "compute_platforms=${compute_platforms}" >> $GITHUB_ENV

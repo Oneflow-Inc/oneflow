@@ -65,6 +65,8 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK(send_msg_buf_.empty());
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
+  read_block_size_ =
+      ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_MEM_BLOCK_SIZE", kDefaultMemBlockSize);
 }
 
 IBVerbsQP::~IBVerbsQP() {
@@ -146,16 +148,14 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
                                 const IBVerbsMemDesc& local_mem, void* read_id) {
   CHECK_EQ(remote_mem.mem_size, local_mem.mem_size());
   WorkRequestId* wr_id = NewWorkRequestId();
-  const size_t block_size =
-      ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_MEM_BLOCK_SIZE", kDefaultMemBlockSize);
-  const size_t block_num = RoundUp(remote_mem.mem_size, block_size) / block_size;
+  const size_t block_num = RoundUp(remote_mem.mem_size, read_block_size_) / read_block_size_;
   wr_id->outstanding_sge_cnt = static_cast<int32_t>(block_num);
   wr_id->read_id = read_id;
   FOR_RANGE(size_t, i, 0, block_num) {
     ibv_send_wr wr{};
     ibv_sge sge{};
-    sge.addr = reinterpret_cast<uint64_t>(local_mem.mem_ptr()) + i * block_size;
-    sge.length = std::min(block_size, local_mem.mem_size() - i * block_size);
+    sge.addr = reinterpret_cast<uint64_t>(local_mem.mem_ptr()) + i * read_block_size_;
+    sge.length = std::min(read_block_size_, local_mem.mem_size() - i * read_block_size_);
     sge.lkey = local_mem.mr()->lkey;
     wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
     wr.next = nullptr;
@@ -164,7 +164,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
     wr.opcode = IBV_WR_RDMA_READ;
     wr.send_flags = 0;
     wr.imm_data = 0;
-    wr.wr.rdma.remote_addr = remote_mem.mem_ptr + i * block_size;
+    wr.wr.rdma.remote_addr = remote_mem.mem_ptr + i * read_block_size_;
     wr.wr.rdma.rkey = remote_mem.mr_rkey;
     EnqueuePostSendReadWR(wr, sge);
   }

@@ -193,8 +193,7 @@ OpRegistry& OpRegistry::SetOutputBlobTimeShapeInferFn(
   return *this;
 }
 
-OpRegistry& OpRegistry::SetParallelDistributionInferFn(
-    ParallelDistributionInferFn nd_sbp_infer_fn) {
+OpRegistry& OpRegistry::SetNdSbpInferFn(NdSbpInferFn nd_sbp_infer_fn) {
   result_.nd_sbp_infer_fn = std::move(nd_sbp_infer_fn);
   return *this;
 }
@@ -220,7 +219,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
         logical_fn(ctx);
       } else {
         for (const auto& pair : ctx->inputs()) {
-          const auto& nd_sbp = ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
+          const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
           const TensorDesc* in_logical =
               ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
           const TensorDesc* in_physical = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
@@ -231,7 +230,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
         for (const auto& pair : ctx->outputs()) {
           TensorDesc* desc = ctx->OutputTensorDesc(pair.first, pair.second);
           *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
-          const auto& nd_sbp = ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
+          const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
           *desc->mut_shape() = *JUST(
               GetPhysicalShape(desc->shape(), nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
         }

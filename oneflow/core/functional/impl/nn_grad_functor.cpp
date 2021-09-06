@@ -250,6 +250,76 @@ class SmoothL1LossGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CombinedMarginLossGradFunctor {
+ public:
+  CombinedMarginLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("combined_margin_loss_grad")
+                         .Input("dy")
+                         .Input("label")
+                         .Input("theta")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& theta, const float& m1,
+                           const float& m2, const float& m3, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("m1", m1));
+    JUST(attrs.SetAttr<float>("m2", m2));
+    JUST(attrs.SetAttr<float>("m3", m3));
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, label, theta}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AffineGridGradFunctor {
+ public:
+  AffineGridGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("affine_grid_grad").Input("dgrid").Output("dtheta").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dgrid, const Shape& size,
+                           const bool& align_corners) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("size", size));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dgrid}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class GridSampleGradFunctor {
+ public:
+  GridSampleGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("grid_sample_grad")
+                         .Input("doutput")
+                         .Input("input")
+                         .Input("grid")
+                         .Output("dinput")
+                         .Output("dgrid")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& doutput,
+                                const std::shared_ptr<one::Tensor>& input,
+                                const std::shared_ptr<one::Tensor>& grid,
+                                const std::string& interpolation_mode,
+                                const std::string& padding_mode, const bool& align_corners) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("interpolation_mode", interpolation_mode));
+    JUST(attrs.SetAttr<std::string>("padding_mode", padding_mode));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {doutput, input, grid}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class PadGradFunctor {
  public:
   PadGradFunctor() {
@@ -272,10 +342,10 @@ class PadGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     if (mode == "constant") {
-      if (IsFloatingDataType(dy->dtype())) {
+      if (IsFloatingDataType(dy->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_value", 0));
-      } else if (IsIntegralDataType(dy->dtype())) {
+      } else if (IsIntegralDataType(dy->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_value", 0));
         JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
       } else {
@@ -385,6 +455,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
+  m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
+  m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
+  m.add_functor<impl::GridSampleGradFunctor>("GridSampleGrad");
   m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");

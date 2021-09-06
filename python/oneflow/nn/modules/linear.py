@@ -95,11 +95,8 @@ class Linear(Module):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.use_bias = bias
         self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
-        self.bias = None
-        if bias:
-            self.bias = flow.nn.Parameter(flow.Tensor(out_features))
+        self.bias = flow.nn.Parameter(flow.Tensor(out_features)) if bias else None
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -110,8 +107,8 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        res = flow.F.matmul(x, self.weight, transpose_a=False, transpose_b=True)
-        if self.use_bias:
+        res = flow._C.matmul(x, self.weight, transpose_a=False, transpose_b=True)
+        if self.bias is not None:
             res += self.bias
         return res
 

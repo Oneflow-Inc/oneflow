@@ -25,11 +25,11 @@ namespace oneflow {
 
 namespace cfg {
 
-class ParallelDistribution;
+class NdSbp;
 
 }
 
-Maybe<void> SyncSymbolParallelDistribution(uint64_t symbol_id, Symbol<cfg::ParallelDistribution>);
+Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id, Symbol<cfg::NdSbp>);
 
 }  // namespace oneflow
 

@@ -125,7 +125,7 @@ TEST(OpkernelInstructionType, new_opkernel) {
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
@@ -154,7 +154,7 @@ TEST(OpkernelInstructionType, delete_opkernel) {
       vm_desc.Mutable(),
       {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol", "InitOpKernelObject"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
@@ -199,7 +199,7 @@ TEST(OpkernelInstructionType, call_opkernel) {
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", device_tag + ".CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
@@ -277,7 +277,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", "gpu.CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
@@ -326,7 +326,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "InitOpKernelObject", device_tag + ".CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
@@ -403,7 +403,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
                           "gpu.compute.UserStatelessCallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
-  vm->Receive(&list);
+  CHECK_JUST(vm->Receive(&list));
   while (!vm->Empty()) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }

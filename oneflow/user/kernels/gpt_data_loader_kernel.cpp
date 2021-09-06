@@ -25,7 +25,7 @@ namespace {
 using namespace user_op;
 using namespace data;
 
-size_t GetNumShards(const Shape& hierarchy, const cfg::ParallelDistribution& nd_sbp) {
+size_t GetNumShards(const Shape& hierarchy, const cfg::NdSbp& nd_sbp) {
   size_t num_shards = 1;
   FOR_RANGE(size_t, i, 0, nd_sbp.sbp_parallel_size()) {
     const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
@@ -36,7 +36,7 @@ size_t GetNumShards(const Shape& hierarchy, const cfg::ParallelDistribution& nd_
   return num_shards;
 }
 
-size_t GetShardIndex(const Shape& hierarchy, const cfg::ParallelDistribution& nd_sbp, size_t rank) {
+size_t GetShardIndex(const Shape& hierarchy, const cfg::NdSbp& nd_sbp, size_t rank) {
   using index_helper_t = NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE>;
   size_t ndim = hierarchy.NumAxes();
   CHECK_GT(ndim, 0);
@@ -78,8 +78,7 @@ class GPTDataLoader final : public OpKernelState {
       shard_index_ = GlobalProcessCtx::Rank();
     } else {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-      const cfg::ParallelDistribution& paral_dist =
-          ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      const cfg::NdSbp& paral_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
       CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
       num_shards_ = GetNumShards(hierarchy, paral_dist);
       CHECK_EQ(num_samples % num_shards_, 0);

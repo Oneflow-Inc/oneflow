@@ -36,9 +36,9 @@ def concat_op(inputs, dim=0):
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> input3 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input3 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
         >>> out = flow.cat([input1, input2, input3], dim=1)
         >>> out.shape
@@ -63,7 +63,7 @@ def concat_op(inputs, dim=0):
                 dynamic_dim_size += input.shape[i]
             else:
                 assert input.shape[i] == first_input_shape[i]
-    return flow.F.concat(inputs, axis=axis, max_dim_size=dynamic_dim_size)
+    return flow._C.concat(inputs, axis=axis, max_dim_size=dynamic_dim_size)
 
 
 if __name__ == "__main__":

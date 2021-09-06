@@ -36,15 +36,16 @@ struct CaseStatus final {
 };
 
 template<typename T>
-class CaseKernel final : public KernelIf<DeviceType::kCPU> {
+class CaseKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CaseKernel);
   CaseKernel() = default;
   ~CaseKernel() override = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
+  void DestroyState(void* state) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow

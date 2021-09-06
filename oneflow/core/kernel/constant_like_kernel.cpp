@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ConstantLikeKernel final : public KernelIf<device_type> {
+class ConstantLikeKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConstantLikeKernel);
   ConstantLikeKernel() : is_init_(false) {}
@@ -28,11 +28,9 @@ class ConstantLikeKernel final : public KernelIf<device_type> {
  private:
   mutable bool is_init_;
 
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override {
+  void ForwardDataContent(KernelContext* ctx) const override {
     if (is_init_) { return; }
-    Blob* out_blob = BnInOp2Blob("out");
+    Blob* out_blob = ctx->BnInOp2Blob("out");
     T value = static_cast<T>(0);
     const auto& conf = this->op_conf().constant_like_conf();
     if (conf.has_int_operand()) {
@@ -42,7 +40,7 @@ class ConstantLikeKernel final : public KernelIf<device_type> {
     } else {
       UNIMPLEMENTED();
     }
-    NewKernelUtil<device_type>::Fill(ctx.device_ctx, out_blob->static_shape().elem_cnt(), value,
+    NewKernelUtil<device_type>::Fill(ctx->device_ctx(), out_blob->static_shape().elem_cnt(), value,
                                      out_blob->mut_dptr<T>());
     is_init_ = true;
   }

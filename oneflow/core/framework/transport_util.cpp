@@ -19,26 +19,24 @@ limitations under the License.
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/transport/transport.h"
-#include "oneflow/core/thread/consistent_unique_id.h"
+#include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/common/thread_local_callback.h"
 
 namespace oneflow {
 
 /*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
                                                              int64_t seconds) {
-  const auto& start = std::chrono::steady_clock::now();
-  const auto& cond_cnt = ctx.flying_cnt();
-  while (*cond_cnt > 0) {
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    CHECK_LT_OR_RETURN(elapsed_seconds.count(), seconds)
-        << Error::TimeoutError() << "Timeout error at " << seconds << " seconds.";
-  }
-  if (ctx.transport_token().type() == kCtrlTransportTokenType) {
-    JUST(ctx.transport_token().ReleaseCtrlTransportToken());
-  }
+  bool is_printed = false;
+  const auto& TryPrintStackInfo = [&is_printed] {
+    if (!is_printed) { blocking::StackInfoCallback(); }
+    is_printed = true;
+  };
+  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds, TryPrintStackInfo,
+                            TransportUtil::BlockingWarningIntervalSeconds()));
   return Maybe<void>::Ok();
 }
 
@@ -74,7 +72,6 @@ template<Maybe<void> (*SendOrRecv)(const TransportToken&, int64_t, void*, std::s
                                                    std::function<void()>*)>
 Maybe<void> AccessToAllOtherRanks(Symbol<RankGroup> rank_group, const TransportToken& token,
                                   AsyncTransportCtx* ctx) {
-  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
   const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
     return rank_group->ForEachRank(DoEach);
   };
@@ -95,14 +92,35 @@ Maybe<void> AccessToNearbyRank(Symbol<RankGroup> rank_group, const TransportToke
   return AccessToOtherRanks<SendOrRecv, Prepare>(ForEachRank, token, ctx);
 }
 
+namespace {
+
+Maybe<std::shared_ptr<TransportToken>> RawGetTransportToken(const TransportToken& token) {
+  CHECK_EQ_OR_RETURN(token.seq_id(), 0);
+  JUST(token.CheckThreadConsistentId());
+  auto auto_token = std::make_shared<TransportToken>(token);
+  return auto_token;
+}
+
+static constexpr auto* GetTransportToken = DECORATE(&RawGetTransportToken, ThreadLocal);
+
+Maybe<TransportToken> GetAutoIncrementalTransportToken(int64_t src_rank, int64_t dst_rank,
+                                                       TransportToken token) {
+  CHECK_EQ_OR_RETURN(token.seq_id(), 0);
+  JUST(token.set_src_rank(src_rank));
+  JUST(token.set_dst_rank(dst_rank));
+  return ++**JUST(GetTransportToken(token));
+}
+
+}  // namespace
+
 Maybe<void> Send(const TransportToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
 #ifdef __linux__
+  int64_t src_rank = GlobalProcessCtx::Rank();
+  int64_t dst_rank = rank;
+  TransportToken send_token = JUST(GetAutoIncrementalTransportToken(src_rank, dst_rank, token));
   auto* transport = JUST(GlobalMaybe<Transport>());
-  TransportToken transport_token(token);
-  JUST(transport_token.set_src_rank(GlobalProcessCtx::Rank()));
-  JUST(transport_token.set_dst_rank(rank));
-  transport->Send(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
+  transport->Send(static_cast<uint64_t>(send_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 #else
   UNIMPLEMENTED();
@@ -113,11 +131,11 @@ Maybe<void> Send(const TransportToken& token, int64_t rank, void* buffer, std::s
 Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::size_t size,
                  const std::function<void()>& Callback) {
 #ifdef __linux__
+  int64_t src_rank = rank;
+  int64_t dst_rank = GlobalProcessCtx::Rank();
+  TransportToken recv_token = JUST(GetAutoIncrementalTransportToken(src_rank, dst_rank, token));
   auto* transport = JUST(GlobalMaybe<Transport>());
-  TransportToken transport_token(token);
-  JUST(transport_token.set_src_rank(rank));
-  JUST(transport_token.set_dst_rank(GlobalProcessCtx::Rank()));
-  transport->Receive(static_cast<uint64_t>(transport_token), rank, buffer, size, Callback);
+  transport->Receive(static_cast<uint64_t>(recv_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 #else
   UNIMPLEMENTED();
@@ -130,6 +148,7 @@ Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::s
 /*static*/ Maybe<void> TransportUtil::BroadcastToAllOtherRanks(Symbol<RankGroup> rank_group,
                                                                const TransportToken& token,
                                                                AsyncTransportCtx* ctx) {
+  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
   JUST(AccessToAllOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(rank_group,
                                                                                       token, ctx));
   return Maybe<void>::Ok();
@@ -138,8 +157,31 @@ Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::s
 /*static*/ Maybe<void> TransportUtil::CollectFromAllOtherRanks(Symbol<RankGroup> rank_group,
                                                                const TransportToken& token,
                                                                AsyncTransportCtx* ctx) {
+  CHECK_OR_RETURN(rank_group->ContainingCurrentRank());
   JUST(AccessToAllOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(rank_group,
                                                                                       token, ctx));
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> TransportUtil::BroadcastToOtherRanks(Symbol<RankGroup> src_rank_group,
+                                                            Symbol<RankGroup> dst_rank_group,
+                                                            const TransportToken& token,
+                                                            AsyncTransportCtx* ctx) {
+  if (src_rank_group->ContainingCurrentRank()) {
+    JUST(AccessToAllOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(
+        dst_rank_group, token, ctx));
+  }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> TransportUtil::CollectFromOtherRanks(Symbol<RankGroup> src_rank_group,
+                                                            Symbol<RankGroup> dst_rank_group,
+                                                            const TransportToken& token,
+                                                            AsyncTransportCtx* ctx) {
+  if (dst_rank_group->ContainingCurrentRank()) {
+    JUST(AccessToAllOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(
+        src_rank_group, token, ctx));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -194,6 +236,24 @@ Maybe<int64_t> GetCurrentRankIndex(const std::vector<int64_t>& rank_heap) {
     return DoEach(rank_heap.at((current_rank_index - 1) / 2));
   };
   return AccessToOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(ForEachRank,
+                                                                                     token, ctx);
+}
+
+/*static*/ Maybe<void> TransportUtil::ReceiveDataFromRank(int64_t rank, const TransportToken& token,
+                                                          AsyncTransportCtx* ctx) {
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    return DoEach(rank);
+  };
+  return AccessToOtherRanks<&Recv, &AsyncTransportCtx::PrepareRecvBufferAndCallback>(ForEachRank,
+                                                                                     token, ctx);
+}
+
+/*static*/ Maybe<void> TransportUtil::SendDataToRank(int64_t rank, const TransportToken& token,
+                                                     AsyncTransportCtx* ctx) {
+  const auto& ForEachRank = [&](const std::function<Maybe<void>(int64_t)>& DoEach) -> Maybe<void> {
+    return DoEach(rank);
+  };
+  return AccessToOtherRanks<&Send, &AsyncTransportCtx::PrepareSendBufferAndCallback>(ForEachRank,
                                                                                      token, ctx);
 }
 

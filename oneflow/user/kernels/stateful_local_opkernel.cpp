@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 namespace one {
@@ -156,7 +157,8 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const std::string& device_tag() const override { return base_ctx_.device_tag(); }
   const ParallelContext& parallel_ctx() const override {
-    return *GetParallelContext4CurrentProcessCtx(CHECK_JUST(base_ctx_.parallel_desc().value()));
+    const auto& parallel_desc = CHECK_JUST(base_ctx_.parallel_desc().value());
+    return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc));
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -223,9 +225,10 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override {
-    const auto parallel_desc = base_ctx_.parallel_desc();
+    const auto& parallel_desc = base_ctx_.parallel_desc();
     if (parallel_desc.has_value()) {
-      return *GetParallelContext4CurrentProcessCtx(CHECK_JUST(parallel_desc.value()));
+      const auto& parallel_desc_symbol = CHECK_JUST(parallel_desc.value());
+      return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc_symbol));
     } else {
       static ParallelContext single_card_parallel_ctx;
       single_card_parallel_ctx.set_parallel_id(0);
@@ -243,13 +246,13 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   }
   const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                       int32_t index) const override {
-    const auto& nd_sbp = ParallelDistribution4ArgNameAndIndex(arg_name, index);
+    const auto& nd_sbp = NdSbp4ArgNameAndIndex(arg_name, index);
     CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
     return nd_sbp.sbp_parallel(0);
   }
 
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const override {
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
     return *CHECK_NOTNULL(base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))
                 ->nd_sbp();
   }
@@ -418,7 +421,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   if (op_reg_val->logical_tensor_desc_infer_fn) {
     opkernel->tensor_desc_infer_fn_ = op_reg_val->logical_tensor_desc_infer_fn;
   } else {
-    return Error::Unimplemented();
+    return Error::UnimplementedError();
   }
   opkernel->data_type_infer_fn_ = op_reg_val->data_type_infer_fn;
 

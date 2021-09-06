@@ -42,8 +42,8 @@ def masked_fill_op(input, mask, value):
         ...     [-1.90089858,  0.01262963,  0.74693893,  0.57132389]]]
         ... )
         >>> fill_value = 8.7654321 # random value e.g. -1e9 3.1415
-        >>> input = flow.Tensor(in_arr, dtype=flow.float32)
-        >>> mask = flow.Tensor((in_arr > 0).astype(np.int8), dtype=flow.int)
+        >>> input = flow.tensor(in_arr, dtype=flow.float32)
+        >>> mask = flow.tensor((in_arr > 0).astype(np.int8), dtype=flow.int)
         >>> output = flow.masked_fill(input, mask, fill_value)
 
         # tensor([[[-0.1317,  8.7654,  8.7654,  8.7654],
@@ -56,10 +56,10 @@ def masked_fill_op(input, mask, value):
 
     """
 
-    in_shape = tuple(input.shape)
-    value_like_x = flow.Tensor(*in_shape, device=input.device)
-    value_like_x.fill_(value)
-    return flow.F.where(mask, value_like_x, input)
+    orig_type = input.dtype
+    return flow._C.where(mask, float(value), input.to(dtype=flow.float64)).to(
+        dtype=orig_type
+    )
 
 
 if __name__ == "__main__":

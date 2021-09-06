@@ -36,7 +36,7 @@ def _test_deconv_bias_false(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -142,7 +142,7 @@ def _test_deconv_bias_true(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     weight = np.array(
@@ -252,7 +252,7 @@ def _test_deconv_group_bias_false(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     m = nn.ConvTranspose2d(2, 2, 3, stride=1, groups=2, bias=False)
@@ -368,7 +368,7 @@ def _test_deconv_group_bias_true(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     m = nn.ConvTranspose2d(2, 2, 3, stride=1, groups=2)
@@ -484,7 +484,7 @@ def _test_deconv_group_large_out_channel(test_case, device):
             ]
         ]
     )
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     m = nn.ConvTranspose2d(2, 6, 3, stride=1, groups=2, bias=False)
@@ -730,7 +730,7 @@ def _test_deconv_group_large_in_channel(test_case, device):
             ],
         ]
     ]
-    input = flow.Tensor(
+    input = flow.tensor(
         np_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     m = nn.ConvTranspose2d(4, 2, 3, stride=1, groups=2, bias=False)
@@ -865,7 +865,7 @@ class TestDeconv2d(flow.unittest.TestCase):
             _test_deconv_group_large_out_channel,
             _test_deconv_group_large_in_channel,
         ]
-        arg_dict["device"] = ["cuda", "cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

@@ -195,7 +195,6 @@ class TensorDataset(Dataset[Tuple[Tensor, ...]]):
     Args:
         *tensors (Tensor): tensors that have the same size of the first dimension.
     """
-    tensors: Tuple[Tensor, ...]
 
     def __init__(self, *tensors: Tensor) -> None:
         assert all(

@@ -21,7 +21,10 @@ limitations under the License.
 #include "oneflow/core/vm/object_wrapper.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/spin_counter.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
 namespace vm {
@@ -574,7 +577,13 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocat
   }
 }
 
-void VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
+int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
+
+Maybe<void> VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
+  CHECK_OR_RETURN(!pthread_fork::IsForkedSubProcess())
+      << "Cannot run OneFlow in forked subprocess. Please add "
+         "'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using Python's "
+         "multiprocessing";
   InstructionMsgList new_instr_msg_list;
   OBJECT_MSG_LIST_FOR_EACH_PTR(compute_instr_msg_list, compute_instr_msg) {
     if (!compute_instr_msg->phy_instr_operand()) {
@@ -582,20 +591,30 @@ void VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
     }
     compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
   }
-  static const int64_t kHighWaterMark = 500;
-  static const int64_t kLowWaterMark = 200;
+  const int64_t kHighWaterMark = GetInstructionHighWaterMark();
+  const int64_t kLowWaterMark = GetInstructionLowWaterMark();
   if (*mut_flying_instruction_cnt() > kHighWaterMark) {
-    Global<ForeignLockHelper>::Get()->WithScopedRelease([this]() {
-      while (*mut_flying_instruction_cnt() > kLowWaterMark) {}
-    });
+    JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+      const auto& NeedSpin = [&] { return *mut_flying_instruction_cnt() > kLowWaterMark; };
+      while (true) {
+        int64_t last_cnt = *mut_flying_instruction_cnt();
+        const auto& ret = TRY(SpinWaitUntilTimeout(NeedSpin, InstructionMaxRunningSeconds()));
+        if (ret.IsOk()) { break; }
+        CHECK_NE_OR_RETURN(last_cnt, *mut_flying_instruction_cnt())
+            << Error::UnimplementedError() << "The virtual machine don't respond in "
+            << InstructionMaxRunningSeconds() << " seconds.";
+      }
+      return Maybe<void>::Ok();
+    }));
   }
   mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
+  return Maybe<void>::Ok();
 }
 
-void VirtualMachine::Receive(ObjectMsgPtr<InstructionMsg>&& compute_instr_msg) {
+Maybe<void> VirtualMachine::Receive(ObjectMsgPtr<InstructionMsg>&& compute_instr_msg) {
   InstructionMsgList instr_msg_list;
   instr_msg_list.EmplaceBack(std::move(compute_instr_msg));
-  Receive(&instr_msg_list);
+  return Receive(&instr_msg_list);
 }
 
 template<typename ContainerT>
@@ -652,7 +671,15 @@ void VirtualMachine::Schedule() {
   TryDeleteLogicalObjects();
   TryRunFrontSeqInstruction(/*out*/ ready_instruction_list);
   auto* waiting_instruction_list = mut_waiting_instruction_list();
-  if (pending_msg_list().size() > 0) {
+  // Using thread_unsafe_size to avoid acquiring mutex lock.
+  // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and
+  // pending_msg_list.list_head_.list_head_.size_ is not a fatal error because
+  // VirtualMachine::Schedule is always in a buzy loop. All instructions will get handled
+  // eventually.
+  //  VirtualMachine::Receive may be less effiencient if the thread safe version
+  //  `pending_msg_list().size()` used here, because VirtualMachine::Schedule is more likely to get
+  //  the mutex lock.
+  if (pending_msg_list().thread_unsafe_size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
     FilterAndRunInstructionsInAdvance(&tmp_pending_msg_list);
@@ -668,9 +695,16 @@ void VirtualMachine::Schedule() {
                                   + mutable_vm_stat_running_instruction_list()->size();
 }
 
+bool VirtualMachine::ThreadUnsafeEmpty() const {
+  return pending_msg_list().thread_unsafe_size() == 0 && waiting_instruction_list().empty()
+         && active_stream_list().empty() && front_seq_compute_instr_list().empty()
+         && flying_instruction_cnt() == 0;
+}
+
 bool VirtualMachine::Empty() const {
   return pending_msg_list().empty() && waiting_instruction_list().empty()
-         && active_stream_list().empty() && front_seq_compute_instr_list().empty();
+         && active_stream_list().empty() && front_seq_compute_instr_list().empty()
+         && flying_instruction_cnt() == 0;
 }
 
 }  // namespace vm

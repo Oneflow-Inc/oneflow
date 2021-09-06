@@ -17,38 +17,46 @@ limitations under the License.
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/dtype.h"
-
 namespace py = pybind11;
 
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<DType, std::shared_ptr<DType>>(m, "dtype")
-      .def_property_readonly("is_signed", &DType::is_signed)
-      .def_property_readonly("is_complex", &DType::is_complex)
-      .def_property_readonly("is_floating_point", &DType::is_floating_point)
-      .def("__str__", &DType::name)
-      .def("__repr__", &DType::name)
+  py::class_<Symbol<DType>, std::shared_ptr<Symbol<DType>>>(m, "dtype")
+      .def_property_readonly("is_signed", [](const Symbol<DType>& d) { return d->is_signed(); })
+      .def_property_readonly("is_complex", [](const Symbol<DType>& d) { return d->is_complex(); })
+      .def_property_readonly("is_floating_point",
+                             [](const Symbol<DType>& d) { return d->is_floating_point(); })
+      .def("__str__", [](const Symbol<DType>& d) { return d->name(); })
+      .def("__repr__", [](const Symbol<DType>& d) { return d->name(); })
       .def(py::self == py::self)
       .def(py::hash(py::self))
-      .def_property_readonly("bytes",
-                             [](const DType& dtype) { return dtype.bytes().GetOrThrow(); });
+      .def(py::pickle(
+          [](const Symbol<DType>& dtype) {  // __getstate__
+            return static_cast<int>(dtype->data_type());
+          },
+          [](int t) {  // __setstate__
+            return CHECK_JUST(DType::Get(DataType(t)));
+          }))
+      .def_property_readonly(
+          "bytes", [](const Symbol<DType>& dtype) { return dtype->bytes().GetOrThrow(); });
 
-  m.attr("char") = DType::Char().get();
-  m.attr("float16") = DType::Float16().get();
-  m.attr("float") = DType::Float().get();
+  m.attr("char") = &CHECK_JUST(DType::Get(DataType::kChar));
+  m.attr("float16") = &CHECK_JUST(DType::Get(DataType::kFloat16));
+  m.attr("float") = &CHECK_JUST(DType::Get(DataType::kFloat));
 
-  m.attr("float32") = DType::Float().get();
-  m.attr("double") = DType::Double().get();
-  m.attr("float64") = DType::Double().get();
+  m.attr("float32") = &CHECK_JUST(DType::Get(DataType::kFloat));
+  m.attr("double") = &CHECK_JUST(DType::Get(DataType::kDouble));
+  m.attr("float64") = &CHECK_JUST(DType::Get(DataType::kDouble));
 
-  m.attr("int8") = DType::Int8().get();
-  m.attr("int32") = DType::Int32().get();
-  m.attr("int64") = DType::Int64().get();
+  m.attr("int8") = &CHECK_JUST(DType::Get(DataType::kInt8));
+  m.attr("int32") = &CHECK_JUST(DType::Get(DataType::kInt32));
+  m.attr("int64") = &CHECK_JUST(DType::Get(DataType::kInt64));
 
-  m.attr("uint8") = DType::UInt8().get();
-  m.attr("record") = DType::OFRecord().get();
-  m.attr("tensor_buffer") = DType::TensorBuffer().get();
+  m.attr("uint8") = &CHECK_JUST(DType::Get(DataType::kUInt8));
+  m.attr("record") = &CHECK_JUST(DType::Get(DataType::kOFRecord));
+  m.attr("tensor_buffer") = &CHECK_JUST(DType::Get(DataType::kTensorBuffer));
+  m.attr("bfloat16") = &CHECK_JUST(DType::Get(DataType::kBFloat16));
 }
 
 }  // namespace oneflow

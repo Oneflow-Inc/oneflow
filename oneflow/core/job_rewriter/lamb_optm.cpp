@@ -36,8 +36,7 @@ OperatorConf GenerateLAMBHelperVariableOpConf(const VariableOp& op, const std::s
   return helper_variable_op;
 }
 
-void SetScalarShapeAndParallelDistributionConf(const ParallelDesc& parallel_desc,
-                                               OperatorConf* op_conf) {
+void SetScalarShapeAndNdSbpConf(const ParallelDesc& parallel_desc, OperatorConf* op_conf) {
   op_conf->mutable_variable_conf()->mutable_shape()->clear_dim();
   op_conf->mutable_variable_conf()->mutable_shape()->add_dim(1);
   op_conf->mutable_variable_conf()->clear_nd_sbp();
@@ -60,9 +59,9 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   OperatorConf beta2_t_var;
   const LambModelUpdateConf& lamb_conf = optimizer_conf.lamb_conf();
   beta1_t_var = GenerateLAMBHelperVariableOpConf(*var_op, "beta1_t", lamb_conf.beta1());
-  SetScalarShapeAndParallelDistributionConf(var_op_node.parallel_desc(), &beta1_t_var);
+  SetScalarShapeAndNdSbpConf(var_op_node.parallel_desc(), &beta1_t_var);
   beta2_t_var = GenerateLAMBHelperVariableOpConf(*var_op, "beta2_t", lamb_conf.beta2());
-  SetScalarShapeAndParallelDistributionConf(var_op_node.parallel_desc(), &beta2_t_var);
+  SetScalarShapeAndNdSbpConf(var_op_node.parallel_desc(), &beta2_t_var);
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {beta1_t_var, beta2_t_var});
 
   user_op::UserOpConfWrapperBuilder lamb_update_op_builder(var_op->op_name() + "_optimizer");

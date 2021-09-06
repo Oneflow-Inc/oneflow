@@ -158,6 +158,15 @@ def get_common_docker_args(
     return f"-v {oneflow_src_dir}:{oneflow_src_dir}{inplace_attr} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir} --shm-size=8g"
 
 
+def get_python_dir(inplace=True, oneflow_src_dir=None, cache_dir=None):
+    if inplace:
+        assert oneflow_src_dir
+        return os.path.join(oneflow_src_dir, "python")
+    else:
+        assert cache_dir
+        return os.path.join(cache_dir, "python")
+
+
 def build_third_party(
     img_tag,
     oneflow_src_dir,
@@ -168,8 +177,26 @@ def build_third_party(
     bash_wrap,
     dry,
     use_system_proxy,
+    inplace,
 ):
     third_party_build_dir = os.path.join(cache_dir, "build-third-party")
+    oneflow_python_dir = get_python_dir(
+        inplace=inplace, oneflow_src_dir=oneflow_src_dir, cache_dir=cache_dir
+    )
+    if inplace:
+        inplace_arg = ""
+        oneflow_python_dir_cmd = ""
+    else:
+        inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
+        oneflow_python_dir_cmd = f"""
+        rm -rf {oneflow_python_dir}
+        cp -r {oneflow_src_dir}/python {oneflow_python_dir}
+        cd {oneflow_python_dir}
+        git init
+        git clean -nXd
+        git clean -fXd
+        cd -
+        """
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -179,19 +206,23 @@ def build_third_party(
             "-DTHIRD_PARTY=ON -DONEFLOW=OFF",
             extra_oneflow_cmake_args,
             oneflow_src_dir,
+            inplace_arg,
         ]
     )
 
     bash_cmd = f"""set -ex
 export TEST_TMPDIR={cache_dir}/bazel_cache
+export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
+{oneflow_python_dir_cmd}
 {cmake_cmd}
-make -j`nproc` prepare_oneflow_third_party
+cmake --build . -j `nproc` --target oneflow_deps
 """
     common_docker_args = get_common_docker_args(
         oneflow_src_dir=oneflow_src_dir,
         cache_dir=cache_dir,
         current_dir=third_party_build_dir,
         use_system_proxy=use_system_proxy,
+        inplace=inplace,
     )
     docker_cmd = (
         f"docker run --network=host {extra_docker_args} --rm {common_docker_args}"
@@ -230,19 +261,13 @@ def build_oneflow(
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
-    oneflow_python_dir = os.path.join(oneflow_src_dir, "python")
-    inplace_arg = ""
-    oneflow_python_dir_cmd = ""
-    if inplace == False:
-        oneflow_python_dir = "/tmp/oneflow_python"
+    oneflow_python_dir = get_python_dir(
+        inplace=inplace, oneflow_src_dir=oneflow_src_dir, cache_dir=cache_dir
+    )
+    if inplace:
+        inplace_arg = ""
+    else:
         inplace_arg = f"-DONEFLOW_PYTHON_DIR={oneflow_python_dir}"
-        oneflow_python_dir_cmd = f"""
-        cp -r {oneflow_src_dir}/python {oneflow_python_dir}
-        cd {oneflow_python_dir}
-        git init
-        git clean -fXd
-        cd -
-        """
     cmake_cmd = " ".join(
         [
             "cmake",
@@ -253,6 +278,7 @@ def build_oneflow(
             extra_oneflow_cmake_args,
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
             f"-DPython3_EXECUTABLE={python_bin}",
+            f"-DCODEGEN_PYTHON_EXECUTABLE={get_python_bin('3.6')}",
             oneflow_src_dir,
             inplace_arg,
         ]
@@ -275,14 +301,16 @@ export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64:$LD_LIBRARY_PATH
 export ONEFLOW_SRC_DIR={oneflow_src_dir}
-export ONEFLOW_PYTHON_DIR={oneflow_python_dir}
-{oneflow_python_dir_cmd}
 export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
 """
     if enter_bash:
         bash_cmd += "\nbash"
     else:
         bash_cmd += f"""
+cd {oneflow_python_dir}
+git clean -nXd -e \!oneflow/include -e \!oneflow/include/**
+git clean -fXd -e \!oneflow/include -e \!oneflow/include/**
+cd -
 {cmake_cmd}
 cmake --build . -j `nproc`
 """
@@ -294,14 +322,15 @@ cd {oneflow_python_dir}
 {python_bin} setup.py bdist_wheel -d /tmp/tmp_wheel --package_name {package_name}
 cd -
 """
-    if skip_audit:
-        bash_cmd += f"""
-cp /tmp/tmp_wheel/*.whl {house_dir}
-"""
-    else:
-        bash_cmd += f"""
-auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
-"""
+    if skip_wheel == False:
+        if skip_audit:
+            bash_cmd += f"""
+    cp /tmp/tmp_wheel/*.whl {house_dir}
+    """
+        else:
+            bash_cmd += f"""
+    auditwheel repair /tmp/tmp_wheel/*.whl --wheel-dir {house_dir}
+    """
     return create_tmp_bash_and_run(
         docker_cmd, img_tag, bash_cmd, bash_args, bash_wrap, dry
     )
@@ -382,10 +411,15 @@ if __name__ == "__main__":
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
     parser.add_argument("--bash", default=False, action="store_true", required=False)
     parser.add_argument("--inplace", default=False, action="store_true", required=False)
+    parser.add_argument(
+        "--shared_lib", default=False, action="store_true", required=False
+    )
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     if args.skip_img:
         "Arg skip_img is deprecated. Setting it has no effect. If you want to build image, use --build_img"
+    if args.skip_wheel:
+        args.skip_audit = True
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
     assert args.package_name
     extra_oneflow_cmake_args = " ".join(
@@ -396,6 +430,8 @@ if __name__ == "__main__":
     cuda_versions = []
     if args.use_aliyun_mirror:
         extra_oneflow_cmake_args += " -DTHIRD_PARTY_MIRROR=aliyun"
+    if args.shared_lib:
+        extra_oneflow_cmake_args += " -DBUILD_SHARED_LIBS=ON"
     if args.cpu:
         extra_oneflow_cmake_args += " -DBUILD_CUDA=OFF"
         cuda_versions = ["10.2"]
@@ -499,6 +535,8 @@ gcc --version
                 if args.cpu:
                     assert len(cuda_versions) == 1
                     sub_dir += "-cpu"
+                if args.shared_lib:
+                    sub_dir += "-shared"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.build_img:
                 return
@@ -513,6 +551,7 @@ gcc --version
                     bash_wrap,
                     args.dry,
                     args.use_system_proxy,
+                    args.inplace,
                 )
             print(cuda_version.split("."))
             cuda_version_literal = "".join(cuda_version.split(".")[:2])

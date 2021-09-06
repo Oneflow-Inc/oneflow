@@ -400,7 +400,8 @@ Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* i
       }));
   std::function<Blob*(const std::string&)> Blob4BnInOp;
   JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
-  opkernel_obj->kernel().SystemForwardHeader(KernelCtx(), Blob4BnInOp);
+  opkernel_obj->kernel_ctx()->UpdateBnInOp2BlobFn(Blob4BnInOp);
+  opkernel_obj->kernel().SystemForwardHeader(opkernel_obj->kernel_ctx());
   return Maybe<void>::Ok();
 }
 
@@ -437,11 +438,11 @@ Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction*
         JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
         return Maybe<void>::Ok();
       }));
-  KernelCtx kernel_ctx;
-  kernel_ctx.device_ctx = device_ctx;
   std::function<Blob*(const std::string&)> Blob4BnInOp;
   JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
-  opkernel_obj->kernel().SystemForwardDataContent(kernel_ctx, Blob4BnInOp);
+  opkernel_obj->kernel_ctx()->UpdateBnInOp2BlobFn(Blob4BnInOp);
+  opkernel_obj->kernel_ctx()->set_device_ctx(device_ctx);
+  opkernel_obj->kernel().SystemForwardDataContent(opkernel_obj->kernel_ctx());
   return Maybe<void>::Ok();
 }
 

@@ -36,15 +36,15 @@ class _InstanceNorm(_NormBase):
         nd_params_shape = [1] * len(x.shape)
         nd_params_shape[axis] = params_shape[0]
         mean = x.mean(2, keepdim=True)
-        variance = x.var(2, keepdim=True)
+        variance = x.var(2, unbiased=False, keepdim=True)
         normalized = (x - mean) / flow.sqrt(variance + self.eps)
-        if self.weight and params_shape[0] == self.weight.nelement():
+        if self.weight is not None and params_shape[0] == self.weight.nelement():
             weight = flow.reshape(self.weight, shape=nd_params_shape)
-        if self.bias and params_shape[0] == self.bias.nelement():
+        if self.bias is not None and params_shape[0] == self.bias.nelement():
             bias = flow.reshape(self.bias, shape=nd_params_shape)
-        if self.weight:
+        if self.weight is not None:
             normalized = normalized * weight
-        if self.bias:
+        if self.bias is not None:
             normalized = normalized + bias
         return normalized
 

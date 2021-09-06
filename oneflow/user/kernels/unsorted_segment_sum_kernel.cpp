@@ -24,10 +24,8 @@ namespace user_op {
 
 namespace {
 
-void CheckParallelDistribution(const Shape& hierarchy, int64_t sum_axis,
-                               const cfg::ParallelDistribution& segment_ids_nd_sbp,
-                               const cfg::ParallelDistribution& data_nd_sbp,
-                               const cfg::ParallelDistribution& out_nd_sbp) {
+void CheckNdSbp(const Shape& hierarchy, int64_t sum_axis, const cfg::NdSbp& segment_ids_nd_sbp,
+                const cfg::NdSbp& data_nd_sbp, const cfg::NdSbp& out_nd_sbp) {
   CHECK_EQ(hierarchy.NumAxes(), segment_ids_nd_sbp.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), data_nd_sbp.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), out_nd_sbp.sbp_parallel_size());
@@ -58,12 +56,10 @@ std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
     user_op::KernelInitContext* ctx) {
   if (ctx->parallel_ctx().parallel_num() > 1) {
     const auto axis = ctx->Attr<int64_t>("axis");
-    const cfg::ParallelDistribution& out_nd_sbp =
-        ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    const cfg::NdSbp& out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
     const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-    CheckParallelDistribution(hierarchy, axis,
-                              ctx->ParallelDistribution4ArgNameAndIndex("segment_ids", 0),
-                              ctx->ParallelDistribution4ArgNameAndIndex("data", 0), out_nd_sbp);
+    CheckNdSbp(hierarchy, axis, ctx->NdSbp4ArgNameAndIndex("segment_ids", 0),
+               ctx->NdSbp4ArgNameAndIndex("data", 0), out_nd_sbp);
     const TensorDesc* out_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("out", 0);
     TensorSliceView view = GetTensorSliceView4ParallelId(
         hierarchy, out_nd_sbp, out_logical_desc->shape(), ctx->parallel_ctx().parallel_id());

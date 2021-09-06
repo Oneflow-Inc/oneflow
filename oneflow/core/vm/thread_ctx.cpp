@@ -19,7 +19,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void ThreadCtx::LoopRun() {
+void ThreadCtx::LoopRun(const std::function<void(ThreadCtx*)>& Initializer) {
+  Initializer(this);
   while (ReceiveAndRun() == kObjectMsgConditionListStatusSuccess) {}
 }
 

@@ -18,10 +18,7 @@ from collections import OrderedDict, namedtuple
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import numpy as np
-
 import oneflow as flow
-from oneflow.framework.check_point_v2 import FeedValueToVariable
-from oneflow.framework.function_util import global_function_or_identity
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
 
@@ -70,16 +67,10 @@ class Module(object):
     def consistent(self):
         return self._consistent
 
-    def forward(self, *args):
+    def forward(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def consistent_forward(self, *args):
-        return self.forward(*args)
-
-    def force_mirrored_forward(self, *args):
-        raise NotImplementedError()
-
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
@@ -87,7 +78,7 @@ class Module(object):
                     result = (result,)
                 args = result
 
-        res = self.forward(*args)
+        res = self.forward(*args, **kwargs)
 
         for hook in itertools.chain(self._forward_hooks.values()):
             result = hook(self, args, res)
@@ -376,7 +367,8 @@ class Module(object):
                     )
                     continue
                 try:
-                    param.copy_(input_param)
+                    with flow.no_grad():
+                        param.copy_(input_param)
                 except Exception as ex:
                     error_msgs.append(
                         'While copying the parameter named "{}", whose dimensions in the model are {} and whose dimensions in the checkpoint are {}, an exception occurred : {}.'.format(
@@ -504,6 +496,64 @@ class Module(object):
             return t.to(device)
 
         return self._apply(convert)
+
+    def to_consistent(self, placement=None, sbp=None):
+        def convert(t):
+            return t.to_consistent(placement=placement, sbp=sbp)
+
+        return self._apply(convert)
+
+    def cpu(self: T) -> T:
+        r"""Moves all model parameters and buffers to the CPU.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.cpu())
+
+    def cuda(self: T, device: Optional[Union[int, flow.device]] = None) -> T:
+        r"""Moves all model parameters and buffers to the GPU.
+
+        This also makes associated parameters and buffers different objects. So
+        it should be called before constructing optimizer if the module will
+        live on GPU while being optimized.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Args:
+            device (int, optional): if specified, all parameters will be
+                copied to that device
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.cuda(device))
+
+    def float(self: T) -> T:
+        r"""Casts all floating point parameters and buffers to ``float`` datatype.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.float() if t.is_floating_point() else t)
+
+    def double(self: T) -> T:
+        r"""Casts all floating point parameters and buffers to ``double`` datatype.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.double() if t.is_floating_point() else t)
 
     def _get_name(self):
         return self.__class__.__name__

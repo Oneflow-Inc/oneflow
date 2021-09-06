@@ -21,7 +21,6 @@ import numpy as np
 from automated_test_util import *
 
 import oneflow as flow
-import oneflow.typing as oft
 import oneflow.unittest
 
 

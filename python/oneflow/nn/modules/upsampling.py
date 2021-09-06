@@ -85,7 +85,7 @@ class Upsample(Module):
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
         >>> output = m(input)
@@ -161,7 +161,7 @@ class UpsamplingNearest2d(Upsample):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
         >>> output = m(input)
@@ -215,14 +215,14 @@ class UpsamplingBilinear2d(Upsample):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
         >>> output = m(input)
         >>> output #doctest: +ELLIPSIS
-        tensor([[[[1.    , 1.3333, 1.6667, 2.    ],
+        tensor([[[[1.0000, 1.3333, 1.6667, 2.0000],
                   ...
-                  [3.    , 3.3333, 3.6667, 4.    ]]]], device='cuda:0',
+                  [3.0000, 3.3333, 3.6667, 4.0000]]]], device='cuda:0',
                dtype=oneflow.float32)
 
     """

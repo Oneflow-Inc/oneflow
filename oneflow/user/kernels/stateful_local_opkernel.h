@@ -130,7 +130,7 @@ class ConsistentTensorMetaTensorDescView final : public user_op::TensorDesc {
 
   void set_is_dynamic(bool val) override { UNIMPLEMENTED(); }
 
-  Symbol<cfg::ParallelDistribution> nd_sbp() { return consistent_tensor_meta_()->nd_sbp(); }
+  Symbol<cfg::NdSbp> nd_sbp() { return consistent_tensor_meta_()->nd_sbp(); }
 
  private:
   const std::function<Symbol<ConsistentTensorMeta>()> consistent_tensor_meta_;
@@ -278,10 +278,10 @@ class LocalUserOpInferContext : public user_op::InferContext {
     UNIMPLEMENTED();
     return *(const cfg::SbpParallel*)nullptr;
   }
-  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
-      const std::string& arg_name, int32_t index) const override {
+  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
+                                          int32_t index) const override {
     UNIMPLEMENTED();
-    return *(const cfg::ParallelDistribution*)nullptr;
+    return *(const cfg::NdSbp*)nullptr;
   }
 
   int64_t parallel_num() const override { return 1; }
@@ -354,10 +354,6 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   const ParallelContext& parallel_ctx() const override {
     UNIMPLEMENTED();
     return *(const ParallelContext*)nullptr;
-  }
-  const JobDesc& job_desc() const override {
-    UNIMPLEMENTED();
-    return *(const JobDesc*)nullptr;
   }
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); };
