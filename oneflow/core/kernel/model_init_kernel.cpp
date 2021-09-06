@@ -42,8 +42,8 @@ class ModelInitKernel final : public Kernel {
   ~ModelInitKernel() override = default;
 
  private:
-  void Forward(const KernelContext* ctx) const override { ForwardDataContent(ctx); }
-  void ForwardDataContent(const KernelContext* ctx) const override {
+  void Forward(KernelContext* ctx) const override { ForwardDataContent(ctx); }
+  void ForwardDataContent(KernelContext* ctx) const override {
     const ModelInitOpConf& conf = this->op_conf().model_init_conf();
     const int64_t num_var = conf.out_size();
     HashMap<std::string, std::unique_ptr<SnapshotReader>> path2snapshot_reader;

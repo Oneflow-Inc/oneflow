@@ -13,22 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_CHECK_NUMBERICS_KERNEL_OBSERVER_H_
-#define ONEFLOW_CORE_KERNEL_CHECK_NUMBERICS_KERNEL_OBSERVER_H_
+#ifndef ONEFLOW_CORE_KERNEL_CUDA_CHECK_NUMERICS_KERNEL_OBSERVER_H_
+#define ONEFLOW_CORE_KERNEL_CUDA_CHECK_NUMERICS_KERNEL_OBSERVER_H_
+
+#ifdef WITH_CUDA
 
 #include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
-class CheckNumericsKernelObserver final : public KernelObserver {
+class CudaCheckNumericsKernelObserver final : public KernelObserver {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CheckNumericsKernelObserver);
-  CheckNumericsKernelObserver() = default;
-  ~CheckNumericsKernelObserver() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CudaCheckNumericsKernelObserver);
+  CudaCheckNumericsKernelObserver();
+  ~CudaCheckNumericsKernelObserver() override;
 
-  void DidForwardDataContent(const KernelContext* ctx, const Kernel* kernel) override;
+  void DidForwardDataContent(KernelContext* ctx, const Kernel* kernel) override;
+
+ private:
+  bool* has_not_finite_host_;
+  bool* has_not_finite_device_;
+  int device_id_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_CHECK_NUMBERICS_KERNEL_OBSERVER_H_
+#endif  // WITH_CUDA
+
+#endif  // ONEFLOW_CORE_KERNEL_CUDA_CHECK_NUMERICS_KERNEL_OBSERVER_H_

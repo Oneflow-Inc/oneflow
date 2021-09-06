@@ -49,8 +49,8 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow.nn as nn
         
-        >>> input = flow.Tensor(np.random.randn(33, 16, 30))
-        >>> filters = flow.Tensor(np.random.randn(20, 16, 5))
+        >>> input = flow.tensor(np.random.randn(33, 16, 30), dtype=flow.float32)
+        >>> filters = flow.tensor(np.random.randn(20, 16, 5), dtype=flow.float32)
         >>> out = nn.functional.conv1d(input, filters,stride=[1], padding=[0], dilation=[1])
         """,
 )
