@@ -44,9 +44,6 @@ class ThreadMgr final {
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 
-#define REGISTER_DEVICE_THREAD_CREATOR_WITH_STREAM_ID(device, creator) \
-  REGISTER_CLASS_CREATOR(int, device, Thread, creator, const StreamId&)
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_

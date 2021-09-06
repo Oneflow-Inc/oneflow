@@ -22,7 +22,8 @@ class KernelInitContext;
 
 class CudaGraphSupport {
  public:
-  virtual ~CudaGraphSupport() {}
+  CudaGraphSupport() = default;
+  virtual ~CudaGraphSupport() = default;
 
   virtual bool IsCudaGraphSupported(KernelInitContext* ctx) const { return true; }
 };

@@ -13,16 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-
-@register_tensor_op("abs")
-def abs_op(input):
-    """Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
+add_docstr(
+    oneflow.cast,
+    """
+    
+    The operation takes input tensor `x` and casts it to the output with `dtype`
 
     Args:
-        input (Tensor): the input tensor.
+        x (oneflow.Tensor): A Tensor
+        dtype (flow.dtype): Data type of the output tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor with specific dtype.
 
     For example:
 
@@ -30,16 +35,11 @@ def abs_op(input):
 
         >>> import oneflow as flow
         >>> import numpy as np
+        >>> np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
+        >>> input = flow.tensor(np_arr, dtype=flow.float32)
+        >>> output = flow.cast(input, flow.int8)
+        >>> np.array_equal(output.numpy(), np_arr.astype(np.int8))
+        True
 
-        >>> x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
-        >>> flow.abs(x)
-        tensor([1., 2., 3., 4.], dtype=oneflow.float32)
-
-    """
-    return flow._C.abs(input)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)
