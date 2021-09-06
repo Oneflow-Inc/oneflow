@@ -85,17 +85,15 @@ class TestConvertDependency(flow.unittest.TestCase):
             def __init__(self):
                 super(ConvModel, self).__init__()
                 self.conv = flow.nn.Conv2d(3, 64, kernel_size=11, bias=False)
-
+            
             def forward(self, x):
                 x = self.conv(x)
                 return x
-
+        
         model = ConvModel().state_dict()
         for layer_name in model:
-            layer = model[layer_name]
-            layer_path = getattr(layer, "file_path", None)
-            test_case.assertEqual(layer_path, "m.conv.1.weight/out")
-            break
+            layer_path = os.path.join(layer_name, "out")
+            test_case.assertEqual(layer_path, "conv.weight/out")
 
     def test_infos_of_nodes(test_case):
         alexnet_module = alexnet()
