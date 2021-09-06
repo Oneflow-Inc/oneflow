@@ -27,11 +27,10 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     double min_cost = -1;
     vm::DTREagerBlobObject* best(nullptr);
     int tensor_id = 0;
-    std::cout << candidates_.size() << std::endl;
     for (auto tensor : candidates_) {
         tensor_id++;
-        std::cout << static_cast<bool>(tensor->compute_op()) << " " << (!tensor->is_pinned()) << std::endl;
-        if (static_cast<bool>(tensor->compute_op()) && !tensor->is_pinned() && (tensor->input_size()>0)) {
+        std::cout << "Is_in_memory: " << static_cast<bool>(tensor->is_in_memory()) << " " << "Is pinned: " << (tensor->is_pinned()) << std::endl;
+        if (static_cast<bool>(tensor->compute_op()) && !tensor->is_pinned() && (tensor->input_size()>0) && tensor->is_in_memory()) {
             auto cur_cost = JUST(tensor->cost());
             if (min_cost < 0 || min_cost > cur_cost) {
                 best = tensor;

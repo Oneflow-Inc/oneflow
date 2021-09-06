@@ -164,6 +164,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   Maybe<void> evict() {
     evict_flag_ = true;
     DeallocateBlobDataPtr();
+    blob_->reset_dptr(nullptr);
     CHECK_NE_OR_RETURN(is_in_memory(), true);
     return Maybe<void>::Ok();
     }

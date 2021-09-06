@@ -667,7 +667,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
       if (!dtr_blob_object->is_in_memory()) {
         CHECK_GT_OR_RETURN(dtr_blob_object->input_size(), 0);
         // TODO: recursive recompute the inputs
-        std::cout << "DTRblobobject not in memory. Need to recompute. Input size: " << dtr_blob_object->input_size() << std::endl;
+        std::cout << "Input tensor is not in memory (Recompute...)" << std::endl;
         JUST(recompute(dtr_blob_object, device_ctx));
       }
       dtr_blob_object->update_access_time();
@@ -726,6 +726,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     //   JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict());
     // }
     JUST(FullCompute(ptr, device_ctx));
+    std::cout << "Now in memory? " << object->is_in_memory() << std::endl;
 
     // unpin inputs
     JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
