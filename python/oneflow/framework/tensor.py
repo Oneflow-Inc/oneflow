@@ -160,13 +160,18 @@ def _ne(self, other):
     return self.ne(other)
 
 
+def _contiguous(self):
+    # TODO: support stride mechanism
+    return self
+
+
 def _getstate(self):
     assert self.is_local, "Only support local tensor to pickle"
     return {"data": self.numpy(), "dtype": self.dtype}
 
 
 def _setstate(self, pickle_dict):
-    return self.__init__(pickle_dict["data"], dtype=pickle_dict["dtype"])
+    return self.__init__(flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"]))
 
 
 def is_nonzero(input):
@@ -189,14 +194,6 @@ def is_nonzero(input):
         True
         >>> flow.is_nonzero(flow.tensor([3]))
         True
-        >>> flow.is_nonzero(flow.tensor([1, 3, 5]))
-        Traceback (most recent call last):
-        ...
-        RuntimeError: bool value of Tensor with more than one value is ambiguous
-        >>> flow.is_nonzero(flow.tensor([]))
-        Traceback (most recent call last):
-        ...
-        RuntimeError: bool value of Tensor with no values is ambiguous
 
     """
     shape = input.shape
@@ -209,23 +206,23 @@ def is_nonzero(input):
 
 
 def _gt(self, other):
-    return self.gt(other)
+    return flow.gt(self, other)
 
 
 def _lt(self, other):
-    return self.lt(other)
+    return flow.lt(self, other)
 
 
 def _ge(self, other):
-    return self.ge(other)
+    return flow.ge(self, other)
 
 
 def _le(self, other):
-    return self.le(other)
+    return flow.le(self, other)
 
 
 def _mul(self, other):
-    return self.mul(other)
+    return flow.mul(self, other)
 
 
 def _rmul(self, other):
@@ -233,7 +230,11 @@ def _rmul(self, other):
 
 
 def _add(self, other):
-    return self.add(other)
+    return flow.add(self, other)
+
+
+def _add_inplace(self, other):
+    return flow.add(self, other, inplace=True)
 
 
 def _iadd(self, other):
@@ -241,11 +242,11 @@ def _iadd(self, other):
 
 
 def _radd(self, other):
-    return self.add(other)
+    return flow.add(self, other)
 
 
 def _sub(self, other):
-    return self.sub(other)
+    return flow.sub(self, other)
 
 
 def _rsub(self, other):
@@ -253,7 +254,7 @@ def _rsub(self, other):
 
 
 def _truediv(self, other):
-    return self.div(other)
+    return flow.div(self, other)
 
 
 def _rtruediv(self, other):
@@ -266,6 +267,194 @@ def _neg(self):
 
 def _pow(self, b):
     return flow.pow(self, b)
+
+
+def _abs(self):
+    return flow.abs(self)
+
+
+def _exp(self):
+    return flow.exp(self)
+
+
+def _acos(self):
+    return flow.acos(self)
+
+
+def _acosh(self):
+    return flow.acosh(self)
+
+
+def _arccosh(self):
+    return flow.arccosh(self)
+
+
+def _atanh(self):
+    return flow.atanh(self)
+
+
+def _arctanh(self):
+    return flow.arctanh(self)
+
+
+def _sign(self):
+    return flow.sign(self)
+
+
+def _sinh(self):
+    return flow.sinh(self)
+
+
+def _tan(self):
+    return flow.tan(self)
+
+
+def _gelu(self):
+    return flow.gelu(self)
+
+
+def _mish(self):
+    return flow.mish(self)
+
+
+def _sigmoid(self):
+    return flow.sigmoid(self)
+
+
+def _tanh(self):
+    return flow.tanh(self)
+
+
+def _silu(self):
+    return flow.silu(self)
+
+
+def _selu(self):
+    return flow.selu(self)
+
+
+def _softsign(self):
+    return flow.softsign(self)
+
+
+def _cast(self, dtype):
+    return flow.cast(self, dtype)
+
+
+def _diag(self, diagonal=0):
+    return flow.diag(self, diagonal=diagonal)
+
+
+def _log1p(self):
+    return flow.log1p(self)
+
+
+def _reciprocal(self):
+    return flow.reciprocal(self)
+
+
+def _asin(self):
+    return flow.asin(self)
+
+
+def _arcsin(self):
+    return flow.arcsin(self)
+
+
+def _asinh(self):
+    return flow.asinh(self)
+
+
+def _arcsinh(self):
+    return flow.arcsinh(self)
+
+
+def _atan(self):
+    return flow.atan(self)
+
+
+def _arctan(self):
+    return flow.arctan(self)
+
+
+def _ceil(self):
+    return flow.ceil(self)
+
+
+def _clamp(self, min=None, max=None):
+    return flow.clamp(self, min=min, max=max)
+
+
+def _clip(self, min=None, max=None):
+    return flow.clip(self, min=min, max=max)
+
+
+def _cos(self):
+    return flow.cos(self)
+
+
+def _cosh(self):
+    return flow.cosh(self)
+
+
+def _erf(self):
+    return flow.erf(self)
+
+
+def _erfc(self):
+    return flow.erfc(self)
+
+
+def _expm1(self):
+    return flow.expm1(self)
+
+
+def _fmod(self, other):
+    return flow.fmod(self, other)
+
+
+def _log(self):
+    return flow.log(self)
+
+
+def _minimum(self, y):
+    return flow.minimum(self, y)
+
+
+def _maximum(self, y):
+    return flow.maximum(self, y)
+
+
+def _rsqrt(self):
+    return flow.rsqrt(self)
+
+
+def _sqrt(self):
+    return flow.sqrt(self)
+
+
+def _square(self):
+    return flow.square(self)
+
+
+def _matmul(self, other):
+    return flow.matmul(self, other)
+
+
+def _round(self):
+    return flow.round(self)
+
+
+def _softplus(self):
+    return flow.softplus(self)
+
+
+def _tril(self, diagonal=0):
+    return flow.tril(self, diagonal=diagonal)
+
+
+def _triu(self, diagonal=0):
+    return flow.triu(self, diagonal=diagonal)
 
 
 def _uniform(self, a=0, b=1):
@@ -443,6 +632,62 @@ def RegisterMethods():
     Tensor.copy_ = _copy
     Tensor.get_device = _get_device
     Tensor._meta_repr = _meta_repr
+    Tensor.abs = _abs
+    Tensor.exp = _exp
+    Tensor.acos = _acos
+    Tensor.acosh = _acosh
+    Tensor.arccosh = _arccosh
+    Tensor.atanh = _atanh
+    Tensor.arctanh = _arctanh
+    Tensor.sign = _sign
+    Tensor.sinh = _sinh
+    Tensor.tan = _tan
+    Tensor.gt = _gt
+    Tensor.ge = _ge
+    Tensor.gelu = _gelu
+    Tensor.mish = _mish
+    Tensor.sigmoid = _sigmoid
+    Tensor.tanh = _tanh
+    Tensor.silu = _silu
+    Tensor.selu = _selu
+    Tensor.softsign = _softsign
+    Tensor.cast = _cast
+    Tensor.diag = _diag
+    Tensor.log1p = _log1p
+    Tensor.add = _add
+    Tensor.add_ = _add_inplace
+    Tensor.div = _truediv
+    Tensor.mul = _mul
+    Tensor.reciprocal = _reciprocal
+    Tensor.sub = _sub
+    Tensor.asin = _asin
+    Tensor.arcsin = _arcsin
+    Tensor.asinh = _asinh
+    Tensor.arcsinh = _arcsinh
+    Tensor.atan = _atan
+    Tensor.arctan = _arctan
+    Tensor.ceil = _ceil
+    Tensor.clamp = _clamp
+    Tensor.clip = _clip
+    Tensor.cos = _cos
+    Tensor.cosh = _cosh
+    Tensor.erf = _erf
+    Tensor.erfc = _erfc
+    Tensor.expm1 = _expm1
+    Tensor.fmod = _fmod
+    Tensor.log = _log
+    Tensor.minimum = _minimum
+    Tensor.maximum = _maximum
+    Tensor.pow = _pow
+    Tensor.rsqrt = _rsqrt
+    Tensor.sqrt = _sqrt
+    Tensor.square = _square
+    Tensor.matmul = _matmul
+    Tensor.round = _round
+    Tensor.softplus = _softplus
+    Tensor.tril = _tril
+    Tensor.triu = _triu
+    Tensor.contiguous = _contiguous
 
 
 def register_tensor_op(op_name):
@@ -451,37 +696,3 @@ def register_tensor_op(op_name):
         return method
 
     return set_tensor_op
-
-
-def tensor(*args, **kwargs):
-    """Constructs a tensor with data, return a consistent tensor if placement and sbp are in kwargs,
-       otherwise return a local tensor. 
-       
-    Arguments:
-        data: Initial data for the tensor. Can be a list, tuple, NumPy ndarray, scalar or tensor.
-    Keyword Arguments:
-        dtype (oneflow.dtype, optional) – the desired data type of returned tensor.
-            Default: if None, infers data type from data.
-        device (oneflow.device, optional): the desired device of returned tensor. If placement
-            and sbp is None, uses the current cpu for the default tensor type.
-        placement (oneflow.placement, optional): the desired placement of returned tensor.
-        sbp (oneflow.sbp or tuple of oneflow.sbp, optional): the desired sbp of returned tensor.
-        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False
-
-    Noted:
-        The Keyword Argument device is mutually exclusive with placement and sbp.
-        Consistent tensor only can be constructed from tensor.
-
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        
-        >>> x = flow.tensor([1,2,3])
-        >>> x
-        tensor([1, 2, 3], dtype=oneflow.int64)
-
-    """
-    return flow._oneflow_internal.tensor(*args, **kwargs)

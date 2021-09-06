@@ -79,7 +79,7 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
   if (!executable) {
     VLOG(2) << "Build executable for launch op " << this->op_conf().name();
     const auto& launch_conf = this->op_conf().xrt_launch_conf();
-    auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, this->job_desc());
+    auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type);
     {
       // Run InferShape pass
       const auto& parallel_ctx = this->kernel_conf().xrt_launch_conf().parallel_ctx();
@@ -100,9 +100,8 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
       }
       const xrt::util::PbMap<std::string, cfg::SbpSignature>* const_cfg_sbp_signatures_ptr =
           &cfg_sbp_signatures;
-      xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), &parallel_ctx,
-                      &parallel_desc, const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc,
-                      &entry_blob_descs);
+      xrt::RunXrtPass("InferShape", graph.get(), options, &parallel_ctx, &parallel_desc,
+                      const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc, &entry_blob_descs);
       // Update argument meta data
       // xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
       //                 &this->job_desc());
@@ -155,12 +154,7 @@ void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
 }
 
 template<DeviceType device_type>
-void XrtLaunchKernel<device_type>::VirtualKernelInit(KernelContext* ctx) {
-  job_desc_ = ctx->job_desc();
-}
-
-template<DeviceType device_type>
-void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   desc_getter_ = BlobDescGetter<device_type>(this, BnInOp2Blob);
   // Prepare input and output parameters
@@ -214,11 +208,6 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) 
   const std::vector<xrt::Parameter>& results = executable->Results();
   CHECK_EQ(results.size(), return_params.size());
   for (int i = 0; i < results.size(); ++i) { CHECK_EQ(results[i].data(), return_params[i].data()); }
-}
-
-template<DeviceType device_type>
-const JobDesc& XrtLaunchKernel<device_type>::job_desc() const {
-  return *job_desc_;
 }
 
 // ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXrtLaunchConf, XrtLaunchKernel,
