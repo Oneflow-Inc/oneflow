@@ -13,12 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -111,34 +107,24 @@ Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* ctx, const TensorTuple
   if (begin_params_axis < 0) { begin_params_axis += dy->shape()->NumAxes(); }
   int64_t begin_norm_axis = ctx->begin_norm_axis;
   if (begin_norm_axis < 0) { begin_norm_axis += dy->shape()->NumAxes(); }
-  if (ctx->has_beta_diff || ctx->has_gamma_diff || ctx->has_normalized_diff) {
-    const auto& param_grad_op = JUST(op_expr_helper::LayerNormParamGradOp(
-        begin_params_axis, ctx->has_beta_diff, ctx->has_gamma_diff, ctx->has_normalized_diff,
-        GradientOpName(op_name_ + "_param")));
-    TensorTuple inputs{dy};
 
-    if (ctx->has_gamma_diff || ctx->has_normalized_diff) {
-      inputs.push_back(saved_tensors.at(ctx->gamma_index));  // gamma
-    }
-    if (ctx->has_gamma_diff) {
-      inputs.push_back(saved_tensors.at(ctx->normalized_index));  // normalized
-    }
-
-    const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(*param_grad_op, inputs));
-
-    if (ctx->has_gamma_diff) {
-      in_grads->at(1) =
-          results->at(ctx->has_gamma_diff);  // In nn functor, in[1] is gamma, and in
-                                             // op_expr_helper, the output[1] is gamma diff.
-    }
-
-    if (ctx->has_beta_diff) {
-      in_grads->at(ctx->has_gamma_diff + 1) = results->at(
-          0);  // In nn functor, in[2] is beta, and in op_expr_helper, the output[0] is beta diff.
-    }
-
-    if (ctx->has_normalized_diff) { dy = results->at(ctx->has_beta_diff + ctx->has_gamma_diff); }
+  std::shared_ptr<Tensor> gamma = saved_tensors.at(ctx->gamma_index);
+  if (!ctx->has_normalized_diff && !ctx->has_gamma_diff && !ctx->has_beta_diff) {
+    // Use LayerNormParamGrad(Tensor dy, Tensor gamma, Int64 begin_params_axis, Double epsilon).
+    dy = JUST(functional::LayerNormParamGrad(dy, begin_params_axis, ctx->epsilon));
+  } else if (ctx->has_normalized_diff && ctx->has_gamma_diff && ctx->has_beta_diff) {
+    // Use LayerNormAffineParamGrad(Tensor dy, Tensor gamma, Tensor normalized, Int64
+    // begin_params_axis, Double epsilon).
+    std::shared_ptr<Tensor> normalized = saved_tensors.at(ctx->normalized_index);
+    const auto& results = JUST(functional::LayerNormAffineParamGrad(
+        dy, gamma, normalized, begin_params_axis, ctx->epsilon));
+    in_grads->at(1) = results->at(0);  // For gamma.
+    in_grads->at(2) = results->at(1);  // For beta.
+    dy = results->at(2);
+  } else {
+    UNIMPLEMENTED();
   }
+
   if (ctx->x_requires_grad) {
     const auto& x = saved_tensors.at(ctx->x_index);
     const auto& mean = saved_tensors.at(ctx->mean_index);

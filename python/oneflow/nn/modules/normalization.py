@@ -258,6 +258,7 @@ class LayerNorm(Module):
             for dim in range(len(x.shape)):
                 if dim >= self.begin_norm_axis:
                     reduce_axis.append(dim)
+            print("reduce_axis: ", reduce_axis)
             mean = x.mean(dim=reduce_axis, keepdim=True)
             variance = x.var(dim=reduce_axis, unbiased=False, keepdim=True)
             params_shape = x.shape[self.begin_params_axis :]
@@ -283,10 +284,8 @@ class LayerNorm(Module):
                 )
             variance += self.eps
             normalized = (x - mean) * variance.rsqrt()
-            if self.weight is not None:
-                normalized = normalized * weight
-            if self.bias is not None:
-                normalized = normalized + bias
+            if self.elementwise_affine:
+                normalized = normalized * weight + bias
             return normalized
         else:
             if self.elementwise_affine:
