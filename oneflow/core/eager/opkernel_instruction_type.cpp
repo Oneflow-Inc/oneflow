@@ -467,13 +467,18 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 }  // namespace
 
 struct LocalCallOpKernelUtil {
-  static inline Maybe<void> Infer(vm::Instruction* instruction) {
-    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+  static inline Maybe<void> DoInfer(LocalCallOpKernelPhyInstrOperand* operand, const vm::Stream& stream) {
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
     operand->set_user_opkernel(JUST(operand->mut_opkernel()->ChooseOpKernel(
         operand->inputs(), operand->outputs(), operand->consistent_tensor_infer_result())));
-    JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
+    JUST(CheckOutputBlobObjectsMemCase(operand, stream));
     JUST(InitOutputBlobs(operand));
+    return Maybe<void>::Ok();
+  }
+  static inline Maybe<void> Infer(vm::Instruction* instruction) {
+    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    auto& stream = instruction->stream();
+    DoInfer(operand, stream);
     return Maybe<void>::Ok();
   }
 
@@ -486,13 +491,8 @@ struct LocalCallOpKernelUtil {
     TryInitOpKernelState(operand, device_ctx, &state);
     JUST(OpKernelCompute(operand, device_ctx, state));
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
-    // operand->set_user_opkernel(nullptr);
+    operand->set_user_opkernel(nullptr);
     return Maybe<void>::Ok();
-  }
-
-  static inline Maybe<bool> IsFullCompute(LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
-    JUST(FullCompute(operand, device_ctx));
-    return true;
   }
 
   static inline Maybe<void> Compute(vm::Instruction* instruction) {
@@ -660,7 +660,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
   static inline Maybe<void> Prepare(vm::Instruction* instruction) {
     std::cout << "DTR tensor prepared." << std::endl;
     auto operand = JUST(GetSharedLocalCallOpKernelPhyInstrOperand(instruction));
-    DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+    auto& stream = instruction->stream();
     JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
       // pin inputs
       dtr_blob_object->pin();
@@ -668,7 +668,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
         CHECK_GT_OR_RETURN(dtr_blob_object->input_size(), 0);
         // TODO: recursive recompute the inputs
         std::cout << "Input tensor is not in memory (Recompute...)" << std::endl;
-        JUST(recompute(dtr_blob_object, device_ctx));
+        JUST(recompute(dtr_blob_object, stream));
       }
       dtr_blob_object->update_access_time();
       dtr_blob_object->update_user_ops(operand);
@@ -705,15 +705,16 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> recompute(vm::DTREagerBlobObject* object, DeviceCtx* device_ctx) {
+  static inline Maybe<void> recompute(vm::DTREagerBlobObject* object, const vm::Stream& stream) {
     auto operand = object->compute_op();
     CHECK_NOTNULL_OR_RETURN(operand);
+    DeviceCtx* device_ctx = stream.device_ctx().get();
     JUST(ForEachDTRInputTensor(operand, [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
       // pin inputs
       dtr_blob_object->pin();
       if (!dtr_blob_object->is_in_memory()) {
         CHECK_GT_OR_RETURN(dtr_blob_object->input_size(), 0);
-        JUST(recompute(dtr_blob_object, device_ctx));
+        JUST(recompute(dtr_blob_object, stream));
       }
       dtr_blob_object->update_access_time();
       return Maybe<void>::Ok();
@@ -722,9 +723,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
     // TODO: execute function, update outputs, if execute failure (OOM), evict()
     auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
     CHECK_NOTNULL_OR_RETURN(ptr);
-    // while(!JUST(IsFullCompute(ptr, device_ctx))) {
-    //   JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict());
-    // }
+    JUST(DoInfer(ptr, stream));
     JUST(FullCompute(ptr, device_ctx));
     std::cout << "Now in memory? " << object->is_in_memory() << std::endl;
 
