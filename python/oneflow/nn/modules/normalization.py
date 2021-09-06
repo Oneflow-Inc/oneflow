@@ -248,6 +248,12 @@ class LayerNorm(Module):
             init.zeros_(self.bias)
 
     def forward(self, x):
+        for i in range(0, len(self.normalized_shape)):
+            if x.shape[i + self.begin_params_axis] != self.normalized_shape[i]:
+                raise RuntimeError(
+                    f"Given normalized_shape={self.normalized_shape}, expected input with shape [*, {str(self.normalized_shape)[1:-1]}], but got input of size {x.shape}"
+                )
+
         assert len(x.shape) > len(
             self.normalized_shape
         ), "Input tensor dim must greater than normalized dim!"

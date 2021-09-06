@@ -120,7 +120,6 @@ Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& eps
 Maybe<one::UserOpExpr> BroadcastDivGradOp();
 Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name);
 
-
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size);
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size,
                                 const std::string& name);
