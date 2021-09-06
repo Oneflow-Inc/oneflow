@@ -29,16 +29,16 @@ struct WaitAndSendIdsStatus final {
 };
 
 template<typename T>
-class WaitAndSendIdsKernel final : public KernelIf<DeviceType::kCPU> {
+class WaitAndSendIdsKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(WaitAndSendIdsKernel);
   WaitAndSendIdsKernel() = default;
   ~WaitAndSendIdsKernel() = default;
 
  private:
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
+  void DestroyState(void* state) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow

@@ -15,15 +15,17 @@ limitations under the License.
 """
 from oneflow.nn.modules.interpolate import interpolate
 from oneflow.nn.modules.norm import l2_normalize
+from oneflow.nn.modules.affine_grid import affine_grid
+from oneflow.nn.modules.grid_sample import grid_sample
 from oneflow._C import conv1d
 from oneflow._C import conv2d
 from oneflow._C import conv3d
-from oneflow._C import avgpool_1d
-from oneflow._C import avgpool_2d
-from oneflow._C import avgpool_3d
-from oneflow._C import maxpool_1d
-from oneflow._C import maxpool_2d
-from oneflow._C import maxpool_3d
+from oneflow._C import avg_pool1d
+from oneflow._C import avg_pool2d
+from oneflow._C import avg_pool3d
+from oneflow._C import max_pool1d
+from oneflow._C import max_pool2d
+from oneflow._C import max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d

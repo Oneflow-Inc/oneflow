@@ -67,7 +67,7 @@ def _np_replication_pad2d_grad(src, dest, padding):
 
 def _test_ReplicationPad2d(test_case, shape, padding, device):
     np_input = np.random.random(shape).astype(np.float32)
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     if isinstance(padding, int):

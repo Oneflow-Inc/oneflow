@@ -19,30 +19,25 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type>
-class IdentityKernel final : public KernelIf<device_type> {
+class IdentityKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IdentityKernel);
   IdentityKernel() = default;
   ~IdentityKernel() = default;
 
  private:
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
-  void ForwardHeader(const KernelCtx& ctx,
-                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void IdentityKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyValidDataContentFrom(ctx.device_ctx, BnInOp2Blob("in"));
+void IdentityKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
+  ctx->BnInOp2Blob("out")->CopyValidDataContentFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type>
-void IdentityKernel<device_type>::ForwardHeader(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyHeaderFrom(ctx.device_ctx, BnInOp2Blob("in"));
+void IdentityKernel<device_type>::ForwardHeader(KernelContext* ctx) const {
+  ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kIdentityConf, IdentityKernel);

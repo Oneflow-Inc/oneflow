@@ -18,27 +18,24 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-class TotalLossInstanceNumKernel final : public KernelIf<DeviceType::kCPU> {
+class TotalLossInstanceNumKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TotalLossInstanceNumKernel);
   TotalLossInstanceNumKernel() = default;
   ~TotalLossInstanceNumKernel() override = default;
 
  private:
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<typename T>
-void TotalLossInstanceNumKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void TotalLossInstanceNumKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   const auto& input_bns = this->op_attribute().input_bns();
-  T first_val = BnInOp2Blob(input_bns.Get(0))->template dptr<T>()[0];
+  T first_val = ctx->BnInOp2Blob(input_bns.Get(0))->template dptr<T>()[0];
   for (const std::string& ibn : input_bns) {
-    CHECK_EQ(BnInOp2Blob(ibn)->template dptr<T>()[0], first_val);
+    CHECK_EQ(ctx->BnInOp2Blob(ibn)->template dptr<T>()[0], first_val);
   }
-  BnInOp2Blob("out")->template mut_dptr<T>()[0] = first_val;
+  ctx->BnInOp2Blob("out")->template mut_dptr<T>()[0] = first_val;
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kTotalLossInstanceNumConf, TotalLossInstanceNumKernel,

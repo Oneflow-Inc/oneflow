@@ -32,6 +32,7 @@ _dtypes = [
     oneflow.uint8,
     oneflow.record,
     oneflow.tensor_buffer,
+    oneflow.bfloat16,
 ]
 
 

@@ -126,7 +126,7 @@ def get_args(callable, *args, **kwargs):
             new_pytorch_args.append(x)
     for key, value in pytorch_kwargs.items():
         if type(value) is torch_original.Tensor:
-            new_pytorch_kwargs[key] = f"Tensor({get_tensor_shape(x)})"
+            new_pytorch_kwargs[key] = f"Tensor({get_tensor_shape(value)})"
         else:
             new_pytorch_kwargs[key] = value
 
@@ -355,6 +355,7 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
         if not np.allclose(
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
         ):
+            print_note_fake_program()
             print(
                 f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )

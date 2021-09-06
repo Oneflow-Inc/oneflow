@@ -23,16 +23,15 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
+class BoxingKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingKernel);
   BoxingKernel() = default;
   ~BoxingKernel() = default;
 
  private:
-  void VirtualKernelInit() override;
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
+  void VirtualKernelInit(KernelContext* ctx) override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 
   PbRpf<std::string> ibn_0_;
   PbRpf<std::string> obn_0_;
@@ -206,7 +205,7 @@ void ConcatSplitDataContent(DeviceCtx* ctx,
 }  // namespace
 
 template<typename T>
-void BoxingKernel<T>::VirtualKernelInit() {
+void BoxingKernel<T>::VirtualKernelInit(KernelContext* ctx) {
   const std::string& ibn_0 = op_attribute().input_bns(0);
   const std::string& obn_0 = op_attribute().output_bns(0);
   ibn_0_ = ConstructPbRpf(ibn_0);
@@ -214,30 +213,31 @@ void BoxingKernel<T>::VirtualKernelInit() {
 }
 
 template<typename T>
-void BoxingKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void BoxingKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
+  DeviceCtx* device_ctx = ctx->device_ctx();
+  const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
+      ConcatSplitDataContent(device_ctx, BnInOp2Blob, op_attribute().input_bns(),
                              boxing_conf.concat_box().axis(), op_attribute().output_bns(),
                              boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
+      ConcatSplitDataContent(device_ctx, BnInOp2Blob, op_attribute().input_bns(),
                              boxing_conf.concat_box().axis(), obn_0_, 0);
-      CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute().output_bns(),
+      CopyFromFirstToOtherBlobs(device_ctx, BnInOp2Blob, op_attribute().output_bns(),
                                 DataContentIterator::GetCopyBlobFieldMthd());
     } else {
       UNIMPLEMENTED();
     }
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), "middle");
-      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, ConstructPbRpf("middle"), 0,
+      CalcSumOfBlobs<T>(device_ctx, BnInOp2Blob, op_attribute().input_bns(), "middle");
+      ConcatSplitDataContent(device_ctx, BnInOp2Blob, ConstructPbRpf("middle"), 0,
                              op_attribute().output_bns(), boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), obn_0_.Get(0));
-      CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute().output_bns(),
+      CalcSumOfBlobs<T>(device_ctx, BnInOp2Blob, op_attribute().input_bns(), obn_0_.Get(0));
+      CopyFromFirstToOtherBlobs(device_ctx, BnInOp2Blob, op_attribute().output_bns(),
                                 DataContentIterator::GetCopyBlobFieldMthd());
     } else {
       UNIMPLEMENTED();

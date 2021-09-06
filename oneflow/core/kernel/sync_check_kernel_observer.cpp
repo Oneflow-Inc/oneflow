@@ -16,19 +16,15 @@ limitations under the License.
 #include "oneflow/core/kernel/sync_check_kernel_observer.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/stream/stream_context.h"
 
 namespace oneflow {
 
-void SyncCheckKernelObserver::DidForwardDataContent(
-    const KernelCtx& kernel_ctx, const Kernel* kernel,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-#ifdef WITH_CUDA
-  auto* cuda_device_ctx = dynamic_cast<CudaDeviceCtx*>(kernel_ctx.device_ctx);
-  if (cuda_device_ctx != nullptr) {
-    OF_CUDA_CHECK(cudaStreamSynchronize(cuda_device_ctx->cuda_stream()))
-        << kernel->op_conf().name();
-  }
-#endif
+void SyncCheckKernelObserver::DidForwardDataContent(KernelContext* kernel_ctx,
+                                                    const Kernel* kernel) {
+  auto* provider = dynamic_cast<StreamContextProvider*>(kernel_ctx->device_ctx());
+  if (provider == nullptr) { return; }
+  CHECK_JUST_MSG(provider->GetStreamContext()->Sync(), kernel->op_conf().name());
 }
 
 }  // namespace oneflow

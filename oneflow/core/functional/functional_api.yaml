@@ -250,7 +250,7 @@
   bind_python: True
 
 - name: "hardsigmoid"
-  signature: "Tensor (Tensor x) => HardSigmoid"
+  signature: "Tensor (Tensor input, Bool inplace=False, *) => HardSigmoid"
   bind_python: True
 
 - name: "hardsigmoid_grad"
@@ -519,6 +519,26 @@
     "Tensor (Tensor dy, Tensor label, Tensor theta, Float m1, Float m2, Float m3, Int64 depth) => CombinedMarginLossGrad"
   bind_python: False
 
+- name: "affine_grid"
+  signature:
+    "Tensor (Tensor theta, *, Shape size, Bool align_corners) => AffineGrid"
+  bind_python: True
+
+- name: "affine_grid_grad"
+  signature:
+    "Tensor (Tensor dgrid, *, Shape size, Bool align_corners) => AffineGridGrad"
+  bind_python: False
+
+- name: "grid_sample"
+  signature:
+    "Tensor (Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners) => GridSample"
+  bind_python: True
+
+- name: "grid_sample_grad"
+  signature:
+    "TensorTuple (Tensor doutput, Tensor input, Tensor grid, *, String interpolation_mode, String padding_mode, Bool align_corners) => GridSampleGrad"
+  bind_python: False
+
 - name: "where"
   signature: [
     "Tensor (Tensor condition, Tensor x, Tensor y) => Where",
@@ -583,24 +603,24 @@
              Int32List strides, Bool ceil_mode) => PoolNdGrad"
   bind_python: False
 
-- name: "maxpool_1d"
+- name: "max_pool1d"
   signature:
-    "TensorTuple (Tensor x, String data_format=\"channels_first\", Int32List padding,
-                  Int32List kernel_size, Int32List stride, Int32List dilation, 
+    "TensorTuple (Tensor x, String data_format=\"channels_first\", Int32List[1] padding,
+                  Int32List[1] kernel_size, Int32List[1] stride, Int32List[1] dilation, 
                   Bool return_indices=True, Bool ceil_mode=False) => Maxpool1D"
   bind_python: True
 
-- name: "maxpool_2d"
+- name: "max_pool2d"
   signature:
-    "TensorTuple (Tensor x, String data_format=\"channels_first\", Int32List padding,
-                  Int32List kernel_size, Int32List stride, Int32List dilation, 
+    "TensorTuple (Tensor x, String data_format=\"channels_first\", Int32List[2] padding,
+                  Int32List[2] kernel_size, Int32List[2] stride, Int32List[2] dilation, 
                   Bool return_indices=True, Bool ceil_mode=False) => Maxpool2D"
   bind_python: True
 
-- name: "maxpool_3d"
+- name: "max_pool3d"
   signature:
-    "TensorTuple (Tensor x, String data_format=\"channels_first\", Int32List padding,
-                  Int32List kernel_size, Int32List stride, Int32List dilation, 
+    "TensorTuple (Tensor x, String data_format=\"channels_first\", Int32List[3] padding,
+                  Int32List[3] kernel_size, Int32List[3] stride, Int32List[3] dilation, 
                   Bool return_indices=True, Bool ceil_mode=False) => Maxpool3D"
   bind_python: True
 
@@ -868,7 +888,7 @@
 
 - name: "dropout"
   signature:
-    "Tensor (Tensor x, Float p=0.5, Generator generator=None) => Dropout"
+    "Tensor (Tensor x, Float p=0.5, Generator generator=None, Bool training=True) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -946,24 +966,24 @@
   signature: "Void (Tensor x, TensorIndex index, Tensor value) => TensorSetItem"
   bind_python: True
 
-- name: "avgpool_1d"
+- name: "avg_pool1d"
   signature:
-    "Tensor (Tensor x, String data_format=\"channels_first\", Int32List padding,
-             Int32List kernel_size, Int32List stride, Bool ceil_mode=False, Bool count_include_pad=True, 
+    "Tensor (Tensor x, String data_format=\"channels_first\", Int32List[1] padding,
+             Int32List[1] kernel_size, Int32List[1] stride, Bool ceil_mode=False, Bool count_include_pad=True, 
              Int64 divisor_override=0) => Avgpool1D"
   bind_python: True 
 
-- name: "avgpool_2d"
+- name: "avg_pool2d"
   signature:
-    "Tensor (Tensor x, String data_format=\"channels_first\", Int32List padding,
-             Int32List kernel_size, Int32List stride, Bool ceil_mode=False, Bool count_include_pad=True, 
+    "Tensor (Tensor x, String data_format=\"channels_first\", Int32List[2] padding,
+             Int32List[2] kernel_size, Int32List[2] stride, Bool ceil_mode=False, Bool count_include_pad=True, 
              Int64 divisor_override=0) => Avgpool2D"
   bind_python: True 
 
-- name: "avgpool_3d"
+- name: "avg_pool3d"
   signature:
-    "Tensor (Tensor x, String data_format=\"channels_first\", Int32List padding,
-             Int32List kernel_size, Int32List stride, Bool ceil_mode=False, Bool count_include_pad=True, 
+    "Tensor (Tensor x, String data_format=\"channels_first\", Int32List[3] padding,
+             Int32List[3] kernel_size, Int32List[3] stride, Bool ceil_mode=False, Bool count_include_pad=True, 
              Int64 divisor_override=0) => Avgpool3D"
   bind_python: True
 
@@ -1024,6 +1044,10 @@
 
 - name: "consistent_all_gather"
   signature: "Tensor (Tensor x) => ConsistentAllGather"
+  bind_python: False
+
+- name: "consistent_s2s"
+  signature: "Tensor (Tensor x, SbpList out_sbp) => ConsistentS2S"
   bind_python: False
 
 - name: "select_first"
@@ -1102,6 +1126,10 @@
 - name: "split"
   signature: "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split"
   bind_python: True
+
+- name: "split_like"
+  signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
+  bind_python: True
   
 - name: "split_with_size"
   signature: "TensorTuple (Tensor x, Int64List split_sizes, Int64 dim=0) => SplitWithSize"
@@ -1149,4 +1177,12 @@
 
 - name: "fused_bias_add_dropout"
   signature: "Tensor (Tensor a, Tensor b, *, Float p=0.5, Int32 axis, Generator generator=None) => FusedBiasAddDropout"
+  bind_python: True
+
+- name: "send"
+  signature: "Void (Tensor input, Int64 dst, Bool send_meta=True) => Send"
+  bind_python: True
+
+- name: "recv"
+  signature: "Tensor (Int64 src, Shape shape=None, DataType dtype=None, Device device=None, *, Tensor out=None) => Recv"
   bind_python: True
