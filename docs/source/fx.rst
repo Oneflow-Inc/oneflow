@@ -5,7 +5,86 @@ oneflow.fx
 
 Overview
 --------
-.. automodule:: oneflow.fx
+**This feature is under a Beta release and its API may change.**
+
+FX is a toolkit for developers to use to transform ``nn.Module``
+instances. FX consists of three main components: a **symbolic tracer,**
+an **intermediate representation**, and **Python code generation**. A
+demonstration of these components in action:
+
+::
+    import oneflow
+    # Simple module for demonstration
+    class MyModule(oneflow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.param = oneflow.nn.Parameter(oneflow.rand(3, 4))
+            self.linear = oneflow.nn.Linear(4, 5)
+
+        def forward(self, x):
+            return self.linear(x + self.param).clamp(min=0.0, max=1.0)
+
+    module = MyModule()
+
+    from oneflow.fx import symbolic_trace
+    # Symbolic tracing frontend - captures the semantics of the module
+    symbolic_traced : oneflow.fx.GraphModule = symbolic_trace(module)
+
+    # High-level intermediate representation (IR) - Graph representation
+    print(symbolic_traced.graph)
+    """
+    graph():
+        %x : [#users=1] = placeholder[target=x]
+        %param : [#users=1] = get_attr[target=param]
+        %add : [#users=1] = call_function[target=operator.add](args = (%x, %param), kwargs = {})
+        %linear : [#users=1] = call_module[target=linear](args = (%add,), kwargs = {})
+        %clamp : [#users=1] = call_method[target=clamp](args = (%linear,), kwargs = {min: 0.0, max: 1.0})
+        return clamp
+    """
+
+    # Code generation - valid Python code
+    print(symbolic_traced.code)
+    """
+    def forward(self, x):
+        param = self.param
+        add = x + param;  x = param = None
+        linear = self.linear(add);  add = None
+        clamp = linear.clamp(min = 0.0, max = 1.0);  linear = None
+        return clamp
+    """
+
+The **symbolic tracer** performs "symbolic execution" of the Python
+code. It feeds fake values, called Proxies, through the code. Operations
+on theses Proxies are recorded. More information about symbolic tracing
+can be found in the :func:`symbolic_trace` and :class:`Tracer`
+documentation.
+
+The **intermediate representation** is the container for the operations
+that were recorded during symbolic tracing. It consists of a list of
+Nodes that represent function inputs, callsites (to functions, methods,
+or :class:`oneflow.nn.Module` instances), and return values. More information
+about the IR can be found in the documentation for :class:`Graph`. The
+IR is the format on which transformations are applied.
+
+**Python code generation** is what makes FX a Python-to-Python (or
+Module-to-Module) transformation toolkit. For each Graph IR, we can
+create valid Python code matching the Graph's semantics. This
+functionality is wrapped up in :class:`GraphModule`, which is a
+:class:`oneflow.nn.Module` instance that holds a :class:`Graph` as well as a
+``forward`` method generated from the Graph.
+
+Taken together, this pipeline of components (symbolic tracing ->
+intermediate representation -> transforms -> Python code generation)
+constitutes the Python-to-Python transformation pipeline of FX. In
+addition, these components can be used separately. For example,
+symbolic tracing can be used in isolation to capture a form of
+the code for analysis (and not transformation) purposes. Code
+generation can be used for programmatically generating models, for
+example from a config file. There are many uses for FX!
+
+Several example transformations can be found at the
+`examples <https://github.com/Oneflow-Inc/examples/tree/main/fx>`__
+repository.
 
 .. _Writing Transformations:
 
@@ -64,7 +143,7 @@ transform are a :class:`oneflow.nn.Module` will allow for composability.
     Note that you MUST call :meth:`GraphModule.recompile` to bring the generated
     ``forward()`` method on the ``GraphModule`` in sync with the modified :class:`Graph`.
 
-Given that you’ve passed in a :class:`flow.nn.Module` that has been traced into a
+Given that you’ve passed in a :class:`oneflow.nn.Module` that has been traced into a
 :class:`Graph`, there are now two primary approaches you can take to building a new
 :class:`Graph`.
 
@@ -106,16 +185,27 @@ Here we define a module ``MyModule`` for demonstration purposes, instantiate it,
 symbolically trace it, then call the :meth:`Graph.print_tabular` method to print
 out a table showing the nodes of this :class:`Graph`:
 
-opcode         name           target                   args                kwargs
--------------  -------------  -----------------------  ------------------  -----------
-placeholder    x              x                        ()                  {}
-get_attr       linear_weight  linear.weight            ()                  {}
-call_function  add            <built-in function add>  (x, linear_weight)  {}
-call_module    linear         linear                   (add,)              {}
-call_method    relu           relu                     (linear,)           {}
-call_method    sum_1          sum                      (relu,)             {'dim': -1}
-call_method    topk           topk                     (sum_1, 3)          {}
-output         output         output                   (topk,)             {}
+
+    +---------------+---------------+----------------------------+--------------------+-------------+
+    | opcode        | name          | target                     | args               | kwargs      |
+    +===============+===============+============================+====================+=============+
+    | placeholder   | x             | x                          | ()                 | {}          |
+    +---------------+---------------+----------------------------+--------------------+-------------+
+    | get_attr      | linear_weight | linear.weight              | ()                 | {}          |
+    +---------------+---------------+----------------------------+--------------------+-------------+
+    | call_function | add_1         | <built-in function add>    | (x, linear_weight) | {}          |
+    +---------------+---------------+----------------------------+--------------------+-------------+
+    | call_module   | linear_1      | linear                     | (add_1,)           | {}          |
+    +---------------+---------------+----------------------------+--------------------+-------------+
+    | call_method   | relu_1        | relu                       | (linear_1,)        | {}          |
+    +---------------+---------------+----------------------------+--------------------+-------------+
+    | call_method   | sum_1         | sum                        | (relu_1,)          | {'dim': -1} |
+    +---------------+---------------+----------------------------+--------------------+-------------+
+    | call_method   | topk_1        | topk                       | (sum_1, 3)         | {}          |
+    +---------------+---------------+----------------------------+--------------------+-------------+
+    | output        | output        | output                     | (topk_1,)          | {}          |
+    +---------------+---------------+----------------------------+--------------------+-------------+
+
 
 We can use this information to answer the questions we posed above.
 
