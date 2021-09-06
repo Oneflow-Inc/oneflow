@@ -85,11 +85,11 @@ class TestConvertDependency(flow.unittest.TestCase):
             def __init__(self):
                 super(ConvModel, self).__init__()
                 self.conv = flow.nn.Conv2d(3, 64, kernel_size=11, bias=False)
-            
+
             def forward(self, x):
                 x = self.conv(x)
                 return x
-        
+
         model = ConvModel().state_dict()
         for layer_name in model:
             layer_path = os.path.join(layer_name, "out")
