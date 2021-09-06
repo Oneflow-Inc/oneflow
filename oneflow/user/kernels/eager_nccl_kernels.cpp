@@ -149,14 +149,13 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    int64_t tmp_size = 0;
     const int64_t dtype_size = GetSizeOfDataType(in->data_type());
     int64_t data_size = in->shape().elem_cnt() * dtype_size;
     // NOTE: in (transpose)-> pack_to_ptr (all2all)-> unpack_from_ptr (transpose)-> out
     const char* pack_to_ptr = in->dptr<char>();
     char* unpack_from_ptr = out->mut_dptr<char>();
-    if (tmp_buffer) { tmp_size = tmp_buffer->shape().elem_cnt(); }
-    CHECK(tmp_size == 0 || tmp_size == data_size || tmp_size == data_size * 2);
+    int64_t tmp_size = tmp_size = tmp_buffer->shape().elem_cnt();
+    CHECK(tmp_size == data_size * 2);
 
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = kernel_state->parallel_desc()->parallel_num();
