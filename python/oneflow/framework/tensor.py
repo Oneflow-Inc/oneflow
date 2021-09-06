@@ -456,6 +456,7 @@ def _tril(self, diagonal=0):
 def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
+
 def _sin(self):
     return flow.sin(self)
 
