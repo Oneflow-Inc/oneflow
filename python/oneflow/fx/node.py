@@ -23,7 +23,9 @@ import builtins
 if TYPE_CHECKING:
     from .graph import Graph
 
-BaseArgumentTypes = Union[str, int, float, bool, oneflow.dtype, oneflow.Tensor, oneflow.device]
+BaseArgumentTypes = Union[
+    str, int, float, bool, oneflow.dtype, oneflow.Tensor, oneflow.device
+]
 base_types = BaseArgumentTypes.__args__  # type: ignore[attr-defined]
 
 Target = Union[Callable[..., Any], str]

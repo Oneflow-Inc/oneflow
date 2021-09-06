@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import builtins
 import functools
 import inspect
@@ -5,7 +20,18 @@ import warnings
 import math
 import os
 from types import CodeType, FunctionType, ModuleType
-from typing import Any, Dict, NamedTuple, Optional, Set, Tuple, Type, List, Callable, Union
+from typing import (
+    Any,
+    Dict,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    List,
+    Callable,
+    Union,
+)
 from itertools import chain
 import oneflow
 import oneflow.fx.utils._pytree as pytree
@@ -19,11 +45,12 @@ from .proxy import TracerBase, Proxy, ParameterProxy
 HAS_VARSTUFF = inspect.CO_VARARGS | inspect.CO_VARKEYWORDS
 
 # These need to run in global scope to handle nested calls correctly
-_orig_module_call : Callable = oneflow.nn.Module.__call__
-_orig_module_getattr : Callable = oneflow.nn.Module.__getattr__
+_orig_module_call: Callable = oneflow.nn.Module.__call__
+_orig_module_getattr: Callable = oneflow.nn.Module.__getattr__
 
 
-_proxyable_classes : Dict[Type, None] = {}
+_proxyable_classes: Dict[Type, None] = {}
+
 
 class ProxyableClassMeta(type):
     """
@@ -69,6 +96,7 @@ class ProxyableClassMeta(type):
     defined with ``ProxyableClassMeta`` as metaclass can be recorded in symbolic
     tracing.
     """
+
     def __init__(cls, name, bases, attrs):
         _proxyable_classes.setdefault(cls)
         super().__init__(name, bases, attrs)
@@ -87,37 +115,62 @@ class ProxyableClassMeta(type):
 
         if len(found_proxies) != 0:
             tracer = found_proxies[0].tracer
-            return tracer.create_proxy('call_function', cls, args, kwargs)
+            return tracer.create_proxy("call_function", cls, args, kwargs)
         else:
             cls.__init__(instance, *args, **kwargs)  # type: ignore[misc]
             return instance
 
+
 def _patch_function(fn: FunctionType, nargs: int) -> FunctionType:
     co = fn.__code__
     co_flags = co.co_flags & ~HAS_VARSTUFF
-    co_args : tuple
+    co_args: tuple
     if hasattr(co, "co_posonlyargcount"):
         co_args = (
-            nargs, 0,
-            0, co.co_nlocals, co.co_stacksize,
-            co_flags, co.co_code, co.co_consts, co.co_names,
-            co.co_varnames, co.co_filename, co.co_name,
-            co.co_firstlineno, co.co_lnotab, co.co_freevars,
-            co.co_cellvars
+            nargs,
+            0,
+            0,
+            co.co_nlocals,
+            co.co_stacksize,
+            co_flags,
+            co.co_code,
+            co.co_consts,
+            co.co_names,
+            co.co_varnames,
+            co.co_filename,
+            co.co_name,
+            co.co_firstlineno,
+            co.co_lnotab,
+            co.co_freevars,
+            co.co_cellvars,
         )
     else:
         co_args = (
-            nargs, 0, co.co_nlocals,
-            co.co_stacksize, co_flags, co.co_code, co.co_consts,
-            co.co_names, co.co_varnames, co.co_filename,
-            co.co_name, co.co_firstlineno, co.co_lnotab,
-            co.co_freevars, co.co_cellvars)
+            nargs,
+            0,
+            co.co_nlocals,
+            co.co_stacksize,
+            co_flags,
+            co.co_code,
+            co.co_consts,
+            co.co_names,
+            co.co_varnames,
+            co.co_filename,
+            co.co_name,
+            co.co_firstlineno,
+            co.co_lnotab,
+            co.co_freevars,
+            co.co_cellvars,
+        )
     new_code = CodeType(*co_args)  # type: ignore[arg-type]
-    return FunctionType(new_code, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
+    return FunctionType(
+        new_code, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__
+    )
 
     # we need to insert placeholder nodes for *args and **kwargs
     # we can't call this function normally, otherwise it would try to unpack them
     # instead, let's make python think that args and kwargs are normal variables
+
 
 # TODO(bbuf) Calls patch_function in order to intercept functions at the C-extension level
 # Generally, oneflow._C.xxx will not be called when building a Module
@@ -125,13 +178,15 @@ class PHBase(object):
     """
     Object representing an input placeholder to `concrete_args`
     """
+
     def __repr__(self):
-        return 'PH'
+        return "PH"
+
 
 PH = PHBase()
 
 
-class Tracer(TracerBase): 
+class Tracer(TracerBase):
     # Reference: https://github.com/pytorch/pytorch/issues/54354
     # The first line of this docstring overrides the one Sphinx generates for the
     # documentation. We need it so that Sphinx doesn't leak `math`s path from the
@@ -147,10 +202,14 @@ class Tracer(TracerBase):
     process. The different behaviors that can be overridden are described
     in the docstrings of the methods on this class.
     """
-    def __init__(self, autowrap_modules: Tuple[ModuleType] = (math, ),
-                 autowrap_functions: Tuple[Callable, ...] = (),
-                 enable_cpatching: bool = False,
-                 param_shapes_constant: bool = False) -> None:
+
+    def __init__(
+        self,
+        autowrap_modules: Tuple[ModuleType] = (math,),
+        autowrap_functions: Tuple[Callable, ...] = (),
+        enable_cpatching: bool = False,
+        param_shapes_constant: bool = False,
+    ) -> None:
         # This method's signature is overridden by the first line of this class'
         # docstring. If this method's signature is modified, the signature that
         # overrides it also should be modified accordingly.
@@ -188,8 +247,10 @@ class Tracer(TracerBase):
         # Functions we will eagerly wrap when we see them while tracing
         # this captures both `math.sqrt()` and `from math import sqrt` automatically
         self._autowrap_function_ids: Set[int] = {
-            id(value) for name, value in chain(*[m.__dict__.items() for m in autowrap_modules])
-            if not name.startswith("_") and callable(value)}
+            id(value)
+            for name, value in chain(*[m.__dict__.items() for m in autowrap_modules])
+            if not name.startswith("_") and callable(value)
+        }
         self._autowrap_function_ids.update(set([id(f) for f in autowrap_functions]))
 
         # Python modules to apply autowrap to at the start, in addition to
@@ -199,8 +260,8 @@ class Tracer(TracerBase):
         self.param_shapes_constant = param_shapes_constant
 
         self.submodule_paths: Optional[Dict[oneflow.nn.Module, str]] = None
-    
-    def create_arg(self, a: Any) -> 'Argument':
+
+    def create_arg(self, a: Any) -> "Argument":
         """
         A method to specify the behavior of tracing when preparing values to
         be used as arguments to nodes in the ``Graph``.
@@ -235,21 +296,21 @@ class Tracer(TracerBase):
         if isinstance(a, oneflow.nn.Parameter):
             for n, p in self.root.named_parameters():
                 if a is p:
-                    return self.create_node('get_attr', n, (), {})
-            raise NameError('parameter is not a member of this module')
+                    return self.create_node("get_attr", n, (), {})
+            raise NameError("parameter is not a member of this module")
         elif isinstance(a, oneflow.Tensor):
             for n_, p_ in self.root.named_buffers():
                 if a is p_:
-                    return self.create_node('get_attr', n_, (), {})
+                    return self.create_node("get_attr", n_, (), {})
         elif isinstance(a, oneflow.nn.Module):
             for n_, p_ in self.root.named_modules():
                 if a is p_:
-                    return self.create_node('get_attr', n_, (), {})
+                    return self.create_node("get_attr", n_, (), {})
         # For NamedTuple instances that appear literally as args, we emit
         # a node to construct the NamedTuple and use that Node as the argument.
-        if isinstance(a, tuple) and hasattr(a, '_fields'):
+        if isinstance(a, tuple) and hasattr(a, "_fields"):
             args = tuple(self.create_arg(elem) for elem in a)
-            return self.create_node('call_function', a.__class__, args, {})
+            return self.create_node("call_function", a.__class__, args, {})
 
         # Tensors do not have a reliable string repr() from which they can be
         # constructed (and we probably don't want to rely on that, either), so
@@ -266,17 +327,17 @@ class Tracer(TracerBase):
             # TODO: binary search
             i = 0
             while True:
-                qualname = f'_{a.__class__.__name__}_constant_{i}'
+                qualname = f"_{a.__class__.__name__}_constant_{i}"
                 if not hasattr(self.root, qualname):
                     break
                 i += 1
             setattr(self.root, qualname, a)
 
-            return self.create_node('get_attr', qualname, (), {})
+            return self.create_node("get_attr", qualname, (), {})
 
         return super().create_arg(a)
 
-    def is_leaf_module(self, m: oneflow.nn.Module, module_qualified_name : str) -> bool:
+    def is_leaf_module(self, m: oneflow.nn.Module, module_qualified_name: str) -> bool:
         """
         A method to specify whether a given ``nn.Module`` is a "leaf" module.
 
@@ -295,9 +356,11 @@ class Tracer(TracerBase):
                 submodule ``bar``, which contains submodule ``baz``, that module will
                 appear with the qualified name ``foo.bar.baz`` here.
         """
-        return m.__module__.startswith('oneflow.nn') and not isinstance(m, oneflow.nn.Sequential)
-    
-    def path_of_module(self, mod : oneflow.nn.Module) -> str:
+        return m.__module__.startswith("oneflow.nn") and not isinstance(
+            m, oneflow.nn.Sequential
+        )
+
+    def path_of_module(self, mod: oneflow.nn.Module) -> str:
         """
         Helper method to find the qualified name of ``mod`` in the Module hierarchy
         of ``root``. For example, if ``root`` has a submodule named ``foo``, which has
@@ -312,7 +375,7 @@ class Tracer(TracerBase):
         if self.submodule_paths:
             path = self.submodule_paths.get(mod)
             if path is None:
-                raise NameError('module is not installed as a submodule')
+                raise NameError("module is not installed as a submodule")
             assert isinstance(path, str)
             return path
         # O(N^2) fallback in the case that we didn't store the submodule
@@ -321,9 +384,15 @@ class Tracer(TracerBase):
             for n, p in self.root.named_modules():
                 if mod is p:
                     return n
-            raise NameError('module is not installed as a submodule')
-    
-    def call_module(self, m: oneflow.nn.Module, forward: Callable[..., Any], args : Tuple[Any, ...], kwargs : Dict[str, Any]) -> Any:
+            raise NameError("module is not installed as a submodule")
+
+    def call_module(
+        self,
+        m: oneflow.nn.Module,
+        forward: Callable[..., Any],
+        args: Tuple[Any, ...],
+        kwargs: Dict[str, Any],
+    ) -> Any:
         """
         Method that specifies the behavior of this ``Tracer`` when it encounters
         a call to an ``nn.Module`` instance.
@@ -353,8 +422,8 @@ class Tracer(TracerBase):
         module_qualified_name = self.path_of_module(m)
         if not self.is_leaf_module(m, module_qualified_name):
             return forward(*args, **kwargs)
-        return self.create_proxy('call_module', module_qualified_name, args, kwargs)
-    
+        return self.create_proxy("call_module", module_qualified_name, args, kwargs)
+
     def create_args_for_root(self, root_fn, is_module, concrete_args=None):
         """
         Create ``placeholder`` nodes corresponding to the signature of the ``root``
@@ -370,11 +439,13 @@ class Tracer(TracerBase):
         total_args = co.co_argcount + co.co_kwonlyargcount
         orig_args = list(co.co_varnames)
         names_iter = iter(co.co_varnames)
-        args : List[Any] = []
+        args: List[Any] = []
         skip_arg_idx = 0
         if is_module:
             if total_args == 0:
-                raise RuntimeError('``self`` argument cannot be part of *args expansion!')
+                raise RuntimeError(
+                    "``self`` argument cannot be part of *args expansion!"
+                )
             skip_arg_idx = 1
             next(names_iter)  # skip self
             args.append(self.root)
@@ -382,18 +453,24 @@ class Tracer(TracerBase):
         sig = inspect.signature(fn_for_analysis)
 
         def proxy_placeholder(name: str):
-            if concrete_args is not None and name in concrete_args :
+            if concrete_args is not None and name in concrete_args:
                 cnt = 0
 
                 def replace_ph(x):
                     nonlocal cnt
                     cnt += 1
-                    out = self.create_proxy('placeholder', f'{name}_{str(cnt)}', (), {})
+                    out = self.create_proxy("placeholder", f"{name}_{str(cnt)}", (), {})
                     if x == PH:
                         return out
                     # Union[int, bool] == bool in Python <= 3.6
-                    if type(x) == bool or type(x) in base_types and type(x) != oneflow.Tensor:
-                        oneflow._assert(out == x, f"{name} has been specialized to have value {x}")
+                    if (
+                        type(x) == bool
+                        or type(x) in base_types
+                        and type(x) != oneflow.Tensor
+                    ):
+                        oneflow._assert(
+                            out == x, f"{name} has been specialized to have value {x}"
+                        )
                     else:
                         warnings.warn(
                             "Was not able to add assertion to guarantee correct inputs to "
@@ -404,26 +481,31 @@ class Tracer(TracerBase):
                     return x
 
                 return pytree.tree_map(replace_ph, concrete_args[name])
-            if name[0] == '*':
+            if name[0] == "*":
                 default = ()
             else:
                 param = sig.parameters[name]
                 default = () if param.default is inspect.Parameter.empty else (param.default,)  # type: ignore[assignment]
-            return self.create_proxy('placeholder', name, default, {},
-                                     type_expr=fn_for_analysis.__annotations__.get(name, None))
+            return self.create_proxy(
+                "placeholder",
+                name,
+                default,
+                {},
+                type_expr=fn_for_analysis.__annotations__.get(name, None),
+            )
+
         arg_names = [next(names_iter) for idx in range(skip_arg_idx, total_args)]
         if isinstance(concrete_args, tuple):
-            assert(len(arg_names) == len(concrete_args))
+            assert len(arg_names) == len(concrete_args)
             concrete_args = {name: val for name, val in zip(arg_names, concrete_args)}
         args.extend(proxy_placeholder(names) for names in arg_names)
-
 
         if co.co_kwonlyargcount > 0 or co.co_flags & HAS_VARSTUFF:
             # TODO: type annotations for *args and **kwargs
             if co.co_flags & inspect.CO_VARARGS:
-                args.append(proxy_placeholder('*' + next(names_iter)))
+                args.append(proxy_placeholder("*" + next(names_iter)))
             if co.co_flags & inspect.CO_VARKEYWORDS:
-                args.append(proxy_placeholder('**' + next(names_iter)))
+                args.append(proxy_placeholder("**" + next(names_iter)))
             root_fn = _patch_function(root_fn, len(args))
 
         flat_args, in_spec = pytree.tree_flatten(tuple(args))
@@ -437,29 +519,43 @@ class Tracer(TracerBase):
                 tree_args = pytree.tree_unflatten(list(args), in_spec)
                 tree_out = root_fn(*tree_args)
                 out_args, out_spec = pytree.tree_flatten(tree_out)
-                assert(self.graph._pytree_info is not None)
-                self.graph._pytree_info = self.graph._pytree_info._replace(out_spec=out_spec)
+                assert self.graph._pytree_info is not None
+                self.graph._pytree_info = self.graph._pytree_info._replace(
+                    out_spec=out_spec
+                )
                 return out_args
 
             return flatten_fn, flat_args
         return root_fn, args
-    
+
     def _module_getattr(self, attr, attr_val, parameter_proxy_cache):
         if isinstance(attr_val, oneflow.nn.Parameter):
             for n, p in self.root.named_parameters():
                 if attr_val is p:
                     if n not in parameter_proxy_cache:
                         kwargs = {}
-                        if 'proxy_factory_fn' in inspect.signature(self.create_proxy).parameters:
-                            kwargs['proxy_factory_fn'] = (None if not self.param_shapes_constant else
-                                                          lambda node : ParameterProxy(self, node, n, attr_val))
-                        val_proxy = self.create_proxy('get_attr', n, (), {}, **kwargs)  # type: ignore[arg-type]
+                        if (
+                            "proxy_factory_fn"
+                            in inspect.signature(self.create_proxy).parameters
+                        ):
+                            kwargs["proxy_factory_fn"] = (
+                                None
+                                if not self.param_shapes_constant
+                                else lambda node: ParameterProxy(
+                                    self, node, n, attr_val
+                                )
+                            )
+                        val_proxy = self.create_proxy("get_attr", n, (), {}, **kwargs)  # type: ignore[arg-type]
                         parameter_proxy_cache[n] = val_proxy
                     return parameter_proxy_cache[n]
 
         return attr_val
-    
-    def trace(self, root: Union[oneflow.nn.Module, Callable], concrete_args: Optional[Dict[str, Any]] = None) -> Graph:
+
+    def trace(
+        self,
+        root: Union[oneflow.nn.Module, Callable],
+        concrete_args: Optional[Dict[str, Any]] = None,
+    ) -> Graph:
         """
         Trace ``root`` and return the corresponding FX ``Graph`` representation. ``root``
         can either be an ``nn.Module`` instance or a Python callable.
@@ -488,19 +584,19 @@ class Tracer(TracerBase):
             self.root = oneflow.nn.Module()
             fn = root
 
-        tracer_cls: Optional[Type['Tracer']] = getattr(self, '__class__', None)
+        tracer_cls: Optional[Type["Tracer"]] = getattr(self, "__class__", None)
         self.graph = Graph(tracer_cls=tracer_cls)
 
         # When we encounter a Tensor value that's not a parameter, we look if it
         # is some other attribute on the model. Construct a dict mapping Tensor
         # values to the qualified name here for efficiency. This is used downstream
         # in create_arg
-        self.tensor_attrs : Dict[Union[oneflow.Tensor], str] = {}
+        self.tensor_attrs: Dict[Union[oneflow.Tensor], str] = {}
 
-        def collect_tensor_attrs(m : oneflow.nn.Module, prefix_atoms : List[str]):
+        def collect_tensor_attrs(m: oneflow.nn.Module, prefix_atoms: List[str]):
             for k, v in m.__dict__.items():
                 if isinstance(v, (oneflow.Tensor)):
-                    self.tensor_attrs[v] = '.'.join(prefix_atoms + [k])
+                    self.tensor_attrs[v] = ".".join(prefix_atoms + [k])
             for k, v in m.named_children():
                 collect_tensor_attrs(v, prefix_atoms + [k])
 
@@ -509,9 +605,11 @@ class Tracer(TracerBase):
         assert isinstance(fn, FunctionType)
 
         fn_globals = fn.__globals__  # run before it gets patched
-        fn, args = self.create_args_for_root(fn, isinstance(root, oneflow.nn.Module), concrete_args)
+        fn, args = self.create_args_for_root(
+            fn, isinstance(root, oneflow.nn.Module), concrete_args
+        )
 
-        parameter_proxy_cache : Dict[str, Proxy] = {}  # Reduce number of get_attr calls
+        parameter_proxy_cache: Dict[str, Proxy] = {}  # Reduce number of get_attr calls
 
         # Method dispatch on parameters is not recorded unless it's directly used.
         # Thus, we need to insert a proxy when __getattr__ requests a parameter.
@@ -525,34 +623,50 @@ class Tracer(TracerBase):
             def forward(*args, **kwargs):
                 return _orig_module_call(mod, *args, **kwargs)
 
-            _autowrap_check(patcher, getattr(getattr(mod, "forward", mod), "__globals__", {}),
-                            self._autowrap_function_ids)
+            _autowrap_check(
+                patcher,
+                getattr(getattr(mod, "forward", mod), "__globals__", {}),
+                self._autowrap_function_ids,
+            )
             return self.call_module(mod, forward, args, kwargs)
-        
+
         with _Patcher() as patcher:
             # allow duplicate patches to support the case of nested calls
-            patcher.patch_method(oneflow.nn.Module, "__getattr__", module_getattr_wrapper, deduplicate=False)
-            patcher.patch_method(oneflow.nn.Module, "__call__", module_call_wrapper, deduplicate=False)
+            patcher.patch_method(
+                oneflow.nn.Module,
+                "__getattr__",
+                module_getattr_wrapper,
+                deduplicate=False,
+            )
+            patcher.patch_method(
+                oneflow.nn.Module, "__call__", module_call_wrapper, deduplicate=False
+            )
 
             _patch_wrapped_functions(patcher)
             _autowrap_check(patcher, fn_globals, self._autowrap_function_ids)
-            
+
             for module in self._autowrap_search:
                 _autowrap_check(patcher, module.__dict__, self._autowrap_function_ids)
-            self.create_node('output', 'output', (self.create_arg(fn(*args)),), {},
-                                type_expr=fn.__annotations__.get('return', None))
+            self.create_node(
+                "output",
+                "output",
+                (self.create_arg(fn(*args)),),
+                {},
+                type_expr=fn.__annotations__.get("return", None),
+            )
 
         self.submodule_paths = None
 
         return self.graph
 
+
 # List of pairs of (global dict, function name) functions
 # to patch for the purposes of the wrap() API.
-_wrapped_fns_to_patch : List[Tuple[dict, str]] = []
+_wrapped_fns_to_patch: List[Tuple[dict, str]] = []
 
 # List of methods on classes to wrap (class type, function name)
 # this currently only works for Tensor.* methods that aren't traced properly
-_wrapped_methods_to_patch : List[Tuple[type, str]] = []
+_wrapped_methods_to_patch: List[Tuple[type, str]] = []
 
 # TODO(BBuf) confirm it in oneflow
 if os.environ.get("FX_PATCH_GETITEM") == "1":
@@ -563,14 +677,26 @@ if os.environ.get("FX_PATCH_GETITEM") == "1":
     # once that is fixed we can make this the default behavior.
     _wrapped_methods_to_patch.append((oneflow.Tensor, "__getitem__"))
 
-# internal_oneflow_funcs = ['FunctionConfig', 'Generator', 'INVALID_SPLIT_AXIS', 'MultiClientSession', 'Tensor', 
-#                          'builtin_op', 'distributed', 'default_generator', 'docstr', 'eager', 'enable_eager_execution',
-#                          'env', 'framework', ]
+internal_oneflow_funcs = [
+    "FunctionConfig",
+    "Generator",
+    "INVALID_SPLIT_AXIS",
+    "MultiClientSession",
+    "Tensor",
+    "builtin_op",
+    "distributed",
+    "default_generator",
+    "docstr",
+    "eager",
+    "enable_eager_execution",
+    "env",
+    "framework",
+]
 
-# oneflow_funcs = dir(oneflow)
-# for funcs_name in oneflow_funcs:
-#     if not funcs_name.startswith('_') and funcs_name not in internal_oneflow_funcs:
-#         _wrapped_methods_to_patch.append((oneflow, funcs_name))
+oneflow_funcs = dir(oneflow)
+for funcs_name in oneflow_funcs:
+    if not funcs_name.startswith("_") and funcs_name not in internal_oneflow_funcs:
+        _wrapped_methods_to_patch.append((oneflow, funcs_name))
 
 
 def _find_proxy(*objects_to_search):
@@ -588,6 +714,7 @@ def _find_proxy(*objects_to_search):
     map_aggregate(objects_to_search, find_proxy)
     return proxy
 
+
 def _create_wrapped_func(orig_fn):
     @functools.wraps(orig_fn)
     def wrapped(*args, **kwargs):
@@ -599,12 +726,15 @@ def _create_wrapped_func(orig_fn):
         """
         proxy = _find_proxy(args, kwargs)
         if proxy is not None:
-            return_proxy = proxy.tracer.create_proxy('call_function', orig_fn, args, kwargs)
-            return_proxy.node.meta['is_wrapped'] = True
+            return_proxy = proxy.tracer.create_proxy(
+                "call_function", orig_fn, args, kwargs
+            )
+            return_proxy.node.meta["is_wrapped"] = True
             return return_proxy
         return orig_fn(*args, **kwargs)
 
     return wrapped
+
 
 def _create_wrapped_method(cls, name):
     orig_fn = getattr(cls, name)
@@ -619,18 +749,20 @@ def _create_wrapped_method(cls, name):
         """
         proxy = _find_proxy(args, kwargs)
         if proxy is not None:
-            return proxy.tracer.create_proxy('call_method', name, args, kwargs)
+            return proxy.tracer.create_proxy("call_method", name, args, kwargs)
         return orig_fn(*args, **kwargs)
 
     return wrapped
 
+
 class _PatchedFn(NamedTuple):
-    frame_dict : Any
-    fn_name : str
-    orig_fn : Any
+    frame_dict: Any
+    fn_name: str
+    orig_fn: Any
 
     def revert(self):
         raise NotImplementedError()
+
 
 class _PatchedFnSetItem(_PatchedFn):
     def revert(self):
@@ -650,11 +782,16 @@ class _PatchedFnSetAttr(_PatchedFn):
 class _Patcher(object):
     def __init__(self):
         super(_Patcher, self).__init__()
-        self.patches_made : List[_PatchedFn] = []
-        self.visited : Set[int] = set()
+        self.patches_made: List[_PatchedFn] = []
+        self.visited: Set[int] = set()
 
-    def patch(self, frame_dict : Dict[str, Any], name : str, new_fn : Callable,
-              deduplicate : bool = True):
+    def patch(
+        self,
+        frame_dict: Dict[str, Any],
+        name: str,
+        new_fn: Callable,
+        deduplicate: bool = True,
+    ):
         """
         Replace frame_dict[name] with new_fn until we exit the context manager.
         """
@@ -664,11 +801,14 @@ class _Patcher(object):
         elif getattr(frame_dict[name], "__fx_already_patched", False):
             return  # already patched, no need to do it again
         else:
-            self.patches_made.append(_PatchedFnSetItem(frame_dict, name, frame_dict[name]))
+            self.patches_made.append(
+                _PatchedFnSetItem(frame_dict, name, frame_dict[name])
+            )
         frame_dict[name] = new_fn
 
-    def patch_method(self, cls: type, name : str, new_fn : Callable,
-                     deduplicate : bool = True):
+    def patch_method(
+        self, cls: type, name: str, new_fn: Callable, deduplicate: bool = True
+    ):
         """
         Replace object_or_dict.name with new_fn until we exit the context manager.
         """
@@ -700,7 +840,7 @@ class _Patcher(object):
         self.visited.clear()
 
 
-def _patch_wrapped_functions(patcher : _Patcher):
+def _patch_wrapped_functions(patcher: _Patcher):
     """
     Go through ``_wrapped_fn_patch_table`` and, for each frame object, wrap
     the listed global functions in the `_create_wrapped_func` wrapper.
@@ -716,18 +856,24 @@ def _patch_wrapped_functions(patcher : _Patcher):
         patcher.patch_method(cls, name, _create_wrapped_method(cls, name))
 
 
-def _autowrap_check(patcher : _Patcher, frame_dict : Dict[str, Any], function_ids : Set[int]):
+def _autowrap_check(
+    patcher: _Patcher, frame_dict: Dict[str, Any], function_ids: Set[int]
+):
     """
     Some methods, like `math.sqrt` are common enough we want to automatically wrap them as we see them.
     This method searches a scope for them and patches them if found.
     """
     if patcher.visit_once(frame_dict):
         for name, value in frame_dict.items():
-            if not name.startswith("_") and callable(value) and id(value) in function_ids:
+            if (
+                not name.startswith("_")
+                and callable(value)
+                and id(value) in function_ids
+            ):
                 patcher.patch(frame_dict, name, _create_wrapped_func(value))
 
 
-def wrap(fn_or_name : Union[str, Callable]):
+def wrap(fn_or_name: Union[str, Callable]):
     """
     This function can be called at module-level scope to register fn_or_name as a "leaf function".
     A "leaf function" will be preserved as a CallFunction node in the FX trace instead of being
@@ -761,22 +907,26 @@ def wrap(fn_or_name : Union[str, Callable]):
             graph when it's called
     """
     if not callable(fn_or_name) and not isinstance(fn_or_name, str):
-        raise RuntimeError('Unsupported type for global function! Must be either a callable or '
-                           'string name')
+        raise RuntimeError(
+            "Unsupported type for global function! Must be either a callable or "
+            "string name"
+        )
 
-    if hasattr(fn_or_name, '__code__'):
+    if hasattr(fn_or_name, "__code__"):
         assert not isinstance(fn_or_name, str)  # to make mypy happy
         fn_name = fn_or_name.__code__.co_name
     else:
-        assert isinstance(fn_or_name, str), "fn_or_name must be a global function or string name"
+        assert isinstance(
+            fn_or_name, str
+        ), "fn_or_name must be a global function or string name"
         fn_name = fn_or_name
 
     currentframe = inspect.currentframe()
     assert currentframe is not None
     f = currentframe.f_back
     assert f is not None
-    if f.f_code.co_name != '<module>':
-        raise NotImplementedError('wrap must be called at the top level of a module')
+    if f.f_code.co_name != "<module>":
+        raise NotImplementedError("wrap must be called at the top level of a module")
 
     # consider implementing Callable version of this via _autowrap_function_ids / _autowrap_search
     # semantics would be slightly different, but would add support `from x import wrapped_function`
@@ -784,10 +934,11 @@ def wrap(fn_or_name : Union[str, Callable]):
     return fn_or_name
 
 
-
-
-def symbolic_trace(root : Union[oneflow.nn.Module, Callable], concrete_args: Optional[Dict[str, Any]] = None,
-                   enable_cpatching: bool = False) -> GraphModule:
+def symbolic_trace(
+    root: Union[oneflow.nn.Module, Callable],
+    concrete_args: Optional[Dict[str, Any]] = None,
+    enable_cpatching: bool = False,
+) -> GraphModule:
     """Symbolic tracing API
 
     Given an ``nn.Module`` or function instance ``root``, this function will return a ``GraphModule``
@@ -838,6 +989,9 @@ def symbolic_trace(root : Union[oneflow.nn.Module, Callable], concrete_args: Opt
     """
     tracer = Tracer(enable_cpatching=enable_cpatching)
     graph = tracer.trace(root, concrete_args)
-    name = root.__class__.__name__ if isinstance(root, oneflow.nn.Module) else root.__name__
+    name = (
+        root.__class__.__name__
+        if isinstance(root, oneflow.nn.Module)
+        else root.__name__
+    )
     return GraphModule(tracer.root, graph, name)
-

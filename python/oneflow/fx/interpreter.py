@@ -1,9 +1,25 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from .graph_module import GraphModule
 from .graph import Graph
 from .node import Argument, Node, Target, map_arg, map_aggregate
 from .proxy import Proxy
 from ._symbolic_trace import Tracer
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+
 
 class Interpreter:
     """
@@ -60,11 +76,12 @@ class Interpreter:
             execution. This can be disabled to, for example, examine all of the intermediate
             values in the execution by looking at the ``Interpreter.env`` attribute.
     """
-    def __init__(self, module : GraphModule, garbage_collect_values : bool = True):
+
+    def __init__(self, module: GraphModule, garbage_collect_values: bool = True):
         assert isinstance(module, GraphModule)
         self.module = module
         self.submodules = dict(self.module.named_modules())
-        self.env : Dict[Node, Any] = {}
+        self.env: Dict[Node, Any] = {}
 
         self.garbage_collect_values = garbage_collect_values
 
@@ -73,10 +90,10 @@ class Interpreter:
             # of a given node. This represents the *last* use of the node in the
             # execution order of the program, which we will use to free unused
             # values
-            node_to_last_use : Dict[Node, Node] = {}
-            self.user_to_last_uses : Dict[Node, List[Node]] = {}
+            node_to_last_use: Dict[Node, Node] = {}
+            self.user_to_last_uses: Dict[Node, List[Node]] = {}
 
-            def register_last_uses(n : Node, user : Node):
+            def register_last_uses(n: Node, user: Node):
                 if n not in node_to_last_use:
                     node_to_last_use[n] = user
                     self.user_to_last_uses.setdefault(user, []).append(n)
@@ -85,7 +102,7 @@ class Interpreter:
                 map_arg(node.args, lambda n: register_last_uses(n, node))
                 map_arg(node.kwargs, lambda n: register_last_uses(n, node))
 
-    def run(self, *args, initial_env : Optional[Dict[Node, Any]] = None) -> Any:
+    def run(self, *args, initial_env: Optional[Dict[Node, Any]] = None) -> Any:
         """
         Run `module` via interpretation and return the result.
 
@@ -104,7 +121,7 @@ class Interpreter:
         # Positional function args are consumed left-to-right by
         # `placeholder` nodes. Use an iterator to keep track of
         # position and extract those values.
-        self.args_iter : Iterator[Any] = iter(args)
+        self.args_iter: Iterator[Any] = iter(args)
 
         for node in self.module.graph.nodes:
             if node in self.env:
@@ -120,11 +137,11 @@ class Interpreter:
                 for to_delete in self.user_to_last_uses.get(node, []):
                     del self.env[to_delete]
 
-            if node.op == 'output':
+            if node.op == "output":
                 output_val = self.env[node]
                 return output_val
 
-    def run_node(self, n : Node) -> Any:
+    def run_node(self, n: Node) -> Any:
         """
         Run a specific node ``n`` and return the result.
         Calls into placeholder, get_attr, call_function,
@@ -144,7 +161,9 @@ class Interpreter:
 
     # Main Node running APIs
 
-    def placeholder(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
+    def placeholder(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Any:
         """
         Execute a ``placeholder`` node. Note that this is stateful:
         ``Interpreter`` maintains an internal iterator over
@@ -162,14 +181,16 @@ class Interpreter:
             Any: The argument value that was retrieved.
         """
         assert isinstance(target, str)
-        if target.startswith('*'):
+        if target.startswith("*"):
             # For a starred parameter e.g. `*args`, retrieve all
             # remaining values from the args list.
             return list(self.args_iter)
         else:
             return next(self.args_iter)
 
-    def get_attr(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
+    def get_attr(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Any:
         """
         Execute a ``get_attr`` node. Will retrieve an attribute
         value from the ``Module`` hierarchy of ``self.module``.
@@ -187,7 +208,9 @@ class Interpreter:
         assert isinstance(target, str)
         return self.fetch_attr(target)
 
-    def call_function(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
+    def call_function(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Any:
         """
         Execute a ``call_function`` node and return the result.
 
@@ -207,7 +230,9 @@ class Interpreter:
         # Execute the function and return the result
         return target(*args, **kwargs)
 
-    def call_method(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
+    def call_method(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Any:
         """
         Execute a ``call_method`` node and return the result.
         
@@ -229,7 +254,9 @@ class Interpreter:
         assert isinstance(target, str)
         return getattr(self_obj, target)(*args_tail, **kwargs)
 
-    def call_module(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
+    def call_module(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Any:
         """
         Execute a ``call_module`` node and return the result.
 
@@ -251,7 +278,9 @@ class Interpreter:
 
         return submod(*args, **kwargs)
 
-    def output(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
+    def output(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Any:
         """
         Execute an ``output`` node. This really just retrieves
         the value referenced by the ``output`` node and returns it.
@@ -270,7 +299,7 @@ class Interpreter:
 
     # Helper methods
 
-    def fetch_attr(self, target : str):
+    def fetch_attr(self, target: str):
         """
         Fetch an attribute from the ``Module`` hierarchy of ``self.module``.
 
@@ -280,15 +309,17 @@ class Interpreter:
         Return:
             Any: The value of the attribute.
         """
-        target_atoms = target.split('.')
+        target_atoms = target.split(".")
         attr_itr = self.module
         for i, atom in enumerate(target_atoms):
             if not hasattr(attr_itr, atom):
-                raise RuntimeError(f"Node referenced nonexistent target {'.'.join(target_atoms[:i])}")
+                raise RuntimeError(
+                    f"Node referenced nonexistent target {'.'.join(target_atoms[:i])}"
+                )
             attr_itr = getattr(attr_itr, atom)
         return attr_itr
 
-    def fetch_args_kwargs_from_env(self, n : Node) -> Tuple[Tuple, Dict]:
+    def fetch_args_kwargs_from_env(self, n: Node) -> Tuple[Tuple, Dict]:
         """
         Fetch the concrete values of ``args`` and ``kwargs`` of node ``n``
         from the current execution environment.
@@ -305,7 +336,7 @@ class Interpreter:
         assert isinstance(kwargs, dict)
         return args, kwargs
 
-    def map_nodes_to_values(self, args : Argument, n : Node) -> Argument:
+    def map_nodes_to_values(self, args: Argument, n: Node) -> Argument:
         """
         Recursively descend through ``args`` and look up the concrete value
         for each ``Node`` in the current execution environment.
@@ -315,12 +346,17 @@ class Interpreter:
 
             n (Node): Node to which ``args`` belongs. This is only used for error reporting.
         """
-        def load_arg(n_arg : Node) -> Any:
+
+        def load_arg(n_arg: Node) -> Any:
             if n_arg not in self.env:
-                raise RuntimeError(f'Node {n} referenced nonexistent value {n_arg}! Run Graph.lint() '
-                                   f'to diagnose such issues')
+                raise RuntimeError(
+                    f"Node {n} referenced nonexistent value {n_arg}! Run Graph.lint() "
+                    f"to diagnose such issues"
+                )
             return self.env[n_arg]
+
         return map_arg(args, load_arg)
+
 
 class Transformer(Interpreter):
     """
@@ -362,6 +398,7 @@ class Transformer(Interpreter):
     Args:
         module (GraphModule): The ``Module`` to be transformed.
     """
+
     def __init__(self, module):
         super().__init__(module)
         self.new_graph = Graph()
@@ -373,10 +410,13 @@ class Transformer(Interpreter):
 
             def is_leaf_module(self, _, __) -> bool:
                 return True
+
         self.tracer = TransformerTracer(self.new_graph)
         self.tracer.root = module
 
-    def placeholder(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Proxy:
+    def placeholder(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Proxy:
         """
         Execute a ``placeholder`` node. In ``Transformer``, this is
         overridden to insert a new ``placeholder`` into the output
@@ -392,7 +432,9 @@ class Transformer(Interpreter):
         assert isinstance(target, str)
         return Proxy(self.new_graph.placeholder(target), self.tracer)
 
-    def get_attr(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Proxy:
+    def get_attr(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Proxy:
         """
         Execute a ``get_attr`` node. In ``Transformer``, this is
         overridden to insert a new ``get_attr`` node into the output
@@ -408,15 +450,19 @@ class Transformer(Interpreter):
         assert isinstance(target, str)
         return Proxy(self.new_graph.get_attr(target), self.tracer)
 
-    def call_module(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
+    def call_module(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Any:
         # Override so that the leaf module policy from `self.tracer` is respected.
         assert isinstance(target, str)
         submod = self.fetch_attr(target)
         return self.tracer.call_module(submod, submod.forward, args, kwargs)
 
-    def call_function(self, target : 'Target', args : Tuple[Argument, ...], kwargs : Dict[str, Any]) -> Any:
+    def call_function(
+        self, target: "Target", args: Tuple[Argument, ...], kwargs: Dict[str, Any]
+    ) -> Any:
         # Override so that functions that were wrapped are still wrapped.
-        return self.tracer.create_proxy('call_function', target, args, kwargs)
+        return self.tracer.create_proxy("call_function", target, args, kwargs)
 
     def transform(self) -> GraphModule:
         """
@@ -425,7 +471,9 @@ class Transformer(Interpreter):
         """
         result = super().run()
         if result is not None:
-            def strip_proxy(a : Union[Argument, Proxy]) -> Any:
+
+            def strip_proxy(a: Union[Argument, Proxy]) -> Any:
                 return a.node if isinstance(a, Proxy) else a
+
             self.new_graph.output(map_aggregate(result, strip_proxy))
         return GraphModule(self.module, self.new_graph)

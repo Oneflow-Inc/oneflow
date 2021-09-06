@@ -108,7 +108,7 @@ class Module(object):
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
         self._modules[name] = module
-    
+
     def get_submodule(self, target: str) -> "Module":
         """
         Returns the submodule given by ``target`` if it exists,
@@ -166,14 +166,14 @@ class Module(object):
         for item in atoms:
 
             if not hasattr(mod, item):
-                raise AttributeError(mod._get_name() + " has no "
-                                     "attribute `" + item + "`")
+                raise AttributeError(
+                    mod._get_name() + " has no " "attribute `" + item + "`"
+                )
 
             mod = getattr(mod, item)
 
             if not isinstance(mod, flow.nn.Module):
-                raise AttributeError("`" + item + "` is not "
-                                     "an nn.Module")
+                raise AttributeError("`" + item + "` is not " "an nn.Module")
 
         return mod
 

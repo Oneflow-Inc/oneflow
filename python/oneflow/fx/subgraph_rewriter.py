@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from .graph_module import GraphModule
 from .graph import Graph
 from .node import Node
@@ -19,14 +34,16 @@ class SubgraphMatcher:
     def __init__(self, pattern: Graph) -> None:
         self.pattern = pattern
         if len(pattern.nodes) == 0:
-            raise ValueError("SubgraphMatcher cannot be initialized with an "
-                             "empty pattern")
+            raise ValueError(
+                "SubgraphMatcher cannot be initialized with an " "empty pattern"
+            )
         # `self.pattern_anchor` is the output Node in `pattern`
         self.pattern_anchor = next(iter(reversed(pattern.nodes)))
         # Ensure that there is only a single output value in the pattern
         # since we don't support multiple outputs
-        assert len(self.pattern_anchor.all_input_nodes) == 1, \
-            "Pattern matching on multiple outputs is not supported"
+        assert (
+            len(self.pattern_anchor.all_input_nodes) == 1
+        ), "Pattern matching on multiple outputs is not supported"
         # Maps nodes in the pattern subgraph to nodes in the larger graph
         self.nodes_map: Dict[Node, Node] = {}
 
@@ -53,8 +70,7 @@ class SubgraphMatcher:
             # Use placeholder and output nodes as wildcards. The
             # only exception is that an output node can't match
             # a placeholder
-            if (pn.op == "placeholder"
-                    or (pn.op == "output" and gn.op != "placeholder")):
+            if pn.op == "placeholder" or (pn.op == "output" and gn.op != "placeholder"):
                 return True
             return pn.op == gn.op and pn.target == gn.target
 
@@ -69,21 +85,24 @@ class SubgraphMatcher:
         # match for `gn`
         if pn.op == "placeholder":
             return True
-        if (pn.op != "output"
-                and len(pn.all_input_nodes) != len(gn.all_input_nodes)):
+        if pn.op != "output" and len(pn.all_input_nodes) != len(gn.all_input_nodes):
             return False
         if pn.op == "output":
-            match_found = any(self._match_nodes(pn.all_input_nodes[0], gn_)
-                              for gn_ in gn.all_input_nodes)
+            match_found = any(
+                self._match_nodes(pn.all_input_nodes[0], gn_)
+                for gn_ in gn.all_input_nodes
+            )
         else:
-            match_found = (len(pn.all_input_nodes) == len(gn.all_input_nodes)
-                           and all(self._match_nodes(pn_, gn_) for pn_, gn_
-                                   in zip(pn.all_input_nodes, gn.all_input_nodes)))
+            match_found = len(pn.all_input_nodes) == len(gn.all_input_nodes) and all(
+                self._match_nodes(pn_, gn_)
+                for pn_, gn_ in zip(pn.all_input_nodes, gn.all_input_nodes)
+            )
         if not match_found:
             self.nodes_map.pop(pn)
             return False
 
         return True
+
 
 def _replace_submodules(gm: GraphModule, replacement: oneflow.nn.Module) -> None:
     gm.delete_all_unused_submodules()
@@ -91,7 +110,9 @@ def _replace_submodules(gm: GraphModule, replacement: oneflow.nn.Module) -> None
     if isinstance(replacement, GraphModule):
         replacement.graph.lint()
 
-    def try_get_submodule(mod: oneflow.nn.Module, target: str) -> Optional[oneflow.nn.Module]:
+    def try_get_submodule(
+        mod: oneflow.nn.Module, target: str
+    ) -> Optional[oneflow.nn.Module]:
         try:
             mod_match = mod.get_submodule(target)
             return mod_match
@@ -120,17 +141,23 @@ def _replace_submodules(gm: GraphModule, replacement: oneflow.nn.Module) -> None
             # CASE 3: The target doesn't exist as a submodule in `gm`
             # or `replacement`
             else:
-                raise RuntimeError("Attempted to create a \"", node.op,
-                                   "\" node during subgraph rewriting "
-                                   f"with target {node.target}, but "
-                                   "the referenced submodule does not "
-                                   "exist in either the original "
-                                   "GraphModule `gm` or the replacement"
-                                   " GraphModule `replacement`")
+                raise RuntimeError(
+                    'Attempted to create a "',
+                    node.op,
+                    '" node during subgraph rewriting '
+                    f"with target {node.target}, but "
+                    "the referenced submodule does not "
+                    "exist in either the original "
+                    "GraphModule `gm` or the replacement"
+                    " GraphModule `replacement`",
+                )
 
     gm.graph.lint()
 
-def replace_pattern(gm: GraphModule, pattern: Callable, replacement: Callable) -> List[Match]:
+
+def replace_pattern(
+    gm: GraphModule, pattern: Callable, replacement: Callable
+) -> List[Match]:
     """
     Matches all possible non-overlapping sets of operators and their
     data dependencies (``pattern``) in the Graph of a GraphModule
@@ -262,11 +289,10 @@ def replace_pattern(gm: GraphModule, pattern: Callable, replacement: Callable) -
 
         if matcher.matches_subgraph_from_anchor(anchor):
 
-            def pattern_is_contained(nodes_map : Dict[Node, Node]) -> bool:
+            def pattern_is_contained(nodes_map: Dict[Node, Node]) -> bool:
                 # `lookup` represents all the nodes in `original_graph`
                 # that are part of `pattern`
-                lookup: Dict[Node, Node] = {v : k for k, v
-                                            in nodes_map.items()}
+                lookup: Dict[Node, Node] = {v: k for k, v in nodes_map.items()}
                 for n in lookup.keys():
 
                     # Nodes that can "leak"...
@@ -281,8 +307,10 @@ def replace_pattern(gm: GraphModule, pattern: Callable, replacement: Callable) -
                     # hook in to the new Graph, thus what we'll
                     # potentially use in other areas of the Graph as
                     # an input Node)
-                    if (len(lookup[n].users) == 1
-                            and list(lookup[n].users.keys())[0].op == "output"):
+                    if (
+                        len(lookup[n].users) == 1
+                        and list(lookup[n].users.keys())[0].op == "output"
+                    ):
                         continue
 
                     for user in n.users:
@@ -298,8 +326,9 @@ def replace_pattern(gm: GraphModule, pattern: Callable, replacement: Callable) -
             if pattern_is_contained(matcher.nodes_map):
                 for k, v in matcher.nodes_map.items():
                     # Shallow copy nodes_map
-                    matches.append(Match(anchor=anchor,
-                                   nodes_map=copy.copy(matcher.nodes_map)))
+                    matches.append(
+                        Match(anchor=anchor, nodes_map=copy.copy(matcher.nodes_map))
+                    )
 
     # The set of all nodes in `original_graph` that we've seen thus far
     # as part of a pattern match
@@ -322,14 +351,15 @@ def replace_pattern(gm: GraphModule, pattern: Callable, replacement: Callable) -
         # Map replacement graph nodes to their copy in `original_graph`
         val_map: Dict[Node, Node] = {}
 
-        pattern_placeholders = [n for n in pattern_graph.nodes
-                                if n.op == "placeholder"]
+        pattern_placeholders = [n for n in pattern_graph.nodes if n.op == "placeholder"]
         assert len(pattern_placeholders)
-        replacement_placeholders = [n for n in replacement_graph.nodes
-                                    if n.op == "placeholder"]
+        replacement_placeholders = [
+            n for n in replacement_graph.nodes if n.op == "placeholder"
+        ]
         assert len(pattern_placeholders) == len(replacement_placeholders)
-        placeholder_map = {r : p for r, p
-                           in zip(replacement_placeholders, pattern_placeholders)}
+        placeholder_map = {
+            r: p for r, p in zip(replacement_placeholders, pattern_placeholders)
+        }
 
         # node from `original_graph` that matched with the output node
         # in `pattern`
@@ -356,8 +386,7 @@ def replace_pattern(gm: GraphModule, pattern: Callable, replacement: Callable) -
 
         # Copy the replacement graph over
         with original_graph.inserting_before(subgraph_output):
-            copied_output = original_graph.graph_copy(replacement_graph,
-                                                      val_map)
+            copied_output = original_graph.graph_copy(replacement_graph, val_map)
 
         # Hook the output Node of the replacement subgraph in to the
         # original Graph at the correct location
@@ -377,8 +406,7 @@ def replace_pattern(gm: GraphModule, pattern: Callable, replacement: Callable) -
             # so we know that, if a Node is in `match.nodes_map.values`,
             # it must have come from the original graph
             for n in subgraph_output.all_input_nodes:
-                if (n.op != "placeholder"
-                        and n in match.nodes_map.values()):
+                if n.op != "placeholder" and n in match.nodes_map.values():
                     subgraph_output = n
                     break
             assert subgraph_output.op != "output"
@@ -388,7 +416,7 @@ def replace_pattern(gm: GraphModule, pattern: Callable, replacement: Callable) -
         # We'll keep the current output Node, but update its args and
         # `_input_nodes` as necessary
         else:
-            subgraph_output.args = ((copied_output,))
+            subgraph_output.args = (copied_output,)
             if isinstance(copied_output, Node):
                 subgraph_output._input_nodes = {copied_output: None}
 

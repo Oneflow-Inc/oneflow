@@ -79,7 +79,9 @@ _register_custom_builtin("nan", "from math import nan", math.nan)
 _register_custom_builtin("NoneType", "NoneType = type(None)", type(None))
 _register_custom_builtin("oneflow", "import oneflow", oneflow)
 _register_custom_builtin("device", "from oneflow import device", oneflow.device)
-_register_custom_builtin("fx_pytree", "import oneflow.fx._pytree as fx_pytree", fx_pytree)
+_register_custom_builtin(
+    "fx_pytree", "import oneflow.fx._pytree as fx_pytree", fx_pytree
+)
 _register_custom_builtin("pytree", "import oneflow.utils._pytree as pytree", pytree)
 
 

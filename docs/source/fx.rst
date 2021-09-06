@@ -179,7 +179,7 @@ We can also do more involved :class:`Graph` rewrites, such as
 deleting or appending nodes. To aid in these transformations,
 FX has utility functions for transforming the graph that can
 be found in the :class:`Graph` documentation. An
-example of using these APIs to append a :func:`torch.relu` call
+example of using these APIs to append a :func:`flow.relu` call
 can be found below.
 
 ::
@@ -187,9 +187,9 @@ can be found below.
     # Specifies the insertion point. Any nodes added to the
     # Graph within this scope will be inserted after `node`
     with traced.graph.inserting_after(node):
-        # Insert a new `call_method` node calling `torch.relu`
+        # Insert a new `call_method` node calling `flow.relu`
         new_node = traced.graph.call_method(
-            torch.relu, args=(node,))
+            flow.relu, args=(node,))
 
         # We want all places that used the value of `node` to
         # now use that value after the `relu` call we've added.
