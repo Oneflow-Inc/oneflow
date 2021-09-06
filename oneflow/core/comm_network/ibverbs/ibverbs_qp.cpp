@@ -127,7 +127,7 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
            0);
 }
 
-void IBVerbsQP::PostAllRecvRequest() {
+void IBVerbsQP::PostAllRecvRequest() { 
   if (message_pool_->IsEmpty()) {
     message_pool_->RegisterMessagePool();
   }
@@ -172,8 +172,8 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   wr_id->msg_mr = msg_mr;
   ibv_send_wr wr{};
   ibv_sge sge{};
-  sge.addr = reinterpret_cast<uint64_t>(reinterpret_cast<void*>(msg_mr->addr()));
-  sge.length = msg_mr->size();
+  sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
+  sge.length = msg_mr->actor_msg_size();
   sge.lkey = msg_mr->lkey();
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   wr.next = nullptr;
@@ -242,8 +242,8 @@ void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
   wr_id->msg_mr = msg_mr;
   ibv_recv_wr wr{};
   ibv_sge sge{};
-  sge.addr = reinterpret_cast<uint64_t>(reinterpret_cast<void*>(msg_mr->addr()));
-  sge.length = msg_mr->size();
+  sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
+  sge.length = msg_mr->actor_msg_size();
   sge.lkey = msg_mr->lkey();
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   wr.next = nullptr;

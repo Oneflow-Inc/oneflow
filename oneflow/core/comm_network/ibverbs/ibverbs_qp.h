@@ -28,20 +28,20 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_mr* mr, char* addr, size_t size) : size_(size) {
+  ActorMsgMR(ibv_mr* mr, char* addr, size_t actor_msg_size) : actor_msg_size_(actor_msg_size) {
     msg_ = reinterpret_cast<ActorMsg*>(addr);
     mr_ = mr;
   }
   ~ActorMsgMR() = default;
 
-  char* addr() { return reinterpret_cast<char*>(msg_); }
+  void* addr() { return reinterpret_cast<void*>(msg_); }
   uint32_t lkey() const { return mr_->lkey; }
   ActorMsg msg()  const { return *msg_; }
   void set_msg(const ActorMsg& val) { *msg_ = val; }
-  size_t size() const { return size_; }
+  size_t actor_msg_size() const { return actor_msg_size_; }
 
  private:
-  size_t size_;
+  size_t actor_msg_size_;
   ibv_mr* mr_;
   ActorMsg* msg_;
 };
@@ -64,13 +64,10 @@ class IBVerbsMessagePool final {
     FreeMemory();
   }
 
-  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd), num_of_message_(number_of_message) {
-    RegisterMessagePool();
-  }
+  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message): pd_(pd), num_of_message_(number_of_message) {}
 
   void RegisterMessagePool() {
-    ActorMsg msg;
-    size_t actor_msg_size = sizeof(msg);
+    size_t actor_msg_size = sizeof(ActorMsg);
     size_t register_memory_size = actor_msg_size * (num_of_message_);
     char* addr = (char*)malloc(register_memory_size);
     ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
@@ -87,6 +84,7 @@ class IBVerbsMessagePool final {
   }
 
   ActorMsgMR* GetMessage() {
+    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
     if (IsEmpty() == false) {
       return GetMessageFromBuf();
     } else {
@@ -96,7 +94,6 @@ class IBVerbsMessagePool final {
   }
 
   ActorMsgMR* GetMessageFromBuf() {
-    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
     ActorMsgMR* msg_mr = message_buf_.front();
     message_buf_.pop_front();
     return msg_mr;
@@ -108,10 +105,10 @@ class IBVerbsMessagePool final {
   }
 
   bool IsEmpty() {
-    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
     return message_buf_.empty() == true;
   }
 
+ private:
   void FreeMr() {
     while (ibv_mr_buf_.empty() == false) {
       ibv_mr* mr = ibv_mr_buf_.front();
@@ -127,7 +124,6 @@ class IBVerbsMessagePool final {
     }
   }
 
- private:
   ibv_pd* pd_;
   size_t num_of_message_;
   std::mutex message_buf_mutex_;
