@@ -56,7 +56,7 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(*shape, placement=placement, sbp=sbp)
         test_case.assertTrue(x.is_consistent)
         # ConsistentTensor -> LocalTensor
-        y = flow.Tensor(x)
+        y = flow.Tensor(x, device="cpu")
         test_case.assertTrue(y.is_local)
         y = flow.Tensor(x, device="cuda")
         test_case.assertTrue(y.is_local)
@@ -70,7 +70,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertFalse(l_x.requires_grad)
         test_case.assertTrue(l_x.is_leaf)
 
-        l_y = flow.Tensor(*shape, requires_grad=True)
+        l_y = flow.Tensor(*shape)
+        l_y.requires_grad = True
         test_case.assertTrue(l_y.requires_grad)
         test_case.assertTrue(l_y.is_leaf)
 
@@ -89,7 +90,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(m.is_leaf)
         test_case.assertFalse(m.requires_grad)
 
-        l_v = flow.Tensor(*shape, requires_grad=True)
+        l_v = flow.Tensor(*shape)
+        l_v.requires_grad = True
         v = l_v.to_consistent(placement=placement, sbp=sbp)
 
         z.retain_grad()

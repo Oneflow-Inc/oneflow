@@ -28,8 +28,8 @@ from automated_test_util import *
 def _test_ne(test_case, shape, device):
     arr1 = np.random.randn(*shape)
     arr2 = np.random.randn(*shape)
-    input = flow.Tensor(arr1, dtype=flow.float32, device=flow.device(device))
-    other = flow.Tensor(arr2, dtype=flow.float32, device=flow.device(device))
+    input = flow.tensor(arr1, dtype=flow.float32, device=flow.device(device))
+    other = flow.tensor(arr2, dtype=flow.float32, device=flow.device(device))
     of_out = flow.ne(input, other)
     of_out2 = flow.not_equal(input, other)
     np_out = np.not_equal(arr1, arr2)
@@ -40,8 +40,8 @@ def _test_ne(test_case, shape, device):
 def _test_tensor_ne_operator(test_case, shape, device):
     arr1 = np.random.randn(*shape)
     arr2 = np.random.randn(*shape)
-    input = flow.Tensor(arr1, dtype=flow.float32, device=flow.device(device))
-    other = flow.Tensor(arr2, dtype=flow.float32, device=flow.device(device))
+    input = flow.tensor(arr1, dtype=flow.float32, device=flow.device(device))
+    other = flow.tensor(arr2, dtype=flow.float32, device=flow.device(device))
     of_out = input.ne(other)
     np_out = np.not_equal(arr1, arr2)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
@@ -49,7 +49,7 @@ def _test_tensor_ne_operator(test_case, shape, device):
 
 def _test_ne_int(test_case, shape, device):
     arr = np.random.randn(*shape)
-    input = flow.Tensor(arr, dtype=flow.float32, device=flow.device(device))
+    input = flow.tensor(arr, dtype=flow.float32, device=flow.device(device))
     num = 1
     of_out = flow.ne(input, num)
     np_out = np.not_equal(arr, num)
@@ -58,7 +58,7 @@ def _test_ne_int(test_case, shape, device):
 
 def _test_tensor_ne_operator_int(test_case, shape, device):
     arr = np.random.randn(*shape)
-    input = flow.Tensor(arr, dtype=flow.float32, device=flow.device(device))
+    input = flow.tensor(arr, dtype=flow.float32, device=flow.device(device))
     num = 1
     of_out = input.ne(num)
     np_out = np.not_equal(arr, num)
@@ -67,7 +67,7 @@ def _test_tensor_ne_operator_int(test_case, shape, device):
 
 def _test_ne_float(test_case, shape, device):
     arr = np.random.randn(*shape)
-    input = flow.Tensor(arr, dtype=flow.float32, device=flow.device(device))
+    input = flow.tensor(arr, dtype=flow.float32, device=flow.device(device))
     num = 1.0
     of_out = flow.ne(input, num)
     np_out = np.not_equal(arr, num)
@@ -76,7 +76,7 @@ def _test_ne_float(test_case, shape, device):
 
 def _test_tensor_ne_operator_float(test_case, shape, device):
     arr = np.random.randn(*shape)
-    input = flow.Tensor(arr, dtype=flow.float32, device=flow.device(device))
+    input = flow.tensor(arr, dtype=flow.float32, device=flow.device(device))
     num = 1.0
     of_out = input.ne(num)
     np_out = np.not_equal(arr, num)
