@@ -33,7 +33,7 @@ class TestTensor(flow.unittest.TestCase):
         flow.nn.init.ones_(tensor)
         test_case.assertTrue(tensor.dtype == flow.float32)
         test_case.assertTrue(
-            np.array_equal(tensor.numpy(), np.ones(shape, dtype=np.float32))
+            np.allclose(tensor.numpy(), np.ones(shape, dtype=np.float32))
         )
 
     @flow.unittest.skip_unless_1n1d()
@@ -49,11 +49,11 @@ class TestTensor(flow.unittest.TestCase):
     def test_copy_to_and_from_numpy(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
         tensor = flow.tensor(np_arr, dtype=flow.float32)
-        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+        test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
         test_case.assertEqual(np.float32, tensor.numpy().dtype)
         np_arr = np.array([4, 6], dtype=np.int32)
         tensor = flow.tensor(np_arr, dtype=flow.int32)
-        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+        test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
         test_case.assertEqual(np.int32, tensor.numpy().dtype)
 
     @flow.unittest.skip_unless_1n1d()
@@ -61,31 +61,31 @@ class TestTensor(flow.unittest.TestCase):
         np_arr = np.arange(6).reshape(3, 2)
         tensor = flow.zeros(3, 2).to(flow.int64)
         tensor.copy_(np_arr)
-        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+        test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
 
     @flow.unittest.skip_unless_1n1d()
     def test_inplace_copy_from_non_contiguous_numpy(test_case):
         np_arr = np.arange(6).reshape(2, 3).transpose(1, 0)
         tensor = flow.zeros(3, 2).to(flow.int64)
         tensor.copy_(np_arr)
-        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+        test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
 
     @flow.unittest.skip_unless_1n1d()
     def test_construct_from_numpy_or_list(test_case):
         shape = (2, 3, 4, 5)
         np_arr = np.random.rand(*shape).astype(np.float32)
         tensor = flow.tensor(np_arr)
-        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+        test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
         np_int_arr = np.random.randint(-100, high=100, size=shape, dtype=np.int32)
         tensor = flow.tensor(np_int_arr, dtype=flow.int32)
         test_case.assertEqual(tensor.dtype, flow.int32)
         test_case.assertTrue(np_arr.flags["C_CONTIGUOUS"])
-        test_case.assertTrue(np.array_equal(tensor.numpy(), np_int_arr))
+        test_case.assertTrue(np.allclose(tensor.numpy(), np_int_arr))
         np_arr = np.random.random((1, 256, 256, 3)).astype(np.float32)
         np_arr = np_arr.transpose(0, 3, 1, 2)
         tensor = flow.tensor(np_arr)
         test_case.assertFalse(np_arr.flags["C_CONTIGUOUS"])
-        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+        test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
 
     @flow.unittest.skip_unless_1n1d()
     def test_construct_from_another_tensor(test_case):
@@ -94,7 +94,7 @@ class TestTensor(flow.unittest.TestCase):
         tensor = flow.tensor(np_arr)
         output = flow.tensor(tensor)
         test_case.assertEqual(output.dtype, flow.float32)
-        test_case.assertTrue(np.array_equal(output.numpy(), np_arr))
+        test_case.assertTrue(np.allclose(output.numpy(), np_arr))
 
     def _test_tensor_init_methods(test_case, tensor_creator, get_numpy):
         shape = (2, 3, 4, 5)
@@ -105,9 +105,9 @@ class TestTensor(flow.unittest.TestCase):
         x.fill_(random_fill_val)
         test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
         flow.nn.init.ones_(x)
-        test_case.assertTrue(np.array_equal(get_numpy(x), np_ones))
+        test_case.assertTrue(np.allclose(get_numpy(x), np_ones))
         flow.nn.init.zeros_(x)
-        test_case.assertTrue(np.array_equal(get_numpy(x), np_zeros))
+        test_case.assertTrue(np.allclose(get_numpy(x), np_zeros))
         flow.nn.init.constant_(x, random_fill_val)
         test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
         z = tensor_creator(5, 4, 3, 2)
@@ -123,9 +123,9 @@ class TestTensor(flow.unittest.TestCase):
         x.fill_(random_fill_val)
         test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
         flow.nn.init.ones_(x)
-        test_case.assertTrue(np.array_equal(get_numpy(x), np_ones))
+        test_case.assertTrue(np.allclose(get_numpy(x), np_ones))
         flow.nn.init.zeros_(x)
-        test_case.assertTrue(np.array_equal(get_numpy(x), np_zeros))
+        test_case.assertTrue(np.allclose(get_numpy(x), np_zeros))
         flow.nn.init.constant_(x, random_fill_val)
         test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
@@ -258,7 +258,7 @@ class TestTensor(flow.unittest.TestCase):
         x.register_hook(lambda _: new_grad)
         y = x.sum() + (x * 2).sum()
         y.backward()
-        test_case.assertTrue(np.array_equal(x.grad.numpy(), new_grad.numpy()))
+        test_case.assertTrue(np.allclose(x.grad.numpy(), new_grad.numpy()))
         grad_nonlocal = None
 
         def assign_nonlocal_variable_and_return_none(grad):
@@ -271,7 +271,7 @@ class TestTensor(flow.unittest.TestCase):
         x.register_hook(assign_nonlocal_variable_and_return_none)
         y = x.sum() + (x * 2).sum()
         y.backward()
-        test_case.assertTrue(np.array_equal(grad_nonlocal.numpy(), np.ones(shape) * 3))
+        test_case.assertTrue(np.allclose(grad_nonlocal.numpy(), np.ones(shape) * 3))
 
     @flow.unittest.skip_unless_1n1d()
     def test_user_defined_data(test_case):
@@ -281,9 +281,9 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(list_data)
         y = flow.Tensor(tuple_data)
         z = flow.Tensor(numpy_data)
-        test_case.assertTrue(np.array_equal(x.numpy(), 5 * np.ones(x.shape)))
-        test_case.assertTrue(np.array_equal(y.numpy(), 5 * np.ones(y.shape)))
-        test_case.assertTrue(np.array_equal(z.numpy(), 5 * np.ones(z.shape)))
+        test_case.assertTrue(np.allclose(x.numpy(), 5 * np.ones(x.shape)))
+        test_case.assertTrue(np.allclose(y.numpy(), 5 * np.ones(y.shape)))
+        test_case.assertTrue(np.allclose(z.numpy(), 5 * np.ones(z.shape)))
 
     @flow.unittest.skip_unless_1n1d()
     def test_mirrored_tensor_and_op(test_case):
@@ -303,7 +303,7 @@ class TestTensor(flow.unittest.TestCase):
         )
         y = op(x1, x2)[0]
         test_case.assertTrue(
-            np.array_equal(y.numpy(), np.array([[5.0]], dtype=np.float32))
+            np.allclose(y.numpy(), np.array([[5.0]], dtype=np.float32))
         )
 
     @flow.unittest.skip_unless_1n1d()
@@ -350,7 +350,7 @@ class TestTensor(flow.unittest.TestCase):
 
         def compare_getitem_with_numpy(tensor, slices):
             np_arr = tensor.numpy()
-            test_case.assertTrue(np.array_equal(np_arr[slices], tensor[slices].numpy()))
+            test_case.assertTrue(np.allclose(np_arr[slices], tensor[slices].numpy()))
 
         def compare_setitem_with_numpy(tensor, slices, value):
             np_arr = tensor.numpy()
@@ -360,7 +360,7 @@ class TestTensor(flow.unittest.TestCase):
                 np_value = value
             np_arr[slices] = np_value
             tensor[slices] = value
-            test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
+            test_case.assertTrue(np.allclose(np_arr, tensor.numpy()))
 
         x = flow.Tensor(5, 5)
         v = flow.Tensor([[0, 1, 2, 3, 4]])
@@ -458,7 +458,7 @@ class TestTensor(flow.unittest.TestCase):
         of_out = input.argwhere()
         np_out = np.argwhere(np_input)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, precision, precision))
-        test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
+        test_case.assertTrue(np.allclose(of_out.numpy().shape, np_out.shape))
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5, auto_backward=False)
@@ -723,14 +723,14 @@ class TestTensor(flow.unittest.TestCase):
         shape = (2, 3)
         x = flow.tensor(np.random.randn(*shape), dtype=flow.float32)
         x.zeros_()
-        test_case.assertTrue(np.array_equal(x.numpy(), np.zeros(shape)))
+        test_case.assertTrue(np.allclose(x.numpy(), np.zeros(shape)))
 
     @flow.unittest.skip_unless_1n1d()
     def test_construct_small_tensor(test_case):
         shape = (2, 3, 4, 5)
         np_arr = np.random.rand(*shape).astype(np.float32)
         tensor = flow.tensor(np_arr)
-        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+        test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
         test_case.assertEqual(tensor.dtype, flow.float32)
         np_int_arr = np.random.randint(-100, high=100, size=shape, dtype=np.int32)
         tensor = flow.tensor(np_int_arr, dtype=flow.int32)
@@ -744,7 +744,7 @@ class TestTensor(flow.unittest.TestCase):
         tuple_data = ((1, 2, 5), (4, 3, 10))
         tensor = flow.tensor(tuple_data)
         test_case.assertEqual(tensor.dtype, flow.int64)
-        test_case.assertTrue(np.array_equal(tensor.numpy(), np.array(tuple_data)))
+        test_case.assertTrue(np.allclose(tensor.numpy(), np.array(tuple_data)))
         scalar = 5.5
         tensor = flow.tensor(scalar)
         test_case.assertEqual(tensor.dtype, flow.float32)
@@ -773,7 +773,7 @@ class TestTensor(flow.unittest.TestCase):
         input = flow.tensor(x)
         of_shape = input.reshape(2, 2, 2, -1).numpy().shape
         np_shape = (2, 2, 2, 2)
-        test_case.assertTrue(np.array_equal(of_shape, np_shape))
+        test_case.assertTrue(np.allclose(of_shape, np_shape))
 
     @autotest()
     def test_reshape_tensor_with_random_data(test_case):
@@ -835,7 +835,7 @@ class TestTensor(flow.unittest.TestCase):
         other = flow.tensor(arr2, dtype=flow.float32)
         of_out = input.eq(other)
         np_out = np.equal(arr1, arr2)
-        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_detach(test_case):
@@ -854,7 +854,7 @@ class TestTensor(flow.unittest.TestCase):
         input = flow.tensor(np_arr, dtype=flow.float32)
         output = input.cast(flow.int8)
         np_out = np_arr.astype(np.int8)
-        test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+        test_case.assertTrue(np.allclose(output.numpy(), np_out))
 
     def _test_sin_tensor_function(test_case, shape, device):
         input = flow.Tensor(np.random.randn(2, 3, 4, 5))
