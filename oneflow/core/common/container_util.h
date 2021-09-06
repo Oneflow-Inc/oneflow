@@ -37,7 +37,8 @@ Maybe<typename MapT::mapped_type*> MapAt(MapT* map, const KeyT& key) {
 }
 
 template<typename VecT>
-Maybe<scalar_or_const_ref_t<typename VecT::value_type>> VectorAt(const VecT& vec, typename VecT::size_type index) {
+Maybe<scalar_or_const_ref_t<typename VecT::value_type>> VectorAt(const VecT& vec,
+                                                                 typename VecT::size_type index) {
   CHECK_LT_OR_RETURN(index, vec.size());
   return vec[index];
 }
@@ -50,18 +51,16 @@ Maybe<typename VecT::value_type*> VectorAt(VecT* vec, typename VecT::size_type i
 
 template<typename T>
 std::string Join(const T& con, const std::string& delimiter) {
-    std::ostringstream os;
-    auto b = begin(con), e = end(con);
+  std::ostringstream os;
+  auto b = begin(con), e = end(con);
 
-    if (b != e) {
-        std::copy(b, prev(e), std::ostream_iterator<typename T::value_type>(os, delimiter));
-        b = prev(e);
-    }
-    if (b != e) {
-        os << *b;
-    }
+  if (b != e) {
+    std::copy(b, prev(e), std::ostream_iterator<typename T::value_type>(os, delimiter));
+    b = prev(e);
+  }
+  if (b != e) { os << *b; }
 
-    return os.str();
+  return os.str();
 }
 
 }  // namespace oneflow
