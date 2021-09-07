@@ -72,7 +72,9 @@ int64_t LCM(int m, int n) {
 
 class EagerCclS0ToS0OpKernelState final : public user_op::OpKernelState {
  public:
-  EagerCclS0ToS0OpKernelState(user_op::KernelInitContext* ctx) { Init(ctx); }
+  explicit EagerCclS0ToS0OpKernelState(user_op::KernelInitContext* ctx) : num_of_data_piece_(0) {
+    Init(ctx);
+  }
   ~EagerCclS0ToS0OpKernelState() override = default;
 
   Symbol<ParallelDesc> in_parallel_desc() const { return in_parallel_desc_; }

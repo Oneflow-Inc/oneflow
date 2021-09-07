@@ -32,8 +32,7 @@ REGISTER_NO_GRAD_USER_OP("eager_s0_to_s0")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& shape = ctx->Attr<Shape>("shape");
       const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
-      Symbol<ParallelDesc> out_parallel_desc =
-          CHECK_JUST(DebugStrToPlacement(out_parallel_conf_txt));
+      Symbol<ParallelDesc> out_parallel_desc = JUST(DebugStrToPlacement(out_parallel_conf_txt));
       DimVector dim_vec{shape.dim_vec()};
       int64_t out_parallel_num = out_parallel_desc->parallel_num();
       if (out_parallel_num > 1) {
