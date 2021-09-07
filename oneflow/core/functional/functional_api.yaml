@@ -246,12 +246,8 @@
   bind_python: False
 
 - name: "glu"
-  signature: "Tensor (Tensor input, Int64 dim) => Glu"
+  signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
   bind_python: True
-
-- name: "glu_grad"
-  signature: "Tensor (Tensor dy, Tensor input, Int64 dim) => GluGrad"
-  bind_python: False
 
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"

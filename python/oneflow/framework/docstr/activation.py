@@ -390,15 +390,15 @@ add_docstr(
 add_docstr(
     oneflow._C.glu,
     r"""
-    glu(x: Tensor, dim: int) -> Tensor 
+    glu(input: Tensor, dim: int) -> Tensor 
 
     The equation is:
 
     .. math::
-         GLU(x) = GLU(a, b) = a \otimes sigmoid(b)
+         GLU(input) = GLU(a, b) = a \otimes sigmoid(b)
     
     .. note::
-        where x is split in half along dim to form a and b, \otimes is the element-wise product between matrices.
+        where input is split in half along dim to form a and b, ⊗ is the element-wise product between matrices.
     
     For example:
 

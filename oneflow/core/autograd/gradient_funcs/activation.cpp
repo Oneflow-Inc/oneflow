@@ -107,46 +107,6 @@ class GeLU : public BaseActivation {
   }
 };
 
-struct GLUCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  int64_t dim;
-};
-
-class GLU : public OpExprGradFunction<GLUCaptureState> {
- public:
-  Maybe<void> Init(const OpExpr& op) {
-    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Capture(GLUCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->dim = JUST(composed_attrs.GetAttr<int64_t>("dim"));
-    ctx->requires_grad = inputs.at(0)->requires_grad();
-    if (ctx->requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const GLUCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-    in_grads->resize(1);
-    if (ctx->requires_grad) {
-      const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::GluGrad(out_grads.at(0), x, ctx->dim));
-    }
-    return Maybe<void>::Ok();
-  }
-
- private:
-  AttrMap base_attrs_;
-};
-
 class HardSigmoid : public BaseActivation {
  public:
   Maybe<void> Apply(const BaseActivationCaptureState* ctx, const TensorTuple& out_grads,
@@ -377,7 +337,6 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("selu", Selu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("softsign", Softsign);
 REGISTER_OP_EXPR_GRAD_FUNCTION("relu", ReLU);
 REGISTER_OP_EXPR_GRAD_FUNCTION("gelu", GeLU);
-REGISTER_OP_EXPR_GRAD_FUNCTION("glu", GLU);
 REGISTER_OP_EXPR_GRAD_FUNCTION("hardsigmoid", HardSigmoid);
 REGISTER_OP_EXPR_GRAD_FUNCTION("hardswish", HardSwish);
 REGISTER_OP_EXPR_GRAD_FUNCTION("leaky_relu", LeakyRelu);

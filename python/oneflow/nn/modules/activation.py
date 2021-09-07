@@ -989,17 +989,17 @@ class GLU(Module):
     r"""The GLU activation.
 
     Args:
-        x (Tensor, float): input tensor. 
+        input (Tensor, float): input tensor. 
         dim (int, optional): dimension on which to split the input. Default: -1
 
     The formula is: 
     
     .. math::  
 
-        GLU(x) = GLU(a, b) = a \otimes sigmoid(b)
+        GLU(input) = GLU(a, b) = a \otimes sigmoid(b)
 
     .. note::
-        where x is split in half along dim to form a and b, \otimes is the element-wise product between matrices.
+        where input is split in half along dim to form a and b, ⊗ is the element-wise product between matrices.
 
     For example:
     
@@ -1007,8 +1007,9 @@ class GLU(Module):
     
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
+        >>> m = nn.GLU()
         >>> x = flow.tensor([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=flow.float32)
-        >>> y = nn.functional.glu(x)
+        >>> y = m(x)
         >>> y
         tensor([[0.9526, 1.9640],
                 [4.9954, 5.9980]], dtype=oneflow.float32)
@@ -1019,17 +1020,8 @@ class GLU(Module):
         super().__init__()
         self.dim = dim
 
-    def forward(self, x):
-        ndim = len(x.shape)
-        assert (
-            -ndim <= self.dim <= ndim - 1
-        ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
-            -ndim, ndim - 1, self.dim
-        )
-        if self.dim < 0:
-            self.dim += ndim
-
-        return flow._C.glu(x, self.dim)
+    def forward(self, input):
+        return flow._C.glu(input, self.dim)
 
 
 if __name__ == "__main__":
