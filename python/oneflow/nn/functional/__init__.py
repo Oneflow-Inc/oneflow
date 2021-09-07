@@ -23,9 +23,9 @@ from oneflow._C import conv3d
 from oneflow._C import avg_pool1d
 from oneflow._C import avg_pool2d
 from oneflow._C import avg_pool3d
-from oneflow._C import max_pool1d
-from oneflow._C import max_pool2d
-from oneflow._C import max_pool3d
+from .functional_maxpool import max_pool1d
+from .functional_maxpool import max_pool2d
+from .functional_maxpool import max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
