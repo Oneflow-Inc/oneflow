@@ -2611,7 +2611,7 @@ def _test_eager_boxing_with_same_placement_s1_to_b(test_case, in_device, out_dev
         )
 
 
-def _test_eager_boxing_s0_to_s0_cpu(test_case, in_device_list, out_device_list):
+def _test_eager_boxing_s0_to_s0(test_case, in_device_list, out_device_list):
     for i in range(10):
         np_arr = np.random.randn(12, 12)
         device = flow.device("cpu")
@@ -2929,12 +2929,12 @@ class TestEagerBoxingWithSameInOutPlacement(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingS0ToS0(flow.unittest.TestCase):
-    def test_eager_boxing_s0_to_s0_cpu(test_case):
+    def test_eager_boxing_s0_to_s0(test_case):
         arg_dict = OrderedDict()
         arg_dict["in_device_list"] = [[0, 1], [1, 2, 3]]
         arg_dict["out_device_list"] = [[2, 3], [0, 1, 3]]
         for arg in GenArgList(arg_dict):
-            _test_eager_boxing_s0_to_s0_cpu(test_case, *arg)
+            _test_eager_boxing_s0_to_s0(test_case, *arg)
 
 
 if __name__ == "__main__":

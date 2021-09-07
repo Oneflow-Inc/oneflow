@@ -29,25 +29,27 @@ HashMap<int64_t, const void*>* GlobalRank2DataPtr() {
   return &rank2data_ptr;
 }
 
+template<DeviceType device_type>
 Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx) {
   if (GlobalProcessCtx::Rank() == dst) {
     auto* rank2data_ptr = GlobalRank2DataPtr();
     CHECK_OR_RETURN(rank2data_ptr->emplace(dst, in).second);
   } else {
-    JUST(ccl::Send<DeviceType::kCPU>(in, elem_cnt, dtype, dst, ctx));
+    JUST(ccl::Send<device_type>(in, elem_cnt, dtype, dst, ctx));
   }
   return Maybe<void>::Ok();
 }
 
+template<DeviceType device_type>
 Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx) {
   if (GlobalProcessCtx::Rank() == src) {
     size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
     auto* rank2data_ptr = GlobalRank2DataPtr();
     const void* in = JUST(MapAt(*rank2data_ptr, src));
-    Memcpy<DeviceType::kCPU>(ctx, out, in, buffer_size);
+    Memcpy<device_type>(ctx, out, in, buffer_size);
     CHECK_OR_RETURN(rank2data_ptr->erase(src) == 1);
   } else {
-    JUST(ccl::Recv<DeviceType::kCPU>(out, elem_cnt, dtype, src, ctx));
+    JUST(ccl::Recv<device_type>(out, elem_cnt, dtype, src, ctx));
   }
   return Maybe<void>::Ok();
 }
@@ -113,6 +115,7 @@ class EagerCclS0ToS0OpKernelState final : public user_op::OpKernelState {
 
 }  // namespace
 
+template<DeviceType device_type>
 class EagerCclS0ToS0Kernel final : public user_op::OpKernel {
  public:
   EagerCclS0ToS0Kernel() = default;
@@ -154,9 +157,10 @@ class EagerCclS0ToS0Kernel final : public user_op::OpKernel {
         int64_t src_idx_offset =
             data_piece_idx - (in_parallel_id * num_of_data_piece / in_parallel_num);
 
-        CHECK_JUST(Send(reinterpret_cast<const void*>(reinterpret_cast<const char*>(in_ptr)
-                                                      + src_idx_offset * size_per_data_piece),
-                        elem_per_data_piece, in->data_type(), dst, ctx->device_ctx()));
+        CHECK_JUST(
+            Send<device_type>(reinterpret_cast<const void*>(reinterpret_cast<const char*>(in_ptr)
+                                                            + src_idx_offset * size_per_data_piece),
+                              elem_per_data_piece, in->data_type(), dst, ctx->device_ctx()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         Symbol<ParallelDesc> out_parallel_desc = kernel_state->out_parallel_desc();
@@ -168,17 +172,24 @@ class EagerCclS0ToS0Kernel final : public user_op::OpKernel {
         int64_t dst_idx_offset =
             data_piece_idx - (out_parallel_id * num_of_data_piece / out_parallel_num);
 
-        CHECK_JUST(Recv(reinterpret_cast<void*>(reinterpret_cast<char*>(out_ptr)
-                                                + dst_idx_offset * size_per_data_piece),
-                        elem_per_data_piece, out->data_type(), src, ctx->device_ctx()));
+        CHECK_JUST(
+            Recv<device_type>(reinterpret_cast<void*>(reinterpret_cast<char*>(out_ptr)
+                                                      + dst_idx_offset * size_per_data_piece),
+                              elem_per_data_piece, out->data_type(), src, ctx->device_ctx()));
       }
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("eager_s0_to_s0")
-    .SetCreateFn<EagerCclS0ToS0Kernel>()
-    .SetIsMatchedHob(user_op::HobDeviceTag() == "cpu");
+#define REGISTER_EAGER_S0_TO_S0_KERNEL(device)     \
+  REGISTER_USER_KERNEL("eager_s0_to_s0")           \
+      .SetCreateFn<EagerCclS0ToS0Kernel<device>>() \
+      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
+
+REGISTER_EAGER_S0_TO_S0_KERNEL(DeviceType::kCPU)
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+REGISTER_EAGER_S0_TO_S0_KERNEL(DeviceType::kGPU)
+#endif
 
 }  // namespace oneflow

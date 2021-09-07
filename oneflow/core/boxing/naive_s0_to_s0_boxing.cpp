@@ -39,7 +39,6 @@ Maybe<void> RawCheckCclS0ToS0(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 
   CHECK_OR_RETURN(in->placement() != out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
   return Maybe<void>::Ok();
 }
 
@@ -68,6 +67,6 @@ Maybe<one::Tensor> CclS0ToS0(const std::shared_ptr<one::Tensor>& tensor, Symbol<
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("ccl-s0-to-s0", CheckCclS0ToS0, &CclS0ToS0));
+COMMAND(RegisterBoxingFunction("naive-s0-to-s0", CheckCclS0ToS0, &CclS0ToS0));
 
 }  // namespace oneflow

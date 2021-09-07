@@ -60,7 +60,6 @@ class EagerS0ToS0Functor {
     {
       CHECK_OR_RETURN(x->is_local());
       CHECK_OR_RETURN(x->is_eager());
-      CHECK_OR_RETURN(!x->is_cuda());
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerS0ToS0OpExpr(in_parallel_desc, out_parallel_desc, shape));
