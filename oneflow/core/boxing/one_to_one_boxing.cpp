@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/device.h"
