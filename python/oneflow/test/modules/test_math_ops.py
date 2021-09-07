@@ -436,10 +436,12 @@ class TestMaximum(flow.unittest.TestCase):
 class TestUnaryInplaceOpsModule(flow.unittest.TestCase):
     def test_inplace(test_case):
         def test_of_np_result(
-            test_case, shape, device, flow_fun, np_fun, rand_fn=flow.randn
+            test_case, shape, device, flow_fun, np_fun, low=0, high=1
         ):
-            x = rand_fn(*shape, dtype=flow.float32, device=flow.device(device))
-            x_inplace = x + 1
+            x = (high - low) * flow.rand(
+                *shape, dtype=flow.float32, device=flow.device(device)
+            ) + low
+            x_inplace = x + 1e-5
             np_out = np_fun(x_inplace.numpy())
             id_old = id(x_inplace)
             y_inplace = flow_fun(x_inplace)
@@ -448,8 +450,8 @@ class TestUnaryInplaceOpsModule(flow.unittest.TestCase):
 
         def test_inplace_impl(test_case, shape, device):
             ops = [
-                (flow.Tensor.abs_, np.abs),
                 (flow.Tensor.sin_, np.sin),
+                (flow.Tensor.abs_, np.abs),
                 (flow.Tensor.exp_, np.exp),
                 (flow.Tensor.cosh_, np.cosh),
                 (flow.Tensor.ceil_, np.ceil),
@@ -459,18 +461,105 @@ class TestUnaryInplaceOpsModule(flow.unittest.TestCase):
                 (flow.Tensor.round_, np.round),
                 (flow.Tensor.square_, np.square),
                 (flow.Tensor.sign_, np.sign),
+                (flow.Tensor.tanh_, np.tanh),
+                (flow.Tensor.sinh_, np.sinh),
+                (flow.Tensor.atan_, np.arctan),
+                (flow.Tensor.cos_, np.cos),
+                (flow.Tensor.asinh_, np.arcsinh),
             ]
             for pair in ops:
-                test_of_np_result(test_case, shape, device, pair[0], pair[1])
+                test_of_np_result(
+                    test_case, shape, device, pair[0], pair[1], low=-10, high=10
+                )
 
             # x > 0
+            def np_rsqrt(x):
+                return np.reciprocal(np.sqrt(x))
+
+            def np_erf(x):
+                import math
+
+                y = np.array([math.erf(item) for item in x.flatten()])
+                return y.reshape(x.shape)
+
+            def np_erfc(x):
+                return 1 - np_erf(x)
+
             ops = [
                 (flow.Tensor.log_, np.log),
-                (flow.Tensor.log1p_, np.log1p),
                 (flow.Tensor.sqrt_, np.sqrt),
+                (flow.Tensor.rsqrt_, np_rsqrt),
+                (flow.Tensor.erf_, np_erf),
+                (flow.Tensor.erfc_, np_erfc),
             ]
             for pair in ops:
-                test_of_np_result(test_case, shape, device, pair[0], pair[1], flow.rand)
+                test_of_np_result(
+                    test_case, shape, device, pair[0], pair[1], low=0, high=10
+                )
+
+            # x > -1
+            test_of_np_result(
+                test_case,
+                shape,
+                device,
+                flow.Tensor.log1p_,
+                np.log1p,
+                low=-0.99,
+                high=10,
+            )
+
+            # -1 < x < 1
+            ops = [
+                (flow.Tensor.acos_, np.arccos),
+                (flow.Tensor.asin_, np.arcsin),
+                (flow.Tensor.atanh_, np.arctanh),
+            ]
+            for pair in ops:
+                test_of_np_result(
+                    test_case, shape, device, pair[0], pair[1], low=-0.99, high=0.99
+                )
+
+            # x > 1
+            test_of_np_result(
+                test_case,
+                shape,
+                device,
+                flow.Tensor.acosh_,
+                np.arccosh,
+                low=1.01,
+                high=10,
+            )
+
+            # -pi/2 < x pi/2
+            test_of_np_result(
+                test_case,
+                shape,
+                device,
+                flow.Tensor.tan_,
+                np.tan,
+                low=-3.14 / 2 + 0.01,
+                high=3.14 / 2 - 0.0 - 1,
+            )
+
+            # x != 0
+            test_of_np_result(
+                test_case,
+                shape,
+                device,
+                flow.Tensor.reciprocal_,
+                np.reciprocal,
+                low=-10,
+                high=-0.01,
+            )
+            test_of_np_result(
+                test_case,
+                shape,
+                device,
+                flow.Tensor.reciprocal_,
+                np.reciprocal,
+                low=0.01,
+                high=10,
+            )
 
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [test_inplace_impl]

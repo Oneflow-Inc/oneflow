@@ -1018,6 +1018,15 @@ def inplace_atan_op_tensor(input):
     return flow._C.atan(input, True)
 
 
+@register_tensor_op("atanh_")
+def inplace_atanh_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.atanh`
+
+    """
+    return flow._C.atanh(input, True)
+
+
 @register_tensor_op("cos_")
 def inplace_cos_op_tensor(input):
     """
