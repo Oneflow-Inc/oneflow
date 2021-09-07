@@ -100,7 +100,10 @@ class Graph(object):
         self._grad_scaler = None
         self._variables_conf = OrderedDict()
         self._is_compiled = False
-        self._job_proto = None
+        # forward graph job proto
+        self._forward_job_proto = None
+        # forward and backward graph job proto
+        self._full_job_proto = None
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
@@ -338,7 +341,15 @@ class Graph(object):
 
     @property
     def _graph_proto(self):
-        return self._job_proto
+        return self._forward_job_proto
+
+    @property
+    def _full_graph_proto(self):
+        if self._debug and self._full_job_proto is not None:
+            return self._full_job_proto
+        else:
+            print("[ERROR](You can't get full graph when debug mode is disable)")
+            raise
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -481,8 +492,12 @@ class Graph(object):
                 state_op_names, self._states_tensor_tuple
             )
 
-            # Save job proto for debug
-            self._job_proto = c_api_util.GetCurrentJob()
+            # Save forward job proto for debug
+            self._forward_job_proto = c_api_util.GetCurrentJob()
+
+        # Save forward and backward graph job proto for debug
+        if self._debug:
+            self._full_job_proto = c_api_util.GetJob(self.config.proto.job_name())
 
         return list_to_func_return(self._eager_outputs_buffer[0])
 

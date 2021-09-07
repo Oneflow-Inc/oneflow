@@ -250,3 +250,10 @@ def GetCurrentJob():
     ret = job_pb.Job()
     ret.ParseFromString(serialized_job)
     return ret
+
+
+def GetJob(job_name):
+    serialized_job = oneflow._oneflow_internal.GetSerializedJob(job_name)
+    ret = job_pb.Job()
+    ret.ParseFromString(serialized_job)
+    return ret
