@@ -135,7 +135,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
       }
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
-                  const std::shared_ptr<const ParallelDesc>& parallel_desc) : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, parallel_desc) {
+                  LocalDepObject* dep_object) : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, dep_object) {
                     compute_time_ = 0;
                     last_access_time_ = 0;
                     pinned_ = 0;
