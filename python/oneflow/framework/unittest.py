@@ -381,7 +381,7 @@ class CondSkipChecker(doctest.OutputChecker):
             return super(CondSkipChecker, self).check_output(want, got, optionflags)
 
         target_rank_list = [bool(flag & optionflags) for flag in self._check_flags]
-        # wrong flag will be handled in DocTestFinder(), so any(target_rank_list) is True
+        # wrong flag will be handled before here, so any(target_rank_list) is True
         # not target rank
         if target_rank_list.index(True) != oneflow.env.get_rank():
             return True
