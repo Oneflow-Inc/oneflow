@@ -458,7 +458,7 @@ Maybe<Symbol<Device>> RawGetTensorDevice(Symbol<ParallelDesc> parallel_desc) {
   return JUST(Device::ThreadLocalGetOrNew(type, device_id));
 }
 
-Maybe<Symbol<ParallelDesc>> RawDebugStrToPlacement(const std::string& parallel_conf_str) {
+Maybe<Symbol<ParallelDesc>> RawTxtStringToPlacement(const std::string& parallel_conf_str) {
   ParallelConf parallel_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf));
   return SymbolOf(ParallelDesc(parallel_conf));
@@ -473,7 +473,7 @@ decltype(GetParallelContext4CurrentProcessCtx) GetParallelContext4CurrentProcess
 decltype(ReplaceDeviceType) ReplaceDeviceType = DECORATE(&RawReplaceDeviceType, ThreadLocal);
 decltype(PlacementToString) PlacementToString = DECORATE(&RawPlacementToString, ThreadLocal);
 decltype(GetTensorDevice) GetTensorDevice = DECORATE(&RawGetTensorDevice, ThreadLocal);
-decltype(DebugStrToPlacement) DebugStrToPlacement =
-    DECORATE(&RawDebugStrToPlacement, ThreadLocalCopiable);
+decltype(TxtStringToPlacement) TxtStringToPlacement =
+    DECORATE(&RawTxtStringToPlacement, ThreadLocalCopiable);
 
 }  // namespace oneflow

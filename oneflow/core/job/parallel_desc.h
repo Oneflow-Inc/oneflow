@@ -146,7 +146,7 @@ extern Maybe<const ParallelContext> (*GetParallelContext4CurrentProcessCtx)(
 extern Maybe<Symbol<ParallelDesc>> (*ReplaceDeviceType)(Symbol<ParallelDesc>, DeviceType);
 extern Maybe<std::string> (*PlacementToString)(Symbol<ParallelDesc> placement);
 extern Maybe<Symbol<Device>> (*GetTensorDevice)(Symbol<ParallelDesc> parallel_desc);
-extern Maybe<Symbol<ParallelDesc>> (*DebugStrToPlacement)(const std::string& parallel_conf_str);
+extern Maybe<Symbol<ParallelDesc>> (*TxtStringToPlacement)(const std::string& parallel_conf_str);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);
@@ -170,7 +170,7 @@ Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc>, DeviceTyp
 
 Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement);
 
-Maybe<Symbol<ParallelDesc>> RawDebugStrToPlacement(const std::string& parallel_conf_str);
+Maybe<Symbol<ParallelDesc>> RawTxtStringToPlacement(const std::string& parallel_conf_str);
 
 }  // namespace private_details
 }  // namespace oneflow
