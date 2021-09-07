@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/primitive/memcpy.h"
 #include "oneflow/core/stream/cuda_stream_context.h"
 #include <cuda_runtime.h>
@@ -54,3 +56,5 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, MemcpyFactory, MemcpyFactoryImpl);
 }  // namespace primitive
 
 }  // namespace oneflow
+
+#endif
