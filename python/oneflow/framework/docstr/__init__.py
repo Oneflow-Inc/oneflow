@@ -20,4 +20,5 @@ from .pooling import *
 from .activation import *
 from .dropout import *
 from .vision import *
+from .loss import *
 from .onehot import *

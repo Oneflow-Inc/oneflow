@@ -1287,35 +1287,13 @@ class TripletMarginLoss(Module):
            "none",
            "mean",
        ], "only 'sum', 'mean' and none supported by now"
-       self.reduction = reduction
-       
-
-    def p_norm(self, x, p=2.0):
-        if p == 2.0:
-            norm = flow.sqrt(flow.sum(flow.square(flow.abs(x)), dim=-1))
-        else:
-            p_constant = flow.mul(flow.ones(flow.abs(x).shape, dtype=flow.float32), p)
-            p_constant = p_constant.to(x.device)
-            sum = flow.sum(flow.pow(flow.abs(x), p_constant), dim=-1)
-            p_tmp = flow.mul(flow.ones(sum.shape, dtype=flow.float32), 1.0 / p)
-            p_tmp = p_tmp.to(sum.device)
-            norm = flow.pow(sum, p_tmp)
-        return norm
+       self.reduction = reduction  
 
     def forward(self, anchor, positive, negative):
-        da_p = self.p_norm(anchor - positive + self.eps, p=self.p)
-        da_n = self.p_norm(anchor - negative + self.eps, p=self.p)
-        if self.swap:
-            distance_swap = self.p_norm(positive - negative + self.eps, p=self.p)
-            da_n = flow.minimum(da_n, distance_swap)
-        triplet_loss = flow.clip(self.margin + da_p - da_n, min=0.0)
-        
-        if self.reduction == "mean":
-            return flow.mean(triplet_loss)
-        elif self.reduction == "sum":
-            return flow.sum(triplet_loss)
-        else:
-            return triplet_loss
+        triplet_loss = flow._C.triplet_margin_loss(
+            anchor, positive, negative, margin=self.margin, p=self.p, eps=self.eps,swap=self.swap, reduction =self.reduction
+        )
+        return triplet_loss
 
 
 if __name__ == "__main__":

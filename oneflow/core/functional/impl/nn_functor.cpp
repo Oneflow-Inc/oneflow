@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -457,6 +458,61 @@ class CombinedMarginLossFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class NormFunctor {
+ public:
+  NormFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                            const float& p) const {
+    std::shared_ptr<one::Tensor> norm;
+    if(p == 2.0)
+    {
+      norm= JUST(Sqrt(ReduceSum(Square(Abs(x)), axis=-1, keepdim=False)));
+    }
+    else
+    {
+      norm=JUST(ScalarPow(ReduceSum(ScalarPow(Abs(x), p), axis=-1, keepdim=False), 1.0/p));
+    }
+    return norm;
+  }
+
+}
+
+
+class TripletMarginLossFunctor {
+ public:
+  TripletMarginLossFunctor() {}
+  
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& anchor,
+                           const std::shared_ptr<one::Tensor>& positive,
+                           const std::shared_ptr<one::Tensor>& negative,
+                           const float& margin, const float& p, const float& eps,
+                           const bool& swap, const std::string& reduction) const {
+    
+    //增加here
+    auto da_p=JUST(Norm(ScalarAdd2(eps, Sub(anchor, positive)), p));
+    auto da_n=JUST(Norm(ScalarAdd2(eps, Sub(anchor, negative)), p));
+    if(swap)
+    {
+      auto distance_swap = JUST(Norm(ScalarAdd2(eps, Sub(positive, negative)), p));
+    }
+    auto triplet_loss = JUST(Clamp(JUST(ScalarAdd(da_p - da_n, margin)), min = 0.0));
+
+    if(reduction == "mean")
+    {
+      return ReduceMean(triplet_loss);
+    }
+    else if(reduction == "sum")
+    {
+      return ReduceSum(triplet_loss);
+    }
+    else
+    {
+      return triplet_loss;
+    }
+
+  }
 };
 
 class AffineGridFunctor {
@@ -1036,6 +1092,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
+  m.add_functor<impl::NormFunctor>("Norm"); 
+  m.add_functor<impl::TripletMarginLossFunctor>("TripletMarginLoss");
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
   m.add_functor<impl::GridSampleFunctor>("GridSample");
   m.add_functor<impl::NormalizationFunctor>("Normalization");

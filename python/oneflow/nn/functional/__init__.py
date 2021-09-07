@@ -52,4 +52,5 @@ from oneflow._C import dropout
 from oneflow._C import smooth_l1_loss
 from oneflow._C import pad
 from oneflow._C import upsample
+from oneflow._C import triplet_margin_loss
 from oneflow.nn.modules.one_hot import one_hot
