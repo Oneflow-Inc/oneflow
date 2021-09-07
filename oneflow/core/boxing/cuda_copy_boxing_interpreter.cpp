@@ -60,7 +60,7 @@ Maybe<one::Tensor> CudaCopy(const std::shared_ptr<one::Tensor>& tensor, Symbol<P
     std::string device_type = Device::Type4DeviceTag(tensor_placement->device_tag());
     local_tensor = JUST(one::functional::Empty(
         *JUST(GetPhysicalShape(*tensor->shape(), *tensor_nd_sbp, *tensor_placement, 0)),
-        tensor->dtype(), MakeOptional(JUST(Device::New(device_type)))));
+        tensor->dtype(), JUST(Device::New(device_type))));
   }
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,

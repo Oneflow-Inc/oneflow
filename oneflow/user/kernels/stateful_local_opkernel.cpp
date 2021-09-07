@@ -83,11 +83,9 @@ void ZeroCopyBaseContext::Update(
 Optional<Symbol<ParallelDesc>> ZeroCopyBaseContext::parallel_desc() const {
   if (!consistent_tensor_infer_result_) { return Optional<Symbol<ParallelDesc>>(); }
   if (!consistent_tensor_infer_result_->input_tensor_metas().empty()) {
-    return MakeOptional(
-        consistent_tensor_infer_result_->input_tensor_metas().at(0)->parallel_desc());
+    return consistent_tensor_infer_result_->input_tensor_metas().at(0)->parallel_desc();
   } else if (!consistent_tensor_infer_result_->output_tensor_metas().empty()) {
-    return MakeOptional(
-        consistent_tensor_infer_result_->output_tensor_metas().at(0)->parallel_desc());
+    return consistent_tensor_infer_result_->output_tensor_metas().at(0)->parallel_desc();
   } else {
     UNIMPLEMENTED();
     return Optional<Symbol<ParallelDesc>>();

@@ -140,7 +140,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
     device_ = JUST(Device::New("cpu"));
   }
   std::shared_ptr<Tensor> tensor =
-      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), MakeOptional(device_)));
+      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, np_arr_raii));
 
   // Cast to float if data is double sequence, rather than numpy array.

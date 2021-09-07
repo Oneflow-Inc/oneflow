@@ -25,6 +25,17 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+
+struct InPlaceConstructType {
+  explicit InPlaceConstructType() = default;
+};
+constexpr InPlaceConstructType InPlaceConstruct{};
+
+struct NullOptType {
+  explicit constexpr NullOptType(int) {}
+};
+constexpr NullOptType NullOpt{0};
+
 namespace internal {
 
 template<typename T, typename U = void>
@@ -118,8 +129,6 @@ class OptionalBase<T, typename std::enable_if<std::is_reference<T>::value>::type
   storage_type value_;
 };
 
-struct InPlaceConstruct {};
-
 template<typename T>
 class OptionalBase<
     T, typename std::enable_if<!IsScalarType<T>::value && !std::is_reference<T>::value>::type> {
@@ -131,7 +140,7 @@ class OptionalBase<
   ~OptionalBase() = default;
 
   template<typename... Args>
-  explicit OptionalBase(InPlaceConstruct, Args&&... args)
+  explicit OptionalBase(InPlaceConstructType, Args&&... args)
       : value_(std::make_shared<T>(std::forward<Args>(args)...)) {}
 
   explicit OptionalBase(const T& value) : value_(std::make_shared<T>(value)) {}
@@ -180,8 +189,6 @@ class OptionalBase<
 
 }  // namespace internal
 
-using internal::InPlaceConstruct;
-
 template<typename T>
 class Optional final : private internal::OptionalBase<T> {
  private:
@@ -197,8 +204,12 @@ class Optional final : private internal::OptionalBase<T> {
   Optional() = default;
   ~Optional() = default;
 
+  Optional(NullOptType)  // NOLINT(google-explicit-constructor)
+      : base() {}
+
   template<typename... Args>
-  explicit Optional(Args&&... val) : base(std::forward<Args>(val)...) {}
+  Optional(Args&&... val)  // NOLINT(google-explicit-constructor)
+      : base(std::forward<Args>(val)...) {}
 
   Optional(const Optional&) = default;
   Optional(Optional&&) noexcept = default;
@@ -236,42 +247,22 @@ class Optional final : private internal::OptionalBase<T> {
   bool has_value() const { return base::has_value(); }
   explicit operator bool() const { return has_value(); }
 
-  bool IsOk() const { return has_value(); }
-
   const_return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return base::value();
   }
 
   return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() { return base::value(); }
 
-  std::shared_ptr<cfg::ErrorProto> error() const {
-    auto error = std::make_shared<cfg::ErrorProto>();
-    error->mutable_value_not_found_error();
-    return error;
-  }
-
   Maybe<T> to_maybe() const {
-    if (IsOk()) {
+    if (has_value()) {
       return base::value();
     } else {
-      return error();
+      return Error::ValueNotFoundError();
     }
   }
 
   void reset() { base::reset(); }
 };
-
-template<typename T>
-auto MakeOptional(T&& value)
-    -> Optional<typename std::remove_cv<typename std::remove_reference<T>::type>::type> {
-  return Optional<typename std::remove_cv<typename std::remove_reference<T>::type>::type>(
-      std::forward<T>(value));
-}
-
-template<typename T, typename... Args>
-auto ConstructOptional(Args&&... args) -> Optional<T> {
-  return Optional<T>(InPlaceConstruct{}, std::forward<Args>(args)...);
-}
 
 }  // namespace oneflow
 

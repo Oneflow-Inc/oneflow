@@ -235,8 +235,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
     cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
   } else {
     const auto& dtype_symbol = JUST(DType::Get(dtype));
-    const auto& empty =
-        JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, MakeOptional(device)));
+    const auto& empty = JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device));
     cur_rank_phy_tensor = JUST(empty->AsMirroredTensor());
     cur_rank_phy_tensor->set_requires_grad(requires_grad);
     cur_rank_phy_tensor->set_is_leaf(is_leaf);
