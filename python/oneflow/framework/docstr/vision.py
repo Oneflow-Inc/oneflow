@@ -36,7 +36,7 @@ add_docstr(
         >>> import numpy as np
 
         >>> pad = [2, 2, 1, 1]
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> input = flow.tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> output = flow._C.pad(input, pad, mode = "replicate")
         >>> output.shape
         flow.Size([1, 2, 5, 7])
@@ -106,7 +106,7 @@ add_docstr(
 
         >>> import oneflow as flow
 
-        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)  
+        >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)  
         >>> output = flow._C.upsample(input, height_scale=2.0, width_scale=2.0, align_corners=False, interpolation="nearest")
     
         >>> output

@@ -56,7 +56,7 @@ def _of_image_resize(
     )
     for image in image_list:
         tensor_dtype = dtype if keep_aspect_ratio else origin_dtype
-        input = flow.Tensor(
+        input = flow.tensor(
             np.expand_dims(image, axis=0), dtype=tensor_dtype, device=flow.device("cpu")
         )
         image_buffer = flow.tensor_to_tensor_buffer(input, instance_dims=3)

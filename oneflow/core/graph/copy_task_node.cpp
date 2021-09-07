@@ -65,7 +65,8 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (copy_type_ == CopyHdOpConf::H2D) {
     TaskNode::InitProducedRegstMemCase(mem_case);
   } else if (copy_type_ == CopyHdOpConf::D2H) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
+        stream_id().device_id().device_index());
   } else {
     UNIMPLEMENTED();
   }

@@ -18,6 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FUNCTIONAL_VALUE_TYPES_H_
 
 #include <memory>
+#include <Python.h>
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
@@ -53,24 +54,33 @@ class TensorIndex;
 namespace one {
 namespace functional {
 
-enum ValueType {
+enum ValueType : int {
   kINVALID = 0,
   kVOID,
+  // Integral
   kINT32,
-  kUINT32,
   kINT64,
+  kUINT32,
   kUINT64,
+  kINTEGRAL_MASK = 10,
+  // Floating
   kFLOAT,
   kDOUBLE,
+  kFLOATING_MASK = 15,
+
   kBOOL,
   kSTRING,
-
+  // Integral list
   kINT32_LIST = 50,
   kUINT32_LIST,
   kINT64_LIST,
   kUINT64_LIST,
+  kINTEGRAL_LIST_MASK = 60,
+  // Floating list
   kFLOAT_LIST,
   kDOUBLE_LIST,
+  kFLOATING_LIST_MASK = 65,
+
   kBOOL_LIST,
   kSTRING_LIST,
 
@@ -97,6 +107,8 @@ enum ValueType {
   kPARALLEL_DESC,
   kSBP_PARALLEL,
   kSBP_PARALLEL_LIST,
+
+  kPY_OBJECT = 400,
 };
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
@@ -152,9 +164,17 @@ VALUE_TYPE_OF_IMPL(Symbol<ParallelDesc>, kPARALLEL_DESC);
 VALUE_TYPE_OF_IMPL(Symbol<cfg::SbpParallel>, kSBP_PARALLEL);
 VALUE_TYPE_OF_IMPL(std::vector<Symbol<cfg::SbpParallel>>, kSBP_PARALLEL_LIST);
 
+VALUE_TYPE_OF_IMPL(PyObject*, kPY_OBJECT);
+VALUE_TYPE_OF_IMPL(const PyObject*, kPY_OBJECT);
+
 #undef VALUE_TYPE_OF_IMPL
 
 Maybe<const std::string&> ValueTypeName(ValueType type);
+
+bool IsIntegralType(ValueType type);
+bool IsIntegralListType(ValueType type);
+bool IsFloatingType(ValueType type);
+bool IsFloatingListType(ValueType type);
 
 }  // namespace functional
 }  // namespace one

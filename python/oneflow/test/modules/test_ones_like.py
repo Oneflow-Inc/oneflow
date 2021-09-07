@@ -25,7 +25,9 @@ import oneflow.unittest
 
 
 def _test_ones_like_float(test_case, shape, device):
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    x = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
     y = flow.ones_like(x)
     test_case.assertTrue(y.dtype is flow.float32)
     test_case.assertTrue(y.shape == x.shape)
@@ -35,7 +37,7 @@ def _test_ones_like_float(test_case, shape, device):
 
 
 def _test_ones_like_int(test_case, shape, device):
-    x = flow.Tensor(np.random.randn(*shape), dtype=flow.int, device=flow.device(device))
+    x = flow.tensor(np.random.randn(*shape), dtype=flow.int, device=flow.device(device))
     y = flow.ones_like(x)
     test_case.assertTrue(y.dtype is flow.int)
     test_case.assertTrue(y.shape == x.shape)
