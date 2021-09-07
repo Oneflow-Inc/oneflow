@@ -36,7 +36,7 @@ class OptionalBase<T, typename std::enable_if<IsScalarType<T>::value>::type> {
   using value_type = T;
   using storage_type = T;
 
-  OptionalBase() : init_(false) {}
+  OptionalBase() : init_(false), value_() {}
   ~OptionalBase() = default;
 
   explicit OptionalBase(const T& value) : init_(true), value_(value) {}
