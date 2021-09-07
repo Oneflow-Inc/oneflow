@@ -28,7 +28,8 @@ struct FusedTrilScaleSoftmaxMaskScaleState : public AutoGradCaptureState {
   float mask_scale_value = 1;
 };
 
-class FusedTrilScaleSoftmaxMaskScale : public OpExprGradFunction<FusedTrilScaleSoftmaxMaskScaleState> {
+class FusedTrilScaleSoftmaxMaskScale
+    : public OpExprGradFunction<FusedTrilScaleSoftmaxMaskScaleState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -63,10 +64,10 @@ class FusedTrilScaleSoftmaxMaskScale : public OpExprGradFunction<FusedTrilScaleS
     const float& tril_scale_value = ctx->tril_scale_value;
     const float& mask_scale_value = ctx->mask_scale_value;
     const std::shared_ptr<oneflow::one::Tensor>& fused_tril_scale_softmax_mask_scale =
-        JUST(functional::FusedTrilScaleSoftmaxMaskScaleGrad(softmax_y, out_grads.at(1), mask, diagonal, 
-                                                            tril_scale_value, mask_scale_value));
+        JUST(functional::FusedTrilScaleSoftmaxMaskScaleGrad(
+            softmax_y, out_grads.at(1), mask, diagonal, tril_scale_value, mask_scale_value));
     in_grads->at(0) = fused_tril_scale_softmax_mask_scale;
-    
+
     return Maybe<void>::Ok();
   }
 
@@ -74,7 +75,8 @@ class FusedTrilScaleSoftmaxMaskScale : public OpExprGradFunction<FusedTrilScaleS
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_tril_scale_softmax_mask_scale", FusedTrilScaleSoftmaxMaskScale);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_tril_scale_softmax_mask_scale",
+                               FusedTrilScaleSoftmaxMaskScale);
 
 }  // namespace one
 }  // namespace oneflow

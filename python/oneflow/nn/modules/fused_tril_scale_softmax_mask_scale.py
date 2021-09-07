@@ -17,14 +17,21 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
 
-def fused_tril_scale_softmax_mask_scale_op(x, mask, diagonal=0, tril_fill_value=0, tril_scale_value=1, mask_scale_value=1):
-    return flow.F.fused_tril_scale_softmax_mask_scale(x, mask, diagonal, tril_fill_value, tril_scale_value, mask_scale_value)
-
+def fused_tril_scale_softmax_mask_scale_op(
+    x, mask, diagonal=0, tril_fill_value=0, tril_scale_value=1, mask_scale_value=1
+):
+    return flow.F.fused_tril_scale_softmax_mask_scale(
+        x, mask, diagonal, tril_fill_value, tril_scale_value, mask_scale_value
+    )
 
 
 @register_tensor_op("fused_tril_scale_softmax_mask_scale")
-def fused_tril_scale_softmax_mask_scale_op_tensor(x, mask, diagonal=0, tril_fill_value=0, tril_scale_value=1, mask_scale_value=1):
-    return flow.F.fused_tril_scale_softmax_mask_scale(x, mask, diagonal, tril_fill_value, tril_scale_value, mask_scale_value)
+def fused_tril_scale_softmax_mask_scale_op_tensor(
+    x, mask, diagonal=0, tril_fill_value=0, tril_scale_value=1, mask_scale_value=1
+):
+    return flow.F.fused_tril_scale_softmax_mask_scale(
+        x, mask, diagonal, tril_fill_value, tril_scale_value, mask_scale_value
+    )
 
 
 if __name__ == "__main__":

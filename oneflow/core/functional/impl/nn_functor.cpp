@@ -937,19 +937,16 @@ class FusedBiasAddGeluGradFunctor {
 class FusedTrilScaleSoftmaxMaskScaleFunctor {
  public:
   FusedTrilScaleSoftmaxMaskScaleFunctor() {
-    op_ = CHECK_JUST(
-        one::OpBuilder("fused_tril_scale_softmax_mask_scale")
-                .Input("x")
-                .Input("mask")
-                .Output("y")
-                .Output("softmax_y")
-                .Build());
+    op_ = CHECK_JUST(one::OpBuilder("fused_tril_scale_softmax_mask_scale")
+                         .Input("x")
+                         .Input("mask")
+                         .Output("y")
+                         .Output("softmax_y")
+                         .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& mask, 
-                           const int64_t& diagonal,
-                           const float& tril_fill_value,
-                           const float& tril_scale_value,
+                           const std::shared_ptr<one::Tensor>& mask, const int64_t& diagonal,
+                           const float& tril_fill_value, const float& tril_scale_value,
                            const float& mask_scale_value) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
@@ -975,10 +972,8 @@ class FusedTrilScaleSoftmaxMaskScaleGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& softmax_y,
                            const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& mask,
-                           const int64_t& diagonal,
-                           const float& tril_scale_value,
-                           const float& mask_scale_value) const {
+                           const std::shared_ptr<one::Tensor>& mask, const int64_t& diagonal,
+                           const float& tril_scale_value, const float& mask_scale_value) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
     JUST(attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
@@ -1113,7 +1108,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
   m.add_functor<impl::FusedBiasAddGeluGradFunctor>("FusedBiasAddGeluGrad");
   m.add_functor<impl::FusedTrilScaleSoftmaxMaskScaleFunctor>("FusedTrilScaleSoftmaxMaskScale");
-  m.add_functor<impl::FusedTrilScaleSoftmaxMaskScaleGradFunctor>("FusedTrilScaleSoftmaxMaskScaleGrad");
+  m.add_functor<impl::FusedTrilScaleSoftmaxMaskScaleGradFunctor>(
+      "FusedTrilScaleSoftmaxMaskScaleGrad");
   m.add_functor<impl::FusedBiasAddDropoutFunctor>("FusedBiasAddDropout");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
 };
