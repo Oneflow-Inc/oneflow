@@ -34,7 +34,7 @@ def np_nonzero(input, as_tuple):
 
 def _test_nonzero(test_case, shape, as_tuple, device):
     np_input = np.random.randn(*shape)
-    input = flow.Tensor(np_input, device=flow.device(device))
+    input = flow.tensor(np_input, dtype=flow.float32, device=flow.device(device))
     of_out = flow.nonzero(input, as_tuple)
     np_out = np_nonzero(np_input, as_tuple)
     if as_tuple:

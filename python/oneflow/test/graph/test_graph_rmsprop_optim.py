@@ -46,7 +46,7 @@ def compare_with_numpy_rmsprop(
         def __init__(self):
             super().__init__()
             self.param0 = flow.nn.Parameter(
-                flow.Tensor(init_value, device=flow.device(device))
+                flow.tensor(init_value, device=flow.device(device))
             )
 
         def forward(self, mask):
@@ -85,7 +85,7 @@ def compare_with_numpy_rmsprop(
     rmsprop_graph = CustomRMSpropGraph()
 
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
+        mask_tensor = flow.tensor(
             random_grad_seq[i], requires_grad=False, device=flow.device(device)
         )
         rmsprop_x = rmsprop_graph(mask_tensor)
@@ -149,7 +149,7 @@ def compare_with_numpy_rmsprop_clip_grad(
         def __init__(self):
             super().__init__()
             self.param0 = flow.nn.Parameter(
-                flow.Tensor(init_value, device=flow.device(device))
+                flow.tensor(init_value, device=flow.device(device))
             )
 
         def forward(self, mask):
@@ -190,7 +190,7 @@ def compare_with_numpy_rmsprop_clip_grad(
     rmsprop_graph = CustomRMSpropGraph()
 
     for i in range(train_iters):
-        mask_tensor = flow.Tensor(
+        mask_tensor = flow.tensor(
             random_grad_seq[i], requires_grad=False, device=flow.device(device)
         )
         rmsprop_x = rmsprop_graph(mask_tensor)

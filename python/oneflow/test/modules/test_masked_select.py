@@ -25,7 +25,7 @@ import oneflow.unittest
 
 
 def _test_masked_select(test_case, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.array([[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
         dtype=flow.float32,
         device=flow.device(device),
@@ -42,13 +42,13 @@ def _test_masked_select(test_case, device):
 
 
 def _test_masked_select_broadcast(test_case, device):
-    x = flow.Tensor(
+    x = flow.tensor(
         np.array([[[-0.462, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    mask = flow.Tensor(
+    mask = flow.tensor(
         np.array(
             [
                 [[1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
