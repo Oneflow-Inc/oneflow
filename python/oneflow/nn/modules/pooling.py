@@ -18,13 +18,8 @@ from typing import Optional
 import oneflow as flow
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import (
-    _getint,
-    _pair,
-    _single,
-    _triple,
-    _generate_output_size,
-)
+from oneflow.nn.modules.utils import (_generate_output_size, _getint, _pair,
+                                      _single, _triple)
 
 
 class MaxPool1d(Module):
@@ -77,7 +72,7 @@ class MaxPool1d(Module):
         x = flow.Tensor(np.random.randn(1, 4, 4))
         y = of_maxpool1d(x)
         y.shape 
-        flow.Size([1, 4, 4])
+        oneflow.Size([1, 4, 4])
 
     """
 
@@ -182,7 +177,7 @@ class MaxPool2d(Module):
         x = flow.Tensor(np.random.randn(1, 4, 4, 4))
         y = of_maxpool2d(x)
         y.shape 
-        flow.Size([1, 4, 4, 4])
+        oneflow.Size([1, 4, 4, 4])
 
     """
 
@@ -296,7 +291,7 @@ class MaxPool3d(Module):
         x = flow.Tensor(np.random.randn(1, 4, 4, 4, 4))
         y = of_maxpool3d(x)
         y.shape 
-        flow.Size([1, 4, 4, 4, 4])
+        oneflow.Size([1, 4, 4, 4, 4])
 
     """
 
@@ -379,7 +374,7 @@ class AvgPool1d(Module):
         x = flow.tensor(np.random.randn(1, 4, 4))
         y = m(x)
         y.shape 
-        flow.Size([1, 4, 4])
+        oneflow.Size([1, 4, 4])
 
     """
 
@@ -450,7 +445,7 @@ class AvgPool2d(Module):
         x = flow.tensor(np.random.randn(1, 4, 4, 4))
         y = m(x)   
         y.shape
-        flow.Size([1, 4, 4, 4])
+        oneflow.Size([1, 4, 4, 4])
 
     """
 
@@ -543,7 +538,7 @@ class AvgPool3d(Module):
         x = flow.tensor(np.random.randn(9, 7, 11, 32, 20))
         y = m(x)
         y.shape
-        flow.Size([9, 7, 10, 31, 19])
+        oneflow.Size([9, 7, 10, 31, 19])
 
     """
 
@@ -608,7 +603,7 @@ class AdaptiveAvgPool1d(Module):
         >>> input = flow.Tensor(np.random.randn(1, 64, 8))
         >>> output = m(input)
         >>> output.size()
-        flow.Size([1, 64, 5])
+        oneflow.Size([1, 64, 5])
 
     """
 
@@ -663,19 +658,19 @@ class AdaptiveAvgPool2d(Module):
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9))
         >>> output = m(input)
         >>> output.size()
-        flow.Size([1, 64, 5, 7])
+        oneflow.Size([1, 64, 5, 7])
 
         >>> m = nn.AdaptiveAvgPool2d(7)
         >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9))
         >>> output = m(input)
         >>> output.size()
-        flow.Size([1, 64, 7, 7])
+        oneflow.Size([1, 64, 7, 7])
 
         >>> m = nn.AdaptiveAvgPool2d((None, 7))
         >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9))
         >>> output = m(input)
         >>> output.size()
-        flow.Size([1, 64, 10, 7])
+        oneflow.Size([1, 64, 10, 7])
 
     """
 
@@ -728,19 +723,19 @@ class AdaptiveAvgPool3d(Module):
         >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9, 10))
         >>> output = m(input)
         >>> output.size()
-        flow.Size([1, 64, 5, 7, 9])
+        oneflow.Size([1, 64, 5, 7, 9])
 
         >>> m = nn.AdaptiveAvgPool3d(7)
         >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9, 8))
         >>> output = m(input)
         >>> output.size()
-        flow.Size([1, 64, 7, 7, 7])
+        oneflow.Size([1, 64, 7, 7, 7])
 
         >>> m = nn.AdaptiveAvgPool3d((7, None, None))
         >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9, 8))
         >>> output = m(input)
         >>> output.size()
-        flow.Size([1, 64, 7, 9, 8])
+        oneflow.Size([1, 64, 7, 9, 8])
 
     """
 
