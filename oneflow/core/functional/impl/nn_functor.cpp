@@ -629,7 +629,7 @@ class DropoutFunctor {
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                           const Optional<one::Generator>& generator, const bool& training) const {
+                           const bool& training, const Optional<one::Generator>& generator) const {
     if (!training || p == 0.0) return x;
 
     MutableAttrMap random_mask_like_attrs;
