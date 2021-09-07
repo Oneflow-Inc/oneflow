@@ -396,6 +396,6 @@ def check_multi_rank_docstr(module):
         for i in range(oneflow.env.get_world_size())
     ]
     finder = doctest.DocTestFinder()
-    runner = doctest.DebugRunner(CondSkipChecker(check_flags), verbose=True)
+    runner = doctest.DebugRunner(CondSkipChecker(check_flags))
     for test in finder.find(module, module.__name__):
         runner.run(test)
