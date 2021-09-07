@@ -36,6 +36,8 @@ Maybe<void> RawCheckCclS0ToS0(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 
   CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0), 0));
   CHECK_OR_RETURN(IsSplitSbp(out->nd_sbp()->sbp_parallel(0), 0));
+
+  CHECK_OR_RETURN(in->placement() != out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
   return Maybe<void>::Ok();
