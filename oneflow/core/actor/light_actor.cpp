@@ -594,7 +594,8 @@ class LightActor : public ActorBase, public KernelContext {
 
 std::shared_ptr<DeviceCtx> NewDefaultDeviceCtx(const TaskProto& task_proto,
                                                StreamContext* stream_ctx) {
-  return stream_ctx->device_ctx();
+  auto* provider = CHECK_NOTNULL(dynamic_cast<DeviceCtxProvider*>(stream_ctx));
+  return provider->GetDeviceCtx();
 }
 
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,
