@@ -14,15 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections.abc
-import warnings
 import functools
 import inspect
 import os
+import warnings
 
 import numpy as np
-import torch as torch_original
-
 import oneflow as flow
+import torch as torch_original
 
 from .generators import Nothing, generator, random_tensor
 
