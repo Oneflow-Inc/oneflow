@@ -48,7 +48,7 @@ class Graph(object):
     5. Instantiate your graph then call it.
 
     .. code-block:: python
-    
+
         >>> import oneflow as flow
 
         >>> class LinearGraph(flow.nn.Graph):
@@ -83,15 +83,15 @@ class Graph(object):
         Initializes internal Graph states. It MUST be called in ``__init__`` method of subclass.
 
         .. code-block:: python
-        
+
             >>> import oneflow as flow
             >>> class SubclassGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__() # MUST be called
             ...         # Then define the graph attributes
             ...     def build(self):
-            ...         pass   
-                    
+            ...         pass
+
         """
         self._generate_name()
         self.config = GraphConfig()
@@ -129,7 +129,7 @@ class Graph(object):
         training or evaluation logic if needed.
 
         .. code-block:: python
-        
+
             >>> import oneflow as flow
             >>> class MyGraph(flow.nn.Graph):
             ...     def __init__(self):
@@ -157,13 +157,13 @@ class Graph(object):
     ):
         r"""Add an optimizer, an learning rate scheduler to the graph.
 
-        To do training with nn.Graph, you should do 2 more things: 
-        
+        To do training with nn.Graph, you should do 2 more things:
+
         1. Add at least one optimier(learning rate schedulers are optional) with ``add_optimizer()`` method.
         2. Call loss tensor's ``backward()`` method in ``build()`` method.
-        
+
         Note that the computaion graph will automatically execute these methods:
-        
+
         * optimizer's ``clip_grad()`` if a optimizer is set to do grad cliping.
         * optimizer's ``step()``.
         * optimizer's ``zero_grad()``.
@@ -174,7 +174,7 @@ class Graph(object):
         or ``Tensor.mean()`` to make the loss tensor a scalar tensor.
 
         .. code-block:: python
-            
+
             >>> import oneflow as flow
             >>> loss_fn = flow.nn.MSELoss(reduction="sum")
             >>> model = flow.nn.Sequential(flow.nn.Linear(3, 1), flow.nn.Flatten(0, 1))
@@ -234,7 +234,7 @@ class Graph(object):
 
             g = CustomGraph()
             out_tensors = g(input_tensors)
-        
+
         The inputs of ``__call__`` method must match the inputs of ``build()``
         method. And the ``__call__`` method will return outputs matching the
         outputs of ``build()`` method.
@@ -550,7 +550,7 @@ class Graph(object):
         def build_tensor_or_none(tensor, name, repr_str):
             assert tensor is None or (isinstance(tensor, Tensor))
             if isinstance(tensor, Tensor):
-                build_arg = build_func(name, tensor)
+                build_arg = build_func(name, tensor, self.config.proto)
                 op_names.append(name)
             else:
                 build_arg = None
@@ -747,7 +747,7 @@ class Graph(object):
         Args:
             name (str): name of the child block. The child block can be accessed from this graph using the given name.
             module (Module): child module to be added to the graph.
-            
+
         Just assign nn.Module in nn.Graph, _add_block will be called to add the
         module as a Block:
 
