@@ -431,6 +431,7 @@ class TestMaximum(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
         return torch.maximum(x, y)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestUnaryInplaceOpsModule(flow.unittest.TestCase):
     # @autotest()
@@ -597,6 +598,7 @@ class TestUnaryInplaceOpsModule(flow.unittest.TestCase):
     #     arg_dict["device"] = ["cpu", "cuda"]
     #     for arg in GenArgList(arg_dict):
     #         arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()

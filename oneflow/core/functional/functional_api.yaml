@@ -168,7 +168,7 @@
   bind_python: True
 
 - name: "reciprocal_no_nan"
-  signature: "Tensor (Tensor x) => ReciprocalNoNan"
+  signature: "Tensor (Tensor x, Bool inplace=False) => ReciprocalNoNan"
   bind_python: True
 
 - name: "image_flip"
@@ -196,7 +196,7 @@
   bind_python: true
 
 - name: "log"
-  signature: "Tensor (Tensor x) => Log"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Log"
   bind_python: True
 
 - name: "sqrt"
@@ -204,7 +204,7 @@
   bind_python: True
 
 - name: "rsqrt"
-  signature: "Tensor (Tensor x) => Rsqrt"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Rsqrt"
   bind_python: True
 
 - name: "square"
@@ -555,7 +555,7 @@
   bind_python: true
 
 - name: "negative"
-  signature: "Tensor (Tensor x) => Negative"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Negative"
   bind_python: True
 
 - name: "layer_norm_affine"
@@ -834,7 +834,7 @@
   bind_python: True
 
 - name: "floor"
-  signature: "Tensor (Tensor x) => Floor"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Floor"
   bind_python: True
 
 - name: "lgamma"
@@ -842,7 +842,7 @@
   bind_python: True
 
 - name: "log1p"
-  signature: "Tensor (Tensor x) => Log1p"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Log1p"
   bind_python: True
 
 - name: "log_sigmoid"
@@ -854,11 +854,11 @@
   bind_python: True
 
 - name: "round"
-  signature: "Tensor (Tensor x) => Round"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Round"
   bind_python: True
 
 - name: "sign"
-  signature: "Tensor (Tensor x) => Sign"
+  signature: "Tensor (Tensor x, Bool inplace=False) => Sign"
   bind_python: True
 
 - name: "sinh"
