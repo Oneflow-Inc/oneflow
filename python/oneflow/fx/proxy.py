@@ -231,7 +231,7 @@ class Proxy:
     There are two main ways around this:
     1. Factor out the untraceable logic into a top-level function and
     use ``fx.wrap`` on it.
-    2. If the control oneflow is static (i.e. the loop trip count is
+    2. If the control flow is static (i.e. the loop trip count is
     based on some hyperparameter), the code can be kept in its original
     position and refactored into something like::
 

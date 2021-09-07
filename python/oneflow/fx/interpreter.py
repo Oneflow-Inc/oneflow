@@ -42,7 +42,6 @@ class Interpreter:
 
     Example:
 
-        # TODO(BBuf) try to match oneflow
         Suppose we want to swap all instances of ``oneflow.neg`` with
         ``oneflow.sigmoid`` and vice versa (including their ``Tensor``
         method equivalents). We could subclass Interpreter like so::
@@ -69,7 +68,6 @@ class Interpreter:
             gm = oneflow.fx.symbolic_trace(fn)
             input = oneflow.randn(3, 4)
             result = NegSigmSwapInterpreter(gm).run(input)
-            oneflow.testing.assert_allclose(result, oneflow.neg(input).sigmoid())
 
     Args:
         module (GraphModule): The module to be executed
@@ -174,7 +172,7 @@ class Interpreter:
 
         Args:
             target (Target): The call target for this node. See
-                `Node <https://pytorch.org/docs/master/fx.html#torch.fx.Node>`__ for
+                `Node <https://oneflow.readthedocs.io/en/master/#oneflow.fx.Node>`__ for
                 details on semantics
             args (Tuple): Tuple of positional args for this invocation
             kwargs (Dict): Dict of keyword arguments for this invocation
@@ -199,7 +197,7 @@ class Interpreter:
 
         Args:
             target (Target): The call target for this node. See
-                `Node <https://pytorch.org/docs/master/fx.html#torch.fx.Node>`__ for
+                `Node <https://oneflow.readthedocs.io/en/master/#oneflow.fx.Node>`__ for
                 details on semantics
             args (Tuple): Tuple of positional args for this invocation
             kwargs (Dict): Dict of keyword arguments for this invocation
@@ -220,7 +218,7 @@ class Interpreter:
 
         Args:
             target (Target): The call target for this node. See
-                `Node <https://pytorch.org/docs/master/fx.html#torch.fx.Node>`__ for
+                `Node <https://oneflow.readthedocs.io/en/master/#oneflow.fx.Node>`__ for
                 details on semantics
             args (Tuple): Tuple of positional args for this invocation
             kwargs (Dict): Dict of keyword arguments for this invocation
@@ -243,7 +241,7 @@ class Interpreter:
         
         Args:
             target (Target): The call target for this node. See
-                `Node <https://pytorch.org/docs/master/fx.html#torch.fx.Node>`__ for
+                `Node <https://oneflow.readthedocs.io/en/master/#oneflow.fx.Node>`__ for
                 details on semantics
             args (Tuple): Tuple of positional args for this invocation
             kwargs (Dict): Dict of keyword arguments for this invocation
@@ -266,7 +264,7 @@ class Interpreter:
 
         Args:
             target (Target): The call target for this node. See
-                `Node <https://pytorch.org/docs/master/fx.html#torch.fx.Node>`__ for
+                `Node <https://oneflow.readthedocs.io/en/master/#oneflow.fx.Node>`__ for
                 details on semantics
             args (Tuple): Tuple of positional args for this invocation
             kwargs (Dict): Dict of keyword arguments for this invocation
@@ -291,7 +289,7 @@ class Interpreter:
 
         Args:
             target (Target): The call target for this node. See
-                `Node <https://pytorch.org/docs/master/fx.html#torch.fx.Node>`__ for
+                `Node <https://oneflow.readthedocs.io/en/master/#oneflow.fx.Node>`__ for
                 details on semantics
             args (Tuple): Tuple of positional args for this invocation
             kwargs (Dict): Dict of keyword arguments for this invocation
@@ -372,8 +370,6 @@ class Transformer(Interpreter):
 
     Example:
 
-        #TODO(BBuf) try to match oneflow
-
         Suppose we want to swap all instances of ``oneflow.neg`` with
         ``oneflow.sigmoid`` and vice versa (including their ``Tensor``
         method equivalents). We could subclass ``Transformer`` like so::
@@ -398,7 +394,6 @@ class Transformer(Interpreter):
 
             transformed : oneflow.nn.Module = NegSigmSwapXformer(gm).transform()
             input = oneflow.randn(3, 4)
-            oneflow.testing.assert_allclose(transformed(input), oneflow.neg(input).sigmoid())
 
     Args:
         module (GraphModule): The ``Module`` to be transformed.
@@ -429,7 +424,7 @@ class Transformer(Interpreter):
 
         Args:
             target (Target): The call target for this node. See
-                `Node <https://pytorch.org/docs/master/fx.html#torch.fx.Node>`__ for
+                `Node <https://oneflow.readthedocs.io/en/master/#oneflow.fx.Node>`__ for
                 details on semantics
             args (Tuple): Tuple of positional args for this invocation
             kwargs (Dict): Dict of keyword arguments for this invocation
@@ -447,7 +442,7 @@ class Transformer(Interpreter):
 
         Args:
             target (Target): The call target for this node. See
-                `Node <https://pytorch.org/docs/master/fx.html#torch.fx.Node>`__ for
+                `Node <https://oneflow.readthedocs.io/en/master/#oneflow.fx.Node>`__ for
                 details on semantics
             args (Tuple): Tuple of positional args for this invocation
             kwargs (Dict): Dict of keyword arguments for this invocation

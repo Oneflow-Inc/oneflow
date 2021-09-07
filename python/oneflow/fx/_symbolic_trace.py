@@ -415,7 +415,7 @@ class Tracer(TracerBase):
             args (Tuple): args of the module callsite
             kwargs (Dict): kwargs of the module callsite
 
-        Return:
+        Returns:
 
             The return value from the Module call. In the case that a ``call_module``
             node was emitted, this is a ``Proxy`` value. Otherwise, it is whatever
