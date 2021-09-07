@@ -182,7 +182,7 @@ def _get_ppm_and_opt():
             return out3
 
     pp_m = PipelineModule()
-    of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.001, momentum=0.1)
+    of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.001, momentum=0.0)
     return pp_m, of_sgd
 
 def _test_graph_pipeline(test_case):
@@ -255,7 +255,7 @@ def _test_graph_pipeline(test_case):
                 return loss
         
         t_m = TrainModule()
-        of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.001, momentum=0.1)
+        of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.001, momentum=0.0)
 
         def one_iter(iter_idx):
             loss = t_m()
