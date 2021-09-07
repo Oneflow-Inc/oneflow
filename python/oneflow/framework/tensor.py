@@ -84,9 +84,9 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         assert (
             self.is_lazy
         ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
-        assert (
-            self.shape.numel() == 1
-        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tesnor.sum() or loss_tensor.mean() to make it a scalar tensor."
+        # assert (
+        #    self.shape.numel() == 1
+        # ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tesnor.sum() or loss_tensor.mean() to make it a scalar tensor."
         assert (
             gradient is None
         ), "nn.Graph donot accept 'gradient' argument in backward() at the moment."
@@ -461,8 +461,8 @@ def register_tensor_op(op_name):
 
 def tensor(*args, **kwargs):
     """Constructs a tensor with data, return a consistent tensor if placement and sbp are in kwargs,
-       otherwise return a local tensor. 
-       
+       otherwise return a local tensor.
+
     Arguments:
         data: Initial data for the tensor. Can be a list, tuple, NumPy ndarray, scalar or tensor.
     Keyword Arguments:
@@ -484,7 +484,7 @@ def tensor(*args, **kwargs):
     .. code-block:: python
 
         >>> import oneflow as flow
-        
+
         >>> x = flow.tensor([1,2,3])
         >>> x
         tensor([1, 2, 3], dtype=oneflow.int64)

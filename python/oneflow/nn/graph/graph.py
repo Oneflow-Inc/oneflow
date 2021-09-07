@@ -17,6 +17,7 @@ from collections import OrderedDict
 from functools import partial
 from typing import Dict
 
+import oneflow
 import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
@@ -28,7 +29,7 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType
 from oneflow.nn.graph.config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-from oneflow.amp import GradScaler
+from oneflow.amp import GradScaler, StaticGradScaler
 from oneflow.nn.graph.util import add_indent, sys_exc_error_msg, list_to_func_return
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.optimizer import Optimizer
@@ -103,6 +104,9 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
+        self._outputs_buffer_size = 2
+        self._cur_index_of_ouputs_buffer = 0
+
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
@@ -120,6 +124,10 @@ class Graph(object):
         When a graph object being called for the first time, the ``build()``
         method will be called implicitly to build the computatioin graph.
 
+        Make sure to call modules's ``train()`` or ``eval()`` method before the
+        first call of your graph to make the module executing the right
+        training or evaluation logic if needed.
+
         .. code-block:: python
         
             >>> import oneflow as flow
@@ -133,6 +141,13 @@ class Graph(object):
             >>> linear_graph = MyGraph()
             >>> x = flow.randn(4, 3)
             >>> y = linear_graph(x) # The build() method is called implicitly
+
+        Note that ``build()`` method's inputs and outputs only accept positional
+        arguements at the moment, each argument must be one of these types:
+
+        * ``Tensor``
+        * ``list`` of ``Tensor``
+        * ``None``
 
         """
         raise NotImplementedError()
@@ -207,7 +222,7 @@ class Graph(object):
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
         r"""Set the GradScaler for gradient and loss scaling.
         """
-        assert isinstance(grad_scaler, GradScaler)
+        assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
     def __call__(self, *args):
@@ -219,12 +234,13 @@ class Graph(object):
 
             g = CustomGraph()
             out_tensors = g(input_tensors)
+        
+        The inputs of ``__call__`` method must match the inputs of ``build()``
+        method. And the ``__call__`` method will return outputs matching the
+        outputs of ``build()`` method.
 
         Note that the first call takes longer than later calls, because nn.Graph
         will do the computaion graph generation and optimization at the first call.
-
-        ``nn.Graph.__call__(*args)`` only accept positional arguements of
-        Tensor/List[Tensor]/TensorTuple/None at the moment.
 
         Donot override this function.
         """
@@ -408,7 +424,11 @@ class Graph(object):
     def _build_forward_graph(self, *args):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
+
+        # Get config form GraphConfig
+        self._outputs_buffer_size = self.config._outputs_buffer_size
         self._generate_config_proto()
+
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
             arg_op_names, lazy_args, self._args_repr = self._build_io(
@@ -433,7 +453,27 @@ class Graph(object):
             self._outputs_tensor_tuple = convert_to_tensor_tuple(
                 self._flatten_io("output", *self._eager_outputs)
             )
-            self._eager_outputs = list_to_func_return(self._eager_outputs)
+            self._eager_outputs_buffer = [
+                self._eager_outputs,
+            ]
+            self._outputs_tensor_tuple_buffer = [
+                self._outputs_tensor_tuple,
+            ]
+
+            # Make outputs buffer
+            if self._outputs_buffer_size >= 2:
+                for i in range(self._outputs_buffer_size - 1):
+                    outputs_buffer_item = self._zero_like_io(
+                        "output", *self._eager_outputs
+                    )
+                    self._eager_outputs_buffer.append(outputs_buffer_item)
+                    outputs_tensor_tuple_buffer_item = convert_to_tensor_tuple(
+                        self._flatten_io("output", *outputs_buffer_item)
+                    )
+                    self._outputs_tensor_tuple_buffer.append(
+                        outputs_tensor_tuple_buffer_item
+                    )
+            self._check_outputs_buffer()
 
             # Register input/output/variable to _c_nn_graph
             self._c_nn_graph.register_input_op_names(arg_op_names)
@@ -445,18 +485,48 @@ class Graph(object):
             # Save job proto for debug
             self._job_proto = c_api_util.GetCurrentJob()
 
-        return self._eager_outputs
+        return list_to_func_return(self._eager_outputs_buffer[0])
+
+    def _check_outputs_buffer(self):
+        has_len = len(self._outputs_tensor_tuple_buffer)
+        assert (
+            has_len == self._outputs_buffer_size
+        ), f"nn.Graph's outputs buffer size {has_len} donot match the set value {self._outputs_buffer_size}."
+        # Check there is not duplicated outputs buffer tensor.
+        out_id_dic = dict()
+
+        def check_id_and_add(t, name):
+            if t is not None:
+                tid = id(t)
+                assert (
+                    tid not in out_id_dic
+                ), f"nn.Graph's outputs buffer add buffer tensor tid {tid} has conflict, new item name {name}, old item name {out_id_dic[tid]}."
+                out_id_dic[tid] = name
+
+        for b_idx, buffer in enumerate(self._outputs_tensor_tuple_buffer):
+            for i_idx, item in enumerate(buffer):
+                check_id_and_add(
+                    item, "graph_ouputs_buffer_" + str(b_idx) + "_" + str(i_idx)
+                )
 
     def _run(self, *args):
         try:
             flattened_eager_args = self._flatten_io("input", *args)
+            outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
+                self._cur_index_of_ouputs_buffer
+            ]
+            eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
             # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
-                self._outputs_tensor_tuple,
+                outputs_tensor_tuple,
                 self._states_tensor_tuple,
                 self._c_nn_graph,
             )
+            # Update outputs buffer reading index
+            self._cur_index_of_ouputs_buffer += 1
+            if self._cur_index_of_ouputs_buffer >= self._outputs_buffer_size:
+                self._cur_index_of_ouputs_buffer = 0
         except:
             print(
                 "[ERROR]"
@@ -465,7 +535,10 @@ class Graph(object):
                 + sys_exc_error_msg()
             )
             raise
-        return self._eager_outputs
+
+        # Copy outputs from buffer
+        eager_outputs = self._copy_io("output", *eager_outputs)
+        return list_to_func_return(eager_outputs)
 
     def _build_io(self, io_type, build_func, *args):
         assert io_type in ("input", "output")
@@ -514,6 +587,51 @@ class Graph(object):
 
         return op_names, build_args, args_repr
 
+    def _mapping_io(self, io_type, func, *args):
+        assert io_type in ("input", "output")
+        io_type_upper = io_type.upper()
+        mapped_args = []
+
+        def mapping_tensor_or_none(tensor):
+            assert tensor is None or (isinstance(tensor, Tensor))
+            if isinstance(tensor, Tensor):
+                mapped_arg = func(tensor)
+            else:
+                mapped_arg = None
+            return mapped_arg
+
+        for idx, arg in enumerate(args):
+            if isinstance(arg, Tensor) or arg is None:
+                mapped_args.append(mapping_tensor_or_none(arg))
+            elif isinstance(arg, (TensorTuple, list)):
+                if isinstance(arg, TensorTuple):
+                    seq_args = TensorTuple()
+                else:
+                    seq_args = list()
+                for i in range(len(arg)):
+                    seq_args.append(mapping_tensor_or_none(arg[i]))
+                mapped_args.append(seq_args)
+            else:
+                self._io_item_check(arg, None, io_type, idx)
+
+        return mapped_args
+
+    def _zero_like_io(self, io_type, *args):
+        def func(tensor):
+            with oneflow._oneflow_internal.lazy_mode.guard(False):
+                build_arg = oneflow.zeros_like(tensor)
+                return build_arg
+
+        return self._mapping_io(io_type, func, *args)
+
+    def _copy_io(self, io_type, *args):
+        def func(tensor):
+            with oneflow._oneflow_internal.lazy_mode.guard(False):
+                build_arg = tensor.to(copy=True)
+                return build_arg
+
+        return self._mapping_io(io_type, func, *args)
+
     def _flatten_io(self, io_type, *args):
         assert isinstance(args, tuple)
         flattened_args = []
@@ -549,7 +667,7 @@ class Graph(object):
             )
             print(repr_str)
             raise NotImplementedError(
-                "nn.Graph.build()'s input/output only support types: Tensor/TensorTuple/list(Tensor)/None."
+                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
 
     def _io_item_check_and_gen(self, item, expect_type, io_type, idx, second_idx=None):
@@ -596,7 +714,7 @@ class Graph(object):
             )
             print(repr_str)
             raise NotImplementedError(
-                "nn.Graph.build()'s input/output only support types: Tensor/TensorTuple/list(Tensor)/None."
+                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
             )
 
     def _build_states(self):
@@ -648,7 +766,7 @@ class Graph(object):
 
         The block can be accessed as an attribute using the given name.
             >>> g = LinearGraph()
-            >>> g.linear
+            >>> print(repr(g.linear))
             (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
               (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, requires_grad=True)): ()
             )
