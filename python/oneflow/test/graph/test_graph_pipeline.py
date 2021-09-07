@@ -215,7 +215,7 @@ def _test_train_graph(test_case, device):
                 self.pp_m.relu0.config.stage_id = 0
                 self.pp_m.stage1_m.config.stage_id = 1
                 # TODO(): support gradient accumulation
-                #self.config.set_gradient_accumulation_steps(2)
+                self.config.set_gradient_accumulation_steps(2)
                 self.add_optimizer(of_sgd)
 
             def build(self):
