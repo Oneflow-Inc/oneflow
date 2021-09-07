@@ -103,7 +103,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
       const auto& add_eps =
           JUST(functional::ScalarAdd(moving_variance, ctx->epsilon, /*inplace=*/false));
       mean = moving_mean;
-      inv_variance = JUST(functional::Rsqrt(add_eps));
+      inv_variance = JUST(functional::Rsqrt(add_eps, /*inplace=*/false));
     }
     const auto& results = JUST(functional::NormalizationGrad(y_grad, x, mean, inv_variance, gamma,
                                                              ctx->epsilon, ctx->axis));

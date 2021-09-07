@@ -1277,6 +1277,69 @@ def inplace_expm1_op_tensor(input):
     return flow._C.expm1(input, True)
 
 
+@register_tensor_op("floor_")
+def inplace_floor_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.floor`
+
+    """
+    return flow._C.floor(input, True)
+
+
+@register_tensor_op("log_")
+def inplace_log_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.log`
+
+    """
+    return flow._C.log(input, True)
+
+
+@register_tensor_op("log1p_")
+def inplace_log1p_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.log1p`
+
+    """
+    return flow._C.log1p(input, True)
+
+
+@register_tensor_op("negative_")
+def inplace_negative_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.negative`
+
+    """
+    return flow._C.negative(input, True)
+
+
+@register_tensor_op("reciprocal_")
+def inplace_reciprocal_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.reciprocal`
+
+    """
+    return flow._C.reciprocal_no_nan(input, True)
+
+
+@register_tensor_op("round_")
+def inplace_round_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.round`
+
+    """
+    return flow._C.round(input, True)
+
+
+@register_tensor_op("rsqrt_")
+def inplace_rsqrt_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.rsqrt`
+
+    """
+    return flow._C.rsqrt(input, True)
+
+
 @register_tensor_op("sqrt_")
 def inplace_sqrt_op_tensor(input):
     """
@@ -1293,6 +1356,15 @@ def inplace_square_op_tensor(input):
 
     """
     return flow._C.square(input, True)
+
+
+@register_tensor_op("sign_")
+def inplace_sign_op_tensor(input):
+    """
+    In-place version of :func:`oneflow.sign`
+
+    """
+    return flow._C.sign(input, True)
 
 
 @register_tensor_op("sinh_")

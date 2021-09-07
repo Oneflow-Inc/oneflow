@@ -1111,3 +1111,65 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.floor,
+    """
+    Returns a new tensor with the arcsine of the elements of :attr:`input`.
+
+    .. math::
+        \\text{out}_{i} = \\lfloor \\text{input}_{i} \\rfloor
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> output = flow.floor(input)
+        >>> output.shape
+        flow.Size([4])
+        >>> output.numpy()
+        array([-1.,  1.,  0.,  0.], dtype=float32)
+        
+        >>> input1 = flow.tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        >>> output1 = input1.floor()
+        >>> output1.shape
+        flow.Size([2, 2])
+        >>> output1.numpy()
+        array([[ 0.,  1.],
+               [-1.,  2.]], dtype=float32)
+
+    """,
+)
+
+add_docstr(
+    oneflow.negative,
+    """This operator computes the negative value of Tensor.
+
+    Args:
+        input (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor(
+        ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
+        ... )
+        >>> out = flow.negative(input)
+        >>> out
+        tensor([-1.0000,  1.0000, -2.3000], dtype=oneflow.float32)
+
+    """
+)

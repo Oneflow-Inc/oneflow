@@ -410,56 +410,124 @@ def _expm1(self):
 
 
 def _fmod(self, other):
+    r"""log()
+
+    See :func:`oneflow.log`
+    """
     return flow.fmod(self, other)
 
 
 def _log(self):
+    r"""log()
+
+    See :func:`oneflow.log`
+    """
     return flow.log(self)
 
 
 def _minimum(self, y):
+    r"""minimum()
+
+    See :func:`oneflow.minimum`
+    """
     return flow.minimum(self, y)
 
 
 def _maximum(self, y):
+    r"""maximum()
+
+    See :func:`oneflow.maximum`
+    """
     return flow.maximum(self, y)
 
 
 def _rsqrt(self):
+    r"""rsqrt()
+
+    See :func:`oneflow.rsqrt`
+    """
     return flow.rsqrt(self)
 
 
 def _sqrt(self):
+    r"""sqrt()
+
+    See :func:`oneflow.sqrt`
+    """
     return flow.sqrt(self)
 
 
 def _square(self):
+    r"""square()
+
+    See :func:`oneflow.square`
+    """
     return flow.square(self)
 
 
 def _matmul(self, other):
+    r"""matmul()
+
+    See :func:`oneflow.matmul`
+    """
     return flow.matmul(self, other)
 
 
 def _round(self):
+    r"""round()
+
+    See :func:`oneflow.round`
+    """
     return flow.round(self)
 
 
 def _softplus(self):
+    r"""softplus()
+
+    See :func:`oneflow.softplus`
+    """
     return flow.softplus(self)
 
 
 def _tril(self, diagonal=0):
+    r"""tril()
+
+    See :func:`oneflow.tril`
+    """
     return flow.tril(self, diagonal=diagonal)
 
 
 def _triu(self, diagonal=0):
+    r"""triu()
+
+    See :func:`oneflow.triu`
+    """
     return flow.triu(self, diagonal=diagonal)
 
 
 def _sin(self):
+    r"""sin()
+
+    See :func:`oneflow.sin`
+    """
     return flow.sin(self)
 
+
+def _floor(self):
+    r"""floor()
+
+    See :func:`oneflow.floor`
+    """
+
+    return flow.floor(self)
+
+def _negative(self):
+    r"""negative()
+
+    See :func:`oneflow.negative`
+    """
+
+    return flow.negative(self)
 
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(
@@ -693,6 +761,8 @@ def RegisterMethods():
     Tensor.triu = _triu
     Tensor.contiguous = _contiguous
     Tensor.sin = _sin
+    Tensor.floor = _floor
+    Tensor.negative = _negative
 
 
 def register_tensor_op(op_name):

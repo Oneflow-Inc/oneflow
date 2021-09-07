@@ -168,7 +168,7 @@ class ScalarDivFunctor {
 class ScalarDiv2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return functional::ScalarMul(JUST(functional::ReciprocalNoNan(x)), scalar);
+    return functional::ScalarMul(JUST(functional::ReciprocalNoNan(x, /*inplace=*/false)), scalar);
   }
 };
 
