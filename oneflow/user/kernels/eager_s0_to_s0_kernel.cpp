@@ -24,16 +24,16 @@ namespace oneflow {
 
 namespace {
 
-const void** GlobalDataPtr() {
+const void** GlobalSrcDataPtr() {
   static thread_local const void* data_ptr = nullptr;
   return &data_ptr;
 }
 
 Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx) {
   if (GlobalProcessCtx::Rank() == dst) {
-    auto** data_ptr = GlobalDataPtr();
-    CHECK_OR_RETURN(*data_ptr == nullptr);
-    *data_ptr = in;
+    auto** src_data_ptr = GlobalSrcDataPtr();
+    CHECK_OR_RETURN(*src_data_ptr == nullptr);
+    *src_data_ptr = in;
   } else {
     JUST(ccl::Send<DeviceType::kCPU>(in, elem_cnt, dtype, dst, ctx));
   }
@@ -43,11 +43,11 @@ Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, D
 Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx) {
   if (GlobalProcessCtx::Rank() == src) {
     size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-    auto** data_ptr = GlobalDataPtr();
-    const void* in = *data_ptr;
-    CHECK_OR_RETURN(*data_ptr != nullptr);
+    auto** src_data_ptr = GlobalSrcDataPtr();
+    const void* in = *src_data_ptr;
+    CHECK_OR_RETURN(*src_data_ptr != nullptr);
     Memcpy<DeviceType::kCPU>(ctx, out, in, buffer_size);
-    *data_ptr = nullptr;
+    *src_data_ptr = nullptr;
   } else {
     JUST(ccl::Recv<DeviceType::kCPU>(out, elem_cnt, dtype, src, ctx));
   }
