@@ -250,11 +250,6 @@ class Optional final : private internal::OptionalBase<T> {
     return error;
   }
 
-  std::string GetSerializedError() const {
-    CHECK(!IsOk());
-    return GetFormatedSerializedError(error());
-  }
-
   Maybe<T> to_maybe() const {
     if (IsOk()) {
       return base::value();
