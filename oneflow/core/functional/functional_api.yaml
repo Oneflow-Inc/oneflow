@@ -568,6 +568,21 @@
   signature: "Tensor (Tensor x, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon) => LayerNorm"
   bind_python: True
 
+- name: "layer_norm_grad"
+  signature:
+    "Tensor (Tensor x, Tensor mean, Tensor inv_variance, Tensor dy, Int64 begin_norm_axis, Double epsilon) => LayerNormGrad"
+  bind_python: False
+
+- name: "layer_norm_param_grad"
+  signature:
+    "Tensor (Tensor dy, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
+  bind_python: False
+
+- name: "layer_norm_affine_param_grad"
+  signature:
+    "TensorTuple (Tensor dy, Tensor gamma, Tensor normalized, Int64 begin_params_axis, Double epsilon) => LayerNormAffineParamGrad"
+  bind_python: False
+
 - name: "avg_pool_2d"
   signature:
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
@@ -880,7 +895,7 @@
   bind_python: False
 
 - name: "dropout"
-  signature: "Tensor (Tensor x, Float p=0.5, Generator generator=None, Bool is_training=True) => Dropout"
+  signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
