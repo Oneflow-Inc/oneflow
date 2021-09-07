@@ -33,9 +33,6 @@ std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
     // NOTE(chengcheng): For Scalar Tensor.
     ranges.emplace_back(0, 1);
   }
-  if (1 == blob_desc.shape().elem_cnt()) {
-    ranges.emplace_back(0, 1);
-  }
   std::vector<TensorSliceView> views;
   if (sbp_parallel.has_partial_sum_parallel() || sbp_parallel.has_broadcast_parallel()) {
     FOR_RANGE(int64_t, i, 0, parallel_num) { views.emplace_back(ranges); }
@@ -45,11 +42,7 @@ std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
     const BalancedSplitter bs(shape.At(axis), parallel_num);
     FOR_RANGE(int64_t, i, 0, parallel_num) {
       if (bs.At(i).size() == 0) {
-        if (1 == blob_desc.shape().elem_cnt() && 0 == i) {
-          views.emplace_back(ranges);
-        } else {
-          views.emplace_back();
-        }
+        views.emplace_back();
       } else {
         ranges[axis] = bs.At(i);
         views.emplace_back(ranges);
