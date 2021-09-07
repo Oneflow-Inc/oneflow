@@ -24,15 +24,16 @@ namespace oneflow {
 
 namespace {
 
-HashMap<int64_t, const void*>* GlobalRank2DataPtr() {
-  static thread_local HashMap<int64_t, const void*> rank2data_ptr;
-  return &rank2data_ptr;
+const void** GlobalDataPtr() {
+  static thread_local const void* data_ptr = nullptr;
+  return &data_ptr;
 }
 
 Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx) {
   if (GlobalProcessCtx::Rank() == dst) {
-    auto* rank2data_ptr = GlobalRank2DataPtr();
-    CHECK_OR_RETURN(rank2data_ptr->emplace(dst, in).second);
+    auto** data_ptr = GlobalDataPtr();
+    CHECK_OR_RETURN(*data_ptr == nullptr);
+    *data_ptr = in;
   } else {
     JUST(ccl::Send<DeviceType::kCPU>(in, elem_cnt, dtype, dst, ctx));
   }
@@ -42,10 +43,11 @@ Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, D
 Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx) {
   if (GlobalProcessCtx::Rank() == src) {
     size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-    auto* rank2data_ptr = GlobalRank2DataPtr();
-    const void* in = JUST(MapAt(*rank2data_ptr, src));
+    auto** data_ptr = GlobalDataPtr();
+    const void* in = *data_ptr;
+    CHECK_OR_RETURN(*data_ptr != nullptr);
     Memcpy<DeviceType::kCPU>(ctx, out, in, buffer_size);
-    CHECK_OR_RETURN(rank2data_ptr->erase(src) == 1);
+    *data_ptr = nullptr;
   } else {
     JUST(ccl::Recv<DeviceType::kCPU>(out, elem_cnt, dtype, src, ctx));
   }
