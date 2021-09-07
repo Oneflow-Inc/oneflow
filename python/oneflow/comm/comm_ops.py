@@ -95,8 +95,7 @@ def all_gather(tensor_list, tensor):
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.device.index == flow.env.get_local_rank()
     assert tensor.is_local
-    shape = tensor.shape
-    tensor = tensor.expand([1] + [shape[i] for i in range(tensor.ndim)])
+    tensor = tensor.expand([1] + list(tensor.shape))
     device_type = tensor.device.type
     tensor = tensor.to_consistent(
         placement=flow.env.all_device_placement(device_type), sbp=flow.sbp.split(0)

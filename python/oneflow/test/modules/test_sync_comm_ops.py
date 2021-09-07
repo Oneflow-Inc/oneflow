@@ -57,7 +57,7 @@ class TestAllGather(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n2d()
 class TestDocs(flow.unittest.TestCase):
     def test_docs(test_case):
-        oneflow.framework.unittest.check_multi_rank_docstr(oneflow.comm.primitive)
+        oneflow.framework.unittest.check_multi_rank_docstr(oneflow.comm.comm_ops)
 
 
 if __name__ == "__main__":
