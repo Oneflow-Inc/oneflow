@@ -19,12 +19,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-CriticalSectionPhyInstrOperand::CriticalSectionPhyInstrOperand(
-    const one::EagerBlobObjectListPtr& eager_blob_objects,
-    const HashMap<std::string, int64_t>& op_name2index,
-    const std::shared_ptr<NNGraphIf>& nn_graph)
-      : eager_blob_objects_(eager_blob_objects), nn_graph_(nn_graph), notifier_(std::make_unique<Notifier>()), op_name2index_(op_name2index),consumer_ref_cnt_(std::make_shared<std::atomic<int64_t>>(eager_blob_objects->size())) {
-}
+CriticalSectionPhyInstrOperand::CriticalSectionPhyInstrOperand(int64_t ref_cnt)
+      : notifier_(std::make_unique<Notifier>()), consumer_ref_cnt_(std::make_shared<std::atomic<int64_t>>(ref_cnt)) { }
 
 void CriticalSectionPhyInstrOperand::ProducerNotifiesConsumer() const {
   CHECK(notifier_->Notify() == kNotifierStatusSuccess);
@@ -34,7 +30,13 @@ void CriticalSectionPhyInstrOperand::ConsumerWaitsProducer() const {
   notifier_->WaitAndClearNotifiedCnt();
 }
 
-void CriticalSectionPhyInstrOperand::ConsumerFetchBlobAndDecreaseRefCnt(const std::string& op_name, const std::function<void(Blob*)>& Callback) const {
+TensorCriticalSectionPhyInstrOperand::TensorCriticalSectionPhyInstrOperand(
+    const one::EagerBlobObjectListPtr& eager_blob_objects,
+    const HashMap<std::string, int64_t>& op_name2index,
+    const std::shared_ptr<NNGraphIf>& nn_graph)
+      : CriticalSectionPhyInstrOperand(eager_blob_objects->size()), eager_blob_objects_(eager_blob_objects), nn_graph_(nn_graph), op_name2index_(op_name2index) { }
+
+void TensorCriticalSectionPhyInstrOperand::ConsumerFetchBlobAndDecreaseRefCnt(const std::string& op_name, const std::function<void(Blob*)>& Callback) const {
   {
     const auto& iter = op_name2index_.find(op_name);
     CHECK(iter != op_name2index_.end());
@@ -46,11 +48,37 @@ void CriticalSectionPhyInstrOperand::ConsumerFetchBlobAndDecreaseRefCnt(const st
   --*consumer_ref_cnt_;
 }
 
-void CriticalSectionPhyInstrOperand::ForEachMirroredObject(
+void TensorCriticalSectionPhyInstrOperand::ForEachMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
     DoEach(nullptr, CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
   }
+}
+
+namespace {
+
+Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
+  const auto& device = JUST(Device::New(type));
+  const auto& local_dep_object = device->mut_transport_local_dep_object();
+  CHECK_OR_RETURN(local_dep_object.has_value());
+  return JUST(local_dep_object.value());
+}
+
+}  // namespace
+
+static constexpr auto* GetEagerNcclLocalDepObject =
+    DECORATE(&RawGetEagerNcclLocalDepObject, ThreadLocalCopiable);
+
+void NcclCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+      const {
+
+#ifdef WITH_CUDA
+  auto* sync_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("sync_launched_nccl"));
+  auto* async_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("async_launched_nccl"));
+  CHECK_EQ(sync_launched_nccl, async_launched_nccl);
+  DoEach(nullptr, async_launched_nccl->mut_mirrored_object());
+#endif  // WITH_CUDA
 }
 
 }  // namespace vm

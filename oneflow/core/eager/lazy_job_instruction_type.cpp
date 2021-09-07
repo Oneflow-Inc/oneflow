@@ -169,12 +169,16 @@ class LaunchLazyJobInstructionType final : public InstructionType {
     }
     const auto& params_critical_section = phy_instr_operand->params_critical_section();
     params_critical_section->ConsumerWaitsProducer();
-    const auto& FinishCb = [this, instruction, in_critical_section, out_critical_section, params_critical_section]() {
+    const auto& nccl_critical_section = phy_instr_operand->nccl_critical_section();
+    nccl_critical_section->ConsumerWaitsProducer();
+    const auto& FinishCb = [this, instruction, in_critical_section, out_critical_section, params_critical_section, nccl_critical_section]() {
       // consumer_ref_cnt of critical section must be cleared
-      // for avoiding InputCriticalSection/OutputCriticalSection/ParamsCriticalSection instructions hanging.
+      // for avoiding InputCriticalSection/OutputCriticalSection instructions hanging.
       *in_critical_section->consumer_ref_cnt() = 0;
       *out_critical_section->consumer_ref_cnt() = 0;
+      // finish ParameterCriticalSection/NcclCriticalSection.
       *params_critical_section->consumer_ref_cnt() = 0;
+      *nccl_critical_section->consumer_ref_cnt() = 0;
 
       auto* device_ctx = GetLazyJobDeviceCtx(instruction);
       device_ctx->DequeueNNGraph();

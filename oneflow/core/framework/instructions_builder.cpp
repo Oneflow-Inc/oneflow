@@ -265,6 +265,15 @@ Maybe<vm::OutputCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeOutputC
   return operand;
 }
 
+Maybe<vm::NcclCriticalSectionPhyInstrOperand> InstructionsBuilder::MakeNcclCriticalSection() const {
+  static std::string instr_name("NcclCriticalSection");
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  const auto& operand = std::make_shared<vm::NcclCriticalSectionPhyInstrOperand>();
+  *instruction->mutable_phy_instr_operand() = operand;
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return operand;
+}
+
 Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
                                             const one::EagerBlobObjectListPtr& outputs,
                                             const one::EagerBlobObjectListPtr& parameters,
@@ -274,8 +283,9 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
   const auto& in_critical_section = JUST(MakeInputCriticalSection(inputs, nn_graph));
   const auto& out_critical_section = JUST(MakeOutputCriticalSection(outputs, nn_graph));
   const auto& param_critical_section = JUST(MakeParameterCriticalSection(parameters, nn_graph));
+  const auto& nccl_critical_section = JUST(MakeNcclCriticalSection());
   *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(in_critical_section, out_critical_section, param_critical_section, nn_graph);
+      std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(in_critical_section, out_critical_section, param_critical_section, nccl_critical_section, nn_graph);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }

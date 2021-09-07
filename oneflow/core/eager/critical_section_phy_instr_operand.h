@@ -38,17 +38,37 @@ class CriticalSectionPhyInstrOperand : public PhyInstrOperand {
   CriticalSectionPhyInstrOperand(CriticalSectionPhyInstrOperand&&) = delete;
   virtual ~CriticalSectionPhyInstrOperand() = default;
 
-  CriticalSectionPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects,
-                            const HashMap<std::string, int64_t>& op_name2index,
-                            const std::shared_ptr<NNGraphIf>& nn_graph);
-
-  const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
+  explicit CriticalSectionPhyInstrOperand(int64_t ref_cnt);
 
   // Called by producer.
   void ProducerNotifiesConsumer() const;
 
   // Called by consumer.
   void ConsumerWaitsProducer() const;
+
+  const std::shared_ptr<std::atomic<int64_t>>& consumer_ref_cnt() const { return consumer_ref_cnt_; };
+
+ protected:
+
+  // producer notifies consumer
+  std::unique_ptr<Notifier> notifier_;
+  // number of working consumers.
+  std::shared_ptr<std::atomic<int64_t>> consumer_ref_cnt_;
+};
+
+class TensorCriticalSectionPhyInstrOperand : public CriticalSectionPhyInstrOperand {
+ public:
+  TensorCriticalSectionPhyInstrOperand(const TensorCriticalSectionPhyInstrOperand&) = delete;
+  TensorCriticalSectionPhyInstrOperand(TensorCriticalSectionPhyInstrOperand&&) = delete;
+  virtual ~TensorCriticalSectionPhyInstrOperand() = default;
+
+  TensorCriticalSectionPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects,
+                            const HashMap<std::string, int64_t>& op_name2index,
+                            const std::shared_ptr<NNGraphIf>& nn_graph);
+
+  const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
+
+  // Called by consumer.
   void ConsumerFetchBlobAndDecreaseRefCnt(const std::string& op_name, const std::function<void(Blob*)>& Callback) const;
 
   void ForEachMirroredObject(
@@ -60,19 +80,15 @@ class CriticalSectionPhyInstrOperand : public PhyInstrOperand {
 
   one::EagerBlobObjectListPtr eager_blob_objects_;
   std::shared_ptr<NNGraphIf> nn_graph_;
-  // producer notifies consumer
-  std::unique_ptr<Notifier> notifier_;
   // op_name to index within `eager_blob_objects_`.
   HashMap<std::string, int64_t> op_name2index_; 
-  // producers notify consumers by op_name2producer_notifier_.
-  std::shared_ptr<std::atomic<int64_t>> consumer_ref_cnt_;
 };
 
-class InputCriticalSectionPhyInstrOperand final : public CriticalSectionPhyInstrOperand {
+class InputCriticalSectionPhyInstrOperand final : public TensorCriticalSectionPhyInstrOperand {
  public:
   InputCriticalSectionPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects,
                             const std::shared_ptr<NNGraphIf>& nn_graph)
-      : CriticalSectionPhyInstrOperand(eager_blob_objects, GetOpNames(*nn_graph), nn_graph) {}
+      : TensorCriticalSectionPhyInstrOperand(eager_blob_objects, GetOpNames(*nn_graph), nn_graph) {}
 
   ~InputCriticalSectionPhyInstrOperand() override = default;
 
@@ -103,11 +119,11 @@ class InputCriticalSectionPhyInstrOperand final : public CriticalSectionPhyInstr
 
 };
 
-class OutputCriticalSectionPhyInstrOperand final : public CriticalSectionPhyInstrOperand {
+class OutputCriticalSectionPhyInstrOperand final : public TensorCriticalSectionPhyInstrOperand {
  public:
   OutputCriticalSectionPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects,
                             const std::shared_ptr<NNGraphIf>& nn_graph)
-      : CriticalSectionPhyInstrOperand(eager_blob_objects, GetOpNames(*nn_graph), nn_graph) {}
+      : TensorCriticalSectionPhyInstrOperand(eager_blob_objects, GetOpNames(*nn_graph), nn_graph) {}
 
   ~OutputCriticalSectionPhyInstrOperand() override = default;
 
@@ -140,11 +156,11 @@ class OutputCriticalSectionPhyInstrOperand final : public CriticalSectionPhyInst
 
 };
 
-class ParameterCriticalSectionPhyInstrOperand final : public CriticalSectionPhyInstrOperand {
+class ParameterCriticalSectionPhyInstrOperand final : public TensorCriticalSectionPhyInstrOperand {
  public:
   ParameterCriticalSectionPhyInstrOperand(const one::EagerBlobObjectListPtr& eager_blob_objects,
                             const std::shared_ptr<NNGraphIf>& nn_graph)
-      : CriticalSectionPhyInstrOperand(eager_blob_objects, {}, nn_graph) {}
+      : TensorCriticalSectionPhyInstrOperand(eager_blob_objects, {}, nn_graph) {}
 
   ~ParameterCriticalSectionPhyInstrOperand() override = default;
 
@@ -160,6 +176,27 @@ class ParameterCriticalSectionPhyInstrOperand final : public CriticalSectionPhyI
       const override { ForEachMirroredObject(DoEach); }
 
   // for outputs
+  void ForEachMut2MirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
+      const override {}
+
+};
+
+class NcclCriticalSectionPhyInstrOperand final : public CriticalSectionPhyInstrOperand {
+ public:
+  NcclCriticalSectionPhyInstrOperand() : CriticalSectionPhyInstrOperand(1) {}
+
+  ~NcclCriticalSectionPhyInstrOperand() override = default;
+
+
+  void ForEachConstMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
+      const override {}
+
+  void ForEachMutMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+      const override;
+
   void ForEachMut2MirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override {}

@@ -63,5 +63,7 @@ COMMAND(RegisterInstructionType<CriticalSectionInstructionType<OutputCriticalSec
 
 COMMAND(RegisterInstructionType<CriticalSectionInstructionType<ParameterCriticalSectionPhyInstrOperand>>("ParameterCriticalSection"));
 
+COMMAND(RegisterInstructionType<CriticalSectionInstructionType<NcclCriticalSectionPhyInstrOperand>>("NcclCriticalSection"));
+
 }  // namespace vm
 }  // namespace oneflow

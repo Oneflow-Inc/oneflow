@@ -465,6 +465,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<vm::InputCriticalSectionPhyInstrOperand> MakeInputCriticalSection(const one::EagerBlobObjectListPtr& eager_blob_object, const std::shared_ptr<NNGraphIf>& nn_graph) const;
   Maybe<vm::ParameterCriticalSectionPhyInstrOperand> MakeParameterCriticalSection(const one::EagerBlobObjectListPtr& eager_blob_object, const std::shared_ptr<NNGraphIf>& nn_graph) const;
   Maybe<vm::OutputCriticalSectionPhyInstrOperand> MakeOutputCriticalSection(const one::EagerBlobObjectListPtr& eager_blob_object, const std::shared_ptr<NNGraphIf>& nn_graph) const;
+  Maybe<vm::NcclCriticalSectionPhyInstrOperand> MakeNcclCriticalSection() const;
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;
