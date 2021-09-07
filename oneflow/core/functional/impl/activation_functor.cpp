@@ -170,6 +170,7 @@ class GluFunctor {
   GluFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
     auto ndim = input->ndim();
+    CHECK_GT_OR_RETURN(ndim, 0) << "glu does not support 0-dimensional tensors";
     CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
         << ", Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got " << dim << ")";

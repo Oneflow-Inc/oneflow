@@ -389,7 +389,7 @@ add_docstr(
 )
 add_docstr(
     oneflow._C.glu,
-    r"""
+    """
     glu(input: Tensor, dim: int) -> Tensor 
 
     The equation is:
