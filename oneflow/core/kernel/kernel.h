@@ -33,7 +33,6 @@ class Kernel {
   virtual ~Kernel();
 
   void Init(const KernelConf& kernel_conf, KernelContext* ctx);
-  virtual void DestroyState(void* state) const;
   void Launch(KernelContext* ctx) const;
 
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
