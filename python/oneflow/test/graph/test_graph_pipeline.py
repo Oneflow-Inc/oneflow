@@ -236,6 +236,10 @@ def _test_train_graph(test_case, device):
             of_graph_out = of_graph_out.to_local()
             of_graph_out_np = of_graph_out.numpy()
             print("rank: ", rank, " pipeline graph out: ", of_graph_out_np)
+            print("loss local", of_graph_out)
+            print("loss local meta ", of_graph_out._meta_repr())
+            print("loss local numel ", of_graph_out.numel())
+            print(f"loss local ndim {of_graph_out.ndim}  shape {of_graph_out.shape}")
             return of_graph_out_np, pp_m.stage1_m.linear1.weight.to_local().numpy()
 
         check_list = []
