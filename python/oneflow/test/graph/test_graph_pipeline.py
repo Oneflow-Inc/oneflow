@@ -32,8 +32,8 @@ class OFRecordDataLoader(flow.nn.Module):
             batch_size=batch_size,
             data_part_num=4,
             part_name_suffix_length=5,
-            random_shuffle=False if mode == "train" else False,
-            shuffle_after_epoch=False if mode == "train" else False,
+            random_shuffle=False,
+            shuffle_after_epoch=False,
             placement=placement,
             sbp=sbp
         )
@@ -42,42 +42,12 @@ class OFRecordDataLoader(flow.nn.Module):
         )
 
         color_space = "RGB"
-        height = 224
-        width = 224
+        height = 22
+        width = 22
 
         self.record_image_decoder = flow.nn.OFRecordImageDecoder("encoded", color_space=color_space)
 
-        self.resize = (
-            flow.nn.image.Resize(target_size=[height, width])
-            if mode == "train"
-            else flow.nn.image.Resize(
-                resize_side="shorter", keep_aspect_ratio=True, target_size=256
-            )
-        )
-
-        rgb_mean = [123.68, 116.779, 103.939]
-        rgb_std = [58.393, 57.12, 57.375]
-        self.crop_mirror_norm = (
-            flow.nn.CropMirrorNormalize(
-                color_space=color_space,
-                output_layout=output_layout,
-                mean=rgb_mean,
-                std=rgb_std,
-                output_dtype=flow.float,
-            )
-            if mode == "train"
-            else flow.nn.CropMirrorNormalize(
-                color_space=color_space,
-                output_layout=output_layout,
-                crop_h=height,
-                crop_w=width,
-                crop_pos_y=0.5,
-                crop_pos_x=0.5,
-                mean=rgb_mean,
-                std=rgb_std,
-                output_dtype=flow.float,
-            )
-        )
+        self.resize = flow.nn.image.Resize(target_size=[height, width])
 
         self.batch_size = batch_size
         self.dataset_size = dataset_size
@@ -90,8 +60,7 @@ class OFRecordDataLoader(flow.nn.Module):
         label = self.record_label_decoder(train_record)
         image_raw_buffer = self.record_image_decoder(train_record)
         image = self.resize(image_raw_buffer)[0]
-        rng = None
-        image = self.crop_mirror_norm(image, rng)
+        image = flow.flatten(image.to(flow.float32), start_dim=1)
 
         return image, label
 
@@ -117,7 +86,7 @@ def _get_ppm_and_opt():
         def __init__(self):
             super().__init__()
             self.train_data_loader = train_data_loader
-            self.linear = flow.nn.Linear(224, 8, False)
+            self.linear = flow.nn.Linear(1452, 8, False)
             self.linear.to_consistent(placement=P0, sbp=B)
             flow.nn.init.constant_(self.linear.weight, 0.023)
 
@@ -163,7 +132,9 @@ def _get_ppm_and_opt():
             out0 = out0.to_consistent(placement=P3, sbp=out0.sbp)
             label = label.to_consistent(placement=P3, sbp=out0.sbp)
             out1 = self.linear(out0)
-            loss = label.to(flow.float32).sum() - out1.sum() 
+            print("out meta ", out1._meta_repr())
+            #loss = label.to(flow.float32).sum() - out1.sum() 
+            loss = out1.sum()
             return loss
 
     class PipelineModule(flow.nn.Module):
@@ -182,7 +153,7 @@ def _get_ppm_and_opt():
             return out3
 
     pp_m = PipelineModule()
-    of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.001, momentum=0.0)
+    of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.0001)
     return pp_m, of_sgd
 
 def _test_graph_pipeline(test_case):
@@ -213,6 +184,8 @@ def _test_graph_pipeline(test_case):
         def one_iter(iter_idx):
             of_graph_out = pp_g()
             if rank == 3:
+                #if iter_idx == 0:
+                #    print(pp_g)
                 of_graph_out = of_graph_out.to_local()
                 of_graph_out_np = of_graph_out.numpy()
                 print("out numpy ", of_graph_out_np)
@@ -228,15 +201,13 @@ def _test_graph_pipeline(test_case):
             ofrecord_root="/dataset/ImageNet/ofrecord",
             mode="train",
             dataset_size=400,
-            batch_size=4,
-            #placement=P0,
-            #sbp=B,
+            batch_size=1,
         )
         class TrainModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.train_data_loader = train_data_loader
-                self.linear = flow.nn.Linear(224, 8, False)
+                self.linear = flow.nn.Linear(1452, 8, False)
                 flow.nn.init.constant_(self.linear.weight, 0.023)
                 self.linear1 = flow.nn.Linear(8, 8, False)
                 flow.nn.init.constant_(self.linear1.weight, 0.023)
@@ -247,21 +218,24 @@ def _test_graph_pipeline(test_case):
 
             def forward(self):
                 image, label = self.train_data_loader()
+                #print("image meta ", image._meta_repr())
+                #print("label meta ", label._meta_repr())
                 out0 = self.linear(image)
                 out1 = self.linear1(out0)
                 out2 = self.linear2(out1)
                 out3 = self.linear3(out2)
-                loss = label.to(flow.float32).sum() - out3.sum() 
+                print("out meta ", out3._meta_repr())
+                loss = out3.sum() 
                 return loss
         
         t_m = TrainModule()
-        of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.001, momentum=0.0)
+        of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.0001)
 
         def one_iter(iter_idx):
             loss = t_m()
             out_np = loss.numpy()
             print("eager out numpy ", out_np)
-            #loss = loss * 0.25
+            loss = loss * 0.25
             loss.backward()
             if iter_idx % 4 == 3:
                 print(f"iter index: {iter_idx}")

@@ -1,0 +1,4 @@
+Log file created at: 2021/09/07 22:24:33
+Running on machine: oneflow-16
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+F0907 22:24:33.657279 35161 ctrl_client.cpp:54] Check failed: rpc_client_.GetStubAt(i)->CallMethod<CtrlMethod::kLoadServer>( &client_ctx, request, &response).error_code() == grpc::StatusCode::OK (14 vs. 0) Machine 0 lost
