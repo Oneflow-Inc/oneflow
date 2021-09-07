@@ -157,7 +157,7 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const std::string& device_tag() const override { return base_ctx_.device_tag(); }
   const ParallelContext& parallel_ctx() const override {
-    const auto& parallel_desc = CHECK_JUST(base_ctx_.parallel_desc().value());
+    const auto& parallel_desc = CHECK_JUST(base_ctx_.parallel_desc());
     return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc));
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -227,7 +227,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const ParallelContext& parallel_ctx() const override {
     const auto& parallel_desc = base_ctx_.parallel_desc();
     if (parallel_desc.has_value()) {
-      const auto& parallel_desc_symbol = CHECK_JUST(parallel_desc.value());
+      const auto& parallel_desc_symbol = CHECK_JUST(parallel_desc);
       return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc_symbol));
     } else {
       static ParallelContext single_card_parallel_ctx;
@@ -260,7 +260,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
   const ParallelDesc& parallel_desc() const override {
-    return *CHECK_JUST(base_ctx_.parallel_desc().value());
+    return *CHECK_JUST(base_ctx_.parallel_desc());
   }
 
  private:

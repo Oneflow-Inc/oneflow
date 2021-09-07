@@ -135,7 +135,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
 
   Symbol<Device> device_;
   if (device) {
-    device_ = JUST(device.value());
+    device_ = JUST(device);
   } else {
     device_ = JUST(Device::New("cpu"));
   }
@@ -146,7 +146,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   // Cast to float if data is double sequence, rather than numpy array.
   Symbol<DType> dtype_;
   if (dtype) {
-    dtype_ = JUST(dtype.value());
+    dtype_ = JUST(dtype);
   } else if (!dtype && data_type == DataType::kDouble && !PyArray_Check(data)) {
     dtype_ = DType::Float();
   }
@@ -174,7 +174,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const bool& requires_grad) {
   std::shared_ptr<Tensor> tensor;
   Symbol<Device> device_;
-  if (device) { device_ = JUST(device.value()); }
+  if (device) { device_ = JUST(device); }
   if (other->is_local()) {
     if (!device) { device_ = JUST(other->device()); }
     tensor = JUST(functional::Copy(other, device_->type(), device_->device_id()));
@@ -184,7 +184,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
     tensor = JUST(functional::Copy(tensor, device_->type(), device_->device_id()));
   }
   if (dtype) {
-    const Symbol<DType>& dtype_ = JUST(dtype.value());
+    const Symbol<DType>& dtype_ = JUST(dtype);
     if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }
   }
   tensor->set_requires_grad(requires_grad);
@@ -200,7 +200,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
   std::shared_ptr<Tensor> tensor =
       JUST(functional::ToConsistent(other, placement, sbp_tuple, grad_sbp_tuple));
   if (dtype) {
-    const Symbol<DType>& dtype_ = JUST(dtype.value());
+    const Symbol<DType>& dtype_ = JUST(dtype);
     if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }
   }
   tensor->set_requires_grad(requires_grad);

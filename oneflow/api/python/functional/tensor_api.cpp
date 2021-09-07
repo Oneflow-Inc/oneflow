@@ -176,7 +176,7 @@ class TensorWithShapeCtorFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     Symbol<Device> device_;
     if (device) {
-      device_ = JUST(device.value());
+      device_ = JUST(device);
     } else {
       device_ = JUST(Device::New("cpu"));
     }

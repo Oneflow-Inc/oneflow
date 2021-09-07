@@ -92,7 +92,7 @@ class ConstantFunctor {
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
     }
     if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
+      Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
@@ -112,7 +112,7 @@ class EmptyFunctor {
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device.value());
+      Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);

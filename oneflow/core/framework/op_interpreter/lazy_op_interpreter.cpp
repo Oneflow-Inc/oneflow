@@ -370,13 +370,13 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   if (ctx.parallel_desc.has_value()) {
     // NOTE(chengcheng): consistent
     CHECK_OR_RETURN(!ctx.device.has_value());
-    parallel_desc = JUST(ctx.parallel_desc.value()).shared_from_symbol();
+    parallel_desc = JUST(ctx.parallel_desc).shared_from_symbol();
     is_local = false;
   } else {
     // NOTE(chengcheng): local
     CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
     if (ctx.device.has_value()) {
-      const auto& device = JUST(ctx.device.value());
+      const auto& device = JUST(ctx.device);
       const auto& placement = JUST(Placement4Device(device));
       parallel_desc = placement.shared_from_symbol();
     } else {
@@ -651,9 +651,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   CHECK_OR_RETURN(input_tensor->is_consistent());
 
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
-  const auto& parallel_desc_sym = JUST(ctx.parallel_desc.value());
+  const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
-  const auto& sbp_sym = JUST(ctx.nd_sbp.value());
+  const auto& sbp_sym = JUST(ctx.nd_sbp);
 
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {
@@ -681,7 +681,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   std::vector<std::string> grad_sbp_str_list;
   if (op_expr.grad_nd_sbp().has_value()) {
     grad_mode = "manual";
-    grad_sbp_str_list = *JUST(GetNdSbpStrList(JUST(op_expr.grad_nd_sbp().value())));
+    grad_sbp_str_list = *JUST(GetNdSbpStrList(JUST(op_expr.grad_nd_sbp())));
   } else {
     grad_mode = "identity";
   }

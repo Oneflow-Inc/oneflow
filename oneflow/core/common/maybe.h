@@ -270,6 +270,9 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Maybe<PtrT> maybe_ptr_;
 };
 
+template<typename T>
+struct Optional;
+
 #define __MaybeErrorStackCheckWrapper__(...) __VA_ARGS__
 
 inline bool MaybeIsOk(Maybe<void>&& maybe) {
@@ -283,14 +286,16 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 
 namespace private_details {
 
-inline void MaybeErrorAddStackFrame(const std::shared_ptr<cfg::ErrorProto>& err,
-                                    const std::string& file, int64_t line, const std::string& func,
-                                    const std::string& message) {
+inline std::shared_ptr<cfg::ErrorProto>&& MaybeErrorAddStackFrame(
+    std::shared_ptr<cfg::ErrorProto>&& err, const std::string& file, int64_t line,
+    const std::string& func, const std::string& message) {
   auto* stack_frame = err->add_stack_frame();
   stack_frame->set_file(file);
   stack_frame->set_line(line);
   stack_frame->set_function(func);
   stack_frame->set_error_msg(message);
+
+  return std::move(err);
 }
 
 template<typename... T>
@@ -299,6 +304,25 @@ Error&& MaybeErrorAddMessage(Error&& err, T&&... msg) {
   return std::move(err);
 }
 
+template<typename T>
+bool MaybeIsOk(const Maybe<T>& val) {
+  return val.IsOk();
+}
+
+template<typename T>
+bool MaybeIsOk(const Optional<T>& val) {
+  return val.has_value();
+}
+
+template<typename T>
+std::shared_ptr<cfg::ErrorProto> MaybeGetError(const Maybe<T>& val) {
+  return val.error();
+}
+
+template<typename T>
+std::shared_ptr<cfg::ErrorProto> MaybeGetError(const Optional<T>&) {
+  return Error::ValueNotFoundError().error_proto();
+}
 }  // namespace private_details
 
 #define TRY(...) __MaybeErrorStackCheckWrapper__(__VA_ARGS__)
@@ -312,51 +336,54 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
 }
 }  // namespace
 
-#define JUST(...)                                                                           \
-  ({                                                                                        \
-    auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                            \
-    if (!maybe.IsOk()) {                                                                    \
-      ::oneflow::private_details::MaybeErrorAddStackFrame(                                  \
-          maybe.error(), __FILE__, __LINE__, __FUNCTION__, OF_PP_STRINGIZE((__VA_ARGS__))); \
-      return maybe.error();                                                                 \
-    }                                                                                       \
-    std::move(maybe);                                                                       \
+#define JUST(...)                                                                         \
+  ({                                                                                      \
+    auto&& value_to_check_ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                \
+    if (!::oneflow::private_details::MaybeIsOk(value_to_check_)) {                        \
+      return ::oneflow::private_details::MaybeErrorAddStackFrame(                         \
+          ::oneflow::private_details::MaybeGetError(value_to_check_), __FILE__, __LINE__, \
+          __FUNCTION__, OF_PP_STRINGIZE((__VA_ARGS__)));                                  \
+    }                                                                                     \
+    std::move(value_to_check_);                                                           \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
-#define CHECK_JUST(...)                                                                  \
-  ([&](const char* func_name) {                                                          \
-    auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                         \
-    if (!maybe.IsOk()) {                                                                 \
-      ::oneflow::private_details::MaybeErrorAddStackFrame(                               \
-          maybe.error(), __FILE__, __LINE__, func_name, OF_PP_STRINGIZE((__VA_ARGS__))); \
-      LOG(FATAL) << maybe.GetSerializedError();                                          \
-    }                                                                                    \
-    return std::move(maybe);                                                             \
-  })(__FUNCTION__)                                                                       \
+#define CHECK_JUST(...)                                                                       \
+  ([&](const char* func_name) {                                                               \
+    auto&& value_to_check_ = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                    \
+    if (!::oneflow::private_details::MaybeIsOk(value_to_check_)) {                            \
+      LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                    \
+          ::oneflow::private_details::MaybeErrorAddStackFrame(                                \
+              ::oneflow::private_details::MaybeGetError(value_to_check_), __FILE__, __LINE__, \
+              func_name, OF_PP_STRINGIZE((__VA_ARGS__))));                                    \
+    }                                                                                         \
+    return std::move(value_to_check_);                                                        \
+  })(__FUNCTION__)                                                                            \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define JUST_MSG(value, ...)                                                               \
-  ({                                                                                       \
-    auto&& maybe = (value);                                                                \
-    if (!maybe.IsOk()) {                                                                   \
-      return ::oneflow::private_details::MaybeErrorAddMessage(                             \
-          ::oneflow::Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__), \
-          OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__);                                    \
-    }                                                                                      \
-    std::move(maybe);                                                                      \
+#define JUST_MSG(value, ...)                                                           \
+  ({                                                                                   \
+    auto&& value_to_check_ = (value);                                                  \
+    if (!::oneflow::private_details::MaybeIsOk(value_to_check_)) {                     \
+      return ::oneflow::private_details::MaybeErrorAddMessage(                         \
+          ::oneflow::Error(::oneflow::private_details::MaybeGetError(value_to_check_)) \
+              .AddStackFrame(__FILE__, __LINE__, __FUNCTION__),                        \
+          OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__);                                \
+    }                                                                                  \
+    std::move(value_to_check_);                                                        \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
-#define CHECK_JUST_MSG(value, ...)                                                             \
-  ([&](const char* func_name) {                                                                \
-    auto&& maybe = (value);                                                                    \
-    if (!maybe.IsOk()) {                                                                       \
-      LOG(FATAL)                                                                               \
-          << ::oneflow::private_details::MaybeErrorAddMessage(                                 \
-                 ::oneflow::Error(maybe.error()).AddStackFrame(__FILE__, __LINE__, func_name), \
-                 OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                                  \
-                 ->DebugString();                                                              \
-    }                                                                                          \
-    return std::move(maybe);                                                                   \
-  })(__FUNCTION__)                                                                             \
+#define CHECK_JUST_MSG(value, ...)                                                      \
+  ([&](const char* func_name) {                                                         \
+    auto&& value_to_check_ = (value);                                                   \
+    if (!::oneflow::private_details::MaybeIsOk(value_to_check_)) {                      \
+      LOG(FATAL) << ::oneflow::private_details::MaybeErrorAddMessage(                   \
+                        ::oneflow::Error(                                               \
+                            ::oneflow::private_details::MaybeGetError(value_to_check_)) \
+                            .AddStackFrame(__FILE__, __LINE__, func_name),              \
+                        OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                    \
+                        ->DebugString();                                                \
+    }                                                                                   \
+    return std::move(value_to_check_);                                                  \
+  })(__FUNCTION__)                                                                      \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
