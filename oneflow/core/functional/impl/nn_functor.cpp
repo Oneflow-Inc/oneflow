@@ -377,6 +377,46 @@ class SparseSoftmaxCrossEntropyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SoftmaxCrossEntropyFunctor {
+ public:
+  SoftmaxCrossEntropyFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softmax_cross_entropy")
+                         .Input("prediction")
+                         .Input("label")
+                         .Output("out")
+                         .Output("prob")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
+                           const std::shared_ptr<one::Tensor>& label) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftmaxCrossEntropyGradFunctor {
+ public:
+  SoftmaxCrossEntropyGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softmax_cross_entropy_grad")
+                         .Input("dy")
+                         .Input("label")
+                         .Input("prob")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& prob) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, label, prob});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SmoothL1LossFunctor {
  public:
   SmoothL1LossFunctor() {
@@ -413,6 +453,44 @@ class CombinedMarginLossFunctor {
     JUST(attrs.SetAttr<float>("m3", m3));
     JUST(attrs.SetAttr<int64_t>("depth", depth));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AffineGridFunctor {
+ public:
+  AffineGridFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("affine_grid").Input("theta").Output("grid").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& theta, const Shape& size,
+                           const bool& align_corners) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("size", size));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {theta}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class GridSampleFunctor {
+ public:
+  GridSampleFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("grid_sample").Input("input").Input("grid").Output("output").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& grid,
+                           const std::string& interpolation_mode, const std::string& padding_mode,
+                           const bool& align_corners) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("interpolation_mode", interpolation_mode));
+    JUST(attrs.SetAttr<std::string>("padding_mode", padding_mode));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, grid}, attrs);
   }
 
  private:
@@ -551,7 +629,9 @@ class DropoutFunctor {
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                           const Optional<one::Generator>& generator) const {
+                           const Optional<one::Generator>& generator, const bool& training) const {
+    if (!training || p == 0.0) return x;
+
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
 
@@ -1010,8 +1090,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
+  m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
+  m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");
   m.add_functor<impl::SmoothL1LossFunctor>("SmoothL1Loss");
   m.add_functor<impl::CombinedMarginLossFunctor>("CombinedMarginLoss");
+  m.add_functor<impl::AffineGridFunctor>("AffineGrid");
+  m.add_functor<impl::GridSampleFunctor>("GridSample");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");

@@ -17,7 +17,7 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.F.conv1d,
+    oneflow._C.conv1d,
     r"""
     conv1d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 
@@ -49,13 +49,13 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow.nn as nn
         
-        >>> input = flow.Tensor(np.random.randn(33, 16, 30))
-        >>> filters = flow.Tensor(np.random.randn(20, 16, 5))
+        >>> input = flow.tensor(np.random.randn(33, 16, 30), dtype=flow.float32)
+        >>> filters = flow.tensor(np.random.randn(20, 16, 5), dtype=flow.float32)
         >>> out = nn.functional.conv1d(input, filters,stride=[1], padding=[0], dilation=[1])
         """,
 )
 add_docstr(
-    oneflow.F.conv2d,
+    oneflow._C.conv2d,
     r"""
     conv2d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 
@@ -83,7 +83,7 @@ add_docstr(
         """,
 )
 add_docstr(
-    oneflow.F.conv3d,
+    oneflow._C.conv3d,
     r"""
     conv3d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 

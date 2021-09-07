@@ -30,11 +30,12 @@ limitations under the License.
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/kernels/bernoulli_kernel.h"
 #include "oneflow/user/kernels/distributions/normal_kernel.h"
 #include "oneflow/user/kernels/distributions/uniform_kernel.h"
-#include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/job/lazy_mode.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -79,7 +80,7 @@ class RandFunctor {
     if (dtype.has_value()) {
       dtype_val = JUST(dtype.value())->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in rand";
+        OF_UNIMPLEMENTED() << "Only support float and double in rand().";
       }
     }
 
@@ -126,7 +127,7 @@ class ConsistentRandFunctor {
     if (dtype.has_value()) {
       dtype_val = JUST(dtype.value())->data_type();
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in rand";
+        OF_UNIMPLEMENTED() << "Only support float and double in rand().";
       }
     }
 
@@ -147,13 +148,12 @@ class ConsistentRandFunctor {
 
     const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
 
-    const auto& parallel_distribution = JUST(GetNdSbp(sbp_tuple));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (!JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      JUST(attrs.SetAttr<std::string>("nd_sbp", parallel_distribution->DebugString()));
+      JUST(attrs.SetAttr<std::string>("nd_sbp", nd_sbp->DebugString()));
     }
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {},
-        OpExprInterpContext(attrs, placement, parallel_distribution, uniform_kernel_state));
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, uniform_kernel_state));
   }
 
  private:
@@ -171,7 +171,7 @@ class RandNFunctor {
       dtype_val = JUST(dtype.value())->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+        OF_UNIMPLEMENTED() << "Only support float and double in randn().";
       }
     }
 
@@ -219,7 +219,7 @@ class ConsistentRandNFunctor {
       dtype_val = JUST(dtype.value())->data_type();
 
       if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+        OF_UNIMPLEMENTED() << "Only support float and double in randn().";
       }
     }
 
@@ -246,6 +246,103 @@ class ConsistentRandNFunctor {
     }
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, normal_kernel_state));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+class RandIntFunctor {
+ public:
+  RandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+
+  Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator) const {
+    DataType dtype_val = DataType::kInt64;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype.value())->data_type();
+
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+      }
+    }
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<double>("low", low));
+    JUST(attrs.SetAttr<double>("high", high - 1));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
+
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
+    if (device.has_value()) {
+      Symbol<Device> device_symbol = JUST(device.value());
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_, {}, OpExprInterpContext(attrs, device_symbol, uniform_kernel_state));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {},
+                                            OpExprInterpContext(attrs, uniform_kernel_state));
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentRandIntFunctor {
+ public:
+  ConsistentRandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+  Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<one::Generator>& generator) const {
+    DataType dtype_val = DataType::kInt64;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype.value())->data_type();
+
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << dtype_val << "not supported in randn";
+      }
+    }
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<double>("low", low));
+    JUST(attrs.SetAttr<double>("high", high - 1));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
+    std::shared_ptr<one::Generator> gen;
+    if (!generator) {
+      gen = JUST(one::DefaultAutoGenerator());
+    } else {
+      gen = JUST(generator.value());
+    }
+
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& uniform_kernel_state = std::make_shared<UniformKernelState>(gen);
+
+    if (LazyMode::is_enabled()) {
+      std::vector<std::string> nd_sbp(sbp_tuple.size());
+      {
+        for (int i = 0; i < sbp_tuple.size(); ++i) {
+          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+    }
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, uniform_kernel_state));
   }
 
  private:
@@ -326,12 +423,14 @@ class ConsistentRandPermFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BernoulliFunctor>("Bernoulli");
-  m.add_functor<impl::RandPermFunctor>("Randperm");
-  m.add_functor<impl::ConsistentRandPermFunctor>("ConsistentRandperm");
+  m.add_functor<impl::RandPermFunctor>("RandPerm");
+  m.add_functor<impl::ConsistentRandPermFunctor>("ConsistentRandPerm");
   m.add_functor<impl::RandFunctor>("Rand");
   m.add_functor<impl::ConsistentRandFunctor>("ConsistentRand");
   m.add_functor<impl::RandNFunctor>("RandN");
   m.add_functor<impl::ConsistentRandNFunctor>("ConsistentRandN");
+  m.add_functor<impl::RandIntFunctor>("RandInt");
+  m.add_functor<impl::ConsistentRandIntFunctor>("ConsistentRandInt");
 };
 
 }  // namespace functional

@@ -276,6 +276,50 @@ class CombinedMarginLossGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class AffineGridGradFunctor {
+ public:
+  AffineGridGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("affine_grid_grad").Input("dgrid").Output("dtheta").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dgrid, const Shape& size,
+                           const bool& align_corners) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("size", size));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dgrid}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class GridSampleGradFunctor {
+ public:
+  GridSampleGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("grid_sample_grad")
+                         .Input("doutput")
+                         .Input("input")
+                         .Input("grid")
+                         .Output("dinput")
+                         .Output("dgrid")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& doutput,
+                                const std::shared_ptr<one::Tensor>& input,
+                                const std::shared_ptr<one::Tensor>& grid,
+                                const std::string& interpolation_mode,
+                                const std::string& padding_mode, const bool& align_corners) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("interpolation_mode", interpolation_mode));
+    JUST(attrs.SetAttr<std::string>("padding_mode", padding_mode));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {doutput, input, grid}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class PadGradFunctor {
  public:
   PadGradFunctor() {
@@ -402,6 +446,94 @@ class NormalizationGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class LayerNormGradFunctor {
+ public:
+  LayerNormGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("layer_norm_grad")
+                         .Input("x")
+                         .Input("mean")
+                         .Input("inv_variance")
+                         .Input("dy")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& mean,
+                           const std::shared_ptr<one::Tensor>& inv_variance,
+                           const std::shared_ptr<one::Tensor>& dy, const int64_t& begin_norm_axis,
+                           const double& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
+    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mean, inv_variance, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class LayerNormParamGradFunctor {
+ public:
+  LayerNormParamGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("layer_norm_param_grad").Input("dy").Output("normalized_diff").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const int64_t& begin_params_axis,
+                           const double& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
+    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class LayerNormAffineParamGradFunctor {
+ public:
+  LayerNormAffineParamGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("layer_norm_param_grad")
+                         .Input("dy")
+                         .Input("gamma")
+                         .Input("normalized")
+                         .Output("gamma_diff")
+                         .Output("beta_diff")
+                         .Output("normalized_diff")
+                         .Output("reduce_buf")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& gamma,
+                                const std::shared_ptr<one::Tensor>& normalized,
+                                const int64_t& begin_params_axis, const double& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
+    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, gamma, normalized}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BroadcastMatmulGradBFunctor {
+ public:
+  BroadcastMatmulGradBFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("broadcast_matmul_grad_b").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, double alpha) const {
+    MutableAttrMap attr;
+    JUST(attr.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attr);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -412,10 +544,16 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
+  m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
+  m.add_functor<impl::GridSampleGradFunctor>("GridSampleGrad");
   m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
+  m.add_functor<impl::LayerNormGradFunctor>("LayerNormGrad");
+  m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
+  m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");
+  m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
 };
 
 }  // namespace functional

@@ -230,7 +230,7 @@ class LayerNorm(Module):
         if isinstance(normalized_shape, int):
             normalized_shape = (normalized_shape,)
         self.normalized_shape = tuple(normalized_shape)
-        self.epsilon = eps
+        self.eps = eps
         self.elementwise_affine = elementwise_affine
         if self.elementwise_affine:
             self.weight = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
@@ -248,6 +248,12 @@ class LayerNorm(Module):
             init.zeros_(self.bias)
 
     def forward(self, x):
+        for i in range(0, len(self.normalized_shape)):
+            if x.shape[i + self.begin_params_axis] != self.normalized_shape[i]:
+                raise RuntimeError(
+                    f"Given normalized_shape={self.normalized_shape}, expected input with shape [*, {str(self.normalized_shape)[1:-1]}], but got input of size {x.shape}"
+                )
+
         assert len(x.shape) > len(
             self.normalized_shape
         ), "Input tensor dim must greater than normalized dim!"
@@ -260,7 +266,6 @@ class LayerNorm(Module):
                     reduce_axis.append(dim)
             mean = x.mean(dim=reduce_axis, keepdim=True)
             variance = x.var(dim=reduce_axis, unbiased=False, keepdim=True)
-            axis = self.begin_norm_axis
             params_shape = x.shape[self.begin_params_axis :]
             weight = self.weight
             bias = self.bias
@@ -269,9 +274,12 @@ class LayerNorm(Module):
                 nd_params_shape[self.begin_norm_axis] = params_shape[0]
                 mean = flow.reshape(mean, shape=nd_params_shape)
                 variance = flow.reshape(variance, nd_params_shape)
-                if self.weight and params_shape[0] == self.weight.nelement():
+                if (
+                    self.weight is not None
+                    and params_shape[0] == self.weight.nelement()
+                ):
                     weight = flow.reshape(self.weight, shape=nd_params_shape)
-                if self.bias and params_shape[0] == self.bias.nelement():
+                if self.bias is not None and params_shape[0] == self.bias.nelement():
                     bias = flow.reshape(self.bias, shape=nd_params_shape)
             elif len(mean.shape) == len(x.shape):
                 pass
@@ -279,36 +287,27 @@ class LayerNorm(Module):
                 raise ValueError(
                     "shape of mean and variance should be 1D or has number of axes and x's"
                 )
-            variance += self.epsilon
+            variance += self.eps
             normalized = (x - mean) * variance.rsqrt()
-            if self.weight is not None:
-                normalized = normalized * weight
-            if self.bias is not None:
-                normalized = normalized + bias
-            affined = normalized
-            nd_params_shape = [1] * (len(x.shape) - len(params_shape)) + list(
-                params_shape
-            )
             if self.elementwise_affine:
-                affined = affined * self.weight
-                affined = affined + self.bias
-            return affined
+                normalized = normalized * weight + bias
+            return normalized
         else:
             if self.elementwise_affine:
-                res = flow.F.layer_norm_affine(
+                res = flow._C.layer_norm_affine(
                     x,
                     self.weight,
                     self.bias,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,
-                    epsilon=self.epsilon,
+                    epsilon=self.eps,
                 )
             else:
-                res = flow.F.layer_norm(
+                res = flow._C.layer_norm(
                     x,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,
-                    epsilon=self.epsilon,
+                    epsilon=self.eps,
                 )
             return res
 

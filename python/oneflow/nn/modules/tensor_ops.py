@@ -19,6 +19,34 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 
 
+@register_tensor_op("negative")
+def negative_op(input):
+    """This operator computes the negative value of Tensor.
+
+    Args:
+        input (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> input = flow.tensor(
+        ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
+        ... )
+        >>> out = flow.negative(input)
+        >>> out
+        tensor([-1.0000,  1.0000, -2.3000], dtype=oneflow.float32)
+
+    """
+    return flow._C.negative(input)
+
+
 @register_tensor_op("type_as")
 def type_as_op(input, target):
     r"""Returns this tensor cast to the type of the given tensor.
@@ -35,8 +63,8 @@ def type_as_op(input, target):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
-        >>> target = flow.Tensor(np.random.randn(4, 5, 6), dtype = flow.int32)
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> target = flow.tensor(np.random.randn(4, 5, 6), dtype = flow.int32)
         >>> input = input.type_as(target)
         >>> input.dtype
         oneflow.int32
@@ -59,7 +87,7 @@ def int(input):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
         >>> input = input.int()
         >>> input.dtype
         oneflow.int32
@@ -81,7 +109,7 @@ def long(input):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
         >>> input = input.long()
         >>> input.dtype
         oneflow.int64
@@ -103,7 +131,7 @@ def float(input):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
         >>> input = input.float()
         >>> input.dtype
         oneflow.float32
@@ -125,7 +153,7 @@ def double(input):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
         >>> input = input.double()
         >>> input.dtype
         oneflow.float64
@@ -146,7 +174,7 @@ def is_floating_point(input):
 
         >>> import oneflow as flow
         
-        >>> input = flow.Tensor([1, 2, 3, 4, 5], dtype=flow.int)
+        >>> input = flow.tensor([1, 2, 3, 4, 5], dtype=flow.int)
         >>> output = flow.is_floating_point(input)
         >>> output
         False
@@ -167,7 +195,7 @@ def cpu(input):
 
         >>> import oneflow as flow
         
-        >>> input = flow.Tensor([1, 2, 3, 4, 5], device=flow.device("cuda"))
+        >>> input = flow.tensor([1, 2, 3, 4, 5], device=flow.device("cuda"))
         >>> output = input.cpu()
         >>> output.device
         device(type='cpu', index=0)

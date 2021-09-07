@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import os
-import collections.abc
+import warnings
 import tempfile
 import unittest
 from itertools import repeat
@@ -190,7 +190,12 @@ class TestModule(flow.unittest.TestCase):
         state_dict = m.state_dict()
         with tempfile.TemporaryDirectory() as save_dir:
             flow.save(state_dict, save_dir)
-            loaded_state_dict = flow.load(save_dir)
+            # Creates a new file and test fault tolerance
+            with open(os.path.join(save_dir, "random_file"), "w") as fp:
+                fp.write("nothing")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                loaded_state_dict = flow.load(save_dir)
             m.load_state_dict(loaded_state_dict)
         res2 = m()
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
@@ -275,8 +280,8 @@ class TestModule(flow.unittest.TestCase):
                 self.param1 = param1
                 self.param2 = param2
 
-        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3, dtype=flow.float64))
-        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3, dtype=flow.float64))
+        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float64))
+        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float64))
         m = CustomModule(tensor0, tensor1)
         m = m.float()
         state_dict = m.state_dict()

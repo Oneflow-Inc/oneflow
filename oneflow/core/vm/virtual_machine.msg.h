@@ -41,6 +41,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OF_PUBLIC Maybe<void> Receive(InstructionMsgList* instr_list);
   OF_PUBLIC Maybe<void> Receive(ObjectMsgPtr<InstructionMsg>&& instruction_msg);
   OF_PUBLIC void Schedule();
+  OF_PUBLIC bool ThreadUnsafeEmpty() const;
   OF_PUBLIC bool Empty() const;
   OF_PUBLIC Maybe<const ParallelDesc> GetInstructionParallelDesc(const InstructionMsg&);
   OF_PUBLIC MirroredObject* MutMirroredObject(int64_t logical_object_id, int64_t global_device_id);

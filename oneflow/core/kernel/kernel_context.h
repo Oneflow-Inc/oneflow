@@ -17,14 +17,22 @@ limitations under the License.
 #define ONEFLOW_CORE_KERNEL_KERNEL_CONTEXT_H_
 
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/kernel/kernel_observer.h"
 
 namespace oneflow {
 
-struct KernelCtx {
-  KernelCtx() : device_ctx(nullptr), other(nullptr) {}
+class Blob;
+class JobDesc;
+class KernelContext : public KernelObserver {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelContext);
+  KernelContext() = default;
+  virtual ~KernelContext() = default;
 
-  DeviceCtx* device_ctx;
-  void* other;
+  virtual DeviceCtx* device_ctx() const = 0;
+  virtual Blob* BnInOp2Blob(const std::string& bn) const = 0;
+  virtual void* state() const = 0;
+  virtual void set_state(void* state) = 0;
 };
 
 }  // namespace oneflow

@@ -49,7 +49,7 @@ def unsqueeze_op(input, dim):
     ), "dim should within the range [-input.ndimension() - 1, input.ndimension() + 1)"
     if dim < 0:
         dim = 1 + input.ndimension() + dim
-    return flow.F.expand_dims(input, dim)
+    return flow._C.expand_dims(input, dim)
 
 
 if __name__ == "__main__":

@@ -24,8 +24,7 @@ class NopKernel final : public Kernel {
   ~NopKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override {}
+  void ForwardDataContent(KernelContext* ctx) const override {}
 };
 
 REGISTER_KERNEL(OperatorConf::kVariableConf, NopKernel);

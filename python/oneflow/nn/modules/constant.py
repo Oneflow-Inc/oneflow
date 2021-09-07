@@ -68,11 +68,17 @@ class _ConstantBase(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow.F.consistent_constant(
-                self.shape, self.value, self.dtype, self.placement, self.sbp,
+            res = flow._C.consistent_constant(
+                self.shape,
+                self.value,
+                dtype=self.dtype,
+                placement=self.placement,
+                sbp=self.sbp,
             )
         else:
-            res = flow.F.constant(self.shape, self.value, self.dtype, self.device,)
+            res = flow._C.constant(
+                self.shape, self.value, dtype=self.dtype, device=self.device
+            )
         res.requires_grad = self.requires_grad
         return res
 
@@ -251,52 +257,6 @@ def full_op(
     return Full(size, value, dtype, device, placement, sbp, requires_grad)()
 
 
-def zeros_like_op(other):
-    """
-    Returns a tensor filled with the scalar value 0, with the same size as input.
-    flow.zeros_like(input) is equivalent to flow.zeros(input.shape, dtype=input.dtype)
-
-    Args:
-        other(Tensor): The size of input will determine size of the output tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x = flow.Tensor(np.random.rand(5))
-        >>> y = flow.zeros_like(x)
-        >>> y
-        tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
-
-    """
-    return flow.F.zeros_like(other)
-
-
-def ones_like_op(other):
-    """
-    Returns a tensor filled with the scalar value 1, with the same size as input.
-    flow.ones_like(input) is equivalent to flow.ones(input.shape, dtype=input.dtype)
-
-    Args:
-        other(Tensor): The size of input will determine size of the output tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x = flow.Tensor(np.random.rand(5))
-        >>> y = flow.ones_like(x)
-        >>> y
-        tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
-
-    """
-    return flow.F.ones_like(other)
-
-
 class NewOnes(Module):
     def __init__(
         self,
@@ -360,11 +320,11 @@ class NewOnes(Module):
             new_requires_grad, bool
         ), f"requires_grad parameter not correct, please check!"
         if self.placement is not None:
-            res = flow.F.consistent_constant(
-                new_size, 1.0, new_dtype, self.placement, self.sbp
+            res = flow._C.consistent_constant(
+                new_size, 1.0, dtype=new_dtype, placement=self.placement, sbp=self.sbp
             )
         else:
-            res = flow.F.constant(new_size, 1.0, new_dtype, new_device)
+            res = flow._C.constant(new_size, 1.0, dtype=new_dtype, device=new_device)
         res.requires_grad = new_requires_grad
         return res
 

@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 template<DeviceType device_type>
-class AssignKernel final : public KernelIf<device_type> {
+class AssignKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AssignKernel);
   AssignKernel() = default;
@@ -26,14 +26,12 @@ class AssignKernel final : public KernelIf<device_type> {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>&) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void AssignKernel<device_type>::ForwardDataContent(
-    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  BnInOp2Blob("ref")->CopyValidDataContentFrom(ctx.device_ctx, BnInOp2Blob("value"));
+void AssignKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
+  ctx->BnInOp2Blob("ref")->CopyValidDataContentFrom(ctx->device_ctx(), ctx->BnInOp2Blob("value"));
 }
 
 REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kAssignConf, DeviceType::kCPU,

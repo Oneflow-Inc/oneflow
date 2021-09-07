@@ -7,6 +7,7 @@ oneflow
     :members: adaptive_avg_pool1d, 
             adaptive_avg_pool2d, 
             adaptive_avg_pool3d, 
+            abs, 
             acos, 
             add, 
             acosh, 
@@ -84,6 +85,7 @@ oneflow
             randn,
             repeat, 
             reshape, 
+            randint,
             randperm,
             reciprocal,
             round,  
@@ -130,5 +132,5 @@ oneflow
             inference_mode,
             is_grad_enabled,
             is_floating_point,
-.. autofunction:: oneflow.data.load_mnist(train_batch_size=100, test_batch_size=100, data_format='NCHW')
 .. autofunction:: oneflow.relu
+.. autofunction:: oneflow.env.get_rank

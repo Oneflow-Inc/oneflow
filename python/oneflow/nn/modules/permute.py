@@ -33,7 +33,7 @@ def permute_op(input, *dims):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> out = input.permute(1, 0, 2, 3).shape
         >>> out
         flow.Size([6, 2, 5, 3])
@@ -50,7 +50,7 @@ def permute_op(input, *dims):
             input.shape
         ), "Invalid dim0 {}, len(shape): {}".format(dim, len(input.shape))
         new_perm.append(dim)
-    return flow.F.transpose(input, perm=new_perm)
+    return flow._C.transpose(input, perm=new_perm)
 
 
 if __name__ == "__main__":

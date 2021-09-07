@@ -28,20 +28,20 @@ def _tensor_to(input, device, dtype, copy=False):
     ret = input
     copy_happened = False
     if device != ret.device:
-        ret = flow.F.copy(ret, device_type=device.type, device_id=device.index)
+        ret = flow._C.copy(ret, device_type=device.type, device_id=device.index)
         copy_happened = True
 
     if dtype != ret.dtype:
-        ret = flow.F.cast(ret, dtype=dtype)
+        ret = flow._C.cast(ret, dtype=dtype)
         copy_happened = True
 
     if copy and not copy_happened:
-        ret = flow.F.copy(ret, device_type=ret.device.type, device_id=ret.device.index)
+        ret = flow._C.copy(ret, device_type=ret.device.type, device_id=ret.device.index)
 
     return ret
 
 
-def _consistent_tensor_to(input, device_type, dtype):
+def _consistent_tensor_to(input, device_type, dtype, copy=False):
     assert input.is_consistent
     # TODO(zwx): support lazy check_meta_consistency
     # input.check_meta_consistency()
@@ -53,7 +53,7 @@ def _consistent_tensor_to(input, device_type, dtype):
     assert isinstance(dtype, flow.dtype)
 
     if device_type == input.placement.device_type and dtype == input.dtype:
-        return input
+        return input if not copy else input.clone()
 
     if input.is_lazy:
         return _lazy_consistent_tensor_to(input, device_type, dtype)
@@ -65,10 +65,10 @@ def _lazy_consistent_tensor_to(input, device_type, dtype):
     ret = input
 
     if dtype != ret.dtype:
-        ret = flow.F.cast(ret, dtype=dtype)
+        ret = flow._C.cast(ret, dtype=dtype)
 
     if device_type != ret.placement.device_type:
-        ret = flow.F.copy(ret, device_type=device_type, device_id=0)
+        ret = flow._C.copy(ret, device_type=device_type, device_id=0)
 
     return ret
 
@@ -77,7 +77,7 @@ def _eager_consistent_tensor_to(input, device_type, dtype):
     input.check_meta_consistency()
 
     if device_type == input.placement.device_type and dtype != input.dtype:
-        return flow.F.cast(input, dtype=dtype)
+        return flow._C.cast(input, dtype=dtype)
 
     device = flow.device(device_type)
     placement = flow._oneflow_internal._ReplacePlacementDeviceTag(
@@ -184,10 +184,7 @@ def to_op(input, *args, **kwargs):
                 f"but device param {device} has been received."
             )
 
-        if copy is True:
-            raise TypeError("A consistent tensor do not support to(copy=True)")
-
-        return _consistent_tensor_to(input, device, dtype)
+        return _consistent_tensor_to(input, device, dtype, copy=copy)
     else:
         if isinstance(device, str):
             device = flow.device(device)

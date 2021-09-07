@@ -32,7 +32,7 @@ class ToConsistent(Module):
         self.sbp = sbp
 
     def forward(self, x, sbp, placement):
-        return flow.F.to_consistent(x, placement=placement, sbp=sbp)
+        return flow._C.to_consistent(x, placement=placement, sbp=sbp)
 
 
 @register_tensor_op("to_consistent")
@@ -102,7 +102,7 @@ def to_consistent_op(input, placement=None, sbp=None, grad_sbp=None):
     if grad_sbp is None:
         grad_sbp = tuple()
     with BlockingInfoContext() as ctx:
-        return flow.F.to_consistent(input, placement, sbp, grad_sbp)
+        return flow._C.to_consistent(input, placement, sbp, grad_sbp)
 
 
 class ToLocal(Module):
@@ -110,7 +110,7 @@ class ToLocal(Module):
         super().__init__()
 
     def forward(self, x):
-        return flow.F.to_local(x)
+        return flow._C.to_local(x)
 
 
 @register_tensor_op("to_local")
@@ -128,11 +128,11 @@ def to_local_op(input):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
-        >>> input = flow.Tensor(np_arr)
+        >>> input = flow.tensor(np_arr, dtype=flow.float32)
         >>> placement = flow.placement("cpu", {0:range(1)})
         >>> consistent_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
         >>> consistent_tensor.to_local()
-        tensor([0.5, 0.6, 0.7], dtype=oneflow.float32)
+        tensor([0.5000, 0.6000, 0.7000], dtype=oneflow.float32)
     """
     assert input.is_consistent, "input must be a consistent tensor!"
-    return flow.F.to_local(input)
+    return flow._C.to_local(input)
