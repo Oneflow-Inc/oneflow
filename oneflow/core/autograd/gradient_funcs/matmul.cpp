@@ -102,9 +102,46 @@ Maybe<void> Matmul::Apply(const MatmulCaptureState* ctx, const TensorTuple& out_
   return Maybe<void>::Ok();
 }
 
+class BroadcastMatmul : public Matmul {
+ public:
+  Maybe<void> Apply(const MatmulCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
+};
+
+Maybe<void> BroadcastMatmul::Apply(const MatmulCaptureState* ctx, const TensorTuple& out_grads,
+                                   TensorTuple* in_grads) const {
+  if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+
+  in_grads->resize(2);
+  if (ctx->requires_grad_a) {
+    const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
+    if (ctx->transpose_a) {
+      in_grads->at(0) =
+          JUST(functional::MatMul(input_b, out_grads.at(0), ctx->transpose_b, true, ctx->alpha));
+    } else {
+      in_grads->at(0) = JUST(
+          functional::MatMul(out_grads.at(0), input_b, false, !(ctx->transpose_b), ctx->alpha));
+    }
+  }
+
+  if (ctx->requires_grad_b) {
+    const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
+    if (ctx->transpose_b) {
+      in_grads->at(1) =
+          JUST(functional::BroadcastMatmulGradB(out_grads.at(0), input_a, ctx->alpha));
+    } else {
+      in_grads->at(1) =
+          JUST(functional::BroadcastMatmulGradB(input_a, out_grads.at(0), ctx->alpha));
+    }
+  }
+
+  return Maybe<void>::Ok();
+}
+
 REGISTER_OP_EXPR_GRAD_FUNCTION("matmul", Matmul);
 REGISTER_OP_EXPR_GRAD_FUNCTION("batch_matmul", Matmul);
-REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_matmul", Matmul);
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_matmul", BroadcastMatmul);
 
 }  // namespace one
 }  // namespace oneflow
