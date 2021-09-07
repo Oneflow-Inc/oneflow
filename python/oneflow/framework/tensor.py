@@ -440,7 +440,7 @@ def _ceil(self):
 def _clamp(self, min=None, max=None):
     r"""clip(min=None, max=None)
 
-    See :func:`oneflow.clip`
+    See :func:`oneflow.clamp`
     """
     return flow.clamp(self, min=min, max=max)
 
@@ -448,7 +448,7 @@ def _clamp(self, min=None, max=None):
 def _clip(self, min=None, max=None):
     r"""clip(min=None, max=None)
 
-    See :func:`oneflow.clip`
+    See :func:`oneflow.clamp`
     """
     return flow.clip(self, min=min, max=max)
 
