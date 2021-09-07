@@ -147,7 +147,6 @@ extern Maybe<Symbol<ParallelDesc>> (*ReplaceDeviceType)(Symbol<ParallelDesc>, De
 extern Maybe<std::string> (*PlacementToString)(Symbol<ParallelDesc> placement);
 extern Maybe<Symbol<Device>> (*GetTensorDevice)(Symbol<ParallelDesc> parallel_desc);
 extern Maybe<Symbol<ParallelDesc>> (*DebugStrToPlacement)(const std::string& parallel_conf_str);
-extern Maybe<Symbol<ParallelDesc>> (*DefaultPlacement)(const std::string& device_tag);
 
 inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
   return ParallelDesc(lhs) == ParallelDesc(rhs);

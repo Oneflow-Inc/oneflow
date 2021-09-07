@@ -98,10 +98,10 @@ class EagerCclS0ToS0OpKernelState final : public user_op::OpKernelState {
 
     num_of_data_piece_ = LCM(in_parallel_num, out_parallel_num);
     for (int64_t i = 0; i < num_of_data_piece_; ++i) {
-      int64_t src_pd_id = i / (num_of_data_piece_ / in_parallel_num);
-      int64_t dst_pd_id = i / (num_of_data_piece_ / out_parallel_num);
-      int64_t src = CHECK_JUST(in_parallel_desc_->MachineId4ParallelId(src_pd_id));
-      int64_t dst = CHECK_JUST(out_parallel_desc_->MachineId4ParallelId(dst_pd_id));
+      int64_t src_parallel_id = i / (num_of_data_piece_ / in_parallel_num);
+      int64_t dst_parallel_id = i / (num_of_data_piece_ / out_parallel_num);
+      int64_t src = CHECK_JUST(in_parallel_desc_->MachineId4ParallelId(src_parallel_id));
+      int64_t dst = CHECK_JUST(out_parallel_desc_->MachineId4ParallelId(dst_parallel_id));
       CHECK(data_piece_idx_to_p2p_pair_.emplace(i, std::make_pair(src, dst)).second);
     }
   }

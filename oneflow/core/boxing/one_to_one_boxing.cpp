@@ -29,7 +29,6 @@ Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
-  CHECK_OR_RETURN(in->placement()->device_tag() == out->placement()->device_tag());
   CHECK_OR_RETURN(in->placement() != out->placement());
   return Maybe<void>::Ok();
 }

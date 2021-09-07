@@ -22,16 +22,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel, int64_t axis) {
-  return sbp_parallel->has_split_parallel() && sbp_parallel->split_parallel().axis() == axis;
-}
-
-static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
-
-}  // namespace
-
 // Can only be called in mirrored
 REGISTER_NO_GRAD_USER_OP("eager_s0_to_s0")
     .Input("in")
