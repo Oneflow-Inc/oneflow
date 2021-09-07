@@ -327,7 +327,7 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
   ([&](const char* func_name) {                                                               \
     auto&& maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__);                              \
     if (!maybe.IsOk()) {                                                                      \
-      LOG(FATAL) << GetFormatedSerializedError(                                               \
+      LOG(FATAL) << ::oneflow::GetFormatedSerializedError(                                    \
           ::oneflow::private_details::MaybeErrorAddStackFrame(                                \
               maybe.error(), __FILE__, __LINE__, func_name, OF_PP_STRINGIZE((__VA_ARGS__)))); \
     }                                                                                         \
