@@ -431,6 +431,172 @@ class TestMaximum(flow.unittest.TestCase):
         y = random_pytorch_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
         return torch.maximum(x, y)
 
+@flow.unittest.skip_unless_1n1d()
+class TestUnaryInplaceOpsModule(flow.unittest.TestCase):
+    # @autotest()
+    # def test_flow_abs_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     x_inplace = x + 1
+    #     y = x_inplace.abs_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_acos_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.acos_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_acosh_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.acosh_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_acosh_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.acosh_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_asin_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.asin_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_asinh_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.asinh_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_atan_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.atan_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_atanh_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.atanh_()
+    #     return y
+
+    @autotest()
+    def test_flow_cos_inplace(test_case):
+        device = random_device()
+        x = random_pytorch_tensor().to(device)
+        x_inplace = x + 1
+        y = x_inplace.cos_()
+        return y
+
+    # @autotest()
+    # def test_flow_cosh_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.cosh_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_ceil_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.ceil_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_erf_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.erf_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_erfc_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.erfc_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_exp_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.exp_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_expm1_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.expm1_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_sqrt_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.sqrt_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_square_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.square_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_sinh_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.sinh_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_tan_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.tan_()
+    #     return y
+
+    # @autotest()
+    # def test_flow_tanh_inplace(test_case):
+    #     device = random_device()
+    #     x = random_pytorch_tensor().to(device)
+    #     y = x.tanh_()
+    #     return y
+
+    # def test_inplace(test_case):
+    #     def test_of_np_result(test_case, shape, device, flow_fun, np_fun):
+    #         x = flow.randn(*shape, dtype=flow.float32, device=flow.device(device))
+    #         x_inplace = x + 1
+    #         np_out = np_fun(x_inplace.numpy())
+    #         id_old = id(x_inplace)
+    #         y_inplace = flow_fun(x_inplace)
+    #         test_case.assertEqual(id_old, id(y_inplace))
+    #         test_case.assertTrue(np.allclose(y_inplace.numpy(), np_out, 1e-4, 1e-4))
+
+    #     def test_inplace_impl(test_case, shape, device):
+    #         ops = [(flow.Tensor.abs_, np.abs),
+    #                 (flow.Tensor.acos_, np.arccos)]
+    #         for pair in ops:
+    #             test_of_np_result(test_case, shape, device, pair[0], pair[1])
+
+    #     arg_dict = OrderedDict()
+    #     arg_dict["test_fun"] = [test_inplace_impl]
+    #     arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
+    #     arg_dict["device"] = ["cpu", "cuda"]
+    #     for arg in GenArgList(arg_dict):
+    #         arg[0](test_case, *arg[1:])
 
 if __name__ == "__main__":
     unittest.main()
