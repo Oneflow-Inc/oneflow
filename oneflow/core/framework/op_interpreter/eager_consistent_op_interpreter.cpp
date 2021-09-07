@@ -116,7 +116,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const auto& infered_input_meta = result->input_tensor_metas().at(i);
     const auto& input_parallel_desc = JUST(input->parallel_desc());
     CHECK_OR_RETURN(input_parallel_desc == infered_input_meta->parallel_desc());
-    if (input_parallel_desc->parallel_num != 1
+    if (input_parallel_desc->parallel_num() != 1
         && infered_input_meta->nd_sbp() != JUST(input->nd_sbp())) {
       input = JUST(GetBoxingOutput(input, infered_input_meta->nd_sbp(),
                                    infered_input_meta->parallel_desc(), parallel_id.has_value()));
