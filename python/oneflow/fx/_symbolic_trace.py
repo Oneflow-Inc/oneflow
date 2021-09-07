@@ -192,7 +192,9 @@ class Tracer(TracerBase):
     # documentation. We need it so that Sphinx doesn't leak `math`s path from the
     # build environment (e.g. `<module 'math' from '/leaked/path').
 
-    """Tracer(autowrap_modules=(math,), autowrap_functions=(), enable_cpatching=False)
+    """
+    
+    Tracer(autowrap_modules=(math,), autowrap_functions=(), enable_cpatching=False)
 
     ``Tracer`` is the class that implements the symbolic tracing functionality
     of ``oneflow.fx.symbolic_trace``. A call to ``symbolic_trace(m)`` is equivalent

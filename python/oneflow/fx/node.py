@@ -224,7 +224,9 @@ class Node:
 
     def prepend(self, x: "Node") -> None:
         """
-        Insert x before this node in the list of nodes in the graph. Example::
+        Insert x before this node in the list of nodes in the graph. 
+        
+        Example::
 
             Before: p -> self
                     bx -> x -> ax
@@ -434,10 +436,10 @@ class Node:
 
         Returns:
             str: If 1) we're using ``format_node`` as an internal helper
-                in the ``__str__`` method of ``Graph``, and 2) ``self``
-                is a placeholder Node, return ``None``. Otherwise,
-                return a  descriptive string representation of the
-                current Node.
+            in the ``__str__`` method of ``Graph``, and 2) ``self``
+            is a placeholder Node, return ``None``. Otherwise,
+            return a  descriptive string representation of the
+            current Node.
         """
         if self.op == "placeholder":
             assert isinstance(self.target, str)
