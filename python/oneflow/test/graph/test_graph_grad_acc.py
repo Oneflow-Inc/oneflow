@@ -78,14 +78,15 @@ def _test_grad_acc_graph(test_case, device):
 
         def build(self, x):
             out = self.linear(x)
-            out = out.sum()
-            out.backward()
-            return out
+            # print("out.shape: ", out.shape)
+            loss = out.sum()
+            loss.backward()
+            return out, loss
 
     linear_t_g = LinearTrainGraph()
     for i in range(3):
         # NOTE(chengcheng): Graph call 1 step for 1 mini-batch(4 micro-batch)
-        of_out = linear_t_g(x)
+        non_scalar_out, of_out = linear_t_g(x)
         # print("of_lazy_out : ", of_out.numpy())
 
         graph_out_list.append(of_out.numpy())
