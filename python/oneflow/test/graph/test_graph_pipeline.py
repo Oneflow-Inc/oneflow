@@ -32,8 +32,8 @@ class OFRecordDataLoader(flow.nn.Module):
             batch_size=batch_size,
             data_part_num=4,
             part_name_suffix_length=5,
-            random_shuffle=True if mode == "train" else False,
-            shuffle_after_epoch=True if mode == "train" else False,
+            random_shuffle=False if mode == "train" else False,
+            shuffle_after_epoch=False if mode == "train" else False,
             placement=placement,
             sbp=sbp
         )
@@ -45,11 +45,7 @@ class OFRecordDataLoader(flow.nn.Module):
         height = 224
         width = 224
 
-        self.record_image_decoder = (
-            flow.nn.OFRecordImageDecoderRandomCrop("encoded", color_space=color_space)
-            if mode == "train"
-            else flow.nn.OFRecordImageDecoder("encoded", color_space=color_space)
-        )
+        self.record_image_decoder = flow.nn.OFRecordImageDecoder("encoded", color_space=color_space)
 
         self.resize = (
             flow.nn.image.Resize(target_size=[height, width])
@@ -58,8 +54,6 @@ class OFRecordDataLoader(flow.nn.Module):
                 resize_side="shorter", keep_aspect_ratio=True, target_size=256
             )
         )
-
-        self.flip = flow.nn.CoinFlip(batch_size=batch_size, placement=placement, sbp=sbp) if mode == "train" else None
 
         rgb_mean = [123.68, 116.779, 103.939]
         rgb_std = [58.393, 57.12, 57.375]
@@ -96,7 +90,7 @@ class OFRecordDataLoader(flow.nn.Module):
         label = self.record_label_decoder(train_record)
         image_raw_buffer = self.record_image_decoder(train_record)
         image = self.resize(image_raw_buffer)[0]
-        rng = self.flip() if self.flip != None else None
+        rng = None
         image = self.crop_mirror_norm(image, rng)
 
         return image, label
@@ -219,8 +213,6 @@ def _test_graph_pipeline(test_case):
         def one_iter(iter_idx):
             of_graph_out = pp_g()
             if rank == 3:
-                if iter_idx == 0:
-                    print(pp_g)
                 of_graph_out = of_graph_out.to_local()
                 of_graph_out_np = of_graph_out.numpy()
                 print("out numpy ", of_graph_out_np)
@@ -232,6 +224,14 @@ def _test_graph_pipeline(test_case):
         return check_list
 
     def train_with_module(iter_num=3):
+        train_data_loader = OFRecordDataLoader(
+            ofrecord_root="/dataset/ImageNet/ofrecord",
+            mode="train",
+            dataset_size=400,
+            batch_size=4,
+            #placement=P0,
+            #sbp=B,
+        )
         class TrainModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -247,8 +247,6 @@ def _test_graph_pipeline(test_case):
 
             def forward(self):
                 image, label = self.train_data_loader()
-                image = image.to(D)
-                label = label.to(D)
                 out0 = self.linear(image)
                 out1 = self.linear1(out0)
                 out2 = self.linear2(out1)
@@ -260,11 +258,15 @@ def _test_graph_pipeline(test_case):
         of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.001, momentum=0.1)
 
         def one_iter(iter_idx):
-            if rank == 3:
-                of_t = t_m()
-                out_np = out.numpy()
-                print("out numpy ", of_graph_out_np)
-                return of_graph_out_np
+            loss = t_m()
+            out_np = loss.numpy()
+            loss = loss * 0.25
+            loss.backward()
+            if iter_idx % 4 == 3:
+                of_sgd.step()
+                of_sgd.zero_grad()
+            print("eager out numpy ", out_np)
+            return out_np 
 
         check_list = []
         for i in range(iter_num):
@@ -272,8 +274,9 @@ def _test_graph_pipeline(test_case):
         return check_list
 
     iter_num = 3
-    #if (rank == 1):
-    #    module_check_list = train_with_module(iter_num)
+
+    if (rank == 3):
+        module_check_list = train_with_module(iter_num * 4)
 
     graph_check_list = train_with_graph(iter_num)
 
