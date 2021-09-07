@@ -248,17 +248,18 @@ class LayerNorm(Module):
             init.zeros_(self.bias)
 
     def forward(self, x):
+        assert len(x.shape) > len(
+            self.normalized_shape
+        ), "Input tensor dim must greater than normalized dim!"
+        self.begin_norm_axis = len(x.shape) - len(self.normalized_shape)
+        self.begin_params_axis = len(x.shape) - len(self.normalized_shape)
+
         for i in range(0, len(self.normalized_shape)):
             if x.shape[i + self.begin_params_axis] != self.normalized_shape[i]:
                 raise RuntimeError(
                     f"Given normalized_shape={self.normalized_shape}, expected input with shape [*, {str(self.normalized_shape)[1:-1]}], but got input of size {x.shape}"
                 )
 
-        assert len(x.shape) > len(
-            self.normalized_shape
-        ), "Input tensor dim must greater than normalized dim!"
-        self.begin_norm_axis = len(x.shape) - len(self.normalized_shape)
-        self.begin_params_axis = len(x.shape) - len(self.normalized_shape)
         if x.device == flow.device("cpu"):
             reduce_axis = []
             for dim in range(len(x.shape)):
