@@ -26,12 +26,11 @@ class BroadcastToCompatibleWithKernel final : public Kernel {
   ~BroadcastToCompatibleWithKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type, typename T>
-void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(
-    const KernelContext* ctx) const {
+void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(KernelContext* ctx) const {
   const Blob* x = ctx->BnInOp2Blob("x");
   Blob* y = ctx->BnInOp2Blob("y");
   const auto& broadcast_axes =

@@ -34,3 +34,5 @@ Functional operations for neural networks
 .. autofunction:: upsample
 .. autofunction:: affine_grid
 .. autofunction:: grid_sample
+.. autofunction:: interpolate
+.. autofunction:: layer_norm

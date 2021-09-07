@@ -28,7 +28,7 @@ void EsacKernel<T>::DestroyState(void* state) const {
 }
 
 template<typename T>
-void EsacKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
+void EsacKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   T value = static_cast<T>(*static_cast<int64_t*>(ctx->state()));
   KernelUtil<DeviceType::kCPU, T>::Set(ctx->device_ctx(), value,
                                        ctx->BnInOp2Blob("out")->mut_dptr<T>());

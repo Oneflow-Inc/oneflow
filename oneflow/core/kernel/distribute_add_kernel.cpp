@@ -34,17 +34,17 @@ class DistributeAddKernel final : public Kernel {
   ~DistributeAddKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  const Blob* GetInBlob(const KernelContext* ctx) const;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  const Blob* GetInBlob(KernelContext* ctx) const;
 };
 
 template<DeviceType device_type>
-void DistributeAddKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void DistributeAddKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   CheckSizeAndCopyBlob(ctx->device_ctx(), ctx->BnInOp2Blob("out"), GetInBlob(ctx));
 }
 
 template<DeviceType device_type>
-const Blob* DistributeAddKernel<device_type>::GetInBlob(const KernelContext* ctx) const {
+const Blob* DistributeAddKernel<device_type>::GetInBlob(KernelContext* ctx) const {
   const Blob* in_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* cur_blob = ctx->BnInOp2Blob(this->op_attribute().input_bns().Get(i));

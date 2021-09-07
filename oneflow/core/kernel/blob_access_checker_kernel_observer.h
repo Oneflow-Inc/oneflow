@@ -26,10 +26,10 @@ class BlobAccessCheckerKernelObserver final : public KernelObserver {
   BlobAccessCheckerKernelObserver() = default;
   ~BlobAccessCheckerKernelObserver() override = default;
 
-  void WillForwardHeader(const KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override;
 
-  void WillForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) override;
-  void DidForwardDataContent(const KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
+  void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override;
 };
 
 }  // namespace oneflow

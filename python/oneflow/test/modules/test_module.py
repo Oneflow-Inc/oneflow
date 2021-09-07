@@ -280,8 +280,8 @@ class TestModule(flow.unittest.TestCase):
                 self.param1 = param1
                 self.param2 = param2
 
-        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3, dtype=flow.float64))
-        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3, dtype=flow.float64))
+        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float64))
+        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float64))
         m = CustomModule(tensor0, tensor1)
         m = m.float()
         state_dict = m.state_dict()

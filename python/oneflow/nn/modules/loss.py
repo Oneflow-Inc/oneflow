@@ -58,8 +58,8 @@ class L1Loss(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor([[1, 1, 1], [2, 2, 2], [7, 7, 7]], dtype = flow.float32)
-        >>> target = flow.Tensor([[4, 4, 4], [4, 4, 4], [4, 4, 4]], dtype = flow.float32)
+        >>> input = flow.tensor([[1, 1, 1], [2, 2, 2], [7, 7, 7]], dtype = flow.float32)
+        >>> target = flow.tensor([[4, 4, 4], [4, 4, 4], [4, 4, 4]], dtype = flow.float32)
         >>> m = flow.nn.L1Loss(reduction="none")
         >>> out = m(input, target)
         >>> out
@@ -139,11 +139,11 @@ class CrossEntropyLoss(Module):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> input = flow.Tensor(
+        >>> input = flow.tensor(
         ...    [[-0.1664078, -1.7256707, -0.14690138],
         ...        [-0.21474946, 0.53737473, 0.99684894],
         ...        [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
-        >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
+        >>> target = flow.tensor(np.array([0, 1, 2]), dtype=flow.int32)
         >>> out = flow.nn.CrossEntropyLoss(reduction="none")(input, target)
         >>> out
         tensor([0.8020, 1.1167, 0.3583], dtype=oneflow.float32)
@@ -175,26 +175,17 @@ class CrossEntropyLoss(Module):
         self.reduction = reduction
 
     def forward(self, input, target):
-        assert len(input.shape) <= 4
+        assert len(input.shape) <= 5
         assert len(target.shape) == len(input.shape) - 1
-        input_shape_len = len(input.shape)
-        if input_shape_len == 3:
-            (b, c, h) = (input.shape[0], input.shape[1], input.shape[2])
-            input = flow._C.transpose(input, perm=(0, 2, 1))
-            input = flow.reshape(input, shape=[-1, input.shape[2]])
-            target = target.flatten()
-        elif input_shape_len == 4:
-            (b, c, h, w) = (
-                input.shape[0],
-                input.shape[1],
-                input.shape[2],
-                input.shape[3],
-            )
-            input = flow._C.transpose(input, perm=(0, 2, 3, 1))
-            input = flow.reshape(input, shape=[-1, input.shape[3]])
-            target = target.flatten()
-        elif input_shape_len >= 5:
-            raise NotImplemented
+        assert input.shape[0] == target.shape[0]
+        for i in range(2, len(input.shape)):
+            assert input.shape[i] == target.shape[i - 1]
+        input = flow._C.transpose(
+            input, perm=(0,) + tuple(range(2, len(input.shape))) + (1,)
+        )
+        input = flow.reshape(input, shape=[-1, input.shape[-1]])
+        target_shape = target.shape
+        target = target.flatten()
         out = flow._C.sparse_softmax_cross_entropy(
             input, target, depth=input.shape[len(input.shape) - 1]
         )
@@ -204,7 +195,7 @@ class CrossEntropyLoss(Module):
             ones = flow.ones(
                 condition.shape, dtype=condition.dtype, device=condition.device
             )
-            condition = ones.sub(condition).reshape(tuple(out.shape))
+            condition = flow.reshape(ones.sub(condition), tuple(out.shape))
             out = flow.where(condition, out, zeros)
             if self.reduction == "mean":
                 reduce_sum = out.sum()
@@ -215,9 +206,7 @@ class CrossEntropyLoss(Module):
         elif self.reduction == "sum":
             return out.sum()
         else:
-            if input_shape_len == 4:
-                out = out.reshape((b, h, w))
-            return out
+            return out.reshape(*target_shape)
 
 
 class BCELoss(Module):
@@ -371,11 +360,11 @@ class NLLLoss(Module):
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> input = flow.Tensor(
+        >>> input = flow.tensor(
         ... [[-0.1664078, -1.7256707, -0.14690138],
         ... [-0.21474946, 0.53737473, 0.99684894],
         ... [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
-        >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
+        >>> target = flow.tensor(np.array([0, 1, 2]), dtype=flow.int32)
         >>> m = flow.nn.NLLLoss(reduction="none")
         >>> out = m(input, target)
         >>> out
@@ -415,50 +404,38 @@ class NLLLoss(Module):
         return res
 
     def forward(self, input, target):
-        assert len(input.shape) <= 4
+        assert len(input.shape) <= 5
         assert len(target.shape) == len(input.shape) - 1
+        assert input.shape[0] == target.shape[0]
+        for i in range(2, len(input.shape)):
+            assert input.shape[i] == target.shape[i - 1]
         input = input.negative()
-        if len(input.shape) == 2:
-            res = self.nllloss_1d(input, target)
-        elif len(input.shape) == 3:
-            (b, c, h) = (input.shape[0], input.shape[1], input.shape[2])
-            input = flow._C.transpose(input, perm=(0, 2, 1))
-            input = flow.reshape(input, shape=[-1, input.shape[2]])
-            target = target.flatten()
-            res = self.nllloss_1d(input, target)
-            res = res.reshape(b, h)
-        elif len(input.shape) == 4:
-            (b, c, h, w) = (
-                input.shape[0],
-                input.shape[1],
-                input.shape[2],
-                input.shape[3],
-            )
-            input = flow._C.transpose(input, perm=(0, 2, 3, 1))
-            input = input.reshape(-1, input.shape[3])
-            target = target.flatten()
-            res = self.nllloss_1d(input, target)
-            res = res.reshape(b, h, w)
-        else:
-            raise NotImplemented
+
+        input = flow._C.transpose(
+            input, perm=(0,) + tuple(range(2, len(input.shape))) + (1,)
+        )
+        input = flow.reshape(input, shape=[-1, input.shape[-1]])
+        target_shape = target.shape
+        target = target.flatten()
+        out = self.nllloss_1d(input, target)
         if self.ignore_index is not None:
-            zeros = flow.zeros(res.shape, dtype=res.dtype, device=res.device)
+            zeros = flow.zeros(out.shape, dtype=out.dtype, device=out.device)
             condition = flow.eq(target, self.ignore_index)
             ones = flow.ones(
                 condition.shape, dtype=condition.dtype, device=condition.device
             )
-            condition = flow.reshape(ones.sub(condition), tuple(res.shape))
-            res = flow.where(condition, res, zeros)
+            condition = flow.reshape(ones.sub(condition), tuple(out.shape))
+            out = flow.where(condition, out, zeros)
             if self.reduction == "mean":
-                res = res.sum()
+                out = out.sum()
                 reduce_count = condition.argwhere().shape[0]
-                res = flow.mul(res, 1.0 / reduce_count)
-        if self.reduction == "none":
-            return res
+                out = flow.mul(out, 1.0 / reduce_count)
+        if self.reduction == "mean":
+            return out.mean()
         elif self.reduction == "sum":
-            return res.sum()
+            return out.sum()
         else:
-            return res.mean()
+            return out.reshape(*target_shape)
 
 
 class KLDivLoss(Module):
@@ -531,8 +508,8 @@ class KLDivLoss(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor([-0.9021705, 0.08798598, 1.04686249], dtype=flow.float32)
-        >>> target = flow.Tensor([1.22386942, -0.89729659, 0.01615712], dtype=flow.float32)
+        >>> input = flow.tensor([-0.9021705, 0.08798598, 1.04686249], dtype=flow.float32)
+        >>> target = flow.tensor([1.22386942, -0.89729659, 0.01615712], dtype=flow.float32)
         >>> m = flow.nn.KLDivLoss(reduction="none", log_target=False)
         >>> out = m(input, target)
         >>> out
@@ -627,10 +604,10 @@ class MSELoss(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(
+        >>> input = flow.tensor(
         ... [[-0.02557137, 0.03101675, 1.37493674],
         ... [0.25599439, -1.08372561, -0.21006816]], dtype=flow.float32)
-        >>> target = flow.Tensor(
+        >>> target = flow.tensor(
         ... [[-1.53105064, -0.68137555, 0.5931354],
         ... [-0.49158347, 0.93673637, 0.1324141]], dtype=flow.float32)
         >>> m = flow.nn.MSELoss(reduction="none")
@@ -701,9 +678,9 @@ class MarginRankingLoss(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> x1 = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), dtype=flow.float32)
-        >>> x2 = flow.Tensor(np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]]), dtype=flow.float32)
-        >>> target = flow.Tensor(np.array([[1, -1, 1],[-1, 1, -1], [1, 1, 1]]), dtype=flow.float32)
+        >>> x1 = flow.tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), dtype=flow.float32)
+        >>> x2 = flow.tensor(np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]]), dtype=flow.float32)
+        >>> target = flow.tensor(np.array([[1, -1, 1],[-1, 1, -1], [1, 1, 1]]), dtype=flow.float32)
         >>> m = flow.nn.MarginRankingLoss(margin =1.0, reduction="none")
         >>> out = m(x1, x2, target)
         >>> out
@@ -824,10 +801,10 @@ class CTCLoss(Module):
         ...                 [[-0.9049, -0.8867, -1.6962], [-1.4938, -1.3630, -0.6547]],
         ...             ]
         ...         ).astype(np.float32)
-        >>> log_probs = flow.Tensor(log_probs, dtype=flow.float32)
-        >>> targets = flow.Tensor(np.array([[1, 2, 2], [1, 2, 2]]).astype("int32"), dtype=flow.int32)
-        >>> input_lengths = flow.Tensor(np.array([5, 5]).astype("int32"), dtype=flow.int32)
-        >>> target_lengths = flow.Tensor(np.array([3, 3]).astype("int32"), dtype=flow.int32)
+        >>> log_probs = flow.tensor(log_probs, dtype=flow.float32)
+        >>> targets = flow.tensor(np.array([[1, 2, 2], [1, 2, 2]]).astype("int32"), dtype=flow.int32)
+        >>> input_lengths = flow.tensor(np.array([5, 5]).astype("int32"), dtype=flow.int32)
+        >>> target_lengths = flow.tensor(np.array([3, 3]).astype("int32"), dtype=flow.int32)
         >>> loss_mean = flow.nn.CTCLoss()
         >>> out = loss_mean(log_probs, targets, input_lengths, target_lengths)
         >>> out
@@ -949,10 +926,10 @@ class BCEWithLogitsLoss(Module):
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> input = flow.Tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2], [0.7, 0.6, -2]], dtype=flow.float32)
-        >>> target = flow.Tensor([[0, 1, 0], [1, 0, 1], [1, 0, 1]], dtype=flow.float32)
-        >>> weight = flow.Tensor([[2, 2, 2], [2, 2, 2], [2, 2, 2]], dtype=flow.float32)
-        >>> pos_weight = flow.Tensor([1.2, 1.3, 1.4], dtype=flow.float32)
+        >>> input = flow.tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2], [0.7, 0.6, -2]], dtype=flow.float32)
+        >>> target = flow.tensor([[0, 1, 0], [1, 0, 1], [1, 0, 1]], dtype=flow.float32)
+        >>> weight = flow.tensor([[2, 2, 2], [2, 2, 2], [2, 2, 2]], dtype=flow.float32)
+        >>> pos_weight = flow.tensor([1.2, 1.3, 1.4], dtype=flow.float32)
 
         >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="none")
         >>> out = m(input, target)
@@ -1109,8 +1086,8 @@ class SmoothL1Loss(Module):
         >>> import oneflow as flow
         >>> import numpy as np
         
-        >>> x = flow.Tensor(np.array([0.1, 0.4, 0.3, 0.5, 0.9]).astype(np.float32), dtype=flow.float32)
-        >>> y = flow.Tensor(np.array([0.3, 0.9, 2.5, 0.4, 0.3]).astype(np.float32), dtype=flow.float32)
+        >>> x = flow.tensor(np.array([0.1, 0.4, 0.3, 0.5, 0.9]).astype(np.float32), dtype=flow.float32)
+        >>> y = flow.tensor(np.array([0.3, 0.9, 2.5, 0.4, 0.3]).astype(np.float32), dtype=flow.float32)
         >>> m = flow.nn.SmoothL1Loss(reduction="none")
         >>> out = m(x, y)
         >>> out
@@ -1186,8 +1163,8 @@ class CombinedMarginLoss(Module):
         >>> import oneflow as flow
         >>> np_x = np.array([[-0.7027179, 0.0230609], [-0.02721931, -0.16056311], [-0.4565852, -0.64471215]])
         >>> np_label = np.array([0, 1, 1])
-        >>> x = flow.Tensor(np_x, dtype=flow.float32)
-        >>> label = flow.Tensor(np_label, dtype=flow.int32)
+        >>> x = flow.tensor(np_x, dtype=flow.float32)
+        >>> label = flow.tensor(np_label, dtype=flow.int32)
         >>> loss_func = flow.nn.CombinedMarginLoss(0.3, 0.5, 0.4)
         >>> out = loss_func(x, label)
         >>> out
