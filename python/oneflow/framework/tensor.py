@@ -85,7 +85,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
             self.is_lazy
         ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
         assert (
-           self.shape.numel() == 1
+            self.shape.numel() == 1
         ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tesnor.sum() or loss_tensor.mean() to make it a scalar tensor."
         assert (
             gradient is None
