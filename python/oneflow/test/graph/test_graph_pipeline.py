@@ -260,12 +260,13 @@ def _test_graph_pipeline(test_case):
         def one_iter(iter_idx):
             loss = t_m()
             out_np = loss.numpy()
-            loss = loss * 0.25
+            print("eager out numpy ", out_np)
+            #loss = loss * 0.25
             loss.backward()
             if iter_idx % 4 == 3:
+                print(f"iter index: {iter_idx}")
                 of_sgd.step()
                 of_sgd.zero_grad()
-            print("eager out numpy ", out_np)
             return out_np 
 
         check_list = []
