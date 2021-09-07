@@ -155,7 +155,7 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
     const char* pack_to_ptr = in->dptr<char>();
     char* unpack_from_ptr = out->mut_dptr<char>();
     int64_t tmp_size = tmp_buffer->shape().elem_cnt();
-    CHECK(tmp_size == data_size * 2);
+    CHECK_EQ(tmp_size, data_size * 2);
 
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = kernel_state->parallel_desc()->parallel_num();
