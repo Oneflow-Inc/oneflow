@@ -47,8 +47,8 @@ def logical_and_op(input, other):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 1, 0]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 1, 0]).astype(np.float32), dtype=flow.float32)
 
         >>> out = flow.logical_and(input1, input2)
         >>> out
@@ -99,8 +99,8 @@ def logical_or_op(input, other):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
 
         >>> out = flow.logical_or(input1, input2)
         >>> out
@@ -141,8 +141,8 @@ def logical_xor_op(input, other):
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.Tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
         >>> out = flow.logical_xor(input1, input2)
         >>> out
         tensor([0, 0, 1], dtype=oneflow.int8)

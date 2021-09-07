@@ -28,8 +28,8 @@ struct InstructionMsg;
 ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name);
 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
-Maybe<void> SingleClientSync();
-Maybe<void> MultiClientSync();
+Maybe<void> ClusterSync();
+Maybe<void> CurrentRankSync();
 
 }  // namespace vm
 }  // namespace oneflow

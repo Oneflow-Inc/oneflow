@@ -26,11 +26,11 @@ class BoxingZerosKernel final : public Kernel {
   ~BoxingZerosKernel() override = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void BoxingZerosKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void BoxingZerosKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
   Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0, out->ByteSizeOfBlobBody());
 }

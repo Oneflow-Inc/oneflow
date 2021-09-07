@@ -91,3 +91,6 @@ Operators for neural networks
         Quantization
 
 .. autofunction:: oneflow.nn.parallel.DistributedDataParallel
+
+.. currentmodule:: oneflow.nn.utils
+.. autofunction:: oneflow.nn.utils.clip_grad_norm_

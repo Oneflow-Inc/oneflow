@@ -13,21 +13,5 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/data_type.h"
-
-// PyArrayObject cannot be forward declared, or compile error will occur
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#include <numpy/arrayobject.h>
-
-namespace oneflow {
-
-namespace numpy {
-
-Maybe<int> OFDataTypeToNumpyType(DataType of_data_type);
-
-Maybe<DataType> NumpyTypeToOFDataType(int np_array_type);
-
-Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array);
-
-}  // namespace numpy
-}  // namespace oneflow
+#define NO_IMPORT_ARRAY
+#include "oneflow/extension/python/numpy_internal.h"

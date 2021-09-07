@@ -52,7 +52,7 @@ def tile_op(input, reps):
         >>> import numpy as np
         
         >>> x = np.array([1, 2]).astype(np.int32)
-        >>> input = flow.Tensor(x, dtype=flow.int32)
+        >>> input = flow.tensor(x, dtype=flow.int32)
         >>> out = input.tile(reps=(2,))
         >>> out
         tensor([1, 2, 1, 2], dtype=oneflow.int32)

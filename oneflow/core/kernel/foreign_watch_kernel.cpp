@@ -30,11 +30,11 @@ class ForeignWatchKernel final : public Kernel {
 
  private:
   bool IsStateless() const override { return false; }
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 template<DeviceType device_type>
-void ForeignWatchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void ForeignWatchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   OfBlob of_blob(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
   (*Global<std::shared_ptr<ForeignWatcher>>::Get())
       ->Call(this->op_conf().foreign_watch_conf().handler_uuid(),

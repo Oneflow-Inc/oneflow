@@ -26,17 +26,17 @@ class CopyHdKernel final : public Kernel {
   ~CopyHdKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  void ForwardHeader(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardHeader(KernelContext* ctx) const override;
 };
 
-void CopyHdKernel::ForwardDataContent(const KernelContext* ctx) const {
+void CopyHdKernel::ForwardDataContent(KernelContext* ctx) const {
   const Blob* in_blob = ctx->BnInOp2Blob(op_attribute().input_bns(0));
   Blob* out_blob = ctx->BnInOp2Blob(op_attribute().output_bns(0));
   out_blob->CopyValidDataContentFrom(ctx->device_ctx(), in_blob);
 }
 
-void CopyHdKernel::ForwardHeader(const KernelContext* ctx) const {
+void CopyHdKernel::ForwardHeader(KernelContext* ctx) const {
   ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->device_ctx(), ctx->BnInOp2Blob("in"));
 }
 

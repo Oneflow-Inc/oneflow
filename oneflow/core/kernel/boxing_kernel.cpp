@@ -31,7 +31,7 @@ class BoxingKernel final : public Kernel {
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 
   PbRpf<std::string> ibn_0_;
   PbRpf<std::string> obn_0_;
@@ -213,7 +213,7 @@ void BoxingKernel<T>::VirtualKernelInit(KernelContext* ctx) {
 }
 
 template<typename T>
-void BoxingKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
+void BoxingKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
   DeviceCtx* device_ctx = ctx->device_ctx();
   const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
