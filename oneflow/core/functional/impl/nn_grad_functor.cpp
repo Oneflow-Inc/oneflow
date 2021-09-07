@@ -550,13 +550,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");
-<<<<<<< HEAD
   m.add_functor<impl::LayerNormGradFunctor>("LayerNormGrad");
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
   m.add_functor<impl::LayerNormAffineParamGradFunctor>("LayerNormAffineParamGrad");
-=======
   m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
->>>>>>> master
 };
 
 }  // namespace functional
