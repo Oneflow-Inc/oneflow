@@ -52,9 +52,15 @@ Maybe<one::Tensor> CclS0ToS0(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
+  {
+    const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(tensor_placement));
+    const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
+    if (in_parallel_id->has_value() || out_parallel_id->has_value()) {
+      local_tensor = JUST(one::functional::EagerS0ToS0(local_tensor, tensor_placement,
+                                                       out->placement(), *tensor->shape()));
+    }
+  }
 
-  local_tensor = JUST(one::functional::EagerS0ToS0(local_tensor, tensor_placement, out->placement(),
-                                                   *tensor->shape()));
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
                                                  *tensor->shape(), tensor->dtype()));

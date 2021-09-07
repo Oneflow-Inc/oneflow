@@ -88,11 +88,8 @@ class EagerCclS0ToS0OpKernelState final : public user_op::OpKernelState {
   void Init(user_op::KernelInitContext* ctx) {
     const std::string& in_parallel_conf_txt = ctx->Attr<std::string>("in_parallel_conf");
     const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
-    ParallelConf parallel_conf;
-    CHECK(TxtString2PbMessage(in_parallel_conf_txt, &parallel_conf));
-    in_parallel_desc_ = SymbolOf(ParallelDesc(parallel_conf));
-    CHECK(TxtString2PbMessage(out_parallel_conf_txt, &parallel_conf));
-    out_parallel_desc_ = SymbolOf(ParallelDesc(parallel_conf));
+    in_parallel_desc_ = CHECK_JUST(DebugStrToPlacement(in_parallel_conf_txt));
+    out_parallel_desc_ = CHECK_JUST(DebugStrToPlacement(out_parallel_conf_txt));
     int64_t in_parallel_num = in_parallel_desc_->parallel_num();
     int64_t out_parallel_num = out_parallel_desc_->parallel_num();
 
