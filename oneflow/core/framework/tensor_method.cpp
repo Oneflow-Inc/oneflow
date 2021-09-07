@@ -40,37 +40,29 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return contig_if_nonempty;
 }
 
-Maybe<MirroredTensor> ShallowCopy(const std::shared_ptr<MirroredTensor>& tensor,
-                                  const std::shared_ptr<const Shape>& new_shape,
-                                  const std::shared_ptr<const Stride>& new_stride,
-                                  int64_t new_storage_offset, DataType new_dtype) {
-  const auto& meta = static_cast<const MirroredTensorMeta&>(tensor->tensor_meta());
-  const auto& shape = new_shape ? new_shape : std::make_shared<const Shape>(meta.shape());
-  const auto& dtype = new_dtype != kInvalidDataType ? new_dtype : meta.dtype();
+Maybe<Tensor> TensorView(const std::shared_ptr<Tensor>& tensor,
+                         const Optional<const Shape>& shape,
+                         const Optional<const Stride>& stride,
+                         int64_t storage_offset, const Optional<DataType>& dtype) {
+  if (!(tensor->is_eager() && tensor->is_local())) {
+    return Error::RuntimeError() << "TensorView(): input should be eager local tensor, but is "
+                                 << tensor->is_lazy() ? "lazy" : "consistent";
+  }
+  CHECK_OR_RETURN(tensor->has_eager_blob_object());
+  const auto& blob_object = JUST(tensor->eager_blob_object());
 
-  auto new_meta = std::make_shared<MirroredTensorMeta>(
-      shape, dtype, meta.device(),
-      new_stride ? new_stride : std::make_shared<const Stride>(meta.stride()),
-      new_storage_offset != -1 ? new_storage_offset : meta.storage_offset());
+  auto to_shape = shape.value_or(tensor->shape());
+  auto to_stride = stride.value_or(JUST(tensor->stride()));
+  auto to_dtype = dtype.value_or(tensor->dtype());
 
-  const auto& impl = tensor->mut_impl();
-  const auto& blob_obj = JUST(impl->eager_blob_object());
+  auto tensor_meta = std::make_shared<MirroredTensorMeta>(
+      to_shape, to_dtype, JUST(tensor->device()),
+      storage_offset != -1 ? storage_offset : JUST(tensor->storage_offset()));
 
-  CHECK_OR_RETURN(blob_obj->mut_blob());
-
-  auto new_blob_obj = std::shared_ptr<vm::EagerBlobObject>(new vm::EagerBlobObject(
-      std::make_shared<MemoryCase>(blob_obj->mem_case()), std::const_pointer_cast<Shape>(shape),
-      dtype, blob_obj->tensor_buffer(), blob_obj->compute_local_dep_object_));
-
-  JUST(new_blob_obj->InitBlob());
-  new_blob_obj->blob_body_bytes_ = blob_obj->blob_body_bytes_;
-  new_blob_obj->mut_blob()->reset_dptr(blob_obj->mut_blob()->mut_dptr<char>());
-
-  auto new_impl = std::make_shared<EagerMirroredTensorImpl>(new_meta, JUST(impl->tensor_storage()),
-                                                            new_blob_obj, tensor->requires_grad(),
-                                                            tensor->is_leaf());
-
-  return std::make_shared<MirroredTensor>(new_impl);
+  auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(tensor_meta, tensor->requires_grad(), tensor->is_leaf());
+  tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()), blob_object->tensor_buffer());
+  JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
+  return std::make_shared<MirroredTensor>(tensor_impl);
 }
 
 }  // namespace one

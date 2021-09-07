@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/memory/memory_allocator.h"
-#include "oneflow/core/framework/tensor_method.h"
 
 namespace oneflow {
 
@@ -89,12 +88,6 @@ class EagerBlobObject final : public BlobObject {
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
                   const Optional<LocalDepObject*>& dep_object);
-
-  friend Maybe<one::MirroredTensor> one::ShallowCopy(
-      const std::shared_ptr<one::MirroredTensor>& tensor,
-      const std::shared_ptr<const Shape>& new_shape,
-      const std::shared_ptr<const Stride>& new_stride, int64_t new_storage_offset,
-      DataType new_dtype);
 
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char[]> header_buffer_;
