@@ -79,7 +79,7 @@ Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, Device
   return Maybe<void>::Ok();
 }
 
-Maybe<std::vector<std::pair<int64_t, int64_t>>> RowGroupP2PPair(
+Maybe<std::vector<std::pair<int64_t, int64_t>>> RawGroupP2PPair(
     Symbol<ParallelDesc> parallel_desc) {
   std::shared_ptr<std::vector<std::pair<int64_t, int64_t>>> p2p_pairs =
       std::make_shared<std::vector<std::pair<int64_t, int64_t>>>();
@@ -91,7 +91,7 @@ Maybe<std::vector<std::pair<int64_t, int64_t>>> RowGroupP2PPair(
   return p2p_pairs;
 }
 
-static constexpr auto* GroupP2PPair = DECORATE(&RowGroupP2PPair, ThreadLocal);
+static constexpr auto* GroupP2PPair = DECORATE(&RawGroupP2PPair, ThreadLocal);
 
 }  // namespace
 
