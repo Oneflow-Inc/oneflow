@@ -65,7 +65,7 @@ struct RegstState {
 struct KernelInfo {
   std::unique_ptr<const Kernel> kernel;
   HashMap<std::string, Blob*> bn_in_op2blob;
-  void* state = nullptr;
+  std::shared_ptr<KernelState> state;
 };
 
 template<typename IndexType, int max_size>
@@ -218,9 +218,7 @@ class LightActor : public ActorBase, public KernelContext {
       }
     }
   }
-  ~LightActor() override {
-    if (exec_kernel) { kernel_info_[0]->kernel->DestroyState(kernel_info_[0]->state); }
-  }
+  ~LightActor() override = default;
 
   void Init(const JobDesc* job_desc, const TaskProto& task_proto,
             StreamContext* stream_ctx) override {
@@ -513,18 +511,18 @@ class LightActor : public ActorBase, public KernelContext {
     }
   }
 
-  void* state() const override {
+  const std::shared_ptr<KernelState>& state() const override {
     if (exec_kernel) {
       return kernel_info_[0]->state;
     } else {
-      return nullptr;
+      static const std::shared_ptr<KernelState> null_state;
+      return null_state;
     }
   }
 
-  void set_state(void* state) override {
+  void set_state(std::shared_ptr<KernelState> state) override {
     CHECK(exec_kernel);
-    CHECK(kernel_info_[0]->state == nullptr);
-    kernel_info_[0]->state = state;
+    kernel_info_[0]->state = std::move(state);
   }
 
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
