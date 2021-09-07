@@ -263,7 +263,7 @@ Maybe<Tensor> NewTensor(py::args args, py::kwargs kwargs, Symbol<DType> desired_
                         bool treat_single_int_as_size) {
   // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
   //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
-  //  its a eager tensor by Run functional::Empty() in LazyMode::Gurad(false)
+  //  its a eager tensor by Run functional::Empty() in LazyMode::Guard(false)
   auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
   Symbol<Device> device;
   Symbol<ParallelDesc> placement;
