@@ -21,6 +21,15 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+  
+template<typename MapT, typename KeyT, typename U>
+scalar_or_const_ref_t<typename MapT::mapped_type> MapAt(const MapT& map, const KeyT& key, const U& default_val) {
+  const auto& iter = map.find(key);
+  if (iter == map.end()) {
+    return default_val;
+  }
+  return iter->second;
+}
 
 template<typename MapT, typename KeyT>
 Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, const KeyT& key) {
