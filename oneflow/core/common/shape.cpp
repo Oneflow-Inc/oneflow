@@ -111,7 +111,18 @@ void Shape::ToProto(ShapeProto* ret) const {
   *(ret->mutable_dim()) = PbRf<int64_t>(dim_vec_.begin(), dim_vec_.end());
 }
 
+int64_t Shape::At(int64_t index) const {
+  CHECK_GE(index, 0);
+  CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
+                                   << " > num_axes: " << this->NumAxes();
+  return dim_vec_.at(index);
+}
+
 void Shape::Set(int64_t index, int64_t val) {
+  CHECK_GE(index, 0);
+  CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
+                                   << " > num_axes: " << this->NumAxes();
+  CHECK_GE(val, 0);
   dim_vec_.at(index) = val;
   UpdateElemCnt();
 }
