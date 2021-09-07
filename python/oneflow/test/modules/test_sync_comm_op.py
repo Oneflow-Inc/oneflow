@@ -46,13 +46,19 @@ class TestAllGather(flow.unittest.TestCase):
         input = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
         tensor_list = [flow.zeros(np_arr.shape, dtype=flow.int32) for _ in range(2)]
         flow.comm.all_gather(tensor_list, input)
-        test_case.assertTrue(np.allclose(tensor_list[0].numpy(), np.array([[2, 3], [4, 5]])))
-        test_case.assertTrue(np.allclose(tensor_list[1].numpy(), np.array([[1, 2], [3, 4]])))
+        test_case.assertTrue(
+            np.allclose(tensor_list[0].numpy(), np.array([[2, 3], [4, 5]]))
+        )
+        test_case.assertTrue(
+            np.allclose(tensor_list[1].numpy(), np.array([[1, 2], [3, 4]]))
+        )
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestDocs(flow.unittest.TestCase):
     def test_docs(test_case):
         oneflow.framework.unittest.check_multi_rank_docstr(oneflow.comm.primitive)
+
 
 if __name__ == "__main__":
     unittest.main()

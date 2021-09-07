@@ -58,6 +58,7 @@ def all_reduce(tensor):
 
     return tensor.to_local()
 
+
 def all_gather(tensor_list, tensor):
     """
     Gathers tensors from the whole group in a list.
@@ -97,10 +98,15 @@ def all_gather(tensor_list, tensor):
     shape = tensor.shape
     tensor = tensor.expand([1] + [shape[i] for i in range(tensor.ndim)])
     device_type = tensor.device.type
-    tensor = tensor.to_consistent(placement=flow.env.all_device_placement(device_type), sbp=flow.sbp.split(0))
+    tensor = tensor.to_consistent(
+        placement=flow.env.all_device_placement(device_type), sbp=flow.sbp.split(0)
+    )
     assert len(tensor_list) == tensor.shape[0]
     for i in range(len(tensor_list)):
-        assert tensor_list[i].shape == tensor[i].shape, f"{tensor_list.shape} vs {tensor[i].shape}"
-        assert tensor_list[i].dtype == tensor[i].dtype, f"{tensor_list[i].dtype} vs {tensor[i].dtype}"
+        assert (
+            tensor_list[i].shape == tensor[i].shape
+        ), f"{tensor_list.shape} vs {tensor[i].shape}"
+        assert (
+            tensor_list[i].dtype == tensor[i].dtype
+        ), f"{tensor_list[i].dtype} vs {tensor[i].dtype}"
         tensor_list[i] = tensor[i].to_local()
-        
