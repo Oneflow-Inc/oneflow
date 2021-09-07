@@ -463,16 +463,6 @@ def fmod_op(input, other):
     return flow._C.fmod(input, other)
 
 
-@register_tensor_op("fmod")
-def fmod_op_tensor(input, other):
-    """
-
-    See :func:`oneflow.fmod`
-    
-    """
-    return fmod_op(input, other)
-
-
 @register_tensor_op("log")
 def log_op(input):
     """
@@ -747,56 +737,6 @@ class Clamp(Module):
         return self._op(x)[0]
 
 
-def clamp_op(input, min=None, max=None):
-    """
-    Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
-    a resulting tensor:
-
-    .. math::
-        y_i = \\begin{cases}
-            \\text{min} & \\text{if } x_i < \\text{min} \\\\
-            x_i & \\text{if } \\text{min} \\leq x_i \\leq \\text{max} \\\\
-            \\text{max} & \\text{if } x_i > \\text{max}
-        \\end{cases}
-
-    If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, args :attr:`min`
-    and :attr:`max` must be real numbers, otherwise they should be integers.
-
-    Args:
-        input (Tensor): the input tensor.
-        min (Number): lower-bound of the range to be clamped to. Defaults to None.
-        max (Number): upper-bound of the range to be clamped to. Defaults to None.
-        out (Tensor, optional): the output tensor.
-
-    For example:
-
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=-0.5, max=0.5)
-        >>> output
-        tensor([ 0.2000,  0.5000, -0.5000, -0.3000], dtype=oneflow.float32)
-
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=None, max=0.5)
-        >>> output
-        tensor([ 0.2000,  0.5000, -1.5000, -0.3000], dtype=oneflow.float32)
-
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=-0.5, max=None)
-        >>> output
-        tensor([ 0.2000,  0.6000, -0.5000, -0.3000], dtype=oneflow.float32)
-
-    """
-    return flow._C.clamp(input, min, max)
-
-
 @register_tensor_op("clamp")
 def clamp_op_tensor(tensor, min=None, max=None):
     """
@@ -818,134 +758,6 @@ def clip_op_tensor(tensor, min=None, max=None):
     See :func:`oneflow.clamp`
     """
     return Clamp(min, max)(tensor)
-
-
-@register_tensor_op("cosh")
-def cosh_op(input):
-    """
-    Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
-
-    .. math::
-        \\text{out}_{i} = \\cosh(\\text{input}_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-        
-        >>> arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.cosh(input).numpy()
-        >>> output
-        array([1.0133467, 1.7859949, 1.2535787, 1.2804903], dtype=float32)
-
-    """
-    return flow._C.cosh(input)
-
-
-@register_tensor_op("erf")
-def erf_op(input):
-    """Computes the error function of each element. The error function is defined as follows:
-
-    .. math::
-            \\operatorname{erf}(x)=\\frac{2}{\\sqrt{\\pi}} \\int_{0}^{x} e^{-t^{2}} d t
-
-    Args:
-        x (oneflow.Tensor): A Tensor
-
-    Returns:
-        oneflow.Tensor: The result Tensor   
-               
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
-        >>> out = flow.erf(x)
-        >>> out.shape
-        flow.Size([3])
-        >>> out.numpy()
-        array([ 0.       , -0.8427008,  1.       ], dtype=float32)
-
-        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
-        >>> out = flow.erf(x)
-        >>> out.shape
-        flow.Size([2, 3])
-        >>> out.numpy()
-        array([[ 0.        , -0.8427008 ,  1.        ],
-               [ 1.        ,  1.        ,  0.74210095]], dtype=float32)
-
-        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
-        >>> out = x.erf()
-        >>> out.shape
-        flow.Size([3, 3])
-        >>> out.numpy()
-        array([[ 0.        , -0.8427008 ,  1.        ],
-               [ 1.        ,  1.        ,  0.74210095],
-               [ 0.9953223 ,  0.9999779 ,  1.        ]], dtype=float32)
-
-    """
-    return flow._C.erf(input)
-
-
-@register_tensor_op("erf")
-def erf_op_tensor(input):
-    """
-    See :func:`oneflow.erf`
-    """
-    return flow._C.erf(input)
-
-
-@register_tensor_op("erfc")
-def erfc_op(input):
-    """Computes the complementary error function of each element of input. The complementary error 
-    function is defined as follows:
-
-    .. math::
-            \\operatorname{erfc}(x)=1-\\frac{2}{\\sqrt{\\pi}} \\int_{0}^{x} e^{-t^{2}} d t
-
-    Args:
-        x (oneflow.Tensor): A Tensor
-
-    Returns:
-        oneflow.Tensor: The result Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        
-        >>> x = flow.tensor(np.array([0, -1., 10.]), dtype=flow.float32)
-        >>> out = flow.erfc(x)
-        >>> out
-        tensor([1.0000e+00, 1.8427e+00, 2.8026e-45], dtype=oneflow.float32)
-
-        >>> x = flow.tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
-        >>> out = flow.erfc(x)
-        >>> out
-        tensor([[1.0000e+00, 1.8427e+00, 2.8026e-45],
-                [1.5375e-12, 4.1838e-23, 2.5790e-01]], dtype=oneflow.float32)
-        
-    """
-    return flow._C.erfc(input)
-
-
-@register_tensor_op("erfc")
-def erfc_op_tensor(input):
-    """
-    See :func:`oneflow.erfc`
-    """
-    return flow._C.erfc(input)
 
 
 def ceil_op(input):
@@ -1058,14 +870,6 @@ def expm1_op(input):
           [4.4241238e+05 1.2026032e+06 3.2690165e+06]]]
 
 
-    """
-    return flow._C.expm1(input)
-
-
-@register_tensor_op("expm1")
-def expm1_op_tensor(input):
-    """
-    See :func:`oneflow.expm1`
     """
     return flow._C.expm1(input)
 

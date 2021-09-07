@@ -270,6 +270,10 @@ def _pow(self, b):
 
 
 def _abs(self):
+    r"""abs()
+
+    See :func:`oneflow.abs`
+    """
     return flow.abs(self)
 
 
@@ -278,10 +282,18 @@ def _exp(self):
 
 
 def _acos(self):
+    r"""acos()
+
+    See :func:`oneflow.acos`
+    """
     return flow.acos(self)
 
 
 def _acosh(self):
+    r"""acosh()
+
+    See :func:`oneflow.acosh`
+    """
     return flow.acosh(self)
 
 
@@ -290,6 +302,10 @@ def _arccosh(self):
 
 
 def _atanh(self):
+    r"""atanh()
+
+    See :func:`oneflow.atanh`
+    """
     return flow.atanh(self)
 
 
@@ -298,14 +314,26 @@ def _arctanh(self):
 
 
 def _sign(self):
+    r"""sign()
+
+    See :func:`oneflow.sign`
+    """
     return flow.sign(self)
 
 
 def _sinh(self):
+    r"""sinh()
+
+    See :func:`oneflow.sinh`
+    """
     return flow.sinh(self)
 
 
 def _tan(self):
+    r"""tan()
+
+    See :func:`oneflow.tan`
+    """
     return flow.tan(self)
 
 
@@ -322,6 +350,10 @@ def _sigmoid(self):
 
 
 def _tanh(self):
+    r"""tanh()
+
+    See :func:`oneflow.tanh`
+    """
     return flow.tanh(self)
 
 
@@ -346,14 +378,26 @@ def _diag(self, diagonal=0):
 
 
 def _log1p(self):
+    r"""log1p()
+
+    See :func:`oneflow.log1p`
+    """
     return flow.log1p(self)
 
 
 def _reciprocal(self):
+    r"""reciprocal()
+
+    See :func:`oneflow.reciprocal`
+    """
     return flow.reciprocal(self)
 
 
 def _asin(self):
+    r"""asin()
+
+    See :func:`oneflow.asin`
+    """
     return flow.asin(self)
 
 
@@ -362,6 +406,10 @@ def _arcsin(self):
 
 
 def _asinh(self):
+    r"""asinh()
+
+    See :func:`oneflow.asinh`
+    """
     return flow.asinh(self)
 
 
@@ -370,6 +418,10 @@ def _arcsinh(self):
 
 
 def _atan(self):
+    r"""atan()
+
+    See :func:`oneflow.atan`
+    """
     return flow.atan(self)
 
 
@@ -378,41 +430,73 @@ def _arctan(self):
 
 
 def _ceil(self):
+    r"""ceil()
+
+    See :func:`oneflow.ceil`
+    """
     return flow.ceil(self)
 
 
 def _clamp(self, min=None, max=None):
+    r"""clip(min=None, max=None)
+
+    See :func:`oneflow.clip`
+    """
     return flow.clamp(self, min=min, max=max)
 
 
 def _clip(self, min=None, max=None):
+    r"""clip(min=None, max=None)
+
+    See :func:`oneflow.clip`
+    """
     return flow.clip(self, min=min, max=max)
 
 
 def _cos(self):
+    r"""cos()
+
+    See :func:`oneflow.cos`
+    """
     return flow.cos(self)
 
 
 def _cosh(self):
+    r"""cosh()
+
+    See :func:`oneflow.cosh`
+    """
     return flow.cosh(self)
 
 
 def _erf(self):
+    r"""erf()
+
+    See :func:`oneflow.erf`
+    """
     return flow.erf(self)
 
 
 def _erfc(self):
+    r"""erfc()
+
+    See :func:`oneflow.erfc`
+    """
     return flow.erfc(self)
 
 
 def _expm1(self):
+    r"""expm1()
+
+    See :func:`oneflow.expm1`
+    """
     return flow.expm1(self)
 
 
 def _fmod(self, other):
-    r"""log()
+    r"""fmod(other)
 
-    See :func:`oneflow.log`
+    See :func:`oneflow.fmod`
     """
     return flow.fmod(self, other)
 
@@ -521,6 +605,7 @@ def _floor(self):
 
     return flow.floor(self)
 
+
 def _negative(self):
     r"""negative()
 
@@ -528,6 +613,7 @@ def _negative(self):
     """
 
     return flow.negative(self)
+
 
 def _uniform(self, a=0, b=1):
     initializer_conf = flow.random_uniform_initializer(

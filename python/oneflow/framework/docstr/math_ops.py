@@ -1171,5 +1171,5 @@ add_docstr(
         >>> out
         tensor([-1.0000,  1.0000, -2.3000], dtype=oneflow.float32)
 
-    """
+    """,
 )
