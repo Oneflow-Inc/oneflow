@@ -686,7 +686,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
     if (task_node->device_type() != DeviceType::kGPU) { return; }
-    int64_t dev_phy_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_node->thrd_id());
+    int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
   for (const auto& pair : global_dev_phy_id2nodes) { Handler(pair.second); }
