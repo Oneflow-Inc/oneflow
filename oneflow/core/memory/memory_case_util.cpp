@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
-
 namespace {
 
 // MemCaseId int64_t encode
@@ -34,7 +33,7 @@ namespace {
 // |          |   rank   | MemCaseId  |
 // |          | -- 19 -- | --- 18 --- |
 // | reserved |    GlobalMemCaseId    |
-// | -- 27 -- | -------- 37 --------- |
+// | -- 27 -- | -------- 37 ---------|
 // | ------------ 64 bit ------------ |
 
 constexpr size_t kRegByNetBits = 1;
@@ -89,10 +88,16 @@ MemoryCase GenerateCorrespondingPageLockedHostMemoryCase(const MemoryCase& mem_c
 std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_type,
                                                         const int64_t device_id) {
   const auto& mem_case = std::make_shared<MemoryCase>();
+  AttrValue name_to_attr_instance;
+  name_to_attr_instance.set_at_int64(device_id);
   if (device_type == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
+    name_to_attr_instance.set_at_string("kCPU");
+    (*mem_case->mutable_name_to_attr())["device"] = name_to_attr_instance;
+    (*mem_case->mutable_name_to_attr())["device_id"] = name_to_attr_instance;
   } else if (device_type == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
+    name_to_attr_instance.set_at_string("kGPU");
+    (*mem_case->mutable_name_to_attr())["device"] = name_to_attr_instance;
+    (*mem_case->mutable_name_to_attr())["device_id"] = name_to_attr_instance;
   } else {
     UNIMPLEMENTED();
   }

@@ -1,34 +1,13 @@
 syntax = "proto2";
 package oneflow;
 
-message CudaPinnedMemory {
-  required int64 device_id = 1;
-}
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+import "oneflow/core/framework/user_op_attr.proto";
 
-message DummyDevicePinnedMemory {
-  optional int64 device_id = 1;
-}
-
-message HostMemory {
-  oneof page_lock_case {
-    CudaPinnedMemory cuda_pinned_mem = 1;
-    DummyDevicePinnedMemory dummy_device_pinned_mem = 3;
-  }
-  optional bool used_by_network = 2 [default = false];
-}
-
-message DeviceCudaMemory {
-  required int64 device_id = 1;
-}
-
-message DummyDeviceMemory {
-  optional int64 device_id = 1;
-}
 
 message MemoryCase {
-  oneof case {
-    HostMemory host_mem = 1;
-    DeviceCudaMemory device_cuda_mem = 2;
-    DummyDeviceMemory dummy_device_mem = 3;
-  }
+  map<string, AttrValue> name_to_attr = 1;
 }
+
+
