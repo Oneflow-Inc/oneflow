@@ -27,7 +27,7 @@ def _test_grad_acc_graph(test_case, device):
         linear = linear.to(device)
         flow.nn.init.constant_(linear.weight, 2.068758)
         flow.nn.init.constant_(linear.bias, 1.23)
-        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
+        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.01, momentum=0.9)
         return linear, of_sgd
 
     x = flow.tensor(
@@ -46,24 +46,28 @@ def _test_grad_acc_graph(test_case, device):
     )
     eager_linear, eager_sgd = get_linear_sgd()
     eager_out_list = []
+    eager_weight_list = []
     for i in range(12):
         index = (i % 4) * 2
-        input = x[index : (index + 2)]
+        input = x[index : (index + 2)]  # NOTE(chengcheng): unpack x by slice
         # print("i = ", i, " input = ", input)
         of_out = eager_linear(input)
         of_out = of_out.sum()
-        of_out.backward()
+        loss = of_out * 0.25  # NOTE(chengcheng): scale loss by grad acc
+        loss.backward()
         if (i + 1) % 4 == 0:
             eager_sgd.step()
             eager_sgd.zero_grad()
+            eager_weight_list.append(eager_linear.weight.numpy())
+            # print("of_eager_weight in step: ", i,
+            #      " weight = ", eager_linear.weight.numpy())
 
-        print("of_eager_out : ", of_out.numpy())
-        # print("of_eager_weight in step: ", i,
-        #       " weight = ", eager_linear.weight )
+        # print("of_eager_out : ", of_out.numpy())
         eager_out_list.append(of_out.numpy())
 
     graph_linear, graph_sgd = get_linear_sgd()
     graph_out_list = []
+    graph_weight_list = []
 
     class LinearTrainGraph(flow.nn.Graph):
         def __init__(self):
@@ -82,31 +86,19 @@ def _test_grad_acc_graph(test_case, device):
     for i in range(3):
         # NOTE(chengcheng): Graph call 1 step for 1 mini-batch(4 micro-batch)
         of_out = linear_t_g(x)
-        """
-        index = (i % 4) * 2
-        input = x[index : (index + 2)]
-        print("i = ", i, " input = ", input)
-        of_out = linear_t_g(input)
-        """
-        print("of_lazy_out : ", of_out.numpy())
+        # print("of_lazy_out : ", of_out.numpy())
 
         graph_out_list.append(of_out.numpy())
+        graph_weight_list.append(graph_linear.weight.numpy())
         # print("of_lazy_weight in step: ", i,
-        #        " weight = ", graph_linear.weight )
+        #       " weight = ", graph_linear.weight.numpy())
 
-    """
-    for i in range(iter_num):
-        # check equal on loss
-        print(module_check_list[i][0], graph_check_list[i][0])
-        print(module_check_list[i][1], graph_check_list[i][1])
-        test_case.assertTrue(
-            np.allclose(module_check_list[i][0], graph_check_list[i][0], rtol=0.01, atol=0.01)
-        )
-        # check equal on weight
-        test_case.assertTrue(
-            np.allclose(module_check_list[i][1], graph_check_list[i][1], rtol=0.01, atol=0.01)
-        )
-    """
+    for i in range(3):
+        test_case.assertTrue(np.allclose(eager_weight_list[i], graph_weight_list[i]))
+        for j in range(4):
+            test_case.assertTrue(
+                eager_out_list[i * 4 + j].item() == graph_out_list[i][j]
+            )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
