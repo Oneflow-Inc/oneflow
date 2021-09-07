@@ -32,6 +32,16 @@ class TestGluModule(flow.unittest.TestCase):
         y = m(x, dim)
         return y
 
+    @autotest(n=5)
+    def test_GLU_module_with_random_data(test_case):
+        device = random_device()
+        m = torch.nn.GLU()
+        m.train(random())
+        m.to(device)
+        x = random_pytorch_tensor(ndim=3, dim0=2, dim1=4, dim2=6).to(device)
+        y = m(x)
 
+        return y
+    
 if __name__ == "__main__":
     unittest.main()

@@ -962,35 +962,17 @@ class Softsign(Module):
         return flow._C.softsign(x)
 
 
-def softsign_op(x):
-    r"""The SoftSign activation.
-
-    The formula is: 
-    
-    .. math::  
-
-        SoftSign(x) = \frac{x}{1 + |x|}
-    
-    See :mod:`oneflow.nn.Softsign`
-    """
-    return Softsign()(x)
-
-
-@register_tensor_op("softsign")
-def softsign_op_tensor(x):
-    r"""
-    softsign() -> Tensor
-    See :func:`oneflow.softsign`
-    """
-    return Softsign()(x)
-
-
 class GLU(Module):
     r"""The GLU activation.
 
     Args:
         input (Tensor, float): input tensor. 
         dim (int, optional): dimension on which to split the input. Default: -1
+
+    Shape:
+        - Input: :math:`(\ast_1, N, \ast_2)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(\ast_1, M, \ast_2)` where :math:`M=N/2`
 
     The formula is: 
     
