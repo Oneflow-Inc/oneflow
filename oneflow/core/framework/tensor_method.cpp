@@ -40,30 +40,5 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
   return contig_if_nonempty;
 }
 
-Maybe<Tensor> TensorView(const std::shared_ptr<Tensor>& tensor,
-                         const Optional<const Shape>& shape,
-                         const Optional<const Stride>& stride,
-                         int64_t storage_offset, const Optional<DataType>& dtype) {
-  if (!(tensor->is_eager() && tensor->is_local())) {
-    return Error::RuntimeError() << "TensorView(): input should be eager local tensor, but is "
-                                 << tensor->is_lazy() ? "lazy" : "consistent";
-  }
-  CHECK_OR_RETURN(tensor->has_eager_blob_object());
-  const auto& blob_object = JUST(tensor->eager_blob_object());
-
-  auto to_shape = shape.value_or(tensor->shape());
-  auto to_stride = stride.value_or(JUST(tensor->stride()));
-  auto to_dtype = dtype.value_or(tensor->dtype());
-
-  auto tensor_meta = std::make_shared<MirroredTensorMeta>(
-      to_shape, to_dtype, JUST(tensor->device()),
-      storage_offset != -1 ? storage_offset : JUST(tensor->storage_offset()));
-
-  auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(tensor_meta, tensor->requires_grad(), tensor->is_leaf());
-  tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()), blob_object->tensor_buffer());
-  JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
-  return std::make_shared<MirroredTensor>(tensor_impl);
-}
-
 }  // namespace one
 }  // namespace oneflow

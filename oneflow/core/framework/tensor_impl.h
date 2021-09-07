@@ -44,6 +44,7 @@ class Device;
 
 namespace vm {
 class EagerBlobObject;
+class TensorBuffer;
 }  // namespace vm
 
 namespace one {
@@ -233,6 +234,9 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
   Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object);
+  Maybe<void> InitEagerBlobObject(LocalDepObject* dep_object,
+                                  const std::shared_ptr<vm::TensorBuffer>& tensor_buffer);
+
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
  private:
