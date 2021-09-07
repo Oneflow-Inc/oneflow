@@ -93,6 +93,7 @@ def all_gather(tensor_list, tensor):
                 [4, 5]], device='cuda:1', dtype=oneflow.int64)]
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
+    assert isinstance(tensor_list, list)
     assert tensor.device.index == flow.env.get_local_rank()
     assert tensor.is_local
     tensor = tensor.expand([1] + list(tensor.shape))
@@ -100,12 +101,5 @@ def all_gather(tensor_list, tensor):
     tensor = tensor.to_consistent(
         placement=flow.env.all_device_placement(device_type), sbp=flow.sbp.split(0)
     )
-    assert len(tensor_list) == tensor.shape[0]
-    for i in range(len(tensor_list)):
-        assert (
-            tensor_list[i].shape == tensor[i].shape
-        ), f"{tensor_list.shape} vs {tensor[i].shape}"
-        assert (
-            tensor_list[i].dtype == tensor[i].dtype
-        ), f"{tensor_list[i].dtype} vs {tensor[i].dtype}"
+    for i in range(tensor.shape[0]):
         tensor_list[i] = tensor[i].to_local()
