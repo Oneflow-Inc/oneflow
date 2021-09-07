@@ -61,10 +61,10 @@ class NoArgNoRetMockNNGraph : public NNGraphIf {
   const std::string job_name_;
 };
 
-TEST(RunLazyJobInstructionType, simple) {
+TEST(LaunchLazyJobInstructionType, simple) {
   vm::TestResourceDescScope resource_scope(1, 1);
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
-  vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"RunLazyJob"});
+  vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"LaunchLazyJob"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
   const std::string job_name("test_job");
@@ -92,8 +92,8 @@ TEST(RunLazyJobInstructionType, simple) {
     static const auto& empty_list =
         std::make_shared<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>();
     const auto& nn_graph = std::make_shared<NoArgNoRetMockNNGraph>(job_name);
-    CHECK_JUST(instructions_builder.RunLazyJob(empty_list, empty_list, empty_list, nn_graph));
-    CHECK_JUST(instructions_builder.RunLazyJob(empty_list, empty_list, empty_list, nn_graph));
+    CHECK_JUST(instructions_builder.LaunchLazyJob(empty_list, empty_list, empty_list, nn_graph));
+    CHECK_JUST(instructions_builder.LaunchLazyJob(empty_list, empty_list, empty_list, nn_graph));
   }
   ASSERT_EQ(list.size(), 2);
   CHECK_JUST(vm->Receive(&list));
@@ -112,10 +112,10 @@ TEST(RunLazyJobInstructionType, simple) {
   Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
 }
 
-TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
+TEST(LaunchLazyJobInstructionType, wait_for_another_job_finished) {
   vm::TestResourceDescScope resource_scope(1, 1);
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
-  vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"RunLazyJob"});
+  vm::TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"LaunchLazyJob"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
   const std::string job_name0("test_job0");
@@ -178,10 +178,10 @@ TEST(RunLazyJobInstructionType, wait_for_another_job_finished) {
     const auto& nn_graph0 = std::make_shared<NoArgNoRetMockNNGraph>(job_name0);
     const auto& nn_graph1 = std::make_shared<NoArgNoRetMockNNGraph>(job_name1);
     for (int i = 0; i < num_job0_instance; ++i) {
-      CHECK_JUST(instructions_builder.RunLazyJob(empty_list, empty_list, empty_list, nn_graph0));
+      CHECK_JUST(instructions_builder.LaunchLazyJob(empty_list, empty_list, empty_list, nn_graph0));
     }
     for (int i = 0; i < num_job1_instance; ++i) {
-      CHECK_JUST(instructions_builder.RunLazyJob(empty_list, empty_list, empty_list, nn_graph1));
+      CHECK_JUST(instructions_builder.LaunchLazyJob(empty_list, empty_list, empty_list, nn_graph1));
     }
   }
   ASSERT_EQ(list.size(), num_job0_instance + num_job1_instance);

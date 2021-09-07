@@ -26,10 +26,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class LazyJobStreamType final : public StreamType {
+class LazyJobStreamType : public StreamType {
  public:
   LazyJobStreamType() = default;
-  ~LazyJobStreamType() override = default;
+  virtual ~LazyJobStreamType() = default;
 
   const char* device_tag() const override { return "lazy_job"; }
 
@@ -46,6 +46,24 @@ class LazyJobStreamType final : public StreamType {
                                           int64_t this_machine_id) const override;
   bool SharingVirtualMachineThread() const override { return false; }
   bool SupportingTransportInstructions() const override { return false; }
+};
+
+class LazyJobLauncherStreamType final : public LazyJobStreamType {
+ public:
+  LazyJobLauncherStreamType() = default;
+  ~LazyJobLauncherStreamType() override = default;
+};
+
+class InputCriticalSectionStreamType final : public LazyJobStreamType {
+ public:
+  InputCriticalSectionStreamType() = default;
+  ~InputCriticalSectionStreamType() override = default;
+};
+
+class OutputCriticalSectionStreamType final : public LazyJobStreamType {
+ public:
+  OutputCriticalSectionStreamType() = default;
+  ~OutputCriticalSectionStreamType() override = default;
 };
 
 }  // namespace vm

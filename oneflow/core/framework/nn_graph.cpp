@@ -267,7 +267,13 @@ Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObj
   for (const auto& tensor : tensor_list) {
     CHECK_OR_RETURN(tensor->is_eager());
     if (tensor->is_consistent()) {
-      blob_list->push_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
+      const auto& placement = JUST(tensor->parallel_desc());
+      if (JUST(GetParallelId4CurrentProcessCtx(placement)).has_value()) {
+        blob_list->push_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
+      } else {
+        // no current rank component of consistent tensor found.
+        blob_list->push_back(std::shared_ptr<vm::EagerBlobObject>());
+      }
     } else {
       blob_list->push_back(JUST(tensor->eager_blob_object()));
     }
@@ -283,7 +289,7 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
   CHECK_EQ_OR_RETURN(inputs.size(), nn_graph->inputs_op_names().size());
   CHECK_EQ_OR_RETURN(outputs.size(), nn_graph->outputs_op_names().size());
   // NOTE(chengcheng):
-  //   parameters not used in RunLazyJobInstrucntion;
+  //   parameters not used in LaunchLazyJobInstrucntion;
   //   the args: parameters is all variable tensor hold by nn.Graph
   //   but the NNGraph::variable_op_size may has FreeEagerTensor as sepcial variable op.
   CHECK_LE_OR_RETURN(parameters.size(), nn_graph->variable_op_size());
@@ -303,7 +309,7 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
       std::make_shared<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>(
           std::move(var_blobs));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->RunLazyJob(input_blob_list_ptr, output_blob_list_ptr, var_blob_list_ptr,
+    return builder->LaunchLazyJob(input_blob_list_ptr, output_blob_list_ptr, var_blob_list_ptr,
                                nn_graph);
   }));
   return Maybe<void>::Ok();
