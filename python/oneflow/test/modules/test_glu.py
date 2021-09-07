@@ -41,6 +41,7 @@ class TestGluModule(flow.unittest.TestCase):
         x = random_pytorch_tensor(ndim=3, dim0=2, dim1=4, dim2=6).to(device)
         y = m(x)
         return y
-    
+
+
 if __name__ == "__main__":
     unittest.main()
