@@ -447,7 +447,7 @@ class TestConsistentCast(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n4d()
     def test_cpu_p2b_with_random_data(test_case):
-        np_arr = np.random.randint(1, 10, [2,3,4])
+        np_arr = np.random.randint(1, 10, [2, 3, 4])
         tensor = flow.tensor(np_arr, dtype=flow.float32)
         cpu_tensor = tensor.to_consistent(
             placement=flow.placement("cpu", {0: range(4)}), sbp=flow.sbp.partial_sum

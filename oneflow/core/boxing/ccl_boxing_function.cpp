@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-Maybe<void> RawCheckCpuP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckCclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(EagerBoxingInterpreterUtil::IsAllPartialSumNdSbp(in->nd_sbp()));
@@ -35,9 +35,9 @@ Maybe<void> RawCheckCpuP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
 }
 }  // namespace
 
-static constexpr auto* CheckCpuP2B = DECORATE(&RawCheckCpuP2B, ThreadLocal);
+static constexpr auto* CheckCclP2B = DECORATE(&RawCheckCclP2B, ThreadLocal);
 
-Maybe<one::Tensor> CpuP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+Maybe<one::Tensor> CclP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                           Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
@@ -47,6 +47,6 @@ Maybe<one::Tensor> CpuP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pla
   return JUST(one::functional::ConsistentAllReduce(tensor));
 }
 
-COMMAND(RegisterBoxingFunction("cpu-p-to-b", CheckCpuP2B, &CpuP2B));
+COMMAND(RegisterBoxingFunction("ccl-p-to-b", CheckCclP2B, &CclP2B));
 
 }  // namespace oneflow
