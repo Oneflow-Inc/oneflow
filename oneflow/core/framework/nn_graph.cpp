@@ -267,13 +267,7 @@ Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObj
   for (const auto& tensor : tensor_list) {
     CHECK_OR_RETURN(tensor->is_eager());
     if (tensor->is_consistent()) {
-      const auto& placement = JUST(tensor->parallel_desc());
-      if (JUST(GetParallelId4CurrentProcessCtx(placement)).has_value()) {
-        blob_list->push_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
-      } else {
-        // no current rank component of consistent tensor found.
-        blob_list->push_back(std::shared_ptr<vm::EagerBlobObject>());
-      }
+      blob_list->push_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
     } else {
       blob_list->push_back(JUST(tensor->eager_blob_object()));
     }

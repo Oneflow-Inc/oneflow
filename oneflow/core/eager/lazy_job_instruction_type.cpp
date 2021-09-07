@@ -78,39 +78,13 @@ class LazyJobInstance final : public JobInstance {
 
 namespace vm {
 
-template<typename CriticalSectionStreamType, typename PhyInstrOperandT>
-class CriticalSectionInstructionType final : public InstructionType {
-  CriticalSectionInstructionType(const CriticalSectionInstructionType&) = delete;
-  CriticalSectionInstructionType(CriticalSectionInstructionType&&) = delete;
-  CriticalSectionInstructionType() = default;
-  ~CriticalSectionInstructionType() = default;
-
-  using stream_type = CriticalSectionStreamType;
-
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
-
-  void Compute(vm::Instruction* instruction) const override {
-    const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const PhyInstrOperandT*>(ptr);
-    CHECK_NOTNULL(phy_instr_operand);
-    phy_instr_operand->ProducerNotifyConsumerAndWaitConsumerAck();
-    auto* status_buffer = instruction->mut_status_buffer();
-    NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
-  }
-
-};
-
-COMMAND(RegisterInstructionType<CriticalSectionInstructionType<InputCriticalSectionStreamType, InputCriticalSectionPhyInstrOperand>>("InputCriticalSection"));
-
-COMMAND(RegisterInstructionType<CriticalSectionInstructionType<OutputCriticalSectionStreamType, OutputCriticalSectionPhyInstrOperand>>("OutputCriticalSection"));
-
 class LaunchLazyJobInstructionType final : public InstructionType {
  public:
   LaunchLazyJobInstructionType(const LaunchLazyJobInstructionType&) = delete;
   LaunchLazyJobInstructionType(LaunchLazyJobInstructionType&&) = delete;
   LaunchLazyJobInstructionType() = default;
   ~LaunchLazyJobInstructionType() = default;
-  using stream_type = LazyJobLauncherStreamType;
+  using stream_type = LazyJobStreamType;
   void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
@@ -163,10 +137,11 @@ class LaunchLazyJobInstructionType final : public InstructionType {
     const auto& nn_graph = phy_instr_operand->nn_graph();
     HashMap<std::string, std::function<void(int64_t)>> push_cbs;
     const auto& in_critical_section = phy_instr_operand->inputs_critical_section();
-    for (const auto& input_op_name : in_critical_section->op_names()) {
+    in_critical_section->ConsumerWaitsProducer();
+    for (const auto& input_op_name : nn_graph->inputs_op_names()) {
       const auto& PushCb = [input_op_name, in_critical_section](int64_t of_blob_ptr) {
         OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        in_critical_section->ConsumerFetchBlobAndNotifyProducerAck(
+        in_critical_section->ConsumerFetchBlobAndDecreaseRefCnt(
             input_op_name, [&](Blob* blob){
               CHECK_NOTNULL(blob);
               of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
@@ -174,14 +149,15 @@ class LaunchLazyJobInstructionType final : public InstructionType {
               of_blob->mut_blob()->CopyDataContentFrom(of_blob->mut_device_ctx(), blob);
             });
       };
-      CHECK(push_cbs.emplace(op_name, PushCb).second);
+      CHECK(push_cbs.emplace(input_op_name, PushCb).second);
     }
     HashMap<std::string, std::function<void(int64_t)>> pull_cbs;
     const auto& out_critical_section = phy_instr_operand->outputs_critical_section();
-    for (const auto& output_op_name : out_critical_section->op_names()) {
+    out_critical_section->ConsumerWaitsProducer();
+    for (const auto& output_op_name : nn_graph->outputs_op_names()) {
       const auto& PullCb = [output_op_name, out_critical_section](int64_t of_blob_ptr) {
         OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        out_critical_section->ConsumerFetchBlobAndNotifyProducerAck(
+        out_critical_section->ConsumerFetchBlobAndDecreaseRefCnt(
             output_op_name, [&](Blob* mut_blob){
               CHECK_NOTNULL(mut_blob);
               mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
@@ -189,9 +165,17 @@ class LaunchLazyJobInstructionType final : public InstructionType {
               mut_blob->CopyDataContentFrom(of_blob->mut_device_ctx(), &of_blob->blob());
             });
       };
-      CHECK(pull_cbs.emplace(op_name, PullCb).second);
+      CHECK(pull_cbs.emplace(output_op_name, PullCb).second);
     }
-    const auto& FinishCb = [this, instruction]() {
+    const auto& params_critical_section = phy_instr_operand->params_critical_section();
+    params_critical_section->ConsumerWaitsProducer();
+    const auto& FinishCb = [this, instruction, in_critical_section, out_critical_section, params_critical_section]() {
+      // consumer_ref_cnt of critical section must be cleared
+      // for avoiding InputCriticalSection/OutputCriticalSection/ParamsCriticalSection instructions hanging.
+      *in_critical_section->consumer_ref_cnt() = 0;
+      *out_critical_section->consumer_ref_cnt() = 0;
+      *params_critical_section->consumer_ref_cnt() = 0;
+
       auto* device_ctx = GetLazyJobDeviceCtx(instruction);
       device_ctx->DequeueNNGraph();
       auto* status_buffer = instruction->mut_status_buffer();
