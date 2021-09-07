@@ -180,14 +180,14 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 };
 
 struct IndependentThreadNum4TaskType final {
-  IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}
-  IndependentThreadNum4TaskType(std::function<size_t()> get_num)
-      : has_func_(true), get_num_(get_num) {}
-  operator size_t() { return has_func_ ? get_num_() : num_; }
+  explicit IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}
+  explicit IndependentThreadNum4TaskType(std::function<size_t()> get_num)
+      : has_func_(true), get_num_(std::move(get_num)) {}
+  explicit operator size_t() { return has_func_ ? get_num_() : num_; }
 
  private:
   bool has_func_;
-  size_t num_;
+  size_t num_{};
   std::function<size_t()> get_num_;
 };
 

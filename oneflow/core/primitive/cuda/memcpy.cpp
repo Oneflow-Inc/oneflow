@@ -32,6 +32,7 @@ class MemcpyImpl : public Memcpy {
   ~MemcpyImpl() override = default;
 
   void Launch(StreamContext* stream_ctx, void* dst, const void* src, size_t count) override {
+    if (dst == src) { return; }
     auto* cuda_stream_ctx = CHECK_NOTNULL(dynamic_cast<CudaStreamContext*>(stream_ctx));
     OF_CUDA_CHECK(
         cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, cuda_stream_ctx->cuda_stream()));
