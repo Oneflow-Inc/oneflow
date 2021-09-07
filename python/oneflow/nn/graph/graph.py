@@ -30,8 +30,7 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType
 from oneflow.nn.graph.config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-from oneflow.nn.graph.util import (add_indent, list_to_func_return,
-                                   sys_exc_error_msg)
+from oneflow.nn.graph.util import add_indent, list_to_func_return, sys_exc_error_msg
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
