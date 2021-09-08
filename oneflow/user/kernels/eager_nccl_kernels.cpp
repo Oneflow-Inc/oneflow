@@ -71,8 +71,8 @@ Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, Device
   if (GlobalProcessCtx::Rank() == src) {
     size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
     auto** src_data_ptr = GlobalSrcDataPtr();
-    const void* in = *src_data_ptr;
     CHECK_OR_RETURN(*src_data_ptr != nullptr);
+    const void* in = *src_data_ptr;
     Memcpy<DeviceType::kCPU>(ctx, out, in, buffer_size);
     *src_data_ptr = nullptr;
   } else {
