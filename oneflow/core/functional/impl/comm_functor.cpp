@@ -238,7 +238,6 @@ class ConsistentS2SFunctor {
       CHECK_OR_RETURN(IsSplitSbp(out_nd_sbp->sbp_parallel(0)));
       CHECK_NE_OR_RETURN(in_nd_sbp->sbp_parallel(0).split_parallel().axis(),
                          out_nd_sbp->sbp_parallel(0).split_parallel().axis());
-      CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kGPU);
     }
     std::shared_ptr<OpExpr> op_expr = JUST(
         CachedEagerNcclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),

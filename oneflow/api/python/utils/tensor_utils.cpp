@@ -30,11 +30,16 @@ namespace oneflow {
 namespace one {
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
-  const auto& tensor = JUST(t->AsMirroredTensor());
-  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
+  std::shared_ptr<MirroredTensor> local_tensor;
+  if (t->is_local()) {
+    local_tensor = JUST(t->AsMirroredTensor());
+  } else {
+    local_tensor = JUST(t->cur_rank_phy_tensor());
+  }
+  CHECK_OR_RETURN(local_tensor->is_eager()) << "eager tensors supported only";
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->AccessBlobByCallback(
-        tensor,
+        local_tensor,
         [](uint64_t of_blob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
           of_blob->AsyncAutoMemset(0);

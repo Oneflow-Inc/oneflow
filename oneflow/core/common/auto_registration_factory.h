@@ -95,6 +95,12 @@ inline Base* NewObj(Key k, Args&&... args) {
 }
 
 template<typename Key, typename Base, typename... Args>
+inline std::unique_ptr<Base> NewObjUniquePtr(Key k, Args&&... args) {
+  return std::unique_ptr<Base>(
+      AutoRegistrationFactory<Key, Base, Args...>::Get().New(k, std::forward<Args>(args)...));
+}
+
+template<typename Key, typename Base, typename... Args>
 inline bool IsClassRegistered(Key k, Args&&... args) {
   return AutoRegistrationFactory<Key, Base, Args...>::Get().IsClassRegistered(
       k, std::forward<Args>(args)...);
