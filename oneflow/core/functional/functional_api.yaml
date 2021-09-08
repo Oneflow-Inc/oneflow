@@ -251,6 +251,10 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
+- name: "glu"
+  signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
+  bind_python: True
+
 - name: "sigmoid"
   signature: "Tensor (Tensor x) => Sigmoid"
   bind_python: True
@@ -568,6 +572,21 @@
   signature: "Tensor (Tensor x, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon) => LayerNorm"
   bind_python: True
 
+- name: "layer_norm_grad"
+  signature:
+    "Tensor (Tensor x, Tensor mean, Tensor inv_variance, Tensor dy, Int64 begin_norm_axis, Double epsilon) => LayerNormGrad"
+  bind_python: False
+
+- name: "layer_norm_param_grad"
+  signature:
+    "Tensor (Tensor dy, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
+  bind_python: False
+
+- name: "layer_norm_affine_param_grad"
+  signature:
+    "TensorTuple (Tensor dy, Tensor gamma, Tensor normalized, Int64 begin_params_axis, Double epsilon) => LayerNormAffineParamGrad"
+  bind_python: False
+
 - name: "avg_pool_2d"
   signature:
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
@@ -606,23 +625,26 @@
 
 - name: "max_pool1d"
   signature:
-    'TensorTuple (Tensor x, String data_format="channels_first", Int32List[1] padding,
-    Int32List[1] kernel_size, Int32List[1] stride, Int32List[1] dilation,
-    Bool return_indices=True, Bool ceil_mode=False) => Maxpool1D'
+    'TensorTuple (Tensor x, Int32List[1] kernel_size, Int32List[1] stride=1, 
+                  Int32List[1] padding=0, Int32List[1] dilation=1, 
+                  Bool return_indices=True, Bool ceil_mode=False, 
+                  String data_format="channels_first") => Maxpool1D'
   bind_python: True
 
 - name: "max_pool2d"
   signature:
-    'TensorTuple (Tensor x, String data_format="channels_first", Int32List[2] padding,
-    Int32List[2] kernel_size, Int32List[2] stride, Int32List[2] dilation,
-    Bool return_indices=True, Bool ceil_mode=False) => Maxpool2D'
+    'TensorTuple (Tensor x, Int32List[2] kernel_size, Int32List[2] stride=1, 
+                  Int32List[2] padding=0, Int32List[2] dilation=1, 
+                  Bool return_indices=True, Bool ceil_mode=False, 
+                  String data_format="channels_first") => Maxpool2D'
   bind_python: True
 
 - name: "max_pool3d"
   signature:
-    'TensorTuple (Tensor x, String data_format="channels_first", Int32List[3] padding,
-    Int32List[3] kernel_size, Int32List[3] stride, Int32List[3] dilation,
-    Bool return_indices=True, Bool ceil_mode=False) => Maxpool3D'
+    'TensorTuple (Tensor x, Int32List[3] kernel_size, Int32List[3] stride=1, 
+                  Int32List[3] padding=0, Int32List[3] dilation=1, 
+                  Bool return_indices=True, Bool ceil_mode=False, 
+                  String data_format="channels_first") => Maxpool3D'
   bind_python: True
 
 - name: "pooling_grad"
@@ -880,7 +902,7 @@
   bind_python: False
 
 - name: "dropout"
-  signature: "Tensor (Tensor x, Float p=0.5, Generator generator=None, Bool is_training=True) => Dropout"
+  signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -961,23 +983,23 @@
 
 - name: "avg_pool1d"
   signature:
-    'Tensor (Tensor x, String data_format="channels_first", Int32List[1] padding,
-    Int32List[1] kernel_size, Int32List[1] stride, Bool ceil_mode=False, Bool count_include_pad=True,
-    Int64 divisor_override=0) => Avgpool1D'
+    'Tensor (Tensor x, Int32List[1] kernel_size, Int32List[1] stride=1, 
+             Int32List[1] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
+             Int64 divisor_override=0, String data_format="channels_first") => Avgpool1D'
   bind_python: True
 
 - name: "avg_pool2d"
   signature:
-    'Tensor (Tensor x, String data_format="channels_first", Int32List[2] padding,
-    Int32List[2] kernel_size, Int32List[2] stride, Bool ceil_mode=False, Bool count_include_pad=True,
-    Int64 divisor_override=0) => Avgpool2D'
+    'Tensor (Tensor x, Int32List[2] kernel_size, Int32List[2] stride=1, 
+             Int32List[2] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
+             Int64 divisor_override=0, String data_format="channels_first") => Avgpool2D'
   bind_python: True
 
 - name: "avg_pool3d"
   signature:
-    'Tensor (Tensor x, String data_format="channels_first", Int32List[3] padding,
-    Int32List[3] kernel_size, Int32List[3] stride, Bool ceil_mode=False, Bool count_include_pad=True,
-    Int64 divisor_override=0) => Avgpool3D'
+    'Tensor (Tensor x, Int32List[3] kernel_size, Int32List[3] stride=1, 
+             Int32List[3] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
+             Int64 divisor_override=0, String data_format="channels_first") => Avgpool3D'
   bind_python: True
 
 - name: "avg_pooling_grad"

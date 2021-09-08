@@ -265,11 +265,11 @@ class PoolingNDFunctor {
   PoolingNDFunctor() = default;
   virtual ~PoolingNDFunctor() = default;
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const std::string& data_format, const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& kernel_size,
                                 const std::vector<int32_t>& stride,
+                                const std::vector<int32_t>& padding,
                                 const std::vector<int32_t>& dilation, const bool& return_indices,
-                                const bool& ceil_mode) const {
+                                const bool& ceil_mode, const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
@@ -629,7 +629,7 @@ class DropoutFunctor {
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                           const Optional<one::Generator>& generator, const bool& training) const {
+                           const bool& training, const Optional<one::Generator>& generator) const {
     if (!training || p == 0.0) return x;
 
     MutableAttrMap random_mask_like_attrs;
@@ -682,11 +682,11 @@ class AvgPoolingNDFunctor {
  public:
   AvgPoolingNDFunctor() = default;
   virtual ~AvgPoolingNDFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& data_format,
-                           const std::vector<int32_t>& padding,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
-                           const std::vector<int32_t>& stride, const bool& ceil_mode,
-                           const bool& count_include_pad, const int64_t& divisor_override) const {
+                           const std::vector<int32_t>& stride, const std::vector<int32_t>& padding,
+                           const bool& ceil_mode, const bool& count_include_pad,
+                           const int64_t& divisor_override, const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
