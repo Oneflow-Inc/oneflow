@@ -212,7 +212,16 @@ def GetDualObject(name, pytorch, oneflow):
                                 if (
                                     hasattr(pytorch, "__name__")
                                     and pytorch.__name__ == "to"
-                                    and pytorch_args[0] == "cpu"
+                                    and (
+                                        (
+                                            len(pytorch_args) > 0
+                                            and pytorch_args[0] == "cpu"
+                                        )
+                                        or (
+                                            len(pytorch_kwargs) > 0
+                                            and pytorch_kwargs["device"] == "cpu"
+                                        )
+                                    )
                                 ):
                                     pass
                                 else:
@@ -321,7 +330,11 @@ def print_note_fake_program():
 
     print(f"\033[32mThis program has {len(unique_vis_tensor)} input tensor: \033[0m")
     for input_tensor in unique_vis_tensor:
-        print(f"\033[32m{get_tensor_shape(input_tensor)}:{input_tensor}\033[0m", end="")
+        print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
+        print(f"\033[32m{input_tensor}\033[0m")
+        print(
+            f"\033[32m-----------------------------------------------------------\033[0m"
+        )
 
 
 def clear_note_fake_program():
