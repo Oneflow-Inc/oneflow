@@ -18,7 +18,6 @@ from enum import unique
 import functools
 import inspect
 import os
-import re
 import warnings
 
 import numpy as np
@@ -210,18 +209,15 @@ def GetDualObject(name, pytorch, oneflow):
 
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
-                            if (
-                                isinstance(pytorch_res, torch_original.Tensor)
-                                and hasattr(pytorch, "__name__")
-                                and (
-                                    pytorch.__name__ != "to"
-                                    or (
-                                        pytorch.__name__ == "to"
-                                        and pytorch_args == "cuda"
-                                    )
-                                )
-                            ):
-                                call_tensor_id.append(id(pytorch_res))
+                            if isinstance(pytorch_res, torch_original.Tensor):
+                                if (
+                                    hasattr(pytorch, "__name__")
+                                    and pytorch.__name__ == "to"
+                                    and pytorch_args[0] == "cpu"
+                                ):
+                                    pass
+                                else:
+                                    call_tensor_id.append(id(pytorch_res))
 
                         except Exception as e:
                             raise PyTorchDoesNotSupportError(e)
@@ -264,12 +260,12 @@ def GetDualObject(name, pytorch, oneflow):
 
 def note_print_args(x, end=True):
     if end:
-        if isinstance(x, str) and re.search("Tensor", x) is None:
+        if isinstance(x, str) and "Tensor" not in x:
             print(f"\033[32m'{x}, '\033[0m", end="")
         else:
             print(f"\033[32m{x}, \033[0m", end="")
     else:
-        if isinstance(x, str) and re.search("Tensor", x) is None:
+        if isinstance(x, str) and "Tensor" not in x:
             print(f"\033[32m'{x}'\033[0m", end="")
         else:
             print(f"\033[32m{x}\033[0m", end="")
@@ -277,12 +273,12 @@ def note_print_args(x, end=True):
 
 def note_print_kwargs(x, y, end=True):
     if end:
-        if isinstance(y, str) and re.search("Tensor", y) is None:
+        if isinstance(y, str) and "Tensor" not in y:
             print(f"\033[32m{x}='{y}, '\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}, \033[0m", end="")
     else:
-        if isinstance(y, str) and re.search("Tensor", y) is None:
+        if isinstance(y, str) and "Tensor" not in y:
             print(f"\033[32m{x}='{y}'\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}\033[0m", end="")
@@ -303,7 +299,8 @@ def print_note_fake_program():
 
         if note_pytorch_kwargs[i]:
             index = 0
-            print(f"\033[32m, \033[0m", end="")
+            if note_pytorch_args[i]:
+                print(f"\033[32m, \033[0m", end="")
             for x in note_pytorch_kwargs[i].keys():
                 index += 1
                 note_print_kwargs(
@@ -313,7 +310,7 @@ def print_note_fake_program():
 
     print(f"\033[32m-----------------------------------------------------------\033[0m")
     unique_vis_tensor = []
-    flag_vis_tensor = [False for i in range(len(vis_tensor))]
+    flag_vis_tensor = [False] * len(vis_tensor)
     for i in range(len(vis_tensor)):
         if flag_vis_tensor[i] == True:
             continue
