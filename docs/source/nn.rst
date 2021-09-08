@@ -33,6 +33,7 @@ Operators for neural networks
         Embedding,
         Flatten,
         GELU,
+        GLU,
         GroupNorm,
         Hardsigmoid,
         Hardswish,

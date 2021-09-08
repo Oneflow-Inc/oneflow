@@ -89,12 +89,12 @@ class SystemOpKernelContext : public KernelContext {
 
   Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
 
-  void* state() const override {
-    UNIMPLEMENTED();
-    return nullptr;
+  const std::shared_ptr<KernelState>& state() const override {
+    static const std::shared_ptr<KernelState> null_state;
+    return null_state;
   }
 
-  void set_state(void* state) override { UNIMPLEMENTED(); }
+  void set_state(std::shared_ptr<KernelState> state) override { UNIMPLEMENTED(); }
 
   void set_device_ctx(DeviceCtx* ctx) { device_ctx_ = ctx; }
 

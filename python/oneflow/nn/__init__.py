@@ -18,6 +18,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.activation import (
     ELU,
     GELU,
+    GLU,
     Hardsigmoid,
     Hardswish,
     Hardtanh,
