@@ -103,13 +103,13 @@ class MaxPool1d(Module):
     def forward(self, x):
         y, indice = flow._C.max_pool1d(
             x,
-            data_format=self.channel_pos,
-            padding=self.padding,
             kernel_size=self.kernel_size,
             stride=self.stride,
+            padding=self.padding,
             dilation=self.dilation,
             return_indices=True,
             ceil_mode=self.ceil_mode,
+            data_format=self.channel_pos,
         )
         if self.return_indices:
             return y, indice
@@ -210,13 +210,13 @@ class MaxPool2d(Module):
     def forward(self, x):
         y, indice = flow._C.max_pool2d(
             x,
-            data_format=self.channel_pos,
-            padding=self.padding,
             kernel_size=self.kernel_size,
             stride=self.stride,
+            padding=self.padding,
             dilation=self.dilation,
             return_indices=True,
             ceil_mode=self.ceil_mode,
+            data_format=self.channel_pos,
         )
         if self.return_indices:
             return y, indice
@@ -324,13 +324,13 @@ class MaxPool3d(Module):
     def forward(self, x):
         y, indice = flow._C.max_pool3d(
             x,
-            data_format=self.channel_pos,
-            padding=self.padding,
             kernel_size=self.kernel_size,
             stride=self.stride,
+            padding=self.padding,
             dilation=self.dilation,
             return_indices=True,
             ceil_mode=self.ceil_mode,
+            data_format=self.channel_pos,
         )
 
         if self.return_indices:
