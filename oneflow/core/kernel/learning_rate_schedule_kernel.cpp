@@ -33,7 +33,7 @@ class LearningRateScheduleKernel final : public Kernel {
       (*log_stream_) << "train_step, lr\n";
     }
   }
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 
   std::unique_ptr<TeePersistentLogStream> log_stream_;
 };
@@ -198,7 +198,7 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
 
 }  // namespace
 
-void LearningRateScheduleKernel::ForwardDataContent(const KernelContext* ctx) const {
+void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   const LearningRateScheduleOpConf& conf = this->op_conf().learning_rate_schedule_conf();
   const int64_t train_step = *ctx->BnInOp2Blob("train_step")->dptr<int64_t>();
   float learning_rate = conf.learning_rate();

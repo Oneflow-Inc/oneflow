@@ -34,17 +34,17 @@ class DistributeCloneKernel final : public Kernel {
   ~DistributeCloneKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelContext* ctx) const override;
-  Blob* GetOutBlob(const KernelContext* ctx) const;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  Blob* GetOutBlob(KernelContext* ctx) const;
 };
 
 template<DeviceType device_type>
-void DistributeCloneKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void DistributeCloneKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   CheckSizeAndCopyBlob(ctx->device_ctx(), GetOutBlob(ctx), ctx->BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type>
-Blob* DistributeCloneKernel<device_type>::GetOutBlob(const KernelContext* ctx) const {
+Blob* DistributeCloneKernel<device_type>::GetOutBlob(KernelContext* ctx) const {
   Blob* out_blob = nullptr;
   FOR_RANGE(int, i, 0, this->op_attribute().output_bns().size()) {
     Blob* cur_blob = ctx->BnInOp2Blob(this->op_attribute().output_bns().Get(i));
