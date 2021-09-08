@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/user/kernels/communicate_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -23,36 +24,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
-HashMap<int64_t, const void*>* GlobalRank2DataPtr() {
-  static thread_local HashMap<int64_t, const void*> rank2data_ptr;
-  return &rank2data_ptr;
-}
-
-template<DeviceType device_type>
-Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx) {
-  if (GlobalProcessCtx::Rank() == dst) {
-    auto* rank2data_ptr = GlobalRank2DataPtr();
-    CHECK_OR_RETURN(rank2data_ptr->emplace(dst, in).second);
-  } else {
-    JUST(ccl::Send<device_type>(in, elem_cnt, dtype, dst, ctx));
-  }
-  return Maybe<void>::Ok();
-}
-
-template<DeviceType device_type>
-Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx) {
-  if (GlobalProcessCtx::Rank() == src) {
-    size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-    auto* rank2data_ptr = GlobalRank2DataPtr();
-    const void* in = JUST(MapAt(*rank2data_ptr, src));
-    Memcpy<device_type>(ctx, out, in, buffer_size);
-    CHECK_OR_RETURN(rank2data_ptr->erase(src) == 1);
-  } else {
-    JUST(ccl::Recv<device_type>(out, elem_cnt, dtype, src, ctx));
-  }
-  return Maybe<void>::Ok();
-}
 
 void Swap(int64_t& m, int64_t& n) {
   int64_t temp = m;

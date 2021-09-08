@@ -13,29 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_ESAC_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_ESAC_KERNEL_H_
+#ifndef ONEFLOW_USER_KERNELS_COMMUNICATE_UTIL_H_
+#define ONEFLOW_USER_KERNELS_COMMUNICATE_UTIL_H_
 
-#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
-struct EsacKernelState : public KernelState {
-  int64_t value{};
-};
+class DeviceCtx;
 
-template<typename T>
-class EsacKernel final : public Kernel {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(EsacKernel);
-  EsacKernel() = default;
-  ~EsacKernel() override = default;
+template<DeviceType device_type>
+Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx);
 
- private:
-  void VirtualKernelInit(KernelContext* ctx) override;
-  void ForwardDataContent(KernelContext* ctx) const override;
-};
+template<DeviceType device_type>
+Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_ESAC_KERNEL_H_
+#endif  // ONEFLOW_USER_KERNELS_COMMUNICATE_UTIL_H_
