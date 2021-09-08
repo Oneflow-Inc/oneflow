@@ -157,8 +157,14 @@ class RNN(Module):
                     input_size if layer == 0 else real_hidden_size * num_directions
                 )
 
-                w_ih = flow.nn.Parameter(flow.Tensor(gate_size, layer_input_size))
-                w_hh = flow.nn.Parameter(flow.Tensor(gate_size, real_hidden_size))
+                # TODO: Modify after adding the stride attribute
+                # w_ih = flow.nn.Parameter(flow.Tensor(gate_size, layer_input_size))
+                # w_hh = flow.nn.Parameter(flow.Tensor(gate_size, real_hidden_size))
+                # b_ih = flow.nn.Parameter(flow.Tensor(gate_size))
+                # b_hh = flow.nn.Parameter(flow.Tensor(gate_size))
+
+                w_ih = flow.nn.Parameter(flow.Tensor(layer_input_size, gate_size))
+                w_hh = flow.nn.Parameter(flow.Tensor(real_hidden_size, gate_size))
                 b_ih = flow.nn.Parameter(flow.Tensor(gate_size))
                 b_hh = flow.nn.Parameter(flow.Tensor(gate_size))
 
@@ -188,7 +194,7 @@ class RNN(Module):
     def permute_tensor(self, input):
         return input.permute(1, 0, 2)
 
-    def forward(self, input, hx=None):
+    def forward(self, input, h_0=None):
         if self.batch_first == False:
             input = self.permute_tensor(input)
 
@@ -196,24 +202,28 @@ class RNN(Module):
         num_layers = self.num_layers
         batch_size, seq_len, _ = input.size()
 
-        if hx is None:
+        if h_0 is None:
             h_t = flow.zeros(
                 (D * num_layers, batch_size, self.hidden_size),
                 dtype=input.dtype,
                 device=input.device,
             )
         else:
-            h_t = hx
+            h_t = h_0
 
         if self.bidirectional:
-            h_t_f = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
-                dim=0,
-            )
-            h_t_b = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
-                dim=0,
-            )
+            if h_0 is None:
+                h_t_f = h_t[:num_layers, :, :]
+                h_t_b = h_t[num_layers:, :, :]
+            else:    
+                h_t_f = flow.cat(
+                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
+                    dim=0,
+                )
+                h_t_b = flow.cat(
+                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
+                    dim=0,
+                )
         else:
             h_t_f = h_t
 
@@ -238,14 +248,25 @@ class RNN(Module):
                     if self.bidirectional:
                         x_t_b = hidden_seq[:, seq_len - 1 - t, :]
 
+                # TODO: Modify after adding the stride attribute
+                # hy1_f = flow.matmul(
+                #     x_t_f,
+                #     getattr(self, "weight_ih_l{}{}".format(layer, "")).permute(1, 0),
+                # )
+                # hy2_f = flow.matmul(
+                #     hid_t_f,
+                #     getattr(self, "weight_hh_l{}{}".format(layer, "")).permute(1, 0),
+                # )
+
                 hy1_f = flow.matmul(
                     x_t_f,
-                    getattr(self, "weight_ih_l{}{}".format(layer, "")).permute(1, 0),
+                    getattr(self, "weight_ih_l{}{}".format(layer, "")),
                 )
                 hy2_f = flow.matmul(
                     hid_t_f,
-                    getattr(self, "weight_hh_l{}{}".format(layer, "")).permute(1, 0),
+                    getattr(self, "weight_hh_l{}{}".format(layer, "")),
                 )
+
                 if self.bias:
                     hy1_f += getattr(self, "bias_ih_l{}{}".format(layer, ""))
                     hy2_f += getattr(self, "bias_hh_l{}{}".format(layer, ""))
@@ -254,17 +275,32 @@ class RNN(Module):
                 hidden_seq_f.append(hid_t_f.unsqueeze(1))
 
                 if self.bidirectional:
+
+                    # TODO：Modify after adding the stride attribute
+                    # hy1_b = flow.matmul(
+                    #     x_t_b,
+                    #     getattr(
+                    #         self, "weight_ih_l{}{}".format(layer, "_reverse")
+                    #     ).permute(1, 0),
+                    # )
+                    # hy2_b = flow.matmul(
+                    #     hid_t_b,
+                    #     getattr(
+                    #         self, "weight_hh_l{}{}".format(layer, "_reverse")
+                    #     ).permute(1, 0),
+                    # )
+
                     hy1_b = flow.matmul(
                         x_t_b,
                         getattr(
                             self, "weight_ih_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
+                        ),
                     )
                     hy2_b = flow.matmul(
                         hid_t_b,
                         getattr(
                             self, "weight_hh_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
+                        ),
                     )
                     if self.bias:
                         hy1_b += getattr(
@@ -444,8 +480,14 @@ class GRU(Module):
                     input_size if layer == 0 else real_hidden_size * num_directions
                 )
 
-                w_ih = flow.nn.Parameter(flow.Tensor(gate_size, layer_input_size))
-                w_hh = flow.nn.Parameter(flow.Tensor(gate_size, real_hidden_size))
+                # TODO: Modify after adding the stride attribute
+                # w_ih = flow.nn.Parameter(flow.Tensor(gate_size, layer_input_size))
+                # w_hh = flow.nn.Parameter(flow.Tensor(gate_size, real_hidden_size))
+                # b_ih = flow.nn.Parameter(flow.Tensor(gate_size))
+                # b_hh = flow.nn.Parameter(flow.Tensor(gate_size))
+
+                w_ih = flow.nn.Parameter(flow.Tensor(layer_input_size, gate_size))
+                w_hh = flow.nn.Parameter(flow.Tensor(real_hidden_size, gate_size))
                 b_ih = flow.nn.Parameter(flow.Tensor(gate_size))
                 b_hh = flow.nn.Parameter(flow.Tensor(gate_size))
 
@@ -475,31 +517,35 @@ class GRU(Module):
     def permute_tensor(self, input):
         return input.permute(1, 0, 2)
 
-    def forward(self, x, hidden=None):
+    def forward(self, input, h_0=None):
         if self.batch_first == False:
-            x = self.permute_tensor(x)
+            input = self.permute_tensor(input)
         D = 2 if self.bidirectional else 1
         num_layers = self.num_layers
-        batch_size, seq_len, _ = x.size()
+        batch_size, seq_len, _ = input.size()
 
-        if hidden is None:
+        if h_0 is None:
             h_t = flow.zeros(
                 (D * num_layers, batch_size, self.hidden_size),
-                dtype=x.dtype,
-                device=x.device,
+                dtype=input.dtype,
+                device=input.device,
             )
         else:
-            h_t = hidden
+            h_t = h_0
 
         if self.bidirectional:
-            h_t_f = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
-                dim=0,
-            )
-            h_t_b = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
-                dim=0,
-            )
+            if h_0 is None:
+                h_t_f = h_t[:num_layers, :, :]
+                h_t_b = h_t[num_layers:, :, :]
+            else:
+                h_t_f = flow.cat(
+                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
+                    dim=0,
+                )
+                h_t_b = flow.cat(
+                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
+                    dim=0,
+                )
         else:
             h_t_f = h_t
 
@@ -516,21 +562,31 @@ class GRU(Module):
 
             for t in range(seq_len):
                 if layer == 0:
-                    x_t_f = x[:, t, :]
+                    x_t_f = input[:, t, :]
                     if self.bidirectional:
-                        x_t_b = x[:, seq_len - 1 - t, :]
+                        x_t_b = input[:, seq_len - 1 - t, :]
                 else:
                     x_t_f = hidden_seq[:, t, :]
                     if self.bidirectional:
                         x_t_b = hidden_seq[:, seq_len - 1 - t, :]
 
+                # TODO: Modify after adding the stride attribute
+                # gi_f = flow.matmul(
+                #     x_t_f,
+                #     getattr(self, "weight_ih_l{}{}".format(layer, "")).permute(1, 0),
+                # )
+                # gh_f = flow.matmul(
+                #     hid_t_f,
+                #     getattr(self, "weight_hh_l{}{}".format(layer, "")).permute(1, 0),
+                # )
+
                 gi_f = flow.matmul(
                     x_t_f,
-                    getattr(self, "weight_ih_l{}{}".format(layer, "")).permute(1, 0),
+                    getattr(self, "weight_ih_l{}{}".format(layer, "")),
                 )
                 gh_f = flow.matmul(
                     hid_t_f,
-                    getattr(self, "weight_hh_l{}{}".format(layer, "")).permute(1, 0),
+                    getattr(self, "weight_hh_l{}{}".format(layer, "")),
                 )
                 if self.bias:
                     gi_f += getattr(self, "bias_ih_l{}{}".format(layer, ""))
@@ -548,17 +604,32 @@ class GRU(Module):
                 hidden_seq_f.append(hid_t_f.unsqueeze(1))
 
                 if self.bidirectional:
+                    
+                    # TODO：Modify after adding the stride attribute
+                    # gi_b = flow.matmul(
+                    #     x_t_b,
+                    #     getattr(
+                    #         self, "weight_ih_l{}{}".format(layer, "_reverse")
+                    #     ).permute(1, 0),
+                    # )
+                    # gh_b = flow.matmul(
+                    #     hid_t_b,
+                    #     getattr(
+                    #         self, "weight_hh_l{}{}".format(layer, "_reverse")
+                    #     ).permute(1, 0),
+                    # )
+
                     gi_b = flow.matmul(
                         x_t_b,
                         getattr(
                             self, "weight_ih_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
+                        ),
                     )
                     gh_b = flow.matmul(
                         hid_t_b,
                         getattr(
                             self, "weight_hh_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
+                        ),
                     )
                     if self.bias:
                         gi_b += getattr(self, "bias_ih_l{}{}".format(layer, "_reverse"))
@@ -774,8 +845,14 @@ class LSTM(nn.Module):
                     input_size if layer == 0 else real_hidden_size * num_directions
                 )
 
-                w_ih = flow.nn.Parameter(flow.Tensor(gate_size, layer_input_size))
-                w_hh = flow.nn.Parameter(flow.Tensor(gate_size, real_hidden_size))
+                # TODO：Modify after adding the stride attribute
+                # w_ih = flow.nn.Parameter(flow.Tensor(gate_size, layer_input_size))
+                # w_hh = flow.nn.Parameter(flow.Tensor(gate_size, real_hidden_size))
+                # b_ih = flow.nn.Parameter(flow.Tensor(gate_size))
+                # b_hh = flow.nn.Parameter(flow.Tensor(gate_size))
+
+                w_ih = flow.nn.Parameter(flow.Tensor(layer_input_size, gate_size))
+                w_hh = flow.nn.Parameter(flow.Tensor(real_hidden_size, gate_size))
                 b_ih = flow.nn.Parameter(flow.Tensor(gate_size))
                 b_hh = flow.nn.Parameter(flow.Tensor(gate_size))
 
@@ -787,7 +864,12 @@ class LSTM(nn.Module):
                     else:
                         layer_params = (w_ih, w_hh)
                 else:
-                    w_hr = flow.nn.Parameter(flow.Tensor(proj_size, hidden_size))
+                    
+                    # TODO: Modify after adding the stride attribute
+                    # w_hr = flow.nn.Parameter(flow.Tensor(proj_size, hidden_size))
+
+                    w_hr = flow.nn.Parameter(flow.Tensor(hidden_size, proj_size))
+
                     if bias:
                         layer_params = (w_ih, w_hh, b_ih, b_hh, w_hr)
                     else:
@@ -814,47 +896,53 @@ class LSTM(nn.Module):
     def permute_tensor(self, input):
         return input.permute(1, 0, 2)
 
-    def forward(self, x, h_x=None):
+    def forward(self, input, h_0=None):
         if self.batch_first == False:
-            x = self.permute_tensor(x)
+            input = self.permute_tensor(input)
         D = 2 if self.bidirectional else 1
         num_layers = self.num_layers
-        batch_size, seq_len, _ = x.size()
+        batch_size, seq_len, _ = input.size()
 
-        if h_x is None:
+        if h_0 is None:
             real_hidden_size = (
                 self.proj_size if self.proj_size > 0 else self.hidden_size
             )
             h_t = flow.zeros(
                 (D * num_layers, batch_size, real_hidden_size),
-                dtype=x.dtype,
-                device=x.device,
+                dtype=input.dtype,
+                device=input.device,
             )
             c_t = flow.zeros(
                 (D * num_layers, batch_size, self.hidden_size),
-                dtype=x.dtype,
-                device=x.device,
+                dtype=input.dtype,
+                device=input.device,
             )
-            h_x = (h_t, c_t)
+            h_0 = (h_t, c_t)
         else:
-            h_t, c_t = h_x
+            h_t, c_t = h_0
 
         if self.bidirectional:
-            h_t_f = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
-                dim=0,
-            )
-            h_t_b = flow.cat(
-                [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
-                dim=0,
-            )
-            c_t_f = flow.cat(
-                [c_t[l, :, :].unsqueeze(0) for l in range(c_t.size(0)) if l % 2 == 0],
-                dim=0,
-            )
-            c_t_b = flow.cat(
-                [c_t[l, :, :].unsqueeze(0) for l in range(c_t.size(0)) if l % 2 != 0],
-                dim=0,
+            if h_0 is None:
+                h_t_f = h_t[:num_layers, :, :]
+                h_t_b = h_t[num_layers:, :, :]
+                c_t_f = c_t[:num_layers, :, :]
+                c_t_b = c_t[num_layers:, :, :]
+            else:
+                h_t_f = flow.cat(
+                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
+                    dim=0,
+                )
+                h_t_b = flow.cat(
+                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
+                    dim=0,
+                )
+                c_t_f = flow.cat(
+                    [c_t[l, :, :].unsqueeze(0) for l in range(c_t.size(0)) if l % 2 == 0],
+                    dim=0,
+                )
+                c_t_b = flow.cat(
+                    [c_t[l, :, :].unsqueeze(0) for l in range(c_t.size(0)) if l % 2 != 0],
+                    dim=0,
             )
         else:
             h_t_f = h_t
@@ -877,21 +965,31 @@ class LSTM(nn.Module):
 
             for t in range(seq_len):
                 if layer == 0:
-                    x_t_f = x[:, t, :]
+                    x_t_f = input[:, t, :]
                     if self.bidirectional:
-                        x_t_b = x[:, seq_len - 1 - t, :]
+                        x_t_b = input[:, seq_len - 1 - t, :]
                 else:
                     x_t_f = hidden_seq[:, t, :]
                     if self.bidirectional:
                         x_t_b = hidden_seq[:, seq_len - 1 - t, :]
 
+                # TODO: Modify after adding the stride attribute
+                # gi_f = flow.matmul(
+                #     x_t_f,
+                #     getattr(self, "weight_ih_l{}{}".format(layer, "")).permute(1, 0),
+                # )
+                # gh_f = flow.matmul(
+                #     hid_t_f,
+                #     getattr(self, "weight_hh_l{}{}".format(layer, "")).permute(1, 0),
+                # )
+
                 gi_f = flow.matmul(
                     x_t_f,
-                    getattr(self, "weight_ih_l{}{}".format(layer, "")).permute(1, 0),
+                    getattr(self, "weight_ih_l{}{}".format(layer, "")),
                 )
                 gh_f = flow.matmul(
                     hid_t_f,
-                    getattr(self, "weight_hh_l{}{}".format(layer, "")).permute(1, 0),
+                    getattr(self, "weight_hh_l{}{}".format(layer, "")),
                 )
                 if self.bias:
                     gi_f += getattr(self, "bias_ih_l{}{}".format(layer, ""))
@@ -905,27 +1003,50 @@ class LSTM(nn.Module):
                 h_c_t_f = (forgetgate_f * h_c_t_f) + (ingate_f * cellgate_f)
                 hid_t_f = outgate_f * flow.tanh(h_c_t_f)
                 if self.proj_size > 0:
+                    
+                    # TODO：Modify after adding the stride attribute
+                    # hid_t_f = flow.matmul(
+                    #     hid_t_f,
+                    #     getattr(self, "weight_hr_l{}{}".format(layer, "")).permute(
+                    #         1, 0
+                    #     ),
+                    # )
+                    
                     hid_t_f = flow.matmul(
                         hid_t_f,
-                        getattr(self, "weight_hr_l{}{}".format(layer, "")).permute(
-                            1, 0
-                        ),
+                        getattr(self, "weight_hr_l{}{}".format(layer, ""))
                     )
                 hidden_seq_f.append(hid_t_f.unsqueeze(1))
 
                 if self.bidirectional:
+
+                    # TODO：Modify after adding the stride attribute
+                    # gi_b = flow.matmul(
+                    #     x_t_b,
+                    #     getattr(
+                    #         self, "weight_ih_l{}{}".format(layer, "_reverse")
+                    #     ).permute(1, 0),
+                    # )
+                    # gh_b = flow.matmul(
+                    #     hid_t_b,
+                    #     getattr(
+                    #         self, "weight_hh_l{}{}".format(layer, "_reverse")
+                    #     ).permute(1, 0),
+                    # )
+
                     gi_b = flow.matmul(
                         x_t_b,
                         getattr(
                             self, "weight_ih_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
+                        ),
                     )
                     gh_b = flow.matmul(
                         hid_t_b,
                         getattr(
                             self, "weight_hh_l{}{}".format(layer, "_reverse")
-                        ).permute(1, 0),
+                        ),
                     )
+
                     if self.bias:
                         gi_b += getattr(self, "bias_ih_l{}{}".format(layer, "_reverse"))
                         gh_b += getattr(self, "bias_hh_l{}{}".format(layer, "_reverse"))
@@ -940,11 +1061,20 @@ class LSTM(nn.Module):
                     h_c_t_b = (forgetgate_b * h_c_t_b) + (ingate_b * cellgate_b)
                     hid_t_b = outgate_b * flow.tanh(h_c_t_b)
                     if self.proj_size > 0:
+                        
+                        # TODO：Modify after adding the stride attribute
+                        # hid_t_b = flow.matmul(
+                        #     hid_t_b,
+                        #     getattr(
+                        #         self, "weight_hr_l{}{}".format(layer, "_reverse")
+                        #     ).permute(1, 0),
+                        # )
+
                         hid_t_b = flow.matmul(
                             hid_t_b,
                             getattr(
                                 self, "weight_hr_l{}{}".format(layer, "_reverse")
-                            ).permute(1, 0),
+                            ),
                         )
                     hidden_seq_b.insert(0, hid_t_b.unsqueeze(1))
 
