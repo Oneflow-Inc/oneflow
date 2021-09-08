@@ -105,7 +105,7 @@ def all_gather(tensor_list, tensor):
         tensor_list[i] = tensor[i].to_local()
 
 
-def broadcast(tensor):
+def broadcast(tensor, src):
     """
     Broadcasts the tensor to the whole group.
 
@@ -139,4 +139,4 @@ def broadcast(tensor):
 
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
-    flow._C.broadcast(tensor, True)
+    flow._C.broadcast(tensor, src, True)
