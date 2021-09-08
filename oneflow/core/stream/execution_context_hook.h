@@ -13,29 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_ESAC_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_ESAC_KERNEL_H_
+#ifndef ONEFLOW_CORE_STREAM_EXECUTION_CONTEXT_HOOK_H_
+#define ONEFLOW_CORE_STREAM_EXECUTION_CONTEXT_HOOK_H_
 
-#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
 
-struct EsacKernelState : public KernelState {
-  int64_t value{};
-};
-
-template<typename T>
-class EsacKernel final : public Kernel {
+class ExecutionContextHook {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(EsacKernel);
-  EsacKernel() = default;
-  ~EsacKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ExecutionContextHook);
+  ExecutionContextHook() = default;
+  virtual ~ExecutionContextHook() = default;
 
- private:
-  void VirtualKernelInit(KernelContext* ctx) override;
-  void ForwardDataContent(KernelContext* ctx) const override;
+  virtual Maybe<void> OnExecutionContextSetup() = 0;
+  virtual Maybe<void> OnExecutionContextTeardown() = 0;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_ESAC_KERNEL_H_
+#endif  // ONEFLOW_CORE_STREAM_EXECUTION_CONTEXT_HOOK_H_
