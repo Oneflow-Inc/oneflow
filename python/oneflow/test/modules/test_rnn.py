@@ -52,7 +52,11 @@ def _test_rnn(test_case, device):
 
     weights_torch = []
     for w in rnn_torch.parameters():
-        weights_torch.append(w.permute(1,0).cpu().data.numpy() if len(w.size())>1 else w.cpu().data.numpy())
+        weights_torch.append(
+            w.permute(1, 0).cpu().data.numpy()
+            if len(w.size()) > 1
+            else w.cpu().data.numpy()
+        )
 
     rnn_flow = flow.nn.RNN(
         input_size=input_size,
@@ -116,7 +120,11 @@ def _test_lstm(test_case, device):
 
     weights_torch = []
     for w in lstm_torch.parameters():
-        weights_torch.append(w.permute(1,0).cpu().data.numpy() if len(w.size())>1 else w.cpu().data.numpy())
+        weights_torch.append(
+            w.permute(1, 0).cpu().data.numpy()
+            if len(w.size()) > 1
+            else w.cpu().data.numpy()
+        )
 
     lstm_flow = flow.nn.LSTM(
         input_size=input_size,
@@ -178,7 +186,11 @@ def _test_gru(test_case, device):
 
     weights_torch = []
     for w in gru_torch.parameters():
-        weights_torch.append(w.permute(1,0).cpu().data.numpy() if len(w.size())>1 else w.cpu().data.numpy())
+        weights_torch.append(
+            w.permute(1, 0).cpu().data.numpy()
+            if len(w.size()) > 1
+            else w.cpu().data.numpy()
+        )
 
     gru_flow = flow.nn.GRU(
         input_size=input_size,

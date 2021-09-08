@@ -215,13 +215,21 @@ class RNN(Module):
             if h_0 is None:
                 h_t_f = h_t[:num_layers, :, :]
                 h_t_b = h_t[num_layers:, :, :]
-            else:    
+            else:
                 h_t_f = flow.cat(
-                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
+                    [
+                        h_t[l, :, :].unsqueeze(0)
+                        for l in range(h_t.size(0))
+                        if l % 2 == 0
+                    ],
                     dim=0,
                 )
                 h_t_b = flow.cat(
-                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
+                    [
+                        h_t[l, :, :].unsqueeze(0)
+                        for l in range(h_t.size(0))
+                        if l % 2 != 0
+                    ],
                     dim=0,
                 )
         else:
@@ -259,12 +267,10 @@ class RNN(Module):
                 # )
 
                 hy1_f = flow.matmul(
-                    x_t_f,
-                    getattr(self, "weight_ih_l{}{}".format(layer, "")),
+                    x_t_f, getattr(self, "weight_ih_l{}{}".format(layer, "")),
                 )
                 hy2_f = flow.matmul(
-                    hid_t_f,
-                    getattr(self, "weight_hh_l{}{}".format(layer, "")),
+                    hid_t_f, getattr(self, "weight_hh_l{}{}".format(layer, "")),
                 )
 
                 if self.bias:
@@ -292,15 +298,11 @@ class RNN(Module):
 
                     hy1_b = flow.matmul(
                         x_t_b,
-                        getattr(
-                            self, "weight_ih_l{}{}".format(layer, "_reverse")
-                        ),
+                        getattr(self, "weight_ih_l{}{}".format(layer, "_reverse")),
                     )
                     hy2_b = flow.matmul(
                         hid_t_b,
-                        getattr(
-                            self, "weight_hh_l{}{}".format(layer, "_reverse")
-                        ),
+                        getattr(self, "weight_hh_l{}{}".format(layer, "_reverse")),
                     )
                     if self.bias:
                         hy1_b += getattr(
@@ -539,11 +541,19 @@ class GRU(Module):
                 h_t_b = h_t[num_layers:, :, :]
             else:
                 h_t_f = flow.cat(
-                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
+                    [
+                        h_t[l, :, :].unsqueeze(0)
+                        for l in range(h_t.size(0))
+                        if l % 2 == 0
+                    ],
                     dim=0,
                 )
                 h_t_b = flow.cat(
-                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
+                    [
+                        h_t[l, :, :].unsqueeze(0)
+                        for l in range(h_t.size(0))
+                        if l % 2 != 0
+                    ],
                     dim=0,
                 )
         else:
@@ -581,12 +591,10 @@ class GRU(Module):
                 # )
 
                 gi_f = flow.matmul(
-                    x_t_f,
-                    getattr(self, "weight_ih_l{}{}".format(layer, "")),
+                    x_t_f, getattr(self, "weight_ih_l{}{}".format(layer, "")),
                 )
                 gh_f = flow.matmul(
-                    hid_t_f,
-                    getattr(self, "weight_hh_l{}{}".format(layer, "")),
+                    hid_t_f, getattr(self, "weight_hh_l{}{}".format(layer, "")),
                 )
                 if self.bias:
                     gi_f += getattr(self, "bias_ih_l{}{}".format(layer, ""))
@@ -604,7 +612,7 @@ class GRU(Module):
                 hidden_seq_f.append(hid_t_f.unsqueeze(1))
 
                 if self.bidirectional:
-                    
+
                     # TODO：Modify after adding the stride attribute
                     # gi_b = flow.matmul(
                     #     x_t_b,
@@ -621,15 +629,11 @@ class GRU(Module):
 
                     gi_b = flow.matmul(
                         x_t_b,
-                        getattr(
-                            self, "weight_ih_l{}{}".format(layer, "_reverse")
-                        ),
+                        getattr(self, "weight_ih_l{}{}".format(layer, "_reverse")),
                     )
                     gh_b = flow.matmul(
                         hid_t_b,
-                        getattr(
-                            self, "weight_hh_l{}{}".format(layer, "_reverse")
-                        ),
+                        getattr(self, "weight_hh_l{}{}".format(layer, "_reverse")),
                     )
                     if self.bias:
                         gi_b += getattr(self, "bias_ih_l{}{}".format(layer, "_reverse"))
@@ -864,7 +868,7 @@ class LSTM(nn.Module):
                     else:
                         layer_params = (w_ih, w_hh)
                 else:
-                    
+
                     # TODO: Modify after adding the stride attribute
                     # w_hr = flow.nn.Parameter(flow.Tensor(proj_size, hidden_size))
 
@@ -929,21 +933,37 @@ class LSTM(nn.Module):
                 c_t_b = c_t[num_layers:, :, :]
             else:
                 h_t_f = flow.cat(
-                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 == 0],
+                    [
+                        h_t[l, :, :].unsqueeze(0)
+                        for l in range(h_t.size(0))
+                        if l % 2 == 0
+                    ],
                     dim=0,
                 )
                 h_t_b = flow.cat(
-                    [h_t[l, :, :].unsqueeze(0) for l in range(h_t.size(0)) if l % 2 != 0],
+                    [
+                        h_t[l, :, :].unsqueeze(0)
+                        for l in range(h_t.size(0))
+                        if l % 2 != 0
+                    ],
                     dim=0,
                 )
                 c_t_f = flow.cat(
-                    [c_t[l, :, :].unsqueeze(0) for l in range(c_t.size(0)) if l % 2 == 0],
+                    [
+                        c_t[l, :, :].unsqueeze(0)
+                        for l in range(c_t.size(0))
+                        if l % 2 == 0
+                    ],
                     dim=0,
                 )
                 c_t_b = flow.cat(
-                    [c_t[l, :, :].unsqueeze(0) for l in range(c_t.size(0)) if l % 2 != 0],
+                    [
+                        c_t[l, :, :].unsqueeze(0)
+                        for l in range(c_t.size(0))
+                        if l % 2 != 0
+                    ],
                     dim=0,
-            )
+                )
         else:
             h_t_f = h_t
             c_t_f = c_t
@@ -984,12 +1004,10 @@ class LSTM(nn.Module):
                 # )
 
                 gi_f = flow.matmul(
-                    x_t_f,
-                    getattr(self, "weight_ih_l{}{}".format(layer, "")),
+                    x_t_f, getattr(self, "weight_ih_l{}{}".format(layer, "")),
                 )
                 gh_f = flow.matmul(
-                    hid_t_f,
-                    getattr(self, "weight_hh_l{}{}".format(layer, "")),
+                    hid_t_f, getattr(self, "weight_hh_l{}{}".format(layer, "")),
                 )
                 if self.bias:
                     gi_f += getattr(self, "bias_ih_l{}{}".format(layer, ""))
@@ -1003,7 +1021,7 @@ class LSTM(nn.Module):
                 h_c_t_f = (forgetgate_f * h_c_t_f) + (ingate_f * cellgate_f)
                 hid_t_f = outgate_f * flow.tanh(h_c_t_f)
                 if self.proj_size > 0:
-                    
+
                     # TODO：Modify after adding the stride attribute
                     # hid_t_f = flow.matmul(
                     #     hid_t_f,
@@ -1011,10 +1029,9 @@ class LSTM(nn.Module):
                     #         1, 0
                     #     ),
                     # )
-                    
+
                     hid_t_f = flow.matmul(
-                        hid_t_f,
-                        getattr(self, "weight_hr_l{}{}".format(layer, ""))
+                        hid_t_f, getattr(self, "weight_hr_l{}{}".format(layer, ""))
                     )
                 hidden_seq_f.append(hid_t_f.unsqueeze(1))
 
@@ -1036,15 +1053,11 @@ class LSTM(nn.Module):
 
                     gi_b = flow.matmul(
                         x_t_b,
-                        getattr(
-                            self, "weight_ih_l{}{}".format(layer, "_reverse")
-                        ),
+                        getattr(self, "weight_ih_l{}{}".format(layer, "_reverse")),
                     )
                     gh_b = flow.matmul(
                         hid_t_b,
-                        getattr(
-                            self, "weight_hh_l{}{}".format(layer, "_reverse")
-                        ),
+                        getattr(self, "weight_hh_l{}{}".format(layer, "_reverse")),
                     )
 
                     if self.bias:
@@ -1061,7 +1074,7 @@ class LSTM(nn.Module):
                     h_c_t_b = (forgetgate_b * h_c_t_b) + (ingate_b * cellgate_b)
                     hid_t_b = outgate_b * flow.tanh(h_c_t_b)
                     if self.proj_size > 0:
-                        
+
                         # TODO：Modify after adding the stride attribute
                         # hid_t_b = flow.matmul(
                         #     hid_t_b,
@@ -1072,9 +1085,7 @@ class LSTM(nn.Module):
 
                         hid_t_b = flow.matmul(
                             hid_t_b,
-                            getattr(
-                                self, "weight_hr_l{}{}".format(layer, "_reverse")
-                            ),
+                            getattr(self, "weight_hr_l{}{}".format(layer, "_reverse")),
                         )
                     hidden_seq_b.insert(0, hid_t_b.unsqueeze(1))
 
