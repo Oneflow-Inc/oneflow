@@ -46,7 +46,7 @@ class CpuStreamContext : public StreamContext,
 
 namespace {
 
-class DeviceCtxImpl final : public DeviceCtx, public StreamContextProvider {
+class DeviceCtxImpl final : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtxImpl);
   explicit DeviceCtxImpl(CpuStreamContext* stream_ctx) : stream_ctx_(stream_ctx) {}
@@ -60,8 +60,6 @@ class DeviceCtxImpl final : public DeviceCtx, public StreamContextProvider {
   void AddCallBack(std::function<void()> callback) const override { callback(); }
 
   vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
-
-  StreamContext* GetStreamContext() override { return stream_ctx_; }
 
  private:
   CpuStreamContext* stream_ctx_;
