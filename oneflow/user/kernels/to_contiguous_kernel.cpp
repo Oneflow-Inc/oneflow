@@ -16,13 +16,13 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/user/kernels/view_copy_kernel.h"
+#include "oneflow/user/kernels/to_contiguous_kernel.h"
 
 namespace oneflow {
 
 template<typename T>
-struct ViewCopyUtil<DeviceType::kCPU, T> : ViewCopyUtilBase {
-  using ViewCopyUtilBase::ViewCopyUtilBase;
+struct ToContiguousUtil<DeviceType::kCPU, T> : ToContiguousUtilBase {
+  using ToContiguousUtilBase::ToContiguousUtilBase;
 
   static constexpr size_t dsize = sizeof(T);
 
@@ -46,10 +46,10 @@ struct ViewCopyUtil<DeviceType::kCPU, T> : ViewCopyUtilBase {
 namespace {
 
 template<DeviceType device_type, typename T>
-class ViewCopyKernel final : public user_op::OpKernel {
+class ToContiguousKernel final : public user_op::OpKernel {
  public:
-  ViewCopyKernel() = default;
-  ~ViewCopyKernel() override = default;
+  ToContiguousKernel() = default;
+  ~ToContiguousKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -67,30 +67,31 @@ class ViewCopyKernel final : public user_op::OpKernel {
     const char* in_dptr = static_cast<const char*>(in->raw_dptr()) + storage_offset * sizeof(T);
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
 
-    ViewCopyUtil<device_type, T>(ctx->device_ctx(), in_shape, in_stride, in_dptr, out_dptr)();
+    ToContiguousUtil<device_type, T>(ctx->device_ctx(), in_shape, in_stride, in_dptr, out_dptr)();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_VIEW_COPY_KERNEL(device_type, T)               \
-  REGISTER_USER_KERNEL("view_copy")                             \
-      .SetCreateFn<ViewCopyKernel<device_type, T>>()            \
+#define REGISTER_TO_CONTIGUOUS_KERNEL(device_type, T)           \
+  REGISTER_USER_KERNEL("to_contiguous")                         \
+      .SetCreateFn<ToContiguousKernel<device_type, T>>()        \
       .SetIsMatchedHob((user_op::HobDeviceTag() == device_type) \
                        & (user_op::HobDataType("in", 0) == GetDataType<T>::value));
 
-#define REGISTER_VIEW_COPY_CPU_KERNEL(T) REGISTER_VIEW_COPY_KERNEL(DeviceType::kCPU, T)
-#define REGISTER_VIEW_COPY_GPU_KERNEL(T) REGISTER_VIEW_COPY_KERNEL(DeviceType::kGPU, T)
+#define REGISTER_TO_CONTIGUOUS_CPU_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kCPU, T)
+#define REGISTER_TO_CONTIGUOUS_GPU_KERNEL(T) REGISTER_TO_CONTIGUOUS_KERNEL(DeviceType::kGPU, T)
 
-#define REGISTER_VIEW_COPY_KERNEL_FOR_CPU_TYPES \
-  OF_PP_FOR_EACH_TUPLE(REGISTER_VIEW_COPY_CPU_KERNEL, VIEW_COPY_TYPES)
+#define REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CPU_TYPES \
+  OF_PP_FOR_EACH_TUPLE(REGISTER_TO_CONTIGUOUS_CPU_KERNEL, TO_CONTIGUOUS_TYPES)
 
-#define REGISTER_VIEW_COPY_KERNEL_FOR_GPU_TYPES \
-  OF_PP_FOR_EACH_TUPLE(REGISTER_VIEW_COPY_GPU_KERNEL, VIEW_COPY_TYPES VIEW_COPY_GPU_SPECIAL_TYPE)
+#define REGISTER_TO_CONTIGUOUS_KERNEL_FOR_GPU_TYPES       \
+  OF_PP_FOR_EACH_TUPLE(REGISTER_TO_CONTIGUOUS_GPU_KERNEL, \
+                       TO_CONTIGUOUS_TYPES TO_CONTIGUOUS_GPU_SPECIAL_TYPE)
 
-REGISTER_VIEW_COPY_KERNEL_FOR_CPU_TYPES
+REGISTER_TO_CONTIGUOUS_KERNEL_FOR_CPU_TYPES
 #ifdef WITH_CUDA
-REGISTER_VIEW_COPY_KERNEL_FOR_GPU_TYPES
+REGISTER_TO_CONTIGUOUS_KERNEL_FOR_GPU_TYPES
 #endif
 
 }  // namespace

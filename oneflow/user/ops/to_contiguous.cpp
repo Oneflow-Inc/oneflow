@@ -21,14 +21,13 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("view_copy")
+REGISTER_USER_OP("to_contiguous")
     .Input("in")
     .Output("out")
-    .Attr<int64_t>("storage_offset")
     .Attr<std::vector<int64_t>>("stride")
+    .Attr<int64_t>("storage_offset")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_
-#define ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_METHODS_H_
+#define ONEFLOW_CORE_FRAMEWORK_TENSOR_METHODS_H_
 
 #include "oneflow/core/framework/tensor.h"
 
@@ -26,7 +26,16 @@ class Tensor;
 
 Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
 
+namespace view {
+
+Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& tensor, const std::vector<int64_t>& start,
+                    const std::vector<int64_t>& end, const std::vector<int64_t>& step);
+
+Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& tensor, const std::vector<int32_t>& permute);
+
+}  // namespace view
+
 }  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_METHODS_H_

@@ -83,5 +83,9 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   return Maybe<void>::Ok();
 }
 
+void EagerBlobObject::TryResetBlobData() const {
+  if (!blob_->dptr()) { blob_->reset_dptr(tensor_buffer_->blob_dptr()); }
+}
+
 }  // namespace vm
 }  // namespace oneflow

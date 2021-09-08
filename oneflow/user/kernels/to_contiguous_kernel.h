@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_USER_KERNELS_VIEW_COPY_KERNEL_H_
-#define ONEFLOW_USER_KERNELS_VIEW_COPY_KERNEL_H_
+#ifndef ONEFLOW_USER_KERNELS_TO_CONTIGUOUS_KERNEL_H_
+#define ONEFLOW_USER_KERNELS_TO_CONTIGUOUS_KERNEL_H_
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/shape_vec.h"
@@ -23,10 +23,10 @@ limitations under the License.
 
 namespace oneflow {
 
-class ViewCopyUtilParam {
+class ToContiguousUtilParam {
  protected:
-  ViewCopyUtilParam(const DeviceCtx* ctx, const ShapeView& in_shape,
-                    const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
+  ToContiguousUtilParam(const DeviceCtx* ctx, const ShapeView& in_shape,
+                        const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
       : ctx(ctx), in_shape(in_shape), in_stride(in_stride), in_dptr(in_dptr), out_dptr(out_dptr) {}
 
   const DeviceCtx* ctx;
@@ -36,13 +36,13 @@ class ViewCopyUtilParam {
   char* out_dptr;
 };
 
-class ViewCopyUtilAttach;
+class ToContiguousUtilAttach;
 
-class ViewCopyUtilBase : public ViewCopyUtilParam {
+class ToContiguousUtilBase : public ToContiguousUtilParam {
  public:
-  ViewCopyUtilBase(const DeviceCtx* ctx, const ShapeView& in_shape,
-                   const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
-      : ViewCopyUtilParam(ctx, in_shape, in_stride, in_dptr, out_dptr),
+  ToContiguousUtilBase(const DeviceCtx* ctx, const ShapeView& in_shape,
+                       const std::vector<int64_t>& in_stride, const char* in_dptr, char* out_dptr)
+      : ToContiguousUtilParam(ctx, in_shape, in_stride, in_dptr, out_dptr),
         contiguous_block_size(1),
         contiguous_dim(in_shape.NumAxes() - 1),
         out_stride(in_shape.NumAxes()),
@@ -98,21 +98,21 @@ class ViewCopyUtilBase : public ViewCopyUtilParam {
 };
 
 template<DeviceType, typename>
-struct ViewCopyUtil : ViewCopyUtilBase {
-  using ViewCopyUtilBase::ViewCopyUtilBase;
+struct ToContiguousUtil : ToContiguousUtilBase {
+  using ToContiguousUtilBase::ToContiguousUtilBase;
 
   void operator()();
 };
 
 }  // namespace oneflow
 
-#define VIEW_COPY_TYPES         \
+#define TO_CONTIGUOUS_TYPES     \
   OF_PP_MAKE_TUPLE_SEQ(float)   \
   OF_PP_MAKE_TUPLE_SEQ(double)  \
   OF_PP_MAKE_TUPLE_SEQ(int32_t) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t) \
   OF_PP_MAKE_TUPLE_SEQ(int8_t)  \
   OF_PP_MAKE_TUPLE_SEQ(uint8_t)
-#define VIEW_COPY_GPU_SPECIAL_TYPE OF_PP_MAKE_TUPLE_SEQ(float16)
+#define TO_CONTIGUOUS_GPU_SPECIAL_TYPE OF_PP_MAKE_TUPLE_SEQ(float16)
 
-#endif  // ONEFLOW_USER_KERNELS_VIEW_COPY_KERNEL_H_
+#endif  // ONEFLOW_USER_KERNELS_TO_CONTIGUOUS_KERNEL_H_

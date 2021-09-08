@@ -861,10 +861,10 @@ class CopyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ViewCopyFunctor {
+class ToContiguousFunctor {
  public:
-  ViewCopyFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("view_copy").Input("in").Output("out").Build());
+  ToContiguousFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("to_contiguous").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     MutableAttrMap attrs;
@@ -1636,39 +1636,6 @@ class SplitWithSizeFunctor {
   }
 };
 
-class TensorViewFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& tensor, const Optional<Shape>& shape,
-                           const Optional<std::vector<int64_t>>& stride, int64_t storage_offset,
-                           const Optional<Symbol<DType>>& dtype) const {
-    if (!(tensor->is_eager() && tensor->is_local())) {
-      return Error::RuntimeError() << "TensorView(): input should be eager local tensor, but is "
-                                   << (tensor->is_lazy() ? "lazy" : "consistent");
-    }
-    JUST(tensor->has_eager_blob_object());
-    const auto& blob_object = JUST(tensor->eager_blob_object());
-
-    auto to_shape = shape.value_or(std::const_pointer_cast<Shape>(tensor->shape()));
-    auto to_dtype = dtype.value_or(tensor->dtype());
-    auto to_stride = JUST(tensor->stride());
-    if (stride) {
-      const auto& stride_vec = JUST(stride);
-      to_stride = std::make_shared<Stride>(StrideVector(stride_vec->begin(), stride_vec->end()));
-    }
-    auto tensor_meta = std::make_shared<MirroredTensorMeta>(
-        to_shape, to_dtype->data_type(), JUST(tensor->device()), to_stride,
-        storage_offset != -1 ? storage_offset : JUST(tensor->storage_offset()));
-
-    auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
-        tensor_meta, tensor->requires_grad(), tensor->is_leaf());
-    tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()),
-                                     blob_object->tensor_buffer());
-    JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
-    JUST(tensor_impl->eager_blob_object())->set_is_shape_synced(true);
-    return std::shared_ptr<Tensor>(std::make_shared<MirroredTensor>(tensor_impl));
-  }
-};
-
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1705,7 +1672,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::CopyFunctor>("Copy");
-  m.add_functor<impl::ViewCopyFunctor>("ViewCopy");
+  m.add_functor<impl::ToContiguousFunctor>("ToContiguous");
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::FlipGradFunctor>("FlipGrad");
   m.add_functor<impl::UpsampleFunctor>("Upsample");
@@ -1748,7 +1715,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SplitFunctor>("Split");
   m.add_functor<impl::SplitLikeFunctor>("SplitLike");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
-  m.add_functor<impl::TensorViewFunctor>("TensorView");
 };
 
 }  // namespace functional

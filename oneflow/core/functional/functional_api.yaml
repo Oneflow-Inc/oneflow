@@ -695,8 +695,8 @@
   signature: "Tensor (Tensor x, String device_type, Int64 device_id) => Copy"
   bind_python: True
 
-- name: "view_copy"
-  signature: "Tensor (Tensor x) => ViewCopy"
+- name: "to_contiguous"
+  signature: "Tensor (Tensor x) => ToContiguous"
   bind_python: True
 
 - name: "flip"
@@ -1200,8 +1200,4 @@
 
 - name: "recv"
   signature: "Tensor (Int64 src, Shape shape=None, DataType dtype=None, Device device=None, *, Tensor out=None) => Recv"
-  bind_python: True
-
-- name: "tensor_view"
-  signature: "Tensor (Tensor input, Shape shape=None, *, Int64List stride=None, Int64 offset=0, DataType dtype=None) => TensorView"
   bind_python: True
