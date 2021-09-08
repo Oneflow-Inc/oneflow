@@ -395,7 +395,7 @@ class BlockConfig(object):
     """
 
     def __init__(self):
-        self._is_null = True 
+        self._is_null = True
         self._stage_id = None
         self._activation_checkpointing = None
 
@@ -424,7 +424,7 @@ class BlockConfig(object):
         """
         self._is_null = False
         self._activation_checkpointing = value
-    
+
     def __repr__(self):
         main_str = (
             "("
@@ -432,9 +432,20 @@ class BlockConfig(object):
             + ":config:"
             + self.__class__.__name__
             + "("
-            + (("stage_id=" + str(self.stage_id) + ", ") if self.stage_id is not None else "")
-            + (("activation_checkpointing=" + str(self.activation_checkpointing) + ", ") if self.activation_checkpointing is not None else "")
+            + (
+                ("stage_id=" + str(self.stage_id) + ", ")
+                if self.stage_id is not None
+                else ""
+            )
+            + (
+                (
+                    "activation_checkpointing="
+                    + str(self.activation_checkpointing)
+                    + ", "
+                )
+                if self.activation_checkpointing is not None
+                else ""
+            )
             + "))"
         )
         return main_str
-

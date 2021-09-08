@@ -97,7 +97,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
-  // Build VM execution instructions with NNGraph's inputs/outputs/parameters for NNGraph execution. 
+  // Build VM execution instructions with NNGraph's inputs/outputs/parameters for NNGraph execution.
   Maybe<void> RunLazyJob(const one::EagerBlobObjectListPtr& inputs,
                          const one::EagerBlobObjectListPtr& outputs,
                          const one::EagerBlobObjectListPtr& parameters,

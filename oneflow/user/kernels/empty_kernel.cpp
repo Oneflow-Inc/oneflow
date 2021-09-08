@@ -29,11 +29,11 @@ class EmptyKernel final : public OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // None POD type need check 
-    if(!IsPODDataType(GetDataType<T>::value)) {
+    // None POD type need check
+    if (!IsPODDataType(GetDataType<T>::value)) {
       const user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
       CHECK(out->shape().NumAxes() > 0 && out->shape().elem_cnt() == 0)
-        << "None POD Tensor created by empty op must be 0-Size tensor.";
+          << "None POD Tensor created by empty op must be 0-Size tensor.";
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

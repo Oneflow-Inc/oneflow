@@ -1,18 +1,26 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import os
 import sys
-
-# For debug
-os.environ["MASTER_ADDR"] = "127.0.0.1"
-os.environ["MASTER_PORT"] = "8003"
-os.environ["WORLD_SIZE"] = "4"
-os.environ["RANK"] = str(sys.argv[1])
-os.environ["LOCAL_RANK"] = str(sys.argv[1])
-
 import unittest
 import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+
 
 class OFRecordDataLoader(flow.nn.Module):
     def __init__(
@@ -46,7 +54,9 @@ class OFRecordDataLoader(flow.nn.Module):
         height = 22
         width = 22
 
-        self.record_image_decoder = flow.nn.OFRecordImageDecoder("encoded", color_space=color_space)
+        self.record_image_decoder = flow.nn.OFRecordImageDecoder(
+            "encoded", color_space=color_space
+        )
 
         self.resize = flow.nn.image.Resize(target_size=[height, width])
 
@@ -65,6 +75,7 @@ class OFRecordDataLoader(flow.nn.Module):
 
         return image, label
 
+
 D = "cuda"
 B = [flow.sbp.broadcast]
 P = flow.placement("cuda", {0: [0, 1, 2, 3]})
@@ -74,6 +85,7 @@ P1 = flow.placement("cuda", {0: [1]})
 P2 = flow.placement("cuda", {0: [2]})
 P3 = flow.placement("cuda", {0: [3]})
 P3C = flow.placement("cpu", {0: [3]})
+
 
 def _get_ppm_and_opt():
     train_data_loader = OFRecordDataLoader(
@@ -106,7 +118,7 @@ def _get_ppm_and_opt():
             self.linear = flow.nn.Linear(8, 8, False)
             self.linear.to_consistent(placement=P1, sbp=B)
             flow.nn.init.constant_(self.linear.weight, 0.023)
-        
+
         def forward(self, input):
             out0 = input.to_consistent(placement=P1, sbp=input.sbp)
             out1 = self.linear(out0)
@@ -118,7 +130,7 @@ def _get_ppm_and_opt():
             self.linear = flow.nn.Linear(8, 8, False)
             self.linear.to_consistent(placement=P2, sbp=B)
             flow.nn.init.constant_(self.linear.weight, 0.023)
-        
+
         def forward(self, input):
             out0 = input.to_consistent(placement=P2, sbp=input.sbp)
             out1 = self.linear(out0)
@@ -130,7 +142,7 @@ def _get_ppm_and_opt():
             self.linear = flow.nn.Linear(8, 2, False)
             self.linear.to_consistent(placement=P3, sbp=B)
             flow.nn.init.constant_(self.linear.weight, 0.023)
-        
+
         def forward(self, out0, label):
             out0 = out0.to_consistent(placement=P3, sbp=out0.sbp)
             label = label.to_consistent(placement=P3, sbp=out0.sbp)
@@ -159,6 +171,7 @@ def _get_ppm_and_opt():
     of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.0001)
     return pp_m, of_sgd
 
+
 def _test_graph_pipeline(test_case):
     rank = flow.env.get_rank()
 
@@ -183,20 +196,15 @@ def _test_graph_pipeline(test_case):
                 return out, image, label
 
         pp_g = PipelineGraph()
-        pp_g.debug()
 
         def one_iter(iter_idx):
             of_graph_out, image, label = pp_g()
             if rank == 3:
-                #if iter_idx == 0:
-                #    print(pp_g)
                 of_graph_out = of_graph_out.to_local()
                 of_graph_out_np = of_graph_out.numpy()
                 print("out numpy \n", of_graph_out_np)
                 label = label.to_local()
-                print(f"label numpy \n shape {label.shape} data {label.numpy()}")
                 image = image.to_local()
-                print(f"image numpy \n shape {image.shape} data {image}")
                 return of_graph_out_np, image.numpy(), label.numpy()
 
         check_list = []
@@ -212,22 +220,23 @@ def _test_graph_pipeline(test_case):
         class DataModule(flow.nn.Module):
             def __init__(self, data):
                 super().__init__()
-                self.data_list = [] 
+                self.data_list = []
                 self.idx = 0
                 for tuple_pair in data:
                     image = tuple_pair[0]
                     label = tuple_pair[1]
-                    print("image ", image)
-                    print("label ", label)
                     for i in range(4):
                         s = i * 4
                         e = s + 4
                         micro_batch_image = image[s:e]
                         micro_batch_label = label[s:e]
-                        print("micro image ", micro_batch_image)
-                        print("micro label ", micro_batch_label)
-                        self.data_list.append((flow.Tensor(micro_batch_image).to("cuda:3"), flow.Tensor(micro_batch_label).to("cuda:3")))
-            
+                        self.data_list.append(
+                            (
+                                flow.Tensor(micro_batch_image).to("cuda:3"),
+                                flow.Tensor(micro_batch_label).to("cuda:3"),
+                            )
+                        )
+
             def forward(self):
                 image, label = self.data_list[self.idx]
                 self.idx += 1
@@ -254,9 +263,9 @@ def _test_graph_pipeline(test_case):
                 out1 = self.linear1(out0)
                 out2 = self.linear2(out1)
                 out3 = self.linear3(out2)
-                loss = out3.sum() 
+                loss = out3.sum()
                 return loss, image, label
-        
+
         if rank == 3:
             d_m = DataModule(data)
             t_m = TrainModule()
@@ -268,8 +277,6 @@ def _test_graph_pipeline(test_case):
                     loss, image, label = t_m(image, label)
                     out_np = loss.numpy()
                     print("eager out numpy \n", out_np)
-                    print(f"eager label numpy \n shape {label.shape} data {label.numpy()}")
-                    print(f"eager image numpy \n shape {image.shape} data {image.numpy()}")
                     loss = loss * 0.25
                     loss.backward()
                     if iter_idx % 4 == 3:
@@ -283,26 +290,24 @@ def _test_graph_pipeline(test_case):
                 check_list.append(one_iter(i))
             return check_list
 
-
-    iter_num = 1
+    iter_num = 3
     graph_check_list, data = train_with_graph(iter_num)
     module_check_list = train_with_module(iter_num * 4, data)
 
-    if (rank == 3):
-        for i in range(iter_num*4):
+    if rank == 3:
+        for i in range(iter_num * 4):
             # check equal on loss
             test_case.assertTrue(
-                np.array_equal(module_check_list[i], graph_check_list[i//4][i%4])
+                np.array_equal(module_check_list[i], graph_check_list[i // 4][i % 4])
             )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-@flow.unittest.skip_unless_1n1d()
+@flow.unittest.skip_unless_1n4d()
 class TestGraphPipeline(oneflow.unittest.TestCase):
     def test_graph_pipeline(test_case):
         _test_graph_pipeline(test_case)
 
 
 if __name__ == "__main__":
-    sys.argv.pop()
     unittest.main()
