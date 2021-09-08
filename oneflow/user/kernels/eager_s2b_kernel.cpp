@@ -110,14 +110,14 @@ class EagerSToBKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_B_TO_S_KERNEL(device)  \
+#define REGISTER_EAGER_S_TO_B_KERNEL(device)  \
   REGISTER_USER_KERNEL("eager_s_to_b")        \
       .SetCreateFn<EagerSToBKernel<device>>() \
       .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
-REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kCPU)
+REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kCPU)
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-REGISTER_EAGER_B_TO_S_KERNEL(DeviceType::kGPU)
+REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kGPU)
 #endif
 
 }  // namespace oneflow
