@@ -70,9 +70,9 @@ class IBVerbsMessagePool final {
   IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message);
   void RegisterMessagePool();
   ActorMsgMR* GetMessage();
-  ActorMsgMR* GetMessageFromBuf() ;
+  ActorMsgMR* GetMessageFromBuf();
   void PutMessage(ActorMsgMR* msg_mr);
-  bool IsEmpty() ;
+  bool IsEmpty();
 
  private:
   void FreeMr() {

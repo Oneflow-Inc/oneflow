@@ -33,50 +33,49 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 
 }  // namespace
 
-IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd * pd, uint32_t num_of_message):pd_(pd),num_of_message_(num_of_message) {}
+IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd* pd, uint32_t num_of_message)
+    : pd_(pd), num_of_message_(num_of_message) {}
 
 void IBVerbsMessagePool::RegisterMessagePool() {
-    size_t actor_msg_size = sizeof(ActorMsg);
-    size_t register_memory_size = actor_msg_size * (num_of_message_);
-    char* addr = (char*)malloc(register_memory_size);
-    ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
-        pd_, addr, register_memory_size,
-        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
-    CHECK(mr);
-    ibv_mr_buf_.push_front(mr);
-    memory_buf_.push_front(addr);
-    for (size_t i = 0; i < num_of_message_; i++) {
-      char* split_addr = addr + actor_msg_size * i;
-      ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, actor_msg_size);
-      message_buf_.push_front(msg_mr);
-    }
-}
-
-ActorMsgMR * IBVerbsMessagePool::GetMessage() {
-    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
-    if (IsEmpty() == false) {
-      return GetMessageFromBuf();
-    } else {
-      RegisterMessagePool();
-      return GetMessageFromBuf();
-    }
-}
-
-ActorMsgMR * IBVerbsMessagePool::GetMessageFromBuf() {
-    ActorMsgMR* msg_mr = message_buf_.front();
-    message_buf_.pop_front();
-    return msg_mr;
-}
-
-void IBVerbsMessagePool::PutMessage(ActorMsgMR *msg_mr) {
-    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
+  size_t actor_msg_size = sizeof(ActorMsg);
+  size_t register_memory_size = actor_msg_size * (num_of_message_);
+  char* addr = (char*)malloc(register_memory_size);
+  ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
+      pd_, addr, register_memory_size,
+      IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+  CHECK(mr);
+  ibv_mr_buf_.push_front(mr);
+  memory_buf_.push_front(addr);
+  for (size_t i = 0; i < num_of_message_; i++) {
+    char* split_addr = addr + actor_msg_size * i;
+    ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, actor_msg_size);
     message_buf_.push_front(msg_mr);
+  }
 }
 
-bool IBVerbsMessagePool::IsEmpty() {
-  return message_buf_.empty() == true;
+ActorMsgMR* IBVerbsMessagePool::GetMessage() {
+  std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
+  if (IsEmpty() == false) {
+    return GetMessageFromBuf();
+  } else {
+    RegisterMessagePool();
+    return GetMessageFromBuf();
+  }
 }
- 
+
+ActorMsgMR* IBVerbsMessagePool::GetMessageFromBuf() {
+  ActorMsgMR* msg_mr = message_buf_.front();
+  message_buf_.pop_front();
+  return msg_mr;
+}
+
+void IBVerbsMessagePool::PutMessage(ActorMsgMR* msg_mr) {
+  std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
+  message_buf_.push_front(msg_mr);
+}
+
+bool IBVerbsMessagePool::IsEmpty() { return message_buf_.empty() == true; }
+
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
                      ibv_cq* recv_cq, IBVerbsMessagePool* message_pool) {
   // ctx_, pd_
@@ -174,7 +173,7 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-  for(uint32_t index = 0 ; index < queue_depth_ ; index ++) {
+  for (uint32_t index = 0; index < queue_depth_; index++) {
     ActorMsgMR* msg_mr = message_pool_->GetMessage();
     PostRecvRequest(msg_mr);
   }
