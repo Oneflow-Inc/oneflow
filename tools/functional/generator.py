@@ -127,6 +127,8 @@ value_aliases = {
     "kBool": "DType::Bool()",
 }
 
+int_list_type = {"Int32List", "Int64List"}
+
 
 def _escape_quote(fmt):
     return re.sub(r"\"|\'", '\\"', fmt)
@@ -222,7 +224,17 @@ class Argument:
         sp = self._name.find("=")
         if sp != -1:
             self._default_value = _normalize(self._name[sp + 1 :])
-            if self._default_value == "None":
+            if self._type in int_list_type:
+                _size_list = []
+                for i in range(self._size):
+                    # For int32List[2] = 1, _size_list will be [1, 1]
+                    _size_list.append(int(self._default_value))
+                self._default_cpp_value = str(_size_list)
+                self._default_cpp_value = self._default_cpp_value.replace("[", "{")
+                self._default_cpp_value = self._default_cpp_value.replace(
+                    "]", "}"
+                )  # "[1, 1]" -> "{1, 1}"
+            elif self._default_value == "None":
                 self._optional = True
                 self._default_cpp_value = ""
             elif self._default_value in value_aliases:
