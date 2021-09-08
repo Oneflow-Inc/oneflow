@@ -678,7 +678,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   CHECK_OR_RETURN(!(*outputs)[0]);
 
-  if (!op_expr.grad_nd_sbp().has_value() && (*sbp_sym) == (*JUST(input_tensor->nd_sbp()))) {
+  if (!op_expr.grad_nd_sbp().has_value() && sbp_sym == JUST(input_tensor->nd_sbp())) {
     // NOTE(chengcheng):  if to_consistent ONLY change placement (nd_sbp and grad_nd_sbp is same),
     //    there is no need to build hierarchical_parallel_cast op.
     if (input_proxy) {
