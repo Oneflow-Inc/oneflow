@@ -41,6 +41,8 @@ note_pytorch_args = []
 note_pytorch_kwargs = []
 vis_tensor = []
 call_tensor_id = []
+
+
 class PyTorchDoesNotSupportError(Exception):
     def __init__(self, exc):
         self.exc = exc
@@ -208,9 +210,19 @@ def GetDualObject(name, pytorch, oneflow):
 
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
-                            if isinstance(pytorch_res, torch_original.Tensor) and hasattr(pytorch, '__name__') and (pytorch.__name__ != "to" or (pytorch.__name__ == "to" and pytorch_args == "cuda")):
+                            if (
+                                isinstance(pytorch_res, torch_original.Tensor)
+                                and hasattr(pytorch, "__name__")
+                                and (
+                                    pytorch.__name__ != "to"
+                                    or (
+                                        pytorch.__name__ == "to"
+                                        and pytorch_args == "cuda"
+                                    )
+                                )
+                            ):
                                 call_tensor_id.append(id(pytorch_res))
-                        
+
                         except Exception as e:
                             raise PyTorchDoesNotSupportError(e)
 
@@ -307,7 +319,7 @@ def print_note_fake_program():
             continue
         unique_vis_tensor.append(vis_tensor[i])
         flag_vis_tensor[i] = True
-        for j in range(i+1, len(vis_tensor)):
+        for j in range(i + 1, len(vis_tensor)):
             if id(vis_tensor[i]) == id(vis_tensor[j]) and flag_vis_tensor[j] == False:
                 flag_vis_tensor[j] = True
 
@@ -477,7 +489,10 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                         call_tensor_id.append(id(getattr(x.pytorch, key).grad))
 
                 for x in dual_objects_to_test:
-                    if isinstance(x.pytorch, torch_original.Tensor) and id(x.pytorch) not in call_tensor_id:
+                    if (
+                        isinstance(x.pytorch, torch_original.Tensor)
+                        and id(x.pytorch) not in call_tensor_id
+                    ):
                         vis_tensor.append(x.pytorch)
                 for x in dual_objects_to_test:
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
