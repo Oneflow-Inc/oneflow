@@ -224,7 +224,7 @@ class Optional final : private internal::OptionalBase<T> {
       : base() {}
 
   template<typename... Args,
-           typename std::enable_if<!IsOneAndDecaySameAs<Optional, Args...>::value, int> = 0>
+           typename std::enable_if<!IsOneAndDecaySameAs<Optional, Args...>::value, int>::type = 0>
   Optional(Args&&... val)  // NOLINT(google-explicit-constructor)
       : base(std::forward<Args>(val)...) {}
 
@@ -232,8 +232,7 @@ class Optional final : private internal::OptionalBase<T> {
   Optional(Optional&&) noexcept = default;
 
   template<typename U,
-           typename std::enable_if<!std::is_same<typename std::decay<U>::type, Optional>::value,
-                                   int>::type = 0>
+           typename std::enable_if<!IsOneAndDecaySameAs<Optional, U>::value, int>::type = 0>
   Optional& operator=(U&& val) {
     return static_cast<Optional&>(static_cast<base&>(*this) = std::forward<U>(val));
   }
