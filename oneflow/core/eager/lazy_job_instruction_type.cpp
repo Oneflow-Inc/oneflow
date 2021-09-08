@@ -101,13 +101,13 @@ class RunLazyJobInstructionType final : public InstructionType {
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       for (const auto& op_name : cur_nn_graph->inputs_op_names()) {
-        buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Send(job_instance);
+        buffer_mgr->Get(GetInputBufferName(job_name, op_name))->Push(job_instance);
       }
       for (const auto& op_name : cur_nn_graph->outputs_op_names()) {
-        buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Send(job_instance);
+        buffer_mgr->Get(GetOutputBufferName(job_name, op_name))->Push(job_instance);
       }
-      buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Send(job_instance);
-      buffer_mgr->Get(GetSourceTickBufferName(job_name))->Send(job_instance);
+      buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
+      buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
       OF_PROFILER_RANGE_POP();  // BufferMgr
     }
     OF_PROFILER_RANGE_PUSH("EnqueueNNGraph");
