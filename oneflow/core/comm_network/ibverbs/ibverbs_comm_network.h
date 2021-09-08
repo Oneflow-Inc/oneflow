@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_message_pool.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 

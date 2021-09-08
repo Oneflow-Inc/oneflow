@@ -58,45 +58,7 @@ struct WorkRequestId {
   ActorMsgMR* msg_mr;
 };
 
-class IBVerbsMessagePool final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(IBVerbsMessagePool);
-  IBVerbsMessagePool() = delete;
-  ~IBVerbsMessagePool() {
-    FreeMr();
-    FreeMemory();
-  }
-
-  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message);
-  void RegisterMessagePool();
-  ActorMsgMR* GetMessage();
-  ActorMsgMR* GetMessageFromBuf();
-  void PutMessage(ActorMsgMR* msg_mr);
-  bool IsEmpty();
-
- private:
-  void FreeMr() {
-    while (ibv_mr_buf_.empty() == false) {
-      ibv_mr* mr = ibv_mr_buf_.front();
-      ibv_mr_buf_.pop_front();
-      CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
-    }
-  }
-
-  void FreeMemory() {
-    while (memory_buf_.empty() == false) {
-      free(memory_buf_.front());
-      memory_buf_.pop_front();
-    }
-  }
-
-  ibv_pd* pd_;
-  size_t num_of_message_;
-  std::mutex message_buf_mutex_;
-  std::deque<ActorMsgMR*> message_buf_;
-  std::deque<ibv_mr*> ibv_mr_buf_;
-  std::deque<char*> memory_buf_;
-};
+class IBVerbsMessagePool;
 
 struct IBVerbsCommNetRMADesc;
 
