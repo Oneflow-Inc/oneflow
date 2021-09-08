@@ -67,48 +67,12 @@ class IBVerbsMessagePool final {
     FreeMemory();
   }
 
-  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message)
-      : pd_(pd), num_of_message_(number_of_message) {}
-
-  void RegisterMessagePool() {
-    size_t actor_msg_size = sizeof(ActorMsg);
-    size_t register_memory_size = actor_msg_size * (num_of_message_);
-    char* addr = (char*)malloc(register_memory_size);
-    ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
-        pd_, addr, register_memory_size,
-        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
-    CHECK(mr);
-    ibv_mr_buf_.push_front(mr);
-    memory_buf_.push_front(addr);
-    for (size_t i = 0; i < num_of_message_; i++) {
-      char* split_addr = addr + actor_msg_size * i;
-      ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, actor_msg_size);
-      message_buf_.push_front(msg_mr);
-    }
-  }
-
-  ActorMsgMR* GetMessage() {
-    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
-    if (IsEmpty() == false) {
-      return GetMessageFromBuf();
-    } else {
-      RegisterMessagePool();
-      return GetMessageFromBuf();
-    }
-  }
-
-  ActorMsgMR* GetMessageFromBuf() {
-    ActorMsgMR* msg_mr = message_buf_.front();
-    message_buf_.pop_front();
-    return msg_mr;
-  }
-
-  void PutMessage(ActorMsgMR* msg_mr) {
-    std::unique_lock<std::mutex> msg_buf_lck(message_buf_mutex_);
-    message_buf_.push_front(msg_mr);
-  }
-
-  bool IsEmpty() { return message_buf_.empty() == true; }
+  IBVerbsMessagePool(ibv_pd* pd, uint32_t number_of_message);
+  void RegisterMessagePool();
+  ActorMsgMR* GetMessage();
+  ActorMsgMR* GetMessageFromBuf() ;
+  void PutMessage(ActorMsgMR* msg_mr);
+  bool IsEmpty() ;
 
  private:
   void FreeMr() {
