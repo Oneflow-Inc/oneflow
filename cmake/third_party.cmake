@@ -77,8 +77,9 @@ if (BUILD_CUDA)
     list(APPEND VENDOR_CUDA_LIBRARIES CUDA::cublasLt_static)
     if(CUDA_VERSION VERSION_GREATER_EQUAL "10.2")
       list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nvjpeg_static)
-      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nppc_static)
       list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nppig_static)
+      # Must put nppc_static after nppig_static in CUDA 10.2
+      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nppc_static)
     endif()
   endif()
   # add a cache entry if want to use a ccache/sccache wrapped nvcc
