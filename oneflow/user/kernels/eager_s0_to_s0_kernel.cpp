@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/user/kernels/communicate_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -23,34 +24,6 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
-HashMap<int64_t, const void*>* GlobalRank2DataPtr() {
-  static thread_local HashMap<int64_t, const void*> rank2data_ptr;
-  return &rank2data_ptr;
-}
-
-Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx) {
-  if (GlobalProcessCtx::Rank() == dst) {
-    auto* rank2data_ptr = GlobalRank2DataPtr();
-    CHECK_OR_RETURN(rank2data_ptr->emplace(dst, in).second);
-  } else {
-    JUST(ccl::Send<DeviceType::kCPU>(in, elem_cnt, dtype, dst, ctx));
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx) {
-  if (GlobalProcessCtx::Rank() == src) {
-    size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-    auto* rank2data_ptr = GlobalRank2DataPtr();
-    const void* in = JUST(MapAt(*rank2data_ptr, src));
-    Memcpy<DeviceType::kCPU>(ctx, out, in, buffer_size);
-    CHECK_OR_RETURN(rank2data_ptr->erase(src) == 1);
-  } else {
-    JUST(ccl::Recv<DeviceType::kCPU>(out, elem_cnt, dtype, src, ctx));
-  }
-  return Maybe<void>::Ok();
-}
 
 void Swap(int64_t& m, int64_t& n) {
   int64_t temp = m;
@@ -154,9 +127,10 @@ class EagerCclS0ToS0Kernel final : public user_op::OpKernel {
         int64_t src_idx_offset =
             data_piece_idx - (in_parallel_id * num_of_data_piece / in_parallel_num);
 
-        CHECK_JUST(Send(reinterpret_cast<const void*>(reinterpret_cast<const char*>(in_ptr)
-                                                      + src_idx_offset * size_per_data_piece),
-                        elem_per_data_piece, in->data_type(), dst, ctx->device_ctx()));
+        CHECK_JUST(Send<DeviceType::kCPU>(
+            reinterpret_cast<const void*>(reinterpret_cast<const char*>(in_ptr)
+                                          + src_idx_offset * size_per_data_piece),
+            elem_per_data_piece, in->data_type(), dst, ctx->device_ctx()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
         Symbol<ParallelDesc> out_parallel_desc = kernel_state->out_parallel_desc();
@@ -168,9 +142,10 @@ class EagerCclS0ToS0Kernel final : public user_op::OpKernel {
         int64_t dst_idx_offset =
             data_piece_idx - (out_parallel_id * num_of_data_piece / out_parallel_num);
 
-        CHECK_JUST(Recv(reinterpret_cast<void*>(reinterpret_cast<char*>(out_ptr)
-                                                + dst_idx_offset * size_per_data_piece),
-                        elem_per_data_piece, out->data_type(), src, ctx->device_ctx()));
+        CHECK_JUST(
+            Recv<DeviceType::kCPU>(reinterpret_cast<void*>(reinterpret_cast<char*>(out_ptr)
+                                                           + dst_idx_offset * size_per_data_piece),
+                                   elem_per_data_piece, out->data_type(), src, ctx->device_ctx()));
       }
     }
   };
