@@ -20,6 +20,10 @@ limitations under the License.
 
 namespace oneflow {
 
+struct EsacKernelState : public KernelState {
+  int64_t value{};
+};
+
 template<typename T>
 class EsacKernel final : public Kernel {
  public:
@@ -28,9 +32,8 @@ class EsacKernel final : public Kernel {
   ~EsacKernel() override = default;
 
  private:
-  void DestroyState(void* state) const override;
   void VirtualKernelInit(KernelContext* ctx) override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow

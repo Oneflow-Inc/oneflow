@@ -126,8 +126,8 @@ def _test_combined_margin_loss(
     np_labels = np.random.randint(0, input_shape[1], size=(*label_shape,)).astype(
         np.int32
     )
-    x = flow.Tensor(np_x, device=device_type, dtype=data_type, requires_grad=True)
-    labels = flow.Tensor(np_labels, device=device_type, dtype=flow.int32)
+    x = flow.tensor(np_x, device=device_type, dtype=data_type, requires_grad=True)
+    labels = flow.tensor(np_labels, device=device_type, dtype=flow.int32)
     loss_func = flow.nn.CombinedMarginLoss(m1, m2, m3).to(flow.device(device_type))
     output = loss_func(x, labels)
     output.sum().backward()

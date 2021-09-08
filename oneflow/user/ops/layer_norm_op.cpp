@@ -220,9 +220,6 @@ REGISTER_USER_OP("layer_norm_param_grad")
       }
       if (has_gamma_diff) {
         user_op::TensorDesc* gamma_diff = ctx->OutputTensorDesc("gamma_diff", 0);
-        const user_op::TensorDesc& normalized = ctx->InputTensorDesc("normalized", 0);
-        CHECK_EQ_OR_RETURN(normalized.data_type(), normalized.data_type());
-        CHECK_EQ_OR_RETURN(normalized.shape(), normalized.shape());
         *gamma_diff->mut_shape() = param_shape;
       }
       if (has_normalized_diff) {

@@ -17,8 +17,6 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/thread/cpu_thread.h"
-#include "oneflow/core/thread/gpu_thread.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -51,8 +49,7 @@ void ThreadMgr::AddPlan(const Plan& plan) {
     if (stream_id.device_id().rank() != this_rank) { continue; }
     int64_t thrd_id = SerializeStreamIdToInt64(stream_id);
     if (threads_.find(thrd_id) != threads_.end()) { continue; }
-    Thread* thread =
-        NewObj<int, Thread, const StreamId&>(stream_id.device_id().device_type(), stream_id);
+    Thread* thread = new Thread(stream_id);
     CHECK_NOTNULL(thread);
     threads_[thrd_id].reset(thread);
   }

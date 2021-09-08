@@ -154,7 +154,7 @@ void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
 }
 
 template<DeviceType device_type>
-void XrtLaunchKernel<device_type>::ForwardDataContent(const KernelContext* ctx) const {
+void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   desc_getter_ = BlobDescGetter<device_type>(this, BnInOp2Blob);
   // Prepare input and output parameters

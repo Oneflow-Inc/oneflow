@@ -36,9 +36,9 @@ def concat_op(inputs, dim=0):
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> input3 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input3 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
         >>> out = flow.cat([input1, input2, input3], dim=1)
         >>> out.shape

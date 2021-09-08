@@ -447,15 +447,44 @@ class TestConsistentCast(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n4d()
     def test_cpu_p2b_with_random_data(test_case):
-        np_arr = np.random.randint(1, 10, [2, 3, 4])
-        tensor = flow.tensor(np_arr, dtype=flow.float32)
+        gen_float = np.random.random
+        gen_int = np.random.randint
+        dtype_list = [
+            flow.uint8,
+            flow.int8,
+            flow.int32,
+            flow.int64,
+            flow.float32,
+            flow.float64,
+            flow.double,
+        ]
+        seed = flow.tensor(gen_int(1, 1000, 1))
+        seed = seed.to_consistent(
+            placement=flow.env.all_device_placement(seed.device.type),
+            sbp=flow.sbp.broadcast,
+        )
+        seed = int(seed.to_local().numpy())
+
+        def choose_shape_and_dtype(seed):
+            rng = np.random.default_rng(seed)
+            kdtype = rng.integers(low=1, high=len(dtype_list), size=1)
+            ndim = rng.integers(low=1, high=4, size=1)
+            shape = rng.integers(low=1, high=10, size=ndim)
+            return kdtype, shape
+
+        kdtype, shape = choose_shape_and_dtype(seed)
+        if kdtype <= 3:
+            np_arr = gen_int(1, 10, shape)
+        else:
+            np_arr = gen_float(shape)
+        tensor = flow.tensor(np_arr, device="cpu", dtype=dtype_list[int(kdtype)])
         cpu_tensor = tensor.to_consistent(
-            placement=flow.placement("cpu", {0: range(4)}), sbp=flow.sbp.partial_sum
+            placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.partial_sum
         )
         cpu_tensor = cpu_tensor.to_consistent(sbp=flow.sbp.broadcast)
         tensor = tensor.to("cuda")
         cuda_tensor = tensor.to_consistent(
-            placement=flow.placement("cuda", {0: range(4)}), sbp=flow.sbp.partial_sum
+            placement=flow.env.all_device_placement("cuda"), sbp=flow.sbp.partial_sum
         )
         cuda_tensor = cuda_tensor.to_consistent(sbp=flow.sbp.broadcast)
         test_case.assertTrue(
@@ -582,6 +611,68 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
                         ],
                         dtype=np.float32,
                     ),
+                )
+            )
+
+    def test_consistent_to_consistent_s0_to_s1_cpu(test_case):
+        np_arr = np.random.randn(4, 12)
+
+        cuda_device = flow.device("cuda")
+        cuda_tensor = flow.tensor(np_arr, device=cuda_device, dtype=flow.float32)
+        cuda_placement = flow.placement("cuda", {0: [1, 3]})
+        cuda_split0_tensor = cuda_tensor.to_consistent(
+            cuda_placement, flow.sbp.split(0)
+        )
+        cuda_split1_tensor = cuda_split0_tensor.to_consistent(
+            cuda_placement, flow.sbp.split(1)
+        )
+
+        cpu_device = flow.device("cpu")
+        cpu_tensor = flow.tensor(np_arr, device=cpu_device, dtype=flow.float32)
+        cpu_placement = flow.placement("cpu", {0: [1, 3]})
+        cpu_split0_tensor = cpu_tensor.to_consistent(cpu_placement, flow.sbp.split(0))
+        cpu_split1_tensor = cpu_split0_tensor.to_consistent(
+            cpu_placement, flow.sbp.split(1)
+        )
+
+        if flow.env.get_rank() == 0 or flow.env.get_rank() == 1:
+            test_case.assertTrue(
+                np.array_equal(
+                    cuda_split1_tensor.to_local().numpy(),
+                    cpu_split1_tensor.to_local().numpy(),
+                )
+            )
+
+    def test_consistent_to_consistent_s1_to_s0_cpu(test_case):
+        np_arr = np.random.randn(4, 12)
+
+        cuda_device = flow.device("cuda")
+        cuda_tensor = flow.tensor(np_arr, device=cuda_device, dtype=flow.float32)
+        cuda_placement = flow.placement("cuda", {0: range(2)})
+        cuda_split_tensor = cuda_tensor.to_consistent(cuda_placement, flow.sbp.split(0))
+        cuda_split1_tensor = cuda_split_tensor.to_consistent(
+            cuda_placement, flow.sbp.split(1)
+        )
+        cuda_split0_tensor = cuda_split1_tensor.to_consistent(
+            cuda_placement, flow.sbp.split(0)
+        )
+
+        cpu_device = flow.device("cpu")
+        cpu_tensor = flow.tensor(np_arr, device=cpu_device, dtype=flow.float32)
+        cpu_placement = flow.placement("cpu", {0: range(2)})
+        cpu_split_tensor = cpu_tensor.to_consistent(cpu_placement, flow.sbp.split(0))
+        cpu_split1_tensor = cpu_split_tensor.to_consistent(
+            cpu_placement, flow.sbp.split(1)
+        )
+        cpu_split0_tensor = cpu_split1_tensor.to_consistent(
+            cpu_placement, flow.sbp.split(0)
+        )
+
+        if flow.env.get_rank() == 0 or flow.env.get_rank() == 1:
+            test_case.assertTrue(
+                np.array_equal(
+                    cuda_split0_tensor.to_local().numpy(),
+                    cpu_split0_tensor.to_local().numpy(),
                 )
             )
 
