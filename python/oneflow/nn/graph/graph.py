@@ -431,7 +431,7 @@ class Graph(object):
 
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
-            arg_op_names, lazy_args, self._args_repr = self._build_io(
+            arg_op_names, lazy_args, self._args_repr, _ = self._build_io(
                 "input", graph_build_util.build_graph_input_arg, *args
             )
 
@@ -447,9 +447,53 @@ class Graph(object):
                     outputs = ()
                 else:
                     outputs = (outputs,)
-            output_op_names, self._eager_outputs, self._outs_repr = self._build_io(
-                "output", graph_build_util.build_graph_output, *outputs
+
+            (
+                output_op_names,
+                self._eager_outputs,
+                self._outs_repr,
+                out2name,
+            ) = self._build_io("output", graph_build_util.build_graph_output, *outputs)
+            # Save job proto for debug
+            self._job_proto = c_api_util.GetCurrentJob()
+
+            oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
+
+            # Save job proto after job Complete for find real output blob shape and build it.
+            self._compeleted_job_proto = c_api_util.GetCurrentJob()
+
+            # NOTE(chengcheng):
+            #   Lazy build output eager tensors.
+            #
+            #   After JobBuildAndInferCtxt.Complete, the output tensor shape
+            #   could be changed by JobPass, such as GradientAccumulationRewritePass.
+            def build_real_output(fake_eager_out):
+                lbn = out2name[fake_eager_out] + "/out"
+                assert lbn in self._compeleted_job_proto.helper.lbn2logical_blob_desc
+                blob_conf = self._compeleted_job_proto.helper.lbn2logical_blob_desc[lbn]
+
+                shape = tuple(blob_conf.shape.dim)
+                dtype = fake_eager_out.dtype
+
+                with oneflow._oneflow_internal.lazy_mode.guard(False):
+                    if fake_eager_out.is_consistent:
+                        eager_out = oneflow.empty(
+                            shape,
+                            dtype=dtype,
+                            placement=fake_eager_out.placement,
+                            sbp=fake_eager_out.sbp,
+                        )
+                    else:
+                        eager_out = oneflow.empty(
+                            shape, dtype=dtype, device=fake_eager_out.device
+                        )
+
+                return eager_out
+
+            self._eager_outputs = self._mapping_io(
+                "output", build_real_output, *self._eager_outputs
             )
+
             self._outputs_tensor_tuple = convert_to_tensor_tuple(
                 self._flatten_io("output", *self._eager_outputs)
             )
@@ -481,9 +525,6 @@ class Graph(object):
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._states_tensor_tuple
             )
-
-            # Save job proto for debug
-            self._job_proto = c_api_util.GetCurrentJob()
 
         return list_to_func_return(self._eager_outputs_buffer[0])
 
@@ -546,12 +587,14 @@ class Graph(object):
         build_args = []
         op_names = []
         args_repr = []
+        tensor2op_name = {}
 
         def build_tensor_or_none(tensor, name, repr_str):
             assert tensor is None or (isinstance(tensor, Tensor))
             if isinstance(tensor, Tensor):
-                build_arg = build_func(name, tensor, self.config.proto)
+                build_arg = build_func(name, tensor)
                 op_names.append(name)
+                tensor2op_name[build_arg] = name
             else:
                 build_arg = None
 
@@ -585,7 +628,7 @@ class Graph(object):
             else:
                 self._io_item_check_and_gen(arg, Tensor, io_type, idx)
 
-        return op_names, build_args, args_repr
+        return op_names, build_args, args_repr, tensor2op_name
 
     def _mapping_io(self, io_type, func, *args):
         assert io_type in ("input", "output")

@@ -59,7 +59,6 @@ class JobBuildAndInferCtx(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
-            oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
             return True
         else:
@@ -129,7 +128,7 @@ def scope_to_proto(scope):
     return text_format.Parse(scope._proto_str, scope_pb2_util.ScopeProto())
 
 
-def build_graph_input_arg(op_name, arg, graph_config_cfg):
+def build_graph_input_arg(op_name, arg):
     assert isinstance(arg, Tensor)
     input_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
@@ -163,7 +162,7 @@ def build_graph_state(op_name, state_tensor, state_config):
     return lazy_tensor
 
 
-def build_graph_output(op_name, out, graph_config_cfg):
+def build_graph_output(op_name, out):
     assert isinstance(out, Tensor)
     assert out.is_lazy
 
@@ -178,28 +177,4 @@ def build_graph_output(op_name, out, graph_config_cfg):
 
     fake_eager_out = output_op.apply([out], attrs)[0]
 
-    shape = fake_eager_out.shape
-    dtype = fake_eager_out.dtype
-
-    if (
-        graph_config_cfg.has_train_conf()
-        and graph_config_cfg.has_num_gradient_accumulation_steps()
-        and graph_config_cfg.num_gradient_accumulation_steps() > 1
-        and shape.numel() == 1
-        and len(shape) == 0
-    ):
-        # NOTE(chengcheng): ONLY manual pack output tensor when scalar output with grad acc > 1
-        shape = (graph_config_cfg.num_gradient_accumulation_steps(),)
-
-    with oneflow._oneflow_internal.lazy_mode.guard(False):
-        if fake_eager_out.is_consistent:
-            eager_out = oneflow.empty(
-                shape,
-                dtype=dtype,
-                placement=fake_eager_out.placement,
-                sbp=fake_eager_out.sbp,
-            )
-        else:
-            eager_out = oneflow.empty(shape, dtype=dtype, device=fake_eager_out.device)
-
-    return eager_out
+    return fake_eager_out

@@ -158,12 +158,6 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
       const auto& old_val = ReplaceInputLbnInOpCustomizedConf(new_return_op_conf, "in",
                                                               return_pack_op.output("out", 0));
       CHECK_EQ(return_in_lbn, old_val);
-      if (is_multi_client && op_conf.has_output_conf()
-          && op_conf.output_conf().blob_conf().shape().dim_size() == 0) {
-        // NOTE(chengcheng): for Scalar output , need generate pack 1-D output blob conf
-        new_return_op_conf->mutable_output_conf()->mutable_blob_conf()->mutable_shape()->add_dim(
-            repeat_num);
-      }
       return Maybe<void>::Ok();
     } else {
       return Maybe<void>::Ok();
