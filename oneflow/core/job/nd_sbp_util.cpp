@@ -23,17 +23,23 @@ namespace oneflow {
 std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
                                                 const cfg::SbpParallel& sbp_parallel,
                                                 const BlobDesc& blob_desc) {
-  std::vector<Range> ranges(blob_desc.shape().NumAxes());
-  FOR_RANGE(int64_t, i, 0, blob_desc.shape().NumAxes()) {
+  const Shape& shape = blob_desc.shape();
+  std::vector<Range> ranges(shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, shape.NumAxes()) {
     ranges[i].mut_begin() = 0;
-    ranges[i].mut_end() = blob_desc.shape().At(i);
+    ranges[i].mut_end() = shape.At(i);
+  }
+  if (shape.NumAxes() == 0 && shape.elem_cnt() == 1) {
+    // NOTE(chengcheng): For Scalar Tensor.
+    ranges.emplace_back(0, 1);
   }
   std::vector<TensorSliceView> views;
   if (sbp_parallel.has_partial_sum_parallel() || sbp_parallel.has_broadcast_parallel()) {
     FOR_RANGE(int64_t, i, 0, parallel_num) { views.emplace_back(ranges); }
   } else if (sbp_parallel.has_split_parallel()) {
     const int64_t axis = sbp_parallel.split_parallel().axis();
-    const BalancedSplitter bs(blob_desc.shape().At(axis), parallel_num);
+    CHECK_LT(axis, shape.NumAxes());
+    const BalancedSplitter bs(shape.At(axis), parallel_num);
     FOR_RANGE(int64_t, i, 0, parallel_num) {
       if (bs.At(i).size() == 0) {
         views.emplace_back();
@@ -56,6 +62,10 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
   FOR_RANGE(int64_t, i, 0, logical_shape.NumAxes()) {
     ranges[i].mut_begin() = 0;
     ranges[i].mut_end() = logical_shape.At(i);
+  }
+  if (logical_shape.NumAxes() == 0 && logical_shape.elem_cnt() == 1) {
+    // NOTE(chengcheng): For Scalar Tensor.
+    ranges.emplace_back(0, 1);
   }
   if (parallel_hierarchy.elem_cnt() == 1) { return TensorSliceView(ranges); }
   if (parallel_hierarchy.NumAxes() == 1) {

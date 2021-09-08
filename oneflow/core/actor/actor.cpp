@@ -15,9 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/runtime_job_descs.h"
-#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/stream/stream_context.h"
 
 namespace oneflow {
@@ -44,12 +42,9 @@ class KernelContextImpl : public KernelContext {
 
   Blob* BnInOp2Blob(const std::string& bn) const override { return bn_in_op2blob_fn_(bn); }
 
-  void* state() const override { return state_; }
+  const std::shared_ptr<KernelState>& state() const override { return state_; }
 
-  void set_state(void* state) override {
-    CHECK(state_ == nullptr);
-    state_ = state;
-  }
+  void set_state(std::shared_ptr<KernelState> state) override { state_ = std::move(state); }
 
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override;
@@ -67,7 +62,7 @@ class KernelContextImpl : public KernelContext {
  private:
   DeviceCtx* device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
-  void* state_;
+  std::shared_ptr<KernelState> state_;
   KernelObserver* stream_kernel_observer_;
 };
 
@@ -127,9 +122,7 @@ void CheckInplaceRegstDescId(const TaskProto& task_proto) {
 
 }  // namespace
 
-Actor::~Actor() {
-  for (ExecKernel& ek : exec_kernel_vec_) { ek.kernel->DestroyState(ek.kernel_ctx->state()); }
-}
+Actor::~Actor() = default;
 
 void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto, StreamContext* stream_ctx) {
   job_desc_ = job_desc;
@@ -327,7 +320,10 @@ void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
   produced_regst2reading_cnt_.at(regst) += val;
 }
 
-void Actor::InitDeviceCtx(StreamContext* stream_ctx) { device_ctx_ = stream_ctx->device_ctx(); }
+void Actor::InitDeviceCtx(StreamContext* stream_ctx) {
+  auto* provider = CHECK_NOTNULL(dynamic_cast<DeviceCtxProvider*>(stream_ctx));
+  device_ctx_ = provider->GetDeviceCtx();
+}
 
 void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> func) const {
   naive_consumed_rs_.ForEachFrontRegst([func](int64_t regst_desc_id, Regst* regst) {
