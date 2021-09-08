@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_MESSAGE_POOL_H_
 
 #include "oneflow/core/actor/actor_message.h"
-//#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/platform/include/ibv.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 
