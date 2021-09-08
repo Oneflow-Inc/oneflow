@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/user/kernels/communicate_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
@@ -49,36 +50,6 @@ size_t InferEagerCclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
   // NOTE(hanbinbin): Set tmp_buffer_size to twice tensor_byte_size because the
   // SbpParallel4ArgNameAndIndex function of LocalUserOpInferContext is unimplemented
   return tensor_byte_size * 2;
-}
-
-const void** GlobalSrcDataPtr() {
-  static thread_local const void* data_ptr = nullptr;
-  return &data_ptr;
-}
-
-Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx) {
-  if (GlobalProcessCtx::Rank() == dst) {
-    auto** src_data_ptr = GlobalSrcDataPtr();
-    CHECK_OR_RETURN(*src_data_ptr == nullptr);
-    *src_data_ptr = in;
-  } else {
-    JUST(ccl::Send<DeviceType::kCPU>(in, elem_cnt, dtype, dst, ctx));
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx) {
-  if (GlobalProcessCtx::Rank() == src) {
-    size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-    auto** src_data_ptr = GlobalSrcDataPtr();
-    CHECK_OR_RETURN(*src_data_ptr != nullptr);
-    const void* in = *src_data_ptr;
-    Memcpy<DeviceType::kCPU>(ctx, out, in, buffer_size);
-    *src_data_ptr = nullptr;
-  } else {
-    JUST(ccl::Recv<DeviceType::kCPU>(out, elem_cnt, dtype, src, ctx));
-  }
-  return Maybe<void>::Ok();
 }
 
 Maybe<std::vector<std::pair<int64_t, int64_t>>> RawGroupP2PPair(
@@ -221,9 +192,10 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           int64_t parallel_id =
               CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(dst, device_id));
 
-          CHECK_JUST(Send(reinterpret_cast<const void*>(reinterpret_cast<const char*>(pack_to_ptr)
-                                                        + parallel_id * chunk_size),
-                          elem_per_chunk, in->data_type(), dst, ctx->device_ctx()));
+          CHECK_JUST(Send<DeviceType::kCPU>(
+              reinterpret_cast<const void*>(reinterpret_cast<const char*>(pack_to_ptr)
+                                            + parallel_id * chunk_size),
+              elem_per_chunk, in->data_type(), dst, ctx->device_ctx()));
         }
         if (GlobalProcessCtx::Rank() == dst) {
           Symbol<ParallelDesc> parallel_desc = kernel_state->parallel_desc();
@@ -231,9 +203,10 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
           int64_t parallel_id =
               CHECK_JUST(parallel_desc->ParallelId4MachineDeviceId(src, device_id));
 
-          CHECK_JUST(Recv(reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr)
-                                                  + parallel_id * chunk_size),
-                          elem_per_chunk, out->data_type(), src, ctx->device_ctx()));
+          CHECK_JUST(Recv<DeviceType::kCPU>(
+              reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr)
+                                      + parallel_id * chunk_size),
+              elem_per_chunk, out->data_type(), src, ctx->device_ctx()));
         }
       }
     }

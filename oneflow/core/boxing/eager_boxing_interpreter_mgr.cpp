@@ -94,8 +94,9 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
       | JUST(BoxingExpr("ccl-s-to-s")) | JUST(BoxingExpr("symmetric-nd-sbp-to-nd-sbp"))
       | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()), JUST(BoxingExpr("nccl-s-to-b")),
                         JUST(BoxingExpr("naive-b-to-p"))))
-      | JUST(BoxingExpr("asymmetric-x-to-b")) | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr())
-      | JUST(BoxingExpr("naive-1-to-1")) | JUST(GenericBoxingExpr());
+      | JUST(BoxingExpr("naive-s-to-b")) | JUST(BoxingExpr("asymmetric-x-to-b"))
+      | JUST(OneToNBoxingExpr()) | JUST(NToOneBoxingExpr()) | JUST(BoxingExpr("naive-1-to-1"))
+      | JUST(GenericBoxingExpr());
   return core | JUST(OptionalCudaCopy(core));
 }
 
