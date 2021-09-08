@@ -25,18 +25,19 @@ namespace {
 class KernelContextImpl : public KernelContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelContextImpl);
-  explicit KernelContextImpl(DeviceCtx* device_ctx)
-      : device_ctx_(device_ctx), state_(nullptr), stream_kernel_observer_(nullptr) {
-    auto* stream_context_provider = dynamic_cast<StreamContextProvider*>(device_ctx);
-    if (stream_context_provider != nullptr) {
-      auto* kernel_observer_provider =
-          dynamic_cast<KernelObserverProvider*>(stream_context_provider->GetStreamContext());
-      if (kernel_observer_provider != nullptr) {
-        stream_kernel_observer_ = kernel_observer_provider->GetKernelObserver();
-      }
+  explicit KernelContextImpl(StreamContext* stream_ctx, DeviceCtx* device_ctx)
+      : stream_ctx_(stream_ctx),
+        device_ctx_(device_ctx),
+        state_(nullptr),
+        stream_kernel_observer_(nullptr) {
+    auto* kernel_observer_provider = dynamic_cast<KernelObserverProvider*>(stream_ctx_);
+    if (kernel_observer_provider != nullptr) {
+      stream_kernel_observer_ = kernel_observer_provider->GetKernelObserver();
     }
   }
   ~KernelContextImpl() = default;
+
+  StreamContext* stream_ctx() const override { return stream_ctx_; }
 
   DeviceCtx* device_ctx() const override { return device_ctx_; }
 
@@ -60,6 +61,7 @@ class KernelContextImpl : public KernelContext {
   }
 
  private:
+  StreamContext* stream_ctx_;
   DeviceCtx* device_ctx_;
   std::function<Blob*(const std::string&)> bn_in_op2blob_fn_;
   std::shared_ptr<KernelState> state_;
@@ -135,7 +137,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto, StreamCon
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel_ctx.reset(new KernelContextImpl(device_ctx_.get()));
+    ek.kernel_ctx.reset(new KernelContextImpl(stream_ctx, device_ctx_.get()));
     ek.kernel = ConstructKernel(node.kernel_conf(), ek.kernel_ctx.get());
     exec_kernel_vec_.push_back(std::move(ek));
   }
