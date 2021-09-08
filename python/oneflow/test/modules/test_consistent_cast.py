@@ -446,7 +446,7 @@ class TestConsistentCast(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n4d()
-    def test_cpu_p2b_with_random_data(test_case):
+    def test_cpu_p2b_with_random_data_shape_dtype(test_case):
         gen_float = np.random.random
         gen_int = np.random.randint
         dtype_list = [
