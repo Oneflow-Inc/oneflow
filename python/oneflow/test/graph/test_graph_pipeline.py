@@ -81,7 +81,7 @@ def _get_ppm_and_opt():
         mode="train",
         dataset_size=400,
         batch_size=4,
-        placement=P0C,
+        placement=P0,
         sbp=B,
     )
 
@@ -284,16 +284,16 @@ def _test_graph_pipeline(test_case):
             return check_list
 
 
-    iter_num = 2
+    iter_num = 1
     graph_check_list, data = train_with_graph(iter_num)
-    #module_check_list = train_with_module(iter_num * 4, data)
+    module_check_list = train_with_module(iter_num * 4, data)
 
-    #if (rank == 3):
-    #    for i in range(iter_num*4):
-    #        # check equal on loss
-    #        test_case.assertTrue(
-    #            np.array_equal(module_check_list[i], graph_check_list[i//4][i%4])
-    #        )
+    if (rank == 3):
+        for i in range(iter_num*4):
+            # check equal on loss
+            test_case.assertTrue(
+                np.array_equal(module_check_list[i], graph_check_list[i//4][i%4])
+            )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
