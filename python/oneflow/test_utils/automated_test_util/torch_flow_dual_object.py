@@ -310,7 +310,7 @@ def print_note_fake_program():
 
     print(f"\033[32m-----------------------------------------------------------\033[0m")
     unique_vis_tensor = []
-    flag_vis_tensor = [False] * len(vis_tensor)
+    flag_vis_tensor = [False for _ in range(len(vis_tensor))]
     for i in range(len(vis_tensor)):
         if flag_vis_tensor[i] == True:
             continue
