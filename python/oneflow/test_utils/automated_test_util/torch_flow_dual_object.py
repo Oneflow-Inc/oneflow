@@ -17,6 +17,7 @@ import collections.abc
 import functools
 import inspect
 import os
+import re
 import warnings
 
 import numpy as np
@@ -119,6 +120,23 @@ def get_args(callable, *args, **kwargs):
     new_pytorch_args = []
     new_pytorch_kwargs = {}
     for x in pytorch_args:
+        if isinstance(x, (tuple, list)):
+            new_x = f"("
+            len_x = len(x)
+            for i in range(len_x):
+                if type(x[i]) is torch_original.Tensor:
+                    if i < len_x - 1:
+                        new_x += f"Tensor({get_tensor_shape(x[i])}), "
+                    else:
+                        new_x += f"Tensor({get_tensor_shape(x[i])})"
+                else:
+                    if i < len_x - 1:
+                        new_x += f"{x[i]}, "
+                    else:
+                        new_x += f"{x[i]}"
+            new_x += f")"
+            new_pytorch_args.append(new_x)
+            continue
         if type(x) is torch_original.Tensor:
             new_pytorch_args.append(f"Tensor({get_tensor_shape(x)})")
         else:
@@ -232,12 +250,12 @@ def GetDualObject(name, pytorch, oneflow):
 
 def note_print_args(x, end=True):
     if end:
-        if isinstance(x, str) and not x.startswith("Tensor"):
+        if isinstance(x, str) and re.search("Tensor", x) is None:
             print(f"\033[32m'{x}, '\033[0m", end="")
         else:
             print(f"\033[32m{x}, \033[0m", end="")
     else:
-        if isinstance(x, str) and not x.startswith("Tensor"):
+        if isinstance(x, str) and re.search("Tensor", x) is None:
             print(f"\033[32m'{x}'\033[0m", end="")
         else:
             print(f"\033[32m{x}\033[0m", end="")
@@ -245,12 +263,12 @@ def note_print_args(x, end=True):
 
 def note_print_kwargs(x, y, end=True):
     if end:
-        if isinstance(y, str) and not y.startswith("Tensor"):
+        if isinstance(y, str) and re.search("Tensor", y) is None:
             print(f"\033[32m{x}='{y}, '\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}, \033[0m", end="")
     else:
-        if isinstance(y, str) and not y.startswith("Tensor"):
+        if isinstance(y, str) and re.search("Tensor", y) is None:
             print(f"\033[32m{x}='{y}'\033[0m", end="")
         else:
             print(f"\033[32m{x}={y}\033[0m", end="")
@@ -271,6 +289,7 @@ def print_note_fake_program():
 
         if note_pytorch_kwargs[i]:
             index = 0
+            print(f"\033[32m,\033[0m", end="")
             for x in note_pytorch_kwargs[i].keys():
                 index += 1
                 note_print_kwargs(
