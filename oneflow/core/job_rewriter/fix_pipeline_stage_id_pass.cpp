@@ -14,14 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
-#include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 
@@ -45,35 +48,75 @@ class FixPipelineStageIdPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
-Maybe<Scope> NewScopeWithStageId(const std::shared_ptr<Scope>& old_scope, int64_t stage_id) {
-  std::shared_ptr<Scope> new_scope;
-  const auto SetScopeProto = [stage_id](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
-  auto* attr_map = scope_proto->mutable_attr_name2attr_value();
-  (*attr_map)[""]
-  const auto& iter = scope_proto_.attr_name2attr_value().find(attr_name);
-  if (iter != scope_proto_.attr_name2attr_value().end()) { return iter->second; }
-  const auto& attr_name2attr_def = GlobalScopeConfigDef().attr_name2attr_def();
-  const auto& def_iter = attr_name2attr_def.find(attr_name);
-  CHECK(def_iter != attr_name2attr_def.end());
-  return def_iter->second.default_val();
-
-    scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
-  };
-
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    new_scope = JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_conf));
-    return Maybe<void>::Ok();
-  }));
-  // NOTE(chengcheng): need sync vm for get scope right now
-  JUST(vm::CurrentRankSync());
-  CHECK_OR_RETURN(new_scope);
-  return new_scope;
+const Scope& Scope4ScopeSymbolId(int64_t scope_symbol_id) {
+  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
+  return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
 }
 
+const Scope& Scope4OpNode(const OpNode* op_node) {
+  const OperatorConf& op_conf = op_node->op().op_conf();
+  CHECK(op_conf.has_scope_symbol_id());
+  return Scope4ScopeSymbolId(op_conf.scope_symbol_id());
+}
+
+bool IsForwardPass(const OpNode* node) {
+  return Scope4OpNode(node).scope_proto().calculation_pass_name() == kForwardPass;
+}
+
+bool IsBackwardPass(const OpNode* node) {
+  return Scope4OpNode(node).scope_proto().calculation_pass_name() == kBackwardPass;
+}
+
+bool OpNodeHasScope(const OpNode* node) { return node->op().op_conf().has_scope_symbol_id(); }
+
+int64_t GetStageIdHint(const OpNode* node) {
+  return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
+}
+
+Maybe<int64_t> NewScopeWithStageId(int64_t old_scope_symbol_id, int64_t stage_id) {
+  return NewScopeSymbolId(
+      old_scope_symbol_id, [stage_id](std::shared_ptr<cfg::ScopeProto> new_scope) {
+        std::cout << "cclog: old scope proto: " << new_scope->DebugString() << "\n\n";
+        auto* attr_map = new_scope->mutable_attr_name2attr_value();
+        (*attr_map)["pipeline_stage_id_hint"].set_at_int64(stage_id);
+        std::cout << "cclog: new scope proto: " << new_scope->DebugString() << "\n\n";
+      });
+}
 
 Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  op_graph.ForEachNode([&](const OpNode* this_node) {
+    if (!OpNodeHasScope(this_node)) {
+      LOG(WARNING) << " op : " << this_node->op().op_conf().DebugString() << " has NOT scope!";
+      return;
+    }
+    int64_t new_scope =
+        CHECK_JUST(NewScopeWithStageId(this_node->op().op_conf().scope_symbol_id(), 99));
+  });
 
+  if (GlobalJobDesc().job_conf().num_gradient_accumulation_steps() <= 1) {
+    return Maybe<void>::Ok();
+  }
+  int64_t max_stage_id = 0;
+
+  op_graph.ForEachNode([&](const OpNode* this_node) {
+    if (!OpNodeHasScope(this_node)) {
+      LOG(WARNING) << " op : " << this_node->op().op_conf().DebugString() << " has NOT scope!";
+      return;
+    }
+    max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
+  });
+
+  if (max_stage_id == 0) { return Maybe<void>::Ok(); }
+  const int64_t total_stage_num = max_stage_id + 1;
+  LOG(INFO) << "total stage num = " << total_stage_num;
+
+  HashMap<std::string, OperatorConf> mut_op_name2conf;
+
+  for (auto& pair : mut_op_name2conf) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
+
+  return Maybe<void>::Ok();
 }
+
 }  // namespace
 
 REGISTER_JOB_PASS("FixPipelineStageIdPass", FixPipelineStageIdPass);
