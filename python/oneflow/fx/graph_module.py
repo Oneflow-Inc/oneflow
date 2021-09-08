@@ -144,17 +144,6 @@ class GraphModule(oneflow.nn.Module):
 
     """
 
-    def __new__(cls: "Type[GraphModule]", *args, **kwargs):
-        # each instance of a graph module needs its own forward method
-        # so create a new singleton class for each instance.
-        # it is a subclass of the user-defined class, the only difference
-        # is an extra layer to install the forward method
-
-        class GraphModuleImpl(cls):  # type: ignore[misc, valid-type]
-            pass
-
-        return super().__new__(GraphModuleImpl)
-
     @compatibility(is_backward_compatible=True)
     def __init__(
         self,
