@@ -35,7 +35,8 @@ class OFRecordDataLoader(flow.nn.Module):
             random_shuffle=False,
             shuffle_after_epoch=False,
             placement=placement,
-            sbp=sbp
+            sbp=sbp,
+            random_seed=0,
         )
         self.record_label_decoder = flow.nn.OFRecordRawDecoder(
             "class/label", shape=(), dtype=flow.int32
@@ -57,6 +58,7 @@ class OFRecordDataLoader(flow.nn.Module):
 
     def forward(self):
         train_record = self.train_record_reader()
+        print("eager of record dtype ", train_record.dtype)
         label = self.record_label_decoder(train_record)
         image_raw_buffer = self.record_image_decoder(train_record)
         image = self.resize(image_raw_buffer)[0]
@@ -68,9 +70,11 @@ D = "cuda"
 B = [flow.sbp.broadcast]
 P = flow.placement("cuda", {0: [0, 1, 2, 3]})
 P0 = flow.placement("cuda", {0: [0]})
+P0C = flow.placement("cpu", {0: [0]})
 P1 = flow.placement("cuda", {0: [1]})
 P2 = flow.placement("cuda", {0: [2]})
 P3 = flow.placement("cuda", {0: [3]})
+P3C = flow.placement("cpu", {0: [3]})
 
 def _get_ppm_and_opt():
     train_data_loader = OFRecordDataLoader(
@@ -78,7 +82,7 @@ def _get_ppm_and_opt():
         mode="train",
         dataset_size=400,
         batch_size=4,
-        placement=P0,
+        placement=P0C,
         sbp=B,
     )
 
@@ -95,7 +99,7 @@ def _get_ppm_and_opt():
             image = image.to(D)
             label = label.to(D)
             out0 = self.linear(image)
-            return out0, label
+            return out0, label, image
 
     class Stage1Module(flow.nn.Module):
         def __init__(self):
@@ -146,11 +150,13 @@ def _get_ppm_and_opt():
             self.stage_3_m = Stage3Module()
 
         def forward(self):
-            out0, label = self.stage_0_m()
+            out0, label, image = self.stage_0_m()
             out1 = self.stage_1_m(out0)
             out2 = self.stage_2_m(out1)
             out3 = self.stage_3_m(out2, label)
-            return out3
+            image = image.to_consistent(placement=P3, sbp=B)
+            label = label.to_consistent(placement=P3, sbp=B)
+            return out3, image, label
 
     pp_m = PipelineModule()
     of_sgd = flow.optim.SGD(pp_m.parameters(), lr=0.0001)
@@ -175,20 +181,25 @@ def _test_graph_pipeline(test_case):
 
             def build(self):
                 pp_m.train()
-                out = self.pp_m()
+                out, image, label = self.pp_m()
                 out.backward()
-                return out
+                return out, image, label
 
         pp_g = PipelineGraph()
+        pp_g.debug()
 
         def one_iter(iter_idx):
-            of_graph_out = pp_g()
+            of_graph_out, image, label = pp_g()
             if rank == 3:
                 #if iter_idx == 0:
                 #    print(pp_g)
                 of_graph_out = of_graph_out.to_local()
                 of_graph_out_np = of_graph_out.numpy()
-                print("out numpy ", of_graph_out_np)
+                print("out numpy \n", of_graph_out_np)
+                label = label.to_local().numpy()
+                print(f"label numpy \n shape {label.shape} data {label}")
+                image = image.to_local().numpy()
+                #print(f"image numpy \n shape {image.shape} data {image}")
                 return of_graph_out_np
 
         check_list = []
@@ -201,12 +212,25 @@ def _test_graph_pipeline(test_case):
             ofrecord_root="/dataset/ImageNet/ofrecord",
             mode="train",
             dataset_size=400,
-            batch_size=1,
+            batch_size=4,
+            placement=P3C,
+            sbp=B
         )
-        class TrainModule(flow.nn.Module):
+
+        class DataModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.train_data_loader = train_data_loader
+            
+            def forward(self):
+                image, label = self.train_data_loader()
+                image = image.to_local()
+                label = label.to_local()
+                return image, label
+
+        class TrainModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
                 self.linear = flow.nn.Linear(1452, 8, False)
                 flow.nn.init.constant_(self.linear.weight, 0.023)
                 self.linear1 = flow.nn.Linear(8, 8, False)
@@ -216,32 +240,36 @@ def _test_graph_pipeline(test_case):
                 self.linear3 = flow.nn.Linear(8, 2, False)
                 flow.nn.init.constant_(self.linear3.weight, 0.023)
 
-            def forward(self):
-                image, label = self.train_data_loader()
+            def forward(self, image, label):
                 #print("image meta ", image._meta_repr())
                 #print("label meta ", label._meta_repr())
                 out0 = self.linear(image)
                 out1 = self.linear1(out0)
                 out2 = self.linear2(out1)
                 out3 = self.linear3(out2)
-                print("out meta ", out3._meta_repr())
+                #print("out meta ", out3._meta_repr())
                 loss = out3.sum() 
-                return loss
+                return loss, image, label
         
+        d_m = DataModule()
         t_m = TrainModule()
         of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.0001)
 
         def one_iter(iter_idx):
-            loss = t_m()
-            out_np = loss.numpy()
-            print("eager out numpy ", out_np)
-            loss = loss * 0.25
-            loss.backward()
-            if iter_idx % 4 == 3:
-                print(f"iter index: {iter_idx}")
-                of_sgd.step()
-                of_sgd.zero_grad()
-            return out_np 
+            image, label = d_m()
+            if rank == 3:
+                loss, image, label = t_m(image, label)
+                out_np = loss.numpy()
+                print("eager out numpy \n", out_np)
+                print(f"eager label numpy \n shape {label.shape} data {label.numpy()}")
+                #print(f"eager image numpy \n shape {image.shape} data {image.numpy()}")
+                loss = loss * 0.25
+                loss.backward()
+                if iter_idx % 4 == 3:
+                    print(f"iter index: {iter_idx}")
+                    of_sgd.step()
+                    of_sgd.zero_grad()
+                return out_np 
 
         check_list = []
         for i in range(iter_num):
@@ -250,10 +278,9 @@ def _test_graph_pipeline(test_case):
 
     iter_num = 3
 
-    if (rank == 3):
-        module_check_list = train_with_module(iter_num * 4)
+    module_check_list = train_with_module(iter_num * 4)
 
-    graph_check_list = train_with_graph(iter_num)
+    #graph_check_list = train_with_graph(iter_num)
 
     #if (rank == 1):
     #    for i in range(iter_num):
