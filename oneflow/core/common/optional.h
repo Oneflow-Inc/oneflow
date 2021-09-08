@@ -22,7 +22,7 @@ limitations under the License.
 #include <utility>
 #include "oneflow/core/common/error.cfg.h"
 #include "oneflow/core/common/type_traits.h"
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/just.h"
 
 namespace oneflow {
 
