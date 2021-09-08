@@ -33,8 +33,17 @@ py::object AddFunctionDoc(py::object f, const std::string& doc_string) {
       THROW(RuntimeError) << "function " << f->m_ml->ml_name << " already has a docstring.";
     }
     f->m_ml->ml_doc = doc_str;
+  } else if (PyFunction_Check(obj)) {
+    auto* f = (PyFunctionObject*)obj;
+    if (f->func_doc != Py_None) {
+      THROW(RuntimeError) << "function "
+                          << PyBytes_AsString(
+                                 PyUnicode_AsEncodedString(f->func_name, "utf-8", "~E~"))
+                          << " already has a docstring.";
+    }
+    f->func_doc = PyUnicode_FromString(doc_str);
   } else {
-    THROW(RuntimeError) << "function is " << Py_TYPE(obj)->tp_name << ", not a valid PyCFunction.";
+    THROW(RuntimeError) << "function is " << Py_TYPE(obj)->tp_name << ", not a valid function.";
   }
   f.inc_ref();
   return f;

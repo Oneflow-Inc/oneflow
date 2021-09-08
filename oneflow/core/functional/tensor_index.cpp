@@ -245,8 +245,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   if (transposed_input->is_consistent()) {
     const auto& placement = JUST(transposed_input->parallel_desc());
     const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
-    packed_indices =
-        JUST(ToConsistent(packed_indices, placement, {broadcast_sbp}, GetNoneSbpList()));
+    std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
+    packed_indices = JUST(ToConsistent(packed_indices, placement, {broadcast_sbp}, grad_sbp_tuple));
   }
   Symbol<Device> device = JUST(transposed_input->device());
   if (JUST(packed_indices->device()) != device) {

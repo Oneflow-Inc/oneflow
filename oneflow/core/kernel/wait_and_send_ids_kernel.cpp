@@ -18,28 +18,22 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
 template<typename T>
 void WaitAndSendIdsKernel<T>::VirtualKernelInit(KernelContext* ctx) {
-  ctx->set_state(new WaitAndSendIdsStatus);
+  ctx->set_state(std::make_shared<WaitAndSendIdsStatus>());
 }
 
 template<typename T>
-void WaitAndSendIdsKernel<T>::DestroyState(void* state) const {
-  delete static_cast<WaitAndSendIdsStatus*>(state);
-}
-
-template<typename T>
-void WaitAndSendIdsKernel<T>::ForwardDataContent(const KernelContext* ctx) const {
-  CHECK(ctx->state());
-  auto* status = static_cast<WaitAndSendIdsStatus*>(ctx->state());
+void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
+  auto* status = CHECK_NOTNULL(dynamic_cast<WaitAndSendIdsStatus*>(ctx->state().get()));
   const auto& conf = this->op_conf().wait_and_send_ids_conf();
   if (status->out_idx_ >= status->out_num_) {
     if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {
-      const auto& job_name = ctx->job_desc()->job_name();
+      CHECK(this->op_conf().wait_and_send_ids_conf().has_job_name());
+      const auto& job_name = this->op_conf().wait_and_send_ids_conf().job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       auto* buffer = buffer_mgr->Get(GetSourceTickBufferName(job_name));
       status->in_id_ = 0;

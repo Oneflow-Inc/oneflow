@@ -492,7 +492,7 @@ class ImageDecoderRandomCropResizeKernel final : public Kernel {
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 
   std::vector<std::unique_ptr<RandomCropGenerator>> random_crop_generators_;
   std::vector<std::unique_ptr<Worker>> workers_;
@@ -529,8 +529,7 @@ void ImageDecoderRandomCropResizeKernel<device_type>::VirtualKernelInit(KernelCo
 }
 
 template<DeviceType device_type>
-void ImageDecoderRandomCropResizeKernel<device_type>::ForwardDataContent(
-    const KernelContext* ctx) const {
+void ImageDecoderRandomCropResizeKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   const ImageDecoderRandomCropResizeOpConf& conf =
       this->op_conf().image_decoder_random_crop_resize_conf();
   const Blob* in = ctx->BnInOp2Blob("in");
