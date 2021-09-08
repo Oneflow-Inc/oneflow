@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/sync_check_kernel_observer.h"
-#include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/device/cuda_device_context.h"
+#ifndef ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
+#define ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
+
 #include "oneflow/core/stream/stream_context.h"
+#include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
 
-void SyncCheckKernelObserver::DidForwardDataContent(KernelContext* kernel_ctx,
-                                                    const Kernel* kernel) {
-  CHECK_JUST_MSG(kernel_ctx->stream_ctx()->Sync(), kernel->op_conf().name());
-}
+StreamContext* NewStreamContextAdapter(DeviceCtx* ctx);
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_STREAM_STREAM_CONTEXT_ADAPTER_H_
