@@ -189,10 +189,6 @@ size_t GetConsumerCount(const TaskProto& task) {
 
 #ifdef WITH_CUDA_GRAPHS
 
-CudaGraphContext* GetCUDAGraphContext(StreamContext* device_ctx) {
-  return dynamic_cast<CudaGraphContext*>(device_ctx);
-}
-
 bool IsCUDAGraphSupported(const Kernel* kernel) {
   auto* user_kernel = dynamic_cast<const UserKernel*>(kernel);
   return (user_kernel != nullptr && user_kernel->IsCudaGraphSupported());
@@ -226,7 +222,7 @@ class LightActor : public ActorBase, public KernelContext {
       const KernelConf& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
       kernel_info_[0]->kernel = ConstructKernel(kernel_conf, this);
 #ifdef WITH_CUDA_GRAPHS
-      cuda_graph_ctx_[0] = GetCUDAGraphContext(stream_ctx);
+      cuda_graph_ctx_[0] = dynamic_cast<CudaGraphContext*>(stream_ctx);
       if (cuda_graph_ctx_[0] != nullptr && kernel_conf.all_blobs_are_static()
           && IsCUDAGraphSupported(kernel_info_[0]->kernel.get())) {
         cuda_graph_exec_[0].reset(new CudaGraphExecutable());
