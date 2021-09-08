@@ -30,7 +30,7 @@ class OFRecordDataLoader(flow.nn.Module):
         self.train_record_reader = flow.nn.OFRecordReader(
             ofrecord_root + "/" + mode,
             batch_size=batch_size,
-            data_part_num=4,
+            data_part_num=40,
             part_name_suffix_length=5,
             random_shuffle=False,
             shuffle_after_epoch=False,
@@ -58,7 +58,6 @@ class OFRecordDataLoader(flow.nn.Module):
 
     def forward(self):
         train_record = self.train_record_reader()
-        print("eager of record dtype ", train_record.dtype)
         label = self.record_label_decoder(train_record)
         image_raw_buffer = self.record_image_decoder(train_record)
         image = self.resize(image_raw_buffer)[0]
@@ -136,8 +135,6 @@ def _get_ppm_and_opt():
             out0 = out0.to_consistent(placement=P3, sbp=out0.sbp)
             label = label.to_consistent(placement=P3, sbp=out0.sbp)
             out1 = self.linear(out0)
-            print("out meta ", out1._meta_repr())
-            #loss = label.to(flow.float32).sum() - out1.sum() 
             loss = out1.sum()
             return loss
 
@@ -196,36 +193,44 @@ def _test_graph_pipeline(test_case):
                 of_graph_out = of_graph_out.to_local()
                 of_graph_out_np = of_graph_out.numpy()
                 print("out numpy \n", of_graph_out_np)
-                label = label.to_local().numpy()
-                print(f"label numpy \n shape {label.shape} data {label}")
-                image = image.to_local().numpy()
-                #print(f"image numpy \n shape {image.shape} data {image}")
-                return of_graph_out_np
+                label = label.to_local()
+                print(f"label numpy \n shape {label.shape} data {label.numpy()}")
+                image = image.to_local()
+                print(f"image numpy \n shape {image.shape} data {image}")
+                return of_graph_out_np, image.numpy(), label.numpy()
 
         check_list = []
+        data_list = []
         for i in range(iter_num):
-            check_list.append(one_iter(i))
-        return check_list
+            out = one_iter(i)
+            if rank == 3:
+                check_list.append(out[0])
+                data_list.append((out[1], out[2]))
+        return check_list, data_list
 
-    def train_with_module(iter_num=3):
-        train_data_loader = OFRecordDataLoader(
-            ofrecord_root="/dataset/ImageNet/ofrecord",
-            mode="train",
-            dataset_size=400,
-            batch_size=4,
-            placement=P3C,
-            sbp=B
-        )
-
+    def train_with_module(iter_num=3, data=None):
         class DataModule(flow.nn.Module):
-            def __init__(self):
+            def __init__(self, data):
                 super().__init__()
-                self.train_data_loader = train_data_loader
+                self.data_list = [] 
+                self.idx = 0
+                for tuple_pair in data:
+                    image = tuple_pair[0]
+                    label = tuple_pair[1]
+                    print("image ", image)
+                    print("label ", label)
+                    for i in range(4):
+                        s = i * 4
+                        e = s + 4
+                        micro_batch_image = image[s:e]
+                        micro_batch_label = label[s:e]
+                        print("micro image ", micro_batch_image)
+                        print("micro label ", micro_batch_label)
+                        self.data_list.append((flow.Tensor(micro_batch_image).to("cuda:3"), flow.Tensor(micro_batch_label).to("cuda:3")))
             
             def forward(self):
-                image, label = self.train_data_loader()
-                image = image.to_local()
-                label = label.to_local()
+                image, label = self.data_list[self.idx]
+                self.idx += 1
                 return image, label
 
         class TrainModule(flow.nn.Module):
@@ -233,64 +238,61 @@ def _test_graph_pipeline(test_case):
                 super().__init__()
                 self.linear = flow.nn.Linear(1452, 8, False)
                 flow.nn.init.constant_(self.linear.weight, 0.023)
+                self.linear.to("cuda:3")
                 self.linear1 = flow.nn.Linear(8, 8, False)
                 flow.nn.init.constant_(self.linear1.weight, 0.023)
+                self.linear1.to("cuda:3")
                 self.linear2 = flow.nn.Linear(8, 8, False)
                 flow.nn.init.constant_(self.linear2.weight, 0.023)
+                self.linear2.to("cuda:3")
                 self.linear3 = flow.nn.Linear(8, 2, False)
                 flow.nn.init.constant_(self.linear3.weight, 0.023)
+                self.linear3.to("cuda:3")
 
             def forward(self, image, label):
-                #print("image meta ", image._meta_repr())
-                #print("label meta ", label._meta_repr())
                 out0 = self.linear(image)
                 out1 = self.linear1(out0)
                 out2 = self.linear2(out1)
                 out3 = self.linear3(out2)
-                #print("out meta ", out3._meta_repr())
                 loss = out3.sum() 
                 return loss, image, label
         
-        d_m = DataModule()
-        t_m = TrainModule()
-        of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.0001)
+        if rank == 3:
+            d_m = DataModule(data)
+            t_m = TrainModule()
+            of_sgd = flow.optim.SGD(t_m.parameters(), lr=0.0001)
 
-        def one_iter(iter_idx):
-            image, label = d_m()
-            if rank == 3:
-                loss, image, label = t_m(image, label)
-                out_np = loss.numpy()
-                print("eager out numpy \n", out_np)
-                print(f"eager label numpy \n shape {label.shape} data {label.numpy()}")
-                #print(f"eager image numpy \n shape {image.shape} data {image.numpy()}")
-                loss = loss * 0.25
-                loss.backward()
-                if iter_idx % 4 == 3:
-                    print(f"iter index: {iter_idx}")
-                    of_sgd.step()
-                    of_sgd.zero_grad()
-                return out_np 
+            def one_iter(iter_idx):
+                image, label = d_m()
+                if rank == 3:
+                    loss, image, label = t_m(image, label)
+                    out_np = loss.numpy()
+                    print("eager out numpy \n", out_np)
+                    print(f"eager label numpy \n shape {label.shape} data {label.numpy()}")
+                    print(f"eager image numpy \n shape {image.shape} data {image.numpy()}")
+                    loss = loss * 0.25
+                    loss.backward()
+                    if iter_idx % 4 == 3:
+                        print(f"iter index: {iter_idx}")
+                        of_sgd.step()
+                        of_sgd.zero_grad()
+                    return out_np
 
-        check_list = []
-        for i in range(iter_num):
-            check_list.append(one_iter(i))
-        return check_list
+            check_list = []
+            for i in range(iter_num):
+                check_list.append(one_iter(i))
+            return check_list
 
-    iter_num = 3
 
-    module_check_list = train_with_module(iter_num * 4)
+    iter_num = 2
+    graph_check_list, data = train_with_graph(iter_num)
+    #module_check_list = train_with_module(iter_num * 4, data)
 
-    #graph_check_list = train_with_graph(iter_num)
-
-    #if (rank == 1):
-    #    for i in range(iter_num):
+    #if (rank == 3):
+    #    for i in range(iter_num*4):
     #        # check equal on loss
     #        test_case.assertTrue(
-    #            np.array_equal(module_check_list[i][0], graph_check_list[i][0])
-    #        )
-    #        # check equal on weight
-    #        test_case.assertTrue(
-    #            np.array_equal(module_check_list[i][1], graph_check_list[i][1])
+    #            np.array_equal(module_check_list[i], graph_check_list[i//4][i%4])
     #        )
 
 
