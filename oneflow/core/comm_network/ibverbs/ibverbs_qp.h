@@ -174,6 +174,7 @@ class IBVerbsQP final {
   uint32_t max_outstanding_send_wr_;
   std::queue<std::pair<ibv_send_wr, ibv_sge>> pending_send_wr_queue_;
   IBVerbsMessagePool* message_pool_;
+  uint32_t queue_depth_;
 };
 
 }  // namespace oneflow

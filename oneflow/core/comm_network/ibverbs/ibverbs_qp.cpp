@@ -61,6 +61,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   num_outstanding_send_wr_ = 0;
   max_outstanding_send_wr_ = queue_depth;
   message_pool_ = message_pool;
+  queue_depth_ = queue_depth;
 }
 
 IBVerbsQP::~IBVerbsQP() { CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0); }
@@ -128,8 +129,9 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
 }
 
 void IBVerbsQP::PostAllRecvRequest() {
-  message_pool_->RegisterMessagePool();
-  while (message_pool_->IsEmpty() == false) {
+  uint32_t index = 0;
+  while(index < queue_depth_) {
+    index++;
     ActorMsgMR* msg_mr = message_pool_->GetMessage();
     PostRecvRequest(msg_mr);
   }
