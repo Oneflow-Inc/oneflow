@@ -31,9 +31,9 @@ TODO
 
 FX should be used by pass writers to provide functionality for capturing and constructing nn.Module code in a structured way. We do not expect end users to utilize FX directly. A useful property of framing FX in this way is that passes can be seen as functions of the form `pass(in_mod : nn.Module) -> nn.Module`. This means we can create composable pipelines of transformations.
 
-![An image of a sample nn.Module transformation pipeline that starts with a Quantize transformation, which is then composed with a Split transformation, then a Lower to Accelerator transformation](https://i.imgur.com/TzFIYMi.png "nn.Module transformation pipeline")
+<!-- ![An image of a sample nn.Module transformation pipeline that starts with a Quantize transformation, which is then composed with a Split transformation, then a Lower to Accelerator transformation](https://i.imgur.com/TzFIYMi.png "nn.Module transformation pipeline") -->
 
-In this example pipeline, we have a Quantize transformation, which is then composed with a Split transformation, then a Lower to Accelerator transformation. Finally, the transformed Modules are compiled with TorchScript for deployment. This last point emphasizes that not only should FX transforms be composable with each other, but their products are composable with other systems like TorchScript compilation or tracing.
+In this example pipeline, we have a Quantize transformation, then this `nn.Module` is converted to [`nn.Graph`](https://oneflow.readthedocs.io/en/master/graph.html#). Finally, the transformed Modules is converted to `ONNX` for deployment. This last point emphasizes that not only should FX transforms be composable with each other, but their products are composable with other systems like TorchScript compilation or tracing.
 
 By using `nn.Module` as the interface between passes, FX transforms are interoperable with each other, and the resulting model can be used anywhere an `nn.Module` can be used.
 
@@ -68,35 +68,35 @@ Here, we set up a simple Module that exercises different language features: fetc
 
 # Internal Structure
 
-## [Graph](https://OneFlow.org/docs/master/fx.html#oneflow.fx.Graph) ##
+## [Graph](https://oneflow.readthedocs.io/en/master/fx.html#oneflow.fx.Graph) ##
 TODO
 
-## [GraphModule](https://OneFlow.org/docs/master/fx.html#oneflow.fx.GraphModule) ##
+## [GraphModule](https://oneflow.readthedocs.io/en/master/fx.html#oneflow.fx.GraphModule) ##
 TODO
 
 # Symbolic Tracing
 
-## [Tracer](https://OneFlow.org/docs/master/fx.html#oneflow.fx.Tracer) ##
+## [Tracer](https://oneflow.readthedocs.io/en/master/fx.html#oneflow.fx.Tracer) ##
 
 `Tracer` is the class that implements the symbolic tracing functionality of `oneflow.fx.symbolic_trace`. A call to `symbolic_trace(m)` is equivalent to `Tracer().trace(m)`. Tracer can be subclassed to override various behaviors of the tracing process. The different behaviors that can be overridden are described in the docstrings of the methods on the class.
 
-In the default implementation of `Tracer().trace`, the tracer first creates Proxy objects for all arguments in the `forward` function. (This happens in the call to `create_args_for_root`.) Next, the `forward` function is called with the new Proxy arguments. As the Proxies flow through the program, they record all the operations (`torch` function calls, method calls, and operators) that they touch into the growing FX Graph as Nodes.
+In the default implementation of `Tracer().trace`, the tracer first creates Proxy objects for all arguments in the `forward` function. (This happens in the call to `create_args_for_root`.) Next, the `forward` function is called with the new Proxy arguments. As the Proxies flow through the program, they record all the operations (`oneflow` function calls, method calls, and operators) that they touch into the growing FX Graph as Nodes.
 
 ## Proxy ##
 
-Proxy objects are Node wrappers used by the Tracer to record operations seen during symbolic tracing. The mechanism through which Proxy objects record computation is [`__torch_function__`](https://OneFlow.org/docs/stable/notes/extending.html#extending-torch). If any custom Python type defines a method named `__torch_function__`, OneFlow will invoke that `__torch_function__` implementation when an instance of that custom type is passed to a function in the `torch` namespace. In FX, when operations on Proxy are dispatched to the `__torch_function__` handler, the `__torch_function__` handler records the operation in the Graph as a Node. The Node that was recorded in the Graph is then itself wrapped in a Proxy, facilitating further application of ops on that value.
+Proxy objects are Node wrappers used by the Tracer to record operations seen during symbolic tracing.
 
 Consider the following example:
 
 ```python
   class M(oneflow.nn.Module):
       def forward(self, x):
-          return torch.relu(x)
+          return oneflow.relu(x)
   m = M()
   traced = symbolic_trace(m)
 ```
 
-During the call to `symbolic_trace`, the parameter `x` is transformed into a Proxy object and the corresponding Node (a Node with op = “placeholder” and target = “x”) is added to the Graph. Then, the Module is run with Proxies as inputs, and recording happens via the `__torch_function__` dispatch path.
+During the call to `symbolic_trace`, the parameter `x` is transformed into a Proxy object and the corresponding Node (a Node with op = “placeholder” and target = “x”) is added to the Graph.
 
 If you're doing graph transforms, you can wrap your own Proxy method around a raw Node so that you can use the overloaded operators to add additional things to a Graph.
 
