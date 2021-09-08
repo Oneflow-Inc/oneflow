@@ -16,12 +16,12 @@ limitations under the License.
 #include "oneflow/core/comm_network/ibverbs/ibverbs_message_pool.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 
-
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 namespace oneflow {
 
-IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd* pd, uint32_t num_of_message): pd_(pd), num_of_message_(num_of_message) {}
+IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd* pd, uint32_t num_of_message)
+    : pd_(pd), num_of_message_(num_of_message) {}
 
 void IBVerbsMessagePool::RegisterMessagePool() {
   size_t actor_msg_size = sizeof(ActorMsg);
@@ -63,6 +63,6 @@ void IBVerbsMessagePool::PutMessage(ActorMsgMR* msg_mr) {
 
 bool IBVerbsMessagePool::IsEmpty() { return message_buf_.empty() == true; }
 
-}
+}  // namespace oneflow
 
 #endif  // WITH_RDMA && OF_PLATFORM_POSIX

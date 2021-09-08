@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/platform/include/ibv.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
-#include  "oneflow/core/comm_network/ibverbs/ibverbs_message_pool.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_message_pool.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
