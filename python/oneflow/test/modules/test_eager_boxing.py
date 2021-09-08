@@ -2611,6 +2611,28 @@ def _test_eager_boxing_with_same_placement_s1_to_b(test_case, in_device, out_dev
         )
 
 
+def _test_eager_boxing_b_to_s(test_case, in_device_list, out_device_list):
+    for i in range(10):
+        np_arr = np.random.randn(12, 12)
+        device = flow.device("cpu")
+        x = flow.tensor(np_arr, device=device, dtype=flow.float32)
+        placement = flow.placement("cpu", {0: in_device_list})
+        y = x.to_consistent(placement, flow.sbp.broadcast)
+
+        new_placement = flow.placement("cpu", {0: out_device_list})
+        z = y.to_consistent(new_placement, flow.sbp.split(0))
+
+        cuda_device = flow.device("cuda")
+        m = flow.tensor(np_arr, device=cuda_device, dtype=flow.float32)
+        cuda_placement = flow.placement("cuda", {0: in_device_list})
+        n = m.to_consistent(cuda_placement, flow.sbp.broadcast)
+
+        cuda_new_placement = flow.placement("cuda", {0: out_device_list})
+        k = n.to_consistent(cuda_new_placement, flow.sbp.split(0))
+        test_case.assertTrue(np.array_equal(z.to_local().numpy(), k.to_local().numpy()))
+        test_case.assertEqual(z.placement, new_placement)
+
+
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingWithNonOverlappingPlacement(flow.unittest.TestCase):
@@ -2902,6 +2924,17 @@ class TestEagerBoxingWithSameInOutPlacement(flow.unittest.TestCase):
         arg_dict["out_device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_with_same_placement_s1_to_b(test_case, *arg)
+
+
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestEagerBoxingBToS(flow.unittest.TestCase):
+    def test_eager_boxing_b_to_s(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device_list"] = [[0, 1], [1, 2, 3]]
+        arg_dict["out_device_list"] = [[2, 3], [0, 1, 3]]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_b_to_s(test_case, *arg)
 
 
 if __name__ == "__main__":

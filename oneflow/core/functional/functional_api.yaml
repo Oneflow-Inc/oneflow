@@ -1049,6 +1049,11 @@
   signature: "Tensor (Tensor x) => LocalAllReduce"
   bind_python: True
 
+
+- name: "eager_b_to_s"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, Shape shape) => EagerBToS"
+  bind_python: False
+
 - name: "consistent_all_reduce"
   signature: "Tensor (Tensor x) => ConsistentAllReduce"
   bind_python: False
