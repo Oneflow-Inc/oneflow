@@ -275,14 +275,14 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
   const auto& error_str = maybe_error.GetDataAndErrorProto(error_proto->DebugString());
   return error_str.first;
 }
-}
+}  // namespace
 }  // namespace oneflow
 
 #define CHECK_OK(...) CHECK(MaybeIsOk(__VA_ARGS__))
 
-#define OF_RETURN_IF_ERROR(...)                                                \
+#define OF_RETURN_IF_ERROR(...)                                          \
   for (auto&& maybe_##__LINE__ = __JustStackCheckWrapper__(__VA_ARGS__); \
-       !maybe_##__LINE__.IsOk();)                                              \
+       !maybe_##__LINE__.IsOk();)                                        \
   return Error(maybe_##__LINE__.error()).AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
 #define OF_TODO() return Error::TodoError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)

@@ -127,6 +127,13 @@ struct ScalarOrConstRef<T, typename std::enable_if<!std::is_scalar<T>::value>::t
 template<typename T>
 using scalar_or_const_ref_t = typename detail::ScalarOrConstRef<T>::type;
 
+template<typename, typename...>
+struct IsOneAndDecaySameAs : std::false_type {};
+
+template<typename T, typename U>
+struct IsOneAndDecaySameAs<T, U>
+    : std::integral_constant<bool, std::is_same<T, typename std::decay<U>::type>::value> {};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_TYPE_TRAITS_H_
