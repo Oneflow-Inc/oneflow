@@ -37,8 +37,8 @@ def torch_tensor_to_flow(x):
 note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
-
-
+vis_tensor = []
+call_tensor_id = []
 class PyTorchDoesNotSupportError(Exception):
     def __init__(self, exc):
         self.exc = exc
@@ -189,6 +189,8 @@ def GetDualObject(name, pytorch, oneflow):
 
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
+                            if isinstance(pytorch_res, torch_original.Tensor):
+                                call_tensor_id.append(id(pytorch_res))
                         except Exception as e:
                             raise PyTorchDoesNotSupportError(e)
 
@@ -196,6 +198,7 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_res = torch_tensor_to_flow(pytorch_res)
                         else:
                             oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 else:
@@ -213,6 +216,8 @@ def GetDualObject(name, pytorch, oneflow):
                             pytorch_res = pytorch_method(
                                 *pytorch_args, **pytorch_kwargs
                             )
+                            if isinstance(pytorch_res, torch_original.Tensor):
+                                call_tensor_id.append(id(pytorch_res))
                         except Exception as e:
                             raise PyTorchDoesNotSupportError(e)
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
@@ -273,11 +278,17 @@ def print_note_fake_program():
                 )
         print(f"\033[32m)\033[0m")
 
+    print(f"\033[32m-------------------------------------------------\033[0m")
+    print(f"\033[32m'This program has {len(vis_tensor)} input tensor\033[0m", end="")
+    print(f"\033[32m{vis_tensor}\033[0m", end="")
+
 
 def clear_note_fake_program():
     note_pytorch_method_names.clear()
     note_pytorch_args.clear()
     note_pytorch_kwargs.clear()
+    call_tensor_id.clear()
+    vis_tensor.clear()
 
 
 class DualObject:
@@ -304,7 +315,10 @@ class DualObject:
         new_name = f"{self.name}.{key}"
         global call_pytorch
         call_pytorch = self.pytorch
-        return GetDualObject(new_name, pytorch_attr, oneflow_attr)
+        res = GetDualObject(new_name, pytorch_attr, oneflow_attr)
+        if isinstance(res.pytorch, torch_original.Tensor):
+            call_tensor_id.append(id(res.pytorch))
+        return res
 
 
 dual_modules_to_test = []
@@ -407,6 +421,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                     for x in res:
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
+                                call_tensor_id.append(id(x.pytorch))
                                 x.sum().backward()
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
@@ -421,6 +436,7 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                                 getattr(x.oneflow, key),
                             )
                         )
+                        call_tensor_id.append(id(getattr(x.pytorch, key)))
                         dual_objects_to_test.append(
                             GetDualObject(
                                 "unused",
@@ -428,7 +444,10 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                                 getattr(x.oneflow, key).grad,
                             )
                         )
+                        call_tensor_id.append(id(getattr(x.pytorch, key).grad))
                 for x in dual_objects_to_test:
+                    if isinstance(x.pytorch, torch_original.Tensor) and id(x.pytorch) not in call_tensor_id:
+                        vis_tensor.append(x.pytorch)
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
                 if verbose:
                     print("test passed")
