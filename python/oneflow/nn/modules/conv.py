@@ -664,7 +664,7 @@ class Conv3d(Module):
                 dilation=self.dilation,
                 groups=self.groups,
             )
-        return res + 2.0
+        return res
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
