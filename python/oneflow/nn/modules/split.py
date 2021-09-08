@@ -31,7 +31,6 @@ class Split(Module):
 
     def forward(self, x):
         dim = dim + x.dim if self.dim < 0 else self.dim
-        x = x + 1.0
         if isinstance(self.split_size_or_sections, list):
             return tuple(
                 flow._C.split_with_size(

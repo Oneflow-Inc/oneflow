@@ -38,6 +38,7 @@ class TestConv3DModule(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         x = random_pytorch_tensor(ndim=5, dim0=2, dim1=channels).to(device)
+        x2 = random_pytorch_tensor(ndim=5, dim0=2, dim1=channels).to(device)
         y = m(x)
         return y
 

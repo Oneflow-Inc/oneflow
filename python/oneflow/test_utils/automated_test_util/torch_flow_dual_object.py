@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import collections.abc
+from enum import unique
 import functools
 import inspect
 import os
@@ -207,8 +208,9 @@ def GetDualObject(name, pytorch, oneflow):
 
                         try:
                             pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
-                            if isinstance(pytorch_res, torch_original.Tensor):
+                            if isinstance(pytorch_res, torch_original.Tensor) and hasattr(pytorch, '__name__') and (pytorch.__name__ != "to" or (pytorch.__name__ == "to" and pytorch_args == "cuda")):
                                 call_tensor_id.append(id(pytorch_res))
+                        
                         except Exception as e:
                             raise PyTorchDoesNotSupportError(e)
 
@@ -289,7 +291,7 @@ def print_note_fake_program():
 
         if note_pytorch_kwargs[i]:
             index = 0
-            print(f"\033[32m,\033[0m", end="")
+            print(f"\033[32m, \033[0m", end="")
             for x in note_pytorch_kwargs[i].keys():
                 index += 1
                 note_print_kwargs(
@@ -297,9 +299,21 @@ def print_note_fake_program():
                 )
         print(f"\033[32m)\033[0m")
 
-    print(f"\033[32m-------------------------------------------------\033[0m")
-    print(f"\033[32m'This program has {len(vis_tensor)} input tensor\033[0m", end="")
-    print(f"\033[32m{vis_tensor}\033[0m", end="")
+    print(f"\033[32m-----------------------------------------------------------\033[0m")
+    unique_vis_tensor = []
+    flag_vis_tensor = [False] * len(vis_tensor)
+    for i in range(len(vis_tensor)):
+        if flag_vis_tensor[i] == True:
+            continue
+        unique_vis_tensor.append(vis_tensor[i])
+        flag_vis_tensor[i] = True
+        for j in range(i+1, len(vis_tensor)):
+            if id(vis_tensor[i]) == id(vis_tensor[j]) and flag_vis_tensor[j] == False:
+                flag_vis_tensor[j] = True
+
+    print(f"\033[32mThis program has {len(unique_vis_tensor)} input tensor: \033[0m")
+    for input_tensor in unique_vis_tensor:
+        print(f"\033[32m{get_tensor_shape(input_tensor)}:{input_tensor}\033[0m", end="")
 
 
 def clear_note_fake_program():
@@ -334,10 +348,7 @@ class DualObject:
         new_name = f"{self.name}.{key}"
         global call_pytorch
         call_pytorch = self.pytorch
-        res = GetDualObject(new_name, pytorch_attr, oneflow_attr)
-        if isinstance(res.pytorch, torch_original.Tensor):
-            call_tensor_id.append(id(res.pytorch))
-        return res
+        return GetDualObject(new_name, pytorch_attr, oneflow_attr)
 
 
 dual_modules_to_test = []
@@ -464,9 +475,11 @@ def autotest(n=20, auto_backward=True, rtol=0.0001, atol=1e-05):
                             )
                         )
                         call_tensor_id.append(id(getattr(x.pytorch, key).grad))
+
                 for x in dual_objects_to_test:
                     if isinstance(x.pytorch, torch_original.Tensor) and id(x.pytorch) not in call_tensor_id:
                         vis_tensor.append(x.pytorch)
+                for x in dual_objects_to_test:
                     test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
                 if verbose:
                     print("test passed")
