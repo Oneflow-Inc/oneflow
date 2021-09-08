@@ -23,7 +23,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestAbsModule(flow.unittest.TestCase):
-    @autotest(n=1)
+    @autotest()
     def test_abs_with_0shape_data(test_case):
         device = random_device()
         x = random_pytorch_tensor().to(device)
