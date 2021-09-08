@@ -51,11 +51,9 @@ void CopyHdKernel::VirtualKernelInit(KernelContext* ctx) {
 void CopyHdKernel::ForwardDataContent(KernelContext* ctx) const {
   const Blob* in_blob = ctx->BnInOp2Blob(op_attribute().input_bns(0));
   Blob* out_blob = ctx->BnInOp2Blob(op_attribute().output_bns(0));
-  auto* stream_ctx =
-      CHECK_NOTNULL(dynamic_cast<StreamContextProvider*>(ctx->device_ctx()))->GetStreamContext();
   const size_t body_byte_size = in_blob->ByteSizeOfBlobBody();
   CHECK_EQ(out_blob->ByteSizeOfBlobBody(), body_byte_size);
-  primitive_->Launch(stream_ctx, out_blob->mut_dptr(), in_blob->dptr(), body_byte_size);
+  primitive_->Launch(ctx->stream_ctx(), out_blob->mut_dptr(), in_blob->dptr(), body_byte_size);
 }
 
 void CopyHdKernel::ForwardHeader(KernelContext* ctx) const {
