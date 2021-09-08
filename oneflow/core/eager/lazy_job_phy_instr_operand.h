@@ -62,7 +62,7 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   void ForEachMutMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override {
-    // Do nothing because lifetime of parameters are managed by params_critical_section_.
+    // Do nothing because lifetime of parameters are managed by params_critical_section_ and nccl_critical_section_.
   }
 
   void ForEachMut2MirroredObject(

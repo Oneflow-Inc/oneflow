@@ -75,6 +75,7 @@ class TensorCriticalSectionPhyInstrOperand : public CriticalSectionPhyInstrOpera
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&) const;
 
   const std::shared_ptr<std::atomic<int64_t>>& consumer_ref_cnt() const { return consumer_ref_cnt_; };
+  const HashMap<std::string, int64_t>& op_name2index() const { return op_name2index_; }
 
  protected:
 
@@ -97,10 +98,9 @@ class InputCriticalSectionPhyInstrOperand final : public TensorCriticalSectionPh
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
       const override { ForEachMirroredObject(DoEach); }
 
-  // for params
   void ForEachMutMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
+      const override;
 
   // for outputs
   void ForEachMut2MirroredObject(
@@ -136,7 +136,7 @@ class OutputCriticalSectionPhyInstrOperand final : public TensorCriticalSectionP
   // for params
   void ForEachMutMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
-      const override {}
+      const override;
 
   // for outputs
   void ForEachMut2MirroredObject(
@@ -173,7 +173,7 @@ class ParameterCriticalSectionPhyInstrOperand final : public TensorCriticalSecti
   // for params
   void ForEachMutMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-      const override { ForEachMirroredObject(DoEach); }
+      const override;
 
   // for outputs
   void ForEachMut2MirroredObject(

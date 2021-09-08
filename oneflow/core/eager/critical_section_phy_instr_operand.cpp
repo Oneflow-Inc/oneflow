@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/eager/critical_section_phy_instr_operand.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/common/decorator.h"
 
 namespace oneflow {
 namespace vm {
@@ -57,6 +58,35 @@ void TensorCriticalSectionPhyInstrOperand::ForEachMirroredObject(
 
 namespace {
 
+Maybe<LocalDepObject*> RawCriticalSectionLocalDepObject() {
+  return JUST(Device::New("critical_section"))->mut_schedule_local_dep_object();
+}
+
+constexpr auto* CriticalSectionLocalDepObject = DECORATE(&RawCriticalSectionLocalDepObject, ThreadLocal);
+
+}
+
+void InputCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+      const {
+  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object()); 
+}
+
+void OutputCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+      const {
+  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object()); 
+}
+
+void ParameterCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
+      const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
+      const {
+  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object()); 
+  ForEachMirroredObject(DoEach);
+}
+
+namespace {
+
 Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
   const auto& device = JUST(Device::New(type));
   const auto& local_dep_object = device->mut_transport_local_dep_object();
@@ -64,15 +94,15 @@ Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
   return JUST(local_dep_object.value());
 }
 
-}  // namespace
-
 static constexpr auto* GetEagerNcclLocalDepObject =
     DECORATE(&RawGetEagerNcclLocalDepObject, ThreadLocalCopiable);
+
+}  // namespace
 
 void NcclCriticalSectionPhyInstrOperand::ForEachMutMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
       const {
-
+  DoEach(nullptr, CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object()); 
 #ifdef WITH_CUDA
   auto* sync_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("sync_launched_nccl"));
   auto* async_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("async_launched_nccl"));
