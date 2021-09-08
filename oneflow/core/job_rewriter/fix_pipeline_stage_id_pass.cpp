@@ -73,6 +73,20 @@ int64_t GetStageIdHint(const OpNode* node) {
   return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
 }
 
+std::string ParallelDesc2HashString(const ParallelDesc& parallel_desc) {
+  std::string ret = parallel_desc.device_tag() + ",{";
+  for(int64_t m : parallel_desc.sorted_machine_ids()) {
+    ret += (std::to_string(m) + ":[");
+    for (int64_t d : parallel_desc.sorted_dev_phy_ids(m)) {
+      ret += (std::to_string(d) + ",");
+    }
+    ret += "],";
+  }
+  ret += "}";
+  std::cout << " cclog: parallel_desc hash str: \n" << ret << "\n\n";
+  return ret;
+}
+
 Maybe<int64_t> NewScopeWithStageId(int64_t old_scope_symbol_id, int64_t stage_id) {
   return NewScopeSymbolId(
       old_scope_symbol_id, [stage_id](std::shared_ptr<cfg::ScopeProto> new_scope) {
@@ -84,6 +98,10 @@ Maybe<int64_t> NewScopeWithStageId(int64_t old_scope_symbol_id, int64_t stage_id
 }
 
 Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  if (GlobalJobDesc().job_conf().num_gradient_accumulation_steps() <= 1) {
+    return Maybe<void>::Ok();
+  }
+  int64_t max_stage_id = 0;
   op_graph.ForEachNode([&](const OpNode* this_node) {
     if (!OpNodeHasScope(this_node)) {
       LOG(WARNING) << " op : " << this_node->op().op_conf().DebugString() << " has NOT scope!";
@@ -91,18 +109,6 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
     }
     int64_t new_scope =
         CHECK_JUST(NewScopeWithStageId(this_node->op().op_conf().scope_symbol_id(), 99));
-  });
-
-  if (GlobalJobDesc().job_conf().num_gradient_accumulation_steps() <= 1) {
-    return Maybe<void>::Ok();
-  }
-  int64_t max_stage_id = 0;
-
-  op_graph.ForEachNode([&](const OpNode* this_node) {
-    if (!OpNodeHasScope(this_node)) {
-      LOG(WARNING) << " op : " << this_node->op().op_conf().DebugString() << " has NOT scope!";
-      return;
-    }
     max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
   });
 
@@ -111,6 +117,43 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
   LOG(INFO) << "total stage num = " << total_stage_num;
 
   HashMap<std::string, OperatorConf> mut_op_name2conf;
+  HashMap<std::string, OperatorConf> op_name2conf;
+  HashMap<std::string, std::string> op_name2placement;
+  HashMap<std::string, int64_t> op_name2stage_id;
+  HashMap<std::string, int64_t> op_name2new_stage_id;
+  HashMap<std::string, HashSet<std::string> placement2op_names;
+
+  // NOTE(chengcheng): group op by placement.
+  op_graph.ForEachNode([&](const OpNode* this_node) {
+    if (!OpNodeHasScope(this_node)) { return; }
+    const std::string& op_name = this_node->op().op_name();
+    op_name2conf.emplace(op_name, this_node->op().op_conf());
+    std::string placement = ParallelDesc2HashString(this_node->parallel_desc());
+    int64_t stage_id = GetStageIdHint(this_node);
+    op_name2stage_id.emplace(op_name, stage_id);
+    op_name2placement.emplace(op_name, placement);
+    placement2op_names[placement].insert(op_name);
+  });
+
+  for(auto& pair : placement2op_names) {
+    std::cout << "cclog: placement = " << placement2op_names << "\n";
+    HashMap<int64_t, HashSet<std::string>> stage_id2op_names;
+    for(const auto& op_name : pair.second) {
+      stage_id2op_names[op_name2stage_id.at(op_name)].insert(op_name);
+    }
+    int64_t max_group_stage_id = -1;
+    int64_t max_group_op_size = -1;
+    for(auto& stage_id_op_names_pair : stage_id2op_names) {
+      if (pair.second.size() > max_group_op_size) {
+        max_group_stage_id = pair.first;
+        max_group_op_size = pair.second.size();
+      }
+    }
+
+    for(auto& stage_id_op_names_pair : stage_id2op_names) {
+      if (pair.first != )
+    }
+  }
 
   for (auto& pair : mut_op_name2conf) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
 
