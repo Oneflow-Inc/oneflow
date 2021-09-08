@@ -48,7 +48,7 @@ namespace one {
 namespace {
 
 Maybe<Symbol<Device>> GetDefaultDevice(const OpExprInterpContext& ctx) {
-  if (ctx.device.has_value()) { return ctx.device.to_maybe(); }
+  if (ctx.device.has_value()) { return JUST(ctx.device); }
   return Device::New("cpu", 0);
 }
 

@@ -90,7 +90,7 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
           ::oneflow::private_details::JustGetError(value_to_check_), __FILE__, __LINE__, \
           __FUNCTION__, OF_PP_STRINGIZE((__VA_ARGS__)));                                 \
     }                                                                                    \
-    std::move(value_to_check_);                                                          \
+    std::forward<decltype(value_to_check_)>(value_to_check_);                            \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_JUST(...)                                                                      \
@@ -102,7 +102,7 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
               ::oneflow::private_details::JustGetError(value_to_check_), __FILE__, __LINE__, \
               func_name, OF_PP_STRINGIZE((__VA_ARGS__))));                                   \
     }                                                                                        \
-    return std::move(value_to_check_);                                                       \
+    return std::forward<decltype(value_to_check_)>(value_to_check_);                         \
   })(__FUNCTION__)                                                                           \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
@@ -115,7 +115,7 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
               .AddStackFrame(__FILE__, __LINE__, __FUNCTION__),                       \
           OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__);                               \
     }                                                                                 \
-    std::move(value_to_check_);                                                       \
+    std::forward<decltype(value_to_check_)>(value_to_check_);                         \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_JUST_MSG(value, ...)                                                        \
@@ -129,9 +129,16 @@ std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
               OF_PP_STRINGIZE((value)), ": ", __VA_ARGS__)                                \
               .error_proto());                                                            \
     }                                                                                     \
-    return std::move(value_to_check_);                                                    \
+    return std::forward<decltype(value_to_check_)>(value_to_check_);                      \
   })(__FUNCTION__)                                                                        \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+
+#define JUST_OPT(...)                                                \
+  ({                                                                 \
+    auto&& value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__); \
+    if (!value_to_check_.has_value()) { return NullOpt; }            \
+    std::forward<decltype(value_to_check_)>(value_to_check_);        \
+  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #else
 #error statement expression is no supported, please implement try-catch version of JUST

@@ -45,7 +45,7 @@ namespace {
 Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
                                             const OpExprInterpContext& ctx) {
   if (!inputs.empty()) { return inputs.at(0)->parallel_desc(); }
-  return ctx.parallel_desc.to_maybe();
+  return JUST(ctx.parallel_desc);
 }
 
 std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,

@@ -81,8 +81,8 @@ class OptionalBase<T, typename std::enable_if<IsScalarType<T>::value>::type> {
     return *this;
   }
 
-  T value() const { return value_; }
-  T& value() { return value_; }
+  T value() const& { return value_; }  // `T value() &&` goes here
+  T& value() & { return value_; }
 
   bool has_value() const { return init_; }
 
@@ -98,6 +98,8 @@ class OptionalBase<T, typename std::enable_if<std::is_reference<T>::value>::type
  public:
   using value_type = typename std::remove_reference<T>::type;
   using storage_type = value_type*;
+
+  static_assert(std::is_lvalue_reference<T>::value, "rvalue reference is not supported here");
 
   OptionalBase() : value_(nullptr){};
   ~OptionalBase() = default;
@@ -119,7 +121,8 @@ class OptionalBase<T, typename std::enable_if<std::is_reference<T>::value>::type
     return *this;
   }
 
-  T value() const { return *value_; }
+  const value_type& value() const { return *value_; }
+  T value() { return *value_; }
 
   bool has_value() const { return value_; }
 
@@ -146,8 +149,8 @@ class OptionalBase<
   explicit OptionalBase(const T& value) : value_(std::make_shared<T>(value)) {}
   explicit OptionalBase(T&& value) : value_(std::make_shared<T>(std::move(value))) {}
 
-  explicit OptionalBase(const std::shared_ptr<T>& value) : value_(value) {}
-  explicit OptionalBase(std::shared_ptr<T>&& value) : value_(std::move(value)) {}
+  explicit OptionalBase(const storage_type& value) : value_(value) {}
+  explicit OptionalBase(storage_type&& value) : value_(std::move(value)) {}
 
   OptionalBase(const OptionalBase&) = default;
   OptionalBase(OptionalBase&&) noexcept = default;
@@ -168,6 +171,16 @@ class OptionalBase<
     }
     return *this;
   }
+
+  OptionalBase& operator=(const storage_type& value) {
+    value_ = value;
+    return *this;
+  }
+  OptionalBase& operator=(storage_type&& value) {
+    value_ = std::move(value);
+    return *this;
+  }
+
   OptionalBase& operator=(const OptionalBase& rhs) {
     value_ = rhs.value_;
     return *this;
@@ -177,14 +190,16 @@ class OptionalBase<
     return *this;
   }
 
-  const storage_type& value() const { return value_; }
+  const storage_type& value() const& { return value_; }
+  storage_type& value() & { return value_; }
+  storage_type value() && { return std::move(value_); }
 
   bool has_value() const { return bool(value_); }
 
   void reset() { value_.reset(); }
 
  private:
-  std::shared_ptr<T> value_;
+  storage_type value_;
 };
 
 }  // namespace internal
@@ -198,8 +213,9 @@ class Optional final : private internal::OptionalBase<T> {
   using value_type = typename base::value_type;
   using storage_type = typename base::storage_type;
 
-  using const_return_type = decltype(std::declval<const base>().value());
-  using return_type = decltype(std::declval<base>().value());
+  using const_return_type = decltype(std::declval<const base&>().value());
+  using return_type = decltype(std::declval<base&>().value());
+  using move_return_type = decltype(std::declval<base&&>().value());
 
   Optional() = default;
   ~Optional() = default;
@@ -214,51 +230,33 @@ class Optional final : private internal::OptionalBase<T> {
   Optional(const Optional&) = default;
   Optional(Optional&&) noexcept = default;
 
-  Optional& operator=(const T& val) {
-    return static_cast<Optional&>(static_cast<base&>(*this) = val);
-  }
-
-  Optional& operator=(T&& val) {
-    return static_cast<Optional&>(static_cast<base&>(*this) = std::move(val));
+  template<typename U>
+  Optional& operator=(U&& val) {
+    return static_cast<Optional&>(static_cast<base&>(*this) = std::forward<U>(val));
   }
 
   Optional& operator=(const Optional& rhs) = default;
-
   Optional& operator=(Optional&& rhs) noexcept = default;
 
-  template<typename U>
-  const_return_type value_or(U&& default_) const {
+  const_return_type value_or(const_return_type default_) const {
     if (has_value()) {
       return base::value();
     } else {
-      return std::forward<U>(default_);
-    }
-  }
-
-  template<typename U>
-  return_type value_or(U&& default_) {
-    if (has_value()) {
-      return base::value();
-    } else {
-      return std::forward<U>(default_);
+      return default_;
     }
   }
 
   bool has_value() const { return base::has_value(); }
   explicit operator bool() const { return has_value(); }
 
-  const_return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
+  const_return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const& {
     return base::value();
   }
 
-  return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() { return base::value(); }
+  return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() & { return base::value(); }
 
-  Maybe<T> to_maybe() const {
-    if (has_value()) {
-      return base::value();
-    } else {
-      return Error::ValueNotFoundError();
-    }
+  move_return_type Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && {
+    return std::move(*this).base::value();
   }
 
   void reset() { base::reset(); }
