@@ -637,8 +637,9 @@ const std::shared_ptr<user_op::OpKernelState>& UserKernel::GetOpKernelState() co
 
 void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                    user_op::OpKernelState* opkernel_state) const {
-#ifdef WITH_CUDA_GRAPHS
   const bool updated = ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
+
+#ifdef WITH_CUDA_GRAPHS
   bool current_scope_capturing = false;
   if (cuda_graph_exec_) {
     if (!cuda_graph_ctx_->IsGraphCapturing()) {
