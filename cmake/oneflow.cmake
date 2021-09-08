@@ -295,6 +295,7 @@ include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
 if(BUILD_CUDA)
+  # TODO: do we still need a dedicated of_cudaobj for modern cmake?
   oneflow_add_library(of_cudaobj ${of_cuda_src})
   add_dependencies(of_cudaobj of_protoobj of_cfgobj of_functional_obj)
   target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
