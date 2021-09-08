@@ -387,3 +387,33 @@ add_docstr(
         tensor([1.0507, 2.1014, 3.1521], dtype=oneflow.float32)
     """,
 )
+add_docstr(
+    oneflow._C.glu,
+    """
+    glu(input: Tensor, dim: int) -> Tensor 
+
+    The equation is:
+
+    .. math::
+         GLU(input) = GLU(a, b) = a \otimes sigmoid(b)
+    
+    .. note::
+        where input is split in half along dim to form a and b, ⊗ is the element-wise product between matrices.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+        >>> x = flow.tensor([[1, 2, 3, 4], [5, 6, 7, 8]], dtype=flow.float32)
+        >>> y = nn.functional.glu(x)
+        >>> y
+        tensor([[0.9526, 1.9640],
+                [4.9954, 5.9980]], dtype=oneflow.float32)
+
+    See    
+    :class:`~oneflow.nn.GLU` for more details.
+ 
+    """,
+)

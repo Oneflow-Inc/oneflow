@@ -28,6 +28,7 @@ class MemcpyImpl : public Memcpy {
   ~MemcpyImpl() = default;
 
   void Launch(StreamContext* stream_ctx, void* dst, const void* src, size_t count) {
+    if (dst == src) { return; }
     std::memcpy(dst, src, count);
   }
 };
