@@ -144,7 +144,6 @@ void TryInsertOrUseBufferOpBothSrcDst(
   const OpNode* dst_node = op_edge->dst_node();
   const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
   const ParallelDesc& dst_parallel_desc = dst_node->parallel_desc();
-  // TODO(): fix
   CHECK(!src_parallel_desc.EqualsIgnoringHierarchy(dst_parallel_desc));
   const std::string& dst_op_name = dst_node->op().op_name();
   const int64_t src_stage_id = GetStageIdHint(src_node);
