@@ -328,7 +328,7 @@ class Graph(object):
     def _shallow_repr(self):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
-    
+
     def _rank0_print(self, msg: str = ""):
         if get_rank() != 0:
             return
@@ -347,13 +347,17 @@ class Graph(object):
     @property
     def _graph_proto(self):
         if not self._is_compiled:
-            self._rank0_print(f"[WARNING]{self._shallow_repr} has not been compiled, it's graph proto is None.")
+            self._rank0_print(
+                f"[WARNING]{self._shallow_repr} has not been compiled, it's graph proto is None. You can call the graph to trigger it's compilation."
+            )
         return self._forward_job_proto
 
     @property
     def _full_graph_proto(self):
         if not self._is_compiled:
-            self._rank0_print(f"[WARNING]{self._shallow_repr} has not been compiled, it's full graph proto is None.")
+            self._rank0_print(
+                f"[WARNING]{self._shallow_repr} has not been compiled, it's full graph proto is None. You can call the graph to trigger it's compilation."
+            )
         return self._full_job_proto
 
     def _generate_name(self):
