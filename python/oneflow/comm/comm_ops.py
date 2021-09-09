@@ -129,14 +129,14 @@ def broadcast(tensor, src):
         >>> tensor # doctest: +ONLY_CHECK_RANK_1
         tensor([[2, 3],
                 [4, 5]], device='cuda:1', dtype=oneflow.int64)
-        >>> flow.comm.broadcast(tensor)
+        >>> flow.comm.broadcast(tensor, 0)
         >>> tensor # doctest: +ONLY_CHECK_RANK_0
         tensor([[1, 2],
                 [3, 4]], device='cuda:0', dtype=oneflow.int64)
         >>> tensor # doctest: +ONLY_CHECK_RANK_1
-        tensor([[2, 3],
-                [4, 5]], device='cuda:1', dtype=oneflow.int64)
+        tensor([[1, 2],
+                [3, 4]], device='cuda:1', dtype=oneflow.int64)
 
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
-    flow._C.broadcast(tensor, src, True)
+    flow._C.broadcast(tensor, src, inplace=True)
