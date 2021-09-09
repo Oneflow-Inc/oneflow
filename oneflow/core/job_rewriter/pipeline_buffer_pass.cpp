@@ -262,10 +262,10 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
           continue; /* last stage(loss) does NOT need to insert buffer */
         }
         if (src_stage_id != dst_stage_id) {
-          LOG(WARNING) << " Cross diff stage link From: [" << src_node->op().op_conf().DebugString()
-                       << "](stage_id:" << std::to_string(src_stage_id) << ") -> ["
-                       << this_node->op().op_conf().DebugString()
-                       << "](stage_id:" << std::to_string(dst_stage_id) << ")\n";
+          LOG(INFO) << " Cross diff stage link From: [" << src_node->op().op_conf().DebugString()
+                    << "](stage_id:" << std::to_string(src_stage_id) << ") -> ["
+                    << this_node->op().op_conf().DebugString()
+                    << "](stage_id:" << std::to_string(dst_stage_id) << ")\n";
         }
         const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
         TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, &buffer_op_name2op_conf,
