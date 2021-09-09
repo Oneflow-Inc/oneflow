@@ -24,6 +24,8 @@ import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.unittest
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n1d()
 class TestGraphActivationCheckpoint(flow.unittest.TestCase):
     def test_activation_checkpoint(test_case):
         loss_fn = flow.nn.MSELoss(reduction="sum")
