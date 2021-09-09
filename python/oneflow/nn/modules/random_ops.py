@@ -106,8 +106,8 @@ def rand_op(
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (int... or flow.Size): Defining the shape of the output tensor.
-          Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
+        size (int... or oneflow.Size): Defining the shape of the output tensor.
+          Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
         out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         layout (optional): The desired layout of returned Tensor.
@@ -127,7 +127,7 @@ def rand_op(
         >>> import oneflow as flow
         >>> x = flow.rand(3,3)
         >>> x.shape
-        flow.Size([3, 3])
+        oneflow.Size([3, 3])
         >>> x.is_consistent
         False
         >>> placement = flow.placement("cpu", {0: [0]})
@@ -204,8 +204,8 @@ def randn_op(
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (int... or flow.Size): Defining the shape of the output tensor.
-          Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
+        size (int... or oneflow.Size): Defining the shape of the output tensor.
+          Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
         out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         layout (optional): The desired layout of returned Tensor.
@@ -225,7 +225,7 @@ def randn_op(
         >>> import oneflow as flow
         >>> x = flow.randn(3,3)
         >>> x.shape
-        flow.Size([3, 3])
+        oneflow.Size([3, 3])
         >>> x.is_consistent
         False
         >>> placement = flow.placement("cpu", {0:[0]})
@@ -317,8 +317,8 @@ def randint_op(
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (int... or flow.Size): Defining the shape of the output tensor.
-          Can be a variable number of arguments or a collection like a list or tuple or flow.Size.
+        size (int... or oneflow.Size): Defining the shape of the output tensor.
+          Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
         out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
         layout (optional): The desired layout of returned Tensor.
