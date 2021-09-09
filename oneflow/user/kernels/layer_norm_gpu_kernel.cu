@@ -290,6 +290,7 @@ void WelfordOnlineSumVariance(
   mu = lmean;
   U delta2 = curr - lmean;
   sigma2 = sigma2 + delta * delta2;
+  // sigma2 = delta;
 }
 
 template<typename T, typename ComputeType>
@@ -309,8 +310,9 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
   for (int row = blockIdx.x; row < num_instances; row += gridDim.x) {
     const int row_offset = row * norm_size;
     const T* x_row = x + row_offset;
-    ComputeType thread_mean = 0;
-    ComputeType thread_m2 = 0;
+    ComputeType thread_mean = static_cast<ComputeType>(0.0);
+    ComputeType thread_m2 = static_cast<ComputeType>(0.0);
+    ComputeType row_mean = static_cast<ComputeType>(10.0); 
     const int tid = threadIdx.x;
     int count = 0; 
     for (int col = tid; col < norm_size; col += blockDim.x) {
@@ -329,12 +331,23 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
       printf("num instances is: %d \n", num_instances);
       printf("thread mean is: %f \n", thread_mean);
       printf("block mean sum is: %f \n", block_mean_sum); 
-      ComputeType row_mean = block_mean_sum * inv_norm_size ;
+
+      if (norm_size < kLayerNormForwardGpuBlockSize){
+        printf("enterhere!"); 
+        row_mean = block_mean_sum * inv_norm_size; 
+      }
+      else{
+        printf("enter else"); 
+        row_mean = block_mean_sum / kLayerNormForwardGpuBlockSize;
+      }
+
       printf("Here row mean is: %f \n", row_mean); 
       row_mean_shared = row_mean;
+
       mean[row] = row_mean;
       ComputeType row_variance =
-          max(block_m2_sum * inv_norm_size, static_cast<ComputeType>(0));
+          max(block_m2_sum * inv_norm_size, static_cast<ComputeType>(0.0));
+      printf("thread_m2_sum is: %f \n", thread_m2); 
       printf("block_m2_sum is: %f \n", block_m2_sum); 
       printf("Here row var is: %f \n", row_variance); 
       ComputeType row_inv_var = rsqrt(row_variance + static_cast<ComputeType>(epsilon));
