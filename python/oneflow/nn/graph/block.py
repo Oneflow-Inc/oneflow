@@ -218,20 +218,34 @@ class Block(object):
     def _pre_forward_mapping_out_scope(self, *args):
         # Deal with activation checkpointing identity.
         if self.config.activation_checkpointing:
+
             def break_with_identity(t):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
-            args = self._mapping_io("input", break_with_identity, "break_activation_checkpointing_with_identity", *args)
-                
+
+            args = self._mapping_io(
+                "input",
+                break_with_identity,
+                "break_activation_checkpointing_with_identity",
+                *args,
+            )
+
         return args
 
     def _post_forward_mapping_out_scope(self, *args):
         # Deal with activation checkpointing identity.
         if self.config.activation_checkpointing:
+
             def break_with_identity(t):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
-            args = self._mapping_io("output", break_with_identity, "break_activation_checkpointing_with_identity", *args)
+
+            args = self._mapping_io(
+                "output",
+                break_with_identity,
+                "break_activation_checkpointing_with_identity",
+                *args,
+            )
         return args
 
     def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
@@ -260,28 +274,42 @@ class Block(object):
             if isinstance(arg, list):
                 seq_args = list()
                 for i in range(len(arg)):
-                    is_tensor, name, repr_str = self._io_tensor_check_and_gen(arg[i], io_type, idx, i)
+                    is_tensor, name, repr_str = self._io_tensor_check_and_gen(
+                        arg[i], io_type, idx, i
+                    )
                     if is_tensor:
                         seq_args.append(mapping_tensor(arg[i]))
                         if self._debug:
-                            print(f"{repr_str} is a Tensor, {func_desc} transformation has been done.")
+                            print(
+                                f"{repr_str} is a Tensor, {func_desc} transformation has been done."
+                            )
                     else:
                         if self._debug:
-                            print(f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored.")
+                            print(
+                                f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored."
+                            )
                         seq_args.append(arg[i])
                 mapped_args.append(seq_args)
             elif isinstance(arg, Tensor):
-                is_tensor, name, repr_str = self._io_tensor_check_and_gen(arg, io_type, idx)
+                is_tensor, name, repr_str = self._io_tensor_check_and_gen(
+                    arg, io_type, idx
+                )
                 assert is_tensor
                 mapped_args.append(mapping_tensor(arg))
                 if self._debug:
-                    print(f"{repr_str} is a Tensor, {func_desc} transformation has been done.")
+                    print(
+                        f"{repr_str} is a Tensor, {func_desc} transformation has been done."
+                    )
             else:
-                is_tensor, name, repr_str = self._io_tensor_check_and_gen(arg, io_type, idx)
+                is_tensor, name, repr_str = self._io_tensor_check_and_gen(
+                    arg, io_type, idx
+                )
                 assert not is_tensor
                 mapped_args.append(arg)
                 if self._debug:
-                    print(f"{repr_str} is not a Tensor or a list of Tensor, {func_desc} transformation will be ignored.")
+                    print(
+                        f"{repr_str} is not a Tensor or a list of Tensor, {func_desc} transformation will be ignored."
+                    )
 
         return tuple(mapped_args)
 
@@ -304,7 +332,13 @@ class Block(object):
             return True, name, repr_str
         else:
             repr_str = (
-                "[WARNING](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
+                "[WARNING]("
+                + io_type.upper()
+                + ":"
+                + name
+                + ":"
+                + str(type(item))
+                + ")"
             )
             return False, name, repr_str
 

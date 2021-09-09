@@ -111,14 +111,6 @@ inline Maybe<std::string> GetSerializedCurrentJob() {
   return job_ctx->job().SerializeAsString();
 }
 
-inline Maybe<std::string> GetSerializedJob(const std::string& job_name) {
-  auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(job_ctx_mgr);
-  auto* job_ctx = JUST(job_ctx_mgr->FindJobBuildAndInferCtx(job_name));
-  CHECK_NOTNULL_OR_RETURN(job_ctx);
-  return job_ctx->job().SerializeAsString();
-}
-
 inline Maybe<std::string> GetFunctionConfigDef() {
   std::string ret;
   google::protobuf::TextFormat::PrintToString(GlobalFunctionConfigDef(), &ret);

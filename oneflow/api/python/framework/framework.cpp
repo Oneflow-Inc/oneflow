@@ -32,8 +32,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetSerializedJobSet", []() { return py::bytes(GetSerializedJobSet()); });
   m.def("GetSerializedStructureGraph", &GetSerializedStructureGraph /* a prototxt saved to file*/);
   m.def("GetSerializedCurrentJob", []() { return py::bytes(GetSerializedCurrentJob()); });
-  m.def("GetSerializedJob",
-        [](const std::string& job_name) { return py::bytes(GetSerializedJob(job_name)); });
 
   m.def("GetFunctionConfigDef", &GetFunctionConfigDef);
   m.def("GetScopeConfigDef", &GetScopeConfigDef);

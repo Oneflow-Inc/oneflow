@@ -50,10 +50,6 @@ inline std::string GetSerializedCurrentJob() {
   return oneflow::GetSerializedCurrentJob().GetOrThrow();
 }
 
-inline std::string GetSerializedJob(const std::string& job_name) {
-  return oneflow::GetSerializedJob(job_name).GetOrThrow();
-}
-
 inline std::string GetFunctionConfigDef() { return oneflow::GetFunctionConfigDef().GetOrThrow(); }
 
 inline std::string GetScopeConfigDef() { return oneflow::GetScopeConfigDef().GetOrThrow(); }

@@ -30,11 +30,7 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType
 from oneflow.nn.graph.config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-<<<<<<< HEAD
-from oneflow.nn.graph.util import add_indent, list_to_func_return, sys_exc_error_msg
-=======
 from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg
->>>>>>> 716cc69369c4662f2c4f9408a75e531adbcc8af2
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
@@ -332,11 +328,6 @@ class Graph(object):
     def _shallow_repr(self):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
-    
-    def _rank0_print(self, msg: str = ""):
-        if get_rank() != 0:
-            return
-        print(msg)
 
     def _rank0_print(self, msg: str = ""):
         if get_rank() != 0:
@@ -433,12 +424,17 @@ class Graph(object):
         # Complie graph to execution plan and init Runtime
         try:
             if self._debug:
-                print(self._shallow_repr() + " start compiling plan and init graph runtime.")
+                print(
+                    self._shallow_repr()
+                    + " start compiling plan and init graph runtime."
+                )
 
             self._c_nn_graph.complie_and_init_runtime()
 
             if self._debug:
-                print(self._shallow_repr() + " end compiling plan and init graph rumtime.")
+                print(
+                    self._shallow_repr() + " end compiling plan and init graph rumtime."
+                )
         except:
             print(
                 "[ERROR]"
@@ -550,9 +546,7 @@ class Graph(object):
         # Make outputs buffer
         if self._outputs_buffer_size >= 2:
             for i in range(self._outputs_buffer_size - 1):
-                outputs_buffer_item = self._zero_like_io(
-                    "output", *self._eager_outputs
-                )
+                outputs_buffer_item = self._zero_like_io("output", *self._eager_outputs)
                 self._eager_outputs_buffer.append(outputs_buffer_item)
                 outputs_tensor_tuple_buffer_item = convert_to_tensor_tuple(
                     self._flatten_io("output", *outputs_buffer_item)
