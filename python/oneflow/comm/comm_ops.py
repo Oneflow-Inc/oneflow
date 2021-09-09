@@ -108,20 +108,15 @@ def all_gather(tensor_list, tensor):
 def broadcast(tensor, src):
     """
     Broadcasts the tensor to the whole group.
-
     ``tensor`` must have the same number of elements in all processes
     participating in the collective.
-
     Args:
         tensor (Tensor): Data to be sent if ``src`` is the rank of current
             process, and tensor to be used to save received data otherwise.
         src (int): Source rank.
-
     .. code-block:: python
-
         >>> # We have 1 process groups, 2 ranks.
         >>> import oneflow as flow
-
         >>> tensor = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_local_rank()
         >>> tensor # doctest: +ONLY_CHECK_RANK_0
         tensor([[1, 2],
@@ -136,7 +131,6 @@ def broadcast(tensor, src):
         >>> tensor # doctest: +ONLY_CHECK_RANK_1
         tensor([[1, 2],
                 [3, 4]], device='cuda:1', dtype=oneflow.int64)
-
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert isinstance(src, int)
