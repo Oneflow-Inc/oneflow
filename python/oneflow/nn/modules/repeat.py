@@ -55,8 +55,11 @@ def repeat_op(input, *sizes):
         >>> input = flow.Tensor(x)
         >>> out = input.repeat(1, 1, 2, 2)
         >>> out.shape
-        flow.Size([1, 3, 2, 4])
+        oneflow.Size([1, 3, 2, 4])
     """
+
+    if input.ndim == 0 and input.numel() == 1:
+        input = input.unsqueeze(0)
 
     if _input_args_is_int(sizes):
         sizes = _single(sizes)

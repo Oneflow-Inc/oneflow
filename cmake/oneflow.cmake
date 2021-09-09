@@ -48,12 +48,15 @@ function(target_treat_warnings_as_errors target)
     target_try_compile_options(${target} -Wno-error=instantiation-after-specialization)
 
     # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
-    target_try_compile_options(${target} -Wno-error=mismatched-tags)
+    target_try_compile_options(${target} -Wno-mismatched-tags)
 
     # disable for pointer operations of intrusive linked lists
     target_try_compile_options(${target} -Wno-error=array-bounds)
 
     target_try_compile_options(${target} -Wno-error=comment)
+
+    # disable visibility warnings related to https://github.com/Oneflow-Inc/oneflow/pull/3676.
+    target_try_compile_options(${target} -Wno-error=attributes)
   endif()
 endfunction()
 
@@ -214,7 +217,7 @@ add_custom_target(of_format
 # clang tidy
 add_custom_target(of_tidy
   COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py --build_dir ${CMAKE_BINARY_DIR}
-  DEPENDS of_git_version oneflow_deps of_cfgobj of_functional_obj 
+  DEPENDS of_git_version oneflow_deps of_cfgobj of_functional_obj of_functional_tensor_obj
   )
 # generate version
 set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
@@ -270,17 +273,30 @@ endif()
 include(functional)
 GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
     FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
-oneflow_add_library(of_functional_obj ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
+oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS} ${FUNCTIONAL_GENERATED_HRCS})
 add_dependencies(of_functional_obj of_cfgobj)
+add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
-set(PYBIND11_SRCS ${CFG_PYBIND11_SRCS} ${FUNCTIONAL_PYBIND11_SRCS})
+GENERATE_FUNCTIONAL_TENSOR_API_AND_PYBIND11_CPP(
+    FUNCTIONAL_TENSOR_GENERATED_SRCS FUNCTIONAL_TENSOR_GENERATED_HRCS
+    FUNCTIONAL_TENSOR_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
+oneflow_add_library(of_functional_tensor_obj STATIC
+    ${FUNCTIONAL_TENSOR_GENERATED_SRCS} ${FUNCTIONAL_TENSOR_GENERATED_HRCS})
+add_dependencies(of_functional_tensor_obj of_cfgobj)
+add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
+target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+
+set(PYBIND11_SRCS
+    ${CFG_PYBIND11_SRCS}
+    ${FUNCTIONAL_PYBIND11_SRCS}
+    ${FUNCTIONAL_TENSOR_PYBIND11_SRCS})
 
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
 if(BUILD_CUDA)
   oneflow_add_library(of_cudaobj ${of_cuda_src})
-  add_dependencies(of_cudaobj of_protoobj of_cfgobj of_functional_obj prepare_oneflow_third_party)
+  add_dependencies(of_cudaobj of_protoobj of_cfgobj of_functional_obj)
   target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
   set(ONEFLOW_CUDA_LIBS of_cudaobj)
 
@@ -291,7 +307,6 @@ endif()
 
 # cc obj lib
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
-add_dependencies(of_ccobj prepare_oneflow_third_party)
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
@@ -332,10 +347,15 @@ endif()
 
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
-add_dependencies(oneflow_internal of_cfgobj of_functional_obj)
+add_dependencies(oneflow_internal of_cfgobj of_functional_obj of_functional_tensor_obj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${ONEFLOW_PYTHON_DIR}/oneflow")
-target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
+target_link_libraries(oneflow_internal PRIVATE
+                      ${of_libs}
+                      of_functional_tensor_obj
+                      ${oneflow_third_party_libs}
+                      of_pyext_obj
+                      ${oneflow_exe_third_party_libs})
 target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 
 target_compile_options(oneflow_internal PRIVATE -Werror=return-type)
@@ -377,9 +397,7 @@ add_custom_target(of_include_copy)
 add_dependencies(of_include_copy oneflow_internal)
 
 foreach(of_include_src_dir ${CFG_INCLUDE_DIR})
-  set(oneflow_all_include_file)
-  file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
-  copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+  copy_all_files_in_dir("${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
 
 set(DEVICE_REG_HEADERS "${PROJECT_SOURCE_DIR}/oneflow/core/framework/device_register_*.h")
@@ -418,4 +436,4 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 add_custom_target(oneflow_py ALL)
-add_dependencies(oneflow_py of_include_copy)
+add_dependencies(oneflow_py of_include_copy of_pyscript_copy)

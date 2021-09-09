@@ -87,7 +87,7 @@ class Linear(Module):
         >>> input = flow.Tensor(np.random.randn(128, 20))
         >>> output = m(input)
         >>> output.size()
-        flow.Size([128, 30])
+        oneflow.Size([128, 30])
 
     """
 
@@ -107,7 +107,7 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        res = flow.F.matmul(x, self.weight, transpose_a=False, transpose_b=True)
+        res = flow._C.matmul(x, self.weight, transpose_a=False, transpose_b=True)
         if self.bias is not None:
             res += self.bias
         return res

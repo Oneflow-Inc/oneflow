@@ -64,7 +64,7 @@ class FakeQuantization(Module):
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
         
-        >>> input_tensor = flow.Tensor(
+        >>> input_tensor = flow.tensor(
         ...    weight, dtype=flow.float32
         ... )
         
@@ -102,7 +102,7 @@ class FakeQuantization(Module):
         self.quantization_scheme = quantization_scheme
 
     def forward(self, input, scale, zero_point):
-        return flow.F.fake_quantization(
+        return flow._C.fake_quantization(
             input,
             scale,
             zero_point,

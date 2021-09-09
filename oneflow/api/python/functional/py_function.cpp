@@ -53,8 +53,7 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
 
   if (max_pos_args == 1) {
     const auto& type = function.argument_def.at(0).type;
-    treat_args_as_intlist = (type == kINT32_LIST || type == kUINT32_LIST || type == kINT64_LIST
-                             || type == kUINT64_LIST);
+    treat_args_as_intlist = IsIntegralListType(type) || type == kSHAPE;
   }
   if (nargs > max_pos_args && !treat_args_as_intlist) {
     if (raise_exception) {
@@ -67,10 +66,7 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
   for (int i = 0; i < function.argument_def.size(); ++i) {
     const auto& param = function.argument_def.at(i);
     py::object obj;
-    if (arg_pos == 0 && treat_args_as_intlist && !param.keyword_only) {
-      obj = args;
-      arg_pos = nargs;
-    } else if (arg_pos < nargs) {
+    if (arg_pos < nargs) {
       if (param.keyword_only) {
         if (raise_exception) {
           THROW(TypeError) << function.name << "(): argument '" << param.name
@@ -78,7 +74,7 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
         }
         return false;
       }
-      obj = args[arg_pos++];
+      obj = args[arg_pos];
     } else {
       if (kwargs.contains(param.name.c_str())) {
         obj = kwargs[param.name.c_str()];
@@ -86,13 +82,14 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
       }
     }
 
-    if (!obj && !param.has_default_value) {
-      if (raise_exception) {
-        THROW(TypeError) << function.name << "(): missing required argument " << param.name;
+    if (obj) {
+      if (arg_pos == 0 && treat_args_as_intlist && !param.keyword_only && PyLong_Check(obj.ptr())) {
+        obj = args;
+        arg_pos = nargs;
+      } else {
+        arg_pos++;
       }
-      return false;
-    } else if (obj) {
-      PythonArg arg(obj);
+      PythonArg arg(obj, param.size);
       if ((obj == Py_None && param.optional) || PythonArgCheck(arg, param.type)) {
         parsed_args->at(i) = std::move(arg);
       } else {
@@ -104,6 +101,12 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
         return false;
       }
     } else {
+      if (!param.has_default_value) {
+        if (raise_exception) {
+          THROW(TypeError) << function.name << "(): missing required argument " << param.name;
+        }
+        return false;
+      }
       parsed_args->at(i) = PythonArg(param.default_value);
     }
   }

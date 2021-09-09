@@ -41,12 +41,10 @@ void CopyTaskNode::BuildExecGphAndRegst() {
 
 void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
-void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id,
+void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, const DeviceId& device_id,
                           const LogicalBlobId& lbi) {
   copy_type_ = copy_type;
-  set_machine_id(machine_id);
-  DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
-                     static_cast<DeviceId::device_index_t>(dev_phy_id)};
+  set_machine_id(device_id.rank());
   auto* stream_index_generator =
       Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id);
   StreamId::stream_index_t stream_index = 0;
@@ -65,7 +63,8 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (copy_type_ == CopyHdOpConf::H2D) {
     TaskNode::InitProducedRegstMemCase(mem_case);
   } else if (copy_type_ == CopyHdOpConf::D2H) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
+        stream_id().device_id().device_index());
   } else {
     UNIMPLEMENTED();
   }

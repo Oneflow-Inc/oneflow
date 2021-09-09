@@ -19,10 +19,10 @@ limitations under the License.
 
 namespace oneflow {
 
-std::unique_ptr<ActorBase> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+std::unique_ptr<ActorBase> NewActor(const TaskProto& task_proto, StreamContext* stream_ctx) {
   ActorBase* rptr = NewObj<int32_t, ActorBase>(task_proto.task_type());
   const auto& job_descs = *Global<RuntimeJobDescs>::Get();
-  rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, thread_ctx);
+  rptr->Init(&job_descs.job_desc(task_proto.job_id()), task_proto, stream_ctx);
   return std::unique_ptr<ActorBase>(rptr);
 }
 

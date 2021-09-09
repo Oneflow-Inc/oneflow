@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/device/cuda_graph_context.h"
+#include "oneflow/core/stream/cuda_graph_context.h"
 
 namespace oneflow {
 
@@ -35,7 +35,7 @@ class UserKernel final : public Kernel {
   UserKernel() = default;
   ~UserKernel() override;
 
-  void InitUserKernel(DeviceCtx* device_ctx);
+  void InitUserKernel(StreamContext* stream_ctx, DeviceCtx* device_ctx);
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(DeviceCtx* device_ctx);
   const std::shared_ptr<user_op::OpKernelState>& GetOpKernelState() const;
   void ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
@@ -43,13 +43,10 @@ class UserKernel final : public Kernel {
   bool IsCudaGraphSupported() const;
 
  private:
-  void VirtualKernelInit(DeviceCtx* device_ctx) override;
+  void VirtualKernelInit(KernelContext* ctx) override;
 
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
-  void ForwardShape(const KernelCtx& ctx,
-                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
+  void ForwardShape(KernelContext* ctx) const override;
 
   bool IsStateless() const override;
 
@@ -59,7 +56,8 @@ class UserKernel final : public Kernel {
   std::unique_ptr<UserKernelInferContext> infer_ctx_;
   std::unique_ptr<user_op::OpKernelInferCache> infer_cache_;
 #ifdef WITH_CUDA_GRAPHS
-  std::unique_ptr<CudaGraphContext> cuda_graph_ctx_;
+  std::unique_ptr<CudaGraphExecutable> cuda_graph_exec_;
+  CudaGraphContext* cuda_graph_ctx_{};
 #endif  // WITH_CUDA_GRAPHS
 };
 

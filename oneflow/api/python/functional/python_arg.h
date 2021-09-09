@@ -13,15 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_ARG_H_
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_ARG_H_
 
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/framework/throw.h"
+#include "oneflow/api/python/functional/value_types.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/functional/value_types.h"
 
 namespace py = pybind11;
 
@@ -51,35 +50,45 @@ class PythonArg {
  public:
   PythonArg() = default;
   PythonArg(const py::object& object)
-      : object_(object.ptr()), immediate_(), active_tag_(HAS_OBJECT) {}
+      : object_(object.ptr()), immediate_(), size_(0), active_tag_(HAS_OBJECT) {}
+
+  PythonArg(const py::object& object, int size)
+      : object_(object.ptr()), immediate_(), size_(size), active_tag_(HAS_OBJECT) {}
 
   PythonArg(const std::shared_ptr<const detail::Immediate>& value)
-      : object_(nullptr), immediate_(value), active_tag_(HAS_IMMEDIATE) {}
+      : object_(nullptr), immediate_(value), size_(0), active_tag_(HAS_IMMEDIATE) {}
 
   template<typename T, typename std::enable_if<!py::detail::is_pyobject<T>::value, int>::type = 0>
   PythonArg(const T& value)
       : object_(nullptr),
         immediate_(std::make_shared<detail::TypedImmediate<T>>(value)),
+        size_(0),
         active_tag_(HAS_IMMEDIATE) {}
 
   virtual ~PythonArg() = default;
 
   PythonArg(const PythonArg& other)
-      : object_(other.object_), immediate_(other.immediate_), active_tag_(other.active_tag_) {}
+      : object_(other.object_),
+        immediate_(other.immediate_),
+        size_(other.size_),
+        active_tag_(other.active_tag_) {}
   PythonArg(PythonArg&& other)
       : object_(other.object_),
         immediate_(std::move(other.immediate_)),
+        size_(other.size_),
         active_tag_(other.active_tag_) {}
 
   PythonArg& operator=(const PythonArg& other) {
     object_ = other.object_;
     immediate_ = other.immediate_;
+    size_ = other.size_;
     active_tag_ = other.active_tag_;
     return *this;
   }
   PythonArg& operator=(PythonArg&& other) {
     object_ = other.object_;
     immediate_ = std::move(other.immediate_);
+    size_ = other.size_;
     active_tag_ = other.active_tag_;
     return *this;
   }
@@ -116,7 +125,7 @@ class PythonArg {
 
   PyObject* object_;
   std::shared_ptr<const detail::Immediate> immediate_;
-
+  size_t size_;
   enum { HAS_OBJECT, HAS_IMMEDIATE, HAS_NONE } active_tag_;
 };
 

@@ -83,7 +83,7 @@ def _test_groupnorm(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     m = flow.nn.GroupNorm(num_groups=1, num_channels=2).to(device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
@@ -204,7 +204,7 @@ def _test_groupnorm_3d(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device))
+    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device(device))
     m = flow.nn.GroupNorm(num_groups=2, num_channels=2, affine=False).to(
         device=flow.device(device)
     )
@@ -242,7 +242,9 @@ def _test_groupnorm_backward(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     m = flow.nn.GroupNorm(num_groups=1, num_channels=2).to(device=flow.device(device))
     y = m(x)
     z = y.sum()
@@ -310,7 +312,9 @@ def _test_groupnorm_backward_3d(test_case, device):
         ],
         dtype=np.float32,
     )
-    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    x = flow.tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     m = flow.nn.GroupNorm(num_groups=2, num_channels=2, affine=False).to(
         device=flow.device(device)
     )

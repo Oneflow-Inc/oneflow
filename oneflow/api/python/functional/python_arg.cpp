@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/api/python/functional/python_arg.h"
 
+#include "oneflow/api/python/framework/device.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
 #include "oneflow/core/framework/dtype.h"
@@ -32,27 +33,33 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-#define INSTANCE_OBJECT_AS_INTEGER(T)                                 \
-  template<>                                                          \
-  Maybe<T> PythonArg::ObjectAs<T>() const {                           \
-    return static_cast<T>(PyLong_AsLongLong(object_));                \
-  }                                                                   \
-  template<>                                                          \
-  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const { \
-    return PyUnpackLongSequence<T>(object_);                          \
+#define INSTANCE_OBJECT_AS_INTEGER(T)                                                             \
+  template<>                                                                                      \
+  Maybe<T> PythonArg::ObjectAs<T>() const {                                                       \
+    return static_cast<T>(PyLong_AsLongLong(object_));                                            \
+  }                                                                                               \
+  template<>                                                                                      \
+  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                             \
+    if (size_ > 0 && PyLong_Check(object_)) {                                                     \
+      return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyLong_AsLongLong(object_))); \
+    }                                                                                             \
+    return PyUnpackLongSequence<T>(object_);                                                      \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_TYPE_SEQ)
 #undef INSTANCE_OBJECT_AS_INTEGER
 
-#define INSTANCE_OBJECT_AS_FLOAT(T)                                   \
-  template<>                                                          \
-  Maybe<T> PythonArg::ObjectAs<T>() const {                           \
-    return static_cast<T>(PyFloat_AsDouble(object_));                 \
-  }                                                                   \
-  template<>                                                          \
-  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const { \
-    return PyUnpackFloatSequence<T>(object_);                         \
+#define INSTANCE_OBJECT_AS_FLOAT(T)                                                              \
+  template<>                                                                                     \
+  Maybe<T> PythonArg::ObjectAs<T>() const {                                                      \
+    return static_cast<T>(PyFloat_AsDouble(object_));                                            \
+  }                                                                                              \
+  template<>                                                                                     \
+  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                            \
+    if (size_ > 0 && PyFloat_Check(object_)) {                                                   \
+      return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyFloat_AsDouble(object_))); \
+    }                                                                                            \
+    return PyUnpackFloatSequence<T>(object_);                                                    \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_FLOAT, FLOATING_TYPE_SEQ)
@@ -118,6 +125,10 @@ Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
 
 template<>
 Maybe<Symbol<Device>> PythonArg::ObjectAs<Symbol<Device>>() const {
+  if (PyStringCheck(object_)) {
+    const char* device_str = JUST(PyStringAsString(object_));
+    return DeviceExportUtil::ParseAndNew(device_str);
+  }
   return PyUnpackDevice(object_);
 }
 
@@ -134,12 +145,26 @@ Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() 
 template<>
 Maybe<std::vector<Symbol<cfg::SbpParallel>>>
 PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
+  if (PySbpParallelCheck(object_)) {
+    return std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(
+        1, JUST(PyUnpackSbpParallel(object_)));
+  }
   return PyUnpackSbpParallelSequence(object_);
 }
 
 template<>
 Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
   return PyUnpackTensorIndex(object_);
+}
+
+template<>
+Maybe<PyObject*> PythonArg::ObjectAs<PyObject*>() const {
+  return object_;
+}
+
+template<>
+Maybe<const PyObject*> PythonArg::ObjectAs<const PyObject*>() const {
+  return object_;
 }
 
 Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
@@ -154,11 +179,13 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kUINT32_LIST:
     case kINT64_LIST:
     case kUINT64_LIST:
-    case kBOOL_LIST: return PyLongSequenceCheck(object_);
+    case kBOOL_LIST: return PyLongSequenceCheck(object_) || (size_ > 0 && PyLong_Check(object_));
     case kFLOAT:
     case kDOUBLE: return PyFloat_Check(object_) || PyLong_Check(object_);
     case kFLOAT_LIST:
-    case kDOUBLE_LIST: return PyFloatSquenceCheck(object_);
+    case kDOUBLE_LIST:
+      return PyFloatSquenceCheck(object_)
+             || (size_ > 0 && (PyFloat_Check(object_) || PyLong_Check(object_)));
     case kSTRING: return PyStringCheck(object_);
     case kSTRING_LIST: return PyStringSequenceCheck(object_);
     case kSCALAR: return PyScalarCheck(object_);
@@ -170,10 +197,12 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kGENERATOR:
     case kGENERATOR_REF: return PyGeneratorCheck(object_);
     case kTENSOR_INDEX: return PyTensorIndexCheck(object_);
-    case kDEVICE: return PyDeviceCheck(object_);
+    case kDEVICE: return PyDeviceCheck(object_) || PyStringCheck(object_);
     case kPARALLEL_DESC: return PyParallelDescCheck(object_);
     case kSBP_PARALLEL: return PySbpParallelCheck(object_);
-    case kSBP_PARALLEL_LIST: return PySbpParallelSequenceCheck(object_);
+    case kSBP_PARALLEL_LIST:
+      return PySbpParallelSequenceCheck(object_) || PySbpParallelCheck(object_);
+    case kPY_OBJECT: return nullptr != object_;
     default: {
       OF_UNIMPLEMENTED() << "Can not check type " << JUST(ValueTypeName(type));
     }

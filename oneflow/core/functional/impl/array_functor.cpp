@@ -473,9 +473,9 @@ class DimScatterFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+                           const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
@@ -495,9 +495,9 @@ class DimScatterAddFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+                           const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
@@ -517,9 +517,9 @@ class DimScatterMulFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
-                           const std::shared_ptr<one::Tensor>& src, const int32_t& dim) const {
+                           const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
@@ -538,12 +538,11 @@ class DimScatterUpdateScalarFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& index, const float& src,
-                           const int32_t& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", src));
+    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -560,12 +559,11 @@ class DimScatterAddScalarFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& index, const float& src,
-                           const int32_t& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", src));
+    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -582,12 +580,11 @@ class DimScatterMulScalarFunctor {
                          .Output("output")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& index, const float& src,
-                           const int32_t& dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", src));
+    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -1216,6 +1213,19 @@ class UnsortedSegmentSumLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TrilFunctor {
+ public:
+  TrilFunctor() { op_ = CHECK_JUST(one::OpBuilder("tril").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class TriuFunctor {
  public:
   TriuFunctor() { op_ = CHECK_JUST(one::OpBuilder("triu").Input("in").Output("out").Build()); }
@@ -1553,6 +1563,34 @@ class SplitFunctor {
   }
 };
 
+class SplitLikeFunctor {
+ public:
+  SplitLikeFunctor() {
+    ops_.resize(kMaxInputCount);
+    for (int n = 1; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("split_like")
+                               .Input("in")
+                               .Input("like", n + 1)
+                               .Output("out", n + 1)
+                               .Build());
+    }
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
+                                const int64_t& axis) const {
+    CHECK_GE_OR_RETURN(like.size(), 2);
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount);
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    TensorTuple inputs(like.size() + 1);
+    inputs[0] = x;
+    for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = like[i]; }
+    return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(like.size() - 1), inputs, attrs);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
+};
+
 class SplitWithSizeFunctor {
  public:
   SplitWithSizeFunctor() {}
@@ -1632,6 +1670,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear3D");
   m.add_functor<impl::UpsampleTrilinear3DGradFunctor>("UpsampleTrilinear3DGrad");
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
+  m.add_functor<impl::TrilFunctor>("Tril");
   m.add_functor<impl::TriuFunctor>("Triu");
   m.add_functor<impl::DiagFunctor>("Diag");
   m.add_functor<impl::DiagGradFunctor>("DiagGrad");
@@ -1653,6 +1692,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
+  m.add_functor<impl::SplitLikeFunctor>("SplitLike");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
 };
 

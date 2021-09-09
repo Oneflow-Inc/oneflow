@@ -49,7 +49,7 @@ def one_hot(
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> input=flow.Tensor(np.array([0, 3, 1, 2]).astype(np.int32), dtype=flow.int64)
+        >>> input=flow.tensor(np.array([0, 3, 1, 2]).astype(np.int32), dtype=flow.int64)
         >>> out = flow.nn.functional.one_hot(input, num_classes=5)
         >>> out
         tensor([[1, 0, 0, 0, 0],
@@ -71,7 +71,7 @@ def one_hot(
 
         num_classes = input.max().numpy().item() + 1
 
-    return flow.F.one_hot(input, num_classes, on_value, off_value)
+    return flow._C.one_hot(input, num_classes, on_value, off_value)
 
 
 if __name__ == "__main__":

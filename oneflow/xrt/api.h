@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
@@ -50,7 +49,7 @@ inline Shape AsShape(const std::vector<T>& dim_vec) {
 
 // Build an xrt graph from launch conf.
 std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function& function,
-                                        const DeviceType& device_type, const JobDesc& job_desc);
+                                        const DeviceType& device_type);
 
 // Build an xrt graph from op graph.
 std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph* op_graph);

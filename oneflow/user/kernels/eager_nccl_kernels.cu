@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+
 namespace oneflow {
 
 namespace {
@@ -53,7 +55,6 @@ class EagerNcclOpKernelState final : public user_op::OpKernelState {
 };
 
 size_t InferEagerNcclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
-  size_t ret = 0;
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   size_t tensor_byte_size =
       GetCudaAlignedSize(in_tensor.shape().elem_cnt() * GetSizeOfDataType(in_tensor.data_type()));
@@ -75,6 +76,7 @@ class EagerNcclAllReduceKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -104,6 +106,7 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -141,6 +144,7 @@ class EagerNcclReduceKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -171,6 +175,7 @@ class EagerNcclReduceScatterKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -206,6 +211,7 @@ class EagerNcclAllGatherKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -235,6 +241,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
   }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<EagerNcclOpKernelState*>(state);
     CHECK(kernel_state != nullptr);
@@ -253,7 +260,8 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
 
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = kernel_state->parallel_desc()->parallel_num();
-    CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());
+    CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt())
+        << in->shape().ToString() << " vs " << out->shape().ToString();
     const int64_t elem_cnt = in->shape().elem_cnt();
     const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
     const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
@@ -359,3 +367,5 @@ REGISTER_EAGER_NCCL_S2S_KERNEL(float)
 REGISTER_EAGER_NCCL_S2S_KERNEL(double)
 REGISTER_EAGER_NCCL_S2S_KERNEL(float16)
 }  // namespace oneflow
+
+#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700

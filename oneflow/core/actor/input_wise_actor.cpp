@@ -59,10 +59,7 @@ void InputWiseActor::Act() {
   cur_processed_regst_desc_id_ = GetCurProcessedRegstDescId();
   Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   CHECK(cur_regst);
-
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  SetKernelCtxOther(&(kernel_ctx.other));
-  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
+  AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* {
     if (cur_processed_regst_desc_id_ != regst_desc_id) { return nullptr; }
     return cur_regst;
   });

@@ -44,7 +44,7 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         >>> input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
         >>> out = flow.squeeze(input, dim=[1, 2]).shape
         >>> out
-        flow.Size([1, 3])
+        oneflow.Size([1, 3])
 
     """
     if isinstance(dim, int):
@@ -53,7 +53,7 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         dim = range(input.ndim)
     dim = list(filter(lambda i: input.size(i) == 1, dim))
 
-    return flow.F.squeeze(input, dim)
+    return flow._C.squeeze(input, dim)
 
 
 if __name__ == "__main__":
