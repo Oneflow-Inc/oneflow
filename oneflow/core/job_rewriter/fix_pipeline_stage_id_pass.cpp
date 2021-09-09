@@ -59,14 +59,6 @@ const Scope& Scope4OpNode(const OpNode* op_node) {
   return Scope4ScopeSymbolId(op_conf.scope_symbol_id());
 }
 
-bool IsForwardPass(const OpNode* node) {
-  return Scope4OpNode(node).scope_proto().calculation_pass_name() == kForwardPass;
-}
-
-bool IsBackwardPass(const OpNode* node) {
-  return Scope4OpNode(node).scope_proto().calculation_pass_name() == kBackwardPass;
-}
-
 bool OpNodeHasScope(const OpNode* node) { return node->op().op_conf().has_scope_symbol_id(); }
 
 int64_t GetStageIdHint(const OpNode* node) {
@@ -85,11 +77,11 @@ std::string ParallelDesc2HashString(const ParallelDesc& parallel_desc) {
 }
 
 Maybe<int64_t> NewScopeWithStageId(int64_t old_scope_symbol_id, int64_t stage_id) {
-  return NewScopeSymbolId(
-      old_scope_symbol_id, [stage_id](std::shared_ptr<cfg::ScopeProto> new_scope) {
-        auto* attr_map = new_scope->mutable_attr_name2attr_value();
-        (*attr_map)["pipeline_stage_id_hint"].set_at_int64(stage_id);
-      });
+  return NewScopeSymbolId(old_scope_symbol_id,
+                          [stage_id](std::shared_ptr<cfg::ScopeProto> new_scope) {
+                            auto* attr_map = new_scope->mutable_attr_name2attr_value();
+                            (*attr_map)["pipeline_stage_id_hint"].set_at_int64(stage_id);
+                          });
 }
 
 Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
@@ -111,9 +103,7 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
 
   HashMap<std::string, OperatorConf> mut_op_name2conf;
   HashMap<std::string, OperatorConf> op_name2conf;
-  HashMap<std::string, std::string> op_name2placement;
   HashMap<std::string, int64_t> op_name2stage_id;
-  HashMap<std::string, int64_t> op_name2new_stage_id;
   HashMap<std::string, HashSet<std::string>> placement2op_names;
 
   // NOTE(chengcheng): group op by placement.
@@ -124,7 +114,6 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
     std::string placement = ParallelDesc2HashString(this_node->parallel_desc());
     int64_t stage_id = GetStageIdHint(this_node);
     op_name2stage_id.emplace(op_name, stage_id);
-    op_name2placement.emplace(op_name, placement);
     placement2op_names[placement].insert(op_name);
   });
 
