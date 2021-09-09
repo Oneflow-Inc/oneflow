@@ -128,6 +128,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(get_numpy(x), np_zeros))
         flow.nn.init.constant_(x, random_fill_val)
         test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
+        x.zeros_()
+        test_case.assertTrue(np.array_equal(get_numpy(x), np_zeros))
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
         test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
 
