@@ -30,7 +30,7 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType
 from oneflow.nn.graph.config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-from oneflow.nn.graph.util import add_indent, list_to_func_return, sys_exc_error_msg
+from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
@@ -493,7 +493,7 @@ class Graph(object):
                 state_op_names, self._states_tensor_tuple
             )
 
-        return list_to_func_return(self._eager_outputs_buffer[0])
+        return seq_to_func_return(self._eager_outputs_buffer[0])
 
     def _rebuild_outputs(self, out2name=None):
         # NOTE(chengcheng):
@@ -604,7 +604,7 @@ class Graph(object):
 
         # Copy outputs from buffer
         eager_outputs = self._copy_io("output", *eager_outputs)
-        return list_to_func_return(eager_outputs)
+        return seq_to_func_return(eager_outputs)
 
     def _build_io(self, io_type, build_func, *args):
         assert io_type in ("input", "output")
