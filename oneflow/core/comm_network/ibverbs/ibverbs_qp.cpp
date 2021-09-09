@@ -45,8 +45,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   CHECK_EQ(ibv::wrapper.ibv_query_device(ctx, &device_attr), 0);
   const int64_t user_queue_depth =
       ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_QUEUE_DEPTH", kDefaultQueueDepth);
-  const uint32_t queue_depth = std::min<uint32_t>(device_attr.max_qp_wr, user_queue_depth);
-  queue_depth_ = queue_depth;
+  queue_depth_ = std::min<uint32_t>(device_attr.max_qp_wr, user_queue_depth);
   ibv_qp_init_attr qp_init_attr{};
   qp_init_attr.qp_context = nullptr;
   qp_init_attr.send_cq = send_cq;
@@ -167,13 +166,13 @@ void IBVerbsQP::PostReadRequest(const IBVerbsCommNetRMADesc& remote_mem,
 
 void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   ActorMsgMR* msg_mr = message_pool_->GetMessage();
-  msg_mr->set_msg(msg);
+  msg_mr->set_message(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
   ibv_send_wr wr{};
   ibv_sge sge{};
   sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
-  sge.length = msg_mr->actor_msg_size();
+  sge.length = msg_mr->message_size();
   sge.lkey = msg_mr->lkey();
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   wr.next = nullptr;
@@ -217,7 +216,7 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
 void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
   auto* ibv_comm_net = dynamic_cast<IBVerbsCommNet*>(Global<CommNet>::Get());
   CHECK(ibv_comm_net != nullptr);
-  ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
+  ibv_comm_net->RecvActorMsg(wr_id->msg_mr->message());
   PostRecvRequest(wr_id->msg_mr);
   DeleteWorkRequestId(wr_id);
 }
@@ -242,7 +241,7 @@ void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
   ibv_recv_wr wr{};
   ibv_sge sge{};
   sge.addr = reinterpret_cast<uint64_t>(msg_mr->addr());
-  sge.length = msg_mr->actor_msg_size();
+  sge.length = msg_mr->message_size();
   sge.lkey = msg_mr->lkey();
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   wr.next = nullptr;
