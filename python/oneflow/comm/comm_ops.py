@@ -139,4 +139,5 @@ def broadcast(tensor, src):
 
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
+    assert isinstance(src, int)
     flow._C.broadcast(tensor, src_rank=src, inplace=True)
