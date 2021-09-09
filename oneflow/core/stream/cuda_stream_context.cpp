@@ -109,7 +109,7 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
 #endif  // WITH_CUDA_GRAPHS
 };
 
-class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
+class DeviceCtxImpl : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtxImpl);
   explicit DeviceCtxImpl(CudaStreamContextImpl* stream_ctx) : stream_ctx_(stream_ctx) {}
@@ -128,8 +128,6 @@ class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
   void AddCallBack(std::function<void()> callback) const override {
     CHECK_JUST(stream_ctx_->AddCallback(std::move(callback)));
   }
-
-  StreamContext* GetStreamContext() override { return stream_ctx_; }
 
  protected:
   CudaStreamContextImpl* stream_ctx_;
