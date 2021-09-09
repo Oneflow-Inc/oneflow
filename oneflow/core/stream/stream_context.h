@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
 
@@ -29,6 +30,7 @@ class StreamContext {
 
   virtual Maybe<void> AddCallback(std::function<void()> callback) = 0;
   virtual Maybe<void> Sync() = 0;
+  virtual DeviceType device_type() const = 0;
 };
 
 class StreamContextProvider {
