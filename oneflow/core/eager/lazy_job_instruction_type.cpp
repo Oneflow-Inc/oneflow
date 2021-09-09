@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -153,7 +154,9 @@ class LaunchLazyJobInstructionType final : public InstructionType {
               CHECK_NOTNULL(blob);
               of_blob->mut_blob()->CopyHeaderFrom(of_blob->mut_device_ctx(), blob);
               if (blob->dptr() == nullptr) { return; }
-              of_blob->mut_blob()->CopyDataContentFrom(of_blob->mut_device_ctx(), blob);
+              SyncAutoMemcpy(of_blob->mut_device_ctx(), of_blob->mut_blob()->mut_dptr(),
+                             blob->dptr(), blob->ByteSizeOfBlobBody(),
+                             of_blob->mut_blob()->mem_case(), blob->mem_case());
             });
       };
       CHECK(push_cbs.emplace(input_op_name, PushCb).second);
@@ -168,7 +171,9 @@ class LaunchLazyJobInstructionType final : public InstructionType {
               CHECK_NOTNULL(mut_blob);
               mut_blob->CopyHeaderFrom(of_blob->mut_device_ctx(), &of_blob->blob());
               if (mut_blob->dptr() == nullptr) { return; }
-              mut_blob->CopyDataContentFrom(of_blob->mut_device_ctx(), &of_blob->blob());
+              SyncAutoMemcpy(of_blob->mut_device_ctx(), mut_blob->mut_dptr(),
+                             of_blob->blob().dptr(), of_blob->blob().ByteSizeOfBlobBody(),
+                             mut_blob->mem_case(), of_blob->blob().mem_case());
             });
       };
       CHECK(pull_cbs.emplace(output_op_name, PullCb).second);
