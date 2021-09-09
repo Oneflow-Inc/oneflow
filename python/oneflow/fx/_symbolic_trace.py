@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import builtins
+from collections import namedtuple
 import functools
 import inspect
 import warnings
@@ -294,7 +295,6 @@ class Tracer(TracerBase):
         # module hierarchy, so it can never create parameter references.
         # The default tracer adds the ability to refer to parameters when
         # tracing modules.
-
         if isinstance(a, oneflow.nn.Parameter):
             for n, p in self.root.named_parameters():
                 if a is p:
@@ -336,7 +336,7 @@ class Tracer(TracerBase):
             setattr(self.root, qualname, a)
 
             return self.create_node("get_attr", qualname, (), {})
-
+        
         return super().create_arg(a)
 
     def is_leaf_module(self, m: oneflow.nn.Module, module_qualified_name: str) -> bool:
@@ -630,6 +630,7 @@ class Tracer(TracerBase):
             )
             return self.call_module(mod, forward, args, kwargs)
 
+
         with _Patcher() as patcher:
             # allow duplicate patches to support the case of nested calls
             patcher.patch_method(
@@ -638,15 +639,16 @@ class Tracer(TracerBase):
                 module_getattr_wrapper,
                 deduplicate=False,
             )
+
             patcher.patch_method(
                 oneflow.nn.Module, "__call__", module_call_wrapper, deduplicate=False
             )
-
             _patch_wrapped_functions(patcher)
             _autowrap_check(patcher, fn_globals, self._autowrap_function_ids)
 
             for module in self._autowrap_search:
                 _autowrap_check(patcher, module.__dict__, self._autowrap_function_ids)
+
             self.create_node(
                 "output",
                 "output",
