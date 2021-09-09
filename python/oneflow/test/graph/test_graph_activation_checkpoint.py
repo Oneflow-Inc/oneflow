@@ -27,8 +27,8 @@ import oneflow.unittest
 class TestGraphActivationCheckpoint(flow.unittest.TestCase):
     def test_activation_checkpoint(test_case):
         loss_fn = flow.nn.MSELoss(reduction="sum")
-        model = flow.nn.Sequential(flow.nn.Linear(3, 1), flow.nn.Flatten(0, 1))
-        optimizer = flow.optim.SGD(model.parameters(), lr=1e-6)
+        model = flow.nn.Sequential(flow.nn.Linear(3, 4), flow.nn.Linear(4, 4))
+        model1 = flow.nn.Sequential(flow.nn.Linear(4, 1), flow.nn.Flatten(0, 1))
 
         class SubModule0(flow.nn.Module):
             def __init__(self):
@@ -43,17 +43,35 @@ class TestGraphActivationCheckpoint(flow.unittest.TestCase):
                 out = self.model(x)
                 return out
 
+        class SubModule1(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.model = model1
+
+            def forward(self, x):
+                scope = oneflow.current_scope()
+                scope_proto = graph_build_util.scope_to_proto(scope)
+                ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
+                test_case.assertEqual(ck_bool, True)
+                out = self.model(x)
+                return out
+
+        optimizer = flow.optim.SGD(model.parameters(), lr=1e-6)
+
         class LinearTrainGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.model = SubModule0()
+                self.model1 = SubModule1()
                 self.loss_fn = loss_fn
                 # Add an optimizer
                 self.add_optimizer(optimizer)
                 self.model.config.activation_checkpointing = True
+                self.model1.config.activation_checkpointing = True
 
             def build(self, x, y):
                 y_pred = self.model(x)
+                y_pred = self.model1(y_pred)
                 loss = self.loss_fn(y_pred, y)
                 loss.backward()
                 return loss
@@ -64,7 +82,7 @@ class TestGraphActivationCheckpoint(flow.unittest.TestCase):
         y = flow.randn(10)
         linear_graph._compile(x, y)
 
-        graph_proto = linear_graph._full_graph_proto
+        graph_proto = linear_graph._graph_proto
         for op in graph_proto.net.op:
             # Check flatten gradient operator take checkpoiting as input
             if re.search("flatten.*grad", op.name, re.I) is not None:

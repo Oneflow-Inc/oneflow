@@ -17,13 +17,14 @@ from collections import OrderedDict
 from functools import partial
 from typing import Iterator, Optional, Set, Union
 
+import oneflow._C
 import oneflow._oneflow_internal
 import oneflow.framework.graph_build_util as graph_build_util
 from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
 from oneflow.nn.parameter import Parameter
-from oneflow.nn.graph.util import add_indent
+from oneflow.nn.graph.util import add_indent, seq_to_func_return
 
 
 class BlockType:
@@ -206,10 +207,32 @@ class Block(object):
     def forward(self, *args):
         assert self._type == BlockType.MODULE
         self._is_executing_forward = True
+        args = self._pre_forward_mapping_out_scope(*args)
         with self.scope_context():
             result = self._origin.__class__.forward(self, *args)
+        result = self._post_forward_mapping_out_scope(result)
+        result = seq_to_func_return(result)
         self._is_executing_forward = False
         return result
+
+    def _pre_forward_mapping_out_scope(self, *args):
+        # Deal with activation checkpointing identity.
+        if self.config.activation_checkpointing:
+            def break_with_identity(t):
+                assert isinstance(t, Tensor)
+                return oneflow._C.identity(t)
+            args = self._mapping_io("input", break_with_identity, "break_activation_checkpointing_with_identity", *args)
+                
+        return args
+
+    def _post_forward_mapping_out_scope(self, *args):
+        # Deal with activation checkpointing identity.
+        if self.config.activation_checkpointing:
+            def break_with_identity(t):
+                assert isinstance(t, Tensor)
+                return oneflow._C.identity(t)
+            args = self._mapping_io("output", break_with_identity, "break_activation_checkpointing_with_identity", *args)
+        return args
 
     def modules(self, memo: Optional[Set["Block"]] = None) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
@@ -223,6 +246,67 @@ class Block(object):
                     continue
                 for m in module.modules(memo):
                     yield m
+
+    def _mapping_io(self, io_type, func, func_desc, *args):
+        assert isinstance(func_desc, str)
+        assert io_type in ("input", "output")
+        mapped_args = []
+
+        def mapping_tensor(item):
+            assert isinstance(item, Tensor)
+            return func(item)
+
+        for idx, arg in enumerate(args):
+            if isinstance(arg, list):
+                seq_args = list()
+                for i in range(len(arg)):
+                    is_tensor, name, repr_str = self._io_tensor_check_and_gen(arg[i], io_type, idx, i)
+                    if is_tensor:
+                        seq_args.append(mapping_tensor(arg[i]))
+                        if self._debug:
+                            print(f"{repr_str} is a Tensor, {func_desc} transformation has been done.")
+                    else:
+                        if self._debug:
+                            print(f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored.")
+                        seq_args.append(arg[i])
+                mapped_args.append(seq_args)
+            elif isinstance(arg, Tensor):
+                is_tensor, name, repr_str = self._io_tensor_check_and_gen(arg, io_type, idx)
+                assert is_tensor
+                mapped_args.append(mapping_tensor(arg))
+                if self._debug:
+                    print(f"{repr_str} is a Tensor, {func_desc} transformation has been done.")
+            else:
+                is_tensor, name, repr_str = self._io_tensor_check_and_gen(arg, io_type, idx)
+                assert not is_tensor
+                mapped_args.append(arg)
+                if self._debug:
+                    print(f"{repr_str} is not a Tensor or a list of Tensor, {func_desc} transformation will be ignored.")
+
+        return tuple(mapped_args)
+
+    def _io_tensor_check_and_gen(self, item, io_type, idx, second_idx=None):
+        assert io_type in ("input", "output")
+        name = (
+            "_"
+            + self.name_prefix
+            + self.name
+            + "-"
+            + io_type
+            + "_"
+            + str(idx)
+            + ("" if second_idx is None else "_" + str(second_idx))
+        )
+        if isinstance(item, Tensor):
+            repr_str = (
+                "(" + io_type.upper() + ":" + name + ":" + item._meta_repr() + ")"
+            )
+            return True, name, repr_str
+        else:
+            repr_str = (
+                "[WARNING](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
+            )
+            return False, name, repr_str
 
     def _members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
