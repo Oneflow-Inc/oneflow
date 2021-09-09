@@ -60,7 +60,6 @@ class EagerBToSFunctor {
     {
       CHECK_OR_RETURN(x->is_local());
       CHECK_OR_RETURN(x->is_eager());
-      // CHECK_OR_RETURN(!x->is_cuda());
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerBToSpExpr(in_parallel_desc, out_parallel_desc, shape));
