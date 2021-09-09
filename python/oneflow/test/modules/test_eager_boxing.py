@@ -2611,26 +2611,30 @@ def _test_eager_boxing_with_same_placement_s1_to_b(test_case, in_device, out_dev
         )
 
 
-def _test_eager_boxing_s_to_b(test_case, in_device_list, out_device_list):
-    for i in range(10):
-        np_arr = np.random.randn(12, 12)
-        device = flow.device("cpu")
-        x = flow.tensor(np_arr, device=device, dtype=flow.float32)
-        placement = flow.placement("cpu", {0: in_device_list})
-        y = x.to_consistent(placement, flow.sbp.split(0))
+def _test_eager_boxing_s_to_b(
+    test_case, shape, device_type, in_device_list, out_device_list
+):
+    np_arr = np.random.uniform(-1e-05, 1e-05, shape)
+    # use cuda to avoid slice boxing here
+    placement_with_all_cuda_device = flow.env.all_device_placement("cuda")
 
-        new_placement = flow.placement("cpu", {0: out_device_list})
-        z = y.to_consistent(new_placement, flow.sbp.broadcast)
+    x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
 
-        cuda_device = flow.device("cuda")
-        m = flow.tensor(np_arr, device=cuda_device, dtype=flow.float32)
-        cuda_placement = flow.placement("cuda", {0: in_device_list})
-        n = m.to_consistent(cuda_placement, flow.sbp.split(0))
+    x = x.to_consistent(placement_with_all_cuda_device, flow.sbp.broadcast)
 
-        cuda_new_placement = flow.placement("cuda", {0: out_device_list})
-        k = n.to_consistent(cuda_new_placement, flow.sbp.broadcast)
-        test_case.assertTrue(np.array_equal(z.to_local().numpy(), k.to_local().numpy()))
-        test_case.assertEqual(z.placement, new_placement)
+    placement = flow.placement(device_type, {0: in_device_list})
+    y = x.to_consistent(placement, flow.sbp.broadcast)
+
+    y = y.to_consistent(placement, flow.sbp.split(0))
+
+    new_placement = flow.placement(device_type, {0: out_device_list})
+    z = y.to_consistent(new_placement, flow.sbp.broadcast)
+
+    if flow.env.get_rank() in out_device_list:
+        test_case.assertTrue(
+            np.allclose(z.to_local().numpy(), x.to_local().numpy(), 1e-5, 1e-5,)
+        )
+    test_case.assertEqual(z.placement, new_placement)
 
 
 def _test_eager_boxing_p_to_b(test_case, in_device_list, out_device_list):
@@ -2953,6 +2957,8 @@ class TestEagerBoxingWithSameInOutPlacement(flow.unittest.TestCase):
 class TestEagerBoxingSToB(flow.unittest.TestCase):
     def test_eager_boxing_s_to_b(test_case):
         arg_dict = OrderedDict()
+        arg_dict["shape"] = [(12, 12), (12, 18, 24)]
+        arg_dict["device_type"] = ["cpu", "cuda"]
         arg_dict["in_device_list"] = [[0, 1], [1, 2, 3]]
         arg_dict["out_device_list"] = [[2, 3], [0, 1, 3]]
         for arg in GenArgList(arg_dict):
