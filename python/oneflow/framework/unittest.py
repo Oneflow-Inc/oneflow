@@ -376,14 +376,17 @@ class CondSkipChecker(doctest.OutputChecker):
         self._check_flags = check_flags
 
     def check_output(self, want, got, optionflags):
-        target_rank_list = [bool(flag & optionflags) for flag in self._check_flags]
-        if (
-            any(target_rank_list)
-            and target_rank_list.index(True) == oneflow.env.get_rank()
-        ):
+        # default check_output without flag
+        if optionflags == 0:
             return super(CondSkipChecker, self).check_output(want, got, optionflags)
-        else:
+
+        target_rank_list = [bool(flag & optionflags) for flag in self._check_flags]
+        # wrong flag will be handled before here, so any(target_rank_list) is True
+        # not target rank
+        if target_rank_list.index(True) != oneflow.env.get_rank():
             return True
+        elif target_rank_list.index(True) == oneflow.env.get_rank():
+            return super(CondSkipChecker, self).check_output(want, got, optionflags)
 
 
 def check_multi_rank_docstr(module):
