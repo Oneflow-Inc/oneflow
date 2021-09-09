@@ -272,6 +272,7 @@ Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0));
+  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "max_v", 0));
   return Maybe<void>::Ok();
 }
 
