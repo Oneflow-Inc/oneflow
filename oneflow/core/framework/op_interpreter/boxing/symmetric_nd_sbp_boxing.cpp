@@ -71,7 +71,6 @@ Maybe<void> CheckSymmetricNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
 
 Maybe<one::Tensor> SymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor>& input,
                                         Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
-  const auto& in_nd_sbp = in->nd_sbp();
   const auto& out_nd_sbp = out->nd_sbp();
   const auto& in_parallel_desc = in->placement();
   const auto& out_parallel_desc = out->placement();

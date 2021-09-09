@@ -36,7 +36,7 @@ def permute_op(input, *dims):
         >>> input = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> out = input.permute(1, 0, 2, 3).shape
         >>> out
-        flow.Size([6, 2, 5, 3])
+        oneflow.Size([6, 2, 5, 3])
 
     """
 
