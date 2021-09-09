@@ -81,17 +81,14 @@ std::string ParallelDesc2HashString(const ParallelDesc& parallel_desc) {
     ret += "],";
   }
   ret += "}";
-  // std::cout << " cclog: parallel_desc hash str: \n" << ret << "\n\n";
   return ret;
 }
 
 Maybe<int64_t> NewScopeWithStageId(int64_t old_scope_symbol_id, int64_t stage_id) {
   return NewScopeSymbolId(
       old_scope_symbol_id, [stage_id](std::shared_ptr<cfg::ScopeProto> new_scope) {
-        std::cout << "cclog: old scope proto: " << new_scope->DebugString() << "\n\n";
         auto* attr_map = new_scope->mutable_attr_name2attr_value();
         (*attr_map)["pipeline_stage_id_hint"].set_at_int64(stage_id);
-        std::cout << "cclog: new scope proto: " << new_scope->DebugString() << "\n\n";
       });
 }
 
@@ -132,7 +129,6 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
   });
 
   for (auto& placement_op_names_pair : placement2op_names) {
-    std::cout << "cclog: placement = " << placement_op_names_pair.first << "\n";
     HashMap<int64_t, HashSet<std::string>> stage_id2op_names;
     for (const auto& op_name : placement_op_names_pair.second) {
       stage_id2op_names[op_name2stage_id.at(op_name)].insert(op_name);
@@ -141,13 +137,9 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
     int64_t max_group_op_size = -1;
     for (auto& stage_id_op_names_pair : stage_id2op_names) {
       int64_t this_group_op_size = stage_id_op_names_pair.second.size();
-      std::cout << "this_stage_id: " << stage_id_op_names_pair.first
-                << " , size = " << this_group_op_size << "\n";
       if (this_group_op_size > max_group_op_size) {
         max_group_stage_id = stage_id_op_names_pair.first;
         max_group_op_size = this_group_op_size;
-        std::cout << "max_group_stage_id: " << max_group_stage_id
-                  << " , max_group_op_size: " << max_group_op_size << "\n\n";
       }
     }
     CHECK_GE_OR_RETURN(max_group_stage_id, 0);
