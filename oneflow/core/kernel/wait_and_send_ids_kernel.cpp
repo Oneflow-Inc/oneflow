@@ -23,18 +23,12 @@ namespace oneflow {
 
 template<typename T>
 void WaitAndSendIdsKernel<T>::VirtualKernelInit(KernelContext* ctx) {
-  ctx->set_state(new WaitAndSendIdsStatus);
-}
-
-template<typename T>
-void WaitAndSendIdsKernel<T>::DestroyState(void* state) const {
-  delete static_cast<WaitAndSendIdsStatus*>(state);
+  ctx->set_state(std::make_shared<WaitAndSendIdsStatus>());
 }
 
 template<typename T>
 void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
-  CHECK(ctx->state());
-  auto* status = static_cast<WaitAndSendIdsStatus*>(ctx->state());
+  auto* status = CHECK_NOTNULL(dynamic_cast<WaitAndSendIdsStatus*>(ctx->state().get()));
   const auto& conf = this->op_conf().wait_and_send_ids_conf();
   if (status->out_idx_ >= status->out_num_) {
     if (CHECK_JUST(*Global<Maybe<bool>, MultiClient>::Get())) {

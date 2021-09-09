@@ -21,20 +21,14 @@ limitations under the License.
 
 namespace oneflow {
 
-class DeviceCtx;
-
 class StreamContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StreamContext);
   StreamContext() = default;
   virtual ~StreamContext() = default;
 
-  virtual Maybe<void> OnActorThreadSetup() = 0;
-  virtual Maybe<void> OnActorThreadTeardown() = 0;
-
   virtual Maybe<void> AddCallback(std::function<void()> callback) = 0;
   virtual Maybe<void> Sync() = 0;
-  virtual std::shared_ptr<DeviceCtx> device_ctx() = 0;
 };
 
 class StreamContextProvider {

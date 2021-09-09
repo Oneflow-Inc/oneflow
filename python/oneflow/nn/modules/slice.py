@@ -38,7 +38,7 @@ def slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
         >>> tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
         >>> y = flow.slice(input, slice_tup_list=tup_list)
         >>> y.shape
-        flow.Size([3, 3, 2])
+        oneflow.Size([3, 3, 2])
     """
     (start, stop, step) = check_slice_tup_list(slice_tup_list, input.shape)
     return flow._C.slice(input, start, stop, step)
