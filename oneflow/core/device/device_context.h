@@ -63,6 +63,8 @@ class DeviceCtx {
     return nullptr;
   }
 
+  virtual DeviceType device_type() const = 0;
+
  protected:
   DeviceCtx() = default;
 
