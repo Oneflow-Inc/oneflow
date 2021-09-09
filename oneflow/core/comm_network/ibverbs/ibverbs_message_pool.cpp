@@ -24,8 +24,8 @@ IBVerbsMessagePool::IBVerbsMessagePool(ibv_pd* pd, uint32_t  actor_msg_mr_num)
     : pd_(pd),  actor_msg_mr_num_( actor_msg_mr_num) {}
 
 void IBVerbsMessagePool::RegisterIBMemoryForMessagePool() {
-  size_t msg_size = sizeof(ActorMsg);
-  size_t register_memory_size = msg_size *  actor_msg_mr_num_;
+  size_t message_size = sizeof(ActorMsg);
+  size_t register_memory_size = message_size *  actor_msg_mr_num_;
   char* addr = (char*)malloc(register_memory_size);
   ibv_mr* mr = ibv::wrapper.ibv_reg_mr_wrap(
       pd_, addr, register_memory_size,
@@ -34,8 +34,8 @@ void IBVerbsMessagePool::RegisterIBMemoryForMessagePool() {
   ibv_mr_buf_.push_back(mr);
   memory_buf_.push_front(addr);
   for (size_t i = 0; i <  actor_msg_mr_num_; i++) {
-    char* split_addr = addr + msg_size * i;
-    ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, msg_size);
+    char* split_addr = addr + message_size * i;
+    ActorMsgMR* msg_mr = new ActorMsgMR(mr, split_addr, message_size);
     message_buf_.push_front(msg_mr);
   }
 }

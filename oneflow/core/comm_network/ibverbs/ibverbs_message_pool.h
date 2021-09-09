@@ -29,32 +29,24 @@ class IBVerbsMessagePool final {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsMessagePool);
   IBVerbsMessagePool() = delete;
   ~IBVerbsMessagePool() {
-    FreeMr();
-    FreeMemory();
-  }
-
-  IBVerbsMessagePool(ibv_pd* pd, uint32_t actor_msg_mr_num);
-  void RegisterIBMemoryForMessagePool();
-  ActorMsgMR* GetMessage();
-  ActorMsgMR* GetMessageFromBuf();
-  void PutMessage(ActorMsgMR* msg_mr);
-
- private:
-  void FreeMr() {
     while (ibv_mr_buf_.empty() == false) {
       ibv_mr* mr = ibv_mr_buf_.front();
       ibv_mr_buf_.pop_front();
       CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0);
     }
-  }
-
-  void FreeMemory() {
     while (memory_buf_.empty() == false) {
       free(memory_buf_.front());
       memory_buf_.pop_front();
     }
   }
 
+  IBVerbsMessagePool(ibv_pd* pd, uint32_t actor_msg_mr_num);
+  void RegisterIBMemoryForMessagePool();
+  ActorMsgMR* GetMessage();
+  void PutMessage(ActorMsgMR* msg_mr);
+
+ private:
+  ActorMsgMR* GetMessageFromBuf();
   ibv_pd* pd_;
   size_t actor_msg_mr_num_;
   std::mutex message_buf_mutex_;
