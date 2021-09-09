@@ -52,6 +52,15 @@ TEST(Optional, JUST) {
 
   ASSERT_EQ(CHECK_JUST(g(a)), 233);
 
+  a = 234;
+  ASSERT_EQ(CHECK_JUST(a), 234);
+
+  b = a;
+  ASSERT_EQ(CHECK_JUST(b), 234);
+
+  b.reset();
+  ASSERT_EQ(b.value_or(1), 1);
+
   Optional<const int> c(233);
   ASSERT_EQ(CHECK_JUST(c), 233);
 }
@@ -64,8 +73,11 @@ TEST(Optional, reference) {
   ASSERT_EQ(CHECK_JUST(a), 2);
   ASSERT_EQ(b.value_or(z), 0);
 
+  CHECK_JUST(a) = 3;
+  ASSERT_EQ(x, 3);
+
   Optional<const int&> c(x);
-  ASSERT_EQ(CHECK_JUST(c), 2);
+  ASSERT_EQ(CHECK_JUST(c), 3);
 }
 
 TEST(Optional, non_scalar) {

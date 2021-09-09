@@ -192,6 +192,9 @@ class OptionalBase<
 
   const storage_type& value() const& { return value_; }
   storage_type& value() & { return value_; }
+
+  // generate a temporary object to allow `const auto& x = optval().value()` where `optval()` is a
+  // function call which returns a temporary Optional
   storage_type value() && { return std::move(value_); }
 
   bool has_value() const { return bool(value_); }
