@@ -85,8 +85,8 @@ class EagerSToBKernel final : public user_op::OpKernel {
 
     const int64_t total_elem_cnt = ctx->Attr<Shape>("shape").elem_cnt();
     int64_t in_parallel_num = kernel_state->in_parallel_num();
-    const int64_t elem_per_data_piece = total_elem_cnt / in_parallel_num;
-    const int64_t size_per_data_piece = elem_per_data_piece * GetSizeOfDataType(in->data_type());
+    const int64_t elem_cnt_per_rank = total_elem_cnt / in_parallel_num;
+    const int64_t data_size_per_rank = elem_cnt_per_rank * GetSizeOfDataType(in->data_type());
 
     const auto& p2p_pair_to_in_parallel_id = kernel_state->p2p_pair_to_in_parallel_id();
 
@@ -96,14 +96,13 @@ class EagerSToBKernel final : public user_op::OpKernel {
       int64_t dst = elem.first.second;
 
       if (GlobalProcessCtx::Rank() == src) {
-        CHECK_JUST(Send<device_type>(in_ptr, elem_per_data_piece, in->data_type(), dst,
-                                     ctx->device_ctx()));
+        CHECK_JUST(
+            Send<device_type>(in_ptr, elem_cnt_per_rank, in->data_type(), dst, ctx->device_ctx()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
-        CHECK_JUST(
-            Recv<device_type>(reinterpret_cast<void*>(reinterpret_cast<char*>(out_ptr)
-                                                      + in_parallel_id * size_per_data_piece),
-                              elem_per_data_piece, out->data_type(), src, ctx->device_ctx()));
+        CHECK_JUST(Recv<device_type>(reinterpret_cast<void*>(reinterpret_cast<char*>(out_ptr)
+                                                             + in_parallel_id * data_size_per_rank),
+                                     elem_cnt_per_rank, out->data_type(), src, ctx->device_ctx()));
       }
     }
   };
