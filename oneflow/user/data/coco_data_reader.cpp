@@ -33,9 +33,10 @@ COCODataReader::COCODataReader(user_op::KernelInitContext* ctx) : DataReader<COC
 
   int64_t parallel_id = 0;
   int64_t parallel_num = 0;
-  // NOTE(zwx): IsMirroredParallelContext return true indicate that COCODataReader works by DDP,
-  //     use rank and world size to init DistributedTrainingDataset
-  if (IsMirroredParallelContext(ctx->parallel_ctx())) {
+  // NOTE(zwx): COCODataReader is not consistent since attr nd_sbp is empty,
+  // we assume that it works in DDP
+  auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
+  if (nd_sbp_str_vec.empty()) {
     parallel_id = GlobalProcessCtx::Rank();
     parallel_num = GlobalProcessCtx::WorldSize();
   } else {
