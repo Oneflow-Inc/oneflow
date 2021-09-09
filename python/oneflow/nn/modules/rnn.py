@@ -111,7 +111,7 @@ class RNN(Module):
         >>> input = flow.tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
         >>> h0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> output, hn = rnn(input, h0)
-        >>> print(output.size())
+        >>> output.size()
         flow.Size([5, 3, 20])
 
     """
@@ -446,7 +446,7 @@ class GRU(Module):
         >>> input = flow.tensor(np.random.randn(5, 3, 10), dtype=flow.float32)
         >>> h0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> output, hn = rnn(input, h0)
-        >>> print(output.size())
+        >>> output.size()
         flow.Size([5, 3, 20])
     
     """
@@ -805,7 +805,7 @@ class LSTM(nn.Module):
         >>> h0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> c0 = flow.tensor(np.random.randn(2, 3, 20), dtype=flow.float32)
         >>> output, (hn, cn) = rnn(input, (h0, c0))
-        >>> print(output.size())
+        >>> output.size()
         flow.Size([5, 3, 20])
         
     """
