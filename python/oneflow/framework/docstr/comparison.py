@@ -40,7 +40,7 @@ add_docstr(
 
         >>> out = flow.gt(input1, input2).shape
         >>> out
-        flow.Size([2, 6, 5, 3])
+        oneflow.Size([2, 6, 5, 3])
 
     """,
 )
