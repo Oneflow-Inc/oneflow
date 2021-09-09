@@ -22,18 +22,18 @@ import oneflow._oneflow_internal
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
+from oneflow.amp import GradScaler, StaticGradScaler
 from oneflow.env import get_rank
-from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.multi_client_session import MultiClientSession
+from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType
 from oneflow.nn.graph.config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-from oneflow.amp import GradScaler, StaticGradScaler
-from oneflow.nn.graph.util import add_indent, sys_exc_error_msg, list_to_func_return
+from oneflow.nn.graph.util import add_indent, list_to_func_return, sys_exc_error_msg
 from oneflow.nn.module import Module
-from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.lr_scheduler import LrScheduler
+from oneflow.nn.optimizer.optimizer import Optimizer
 
 
 class Graph(object):
@@ -68,11 +68,11 @@ class Graph(object):
         # trace a computatioin graph. Then the computation graph will be
         # optimized and executed for the first time.
         >>> linear_graph(x).shape
-        flow.Size([4, 8])
+        oneflow.Size([4, 8])
 
         # Later call on graph will execute the computation graph directly.
         >>> linear_graph(x).shape
-        flow.Size([4, 8])
+        oneflow.Size([4, 8])
 
     Note that Graph cannot be nested at the moment.
     """
