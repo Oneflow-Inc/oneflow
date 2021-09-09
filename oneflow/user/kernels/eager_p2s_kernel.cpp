@@ -97,28 +97,28 @@ class EagerPToSKernel final : public user_op::OpKernel {
 
     const int64_t total_elem_cnt = ctx->Attr<Shape>("shape").elem_cnt();
     int64_t out_parallel_num = kernel_state->out_parallel_num();
-    const int64_t elem_per_data_piece = total_elem_cnt / out_parallel_num;
-    const int64_t size_per_data_piece = elem_per_data_piece * GetSizeOfDataType(in->data_type());
+    const int64_t elem_cnt_per_rank = total_elem_cnt / out_parallel_num;
+    const int64_t data_size_per_rank = elem_cnt_per_rank * GetSizeOfDataType(in->data_type());
 
     const auto& p2p_pair_to_out_parallel_id = kernel_state->p2p_pair_to_out_parallel_id();
 
     Memset<device_type>(ctx->device_ctx(), out->mut_dptr(), 0,
-                        elem_per_data_piece * GetSizeOfDataType(out->data_type()));
+                        elem_cnt_per_rank * GetSizeOfDataType(out->data_type()));
     for (const auto& elem : p2p_pair_to_out_parallel_id) {
       int64_t out_parallel_id = elem.second;
       int64_t src = elem.first.first;
       int64_t dst = elem.first.second;
 
       if (GlobalProcessCtx::Rank() == src) {
-        CHECK_JUST(Send<device_type>(
-            reinterpret_cast<const void*>(reinterpret_cast<const char*>(in_ptr)
-                                          + out_parallel_id * size_per_data_piece),
-            elem_per_data_piece, in->data_type(), dst, ctx->device_ctx()));
+        CHECK_JUST(
+            Send<device_type>(reinterpret_cast<const void*>(reinterpret_cast<const char*>(in_ptr)
+                                                            + out_parallel_id * data_size_per_rank),
+                              elem_cnt_per_rank, in->data_type(), dst, ctx->device_ctx()));
       }
       if (GlobalProcessCtx::Rank() == dst) {
-        CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, elem_per_data_piece, out->data_type(), src,
+        CHECK_JUST(Recv<device_type>(tmp_buffer_ptr, elem_cnt_per_rank, out->data_type(), src,
                                      ctx->device_ctx()));
-        NewKernelUtil<device_type>::Axpy(ctx->device_ctx(), elem_per_data_piece, static_cast<T>(1),
+        NewKernelUtil<device_type>::Axpy(ctx->device_ctx(), elem_cnt_per_rank, static_cast<T>(1),
                                          reinterpret_cast<const T*>(tmp_buffer_ptr), 1,
                                          out->mut_dptr<T>(), 1);
       }
