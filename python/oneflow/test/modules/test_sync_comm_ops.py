@@ -65,6 +65,10 @@ class TestBroadCast(flow.unittest.TestCase):
         flow.comm.broadcast(tensor, 1)
         test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[4, 5], [6, 7]])))
 
+        tensor = flow.tensor(np_arr, device="cuda", dtype=flow.int32)
+        flow.comm.broadcast(tensor, 0)
+        test_case.assertTrue(np.allclose(tensor.numpy(), np.array([[1, 2], [3, 4]])))
+
 
 @flow.unittest.skip_unless_1n2d()
 class TestDocs(flow.unittest.TestCase):
