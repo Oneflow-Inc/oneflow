@@ -95,8 +95,8 @@ def _get_ppm_and_opt():
     )
 
     class StageModule(flow.nn.Module):
-        def __init__(self):
-            super().__init__(linear_args, placement)
+        def __init__(self, linear_args, placement):
+            super().__init__()
             self.linear = flow.nn.Linear(*linear_args)
             self.linear.to_consistent(placement=placement, sbp=B)
             flow.nn.init.constant_(self.linear.weight, 0.023)
@@ -167,7 +167,7 @@ def _test_graph_pipeline(test_case):
                 loss_np = loss.numpy()
                 print("loss numpy \n", loss)
                 image = image.to_local().numpy()
-                return loss, image.numpy()
+                return loss, image
 
         check_list = []
         data_list = []
@@ -184,8 +184,7 @@ def _test_graph_pipeline(test_case):
                 super().__init__()
                 self.data_list = []
                 self.idx = 0
-                for tuple_pair in data:
-                    image = tuple_pair[0]
+                for image in data:
                     for i in range(4):
                         s = i * 4
                         e = s + 4
@@ -231,7 +230,7 @@ def _test_graph_pipeline(test_case):
             def one_iter(iter_idx):
                 image = d_m()
                 if rank == 3:
-                    loss = t_m(image, label)
+                    loss = t_m(image)
                     loss_np = loss.numpy()
                     print("eager loss numpy \n", loss_np)
                     loss = loss * 0.25
