@@ -1054,6 +1054,10 @@
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, Shape shape) => EagerSToB"
   bind_python: False
 
+- name: "eager_p_to_b"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, Shape shape) => EagerPToB"
+  bind_python: False
+
 - name: "consistent_all_reduce"
   signature: "Tensor (Tensor x) => ConsistentAllReduce"
   bind_python: False

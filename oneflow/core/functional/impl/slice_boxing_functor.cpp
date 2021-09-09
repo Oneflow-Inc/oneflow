@@ -49,6 +49,20 @@ Maybe<one::UserOpExpr> EagerSToB(Symbol<ParallelDesc> in_parallel_desc,
 
 static constexpr auto* CachedEagerSToBpExpr = DECORATE(&EagerSToB, ThreadLocalCopiable);
 
+Maybe<one::UserOpExpr> EagerPToB(Symbol<ParallelDesc> in_parallel_desc,
+                                 Symbol<ParallelDesc> out_parallel_desc, const Shape& shape) {
+  return one::OpBuilder("eager_p_to_b", *JUST(UniqueStr("eager_p_to_b")))
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("in_parallel_conf", PbMessage2TxtString(in_parallel_desc->parallel_conf()))
+      .Attr<std::string>("out_parallel_conf",
+                         PbMessage2TxtString(out_parallel_desc->parallel_conf()))
+      .Attr<Shape>("shape", shape)
+      .Build();
+}
+
+static constexpr auto* CachedEagerPToBpExpr = DECORATE(&EagerPToB, ThreadLocalCopiable);
+
 }  // namespace
 
 class EagerSToBFunctor {
@@ -67,9 +81,28 @@ class EagerSToBFunctor {
   }
 };
 
+class EagerPToBFunctor {
+ public:
+  EagerPToBFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           Symbol<ParallelDesc> in_parallel_desc,
+                           Symbol<ParallelDesc> out_parallel_desc, const Shape& shape) const {
+    {
+      CHECK_OR_RETURN(x->is_local());
+      CHECK_OR_RETURN(x->is_eager());
+    }
+    std::shared_ptr<OpExpr> op_expr =
+        JUST(CachedEagerPToBpExpr(in_parallel_desc, out_parallel_desc, shape));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
+  }
+};
+
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::EagerSToBFunctor>("EagerSToB"); };
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::EagerSToBFunctor>("EagerSToB");
+  m.add_functor<impl::EagerPToBFunctor>("EagerPToB");
+};
 
 }  // namespace functional
 }  // namespace one
