@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-struct WaitAndSendIdsStatus final {
+struct WaitAndSendIdsStatus final : public KernelState {
   BufferStatus buffer_status_;
   int64_t in_id_;
   int64_t out_idx_;
@@ -37,8 +37,7 @@ class WaitAndSendIdsKernel final : public Kernel {
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
-  void DestroyState(void* state) const override;
-  void ForwardDataContent(const KernelContext* ctx) const override;
+  void ForwardDataContent(KernelContext* ctx) const override;
 };
 
 }  // namespace oneflow

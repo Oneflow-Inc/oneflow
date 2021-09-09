@@ -135,7 +135,9 @@ def _run_test_quantize(
     per_layer_quantization,
 ):
     input = (np.random.random(in_shape) - 0.5).astype(type_name_to_np_type[dtype])
-    input_tensor = flow.Tensor(input, device=flow.device(device_type))
+    input_tensor = flow.tensor(
+        input, dtype=flow.float32, device=flow.device(device_type)
+    )
     min_max_observer = flow.nn.MinMaxObserver(
         quantization_formula=quantization_formula,
         quantization_bit=quantization_bit,

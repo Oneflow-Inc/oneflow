@@ -63,7 +63,7 @@ def _np_constant_pad2d_grad(src, dest, padding):
 
 def _test_ConstantPad2d(test_case, shape, padding, value, device):
     np_input = np.random.random(shape)
-    of_input = flow.Tensor(
+    of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     if isinstance(padding, int):

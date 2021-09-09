@@ -21,7 +21,7 @@ namespace oneflow {
 
 namespace {
 
-bool IsAllBlobEmpty(const PbRpf<std::string>& bns, const KernelContext* ctx) {
+bool IsAllBlobEmpty(const PbRpf<std::string>& bns, KernelContext* ctx) {
   for (const auto& bn : bns) {
     Blob* blob = ctx->BnInOp2Blob(bn);
     if (blob && !blob->IsBodyEmpty()) { return false; }
@@ -35,7 +35,7 @@ Kernel::Kernel() = default;
 
 Kernel::~Kernel() = default;
 
-void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
+void Kernel::InitBase(const KernelConf& kernel_conf) {
   if (shape_infer_helper_) { return; }
   kernel_conf_ = kernel_conf;
   shape_infer_helper_.reset(
@@ -43,36 +43,34 @@ void Kernel::InitBase(const JobDesc* job_desc, const KernelConf& kernel_conf) {
 }
 
 void Kernel::Init(const KernelConf& kernel_conf, KernelContext* ctx) {
-  InitBase(ctx->job_desc(), kernel_conf);
+  InitBase(kernel_conf);
   VirtualKernelInit(ctx);
 }
 
-void Kernel::DestroyState(void* state) const { CHECK(state == nullptr); }
-
-void Kernel::Launch(const KernelContext* ctx) const {
-  Global<KernelObserver>::Get()->WillForward(ctx, this);
+void Kernel::Launch(KernelContext* ctx) const {
+  ctx->WillForward(ctx, this);
   Forward(ctx);
-  Global<KernelObserver>::Get()->DidForward(ctx, this);
+  ctx->DidForward(ctx, this);
 }
 
-void Kernel::Forward(const KernelContext* ctx) const {
-  Global<KernelObserver>::Get()->WillForwardHeader(ctx, this);
+void Kernel::Forward(KernelContext* ctx) const {
+  ctx->WillForwardHeader(ctx, this);
   ForwardHeader(ctx);
-  Global<KernelObserver>::Get()->DidForwardHeader(ctx, this);
+  ctx->DidForwardHeader(ctx, this);
   if ((!kernel_conf_.all_blobs_are_static()) && IsAllBlobEmpty(op_attribute().output_bns(), ctx)
       && IsStateless()) {
     return;
   }
-  Global<KernelObserver>::Get()->WillForwardDataContent(ctx, this);
+  ctx->WillForwardDataContent(ctx, this);
   ForwardDataContent(ctx);
-  Global<KernelObserver>::Get()->DidForwardDataContent(ctx, this);
+  ctx->DidForwardDataContent(ctx, this);
 }
 
-void Kernel::ForwardHeader(const KernelContext* ctx) const {
+void Kernel::ForwardHeader(KernelContext* ctx) const {
   if (!kernel_conf_.all_blobs_are_static()) { ForwardShape(ctx); }
 }
 
-void Kernel::ForwardShape(const KernelContext* ctx) const {
+void Kernel::ForwardShape(KernelContext* ctx) const {
   return shape_infer_helper_->InferShape(
       [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); });
 }

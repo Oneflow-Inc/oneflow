@@ -16,8 +16,8 @@ limitations under the License.
 from typing import Union
 
 import oneflow as flow
-from oneflow.nn.module import Module
 from oneflow.nn.common_types import _size_4_t
+from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _quadruple
 
 
@@ -50,7 +50,7 @@ class ReplicationPad2d(Module):
         >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
         >>> output = replicationpad_layer_0(input)
         >>> output.shape
-        flow.Size([1, 2, 5, 7])
+        oneflow.Size([1, 2, 5, 7])
         >>> output
         tensor([[[[ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
                   [ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
@@ -125,7 +125,7 @@ class ReflectionPad2d(Module):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)), dtype=flow.float32)
+        >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> m = flow.nn.ReflectionPad2d((2, 2, 1, 1))
         >>> out = m(input)
         >>> out
@@ -266,7 +266,7 @@ class ConstantPad2d(Module):
         >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
         >>> output = constantpad_layer_0(input)
         >>> output.shape
-        flow.Size([1, 2, 5, 7])
+        oneflow.Size([1, 2, 5, 7])
         >>> output
         tensor([[[[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
                   [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
@@ -427,7 +427,7 @@ class ZeroPad2d(Module):
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> output_int = zeropad_layer_int(input)
         >>> output_int.shape
-        flow.Size([1, 2, 7, 7])
+        oneflow.Size([1, 2, 7, 7])
         >>> output_int
         tensor([[[[ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
