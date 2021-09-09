@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/stream/cuda_stream_context.h"
 #include "oneflow/core/stream/cuda_graph_context.h"
+#include "oneflow/core/stream/execution_context_hook.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -45,13 +46,15 @@ void SetAffinityByDevice(int64_t dev_id) {
 }
 
 #ifdef WITH_CUDA_GRAPHS
-#define CUDA_STREAM_CONTEXT_IMPL_BASE \
- public                               \
-  CudaStreamContext, public CudaGraphContext, public KernelObserverProvider
+#define CUDA_STREAM_CONTEXT_IMPL_BASE                                        \
+ public                                                                      \
+  CudaStreamContext, public CudaGraphContext, public KernelObserverProvider, \
+      public ExecutionContextHook, public DeviceCtxProvider
 #else
-#define CUDA_STREAM_CONTEXT_IMPL_BASE \
- public                               \
-  CudaStreamContext, public KernelObserverProvider
+#define CUDA_STREAM_CONTEXT_IMPL_BASE                                            \
+ public                                                                          \
+  CudaStreamContext, public KernelObserverProvider, public ExecutionContextHook, \
+      public DeviceCtxProvider
 #endif
 
 class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
@@ -60,12 +63,12 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   explicit CudaStreamContextImpl(const StreamId& stream_id);
   virtual ~CudaStreamContextImpl();
 
-  Maybe<void> OnActorThreadSetup() override;
-  Maybe<void> OnActorThreadTeardown() override;
+  Maybe<void> OnExecutionContextSetup() override;
+  Maybe<void> OnExecutionContextTeardown() override;
 
   Maybe<void> AddCallback(std::function<void()> callback) override;
   Maybe<void> Sync() override;
-  std::shared_ptr<DeviceCtx> device_ctx() override;
+  std::shared_ptr<DeviceCtx> GetDeviceCtx() override;
   KernelObserver* GetKernelObserver() override;
 
   cudaStream_t cuda_stream() const override;
@@ -100,14 +103,13 @@ class CudaStreamContextImpl : CUDA_STREAM_CONTEXT_IMPL_BASE {
   std::thread poller_thread_;
   StreamId stream_id_;
   std::shared_ptr<DeviceCtx> device_ctx_;
-  bool is_graph_capturing_;
   std::unique_ptr<KernelObserver> kernel_observer_;
 #ifdef WITH_CUDA_GRAPHS
   std::unique_ptr<GenericCudaGraphContext> cuda_graph_ctx_impl_;
 #endif  // WITH_CUDA_GRAPHS
 };
 
-class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
+class DeviceCtxImpl : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtxImpl);
   explicit DeviceCtxImpl(CudaStreamContextImpl* stream_ctx) : stream_ctx_(stream_ctx) {}
@@ -127,16 +129,13 @@ class DeviceCtxImpl : public DeviceCtx, public StreamContextProvider {
     CHECK_JUST(stream_ctx_->AddCallback(std::move(callback)));
   }
 
-  StreamContext* GetStreamContext() override { return stream_ctx_; }
-
  protected:
   CudaStreamContextImpl* stream_ctx_;
 };
 
 }  // namespace
 
-CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id)
-    : stream_id_(stream_id), is_graph_capturing_(false) {
+CudaStreamContextImpl::CudaStreamContextImpl(const StreamId& stream_id) : stream_id_(stream_id) {
   CudaCurrentDeviceGuard guard(stream_id_.device_id().device_index());
   CHECK_EQ(stream_id.device_id().device_type(), DeviceType::kGPU);
   cuda_event_flags_ = cudaEventDisableTiming;
@@ -227,13 +226,13 @@ CudaStreamContextImpl::~CudaStreamContextImpl() {
   OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
 }
 
-Maybe<void> CudaStreamContextImpl::OnActorThreadSetup() {
+Maybe<void> CudaStreamContextImpl::OnExecutionContextSetup() {
   SetAffinityByDevice(stream_id_.device_id().device_index());
   OF_CUDA_CHECK(cudaSetDevice(stream_id_.device_id().device_index()));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CudaStreamContextImpl::OnActorThreadTeardown() { return Maybe<void>::Ok(); }
+Maybe<void> CudaStreamContextImpl::OnExecutionContextTeardown() { return Maybe<void>::Ok(); }
 
 Maybe<void> CudaStreamContextImpl::AddCallback(std::function<void()> callback) {
   cudaEvent_t cuda_event = GetEvent();
@@ -285,7 +284,7 @@ Maybe<void> CudaStreamContextImpl::Sync() {
   }
 }
 
-std::shared_ptr<DeviceCtx> CudaStreamContextImpl::device_ctx() { return device_ctx_; }
+std::shared_ptr<DeviceCtx> CudaStreamContextImpl::GetDeviceCtx() { return device_ctx_; }
 
 KernelObserver* CudaStreamContextImpl::GetKernelObserver() { return kernel_observer_.get(); }
 
